@@ -110,6 +110,7 @@ public class FlatCard extends JPanel {
   private Insets myPadding =
       new Insets(DEFAULT_PADDING, DEFAULT_PADDING, DEFAULT_PADDING, DEFAULT_PADDING);
   private Color myBorderColor;
+  private Color mySurfaceColorOverride;
   private int myBorderWidth = 1;
   private boolean myAnimateCollapse;
 
@@ -127,6 +128,7 @@ public class FlatCard extends JPanel {
   private JPanel myTextStack;
   private JLabel myTitleLabel;
   private JLabel mySubtitleLabel;
+  private JPanel myLeadingActionsPanel;
   private JPanel myTrailingActionsPanel;
   private JLabel myChevronLabel;
 
@@ -170,7 +172,14 @@ public class FlatCard extends JPanel {
 
     myLeadingIconLabel = new JLabel();
     myLeadingIconLabel.setVisible(false);
-    myHeaderRow.add(myLeadingIconLabel, BorderLayout.WEST);
+    final JPanel westGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, DEFAULT_INNER_GAP / 2, 0));
+    westGroup.setOpaque(false);
+    westGroup.add(myLeadingIconLabel);
+    myLeadingActionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, DEFAULT_INNER_GAP / 2, 0));
+    myLeadingActionsPanel.setOpaque(false);
+    myLeadingActionsPanel.setVisible(false);
+    westGroup.add(myLeadingActionsPanel);
+    myHeaderRow.add(westGroup, BorderLayout.WEST);
 
     myTextStack = new JPanel();
     myTextStack.setOpaque(false);
@@ -618,6 +627,48 @@ public class FlatCard extends JPanel {
   }
 
   /**
+   * Replaces the leading actions row of the header. Leading actions render in the WEST slot, after
+   * the leading icon (if any) and before the title — useful for an info or context button you want
+   * sitting next to the title rather than lost on the far right of a wide card.
+   *
+   * @param theActions zero or more action components rendered in order from left to right
+   * @return this card
+   */
+  public FlatCard setLeadingActions(final Component... theActions) {
+    myLeadingActionsPanel.removeAll();
+    if (theActions != null) {
+      for (Component c : theActions) {
+        if (c != null) {
+          myLeadingActionsPanel.add(c);
+        }
+      }
+    }
+    boolean has = myLeadingActionsPanel.getComponentCount() > 0;
+    myLeadingActionsPanel.setVisible(has);
+    refreshHeaderVisibility();
+    return this;
+  }
+
+  /**
+   * Returns the title label so callers can customize fonts, foreground, alignment, or FlatLaf style
+   * class (e.g., {@code label.putClientProperty("FlatLaf.styleClass", "h2")} for a bigger title).
+   *
+   * @return the live title label; never null
+   */
+  public JLabel getTitleLabel() {
+    return myTitleLabel;
+  }
+
+  /**
+   * Returns the subtitle label so callers can customize fonts, foreground, or FlatLaf style class.
+   *
+   * @return the live subtitle label; never null
+   */
+  public JLabel getSubtitleLabel() {
+    return mySubtitleLabel;
+  }
+
+  /**
    * Replaces the trailing actions row of the header.
    *
    * @param theActions zero or more action components rendered in order from left to right
@@ -899,9 +950,11 @@ public class FlatCard extends JPanel {
     boolean hasTitle = myTitleLabel.getText() != null && !myTitleLabel.getText().isEmpty();
     boolean hasSub = mySubtitleLabel.isVisible();
     boolean hasIcon = myLeadingIconLabel.isVisible();
+    boolean hasLeadingActions = myLeadingActionsPanel.isVisible();
     boolean hasActions = myTrailingActionsPanel.isVisible();
     boolean hasChevron = myCollapsible;
-    myHeaderRow.setVisible(hasTitle || hasSub || hasIcon || hasActions || hasChevron);
+    myHeaderRow.setVisible(
+        hasTitle || hasSub || hasIcon || hasLeadingActions || hasActions || hasChevron);
     myHeaderRow.revalidate();
   }
 
@@ -1043,7 +1096,24 @@ public class FlatCard extends JPanel {
     g2.drawRoundRect(x - 1, y - 1, w + 1, h + 1, arc + 2, arc + 2);
   }
 
+  /**
+   * Overrides the variant-derived surface color with a caller-supplied tint. Pass {@code null} to
+   * restore variant-default behavior. Hover, pressed, and selected blends are still applied on top
+   * of the override.
+   *
+   * @param theColor the surface fill color, or null to clear
+   * @return this card
+   */
+  public FlatCard setSurfaceColor(final Color theColor) {
+    mySurfaceColorOverride = theColor;
+    repaint();
+    return this;
+  }
+
   private Color surfaceColor() {
+    if (mySurfaceColorOverride != null) {
+      return mySurfaceColorOverride;
+    }
     Color panel = UIManager.getColor("Panel.background");
     if (panel == null) {
       panel = Color.WHITE;
