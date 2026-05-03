@@ -120,6 +120,7 @@ public class FlatCard extends JPanel {
   private boolean mySelected;
   private boolean myCollapsible;
   private boolean myCollapsed;
+  private boolean myKeepSummaryWhenExpanded;
   private boolean myPendingHeaderToggle;
 
   // Header sub-components --------------------------------------------------
@@ -579,37 +580,41 @@ public class FlatCard extends JPanel {
    * @return this card
    */
   public FlatCard setHeader(final String theTitle) {
-    return setHeader(theTitle, null, null);
+    return setHeader(theTitle, null);
   }
 
   /**
-   * Sets the header title and subtitle.
+   * Sets the header title and subtitle. Does not modify the leading icon — use {@link
+   * #setLeadingIcon(Icon)} or the three-arg {@link #setHeader(String, String, Icon)} overload to
+   * change it.
    *
-   * @param theTitle the title text (null/empty hides the header row)
+   * @param theTitle the title text (null/empty hides the title text)
    * @param theSubtitle the subtitle text (null/empty hides the subtitle line)
    * @return this card
    */
   public FlatCard setHeader(final String theTitle, final String theSubtitle) {
-    return setHeader(theTitle, theSubtitle, null);
-  }
-
-  /**
-   * Sets the header title, subtitle, and leading icon.
-   *
-   * @param theTitle the title text
-   * @param theSubtitle the subtitle text (may be null)
-   * @param theLeadingIcon the icon shown before the title (may be null)
-   * @return this card
-   */
-  public FlatCard setHeader(
-      final String theTitle, final String theSubtitle, final Icon theLeadingIcon) {
     boolean hasTitle = theTitle != null && !theTitle.isEmpty();
     myTitleLabel.setText(hasTitle ? theTitle : "");
     boolean hasSub = theSubtitle != null && !theSubtitle.isEmpty();
     mySubtitleLabel.setText(hasSub ? theSubtitle : "");
     mySubtitleLabel.setVisible(hasSub);
-    setLeadingIcon(theLeadingIcon);
     refreshHeaderVisibility();
+    return this;
+  }
+
+  /**
+   * Sets the header title, subtitle, and leading icon. Pass {@code null} for {@code theLeadingIcon}
+   * to explicitly clear the icon.
+   *
+   * @param theTitle the title text
+   * @param theSubtitle the subtitle text (may be null)
+   * @param theLeadingIcon the icon shown before the title (may be null to clear)
+   * @return this card
+   */
+  public FlatCard setHeader(
+      final String theTitle, final String theSubtitle, final Icon theLeadingIcon) {
+    setHeader(theTitle, theSubtitle);
+    setLeadingIcon(theLeadingIcon);
     return this;
   }
 
@@ -812,7 +817,7 @@ public class FlatCard extends JPanel {
     final boolean old = myCollapsed;
     myCollapsed = theCollapsed;
     myChevronLabel.setText(chevronGlyph(myCollapsed));
-    myCollapsedSummaryHolder.setVisible(myCollapsed && myCollapsedSummary != null);
+    myCollapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
     if (myAnimateCollapse) {
       animateTo(myCollapsed ? 0f : 1f);
     } else {
@@ -846,10 +851,49 @@ public class FlatCard extends JPanel {
     if (theSummary != null) {
       myCollapsedSummaryHolder.add(theSummary, BorderLayout.CENTER);
     }
-    myCollapsedSummaryHolder.setVisible(myCollapsed && theSummary != null);
+    myCollapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
     revalidate();
     repaint();
     return this;
+  }
+
+  /**
+   * Opts the card into showing the collapsed-summary slot in <em>both</em> states (collapsed
+   * <em>and</em> expanded), instead of only when collapsed.
+   *
+   * <p>Useful when the summary carries affordances (click targets, hover highlights, glyphs
+   * encoding metadata) that should remain reachable while the user studies the expanded body — so
+   * the user doesn't have to collapse the card to interact with the summary again.
+   *
+   * @param theKeep true to keep the collapsed-summary visible while expanded; false (default) to
+   *     restore the standard "summary visible only when collapsed" behavior
+   * @return this card
+   */
+  public FlatCard setKeepSummaryWhenExpanded(final boolean theKeep) {
+    if (theKeep == myKeepSummaryWhenExpanded) {
+      return this;
+    }
+    myKeepSummaryWhenExpanded = theKeep;
+    myCollapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
+    revalidate();
+    repaint();
+    return this;
+  }
+
+  /**
+   * Returns whether the card keeps the collapsed-summary slot visible while expanded.
+   *
+   * @return true if the summary is shown in both collapsed and expanded states
+   */
+  public boolean isKeepSummaryWhenExpanded() {
+    return myKeepSummaryWhenExpanded;
+  }
+
+  private boolean shouldShowCollapsedSummary() {
+    if (myCollapsedSummary == null) {
+      return false;
+    }
+    return myCollapsed || myKeepSummaryWhenExpanded;
   }
 
   /**
