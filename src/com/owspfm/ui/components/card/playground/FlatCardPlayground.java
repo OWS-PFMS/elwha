@@ -13,6 +13,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JToolBar;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -65,6 +66,20 @@ public final class FlatCardPlayground {
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     frame.setLayout(new BorderLayout());
 
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("FlatCard", buildFlatCardTab());
+    tabs.addTab("FlatCardList", new FlatCardListShowcase());
+    tabs.addTab("Cursors", new CursorReferencePanel());
+
+    frame.add(buildToolbar(frame), BorderLayout.NORTH);
+    frame.add(tabs, BorderLayout.CENTER);
+
+    frame.setSize(1280, 820);
+    frame.setLocationRelativeTo(null);
+    frame.setVisible(true);
+  }
+
+  private static JPanel buildFlatCardTab() {
     final GalleryPanel gallery = new GalleryPanel();
     final LiveConfigPanel live = new LiveConfigPanel();
     final SnippetPanel snippet = new SnippetPanel();
@@ -79,12 +94,10 @@ public final class FlatCardPlayground {
     JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, gallery, right);
     split.setResizeWeight(0.5);
     split.setDividerLocation(560);
-    frame.add(buildToolbar(frame), BorderLayout.NORTH);
-    frame.add(split, BorderLayout.CENTER);
 
-    frame.setSize(1280, 820);
-    frame.setLocationRelativeTo(null);
-    frame.setVisible(true);
+    JPanel wrap = new JPanel(new BorderLayout());
+    wrap.add(split, BorderLayout.CENTER);
+    return wrap;
   }
 
   private static JToolBar buildToolbar(final JFrame frame) {

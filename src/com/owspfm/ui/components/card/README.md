@@ -115,6 +115,15 @@ on the left, and a live-editing focus card with code-snippet output on the right
 A minimal smoke-test demo (`FlatCardDemo`) is also included in this package for use as a
 developer-only entry point.
 
+## See also: `FlatCardList`
+
+For lists of cards, see the sibling [`com.owspfm.ui.components.card.list`](./list/README.md)
+package — it provides a reusable, model-driven `FlatCardList<T>` with selection,
+drag-to-reorder, filter, sort, empty/loading states, fade animations, and full
+keyboard navigation, all backed by an observable model and a single-method adapter.
+The playground includes a dedicated **FlatCardList** tab that exercises every option
+live alongside the existing FlatCard tab.
+
 ## Extracting to a separate library
 
 The package was designed for a clean lift-and-shift:

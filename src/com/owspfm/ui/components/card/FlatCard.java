@@ -119,6 +119,7 @@ public class FlatCard extends JPanel {
   private boolean mySelected;
   private boolean myCollapsible;
   private boolean myCollapsed;
+  private boolean myPendingHeaderToggle;
 
   // Header sub-components --------------------------------------------------
   private JPanel myHeaderRow;
@@ -196,6 +197,9 @@ public class FlatCard extends JPanel {
     myChevronLabel.setHorizontalAlignment(SwingConstants.CENTER);
     myChevronLabel.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
     myChevronLabel.setVisible(false);
+    // Chevron is a button-like affordance and should always show the click cursor, even when
+    // the host card has a different cursor (e.g., MOVE_CURSOR set by FlatCardList for drag).
+    myChevronLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     eastGroup.add(myChevronLabel);
     myHeaderRow.add(eastGroup, BorderLayout.EAST);
 
@@ -279,11 +283,14 @@ public class FlatCard extends JPanel {
               return;
             }
             if (myCollapsible && isInHeader(e)) {
-              toggleCollapsed(e);
-              return;
+              // Defer the actual collapse toggle to mouseReleased — that way a hosting list can
+              // call cancelPendingClick() if the press turns into a drag, suppressing what
+              // would otherwise be an unwanted toggle on every drag start.
+              myPendingHeaderToggle = true;
             }
             if (myInteractionMode == CardInteractionMode.CLICKABLE
-                || myInteractionMode == CardInteractionMode.SELECTABLE) {
+                || myInteractionMode == CardInteractionMode.SELECTABLE
+                || myPendingHeaderToggle) {
               myPressed = true;
               requestFocusInWindow();
               repaint();
@@ -294,18 +301,29 @@ public class FlatCard extends JPanel {
           public void mouseReleased(MouseEvent e) {
             if (!myPressed || !isEnabled()) {
               myPressed = false;
+              myPendingHeaderToggle = false;
               repaint();
               return;
             }
             myPressed = false;
             if (contains(e.getPoint())) {
-              activate(e.getModifiersEx());
+              if (myPendingHeaderToggle) {
+                myPendingHeaderToggle = false;
+                setCollapsed(!myCollapsed);
+              } else {
+                activate(e.getModifiersEx());
+              }
             }
+            myPendingHeaderToggle = false;
             repaint();
           }
         };
     addMouseListener(ma);
-    myHeaderRow.addMouseListener(ma);
+    // Intentionally NOT installing this listener on myHeaderRow: when a child has its own
+    // mouse listener, AWT delivers the event there and stops, which prevents outer listeners
+    // (e.g., a host FlatCardList that wants to handle selection on header clicks) from ever
+    // seeing the event. The card-level listener detects header clicks via Y-bounds in
+    // isInHeader(), so the toggle still fires correctly.
     myChevronLabel.addMouseListener(ma);
 
     addFocusListener(
@@ -824,6 +842,24 @@ public class FlatCard extends JPanel {
   }
 
   // --- listeners -------
+
+  /**
+   * Cancels any in-flight click that's been seen by mousePressed but not yet completed by
+   * mouseReleased.
+   *
+   * <p>Specifically clears the deferred header-collapse toggle and the {@code pressed} state, so
+   * the in-progress press-release sequence won't fire either of them. Hosting components that
+   * convert presses into drags (e.g., a list with reorder enabled) should call this once they
+   * decide a drag has started, to suppress an otherwise-spurious header toggle on every drag.
+   *
+   * @return this card
+   */
+  public FlatCard cancelPendingClick() {
+    myPressed = false;
+    myPendingHeaderToggle = false;
+    repaint();
+    return this;
+  }
 
   /**
    * Registers an action listener that fires on click (clickable) or toggle (selectable).
