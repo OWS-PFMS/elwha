@@ -42,7 +42,7 @@ import javax.swing.UIManager;
  * @version v1.1.0-alpha.2
  * @since v1.1.0-alpha.2
  */
-final class Cursors {
+public final class Cursors {
 
   private static final int DESIGN_SIZE = 32;
   private static final int FALLBACK_SIZE = 16;
@@ -60,7 +60,7 @@ final class Cursors {
    *
    * @return the grab cursor
    */
-  static Cursor grab() {
+  public static Cursor grab() {
     refreshIfThemeChanged();
     if (grabCached == null) {
       grabCached = loadCursor("grab", isDarkTheme(), new Point(15, 8), "FlatCardList.grab", true);
@@ -73,7 +73,7 @@ final class Cursors {
    *
    * @return the grabbing cursor
    */
-  static Cursor grabbing() {
+  public static Cursor grabbing() {
     refreshIfThemeChanged();
     if (grabbingCached == null) {
       grabbingCached =
