@@ -2,6 +2,8 @@ package com.owspfm.ui.components.card.list;
 
 import com.owspfm.ui.components.card.CardInteractionMode;
 import com.owspfm.ui.components.card.FlatCard;
+import com.owspfm.ui.components.flatlist.FlatList;
+import com.owspfm.ui.components.flatlist.FlatListOrientation;
 import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -76,17 +78,42 @@ import javax.swing.event.MouseInputAdapter;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
+ * @version v1.1.0-alpha.3
  * @since v1.1.0-alpha.2
  */
-public class FlatCardList<T> extends JPanel implements Accessible {
+public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
 
-  /** Layout orientation for the rendered list. */
-  public enum Orientation {
+  /**
+   * Aliased reference to the shared {@link FlatListOrientation} enum (extracted in story #237).
+   *
+   * <p>This {@code FlatCardList.Orientation} symbol existed prior to the shared-abstraction
+   * extraction and only ever shipped {@code VERTICAL} and {@code GRID}. It is preserved as an alias
+   * so existing call sites such as {@code FlatCardList.Orientation.GRID} continue to compile;
+   * however, all new code should reference {@link FlatListOrientation} directly. Story #242 added
+   * support for {@link FlatListOrientation#HORIZONTAL} and {@link FlatListOrientation#WRAP}, which
+   * are also reachable through this class now.
+   */
+  public static final class Orientation {
     /** Single-column vertical stack (default). */
-    VERTICAL,
-    /** N-column grid (set with {@link #setColumns(int)}). */
-    GRID
+    public static final FlatListOrientation VERTICAL = FlatListOrientation.VERTICAL;
+
+    /** N-column grid (set with {@link FlatCardList#setColumns(int)}). */
+    public static final FlatListOrientation GRID = FlatListOrientation.GRID;
+
+    private Orientation() {
+      // alias holder — instances are not constructed
+    }
+
+    /**
+     * Returns the orientation values historically supported by {@code FlatCardList} — {@code
+     * [VERTICAL, GRID]} — for callers that need to iterate them. New code should iterate {@link
+     * FlatListOrientation#values()} directly.
+     *
+     * @return the legacy two-value array
+     */
+    public static FlatListOrientation[] values() {
+      return new FlatListOrientation[] {VERTICAL, GRID};
+    }
   }
 
   private static final Logger LOG = Logger.getLogger(FlatCardList.class.getName());
@@ -106,7 +133,7 @@ public class FlatCardList<T> extends JPanel implements Accessible {
   private final CardSelectionModel<T> mySelectionModel = new DefaultCardSelectionModel<>();
 
   // Configuration ----------------------------------------------------------
-  private Orientation myOrientation = Orientation.VERTICAL;
+  private FlatListOrientation myOrientation = FlatListOrientation.VERTICAL;
   private int myColumns = DEFAULT_COLUMNS;
   private int myItemGap = DEFAULT_GAP;
   private Insets myListPadding = new Insets(DEFAULT_GAP, DEFAULT_GAP, DEFAULT_GAP, DEFAULT_GAP);
@@ -212,10 +239,12 @@ public class FlatCardList<T> extends JPanel implements Accessible {
   /**
    * Sets the layout orientation.
    *
-   * @param theOrientation one of {@link Orientation}; null is ignored
+   * @param theOrientation one of {@link FlatListOrientation}; null is ignored. All four
+   *     orientations are supported as of story #242.
    * @return this list
    */
-  public FlatCardList<T> setOrientation(final Orientation theOrientation) {
+  @Override
+  public FlatCardList<T> setOrientation(final FlatListOrientation theOrientation) {
     if (theOrientation == null || theOrientation == myOrientation) {
       return this;
     }
@@ -226,22 +255,43 @@ public class FlatCardList<T> extends JPanel implements Accessible {
   }
 
   /**
-   * Sets the column count for {@link Orientation#GRID}.
+   * Returns the current orientation.
+   *
+   * @return the orientation (never null)
+   */
+  @Override
+  public FlatListOrientation getOrientation() {
+    return myOrientation;
+  }
+
+  /**
+   * Sets the column count for {@link FlatListOrientation#GRID}.
    *
    * @param theColumns column count, clamped to {@code >= 1}
    * @return this list
    */
+  @Override
   public FlatCardList<T> setColumns(final int theColumns) {
     final int v = Math.max(1, theColumns);
     if (v == myColumns) {
       return this;
     }
     myColumns = v;
-    if (myOrientation == Orientation.GRID) {
+    if (myOrientation == FlatListOrientation.GRID) {
       applyOrientationLayout();
       rebuildContent(false);
     }
     return this;
+  }
+
+  /**
+   * Returns the column count for grid mode.
+   *
+   * @return the column count
+   */
+  @Override
+  public int getColumns() {
+    return myColumns;
   }
 
   /**
@@ -250,6 +300,7 @@ public class FlatCardList<T> extends JPanel implements Accessible {
    * @param theGap pixels, clamped to {@code >= 0}
    * @return this list
    */
+  @Override
   public FlatCardList<T> setItemGap(final int theGap) {
     final int v = Math.max(0, theGap);
     if (v == myItemGap) {
@@ -262,11 +313,22 @@ public class FlatCardList<T> extends JPanel implements Accessible {
   }
 
   /**
+   * Returns the active item gap.
+   *
+   * @return the gap in pixels
+   */
+  @Override
+  public int getItemGap() {
+    return myItemGap;
+  }
+
+  /**
    * Sets the padding around the rendered list.
    *
    * @param theInsets the insets; null treated as zero
    * @return this list
    */
+  @Override
   public FlatCardList<T> setListPadding(final Insets theInsets) {
     myListPadding = theInsets == null ? new Insets(0, 0, 0, 0) : (Insets) theInsets.clone();
     rebuildPadding();
@@ -347,6 +409,7 @@ public class FlatCardList<T> extends JPanel implements Accessible {
    * @param theFilter the predicate; null clears filtering
    * @return this list
    */
+  @Override
   public FlatCardList<T> setFilter(final Predicate<T> theFilter) {
     myFilter = theFilter;
     rebuildVisibleItems();
@@ -363,6 +426,7 @@ public class FlatCardList<T> extends JPanel implements Accessible {
    * @param theComparator the comparator; null clears sorting
    * @return this list
    */
+  @Override
   public FlatCardList<T> setSortOrder(final Comparator<T> theComparator) {
     myComparator = theComparator;
     if (theComparator != null && myReorderable && !myReorderWarningLogged) {
@@ -381,6 +445,7 @@ public class FlatCardList<T> extends JPanel implements Accessible {
    * @param theComponent the placeholder; null restores the default
    * @return this list
    */
+  @Override
   public FlatCardList<T> setEmptyState(final JComponent theComponent) {
     myEmptyState = theComponent;
     if (myEmptyHolder.isShowing() || myVisibleItems.isEmpty()) {
@@ -395,6 +460,7 @@ public class FlatCardList<T> extends JPanel implements Accessible {
    * @param theLoading whether to show the loading state
    * @return this list
    */
+  @Override
   public FlatCardList<T> setLoading(final boolean theLoading) {
     if (theLoading == myLoading) {
       return this;
@@ -410,6 +476,7 @@ public class FlatCardList<T> extends JPanel implements Accessible {
    * @param theComponent the loading component
    * @return this list
    */
+  @Override
   public FlatCardList<T> setLoadingComponent(final JComponent theComponent) {
     myLoadingComponent = theComponent;
     if (myLoading) {
@@ -475,10 +542,12 @@ public class FlatCardList<T> extends JPanel implements Accessible {
 
   private void applyOrientationLayout() {
     myContent.removeAll();
-    if (myOrientation == Orientation.GRID) {
-      myContent.setLayout(new GridStackingLayout());
-    } else {
-      myContent.setLayout(new StackingLayout());
+    switch (myOrientation) {
+      case GRID -> myContent.setLayout(new GridStackingLayout());
+      case HORIZONTAL -> myContent.setLayout(new HorizontalStackingLayout());
+      case WRAP -> myContent.setLayout(new WrapStackingLayout());
+      case VERTICAL -> myContent.setLayout(new StackingLayout());
+      default -> myContent.setLayout(new StackingLayout());
     }
   }
 
@@ -818,7 +887,7 @@ public class FlatCardList<T> extends JPanel implements Accessible {
    * (independent of in-flight animation), so the answer doesn't oscillate as cards slide.
    */
   private int computeDropIndex(final Point thePoint) {
-    if (myOrientation == Orientation.GRID) {
+    if (myOrientation == FlatListOrientation.GRID) {
       return computeGridDropIndex(thePoint);
     }
     int slot = 0;
@@ -881,7 +950,7 @@ public class FlatCardList<T> extends JPanel implements Accessible {
     ordered.add(dropClamp, myDrag.card);
 
     final Insets in = myContent.getInsets();
-    if (myOrientation == Orientation.GRID) {
+    if (myOrientation == FlatListOrientation.GRID) {
       final int availW = Math.max(1, myContent.getWidth() - in.left - in.right);
       final int cellW = Math.max(1, (availW - (myColumns - 1) * myItemGap) / myColumns);
       final int cellH = Math.max(1, computeGridCellHeight());
@@ -982,20 +1051,52 @@ public class FlatCardList<T> extends JPanel implements Accessible {
     final T item = myDrag.item;
     myDrag = null;
     if (fromVis < 0 || toVis < 0 || fromVis == toVis) {
-      myContent.revalidate();
-      myContent.repaint();
+      restoreContentOrder();
       return;
     }
+    boolean modelMoved = false;
     if (myModel instanceof DefaultCardListModel<T> mutable) {
       final int fromModel = indexOfInModel(item);
       final T atTarget = myVisibleItems.get(toVis);
       final int toModel = indexOfInModel(atTarget);
-      if (fromModel >= 0 && toModel >= 0) {
+      if (fromModel >= 0 && toModel >= 0 && fromModel != toModel) {
         mutable.move(fromModel, toModel);
         fireReorder(item, fromModel, toModel);
+        modelMoved = true;
       }
     } else {
       LOG.warning("FlatCardList: reorder requires a mutable DefaultCardListModel; drop ignored");
+    }
+    if (!modelMoved) {
+      // Successful model.move fires a MOVED event → onModelChanged → rebuildContent, which
+      // resets child order. When the model is NOT mutated (e.g., the card at toVis happened to
+      // be the dragged item, or the model wasn't mutable), the child order scrambled by
+      // activateDrag's setComponentZOrder(myDrag.card, 0) call would otherwise persist and make
+      // the layout (which iterates children by index) visually relocate the dragged card to row
+      // 0 / col 0 — independent of the model.
+      restoreContentOrder();
+    }
+  }
+
+  /**
+   * Restores child component order of myContent to match {@code myVisibleItems}, then revalidates
+   * and repaints. Required after a no-op drag-drop because {@link #activateDrag} calls {@code
+   * myContent.setComponentZOrder(myDrag.card, 0)} during the drag to bring the dragged card to the
+   * visual front — which also rearranges the children array. The idle layouts (Stacking and
+   * GridStacking) place children by index, so a scrambled order after a no-op drop visually
+   * relocates the dragged card to position 0 even though the model is untouched.
+   */
+  private void restoreContentOrder() {
+    int targetIndex = 0;
+    for (T item : myVisibleItems) {
+      final FlatCard card = myCardByItem.get(item);
+      if (card == null) {
+        continue;
+      }
+      if (card.getParent() == myContent) {
+        myContent.setComponentZOrder(card, targetIndex);
+        targetIndex++;
+      }
     }
     myContent.revalidate();
     myContent.repaint();
@@ -1046,7 +1147,7 @@ public class FlatCardList<T> extends JPanel implements Accessible {
 
     @Override
     public Dimension getMaximumSize() {
-      if (myOrientation == Orientation.VERTICAL) {
+      if (myOrientation == FlatListOrientation.VERTICAL) {
         return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
       }
       return super.getMaximumSize();
@@ -1210,6 +1311,122 @@ public class FlatCardList<T> extends JPanel implements Accessible {
   private void paintDropPlaceholder(final Graphics g) {
     // Both vertical and grid modes now use the StackingLayout / GridStackingLayout to physically
     // slide surrounding cards out of the way; no separate placeholder rectangle is needed.
+  }
+
+  /**
+   * Single-row horizontal layout (story #242 back-port of FlatPillList's HorizontalLayout). Cards
+   * are placed left-to-right at preferred width and a shared row height (max of preferred heights).
+   * Overflow is clipped on the right — wrap the list in a {@link javax.swing.JScrollPane} for
+   * horizontal scrolling. Drag-while-active is not specially supported for this orientation; the
+   * layout falls back to the static positions during a drag, which is acceptable since horizontal
+   * card rows are typically read-only.
+   */
+  private final class HorizontalStackingLayout implements java.awt.LayoutManager {
+    @Override
+    public void addLayoutComponent(final String theName, final Component theComp) {
+      // no-op
+    }
+
+    @Override
+    public void removeLayoutComponent(final Component theComp) {
+      // no-op
+    }
+
+    @Override
+    public Dimension preferredLayoutSize(final Container theParent) {
+      final Insets in = theParent.getInsets();
+      int totalW = in.left + in.right;
+      int rowH = 0;
+      final int count = theParent.getComponentCount();
+      for (int i = 0; i < count; i++) {
+        final Dimension pref = theParent.getComponent(i).getPreferredSize();
+        totalW += pref.width;
+        if (i + 1 < count) {
+          totalW += myItemGap;
+        }
+        rowH = Math.max(rowH, pref.height);
+      }
+      return new Dimension(totalW, rowH + in.top + in.bottom);
+    }
+
+    @Override
+    public Dimension minimumLayoutSize(final Container theParent) {
+      return preferredLayoutSize(theParent);
+    }
+
+    @Override
+    public void layoutContainer(final Container theParent) {
+      final Insets in = theParent.getInsets();
+      int rowH = 0;
+      for (int i = 0; i < theParent.getComponentCount(); i++) {
+        rowH = Math.max(rowH, theParent.getComponent(i).getPreferredSize().height);
+      }
+      int x = in.left;
+      for (int i = 0; i < theParent.getComponentCount(); i++) {
+        final Component c = theParent.getComponent(i);
+        final Dimension pref = c.getPreferredSize();
+        c.setBounds(x, in.top, pref.width, rowH);
+        x += pref.width + myItemGap;
+      }
+    }
+  }
+
+  /**
+   * Multi-row wrapping layout (story #242 back-port of FlatPillList's WrapLayout). Cards flow
+   * left-to-right and wrap to a new row when the container's available width is exhausted. Respects
+   * {@link #myItemGap} for both row and column spacing. As with horizontal, drag is not specially
+   * supported here.
+   */
+  private final class WrapStackingLayout implements java.awt.LayoutManager {
+    @Override
+    public void addLayoutComponent(final String theName, final Component theComp) {
+      // no-op
+    }
+
+    @Override
+    public void removeLayoutComponent(final Component theComp) {
+      // no-op
+    }
+
+    @Override
+    public Dimension preferredLayoutSize(final Container theParent) {
+      return measureOrLayout(theParent, false);
+    }
+
+    @Override
+    public Dimension minimumLayoutSize(final Container theParent) {
+      return preferredLayoutSize(theParent);
+    }
+
+    @Override
+    public void layoutContainer(final Container theParent) {
+      measureOrLayout(theParent, true);
+    }
+
+    private Dimension measureOrLayout(final Container theParent, final boolean theApply) {
+      final Insets in = theParent.getInsets();
+      final int avail = Math.max(in.left, theParent.getWidth() - in.right);
+      int x = in.left;
+      int y = in.top;
+      int rowH = 0;
+      int maxX = in.left;
+      for (int i = 0; i < theParent.getComponentCount(); i++) {
+        final Component c = theParent.getComponent(i);
+        final Dimension pref = c.getPreferredSize();
+        if (x > in.left && x + pref.width > avail) {
+          x = in.left;
+          y += rowH + myItemGap;
+          rowH = 0;
+        }
+        if (theApply) {
+          c.setBounds(x, y, pref.width, pref.height);
+        }
+        x += pref.width + myItemGap;
+        rowH = Math.max(rowH, pref.height);
+        maxX = Math.max(maxX, x - myItemGap);
+      }
+      return new Dimension(maxX + in.right, y + rowH + in.bottom);
+    }
   }
 
   // ------------------------------------------------------------- animation

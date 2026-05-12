@@ -7,6 +7,7 @@ import com.owspfm.ui.components.card.list.CardSelectionMode;
 import com.owspfm.ui.components.card.list.DefaultCardListModel;
 import com.owspfm.ui.components.card.list.FlatCardList;
 import com.owspfm.ui.components.card.list.ReorderHandle;
+import com.owspfm.ui.components.flatlist.FlatListOrientation;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
@@ -54,7 +55,7 @@ import javax.swing.event.DocumentListener;
  * </ul>
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
+ * @version v1.1.0-alpha.3
  * @since v1.1.0-alpha.2
  */
 public final class FlatCardListShowcase extends JPanel {
@@ -68,7 +69,7 @@ public final class FlatCardListShowcase extends JPanel {
   private final JTextArea mySnippet;
   private final Random myRandom = new Random(42);
 
-  private JComboBox<FlatCardList.Orientation> myOrientationBox;
+  private JComboBox<FlatListOrientation> myOrientationBox;
   private JSlider myColumnsSlider;
   private JLabel myColumnsLabel;
   private JSlider myGapSlider;
@@ -272,8 +273,8 @@ public final class FlatCardListShowcase extends JPanel {
 
   // ------------------------------------------------------------- controls
 
-  private JComboBox<FlatCardList.Orientation> buildOrientationBox() {
-    myOrientationBox = new JComboBox<>(FlatCardList.Orientation.values());
+  private JComboBox<FlatListOrientation> buildOrientationBox() {
+    myOrientationBox = new JComboBox<>(FlatListOrientation.values());
     myOrientationBox.addActionListener(e -> syncFromControls());
     return myOrientationBox;
   }
@@ -431,9 +432,9 @@ public final class FlatCardListShowcase extends JPanel {
   // -------------------------------------------------------------- glue
 
   private void syncFromControls() {
-    final FlatCardList.Orientation orientation =
-        (FlatCardList.Orientation) myOrientationBox.getSelectedItem();
-    final boolean grid = orientation == FlatCardList.Orientation.GRID;
+    final FlatListOrientation orientation =
+        (FlatListOrientation) myOrientationBox.getSelectedItem();
+    final boolean grid = orientation == FlatListOrientation.GRID;
     myColumnsSlider.setEnabled(grid);
     myColumnsLabel.setEnabled(grid);
 
@@ -551,9 +552,9 @@ public final class FlatCardListShowcase extends JPanel {
     sb.append("        .setBody(buildBody(item));\n\n");
     sb.append("FlatCardList<DemoItem> list = new FlatCardList<>(model, adapter)\n");
     sb.append("    .setOrientation(Orientation.")
-        .append(((FlatCardList.Orientation) myOrientationBox.getSelectedItem()).name())
+        .append(((FlatListOrientation) myOrientationBox.getSelectedItem()).name())
         .append(")\n");
-    if (myOrientationBox.getSelectedItem() == FlatCardList.Orientation.GRID) {
+    if (myOrientationBox.getSelectedItem() == FlatListOrientation.GRID) {
       sb.append("    .setColumns(").append(myColumnsSlider.getValue()).append(")\n");
     }
     sb.append("    .setItemGap(").append(myGapSlider.getValue()).append(")\n");

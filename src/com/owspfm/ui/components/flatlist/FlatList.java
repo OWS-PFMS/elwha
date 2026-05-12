@@ -1,0 +1,141 @@
+package com.owspfm.ui.components.flatlist;
+
+import java.awt.Insets;
+import java.util.Comparator;
+import java.util.function.Predicate;
+import javax.swing.JComponent;
+
+/**
+ * The shared contract implemented by every {@code FlatList} component family member — {@code
+ * FlatCardList}, {@code FlatPillList}, and any future siblings (e.g. {@code FlatTagList}).
+ *
+ * <p>Extracted in story #237 so consumers can write orientation-agnostic and family-agnostic code:
+ *
+ * <pre>{@code
+ * void configureForCompactMode(FlatList<?> list) {
+ *   list.setOrientation(FlatListOrientation.HORIZONTAL);
+ *   list.setItemGap(4);
+ *   list.setListPadding(new Insets(2, 4, 2, 4));
+ * }
+ * }</pre>
+ *
+ * <p>This interface deliberately stays narrow — it covers only the cross-cutting concerns that
+ * every family member is expected to expose:
+ *
+ * <ul>
+ *   <li>Orientation, item gap, list padding
+ *   <li>Empty / loading-state placeholders
+ *   <li>Filter and sort predicates over the visible items
+ * </ul>
+ *
+ * <p>Selection, drag-to-reorder, and per-family model types stay on the concrete classes since they
+ * have family-specific signatures ({@code FlatPill} vs {@code FlatCard}, {@code PillSelectionMode}
+ * vs {@code CardSelectionMode}, etc.). Those cross the abstraction barrier only via the
+ * per-implementation API.
+ *
+ * <p><strong>Fluent return types</strong>: every mutator returns {@code FlatList<T>} so concrete
+ * implementations can return their own type via covariant override and keep their existing fluent
+ * builder API intact.
+ *
+ * @param <T> the item type
+ * @author Charles Bryan
+ * @version v1.1.0-alpha.3
+ * @since v1.1.0-alpha.3
+ */
+public interface FlatList<T> {
+
+  /**
+   * Returns the active orientation.
+   *
+   * @return the orientation (never null)
+   */
+  FlatListOrientation getOrientation();
+
+  /**
+   * Sets the layout orientation. Implementations not yet supporting a given orientation may either
+   * throw {@link UnsupportedOperationException} or fall back to a supported value with a one-shot
+   * warning — see the concrete class documentation.
+   *
+   * @param theOrientation the new orientation
+   * @return this list (for fluent chaining)
+   */
+  FlatList<T> setOrientation(FlatListOrientation theOrientation);
+
+  /**
+   * Returns the gap between rendered items.
+   *
+   * @return the gap in pixels
+   */
+  int getItemGap();
+
+  /**
+   * Sets the gap between rendered items.
+   *
+   * @param theGap pixels, clamped to {@code >= 0}
+   * @return this list (for fluent chaining)
+   */
+  FlatList<T> setItemGap(int theGap);
+
+  /**
+   * Sets the padding around the rendered list.
+   *
+   * @param theInsets the insets; null treated as zero
+   * @return this list (for fluent chaining)
+   */
+  FlatList<T> setListPadding(Insets theInsets);
+
+  /**
+   * Sets the column count for {@link FlatListOrientation#GRID}. No effect on other orientations.
+   *
+   * @param theColumns column count, clamped to {@code >= 1}
+   * @return this list (for fluent chaining)
+   */
+  FlatList<T> setColumns(int theColumns);
+
+  /**
+   * Returns the column count for grid mode.
+   *
+   * @return the column count
+   */
+  int getColumns();
+
+  /**
+   * Replaces the empty-state placeholder. Pass {@code null} to restore the built-in default.
+   *
+   * @param theComponent the placeholder
+   * @return this list (for fluent chaining)
+   */
+  FlatList<T> setEmptyState(JComponent theComponent);
+
+  /**
+   * Sets the loading flag. While true, the list renders the loading component instead of items.
+   *
+   * @param theLoading whether to show the loading state
+   * @return this list (for fluent chaining)
+   */
+  FlatList<T> setLoading(boolean theLoading);
+
+  /**
+   * Replaces the loading-state component. Pass {@code null} to restore the built-in default.
+   *
+   * @param theComponent the loading component
+   * @return this list (for fluent chaining)
+   */
+  FlatList<T> setLoadingComponent(JComponent theComponent);
+
+  /**
+   * Sets a filter predicate that hides items rejected by it. Pass null to clear.
+   *
+   * @param theFilter the predicate; null clears filtering
+   * @return this list (for fluent chaining)
+   */
+  FlatList<T> setFilter(Predicate<T> theFilter);
+
+  /**
+   * Sets a sort comparator that orders rendered items. Pass null to clear.
+   *
+   * @param theComparator the comparator; null clears sorting
+   * @return this list (for fluent chaining)
+   */
+  FlatList<T> setSortOrder(Comparator<T> theComparator);
+}
