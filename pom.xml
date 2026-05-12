@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.owspfm</groupId>
+  <artifactId>flatcomp</artifactId>
+  <version>0.1.0</version>
+  <packaging>jar</packaging>
+
+  <name>FlatComp</name>
+  <description>A Swing component library built on FlatLaf — FlatCard, FlatPill, and related primitives.</description>
+  <url>https://github.com/OWS-PFMS/flatcomp</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>cfb3</id>
+      <name>Charles Bryan</name>
+      <email>cfb3@uw.edu</email>
+      <organization>Open Water Systems</organization>
+      <organizationUrl>https://openwatersystems.com</organizationUrl>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com/OWS-PFMS/flatcomp.git</connection>
+    <developerConnection>scm:git:ssh://github.com:OWS-PFMS/flatcomp.git</developerConnection>
+    <url>https://github.com/OWS-PFMS/flatcomp/tree/main</url>
+  </scm>
+
+  <properties>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <flatlaf.version>3.2.5</flatlaf.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf</artifactId>
+      <version>${flatlaf.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf-extras</artifactId>
+      <version>${flatlaf.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf-intellij-themes</artifactId>
+      <version>${flatlaf.version}</version>
+    </dependency>
+  </dependencies>
+
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub OWS-PFMS Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/OWS-PFMS/flatcomp</url>
+    </repository>
+  </distributionManagement>
+
+  <build>
+    <sourceDirectory>src</sourceDirectory>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <release>21</release>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.3.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals><goal>jar-no-fork</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.10.1</version>
+        <configuration>
+          <doclint>none</doclint>
+          <failOnError>false</failOnError>
+        </configuration>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals><goal>jar</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

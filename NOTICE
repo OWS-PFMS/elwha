@@ -1,0 +1,16 @@
+FlatComp
+Copyright 2026 Open Water Systems (Charles Bryan)
+
+This product includes software developed at Open Water Systems
+(https://openwatersystems.com).
+
+Originally extracted from the OWS-Local-Search-GUI project
+(https://github.com/OWS-PFMS/OWS-Local-Search-GUI), 2026-05-12.
+
+This product includes Material Symbols icon SVG assets from Google,
+licensed under the Apache License 2.0
+(https://github.com/google/material-design-icons).
+
+This product includes the Capitaine cursor theme PNG assets,
+licensed under CC BY-SA 4.0
+(see src/main/resources/com/owspfm/ui/components/card/list/cursors/LICENSE-capitaine.txt).
