@@ -63,6 +63,19 @@ def update_file(file_path: Path, version: str) -> None:
 
         # Detect JavaDoc block start
         if re.match(r'^\s*/\*\*', line):
+            # Single-line javadoc /** ... */ — preserve as-is. These are
+            # field/method/enum-constant docs; injecting class-level tags
+            # would corrupt the file. If the line happens to carry
+            # @version/@since (rare), rewrite them in place.
+            if '*/' in line:
+                if '@version' in line:
+                    line = re.sub(r'(@version\s+)\S+', rf'\g<1>{version}', line)
+                if '@since' in line:
+                    line = re.sub(r'(@since\s+)\S+', rf'\g<1>{version}', line)
+                result.append(line)
+                i += 1
+                continue
+
             javadoc_lines = [line]
             i += 1
             has_version = False
