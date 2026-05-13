@@ -20,8 +20,8 @@ public class CardSelectionEvent<T> extends EventObject {
    *
    * @param theSource the originating selection model
    * @param theSelected the new selected items (defensive copy expected from caller)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public CardSelectionEvent(final Object theSource, final List<T> theSelected) {
     super(theSource);
@@ -32,8 +32,8 @@ public class CardSelectionEvent<T> extends EventObject {
    * Returns the selected items in the order they appear in the underlying model.
    *
    * @return immutable view of the new selection
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public List<T> getSelected() {
     return mySelected;

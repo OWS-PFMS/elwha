@@ -48,8 +48,8 @@ public interface FlatList<T> {
    * Returns the active orientation.
    *
    * @return the orientation (never null)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatListOrientation getOrientation();
 
@@ -60,8 +60,8 @@ public interface FlatList<T> {
    *
    * @param theOrientation the new orientation
    * @return this list (for fluent chaining)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatList<T> setOrientation(FlatListOrientation theOrientation);
 
@@ -69,8 +69,8 @@ public interface FlatList<T> {
    * Returns the gap between rendered items.
    *
    * @return the gap in pixels
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   int getItemGap();
 
@@ -79,8 +79,8 @@ public interface FlatList<T> {
    *
    * @param theGap pixels, clamped to {@code >= 0}
    * @return this list (for fluent chaining)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatList<T> setItemGap(int theGap);
 
@@ -89,8 +89,8 @@ public interface FlatList<T> {
    *
    * @param theInsets the insets; null treated as zero
    * @return this list (for fluent chaining)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatList<T> setListPadding(Insets theInsets);
 
@@ -99,8 +99,8 @@ public interface FlatList<T> {
    *
    * @param theColumns column count, clamped to {@code >= 1}
    * @return this list (for fluent chaining)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatList<T> setColumns(int theColumns);
 
@@ -108,8 +108,8 @@ public interface FlatList<T> {
    * Returns the column count for grid mode.
    *
    * @return the column count
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   int getColumns();
 
@@ -118,8 +118,8 @@ public interface FlatList<T> {
    *
    * @param theComponent the placeholder
    * @return this list (for fluent chaining)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatList<T> setEmptyState(JComponent theComponent);
 
@@ -128,8 +128,8 @@ public interface FlatList<T> {
    *
    * @param theLoading whether to show the loading state
    * @return this list (for fluent chaining)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatList<T> setLoading(boolean theLoading);
 
@@ -138,8 +138,8 @@ public interface FlatList<T> {
    *
    * @param theComponent the loading component
    * @return this list (for fluent chaining)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatList<T> setLoadingComponent(JComponent theComponent);
 
@@ -148,8 +148,8 @@ public interface FlatList<T> {
    *
    * @param theFilter the predicate; null clears filtering
    * @return this list (for fluent chaining)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatList<T> setFilter(Predicate<T> theFilter);
 
@@ -158,8 +158,8 @@ public interface FlatList<T> {
    *
    * @param theComparator the comparator; null clears sorting
    * @return this list (for fluent chaining)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatList<T> setSortOrder(Comparator<T> theComparator);
 }

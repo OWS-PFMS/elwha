@@ -34,8 +34,9 @@ public final class MaterialIcons {
    * Label.foreground}. Material Symbols are monochrome, so a blanket remap is safe and avoids the
    * per-color "map black to foreground" enumeration. The function runs at paint time, so a runtime
    * LAF switch (light ↔ dark) re-themes the icons on the next repaint with no re-allocation.
-    * @version v0.1.0
-    * @since v0.1.0
+   *
+   * @version v0.1.0
+   * @since v0.1.0
    */
   private static final FlatSVGIcon.ColorFilter THEME_FILTER =
       new FlatSVGIcon.ColorFilter(
@@ -139,8 +140,8 @@ public final class MaterialIcons {
    *
    * @param theName the bare icon name (no path, no extension), e.g. {@code "push_pin"}
    * @return a fresh icon sized to {@link #DEFAULT_SIZE}
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public static FlatSVGIcon get(final String theName) {
     return load(theName);

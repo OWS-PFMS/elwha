@@ -34,8 +34,8 @@ public interface CardAdapter<T> {
    * @param theItem the domain item
    * @param theIndex the visible index of the item in the list
    * @return a non-null {@link FlatCard}
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatCard cardFor(T theItem, int theIndex);
 }
