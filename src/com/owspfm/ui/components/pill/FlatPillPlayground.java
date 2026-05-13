@@ -87,16 +87,16 @@ public final class FlatPillPlayground {
     "Throughput"
   };
 
-  private final JFrame myFrame = new JFrame("FlatPill playground");
-  private final DefaultPillListModel<String> myModel = new DefaultPillListModel<>();
-  private final java.util.Set<String> myPinned = new java.util.HashSet<>();
-  private String myAnchor;
-  private FlatPillList<String> myList;
-  private JScrollPane myListScroll;
+  private final JFrame frame = new JFrame("FlatPill playground");
+  private final DefaultPillListModel<String> model = new DefaultPillListModel<>();
+  private final java.util.Set<String> pinned = new java.util.HashSet<>();
+  private String anchor;
+  private FlatPillList<String> list;
+  private JScrollPane listScroll;
 
   private FlatPillPlayground() {
     for (String s : SAMPLE_ITEMS) {
-      myModel.add(s);
+      model.add(s);
     }
   }
 
@@ -116,8 +116,8 @@ public final class FlatPillPlayground {
   }
 
   private void launch() {
-    myFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-    myFrame.setLayout(new BorderLayout());
+    frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+    frame.setLayout(new BorderLayout());
 
     final JTabbedPane tabs = new JTabbedPane();
     tabs.addTab("Variant gallery", buildVariantGallery());
@@ -127,12 +127,12 @@ public final class FlatPillPlayground {
         new JSplitPane(JSplitPane.VERTICAL_SPLIT, tabs, buildLafPanelWrapper());
     split.setResizeWeight(0.65);
     split.setBorder(BorderFactory.createEmptyBorder());
-    myFrame.add(split, BorderLayout.CENTER);
-    myFrame.add(buildThemeToggleBar(), BorderLayout.NORTH);
+    frame.add(split, BorderLayout.CENTER);
+    frame.add(buildThemeToggleBar(), BorderLayout.NORTH);
 
-    myFrame.setSize(1100, 820);
-    myFrame.setLocationRelativeTo(null);
-    myFrame.setVisible(true);
+    frame.setSize(1100, 820);
+    frame.setLocationRelativeTo(null);
+    frame.setVisible(true);
   }
 
   // ----------------------------------------------------------- variant gallery
@@ -198,26 +198,26 @@ public final class FlatPillPlayground {
     return wrap;
   }
 
-  private JLabel headerLabel(final String theText) {
-    final JLabel l = new JLabel(theText);
+  private JLabel headerLabel(final String text) {
+    final JLabel l = new JLabel(text);
     l.putClientProperty("FlatLaf.styleClass", "small");
     l.setForeground(UIManager.getColor("Label.disabledForeground"));
     return l;
   }
 
-  private Component buildSamplePill(final PillVariant theVariant, final String theState) {
-    final FlatPill pill = new FlatPill(theVariant.name().toLowerCase().replace('_', ' '));
-    pill.setVariant(theVariant);
+  private Component buildSamplePill(final PillVariant variant, final String state) {
+    final FlatPill pill = new FlatPill(variant.name().toLowerCase().replace('_', ' '));
+    pill.setVariant(variant);
 
-    final boolean disabled = "disabled".equals(theState);
-    final boolean selected = "selected".equals(theState);
+    final boolean disabled = "disabled".equals(state);
+    final boolean selected = "selected".equals(state);
     pill.setInteractionMode(disabled ? PillInteractionMode.STATIC : PillInteractionMode.SELECTABLE);
     pill.setEnabled(!disabled);
     pill.setSelected(selected);
 
-    switch (theState) {
-      case "hover" -> pill.setSurfaceColor(approxStateColor(theVariant, 0.18f));
-      case "pressed" -> pill.setSurfaceColor(approxStateColor(theVariant, 0.28f));
+    switch (state) {
+      case "hover" -> pill.setSurfaceColor(approxStateColor(variant, 0.18f));
+      case "pressed" -> pill.setSurfaceColor(approxStateColor(variant, 0.28f));
       case "focused" -> pill.setBorderWidth(2);
       default -> {
         // default / disabled / selected — leave as-is
@@ -226,7 +226,7 @@ public final class FlatPillPlayground {
     return pill;
   }
 
-  private Color approxStateColor(final PillVariant theVariant, final float theAmount) {
+  private Color approxStateColor(final PillVariant variant, final float amount) {
     Color base = UIManager.getColor("Panel.background");
     if (base == null) {
       base = new Color(245, 245, 245);
@@ -235,20 +235,20 @@ public final class FlatPillPlayground {
     if (tint == null) {
       tint = Color.DARK_GRAY;
     }
-    if (theVariant == PillVariant.WARM_ACCENT) {
+    if (variant == PillVariant.WARM_ACCENT) {
       base = new Color(248, 226, 165);
     }
-    final int r = (int) (base.getRed() * (1 - theAmount) + tint.getRed() * theAmount);
-    final int g = (int) (base.getGreen() * (1 - theAmount) + tint.getGreen() * theAmount);
-    final int b = (int) (base.getBlue() * (1 - theAmount) + tint.getBlue() * theAmount);
+    final int r = (int) (base.getRed() * (1 - amount) + tint.getRed() * amount);
+    final int g = (int) (base.getGreen() * (1 - amount) + tint.getGreen() * amount);
+    final int b = (int) (base.getBlue() * (1 - amount) + tint.getBlue() * amount);
     return new Color(r, g, b);
   }
 
   // ---------------------------------------------------------------- live list
 
   private JPanel buildLiveListPane() {
-    myList =
-        new FlatPillList<>(myModel, (item, idx) -> buildLivePill(item))
+    list =
+        new FlatPillList<>(model, (item, idx) -> buildLivePill(item))
             .setSelectionMode(PillSelectionMode.MULTIPLE)
             .setItemGap(6)
             .setListPadding(new Insets(8, 8, 8, 8));
@@ -256,13 +256,13 @@ public final class FlatPillPlayground {
     // Mode selector to Static, Movable, or Anchored. Default both affordances to BUTTON so
     // the clickable-icon flow is what visitors see first; flip to INDICATOR or NONE via the
     // Pin/Anchor combos in the control bar.
-    myList.setMovementMode(FlatPillList.MovementMode.PINNED);
-    myList.setPinAffordance(FlatPillList.IconAffordance.BUTTON);
-    myList.setAnchorAffordance(FlatPillList.IconAffordance.BUTTON);
+    list.setMovementMode(FlatPillList.MovementMode.PINNED);
+    list.setPinAffordance(FlatPillList.IconAffordance.BUTTON);
+    list.setAnchorAffordance(FlatPillList.IconAffordance.BUTTON);
     armBindingsForMode(FlatPillList.MovementMode.PINNED);
 
-    myListScroll = new JScrollPane(myList);
-    myListScroll.setBorder(
+    listScroll = new JScrollPane(list);
+    listScroll.setBorder(
         BorderFactory.createLineBorder(UIManager.getColor("Component.borderColor")));
 
     final JPanel controls = buildLiveListControls();
@@ -270,7 +270,7 @@ public final class FlatPillPlayground {
     final JPanel wrap = new JPanel(new BorderLayout(0, 8));
     wrap.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
     wrap.add(controls, BorderLayout.NORTH);
-    wrap.add(myListScroll, BorderLayout.CENTER);
+    wrap.add(listScroll, BorderLayout.CENTER);
     wrap.add(buildLiveListFooter(), BorderLayout.SOUTH);
     return wrap;
   }
@@ -284,77 +284,76 @@ public final class FlatPillPlayground {
    * @version v0.1.0
    * @since v0.1.0
    */
-  private void armBindingsForMode(final FlatPillList.MovementMode theMode) {
-    if (theMode == FlatPillList.MovementMode.PINNED) {
-      myList.setPinPredicate(myPinned::contains);
-      myList.setPinAction(
+  private void armBindingsForMode(final FlatPillList.MovementMode mode) {
+    if (mode == FlatPillList.MovementMode.PINNED) {
+      list.setPinPredicate(pinned::contains);
+      list.setPinAction(
           (item, pinNow) -> {
             if (pinNow) {
-              myPinned.add(item);
+              pinned.add(item);
             } else {
-              myPinned.remove(item);
+              pinned.remove(item);
             }
-            myList.pinStateChanged();
+            list.pinStateChanged();
           });
-    } else if (theMode == FlatPillList.MovementMode.ANCHORED) {
-      myList.setAnchorPredicate(item -> item != null && item.equals(myAnchor));
-      myList.setAnchorAction(
+    } else if (mode == FlatPillList.MovementMode.ANCHORED) {
+      list.setAnchorPredicate(item -> item != null && item.equals(anchor));
+      list.setAnchorAction(
           item -> {
-            myAnchor = item;
-            myList.anchorStateChanged();
+            anchor = item;
+            list.anchorStateChanged();
           });
     }
   }
 
-  private FlatPill buildLivePill(final String theItem) {
+  private FlatPill buildLivePill(final String item) {
     final FlatPill pill =
-        new FlatPill(theItem)
+        new FlatPill(item)
             .setVariant(PillVariant.FILLED)
             .setInteractionMode(PillInteractionMode.CLICKABLE);
     // Trailing trashcan that removes the pill from the model. Uses Material Symbols' "delete"
     // glyph via FlatSVGIcon — auto-themed against the active LAF. App-level override via
-    // UIManager.put("FlatPill.removeIcon", myIcon) is still honored.
+    // UIManager.put("FlatPill.removeIcon", icon) is still honored.
     final javax.swing.Icon trashIcon =
         UIManager.get("FlatPill.removeIcon") instanceof javax.swing.Icon override
             ? override
             : MaterialIcons.delete();
-    pill.setTrailingIcon(trashIcon, "Remove " + theItem, () -> myModel.remove(theItem));
+    pill.setTrailingIcon(trashIcon, "Remove " + item, () -> model.remove(item));
     // Right-click → mode-appropriate toggle (pin/unpin or set/remove anchor) / details / rename
     // / remove. The mode-specific item is composed at popup time so flipping modes via the
     // selector above reflects in the next right-click without re-attaching listeners.
     pill.attachContextMenu(
         () -> {
           final JPopupMenu p = new JPopupMenu();
-          final FlatPillList.MovementMode m = myList.getMovementMode();
+          final FlatPillList.MovementMode m = list.getMovementMode();
           if (m == FlatPillList.MovementMode.PINNED) {
-            p.add(myList.createPinMenuItem(theItem));
+            p.add(list.createPinMenuItem(item));
             p.addSeparator();
           } else if (m == FlatPillList.MovementMode.ANCHORED) {
-            p.add(myList.createAnchorMenuItem(theItem));
+            p.add(list.createAnchorMenuItem(item));
             p.addSeparator();
           }
           final JMenuItem details = new JMenuItem("Show details");
           details.addActionListener(
               e ->
                   JOptionPane.showMessageDialog(
-                      myFrame, "Details for: " + theItem, "Pill", JOptionPane.INFORMATION_MESSAGE));
+                      frame, "Details for: " + item, "Pill", JOptionPane.INFORMATION_MESSAGE));
           p.add(details);
           final JMenuItem rename = new JMenuItem("Rename…");
           rename.addActionListener(
               e -> {
-                final String newName =
-                    JOptionPane.showInputDialog(myFrame, "Rename pill:", theItem);
+                final String newName = JOptionPane.showInputDialog(frame, "Rename pill:", item);
                 if (newName != null && !newName.isEmpty()) {
-                  final int idx = myModel.indexOf(theItem);
+                  final int idx = model.indexOf(item);
                   if (idx >= 0) {
-                    myModel.set(idx, newName);
+                    model.set(idx, newName);
                   }
                 }
               });
           p.add(rename);
           p.addSeparator();
           final JMenuItem remove = new JMenuItem("Remove");
-          remove.addActionListener(e -> myModel.remove(theItem));
+          remove.addActionListener(e -> model.remove(item));
           p.add(remove);
           return p;
         });
@@ -369,17 +368,17 @@ public final class FlatPillPlayground {
     final JComboBox<FlatListOrientation> orient = new JComboBox<>(FlatListOrientation.values());
     orient.setSelectedItem(FlatListOrientation.VERTICAL);
     orient.addActionListener(
-        e -> myList.setOrientation((FlatListOrientation) orient.getSelectedItem()));
+        e -> list.setOrientation((FlatListOrientation) orient.getSelectedItem()));
     p.add(orient);
 
     p.add(new JLabel("Mode:"));
     final JComboBox<FlatPillList.MovementMode> mode =
         new JComboBox<>(FlatPillList.MovementMode.values());
-    mode.setSelectedItem(myList.getMovementMode());
+    mode.setSelectedItem(list.getMovementMode());
     mode.addActionListener(
         e -> {
           final FlatPillList.MovementMode next = (FlatPillList.MovementMode) mode.getSelectedItem();
-          myList.setMovementMode(next);
+          list.setMovementMode(next);
           // PINNED↔ANCHORED mutex wiped the inactive side's predicate/action — re-arm whichever
           // side the new mode needs.
           armBindingsForMode(next);
@@ -388,35 +387,35 @@ public final class FlatPillPlayground {
 
     p.add(new JLabel("Columns (grid):"));
     final JSpinner cols = new JSpinner(new SpinnerNumberModel(4, 1, 10, 1));
-    cols.addChangeListener(e -> myList.setColumns((Integer) cols.getValue()));
+    cols.addChangeListener(e -> list.setColumns((Integer) cols.getValue()));
     p.add(cols);
 
     p.add(new JLabel("Gap:"));
     final JSlider gap = new JSlider(0, 30, 6);
     gap.setPreferredSize(new Dimension(120, gap.getPreferredSize().height));
-    gap.addChangeListener(e -> myList.setItemGap(gap.getValue()));
+    gap.addChangeListener(e -> list.setItemGap(gap.getValue()));
     p.add(gap);
 
     p.add(new JLabel("Pin:"));
     final JComboBox<FlatPillList.IconAffordance> pinAff =
         new JComboBox<>(FlatPillList.IconAffordance.values());
-    pinAff.setSelectedItem(myList.getPinAffordance());
+    pinAff.setSelectedItem(list.getPinAffordance());
     pinAff.addActionListener(
-        e -> myList.setPinAffordance((FlatPillList.IconAffordance) pinAff.getSelectedItem()));
+        e -> list.setPinAffordance((FlatPillList.IconAffordance) pinAff.getSelectedItem()));
     p.add(pinAff);
 
     p.add(new JLabel("Anchor:"));
     final JComboBox<FlatPillList.IconAffordance> anchorAff =
         new JComboBox<>(FlatPillList.IconAffordance.values());
-    anchorAff.setSelectedItem(myList.getAnchorAffordance());
+    anchorAff.setSelectedItem(list.getAnchorAffordance());
     anchorAff.addActionListener(
-        e -> myList.setAnchorAffordance((FlatPillList.IconAffordance) anchorAff.getSelectedItem()));
+        e -> list.setAnchorAffordance((FlatPillList.IconAffordance) anchorAff.getSelectedItem()));
     p.add(anchorAff);
 
     p.add(new JLabel("Select:"));
     final JComboBox<PillSelectionMode> sel = new JComboBox<>(PillSelectionMode.values());
-    sel.setSelectedItem(myList.getSelectionMode());
-    sel.addActionListener(e -> myList.setSelectionMode((PillSelectionMode) sel.getSelectedItem()));
+    sel.setSelectedItem(list.getSelectionMode());
+    sel.addActionListener(e -> list.setSelectionMode((PillSelectionMode) sel.getSelectedItem()));
     p.add(sel);
 
     return p;
@@ -427,11 +426,11 @@ public final class FlatPillPlayground {
     final JButton addBtn =
         new JButton(
             new AbstractAction("Add pill") {
-              private int myCounter;
+              private int counter;
 
               @Override
               public void actionPerformed(final ActionEvent e) {
-                myModel.add("New " + (++myCounter));
+                model.add("New " + (++counter));
               }
             });
     p.add(addBtn);
@@ -441,7 +440,7 @@ public final class FlatPillPlayground {
             new AbstractAction("Clear all") {
               @Override
               public void actionPerformed(final ActionEvent e) {
-                myModel.clear();
+                model.clear();
               }
             });
     p.add(clearBtn);
@@ -451,9 +450,9 @@ public final class FlatPillPlayground {
             new AbstractAction("Reset items") {
               @Override
               public void actionPerformed(final ActionEvent e) {
-                myModel.clear();
+                model.clear();
                 for (String s : SAMPLE_ITEMS) {
-                  myModel.add(s);
+                  model.add(s);
                 }
               }
             });
@@ -512,11 +511,11 @@ public final class FlatPillPlayground {
     return wrap;
   }
 
-  private void addLafRow(final JPanel theGrid, final String theLabel, final JComponent theControl) {
-    final JLabel l = new JLabel(theLabel);
+  private void addLafRow(final JPanel grid, final String label, final JComponent control) {
+    final JLabel l = new JLabel(label);
     l.putClientProperty("FlatLaf.styleClass", "small");
-    theGrid.add(l);
-    theGrid.add(theControl);
+    grid.add(l);
+    grid.add(control);
   }
 
   private JSlider buildArcSlider() {
@@ -533,8 +532,8 @@ public final class FlatPillPlayground {
     return s;
   }
 
-  private JSlider buildPaddingSlider(final boolean theHorizontal) {
-    final JSlider s = new JSlider(0, 30, theHorizontal ? 10 : 4);
+  private JSlider buildPaddingSlider(final boolean horizontal) {
+    final JSlider s = new JSlider(0, 30, horizontal ? 10 : 4);
     s.addChangeListener(
         e -> {
           final int v = s.getValue();
@@ -543,7 +542,7 @@ public final class FlatPillPlayground {
                   ? in
                   : new Insets(4, 10, 4, 10);
           final Insets next =
-              theHorizontal
+              horizontal
                   ? new Insets(cur.top, v, cur.bottom, v)
                   : new Insets(v, cur.left, v, cur.right);
           UIManager.put(FlatPill.K_PADDING, next);
@@ -552,39 +551,39 @@ public final class FlatPillPlayground {
           // updateUI cascade, which causes FlatPill.updateUI() to call rebuildBorder() and
           // read the fresh UIManager value. Standard Swing convention for live UIManager
           // tweaks; the same dance is what FlatLaf does for global theme switches.
-          SwingUtilities.updateComponentTreeUI(myList);
+          SwingUtilities.updateComponentTreeUI(list);
         });
     return s;
   }
 
-  private JButton buildColorPicker(final String theKey) {
+  private JButton buildColorPicker(final String key) {
     final JButton btn = new JButton();
     btn.setPreferredSize(new Dimension(80, 22));
-    refreshSwatch(btn, theKey);
+    refreshSwatch(btn, key);
     btn.addActionListener(
         e -> {
-          final Color current = UIManager.getColor(theKey);
+          final Color current = UIManager.getColor(key);
           final Color chosen =
-              JColorChooser.showDialog(myFrame, theKey, current == null ? Color.WHITE : current);
+              JColorChooser.showDialog(frame, key, current == null ? Color.WHITE : current);
           if (chosen != null) {
-            UIManager.put(theKey, chosen);
-            refreshSwatch(btn, theKey);
+            UIManager.put(key, chosen);
+            refreshSwatch(btn, key);
             repaintLive();
           }
         });
     return btn;
   }
 
-  private void refreshSwatch(final JButton theButton, final String theKey) {
-    final Color c = UIManager.getColor(theKey);
+  private void refreshSwatch(final JButton button, final String key) {
+    final Color c = UIManager.getColor(key);
     if (c != null) {
-      theButton.setBackground(c);
-      theButton.setText(toHex(c));
-      theButton.setForeground(isLight(c) ? Color.BLACK : Color.WHITE);
+      button.setBackground(c);
+      button.setText(toHex(c));
+      button.setForeground(isLight(c) ? Color.BLACK : Color.WHITE);
     } else {
-      theButton.setBackground(null);
-      theButton.setText("(theme default)");
-      theButton.setForeground(UIManager.getColor("Label.disabledForeground"));
+      button.setBackground(null);
+      button.setText("(theme default)");
+      button.setForeground(UIManager.getColor("Label.disabledForeground"));
     }
   }
 
@@ -615,12 +614,12 @@ public final class FlatPillPlayground {
       UIManager.put(k, null);
     }
     repaintLive();
-    SwingUtilities.updateComponentTreeUI(myFrame);
+    SwingUtilities.updateComponentTreeUI(frame);
   }
 
   private void repaintLive() {
-    if (myList != null) {
-      myList.repaint();
+    if (list != null) {
+      list.repaint();
     }
   }
 
@@ -642,14 +641,14 @@ public final class FlatPillPlayground {
     return bar;
   }
 
-  private void applyTheme(final boolean theLight) {
+  private void applyTheme(final boolean light) {
     try {
-      if (theLight) {
+      if (light) {
         FlatLightLaf.setup();
       } else {
         FlatDarkLaf.setup();
       }
-      SwingUtilities.updateComponentTreeUI(myFrame);
+      SwingUtilities.updateComponentTreeUI(frame);
     } catch (Exception ignored) {
       // theme switch failures don't merit a popup in a demo
     }

@@ -95,19 +95,19 @@ public final class FlatPillDemo {
     frame.setVisible(true);
   }
 
-  private static JLabel headerLabel(final String theText) {
-    final JLabel l = new JLabel(theText);
+  private static JLabel headerLabel(final String text) {
+    final JLabel l = new JLabel(text);
     l.putClientProperty("FlatLaf.styleClass", "small");
     l.setForeground(UIManager.getColor("Label.disabledForeground"));
     return l;
   }
 
-  private static Component buildSample(final PillVariant theVariant, final String theState) {
-    final FlatPill pill = new FlatPill(theVariant.name().toLowerCase().replace('_', ' '));
-    pill.setVariant(theVariant);
+  private static Component buildSample(final PillVariant variant, final String state) {
+    final FlatPill pill = new FlatPill(variant.name().toLowerCase().replace('_', ' '));
+    pill.setVariant(variant);
 
-    final boolean disabled = "disabled".equals(theState);
-    final boolean selected = "selected".equals(theState);
+    final boolean disabled = "disabled".equals(state);
+    final boolean selected = "selected".equals(state);
     final boolean clickable = !disabled;
 
     pill.setInteractionMode(
@@ -117,9 +117,9 @@ public final class FlatPillDemo {
 
     // Static states (hover / pressed / focused) are simulated for the matrix view by overriding
     // the surface color directly — the matrix is a visual reference, not a live interaction.
-    switch (theState) {
-      case "hover" -> pill.setSurfaceColor(blendForState(theVariant, 0.18f));
-      case "pressed" -> pill.setSurfaceColor(blendForState(theVariant, 0.28f));
+    switch (state) {
+      case "hover" -> pill.setSurfaceColor(blendForState(variant, 0.18f));
+      case "pressed" -> pill.setSurfaceColor(blendForState(variant, 0.28f));
       case "focused" -> {
         // We can't synthetically focus without owning the window — outline approximates it.
         pill.setBorderWidth(2);
@@ -131,7 +131,7 @@ public final class FlatPillDemo {
     return pill;
   }
 
-  private static Color blendForState(final PillVariant theVariant, final float theAmount) {
+  private static Color blendForState(final PillVariant variant, final float amount) {
     Color base = UIManager.getColor("Panel.background");
     if (base == null) {
       base = new Color(245, 245, 245);
@@ -140,12 +140,12 @@ public final class FlatPillDemo {
     if (tint == null) {
       tint = Color.DARK_GRAY;
     }
-    if (theVariant == PillVariant.WARM_ACCENT) {
+    if (variant == PillVariant.WARM_ACCENT) {
       base = new Color(248, 226, 165);
     }
-    final int r = (int) (base.getRed() * (1 - theAmount) + tint.getRed() * theAmount);
-    final int g = (int) (base.getGreen() * (1 - theAmount) + tint.getGreen() * theAmount);
-    final int b = (int) (base.getBlue() * (1 - theAmount) + tint.getBlue() * theAmount);
+    final int r = (int) (base.getRed() * (1 - amount) + tint.getRed() * amount);
+    final int g = (int) (base.getGreen() * (1 - amount) + tint.getGreen() * amount);
+    final int b = (int) (base.getBlue() * (1 - amount) + tint.getBlue() * amount);
     return new Color(r, g, b);
   }
 

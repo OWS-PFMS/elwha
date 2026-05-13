@@ -117,9 +117,9 @@ survives a filter change for items that still match.
 ### Empty / loading state
 
 ```java
-list.setEmptyState(myCustomPlaceholder);    // null restores default
+list.setEmptyState(customPlaceholder);    // null restores default
 list.setLoading(true);
-list.setLoadingComponent(mySpinner);        // optional
+list.setLoadingComponent(spinner);        // optional
 ```
 
 ### Animations

@@ -37,26 +37,26 @@ public class PillListDataEvent extends EventObject {
     MOVED
   }
 
-  private final Type myType;
-  private final int myIndex0;
-  private final int myIndex1;
+  private final Type type;
+  private final int index0;
+  private final int index1;
 
   /**
    * Constructs a new event.
    *
-   * @param theSource the originating model
-   * @param theType the kind of change
-   * @param theIndex0 the first affected index (or source index for {@link Type#MOVED})
-   * @param theIndex1 the last affected index (or destination index for {@link Type#MOVED})
+   * @param source the originating model
+   * @param type the kind of change
+   * @param index0 the first affected index (or source index for {@link Type#MOVED})
+   * @param index1 the last affected index (or destination index for {@link Type#MOVED})
    * @version v0.1.0
    * @since v0.1.0
    */
   public PillListDataEvent(
-      final Object theSource, final Type theType, final int theIndex0, final int theIndex1) {
-    super(theSource);
-    myType = theType;
-    myIndex0 = theIndex0;
-    myIndex1 = theIndex1;
+      final Object source, final Type type, final int index0, final int index1) {
+    super(source);
+    this.type = type;
+    this.index0 = index0;
+    this.index1 = index1;
   }
 
   /**
@@ -67,7 +67,7 @@ public class PillListDataEvent extends EventObject {
    * @since v0.1.0
    */
   public Type getType() {
-    return myType;
+    return type;
   }
 
   /**
@@ -78,7 +78,7 @@ public class PillListDataEvent extends EventObject {
    * @since v0.1.0
    */
   public int getIndex0() {
-    return myIndex0;
+    return index0;
   }
 
   /**
@@ -89,6 +89,6 @@ public class PillListDataEvent extends EventObject {
    * @since v0.1.0
    */
   public int getIndex1() {
-    return myIndex1;
+    return index1;
   }
 }

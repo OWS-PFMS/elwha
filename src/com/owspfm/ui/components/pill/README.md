@@ -57,11 +57,11 @@ A single-row capsule containing optional leading icon, text, and optional Action
 ### Context menus
 
 ```java
-pill.attachContextMenu(myJPopupMenu);
+pill.attachContextMenu(jPopupMenu);
 // or
 pill.attachContextMenu(() -> buildPopupForCurrentState());
 // or full control:
-pill.setContextMenuCallback(evt -> myPopup.show(evt.getComponent(), evt.getX(), evt.getY()));
+pill.setContextMenuCallback(evt -> popup.show(evt.getComponent(), evt.getX(), evt.getY()));
 ```
 
 Right-click is detected on both `mousePressed` (Mac) and `mouseReleased` (Windows). `VK_CONTEXT_MENU` and `Shift+F10` keyboard accelerators invoke the same callback.
@@ -69,7 +69,7 @@ Right-click is detected on both `mousePressed` (Mac) and `mouseReleased` (Window
 ### Trailing icon-button
 
 ```java
-pill.setTrailingAction(myAction);                            // Action-bound (uses SMALL_ICON or NAME)
+pill.setTrailingAction(action);                            // Action-bound (uses SMALL_ICON or NAME)
 pill.setTrailingIcon(closeIcon, "Remove", () -> remove(it)); // convenience for icon + tooltip + click
 ```
 
@@ -103,7 +103,7 @@ Every visual property is resolved through three layers, last-wins:
    pill.setCornerRadius(8)
        .setPadding(new Insets(2, 6, 2, 6))
        .setBorderColor(Color.RED)
-       .setSurfaceColor(myCustomFill);
+       .setSurfaceColor(customFill);
    ```
    Or use the `"FlatPill.style"` client property for a FlatLaf-style key=value string.
 
@@ -144,8 +144,8 @@ list.setSortOrder(Comparator.comparing(Factor::name));
 ### Empty / loading state
 
 ```java
-list.setEmptyState(myEmptyComponent);
-list.setLoadingComponent(mySpinner);
+list.setEmptyState(emptyComponent);
+list.setLoadingComponent(spinner);
 list.setLoading(true);
 ```
 

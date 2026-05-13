@@ -111,23 +111,23 @@ public final class Cursors {
    * @since v0.1.0
    */
   private static Cursor loadCursor(
-      final String theBaseName,
-      final boolean theDark,
-      final Point theHotspot,
-      final String theName,
-      final boolean theOpenHand) {
+      final String baseName,
+      final boolean dark,
+      final Point hotspot,
+      final String name,
+      final boolean openHand) {
     final Dimension best = bestCursorSize();
     final int requestedSize = best.width;
-    final BufferedImage image = pickBestImage(theBaseName, theDark, requestedSize, theOpenHand);
+    final BufferedImage image = pickBestImage(baseName, dark, requestedSize, openHand);
     if (image == null) {
       return Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
     }
     final Point scaledHotspot =
         new Point(
-            theHotspot.x * image.getWidth() / DESIGN_SIZE,
-            theHotspot.y * image.getHeight() / DESIGN_SIZE);
+            hotspot.x * image.getWidth() / DESIGN_SIZE,
+            hotspot.y * image.getHeight() / DESIGN_SIZE);
     try {
-      return Toolkit.getDefaultToolkit().createCustomCursor(image, scaledHotspot, theName);
+      return Toolkit.getDefaultToolkit().createCustomCursor(image, scaledHotspot, name);
     } catch (Exception | Error ignore) {
       return Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
     }
@@ -142,23 +142,20 @@ public final class Cursors {
   }
 
   private static BufferedImage pickBestImage(
-      final String theBaseName,
-      final boolean theDark,
-      final int theRequestedSize,
-      final boolean theOpenHand) {
-    final String themeKey = theDark ? "dark" : "light";
-    final int[] sizes = theRequestedSize >= 24 ? new int[] {32, 16} : new int[] {16, 32};
+      final String baseName, final boolean dark, final int requestedSize, final boolean openHand) {
+    final String themeKey = dark ? "dark" : "light";
+    final int[] sizes = requestedSize >= 24 ? new int[] {32, 16} : new int[] {16, 32};
     for (int s : sizes) {
-      final BufferedImage img = loadPng(theBaseName + "-" + themeKey + "-" + s + ".png");
+      final BufferedImage img = loadPng(baseName + "-" + themeKey + "-" + s + ".png");
       if (img != null) {
-        return scaleIfNeeded(img, theRequestedSize);
+        return scaleIfNeeded(img, requestedSize);
       }
     }
-    return paintFallback(theOpenHand, theRequestedSize);
+    return paintFallback(openHand, requestedSize);
   }
 
-  private static BufferedImage loadPng(final String theFileName) {
-    final URL url = Cursors.class.getResource("cursors/" + theFileName);
+  private static BufferedImage loadPng(final String fileName) {
+    final URL url = Cursors.class.getResource("cursors/" + fileName);
     if (url == null) {
       return null;
     }
@@ -169,18 +166,18 @@ public final class Cursors {
     }
   }
 
-  private static BufferedImage scaleIfNeeded(final BufferedImage theSrc, final int theTargetSize) {
-    if (theSrc.getWidth() == theTargetSize && theSrc.getHeight() == theTargetSize) {
-      return theSrc;
+  private static BufferedImage scaleIfNeeded(final BufferedImage src, final int targetSize) {
+    if (src.getWidth() == targetSize && src.getHeight() == targetSize) {
+      return src;
     }
     final BufferedImage out =
-        new BufferedImage(theTargetSize, theTargetSize, BufferedImage.TYPE_INT_ARGB);
+        new BufferedImage(targetSize, targetSize, BufferedImage.TYPE_INT_ARGB);
     final Graphics2D g = out.createGraphics();
     try {
       g.setRenderingHint(
           RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
       g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-      g.drawImage(theSrc, 0, 0, theTargetSize, theTargetSize, null);
+      g.drawImage(src, 0, 0, targetSize, targetSize, null);
     } finally {
       g.dispose();
     }
@@ -189,17 +186,17 @@ public final class Cursors {
 
   // --------------------------------------------------------- fallback paint
 
-  private static BufferedImage paintFallback(final boolean theOpenHand, final int theSize) {
-    final int size = theSize > 0 ? theSize : FALLBACK_SIZE;
-    return theOpenHand ? paintOpenHand(size) : paintClosedFist(size);
+  private static BufferedImage paintFallback(final boolean openHand, final int size) {
+    final int actualSize = size > 0 ? size : FALLBACK_SIZE;
+    return openHand ? paintOpenHand(actualSize) : paintClosedFist(actualSize);
   }
 
-  private static BufferedImage paintOpenHand(final int theSize) {
-    final BufferedImage img = new BufferedImage(theSize, theSize, BufferedImage.TYPE_INT_ARGB);
+  private static BufferedImage paintOpenHand(final int size) {
+    final BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
     final Graphics2D g = img.createGraphics();
     try {
       g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      final double s = theSize / 32.0;
+      final double s = size / 32.0;
 
       final Area hand = new Area();
       hand.add(new Area(rr(8, 16, 16, 14, 5, s)));
@@ -220,12 +217,12 @@ public final class Cursors {
     return img;
   }
 
-  private static BufferedImage paintClosedFist(final int theSize) {
-    final BufferedImage img = new BufferedImage(theSize, theSize, BufferedImage.TYPE_INT_ARGB);
+  private static BufferedImage paintClosedFist(final int size) {
+    final BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
     final Graphics2D g = img.createGraphics();
     try {
       g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      final double s = theSize / 32.0;
+      final double s = size / 32.0;
 
       final Area fist = new Area();
       fist.add(new Area(rr(7, 13, 18, 15, 6, s)));
@@ -246,23 +243,18 @@ public final class Cursors {
   }
 
   private static RoundRectangle2D.Double rr(
-      final double theX,
-      final double theY,
-      final double theW,
-      final double theH,
-      final double theArc,
-      final double theScale) {
+      final double x,
+      final double y,
+      final double w,
+      final double h,
+      final double arc,
+      final double scale) {
     return new RoundRectangle2D.Double(
-        theX * theScale,
-        theY * theScale,
-        theW * theScale,
-        theH * theScale,
-        theArc * theScale,
-        theArc * theScale);
+        x * scale, y * scale, w * scale, h * scale, arc * scale, arc * scale);
   }
 
   /** Convenience for the playground reference panel: returns the raw PNG image. */
-  static Image previewImage(final String theBaseName, final boolean theDark) {
-    return loadPng(theBaseName + "-" + (theDark ? "dark" : "light") + "-32.png");
+  static Image previewImage(final String baseName, final boolean dark) {
+    return loadPng(baseName + "-" + (dark ? "dark" : "light") + "-32.png");
   }
 }

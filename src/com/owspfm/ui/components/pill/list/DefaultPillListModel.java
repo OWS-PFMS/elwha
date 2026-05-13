@@ -18,8 +18,8 @@ import java.util.List;
  */
 public class DefaultPillListModel<T> implements PillListModel<T> {
 
-  private final List<T> myItems = new ArrayList<>();
-  private final List<PillListDataListener> myListeners = new ArrayList<>();
+  private final List<T> items = new ArrayList<>();
+  private final List<PillListDataListener> listeners = new ArrayList<>();
 
   /** Creates an empty model. */
   public DefaultPillListModel() {
@@ -29,88 +29,88 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
   /**
    * Creates a model pre-populated with the given items.
    *
-   * @param theItems the initial items (copied; null treated as empty)
+   * @param items the initial items (copied; null treated as empty)
    * @version v0.1.0
    * @since v0.1.0
    */
-  public DefaultPillListModel(final Collection<? extends T> theItems) {
+  public DefaultPillListModel(final Collection<? extends T> items) {
     super();
-    if (theItems != null) {
-      myItems.addAll(theItems);
+    if (items != null) {
+      this.items.addAll(items);
     }
   }
 
   @Override
   public int getSize() {
-    return myItems.size();
+    return items.size();
   }
 
   @Override
-  public T getElementAt(final int theIndex) {
-    return myItems.get(theIndex);
+  public T getElementAt(final int index) {
+    return items.get(index);
   }
 
   @Override
   public Iterator<T> iterator() {
-    return Collections.unmodifiableList(myItems).iterator();
+    return Collections.unmodifiableList(items).iterator();
   }
 
   /**
    * Appends an item.
    *
-   * @param theItem the item to append (null is permitted)
+   * @param item the item to append (null is permitted)
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void add(final T theItem) {
-    final int index = myItems.size();
-    myItems.add(theItem);
+  public void add(final T item) {
+    final int index = items.size();
+    items.add(item);
     fire(PillListDataEvent.Type.ADDED, index, index);
   }
 
   /**
    * Inserts an item at the given index.
    *
-   * @param theIndex the insertion index (0..size)
-   * @param theItem the item to insert
+   * @param index the insertion index (0..size)
+   * @param item the item to insert
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void add(final int theIndex, final T theItem) {
-    myItems.add(theIndex, theItem);
-    fire(PillListDataEvent.Type.ADDED, theIndex, theIndex);
+  public void add(final int index, final T item) {
+    items.add(index, item);
+    fire(PillListDataEvent.Type.ADDED, index, index);
   }
 
   /**
    * Appends a batch of items, firing a single ADDED event covering the inserted range.
    *
-   * @param theItems the items to append (null/empty is a no-op)
+   * @param items the items to append (null/empty is a no-op)
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void addAll(final Collection<? extends T> theItems) {
-    if (theItems == null || theItems.isEmpty()) {
+  public void addAll(final Collection<? extends T> items) {
+    if (items == null || items.isEmpty()) {
       return;
     }
-    final int from = myItems.size();
-    myItems.addAll(theItems);
-    fire(PillListDataEvent.Type.ADDED, from, myItems.size() - 1);
+    final int from = this.items.size();
+    this.items.addAll(items);
+    fire(PillListDataEvent.Type.ADDED, from, this.items.size() - 1);
   }
 
   /**
    * Removes the first occurrence of the given item.
    *
-   * @param theItem the item to remove
+   * @param item the item to remove
    * @return true if a matching item was found and removed
    * @version v0.1.0
    * @since v0.1.0
    */
-  public boolean remove(final T theItem) {
-    final int idx = myItems.indexOf(theItem);
+  public boolean remove(final T item) {
+    final int idx = items.indexOf(item);
     if (idx < 0) {
       return false;
     }
-    myItems.remove(idx);
+    items.remove(idx);
     fire(PillListDataEvent.Type.REMOVED, idx, idx);
     return true;
   }
@@ -118,101 +118,101 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
   /**
    * Removes the item at the given index.
    *
-   * @param theIndex the index to remove
+   * @param index the index to remove
    * @return the removed item
    * @version v0.1.0
    * @since v0.1.0
    */
-  public T remove(final int theIndex) {
-    final T removed = myItems.remove(theIndex);
-    fire(PillListDataEvent.Type.REMOVED, theIndex, theIndex);
+  public T remove(final int index) {
+    final T removed = items.remove(index);
+    fire(PillListDataEvent.Type.REMOVED, index, index);
     return removed;
   }
 
   /**
    * Replaces the item at the given index.
    *
-   * @param theIndex the index to replace
-   * @param theItem the replacement item
+   * @param index the index to replace
+   * @param item the replacement item
    * @return the previous item
    * @version v0.1.0
    * @since v0.1.0
    */
-  public T set(final int theIndex, final T theItem) {
-    final T old = myItems.set(theIndex, theItem);
-    fire(PillListDataEvent.Type.CHANGED, theIndex, theIndex);
+  public T set(final int index, final T item) {
+    final T old = items.set(index, item);
+    fire(PillListDataEvent.Type.CHANGED, index, index);
     return old;
   }
 
   /**
-   * Moves an item to a new index. A no-op if {@code theFrom == theTo}.
+   * Moves an item to a new index. A no-op if {@code from == to}.
    *
-   * @param theFrom the source index
-   * @param theTo the destination index
+   * @param from the source index
+   * @param to the destination index
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void move(final int theFrom, final int theTo) {
-    if (theFrom == theTo) {
+  public void move(final int from, final int to) {
+    if (from == to) {
       return;
     }
-    if (theFrom < 0 || theFrom >= myItems.size() || theTo < 0 || theTo >= myItems.size()) {
-      throw new IndexOutOfBoundsException("move(" + theFrom + " -> " + theTo + ")");
+    if (from < 0 || from >= items.size() || to < 0 || to >= items.size()) {
+      throw new IndexOutOfBoundsException("move(" + from + " -> " + to + ")");
     }
-    final T item = myItems.remove(theFrom);
-    myItems.add(theTo, item);
-    fire(PillListDataEvent.Type.MOVED, theFrom, theTo);
+    final T item = items.remove(from);
+    items.add(to, item);
+    fire(PillListDataEvent.Type.MOVED, from, to);
   }
 
   /** Removes every item, firing a single REMOVED event spanning the prior range. */
   public void clear() {
-    if (myItems.isEmpty()) {
+    if (items.isEmpty()) {
       return;
     }
-    final int last = myItems.size() - 1;
-    myItems.clear();
+    final int last = items.size() - 1;
+    items.clear();
     fire(PillListDataEvent.Type.REMOVED, 0, last);
   }
 
   /**
    * Returns whether the model contains the given item.
    *
-   * @param theItem the item
+   * @param item the item
    * @return true if present
    * @version v0.1.0
    * @since v0.1.0
    */
-  public boolean contains(final T theItem) {
-    return myItems.contains(theItem);
+  public boolean contains(final T item) {
+    return items.contains(item);
   }
 
   /**
    * Returns the index of the first occurrence of the given item, or -1.
    *
-   * @param theItem the item
+   * @param item the item
    * @return the index, or -1 if not present
    * @version v0.1.0
    * @since v0.1.0
    */
-  public int indexOf(final T theItem) {
-    return myItems.indexOf(theItem);
+  public int indexOf(final T item) {
+    return items.indexOf(item);
   }
 
   @Override
-  public void addPillListDataListener(final PillListDataListener theListener) {
-    if (theListener != null && !myListeners.contains(theListener)) {
-      myListeners.add(theListener);
+  public void addPillListDataListener(final PillListDataListener listener) {
+    if (listener != null && !listeners.contains(listener)) {
+      listeners.add(listener);
     }
   }
 
   @Override
-  public void removePillListDataListener(final PillListDataListener theListener) {
-    myListeners.remove(theListener);
+  public void removePillListDataListener(final PillListDataListener listener) {
+    listeners.remove(listener);
   }
 
-  private void fire(final PillListDataEvent.Type theType, final int theI0, final int theI1) {
-    final PillListDataEvent evt = new PillListDataEvent(this, theType, theI0, theI1);
-    for (PillListDataListener l : new ArrayList<>(myListeners)) {
+  private void fire(final PillListDataEvent.Type type, final int i0, final int i1) {
+    final PillListDataEvent evt = new PillListDataEvent(this, type, i0, i1);
+    for (PillListDataListener l : new ArrayList<>(listeners)) {
       l.contentsChanged(evt);
     }
   }

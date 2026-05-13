@@ -38,42 +38,42 @@ import javax.swing.JSlider;
  */
 public final class LiveConfigPanel extends JPanel {
 
-  private final FlatCard myFocusCard;
+  private final FlatCard focusCard;
 
   // Mutable config state ---------------------------------------------------
-  private CardVariant myVariant = CardVariant.ELEVATED;
-  private CardInteractionMode myMode = CardInteractionMode.STATIC;
-  private int myElevation = 1;
-  private int myCornerRadius = 12;
-  private int myPadding = 16;
-  private int myBorderWidth = 1;
-  private boolean myCollapsible;
-  private boolean myCollapsed;
-  private boolean myDisabled;
-  private boolean myShowHeader = true;
-  private boolean myShowMedia;
-  private boolean myShowFooter = true;
+  private CardVariant variant = CardVariant.ELEVATED;
+  private CardInteractionMode mode = CardInteractionMode.STATIC;
+  private int elevation = 1;
+  private int cornerRadius = 12;
+  private int padding = 16;
+  private int borderWidth = 1;
+  private boolean collapsible;
+  private boolean collapsed;
+  private boolean disabled;
+  private boolean showHeader = true;
+  private boolean showMedia;
+  private boolean showFooter = true;
 
-  private final List<Consumer<Snapshot>> myListeners = new ArrayList<>();
-  private boolean myUpdating;
+  private final List<Consumer<Snapshot>> listeners = new ArrayList<>();
+  private boolean updating;
 
   // Cached slot components (created once, swapped in/out by show* toggles only).
-  private MediaPlate myCachedMedia;
-  private JComponent myCachedFooter;
+  private MediaPlate cachedMedia;
+  private JComponent cachedFooter;
   // Track previously-applied slot visibility so we only rebuild the slot when it flips.
-  private Boolean myAppliedShowHeader;
-  private Boolean myAppliedShowMedia;
-  private Boolean myAppliedShowFooter;
+  private Boolean appliedShowHeader;
+  private Boolean appliedShowMedia;
+  private Boolean appliedShowFooter;
 
   /** Builds the live-config view with a default ELEVATED static card. */
   public LiveConfigPanel() {
     super(new BorderLayout(16, 0));
     setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
-    myFocusCard = buildFocusCard();
+    focusCard = buildFocusCard();
     JPanel cardHolder = new JPanel(new BorderLayout());
     cardHolder.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-    cardHolder.add(myFocusCard, BorderLayout.NORTH);
+    cardHolder.add(focusCard, BorderLayout.NORTH);
     cardHolder.setPreferredSize(new Dimension(360, 360));
 
     add(cardHolder, BorderLayout.CENTER);
@@ -119,110 +119,110 @@ public final class LiveConfigPanel extends JPanel {
     gbc.insets = new Insets(4, 4, 4, 4);
 
     JComboBox<CardVariant> variantBox = new JComboBox<>(CardVariant.values());
-    variantBox.setSelectedItem(myVariant);
+    variantBox.setSelectedItem(variant);
     variantBox.addActionListener(
         e -> {
-          myVariant = (CardVariant) variantBox.getSelectedItem();
+          variant = (CardVariant) variantBox.getSelectedItem();
           applyAll();
         });
     addLabeledRow(panel, gbc, "Variant", variantBox);
 
     JComboBox<CardInteractionMode> modeBox = new JComboBox<>(CardInteractionMode.values());
-    modeBox.setSelectedItem(myMode);
+    modeBox.setSelectedItem(mode);
     modeBox.addActionListener(
         e -> {
-          myMode = (CardInteractionMode) modeBox.getSelectedItem();
+          mode = (CardInteractionMode) modeBox.getSelectedItem();
           applyAll();
         });
     addLabeledRow(panel, gbc, "Interaction mode", modeBox);
 
-    JSlider elevation = newSlider(0, FlatCard.MAX_ELEVATION, myElevation);
-    elevation.addChangeListener(
+    JSlider elevationSlider = newSlider(0, FlatCard.MAX_ELEVATION, elevation);
+    elevationSlider.addChangeListener(
         e -> {
-          myElevation = elevation.getValue();
+          elevation = elevationSlider.getValue();
           applyAll();
         });
-    addLabeledRow(panel, gbc, "Elevation", elevation);
+    addLabeledRow(panel, gbc, "Elevation", elevationSlider);
 
-    JSlider radius = newSlider(0, 36, myCornerRadius);
-    radius.addChangeListener(
+    JSlider radiusSlider = newSlider(0, 36, cornerRadius);
+    radiusSlider.addChangeListener(
         e -> {
-          myCornerRadius = radius.getValue();
+          cornerRadius = radiusSlider.getValue();
           applyAll();
         });
-    addLabeledRow(panel, gbc, "Corner radius", radius);
+    addLabeledRow(panel, gbc, "Corner radius", radiusSlider);
 
-    JSlider padding = newSlider(0, 48, myPadding);
-    padding.addChangeListener(
+    JSlider paddingSlider = newSlider(0, 48, padding);
+    paddingSlider.addChangeListener(
         e -> {
-          myPadding = padding.getValue();
+          padding = paddingSlider.getValue();
           applyAll();
         });
-    addLabeledRow(panel, gbc, "Padding", padding);
+    addLabeledRow(panel, gbc, "Padding", paddingSlider);
 
-    JSlider borderWidth = newSlider(0, 6, myBorderWidth);
-    borderWidth.addChangeListener(
+    JSlider borderWidthSlider = newSlider(0, 6, borderWidth);
+    borderWidthSlider.addChangeListener(
         e -> {
-          myBorderWidth = borderWidth.getValue();
+          borderWidth = borderWidthSlider.getValue();
           applyAll();
         });
-    addLabeledRow(panel, gbc, "Border width", borderWidth);
+    addLabeledRow(panel, gbc, "Border width", borderWidthSlider);
 
-    JCheckBox collapsible =
+    JCheckBox collapsibleBox =
         newCheck(
             "Collapsible",
-            myCollapsible,
+            collapsible,
             v -> {
-              myCollapsible = v;
+              collapsible = v;
               applyAll();
             });
-    JCheckBox collapsed =
+    JCheckBox collapsedBox =
         newCheck(
             "Collapsed",
-            myCollapsed,
+            collapsed,
             v -> {
-              myCollapsed = v;
+              collapsed = v;
               applyAll();
             });
-    JCheckBox disabled =
+    JCheckBox disabledBox =
         newCheck(
             "Disabled",
-            myDisabled,
+            disabled,
             v -> {
-              myDisabled = v;
+              disabled = v;
               applyAll();
             });
-    addRow(panel, gbc, collapsible);
-    addRow(panel, gbc, collapsed);
-    addRow(panel, gbc, disabled);
+    addRow(panel, gbc, collapsibleBox);
+    addRow(panel, gbc, collapsedBox);
+    addRow(panel, gbc, disabledBox);
 
-    JCheckBox showHeader =
+    JCheckBox showHeaderBox =
         newCheck(
             "Header",
-            myShowHeader,
+            showHeader,
             v -> {
-              myShowHeader = v;
+              showHeader = v;
               applyAll();
             });
-    JCheckBox showMedia =
+    JCheckBox showMediaBox =
         newCheck(
             "Media",
-            myShowMedia,
+            showMedia,
             v -> {
-              myShowMedia = v;
+              showMedia = v;
               applyAll();
             });
-    JCheckBox showFooter =
+    JCheckBox showFooterBox =
         newCheck(
             "Footer",
-            myShowFooter,
+            showFooter,
             v -> {
-              myShowFooter = v;
+              showFooter = v;
               applyAll();
             });
-    addRow(panel, gbc, showHeader);
-    addRow(panel, gbc, showMedia);
-    addRow(panel, gbc, showFooter);
+    addRow(panel, gbc, showHeaderBox);
+    addRow(panel, gbc, showMediaBox);
+    addRow(panel, gbc, showFooterBox);
 
     gbc.weighty = 1;
     panel.add(Box.createVerticalGlue(), gbc);
@@ -268,57 +268,57 @@ public final class LiveConfigPanel extends JPanel {
   // ---------------------------------------------------------------- apply
 
   private void applyAll() {
-    if (myUpdating) {
+    if (updating) {
       return;
     }
-    myUpdating = true;
+    updating = true;
     try {
-      myFocusCard.setVariant(myVariant);
-      myFocusCard.setInteractionMode(myMode);
-      myFocusCard.setElevation(myElevation);
-      myFocusCard.setCornerRadius(myCornerRadius);
-      myFocusCard.setPadding(myPadding);
-      myFocusCard.setBorderWidth(myBorderWidth);
-      myFocusCard.setCollapsible(myCollapsible);
-      myFocusCard.setCollapsed(myCollapsed);
-      myFocusCard.setEnabled(!myDisabled);
+      focusCard.setVariant(variant);
+      focusCard.setInteractionMode(mode);
+      focusCard.setElevation(elevation);
+      focusCard.setCornerRadius(cornerRadius);
+      focusCard.setPadding(padding);
+      focusCard.setBorderWidth(borderWidth);
+      focusCard.setCollapsible(collapsible);
+      focusCard.setCollapsed(collapsed);
+      focusCard.setEnabled(!disabled);
 
-      if (myAppliedShowHeader == null || myAppliedShowHeader != myShowHeader) {
-        if (myShowHeader) {
-          myFocusCard.setHeader("Focus card", "Live-edited example");
+      if (appliedShowHeader == null || appliedShowHeader != showHeader) {
+        if (showHeader) {
+          focusCard.setHeader("Focus card", "Live-edited example");
         } else {
-          myFocusCard.setHeader(null, null);
+          focusCard.setHeader(null, null);
         }
-        myAppliedShowHeader = myShowHeader;
+        appliedShowHeader = showHeader;
       }
-      if (myAppliedShowMedia == null || myAppliedShowMedia != myShowMedia) {
-        if (myShowMedia) {
-          if (myCachedMedia == null) {
-            myCachedMedia = new MediaPlate();
+      if (appliedShowMedia == null || appliedShowMedia != showMedia) {
+        if (showMedia) {
+          if (cachedMedia == null) {
+            cachedMedia = new MediaPlate();
           }
-          myFocusCard.setMedia(myCachedMedia);
+          focusCard.setMedia(cachedMedia);
         } else {
-          myFocusCard.setMedia(null);
+          focusCard.setMedia(null);
         }
-        myAppliedShowMedia = myShowMedia;
+        appliedShowMedia = showMedia;
       }
-      if (myAppliedShowFooter == null || myAppliedShowFooter != myShowFooter) {
-        if (myShowFooter) {
-          if (myCachedFooter == null) {
-            myCachedFooter = buildFooter();
+      if (appliedShowFooter == null || appliedShowFooter != showFooter) {
+        if (showFooter) {
+          if (cachedFooter == null) {
+            cachedFooter = buildFooter();
           }
-          myFocusCard.setFooter(myCachedFooter);
+          focusCard.setFooter(cachedFooter);
         } else {
-          myFocusCard.setFooter((JComponent) null);
+          focusCard.setFooter((JComponent) null);
         }
-        myAppliedShowFooter = myShowFooter;
+        appliedShowFooter = showFooter;
       }
     } finally {
-      myUpdating = false;
+      updating = false;
     }
 
-    myFocusCard.revalidate();
-    myFocusCard.repaint();
+    focusCard.revalidate();
+    focusCard.repaint();
     notifyListeners();
   }
 
@@ -327,13 +327,13 @@ public final class LiveConfigPanel extends JPanel {
   /**
    * Registers a listener that is notified after every config change with the latest snapshot.
    *
-   * @param theListener consumer invoked with the snapshot; null is ignored
+   * @param listener consumer invoked with the snapshot; null is ignored
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void addConfigChangeListener(final Consumer<Snapshot> theListener) {
-    if (theListener != null) {
-      myListeners.add(theListener);
+  public void addConfigChangeListener(final Consumer<Snapshot> listener) {
+    if (listener != null) {
+      listeners.add(listener);
     }
   }
 
@@ -346,23 +346,23 @@ public final class LiveConfigPanel extends JPanel {
    */
   public Snapshot snapshot() {
     return new Snapshot(
-        myVariant,
-        myMode,
-        myElevation,
-        myCornerRadius,
-        myPadding,
-        myBorderWidth,
-        myCollapsible,
-        myCollapsed,
-        myDisabled,
-        myShowHeader,
-        myShowMedia,
-        myShowFooter);
+        variant,
+        mode,
+        elevation,
+        cornerRadius,
+        padding,
+        borderWidth,
+        collapsible,
+        collapsed,
+        disabled,
+        showHeader,
+        showMedia,
+        showFooter);
   }
 
   private void notifyListeners() {
     Snapshot s = snapshot();
-    for (Consumer<Snapshot> l : myListeners) {
+    for (Consumer<Snapshot> l : listeners) {
       l.accept(s);
     }
   }

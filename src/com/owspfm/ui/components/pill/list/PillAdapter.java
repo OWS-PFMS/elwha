@@ -28,11 +28,11 @@ public interface PillAdapter<T> {
   /**
    * Builds a pill for the given item.
    *
-   * @param theItem the domain item
-   * @param theIndex the visible index of the item in the list
+   * @param item the domain item
+   * @param index the visible index of the item in the list
    * @return a non-null {@link FlatPill}
    * @version v0.1.0
    * @since v0.1.0
    */
-  FlatPill pillFor(T theItem, int theIndex);
+  FlatPill pillFor(T item, int index);
 }

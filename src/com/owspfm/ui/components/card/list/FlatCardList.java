@@ -132,91 +132,91 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   private static final int DRAG_THRESHOLD = 5;
 
   // Backing model + adapter ------------------------------------------------
-  private final CardListModel<T> myModel;
-  private final CardAdapter<T> myAdapter;
-  private final CardListDataListener myModelListener = this::onModelChanged;
-  private final CardSelectionModel<T> mySelectionModel = new DefaultCardSelectionModel<>();
+  private final CardListModel<T> model;
+  private final CardAdapter<T> adapter;
+  private final CardListDataListener modelListener = this::onModelChanged;
+  private final CardSelectionModel<T> selectionModel = new DefaultCardSelectionModel<>();
 
   // Configuration ----------------------------------------------------------
-  private FlatListOrientation myOrientation = FlatListOrientation.VERTICAL;
-  private int myColumns = DEFAULT_COLUMNS;
-  private int myItemGap = DEFAULT_GAP;
-  private Insets myListPadding = new Insets(DEFAULT_GAP, DEFAULT_GAP, DEFAULT_GAP, DEFAULT_GAP);
-  private CardSelectionMode mySelectionMode = CardSelectionMode.NONE;
-  private boolean myReorderable;
-  private ReorderHandle myReorderHandle = ReorderHandle.WHOLE_CARD;
-  private Predicate<T> myFilter;
-  private Comparator<T> myComparator;
-  private JComponent myEmptyState;
-  private JComponent myLoadingComponent;
-  private boolean myLoading;
-  private boolean myAnimateChanges;
-  private int myAnimationDurationMs = DEFAULT_ANIMATION_MS;
-  private boolean myReorderWarningLogged;
+  private FlatListOrientation orientation = FlatListOrientation.VERTICAL;
+  private int columns = DEFAULT_COLUMNS;
+  private int itemGap = DEFAULT_GAP;
+  private Insets listPadding = new Insets(DEFAULT_GAP, DEFAULT_GAP, DEFAULT_GAP, DEFAULT_GAP);
+  private CardSelectionMode selectionMode = CardSelectionMode.NONE;
+  private boolean reorderable;
+  private ReorderHandle reorderHandle = ReorderHandle.WHOLE_CARD;
+  private Predicate<T> filter;
+  private Comparator<T> comparator;
+  private JComponent emptyState;
+  private JComponent loadingComponent;
+  private boolean loading;
+  private boolean animateChanges;
+  private int animationDurationMs = DEFAULT_ANIMATION_MS;
+  private boolean reorderWarningLogged;
 
   // Listeners --------------------------------------------------------------
-  private final List<CardReorderListener<T>> myReorderListeners = new ArrayList<>();
+  private final List<CardReorderListener<T>> reorderListeners = new ArrayList<>();
 
   // Render cache: visible items in render order ----------------------------
-  private final List<T> myVisibleItems = new ArrayList<>();
-  private final Map<T, FlatCard> myCardByItem = new LinkedHashMap<>();
-  private int myFocusedVisibleIndex = -1;
-  private T myAnchorItem;
+  private final List<T> visibleItems = new ArrayList<>();
+  private final Map<T, FlatCard> cardByItem = new LinkedHashMap<>();
+  private int focusedVisibleIndex = -1;
+  private T anchorItem;
 
   // Layout panels ----------------------------------------------------------
-  private final JPanel myContent;
-  private final JPanel myEmptyHolder;
-  private final JPanel myLoadingHolder;
+  private final JPanel content;
+  private final JPanel emptyHolder;
+  private final JPanel loadingHolder;
 
   // Drag state -------------------------------------------------------------
-  private DragState myDrag;
-  private final Map<FlatCard, Integer> myDisplacedY = new HashMap<>();
-  private final Map<FlatCard, Integer> myTargetY = new HashMap<>();
-  private final Map<FlatCard, Integer> myDisplacedX = new HashMap<>();
-  private final Map<FlatCard, Integer> myTargetX = new HashMap<>();
-  private Timer myDragAnimTimer;
+  private DragState drag;
+  private final Map<FlatCard, Integer> displacedY = new HashMap<>();
+  private final Map<FlatCard, Integer> targetY = new HashMap<>();
+  private final Map<FlatCard, Integer> displacedX = new HashMap<>();
+  private final Map<FlatCard, Integer> targetX = new HashMap<>();
+  private Timer dragAnimTimer;
 
   // Animation state --------------------------------------------------------
-  private Timer myFadeTimer;
-  private float myFadeAlpha = 1f;
+  private Timer fadeTimer;
+  private float fadeAlpha = 1f;
 
   // ------------------------------------------------------------------ ctor
 
   /**
    * Builds a list bound to the given model and adapter.
    *
-   * @param theModel the backing model (required)
-   * @param theAdapter the adapter that maps items to cards (required)
+   * @param model the backing model (required)
+   * @param adapter the adapter that maps items to cards (required)
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCardList(final CardListModel<T> theModel, final CardAdapter<T> theAdapter) {
+  public FlatCardList(final CardListModel<T> model, final CardAdapter<T> adapter) {
     super(new BorderLayout());
-    if (theModel == null) {
+    if (model == null) {
       throw new IllegalArgumentException("model must not be null");
     }
-    if (theAdapter == null) {
+    if (adapter == null) {
       throw new IllegalArgumentException("adapter must not be null");
     }
-    myModel = theModel;
-    myAdapter = theAdapter;
+    this.model = model;
+    this.adapter = adapter;
 
-    myContent = new ContentPanel();
-    myContent.setOpaque(false);
+    content = new ContentPanel();
+    content.setOpaque(false);
     applyOrientationLayout();
 
-    myEmptyHolder = new JPanel(new BorderLayout());
-    myEmptyHolder.setOpaque(false);
+    emptyHolder = new JPanel(new BorderLayout());
+    emptyHolder.setOpaque(false);
 
-    myLoadingHolder = new JPanel(new BorderLayout());
-    myLoadingHolder.setOpaque(false);
+    loadingHolder = new JPanel(new BorderLayout());
+    loadingHolder.setOpaque(false);
 
     setOpaque(false);
     setFocusable(true);
-    add(myContent, BorderLayout.CENTER);
+    add(content, BorderLayout.CENTER);
     rebuildPadding();
 
-    myModel.addCardListDataListener(myModelListener);
+    model.addCardListDataListener(modelListener);
     rebuildVisibleItems();
     rebuildContent(false);
 
@@ -233,7 +233,7 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   public CardListModel<T> getModel() {
-    return myModel;
+    return model;
   }
 
   /**
@@ -244,24 +244,24 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   public CardSelectionModel<T> getSelectionModel() {
-    return mySelectionModel;
+    return selectionModel;
   }
 
   /**
    * Sets the layout orientation.
    *
-   * @param theOrientation one of {@link FlatListOrientation}; null is ignored. All four
-   *     orientations are supported as of story #242.
+   * @param orientation one of {@link FlatListOrientation}; null is ignored. All four orientations
+   *     are supported as of story #242.
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
   @Override
-  public FlatCardList<T> setOrientation(final FlatListOrientation theOrientation) {
-    if (theOrientation == null || theOrientation == myOrientation) {
+  public FlatCardList<T> setOrientation(final FlatListOrientation orientation) {
+    if (orientation == null || orientation == this.orientation) {
       return this;
     }
-    myOrientation = theOrientation;
+    this.orientation = orientation;
     applyOrientationLayout();
     rebuildContent(false);
     return this;
@@ -276,25 +276,25 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    */
   @Override
   public FlatListOrientation getOrientation() {
-    return myOrientation;
+    return orientation;
   }
 
   /**
    * Sets the column count for {@link FlatListOrientation#GRID}.
    *
-   * @param theColumns column count, clamped to {@code >= 1}
+   * @param columns column count, clamped to {@code >= 1}
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
   @Override
-  public FlatCardList<T> setColumns(final int theColumns) {
-    final int v = Math.max(1, theColumns);
-    if (v == myColumns) {
+  public FlatCardList<T> setColumns(final int columns) {
+    final int v = Math.max(1, columns);
+    if (v == this.columns) {
       return this;
     }
-    myColumns = v;
-    if (myOrientation == FlatListOrientation.GRID) {
+    this.columns = v;
+    if (orientation == FlatListOrientation.GRID) {
       applyOrientationLayout();
       rebuildContent(false);
     }
@@ -310,24 +310,24 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    */
   @Override
   public int getColumns() {
-    return myColumns;
+    return columns;
   }
 
   /**
    * Sets the gap between rendered cards (vertical stack: between rows; grid: between cells).
    *
-   * @param theGap pixels, clamped to {@code >= 0}
+   * @param gap pixels, clamped to {@code >= 0}
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
   @Override
-  public FlatCardList<T> setItemGap(final int theGap) {
-    final int v = Math.max(0, theGap);
-    if (v == myItemGap) {
+  public FlatCardList<T> setItemGap(final int gap) {
+    final int v = Math.max(0, gap);
+    if (v == itemGap) {
       return this;
     }
-    myItemGap = v;
+    itemGap = v;
     applyOrientationLayout();
     rebuildContent(false);
     return this;
@@ -342,20 +342,20 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    */
   @Override
   public int getItemGap() {
-    return myItemGap;
+    return itemGap;
   }
 
   /**
    * Sets the padding around the rendered list.
    *
-   * @param theInsets the insets; null treated as zero
+   * @param insets the insets; null treated as zero
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
   @Override
-  public FlatCardList<T> setListPadding(final Insets theInsets) {
-    myListPadding = theInsets == null ? new Insets(0, 0, 0, 0) : (Insets) theInsets.clone();
+  public FlatCardList<T> setListPadding(final Insets insets) {
+    listPadding = insets == null ? new Insets(0, 0, 0, 0) : (Insets) insets.clone();
     rebuildPadding();
     revalidate();
     repaint();
@@ -365,18 +365,18 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * Sets the selection mode.
    *
-   * @param theMode the selection mode; null is ignored
+   * @param mode the selection mode; null is ignored
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCardList<T> setSelectionMode(final CardSelectionMode theMode) {
-    if (theMode == null || theMode == mySelectionMode) {
+  public FlatCardList<T> setSelectionMode(final CardSelectionMode mode) {
+    if (mode == null || mode == selectionMode) {
       return this;
     }
-    mySelectionMode = theMode;
-    if (theMode == CardSelectionMode.NONE) {
-      mySelectionModel.clearSelection();
+    selectionMode = mode;
+    if (mode == CardSelectionMode.NONE) {
+      selectionModel.clearSelection();
     }
     rebuildContent(false);
     return this;
@@ -390,22 +390,22 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   public CardSelectionMode getSelectionMode() {
-    return mySelectionMode;
+    return selectionMode;
   }
 
   /**
    * Enables or disables drag-to-reorder.
    *
-   * @param theReorderable whether reorder is enabled
+   * @param reorderable whether reorder is enabled
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCardList<T> setReorderable(final boolean theReorderable) {
-    if (theReorderable == myReorderable) {
+  public FlatCardList<T> setReorderable(final boolean reorderable) {
+    if (reorderable == this.reorderable) {
       return this;
     }
-    myReorderable = theReorderable;
+    this.reorderable = reorderable;
     rebuildContent(false);
     return this;
   }
@@ -418,22 +418,22 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   public boolean isReorderable() {
-    return myReorderable;
+    return reorderable;
   }
 
   /**
    * Sets the location on each card that initiates a reorder drag.
    *
-   * @param theHandle one of {@link ReorderHandle}; null is ignored
+   * @param handle one of {@link ReorderHandle}; null is ignored
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCardList<T> setReorderHandle(final ReorderHandle theHandle) {
-    if (theHandle == null || theHandle == myReorderHandle) {
+  public FlatCardList<T> setReorderHandle(final ReorderHandle handle) {
+    if (handle == null || handle == reorderHandle) {
       return this;
     }
-    myReorderHandle = theHandle;
+    reorderHandle = handle;
     rebuildContent(false);
     return this;
   }
@@ -441,16 +441,16 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * Sets a filter predicate that hides items rejected by it. Pass null to clear.
    *
-   * @param theFilter the predicate; null clears filtering
+   * @param filter the predicate; null clears filtering
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
   @Override
-  public FlatCardList<T> setFilter(final Predicate<T> theFilter) {
-    myFilter = theFilter;
+  public FlatCardList<T> setFilter(final Predicate<T> filter) {
+    this.filter = filter;
     rebuildVisibleItems();
-    rebuildContent(myAnimateChanges);
+    rebuildContent(animateChanges);
     return this;
   }
 
@@ -460,20 +460,20 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * <p>Combines with the filter (filter first, then sort). When non-null, drag-to-reorder is
    * disabled and a one-shot warning is logged.
    *
-   * @param theComparator the comparator; null clears sorting
+   * @param comparator the comparator; null clears sorting
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
   @Override
-  public FlatCardList<T> setSortOrder(final Comparator<T> theComparator) {
-    myComparator = theComparator;
-    if (theComparator != null && myReorderable && !myReorderWarningLogged) {
+  public FlatCardList<T> setSortOrder(final Comparator<T> comparator) {
+    this.comparator = comparator;
+    if (comparator != null && reorderable && !reorderWarningLogged) {
       LOG.warning("FlatCardList: reorder disabled while a sort order is active");
-      myReorderWarningLogged = true;
+      reorderWarningLogged = true;
     }
     rebuildVisibleItems();
-    rebuildContent(myAnimateChanges);
+    rebuildContent(animateChanges);
     return this;
   }
 
@@ -481,15 +481,15 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Replaces the placeholder shown when zero items are visible. Pass null to fall back to the
    * built-in default.
    *
-   * @param theComponent the placeholder; null restores the default
+   * @param component the placeholder; null restores the default
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
   @Override
-  public FlatCardList<T> setEmptyState(final JComponent theComponent) {
-    myEmptyState = theComponent;
-    if (myEmptyHolder.isShowing() || myVisibleItems.isEmpty()) {
+  public FlatCardList<T> setEmptyState(final JComponent component) {
+    emptyState = component;
+    if (emptyHolder.isShowing() || visibleItems.isEmpty()) {
       rebuildContent(false);
     }
     return this;
@@ -498,17 +498,17 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * Sets the loading flag. While true, the list renders the loading component instead of items.
    *
-   * @param theLoading whether to show the loading state
+   * @param loading whether to show the loading state
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
   @Override
-  public FlatCardList<T> setLoading(final boolean theLoading) {
-    if (theLoading == myLoading) {
+  public FlatCardList<T> setLoading(final boolean loading) {
+    if (loading == this.loading) {
       return this;
     }
-    myLoading = theLoading;
+    this.loading = loading;
     rebuildContent(false);
     return this;
   }
@@ -516,15 +516,15 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * Replaces the loading-state component. Pass null to fall back to the built-in default.
    *
-   * @param theComponent the loading component
+   * @param component the loading component
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
   @Override
-  public FlatCardList<T> setLoadingComponent(final JComponent theComponent) {
-    myLoadingComponent = theComponent;
-    if (myLoading) {
+  public FlatCardList<T> setLoadingComponent(final JComponent component) {
+    loadingComponent = component;
+    if (loading) {
       rebuildContent(false);
     }
     return this;
@@ -533,144 +533,143 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * Toggles fade animations on add/remove and reorder.
    *
-   * @param theAnimate whether to animate
+   * @param animate whether to animate
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCardList<T> setAnimateChanges(final boolean theAnimate) {
-    myAnimateChanges = theAnimate;
+  public FlatCardList<T> setAnimateChanges(final boolean animate) {
+    animateChanges = animate;
     return this;
   }
 
   /**
    * Sets the animation duration in milliseconds.
    *
-   * @param theMs the duration; clamped to {@code >= 50}
+   * @param ms the duration; clamped to {@code >= 50}
    * @return this list
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCardList<T> setAnimationDuration(final int theMs) {
-    myAnimationDurationMs = Math.max(50, theMs);
+  public FlatCardList<T> setAnimationDuration(final int ms) {
+    animationDurationMs = Math.max(50, ms);
     return this;
   }
 
   /**
    * Registers a reorder listener.
    *
-   * @param theListener the listener; null is ignored
+   * @param listener the listener; null is ignored
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void addReorderListener(final CardReorderListener<T> theListener) {
-    if (theListener != null && !myReorderListeners.contains(theListener)) {
-      myReorderListeners.add(theListener);
+  public void addReorderListener(final CardReorderListener<T> listener) {
+    if (listener != null && !reorderListeners.contains(listener)) {
+      reorderListeners.add(listener);
     }
   }
 
   /**
    * Removes a previously registered reorder listener.
    *
-   * @param theListener the listener
+   * @param listener the listener
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void removeReorderListener(final CardReorderListener<T> theListener) {
-    myReorderListeners.remove(theListener);
+  public void removeReorderListener(final CardReorderListener<T> listener) {
+    reorderListeners.remove(listener);
   }
 
   /**
    * Returns the rendered card for the given item, or {@code null} if the item is not currently
    * visible.
    *
-   * @param theItem the item
+   * @param item the item
    * @return the card, or null
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard getCardFor(final T theItem) {
-    return myCardByItem.get(theItem);
+  public FlatCard getCardFor(final T item) {
+    return cardByItem.get(item);
   }
 
   // ------------------------------------------------------------- internals
 
   private void applyOrientationLayout() {
-    myContent.removeAll();
-    switch (myOrientation) {
-      case GRID -> myContent.setLayout(new GridStackingLayout());
-      case HORIZONTAL -> myContent.setLayout(new HorizontalStackingLayout());
-      case WRAP -> myContent.setLayout(new WrapStackingLayout());
-      case VERTICAL -> myContent.setLayout(new StackingLayout());
-      default -> myContent.setLayout(new StackingLayout());
+    content.removeAll();
+    switch (orientation) {
+      case GRID -> content.setLayout(new GridStackingLayout());
+      case HORIZONTAL -> content.setLayout(new HorizontalStackingLayout());
+      case WRAP -> content.setLayout(new WrapStackingLayout());
+      case VERTICAL -> content.setLayout(new StackingLayout());
+      default -> content.setLayout(new StackingLayout());
     }
   }
 
   private void rebuildPadding() {
     setBorder(
         BorderFactory.createEmptyBorder(
-            myListPadding.top, myListPadding.left, myListPadding.bottom, myListPadding.right));
+            listPadding.top, listPadding.left, listPadding.bottom, listPadding.right));
   }
 
-  private void onModelChanged(final CardListDataEvent theEvent) {
+  private void onModelChanged(final CardListDataEvent event) {
     rebuildVisibleItems();
-    rebuildContent(myAnimateChanges);
+    rebuildContent(animateChanges);
   }
 
   private void rebuildVisibleItems() {
-    myVisibleItems.clear();
-    final Iterator<T> it = myModel.iterator();
+    visibleItems.clear();
+    final Iterator<T> it = model.iterator();
     while (it.hasNext()) {
       final T item = it.next();
-      if (myFilter == null || myFilter.test(item)) {
-        myVisibleItems.add(item);
+      if (filter == null || filter.test(item)) {
+        visibleItems.add(item);
       }
     }
-    if (myComparator != null) {
-      myVisibleItems.sort(myComparator);
+    if (comparator != null) {
+      visibleItems.sort(comparator);
     }
   }
 
   private void rebuildContent(final boolean animate) {
     removeAll();
-    if (myLoading) {
-      myLoadingHolder.removeAll();
-      myLoadingHolder.add(
-          myLoadingComponent != null ? myLoadingComponent : defaultLoading(), BorderLayout.CENTER);
-      add(myLoadingHolder, BorderLayout.CENTER);
+    if (loading) {
+      loadingHolder.removeAll();
+      loadingHolder.add(
+          loadingComponent != null ? loadingComponent : defaultLoading(), BorderLayout.CENTER);
+      add(loadingHolder, BorderLayout.CENTER);
       revalidate();
       repaint();
       return;
     }
-    if (myVisibleItems.isEmpty()) {
-      myEmptyHolder.removeAll();
-      myEmptyHolder.add(
-          myEmptyState != null ? myEmptyState : defaultEmptyState(), BorderLayout.CENTER);
-      add(myEmptyHolder, BorderLayout.CENTER);
+    if (visibleItems.isEmpty()) {
+      emptyHolder.removeAll();
+      emptyHolder.add(emptyState != null ? emptyState : defaultEmptyState(), BorderLayout.CENTER);
+      add(emptyHolder, BorderLayout.CENTER);
       revalidate();
       repaint();
       return;
     }
 
-    myCardByItem.clear();
-    myContent.removeAll();
+    cardByItem.clear();
+    content.removeAll();
     applyOrientationLayout();
 
-    final boolean canReorder = myReorderable && myComparator == null;
-    for (int i = 0; i < myVisibleItems.size(); i++) {
-      final T item = myVisibleItems.get(i);
-      final FlatCard card = myAdapter.cardFor(item, i);
+    final boolean canReorder = reorderable && comparator == null;
+    for (int i = 0; i < visibleItems.size(); i++) {
+      final T item = visibleItems.get(i);
+      final FlatCard card = adapter.cardFor(item, i);
       if (card == null) {
         continue;
       }
-      myCardByItem.put(item, card);
+      cardByItem.put(item, card);
       configureCardForList(card, item, i, canReorder);
-      myContent.add(card);
+      content.add(card);
     }
-    add(myContent, BorderLayout.CENTER);
+    add(content, BorderLayout.CENTER);
 
-    if (myFocusedVisibleIndex >= myVisibleItems.size()) {
-      myFocusedVisibleIndex = myVisibleItems.size() - 1;
+    if (focusedVisibleIndex >= visibleItems.size()) {
+      focusedVisibleIndex = visibleItems.size() - 1;
     }
 
     revalidate();
@@ -678,84 +677,84 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
     if (animate) {
       startFadeIn();
     } else {
-      myFadeAlpha = 1f;
+      fadeAlpha = 1f;
     }
   }
 
   private void configureCardForList(
-      final FlatCard theCard, final T theItem, final int theIndex, final boolean theCanReorder) {
-    if (mySelectionMode != CardSelectionMode.NONE) {
+      final FlatCard card, final T item, final int index, final boolean canReorder) {
+    if (selectionMode != CardSelectionMode.NONE) {
       // CLICKABLE (not SELECTABLE) so FlatCard fires action events but does NOT auto-toggle
-      // its own mySelected state on release — the list owns selection through its model and
+      // its own selected state on release — the list owns selection through its model and
       // calls setSelected() explicitly, which would otherwise desync against FlatCard's toggle.
-      theCard.setInteractionMode(CardInteractionMode.CLICKABLE);
-      theCard.setSelected(mySelectionModel.isSelected(theItem));
+      card.setInteractionMode(CardInteractionMode.CLICKABLE);
+      card.setSelected(selectionModel.isSelected(item));
     }
 
     final MouseInputAdapter handler =
         new MouseInputAdapter() {
           @Override
-          public void mousePressed(final MouseEvent theEvent) {
-            if (!shouldHandleHere(theEvent)) {
+          public void mousePressed(final MouseEvent event) {
+            if (!shouldHandleHere(event)) {
               return;
             }
             requestFocusInWindow();
-            myFocusedVisibleIndex = theIndex;
-            handleSelectionPress(theItem, theIndex, theEvent.getModifiersEx());
-            if (theCanReorder && shouldStartDragFrom(theEvent)) {
-              initiateDrag(theItem, theCard, theEvent);
+            focusedVisibleIndex = index;
+            handleSelectionPress(item, index, event.getModifiersEx());
+            if (canReorder && shouldStartDragFrom(event)) {
+              initiateDrag(item, card, event);
             }
-            theEvent.consume();
+            event.consume();
           }
 
           @Override
-          public void mouseDragged(final MouseEvent theEvent) {
-            if (myDrag == null || myDrag.item != theItem) {
+          public void mouseDragged(final MouseEvent event) {
+            if (drag == null || drag.item != item) {
               return;
             }
-            if (!myDrag.active && hasMovedPastThreshold(theEvent, theCard)) {
+            if (!drag.active && hasMovedPastThreshold(event, card)) {
               activateDrag();
             }
-            if (myDrag.active) {
-              continueDrag(theEvent);
+            if (drag.active) {
+              continueDrag(event);
             }
-            theEvent.consume();
+            event.consume();
           }
 
           @Override
-          public void mouseReleased(final MouseEvent theEvent) {
-            if (myDrag == null || myDrag.item != theItem) {
+          public void mouseReleased(final MouseEvent event) {
+            if (drag == null || drag.item != item) {
               return;
             }
-            if (myDrag.active) {
-              endDrag(theEvent);
+            if (drag.active) {
+              endDrag(event);
             } else {
               // Press-with-no-drag — let FlatCard's own mouseReleased run its course (which
               // will fire the deferred header toggle if applicable). Just clear the pending
               // drag state so the next press starts clean.
-              myDrag = null;
+              drag = null;
             }
-            theEvent.consume();
+            event.consume();
           }
 
-          private boolean shouldHandleHere(final MouseEvent theEvent) {
-            return theEvent.getButton() == MouseEvent.BUTTON1
-                || theEvent.getID() != MouseEvent.MOUSE_PRESSED;
+          private boolean shouldHandleHere(final MouseEvent event) {
+            return event.getButton() == MouseEvent.BUTTON1
+                || event.getID() != MouseEvent.MOUSE_PRESSED;
           }
 
-          private boolean shouldStartDragFrom(final MouseEvent theEvent) {
-            return switch (myReorderHandle) {
+          private boolean shouldStartDragFrom(final MouseEvent event) {
+            return switch (reorderHandle) {
               case WHOLE_CARD -> true;
-              case LEADING_ICON -> isInLeadingIcon(theCard, theEvent);
+              case LEADING_ICON -> isInLeadingIcon(card, event);
               case TRAILING_HANDLE -> false;
             };
           }
         };
-    theCard.addMouseListener(handler);
-    theCard.addMouseMotionListener(handler);
+    card.addMouseListener(handler);
+    card.addMouseMotionListener(handler);
 
-    if (theCanReorder && myReorderHandle == ReorderHandle.TRAILING_HANDLE) {
-      installTrailingHandle(theCard, theItem, theIndex);
+    if (canReorder && reorderHandle == ReorderHandle.TRAILING_HANDLE) {
+      installTrailingHandle(card, item, index);
     }
 
     // Cursor strategy: distinguish "draggable surface" (MOVE) from "click affordance" (HAND).
@@ -764,27 +763,26 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
     //   of the card stays at HAND for selection (set by setInteractionMode(CLICKABLE) above).
     // The chevron always overrides to HAND (set in FlatCard) so it visibly contrasts with a
     // MOVE'd card body.
-    if (theCanReorder && myReorderHandle == ReorderHandle.WHOLE_CARD) {
-      theCard.setCursor(Cursors.grab());
+    if (canReorder && reorderHandle == ReorderHandle.WHOLE_CARD) {
+      card.setCursor(Cursors.grab());
     }
   }
 
-  private boolean isInLeadingIcon(final FlatCard theCard, final MouseEvent theEvent) {
-    return theEvent.getX() <= 24;
+  private boolean isInLeadingIcon(final FlatCard card, final MouseEvent event) {
+    return event.getX() <= 24;
   }
 
-  private boolean hasMovedPastThreshold(final MouseEvent theEvent, final FlatCard theCard) {
-    if (myDrag == null) {
+  private boolean hasMovedPastThreshold(final MouseEvent event, final FlatCard card) {
+    if (drag == null) {
       return false;
     }
-    final Point now =
-        SwingUtilities.convertPoint(theEvent.getComponent(), theEvent.getPoint(), myContent);
-    final int dx = now.x - myDrag.startPoint.x;
-    final int dy = now.y - myDrag.startPoint.y;
+    final Point now = SwingUtilities.convertPoint(event.getComponent(), event.getPoint(), content);
+    final int dx = now.x - drag.startPoint.x;
+    final int dy = now.y - drag.startPoint.y;
     return dx * dx + dy * dy >= DRAG_THRESHOLD * DRAG_THRESHOLD;
   }
 
-  private void installTrailingHandle(final FlatCard theCard, final T theItem, final int theIndex) {
+  private void installTrailingHandle(final FlatCard card, final T item, final int index) {
     final JLabel grip = new JLabel("⋮⋮");
     grip.setHorizontalAlignment(SwingConstants.CENTER);
     grip.setForeground(UIManager.getColor("Label.disabledForeground"));
@@ -794,77 +792,77 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
     grip.addMouseListener(
         new MouseAdapter() {
           @Override
-          public void mousePressed(final MouseEvent theEvent) {
-            initiateDrag(theItem, theCard, theEvent);
+          public void mousePressed(final MouseEvent event) {
+            initiateDrag(item, card, event);
           }
 
           @Override
-          public void mouseReleased(final MouseEvent theEvent) {
-            if (myDrag == null) {
+          public void mouseReleased(final MouseEvent event) {
+            if (drag == null) {
               return;
             }
-            if (myDrag.active) {
-              endDrag(theEvent);
+            if (drag.active) {
+              endDrag(event);
             } else {
-              myDrag = null;
+              drag = null;
             }
           }
         });
     grip.addMouseMotionListener(
         new MouseInputAdapter() {
           @Override
-          public void mouseDragged(final MouseEvent theEvent) {
-            if (myDrag == null) {
+          public void mouseDragged(final MouseEvent event) {
+            if (drag == null) {
               return;
             }
-            if (!myDrag.active && hasMovedPastThreshold(theEvent, theCard)) {
+            if (!drag.active && hasMovedPastThreshold(event, card)) {
               activateDrag();
             }
-            if (myDrag.active) {
-              continueDrag(theEvent);
+            if (drag.active) {
+              continueDrag(event);
             }
           }
         });
-    theCard.setTrailingActions(grip);
+    card.setTrailingActions(grip);
   }
 
   // -------------------------------------------------------------- selection
 
-  private void handleSelectionPress(final T theItem, final int theIndex, final int theModifiers) {
-    if (mySelectionMode == CardSelectionMode.NONE) {
+  private void handleSelectionPress(final T item, final int index, final int modifiers) {
+    if (selectionMode == CardSelectionMode.NONE) {
       return;
     }
-    final boolean shift = (theModifiers & InputEvent.SHIFT_DOWN_MASK) != 0;
+    final boolean shift = (modifiers & InputEvent.SHIFT_DOWN_MASK) != 0;
     final int meta = InputEvent.META_DOWN_MASK | InputEvent.CTRL_DOWN_MASK;
-    final boolean toggle = (theModifiers & meta) != 0;
+    final boolean toggle = (modifiers & meta) != 0;
 
-    if (mySelectionMode == CardSelectionMode.SINGLE) {
-      mySelectionModel.setSelected(List.of(theItem));
-      myAnchorItem = theItem;
-    } else if (shift && myAnchorItem != null) {
-      final int anchorIdx = myVisibleItems.indexOf(myAnchorItem);
+    if (selectionMode == CardSelectionMode.SINGLE) {
+      selectionModel.setSelected(List.of(item));
+      anchorItem = item;
+    } else if (shift && anchorItem != null) {
+      final int anchorIdx = visibleItems.indexOf(anchorItem);
       if (anchorIdx >= 0) {
-        final int from = Math.min(anchorIdx, theIndex);
-        final int to = Math.max(anchorIdx, theIndex);
-        final List<T> range = new ArrayList<>(myVisibleItems.subList(from, to + 1));
-        mySelectionModel.setSelected(range);
+        final int from = Math.min(anchorIdx, index);
+        final int to = Math.max(anchorIdx, index);
+        final List<T> range = new ArrayList<>(visibleItems.subList(from, to + 1));
+        selectionModel.setSelected(range);
       } else {
-        mySelectionModel.setSelected(List.of(theItem));
-        myAnchorItem = theItem;
+        selectionModel.setSelected(List.of(item));
+        anchorItem = item;
       }
     } else if (toggle) {
-      mySelectionModel.toggle(theItem);
-      myAnchorItem = theItem;
+      selectionModel.toggle(item);
+      anchorItem = item;
     } else {
-      mySelectionModel.setSelected(List.of(theItem));
-      myAnchorItem = theItem;
+      selectionModel.setSelected(List.of(item));
+      anchorItem = item;
     }
     syncSelectionVisuals();
   }
 
   private void syncSelectionVisuals() {
-    for (Map.Entry<T, FlatCard> entry : myCardByItem.entrySet()) {
-      entry.getValue().setSelected(mySelectionModel.isSelected(entry.getKey()));
+    for (Map.Entry<T, FlatCard> entry : cardByItem.entrySet()) {
+      entry.getValue().setSelected(selectionModel.isSelected(entry.getKey()));
     }
   }
 
@@ -878,17 +876,16 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  private void initiateDrag(final T theItem, final FlatCard theCard, final MouseEvent theEvent) {
-    myDrag = new DragState();
-    myDrag.item = theItem;
-    myDrag.card = theCard;
-    myDrag.fromIndex = myVisibleItems.indexOf(theItem);
-    myDrag.toIndex = myDrag.fromIndex;
-    myDrag.startPoint = SwingUtilities.convertPoint(theCard, theEvent.getPoint(), myContent);
-    myDrag.currentPoint = myDrag.startPoint;
-    myDrag.grabOffset =
-        SwingUtilities.convertPoint(theEvent.getComponent(), theEvent.getPoint(), theCard);
-    myDrag.active = false;
+  private void initiateDrag(final T item, final FlatCard card, final MouseEvent event) {
+    drag = new DragState();
+    drag.item = item;
+    drag.card = card;
+    drag.fromIndex = visibleItems.indexOf(item);
+    drag.toIndex = drag.fromIndex;
+    drag.startPoint = SwingUtilities.convertPoint(card, event.getPoint(), content);
+    drag.currentPoint = drag.startPoint;
+    drag.grabOffset = SwingUtilities.convertPoint(event.getComponent(), event.getPoint(), card);
+    drag.active = false;
   }
 
   /**
@@ -900,47 +897,46 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   private void activateDrag() {
-    if (myDrag == null || myDrag.active) {
+    if (drag == null || drag.active) {
       return;
     }
-    myDrag.active = true;
+    drag.active = true;
 
     // Telling the card to drop any pending press state suppresses the header-collapse toggle
     // that would otherwise fire on the upcoming mouseReleased — the user meant "drag", not
     // "click to expand".
-    myDrag.card.cancelPendingClick();
+    drag.card.cancelPendingClick();
 
-    myDisplacedY.clear();
-    myDisplacedX.clear();
-    for (FlatCard c : myCardByItem.values()) {
-      myDisplacedY.put(c, c.getY());
-      myDisplacedX.put(c, c.getX());
+    displacedY.clear();
+    displacedX.clear();
+    for (FlatCard c : cardByItem.values()) {
+      displacedY.put(c, c.getY());
+      displacedX.put(c, c.getX());
     }
     recomputeDragTargets();
 
-    myContent.setComponentZOrder(myDrag.card, 0);
+    content.setComponentZOrder(drag.card, 0);
 
     setCursor(Cursors.grabbing());
-    myDrag.card.setCursor(Cursors.grabbing());
+    drag.card.setCursor(Cursors.grabbing());
     startDragAnimation();
-    myContent.revalidate();
-    myContent.repaint();
+    content.revalidate();
+    content.repaint();
   }
 
-  private void continueDrag(final MouseEvent theEvent) {
-    if (myDrag == null) {
+  private void continueDrag(final MouseEvent event) {
+    if (drag == null) {
       return;
     }
-    final Point p =
-        SwingUtilities.convertPoint(theEvent.getComponent(), theEvent.getPoint(), myContent);
-    myDrag.currentPoint = p;
+    final Point p = SwingUtilities.convertPoint(event.getComponent(), event.getPoint(), content);
+    drag.currentPoint = p;
     final int newDrop = computeDropIndex(p);
-    if (newDrop != myDrag.toIndex) {
-      myDrag.toIndex = newDrop;
+    if (newDrop != drag.toIndex) {
+      drag.toIndex = newDrop;
       recomputeDragTargets();
     }
-    myContent.revalidate();
-    myContent.repaint();
+    content.revalidate();
+    content.repaint();
   }
 
   /**
@@ -950,46 +946,45 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  private int computeDropIndex(final Point thePoint) {
-    if (myOrientation == FlatListOrientation.GRID) {
-      return computeGridDropIndex(thePoint);
+  private int computeDropIndex(final Point point) {
+    if (orientation == FlatListOrientation.GRID) {
+      return computeGridDropIndex(point);
     }
     int slot = 0;
-    final Insets in = myContent.getInsets();
+    final Insets in = content.getInsets();
     int y = in.top;
-    for (T item : myVisibleItems) {
-      if (item == myDrag.item) {
+    for (T item : visibleItems) {
+      if (item == drag.item) {
         continue;
       }
-      final FlatCard c = myCardByItem.get(item);
+      final FlatCard c = cardByItem.get(item);
       if (c == null) {
         continue;
       }
       final int h = c.getPreferredSize().height;
       final int mid = y + h / 2;
-      if (thePoint.y > mid) {
+      if (point.y > mid) {
         slot++;
       }
-      y += h + myItemGap;
+      y += h + itemGap;
     }
     return slot;
   }
 
-  private int computeGridDropIndex(final Point thePoint) {
-    final Insets in = myContent.getInsets();
-    final int availW = Math.max(1, myContent.getWidth() - in.left - in.right);
-    final int cellW = Math.max(1, (availW - (myColumns - 1) * myItemGap) / myColumns);
+  private int computeGridDropIndex(final Point point) {
+    final Insets in = content.getInsets();
+    final int availW = Math.max(1, content.getWidth() - in.left - in.right);
+    final int cellW = Math.max(1, (availW - (columns - 1) * itemGap) / columns);
     final int cellH = Math.max(1, computeGridCellHeight());
-    final int col =
-        Math.max(0, Math.min(myColumns - 1, (thePoint.x - in.left) / (cellW + myItemGap)));
-    final int row = Math.max(0, (thePoint.y - in.top) / (cellH + myItemGap));
-    final int idx = row * myColumns + col;
-    return Math.max(0, Math.min(myVisibleItems.size() - 1, idx));
+    final int col = Math.max(0, Math.min(columns - 1, (point.x - in.left) / (cellW + itemGap)));
+    final int row = Math.max(0, (point.y - in.top) / (cellH + itemGap));
+    final int idx = row * columns + col;
+    return Math.max(0, Math.min(visibleItems.size() - 1, idx));
   }
 
   private int computeGridCellHeight() {
     int max = 0;
-    for (FlatCard c : myCardByItem.values()) {
+    for (FlatCard c : cardByItem.values()) {
       max = Math.max(max, c.getPreferredSize().height);
     }
     return max > 0 ? max : 32;
@@ -997,137 +992,133 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
 
   /**
    * Recomputes target X / Y for every non-dragged card, based on the visual order produced by
-   * removing the dragged card and reinserting it at {@code myDrag.toIndex}.
+   * removing the dragged card and reinserting it at {@code drag.toIndex}.
    *
    * @version v0.1.0
    * @since v0.1.0
    */
   private void recomputeDragTargets() {
-    myTargetY.clear();
-    myTargetX.clear();
+    targetY.clear();
+    targetX.clear();
     final List<FlatCard> ordered = new ArrayList<>();
-    for (T item : myVisibleItems) {
-      final FlatCard c = myCardByItem.get(item);
+    for (T item : visibleItems) {
+      final FlatCard c = cardByItem.get(item);
       if (c != null) {
         ordered.add(c);
       }
     }
-    ordered.remove(myDrag.card);
-    final int dropClamp = Math.max(0, Math.min(ordered.size(), myDrag.toIndex));
-    ordered.add(dropClamp, myDrag.card);
+    ordered.remove(drag.card);
+    final int dropClamp = Math.max(0, Math.min(ordered.size(), drag.toIndex));
+    ordered.add(dropClamp, drag.card);
 
-    final Insets in = myContent.getInsets();
-    if (myOrientation == FlatListOrientation.GRID) {
-      final int availW = Math.max(1, myContent.getWidth() - in.left - in.right);
-      final int cellW = Math.max(1, (availW - (myColumns - 1) * myItemGap) / myColumns);
+    final Insets in = content.getInsets();
+    if (orientation == FlatListOrientation.GRID) {
+      final int availW = Math.max(1, content.getWidth() - in.left - in.right);
+      final int cellW = Math.max(1, (availW - (columns - 1) * itemGap) / columns);
       final int cellH = Math.max(1, computeGridCellHeight());
       for (int i = 0; i < ordered.size(); i++) {
         final FlatCard c = ordered.get(i);
-        final int col = i % myColumns;
-        final int row = i / myColumns;
-        myTargetX.put(c, in.left + col * (cellW + myItemGap));
-        myTargetY.put(c, in.top + row * (cellH + myItemGap));
+        final int col = i % columns;
+        final int row = i / columns;
+        targetX.put(c, in.left + col * (cellW + itemGap));
+        targetY.put(c, in.top + row * (cellH + itemGap));
       }
     } else {
       int y = in.top;
       for (FlatCard c : ordered) {
-        myTargetY.put(c, y);
-        myTargetX.put(c, in.left);
-        y += c.getPreferredSize().height + myItemGap;
+        targetY.put(c, y);
+        targetX.put(c, in.left);
+        y += c.getPreferredSize().height + itemGap;
       }
     }
   }
 
   private void startDragAnimation() {
-    if (myDragAnimTimer != null && myDragAnimTimer.isRunning()) {
-      myDragAnimTimer.stop();
+    if (dragAnimTimer != null && dragAnimTimer.isRunning()) {
+      dragAnimTimer.stop();
     }
-    myDragAnimTimer =
+    dragAnimTimer =
         new Timer(
             ANIMATION_TICK_MS,
             e -> {
-              if (myDrag == null) {
+              if (drag == null) {
                 ((Timer) e.getSource()).stop();
                 return;
               }
               boolean moved = false;
-              for (Map.Entry<FlatCard, Integer> entry : myTargetY.entrySet()) {
+              for (Map.Entry<FlatCard, Integer> entry : targetY.entrySet()) {
                 final FlatCard c = entry.getKey();
-                if (c == myDrag.card) {
+                if (c == drag.card) {
                   continue;
                 }
-                if (animateAxis(c, entry.getValue(), myDisplacedY, c.getY())) {
+                if (animateAxis(c, entry.getValue(), displacedY, c.getY())) {
                   moved = true;
                 }
-                final Integer tx = myTargetX.get(c);
-                if (tx != null && animateAxis(c, tx, myDisplacedX, c.getX())) {
+                final Integer tx = targetX.get(c);
+                if (tx != null && animateAxis(c, tx, displacedX, c.getX())) {
                   moved = true;
                 }
               }
               if (moved) {
-                myContent.revalidate();
-                myContent.repaint();
+                content.revalidate();
+                content.repaint();
               }
             });
-    myDragAnimTimer.start();
+    dragAnimTimer.start();
   }
 
   /**
-   * Lerps a single axis (x or y) for {@code theCard} toward {@code theTarget}; returns true if it
-   * moved.
+   * Lerps a single axis (x or y) for {@code card} toward {@code target}; returns true if it moved.
    *
    * @version v0.1.0
    * @since v0.1.0
    */
   private static boolean animateAxis(
-      final FlatCard theCard,
-      final int theTarget,
-      final Map<FlatCard, Integer> theMap,
-      final int theFallback) {
-    final Integer curBoxed = theMap.get(theCard);
-    final int cur = curBoxed != null ? curBoxed : theFallback;
-    if (cur == theTarget) {
+      final FlatCard card, final int target, final Map<FlatCard, Integer> map, final int fallback) {
+    final Integer curBoxed = map.get(card);
+    final int cur = curBoxed != null ? curBoxed : fallback;
+    if (cur == target) {
       return false;
     }
-    final int diff = theTarget - cur;
+    final int diff = target - cur;
     int step = (int) Math.round(diff * 0.30);
     if (step == 0 || Math.abs(diff) <= 1) {
       step = diff;
     }
-    theMap.put(theCard, cur + step);
+    map.put(card, cur + step);
     return true;
   }
 
-  private void endDrag(final MouseEvent theEvent) {
+  private void endDrag(final MouseEvent event) {
     setCursor(Cursor.getDefaultCursor());
-    if (myDragAnimTimer != null) {
-      myDragAnimTimer.stop();
+    if (dragAnimTimer != null) {
+      dragAnimTimer.stop();
     }
-    myDisplacedY.clear();
-    myTargetY.clear();
-    myDisplacedX.clear();
-    myTargetX.clear();
-    if (myDrag == null) {
+    displacedY.clear();
+    targetY.clear();
+    displacedX.clear();
+    targetX.clear();
+    if (drag == null) {
       return;
     }
     // Restore the dragged card's hover cursor. If the drop triggers a model.move below, the
     // card will be rebuilt and re-configured anyway — this only matters for no-op drops where
     // the same card stays on screen.
-    if (myDrag.card != null && myReorderable && myReorderHandle == ReorderHandle.WHOLE_CARD) {
-      myDrag.card.setCursor(Cursors.grab());
+    if (drag.card != null && reorderable && reorderHandle == ReorderHandle.WHOLE_CARD) {
+      drag.card.setCursor(Cursors.grab());
     }
-    final int fromVis = myDrag.fromIndex;
-    final int toVis = myDrag.toIndex;
-    final T item = myDrag.item;
-    myDrag = null;
+    final int fromVis = drag.fromIndex;
+    final int toVis = drag.toIndex;
+    final T item = drag.item;
+    drag = null;
     if (fromVis < 0 || toVis < 0 || fromVis == toVis) {
       restoreContentOrder();
       return;
     }
     boolean modelMoved = false;
-    if (myModel instanceof DefaultCardListModel<T> mutable) {
+    if (model instanceof DefaultCardListModel<T> mutable) {
       final int fromModel = indexOfInModel(item);
-      final T atTarget = myVisibleItems.get(toVis);
+      final T atTarget = visibleItems.get(toVis);
       final int toModel = indexOfInModel(atTarget);
       if (fromModel >= 0 && toModel >= 0 && fromModel != toModel) {
         mutable.move(fromModel, toModel);
@@ -1141,7 +1132,7 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
       // Successful model.move fires a MOVED event → onModelChanged → rebuildContent, which
       // resets child order. When the model is NOT mutated (e.g., the card at toVis happened to
       // be the dragged item, or the model wasn't mutable), the child order scrambled by
-      // activateDrag's setComponentZOrder(myDrag.card, 0) call would otherwise persist and make
+      // activateDrag's setComponentZOrder(drag.card, 0) call would otherwise persist and make
       // the layout (which iterates children by index) visually relocate the dragged card to row
       // 0 / col 0 — independent of the model.
       restoreContentOrder();
@@ -1149,9 +1140,9 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   /**
-   * Restores child component order of myContent to match {@code myVisibleItems}, then revalidates
-   * and repaints. Required after a no-op drag-drop because {@link #activateDrag} calls {@code
-   * myContent.setComponentZOrder(myDrag.card, 0)} during the drag to bring the dragged card to the
+   * Restores child component order of content to match {@code visibleItems}, then revalidates and
+   * repaints. Required after a no-op drag-drop because {@link #activateDrag} calls {@code
+   * content.setComponentZOrder(drag.card, 0)} during the drag to bring the dragged card to the
    * visual front — which also rearranges the children array. The idle layouts (Stacking and
    * GridStacking) place children by index, so a scrambled order after a no-op drop visually
    * relocates the dragged card to position 0 even though the model is untouched.
@@ -1161,24 +1152,24 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    */
   private void restoreContentOrder() {
     int targetIndex = 0;
-    for (T item : myVisibleItems) {
-      final FlatCard card = myCardByItem.get(item);
+    for (T item : visibleItems) {
+      final FlatCard card = cardByItem.get(item);
       if (card == null) {
         continue;
       }
-      if (card.getParent() == myContent) {
-        myContent.setComponentZOrder(card, targetIndex);
+      if (card.getParent() == content) {
+        content.setComponentZOrder(card, targetIndex);
         targetIndex++;
       }
     }
-    myContent.revalidate();
-    myContent.repaint();
+    content.revalidate();
+    content.repaint();
   }
 
-  private int indexOfInModel(final T theItem) {
+  private int indexOfInModel(final T item) {
     int i = 0;
-    for (T t : myModel) {
-      if (t == theItem || (t != null && t.equals(theItem))) {
+    for (T t : model) {
+      if (t == item || (t != null && t.equals(item))) {
         return i;
       }
       i++;
@@ -1186,9 +1177,9 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
     return -1;
   }
 
-  private void fireReorder(final T theItem, final int theFrom, final int theTo) {
-    final CardReorderEvent<T> evt = new CardReorderEvent<>(this, theItem, theFrom, theTo);
-    for (CardReorderListener<T> l : new ArrayList<>(myReorderListeners)) {
+  private void fireReorder(final T item, final int from, final int to) {
+    final CardReorderEvent<T> evt = new CardReorderEvent<>(this, item, from, to);
+    for (CardReorderListener<T> l : new ArrayList<>(reorderListeners)) {
       l.cardReordered(evt);
     }
   }
@@ -1220,7 +1211,7 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
 
     @Override
     public Dimension getMaximumSize() {
-      if (myOrientation == FlatListOrientation.VERTICAL) {
+      if (orientation == FlatListOrientation.VERTICAL) {
         return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
       }
       return super.getMaximumSize();
@@ -1237,27 +1228,27 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    */
   private final class StackingLayout implements java.awt.LayoutManager {
     @Override
-    public void addLayoutComponent(final String theName, final Component theComp) {
+    public void addLayoutComponent(final String name, final Component comp) {
       // No-op — this layout doesn't use named constraints.
     }
 
     @Override
-    public void removeLayoutComponent(final Component theComp) {
-      myDisplacedY.remove(theComp);
-      myTargetY.remove(theComp);
+    public void removeLayoutComponent(final Component comp) {
+      displacedY.remove(comp);
+      targetY.remove(comp);
     }
 
     @Override
-    public Dimension preferredLayoutSize(final Container theParent) {
-      final Insets in = theParent.getInsets();
+    public Dimension preferredLayoutSize(final Container parent) {
+      final Insets in = parent.getInsets();
       int total = in.top + in.bottom;
       int width = 0;
-      final int count = theParent.getComponentCount();
+      final int count = parent.getComponentCount();
       for (int i = 0; i < count; i++) {
-        final Dimension pref = theParent.getComponent(i).getPreferredSize();
+        final Dimension pref = parent.getComponent(i).getPreferredSize();
         total += pref.height;
         if (i + 1 < count) {
-          total += myItemGap;
+          total += itemGap;
         }
         width = Math.max(width, pref.width);
       }
@@ -1265,36 +1256,36 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
     }
 
     @Override
-    public Dimension minimumLayoutSize(final Container theParent) {
-      return preferredLayoutSize(theParent);
+    public Dimension minimumLayoutSize(final Container parent) {
+      return preferredLayoutSize(parent);
     }
 
     @Override
-    public void layoutContainer(final Container theParent) {
-      final Insets in = theParent.getInsets();
-      final int width = Math.max(0, theParent.getWidth() - in.left - in.right);
-      if (myDrag == null) {
+    public void layoutContainer(final Container parent) {
+      final Insets in = parent.getInsets();
+      final int width = Math.max(0, parent.getWidth() - in.left - in.right);
+      if (drag == null) {
         int y = in.top;
-        for (int i = 0; i < theParent.getComponentCount(); i++) {
-          final Component c = theParent.getComponent(i);
+        for (int i = 0; i < parent.getComponentCount(); i++) {
+          final Component c = parent.getComponent(i);
           final Dimension pref = c.getPreferredSize();
           c.setBounds(in.left, y, width, pref.height);
-          y += pref.height + myItemGap;
+          y += pref.height + itemGap;
         }
         return;
       }
       // Drag mode: dragged card follows the cursor (Y); others use displaced Y.
-      for (int i = 0; i < theParent.getComponentCount(); i++) {
-        final Component c = theParent.getComponent(i);
+      for (int i = 0; i < parent.getComponentCount(); i++) {
+        final Component c = parent.getComponent(i);
         final Dimension pref = c.getPreferredSize();
-        if (c == myDrag.card) {
-          int y = myDrag.currentPoint.y - myDrag.grabOffset.y;
+        if (c == drag.card) {
+          int y = drag.currentPoint.y - drag.grabOffset.y;
           // Clamp so the card doesn't drift past the visible content area.
-          final int maxY = Math.max(in.top, theParent.getHeight() - in.bottom - pref.height);
+          final int maxY = Math.max(in.top, parent.getHeight() - in.bottom - pref.height);
           y = Math.max(in.top, Math.min(maxY, y));
           c.setBounds(in.left, y, width, pref.height);
         } else {
-          final Integer dispY = myDisplacedY.get(c);
+          final Integer dispY = displacedY.get(c);
           final int y = dispY != null ? dispY : in.top;
           c.setBounds(in.left, y, width, pref.height);
         }
@@ -1313,72 +1304,69 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    */
   private final class GridStackingLayout implements java.awt.LayoutManager {
     @Override
-    public void addLayoutComponent(final String theName, final Component theComp) {
+    public void addLayoutComponent(final String name, final Component comp) {
       // No-op — this layout doesn't use named constraints.
     }
 
     @Override
-    public void removeLayoutComponent(final Component theComp) {
-      myDisplacedY.remove(theComp);
-      myTargetY.remove(theComp);
-      myDisplacedX.remove(theComp);
-      myTargetX.remove(theComp);
+    public void removeLayoutComponent(final Component comp) {
+      displacedY.remove(comp);
+      targetY.remove(comp);
+      displacedX.remove(comp);
+      targetX.remove(comp);
     }
 
     @Override
-    public Dimension preferredLayoutSize(final Container theParent) {
-      final Insets in = theParent.getInsets();
-      final int count = theParent.getComponentCount();
-      final int rows = (count + myColumns - 1) / Math.max(1, myColumns);
+    public Dimension preferredLayoutSize(final Container parent) {
+      final Insets in = parent.getInsets();
+      final int count = parent.getComponentCount();
+      final int rows = (count + columns - 1) / Math.max(1, columns);
       final int cellH = computeGridCellHeight();
       int cellW = 0;
       for (int i = 0; i < count; i++) {
-        cellW = Math.max(cellW, theParent.getComponent(i).getPreferredSize().width);
+        cellW = Math.max(cellW, parent.getComponent(i).getPreferredSize().width);
       }
       return new Dimension(
-          cellW * myColumns + myItemGap * Math.max(0, myColumns - 1) + in.left + in.right,
-          cellH * rows + myItemGap * Math.max(0, rows - 1) + in.top + in.bottom);
+          cellW * columns + itemGap * Math.max(0, columns - 1) + in.left + in.right,
+          cellH * rows + itemGap * Math.max(0, rows - 1) + in.top + in.bottom);
     }
 
     @Override
-    public Dimension minimumLayoutSize(final Container theParent) {
-      return preferredLayoutSize(theParent);
+    public Dimension minimumLayoutSize(final Container parent) {
+      return preferredLayoutSize(parent);
     }
 
     @Override
-    public void layoutContainer(final Container theParent) {
-      final Insets in = theParent.getInsets();
-      final int availW = Math.max(0, theParent.getWidth() - in.left - in.right);
-      final int cellW = Math.max(1, (availW - (myColumns - 1) * myItemGap) / myColumns);
+    public void layoutContainer(final Container parent) {
+      final Insets in = parent.getInsets();
+      final int availW = Math.max(0, parent.getWidth() - in.left - in.right);
+      final int cellW = Math.max(1, (availW - (columns - 1) * itemGap) / columns);
       final int cellH = Math.max(1, computeGridCellHeight());
 
-      if (myDrag == null) {
-        for (int i = 0; i < theParent.getComponentCount(); i++) {
-          final Component c = theParent.getComponent(i);
-          final int col = i % myColumns;
-          final int row = i / myColumns;
+      if (drag == null) {
+        for (int i = 0; i < parent.getComponentCount(); i++) {
+          final Component c = parent.getComponent(i);
+          final int col = i % columns;
+          final int row = i / columns;
           c.setBounds(
-              in.left + col * (cellW + myItemGap),
-              in.top + row * (cellH + myItemGap),
-              cellW,
-              cellH);
+              in.left + col * (cellW + itemGap), in.top + row * (cellH + itemGap), cellW, cellH);
         }
         return;
       }
 
-      for (int i = 0; i < theParent.getComponentCount(); i++) {
-        final Component c = theParent.getComponent(i);
-        if (c == myDrag.card) {
-          int x = myDrag.currentPoint.x - myDrag.grabOffset.x;
-          int y = myDrag.currentPoint.y - myDrag.grabOffset.y;
-          final int maxX = Math.max(in.left, theParent.getWidth() - in.right - cellW);
-          final int maxY = Math.max(in.top, theParent.getHeight() - in.bottom - cellH);
+      for (int i = 0; i < parent.getComponentCount(); i++) {
+        final Component c = parent.getComponent(i);
+        if (c == drag.card) {
+          int x = drag.currentPoint.x - drag.grabOffset.x;
+          int y = drag.currentPoint.y - drag.grabOffset.y;
+          final int maxX = Math.max(in.left, parent.getWidth() - in.right - cellW);
+          final int maxY = Math.max(in.top, parent.getHeight() - in.bottom - cellH);
           x = Math.max(in.left, Math.min(maxX, x));
           y = Math.max(in.top, Math.min(maxY, y));
           c.setBounds(x, y, cellW, cellH);
         } else {
-          final Integer dispX = myDisplacedX.get(c);
-          final Integer dispY = myDisplacedY.get(c);
+          final Integer dispX = displacedX.get(c);
+          final Integer dispY = displacedY.get(c);
           final int x = dispX != null ? dispX : in.left;
           final int y = dispY != null ? dispY : in.top;
           c.setBounds(x, y, cellW, cellH);
@@ -1405,26 +1393,26 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    */
   private final class HorizontalStackingLayout implements java.awt.LayoutManager {
     @Override
-    public void addLayoutComponent(final String theName, final Component theComp) {
+    public void addLayoutComponent(final String name, final Component comp) {
       // no-op
     }
 
     @Override
-    public void removeLayoutComponent(final Component theComp) {
+    public void removeLayoutComponent(final Component comp) {
       // no-op
     }
 
     @Override
-    public Dimension preferredLayoutSize(final Container theParent) {
-      final Insets in = theParent.getInsets();
+    public Dimension preferredLayoutSize(final Container parent) {
+      final Insets in = parent.getInsets();
       int totalW = in.left + in.right;
       int rowH = 0;
-      final int count = theParent.getComponentCount();
+      final int count = parent.getComponentCount();
       for (int i = 0; i < count; i++) {
-        final Dimension pref = theParent.getComponent(i).getPreferredSize();
+        final Dimension pref = parent.getComponent(i).getPreferredSize();
         totalW += pref.width;
         if (i + 1 < count) {
-          totalW += myItemGap;
+          totalW += itemGap;
         }
         rowH = Math.max(rowH, pref.height);
       }
@@ -1432,23 +1420,23 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
     }
 
     @Override
-    public Dimension minimumLayoutSize(final Container theParent) {
-      return preferredLayoutSize(theParent);
+    public Dimension minimumLayoutSize(final Container parent) {
+      return preferredLayoutSize(parent);
     }
 
     @Override
-    public void layoutContainer(final Container theParent) {
-      final Insets in = theParent.getInsets();
+    public void layoutContainer(final Container parent) {
+      final Insets in = parent.getInsets();
       int rowH = 0;
-      for (int i = 0; i < theParent.getComponentCount(); i++) {
-        rowH = Math.max(rowH, theParent.getComponent(i).getPreferredSize().height);
+      for (int i = 0; i < parent.getComponentCount(); i++) {
+        rowH = Math.max(rowH, parent.getComponent(i).getPreferredSize().height);
       }
       int x = in.left;
-      for (int i = 0; i < theParent.getComponentCount(); i++) {
-        final Component c = theParent.getComponent(i);
+      for (int i = 0; i < parent.getComponentCount(); i++) {
+        final Component c = parent.getComponent(i);
         final Dimension pref = c.getPreferredSize();
         c.setBounds(x, in.top, pref.width, rowH);
-        x += pref.width + myItemGap;
+        x += pref.width + itemGap;
       }
     }
   }
@@ -1456,7 +1444,7 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * Multi-row wrapping layout (story #242 back-port of FlatPillList's WrapLayout). Cards flow
    * left-to-right and wrap to a new row when the container's available width is exhausted. Respects
-   * {@link #myItemGap} for both row and column spacing. As with horizontal, drag is not specially
+   * {@link #itemGap} for both row and column spacing. As with horizontal, drag is not specially
    * supported here.
    *
    * @version v0.1.0
@@ -1464,51 +1452,51 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    */
   private final class WrapStackingLayout implements java.awt.LayoutManager {
     @Override
-    public void addLayoutComponent(final String theName, final Component theComp) {
+    public void addLayoutComponent(final String name, final Component comp) {
       // no-op
     }
 
     @Override
-    public void removeLayoutComponent(final Component theComp) {
+    public void removeLayoutComponent(final Component comp) {
       // no-op
     }
 
     @Override
-    public Dimension preferredLayoutSize(final Container theParent) {
-      return measureOrLayout(theParent, false);
+    public Dimension preferredLayoutSize(final Container parent) {
+      return measureOrLayout(parent, false);
     }
 
     @Override
-    public Dimension minimumLayoutSize(final Container theParent) {
-      return preferredLayoutSize(theParent);
+    public Dimension minimumLayoutSize(final Container parent) {
+      return preferredLayoutSize(parent);
     }
 
     @Override
-    public void layoutContainer(final Container theParent) {
-      measureOrLayout(theParent, true);
+    public void layoutContainer(final Container parent) {
+      measureOrLayout(parent, true);
     }
 
-    private Dimension measureOrLayout(final Container theParent, final boolean theApply) {
-      final Insets in = theParent.getInsets();
-      final int avail = Math.max(in.left, theParent.getWidth() - in.right);
+    private Dimension measureOrLayout(final Container parent, final boolean apply) {
+      final Insets in = parent.getInsets();
+      final int avail = Math.max(in.left, parent.getWidth() - in.right);
       int x = in.left;
       int y = in.top;
       int rowH = 0;
       int maxX = in.left;
-      for (int i = 0; i < theParent.getComponentCount(); i++) {
-        final Component c = theParent.getComponent(i);
+      for (int i = 0; i < parent.getComponentCount(); i++) {
+        final Component c = parent.getComponent(i);
         final Dimension pref = c.getPreferredSize();
         if (x > in.left && x + pref.width > avail) {
           x = in.left;
-          y += rowH + myItemGap;
+          y += rowH + itemGap;
           rowH = 0;
         }
-        if (theApply) {
+        if (apply) {
           c.setBounds(x, y, pref.width, pref.height);
         }
-        x += pref.width + myItemGap;
+        x += pref.width + itemGap;
         rowH = Math.max(rowH, pref.height);
-        maxX = Math.max(maxX, x - myItemGap);
+        maxX = Math.max(maxX, x - itemGap);
       }
       return new Dimension(maxX + in.right, y + rowH + in.bottom);
     }
@@ -1517,34 +1505,34 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   // ------------------------------------------------------------- animation
 
   private void startFadeIn() {
-    if (myFadeTimer != null && myFadeTimer.isRunning()) {
-      myFadeTimer.stop();
+    if (fadeTimer != null && fadeTimer.isRunning()) {
+      fadeTimer.stop();
     }
-    myFadeAlpha = 0f;
+    fadeAlpha = 0f;
     final long start = System.currentTimeMillis();
-    myFadeTimer =
+    fadeTimer =
         new Timer(
             ANIMATION_TICK_MS,
             e -> {
               final long elapsed = System.currentTimeMillis() - start;
-              myFadeAlpha = Math.min(1f, elapsed / (float) myAnimationDurationMs);
-              myContent.repaint();
-              if (myFadeAlpha >= 1f) {
+              fadeAlpha = Math.min(1f, elapsed / (float) animationDurationMs);
+              content.repaint();
+              if (fadeAlpha >= 1f) {
                 ((Timer) e.getSource()).stop();
               }
             });
-    myFadeTimer.start();
+    fadeTimer.start();
   }
 
   @Override
   protected void paintChildren(final Graphics g) {
-    if (myFadeAlpha >= 1f || !myAnimateChanges) {
+    if (fadeAlpha >= 1f || !animateChanges) {
       super.paintChildren(g);
       return;
     }
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
-      g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, myFadeAlpha));
+      g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, fadeAlpha));
       super.paintChildren(g2);
     } finally {
       g2.dispose();
@@ -1607,19 +1595,19 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
     am.put("flatlist.selectAll", selectAll);
   }
 
-  private void moveFocus(final int theDelta) {
-    if (myVisibleItems.isEmpty()) {
+  private void moveFocus(final int delta) {
+    if (visibleItems.isEmpty()) {
       return;
     }
-    int next = myFocusedVisibleIndex + theDelta;
+    int next = focusedVisibleIndex + delta;
     if (next < 0) {
       next = 0;
     }
-    if (next >= myVisibleItems.size()) {
-      next = myVisibleItems.size() - 1;
+    if (next >= visibleItems.size()) {
+      next = visibleItems.size() - 1;
     }
-    myFocusedVisibleIndex = next;
-    final FlatCard card = myCardByItem.get(myVisibleItems.get(next));
+    focusedVisibleIndex = next;
+    final FlatCard card = cardByItem.get(visibleItems.get(next));
     if (card != null) {
       card.requestFocusInWindow();
       scrollRectToVisible(card.getBounds());
@@ -1627,52 +1615,52 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   private final class MoveFocus extends AbstractAction {
-    private final int myDelta;
+    private final int delta;
 
-    MoveFocus(final int theDelta, final boolean theIgnored) {
+    MoveFocus(final int delta, final boolean ignored) {
       super();
-      myDelta = theDelta;
+      this.delta = delta;
     }
 
     @Override
-    public void actionPerformed(final ActionEvent theEvent) {
-      moveFocus(myDelta);
+    public void actionPerformed(final ActionEvent event) {
+      moveFocus(delta);
     }
   }
 
   private final class JumpFocus extends AbstractAction {
-    private final int myTarget;
+    private final int target;
 
-    JumpFocus(final int theTarget) {
+    JumpFocus(final int target) {
       super();
-      myTarget = theTarget;
+      this.target = target;
     }
 
     @Override
-    public void actionPerformed(final ActionEvent theEvent) {
-      myFocusedVisibleIndex = -1;
-      moveFocus(myTarget == 0 ? 0 : myVisibleItems.size());
+    public void actionPerformed(final ActionEvent event) {
+      focusedVisibleIndex = -1;
+      moveFocus(target == 0 ? 0 : visibleItems.size());
     }
   }
 
   private final class ActivateFocused extends AbstractAction {
     @Override
-    public void actionPerformed(final ActionEvent theEvent) {
-      if (myFocusedVisibleIndex < 0 || myFocusedVisibleIndex >= myVisibleItems.size()) {
+    public void actionPerformed(final ActionEvent event) {
+      if (focusedVisibleIndex < 0 || focusedVisibleIndex >= visibleItems.size()) {
         return;
       }
-      final T item = myVisibleItems.get(myFocusedVisibleIndex);
-      handleSelectionPress(item, myFocusedVisibleIndex, 0);
+      final T item = visibleItems.get(focusedVisibleIndex);
+      handleSelectionPress(item, focusedVisibleIndex, 0);
     }
   }
 
   private final class SelectAllAction extends AbstractAction {
     @Override
-    public void actionPerformed(final ActionEvent theEvent) {
-      if (mySelectionMode != CardSelectionMode.MULTIPLE) {
+    public void actionPerformed(final ActionEvent event) {
+      if (selectionMode != CardSelectionMode.MULTIPLE) {
         return;
       }
-      mySelectionModel.setSelected(new ArrayList<>(myVisibleItems));
+      selectionModel.setSelected(new ArrayList<>(visibleItems));
       syncSelectionVisuals();
     }
   }
@@ -1703,15 +1691,15 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
 
     @Override
     public int getAccessibleChildrenCount() {
-      return myVisibleItems.size();
+      return visibleItems.size();
     }
 
     @Override
-    public javax.accessibility.Accessible getAccessibleChild(final int theIndex) {
-      if (theIndex < 0 || theIndex >= myVisibleItems.size()) {
+    public javax.accessibility.Accessible getAccessibleChild(final int index) {
+      if (index < 0 || index >= visibleItems.size()) {
         return null;
       }
-      final FlatCard card = myCardByItem.get(myVisibleItems.get(theIndex));
+      final FlatCard card = cardByItem.get(visibleItems.get(index));
       if (card == null) {
         return null;
       }

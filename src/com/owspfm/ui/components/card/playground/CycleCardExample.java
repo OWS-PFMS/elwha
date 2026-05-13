@@ -153,7 +153,7 @@ final class CycleCardExample {
    * @since v0.1.0
    */
   private static final class CycleRing extends JComponent {
-    private final String[] myFactors;
+    private final String[] factors;
     private static final int PILL_PAD_X = 7;
     private static final int PILL_PAD_Y = 4;
     private static final int PILL_ARC = 8;
@@ -161,7 +161,7 @@ final class CycleCardExample {
     private static final int CURVE_BOW = 28;
 
     CycleRing(final String[] factors) {
-      this.myFactors = factors;
+      this.factors = factors;
       setPreferredSize(new Dimension(420, 320));
     }
 
@@ -181,7 +181,7 @@ final class CycleCardExample {
         double cx = w / 2.0;
         double cy = h / 2.0;
         double radius = Math.max(60, Math.min(w, h) / 2.0 - RING_MARGIN);
-        int n = myFactors.length;
+        int n = factors.length;
 
         Point2D.Double[] centers = new Point2D.Double[n];
         for (int i = 0; i < n; i++) {
@@ -199,7 +199,7 @@ final class CycleCardExample {
 
         FontMetrics fm = g2.getFontMetrics();
         for (int i = 0; i < n; i++) {
-          drawPill(g2, myFactors[i], centers[i].x, centers[i].y, fm);
+          drawPill(g2, factors[i], centers[i].x, centers[i].y, fm);
         }
       } finally {
         g2.dispose();

@@ -14,9 +14,9 @@ public interface CardSelectionListener<T> {
   /**
    * Invoked after the selection set changes.
    *
-   * @param theEvent the event carrying the new selection
+   * @param event the event carrying the new selection
    * @version v0.1.0
    * @since v0.1.0
    */
-  void selectionChanged(CardSelectionEvent<T> theEvent);
+  void selectionChanged(CardSelectionEvent<T> event);
 }

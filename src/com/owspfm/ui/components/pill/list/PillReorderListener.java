@@ -14,9 +14,9 @@ public interface PillReorderListener<T> {
   /**
    * Invoked after the user drops a dragged pill and the model has been updated.
    *
-   * @param theEvent the reorder event
+   * @param event the reorder event
    * @version v0.1.0
    * @since v0.1.0
    */
-  void pillReordered(PillReorderEvent<T> theEvent);
+  void pillReordered(PillReorderEvent<T> event);
 }
