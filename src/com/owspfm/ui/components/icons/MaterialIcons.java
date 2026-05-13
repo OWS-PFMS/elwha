@@ -138,17 +138,17 @@ public final class MaterialIcons {
    * Generic lookup for cases where a name is computed at runtime. Throws if the resource is
    * missing.
    *
-   * @param theName the bare icon name (no path, no extension), e.g. {@code "push_pin"}
+   * @param name the bare icon name (no path, no extension), e.g. {@code "push_pin"}
    * @return a fresh icon sized to {@link #DEFAULT_SIZE}
    * @version v0.1.0
    * @since v0.1.0
    */
-  public static FlatSVGIcon get(final String theName) {
-    return load(theName);
+  public static FlatSVGIcon get(final String name) {
+    return load(name);
   }
 
-  private static FlatSVGIcon load(final String theName) {
-    final FlatSVGIcon icon = new FlatSVGIcon(BASE + theName + ".svg", DEFAULT_SIZE, DEFAULT_SIZE);
+  private static FlatSVGIcon load(final String name) {
+    final FlatSVGIcon icon = new FlatSVGIcon(BASE + name + ".svg", DEFAULT_SIZE, DEFAULT_SIZE);
     icon.setColorFilter(THEME_FILTER);
     return icon;
   }

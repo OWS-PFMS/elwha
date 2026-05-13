@@ -15,26 +15,26 @@ import java.util.EventObject;
  */
 public class PillReorderEvent<T> extends EventObject {
 
-  private final T myItem;
-  private final int myFromIndex;
-  private final int myToIndex;
+  private final T item;
+  private final int fromIndex;
+  private final int toIndex;
 
   /**
    * Constructs a new reorder event.
    *
-   * @param theSource the originating list
-   * @param theItem the moved item
-   * @param theFromIndex the source index
-   * @param theToIndex the destination index
+   * @param source the originating list
+   * @param item the moved item
+   * @param fromIndex the source index
+   * @param toIndex the destination index
    * @version v0.1.0
    * @since v0.1.0
    */
   public PillReorderEvent(
-      final Object theSource, final T theItem, final int theFromIndex, final int theToIndex) {
-    super(theSource);
-    myItem = theItem;
-    myFromIndex = theFromIndex;
-    myToIndex = theToIndex;
+      final Object source, final T item, final int fromIndex, final int toIndex) {
+    super(source);
+    this.item = item;
+    this.fromIndex = fromIndex;
+    this.toIndex = toIndex;
   }
 
   /**
@@ -45,7 +45,7 @@ public class PillReorderEvent<T> extends EventObject {
    * @since v0.1.0
    */
   public T getItem() {
-    return myItem;
+    return item;
   }
 
   /**
@@ -56,7 +56,7 @@ public class PillReorderEvent<T> extends EventObject {
    * @since v0.1.0
    */
   public int getFromIndex() {
-    return myFromIndex;
+    return fromIndex;
   }
 
   /**
@@ -67,6 +67,6 @@ public class PillReorderEvent<T> extends EventObject {
    * @since v0.1.0
    */
   public int getToIndex() {
-    return myToIndex;
+    return toIndex;
   }
 }

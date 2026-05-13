@@ -58,12 +58,12 @@ public interface FlatList<T> {
    * throw {@link UnsupportedOperationException} or fall back to a supported value with a one-shot
    * warning — see the concrete class documentation.
    *
-   * @param theOrientation the new orientation
+   * @param orientation the new orientation
    * @return this list (for fluent chaining)
    * @version v0.1.0
    * @since v0.1.0
    */
-  FlatList<T> setOrientation(FlatListOrientation theOrientation);
+  FlatList<T> setOrientation(FlatListOrientation orientation);
 
   /**
    * Returns the gap between rendered items.
@@ -77,32 +77,32 @@ public interface FlatList<T> {
   /**
    * Sets the gap between rendered items.
    *
-   * @param theGap pixels, clamped to {@code >= 0}
+   * @param gap pixels, clamped to {@code >= 0}
    * @return this list (for fluent chaining)
    * @version v0.1.0
    * @since v0.1.0
    */
-  FlatList<T> setItemGap(int theGap);
+  FlatList<T> setItemGap(int gap);
 
   /**
    * Sets the padding around the rendered list.
    *
-   * @param theInsets the insets; null treated as zero
+   * @param insets the insets; null treated as zero
    * @return this list (for fluent chaining)
    * @version v0.1.0
    * @since v0.1.0
    */
-  FlatList<T> setListPadding(Insets theInsets);
+  FlatList<T> setListPadding(Insets insets);
 
   /**
    * Sets the column count for {@link FlatListOrientation#GRID}. No effect on other orientations.
    *
-   * @param theColumns column count, clamped to {@code >= 1}
+   * @param columns column count, clamped to {@code >= 1}
    * @return this list (for fluent chaining)
    * @version v0.1.0
    * @since v0.1.0
    */
-  FlatList<T> setColumns(int theColumns);
+  FlatList<T> setColumns(int columns);
 
   /**
    * Returns the column count for grid mode.
@@ -116,50 +116,50 @@ public interface FlatList<T> {
   /**
    * Replaces the empty-state placeholder. Pass {@code null} to restore the built-in default.
    *
-   * @param theComponent the placeholder
+   * @param component the placeholder
    * @return this list (for fluent chaining)
    * @version v0.1.0
    * @since v0.1.0
    */
-  FlatList<T> setEmptyState(JComponent theComponent);
+  FlatList<T> setEmptyState(JComponent component);
 
   /**
    * Sets the loading flag. While true, the list renders the loading component instead of items.
    *
-   * @param theLoading whether to show the loading state
+   * @param loading whether to show the loading state
    * @return this list (for fluent chaining)
    * @version v0.1.0
    * @since v0.1.0
    */
-  FlatList<T> setLoading(boolean theLoading);
+  FlatList<T> setLoading(boolean loading);
 
   /**
    * Replaces the loading-state component. Pass {@code null} to restore the built-in default.
    *
-   * @param theComponent the loading component
+   * @param component the loading component
    * @return this list (for fluent chaining)
    * @version v0.1.0
    * @since v0.1.0
    */
-  FlatList<T> setLoadingComponent(JComponent theComponent);
+  FlatList<T> setLoadingComponent(JComponent component);
 
   /**
    * Sets a filter predicate that hides items rejected by it. Pass null to clear.
    *
-   * @param theFilter the predicate; null clears filtering
+   * @param filter the predicate; null clears filtering
    * @return this list (for fluent chaining)
    * @version v0.1.0
    * @since v0.1.0
    */
-  FlatList<T> setFilter(Predicate<T> theFilter);
+  FlatList<T> setFilter(Predicate<T> filter);
 
   /**
    * Sets a sort comparator that orders rendered items. Pass null to clear.
    *
-   * @param theComparator the comparator; null clears sorting
+   * @param comparator the comparator; null clears sorting
    * @return this list (for fluent chaining)
    * @version v0.1.0
    * @since v0.1.0
    */
-  FlatList<T> setSortOrder(Comparator<T> theComparator);
+  FlatList<T> setSortOrder(Comparator<T> comparator);
 }

@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Naming convention switched to Google Java Style** ([epic #5](https://github.com/OWS-PFMS/flatcomp/issues/5)). Every `my*`-prefixed instance field and every `the*`-prefixed parameter / local was renamed to its unprefixed equivalent across the source tree. Public API parameter names move with this change — Java does not bind to parameter names at the call site, but Javadoc `@param` references and consumers reading reflection metadata will see the new names. No method signatures, class names, package names, or behavior changed.
+
+### Tooling
+
+- **Spotless** (`spotless-maven-plugin` 2.46.1 + `googleJavaFormat`) wired into the Maven build as `mvn spotless:check` at the `verify` phase. Run `mvn spotless:apply` locally to fix formatting. Note: requires JDK 21 — Spotless + google-java-format hits a binary-API drift on JDK 22+ (tracked upstream at [diffplug/spotless#2468](https://github.com/diffplug/spotless/issues/2468)).
+- **Checkstyle** (`maven-checkstyle-plugin` 3.6.0 + Checkstyle 10.21.0) wired with a project-local config (`config/checkstyle/checkstyle.xml`) that enforces Google naming patterns plus a project-specific ban on `my*` / `the*` identifier prefixes. Currently in **advisory mode**; will flip to fail-on-violation in [#9](https://github.com/OWS-PFMS/flatcomp/issues/9).
+
 ## [0.1.0] — 2026-05-12
 
 Initial release. Library extracted from the [OWS-Local-Search-GUI](https://github.com/OWS-PFMS/OWS-Local-Search-GUI) project ([epic #231](https://github.com/OWS-PFMS/OWS-Local-Search-GUI/issues/231)).

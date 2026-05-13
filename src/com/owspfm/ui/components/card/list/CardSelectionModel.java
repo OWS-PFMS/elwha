@@ -19,12 +19,12 @@ public interface CardSelectionModel<T> {
   /**
    * Returns whether the given item is currently selected.
    *
-   * @param theItem the item to test
+   * @param item the item to test
    * @return true if selected
    * @version v0.1.0
    * @since v0.1.0
    */
-  boolean isSelected(T theItem);
+  boolean isSelected(T item);
 
   /**
    * Returns the currently selected items.
@@ -38,38 +38,38 @@ public interface CardSelectionModel<T> {
   /**
    * Replaces the entire selection.
    *
-   * @param theSelected the new selection (null treated as empty)
+   * @param selected the new selection (null treated as empty)
    * @version v0.1.0
    * @since v0.1.0
    */
-  void setSelected(List<T> theSelected);
+  void setSelected(List<T> selected);
 
   /**
    * Adds an item to the selection (no-op if already selected).
    *
-   * @param theItem the item
+   * @param item the item
    * @version v0.1.0
    * @since v0.1.0
    */
-  void add(T theItem);
+  void add(T item);
 
   /**
    * Removes an item from the selection (no-op if not selected).
    *
-   * @param theItem the item
+   * @param item the item
    * @version v0.1.0
    * @since v0.1.0
    */
-  void remove(T theItem);
+  void remove(T item);
 
   /**
    * Toggles the membership of the given item.
    *
-   * @param theItem the item
+   * @param item the item
    * @version v0.1.0
    * @since v0.1.0
    */
-  void toggle(T theItem);
+  void toggle(T item);
 
   /** Clears the selection. */
   void clearSelection();
@@ -77,18 +77,18 @@ public interface CardSelectionModel<T> {
   /**
    * Registers a selection-change listener.
    *
-   * @param theListener the listener
+   * @param listener the listener
    * @version v0.1.0
    * @since v0.1.0
    */
-  void addSelectionListener(CardSelectionListener<T> theListener);
+  void addSelectionListener(CardSelectionListener<T> listener);
 
   /**
    * Removes a previously registered selection-change listener.
    *
-   * @param theListener the listener to remove
+   * @param listener the listener to remove
    * @version v0.1.0
    * @since v0.1.0
    */
-  void removeSelectionListener(CardSelectionListener<T> theListener);
+  void removeSelectionListener(CardSelectionListener<T> listener);
 }

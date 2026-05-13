@@ -16,8 +16,8 @@ import java.util.Set;
  */
 public class DefaultPillSelectionModel<T> implements PillSelectionModel<T> {
 
-  private final Set<T> mySelected = new LinkedHashSet<>();
-  private final List<PillSelectionListener<T>> myListeners = new ArrayList<>();
+  private final Set<T> selected = new LinkedHashSet<>();
+  private final List<PillSelectionListener<T>> listeners = new ArrayList<>();
 
   /** Creates an empty selection model. */
   public DefaultPillSelectionModel() {
@@ -25,71 +25,71 @@ public class DefaultPillSelectionModel<T> implements PillSelectionModel<T> {
   }
 
   @Override
-  public boolean isSelected(final T theItem) {
-    return mySelected.contains(theItem);
+  public boolean isSelected(final T item) {
+    return selected.contains(item);
   }
 
   @Override
   public List<T> getSelected() {
-    return Collections.unmodifiableList(new ArrayList<>(mySelected));
+    return Collections.unmodifiableList(new ArrayList<>(selected));
   }
 
   @Override
-  public void setSelected(final List<T> theSelected) {
-    mySelected.clear();
-    if (theSelected != null) {
-      mySelected.addAll(theSelected);
+  public void setSelected(final List<T> selected) {
+    selected.clear();
+    if (selected != null) {
+      selected.addAll(selected);
     }
     fire();
   }
 
   @Override
-  public void add(final T theItem) {
-    if (mySelected.add(theItem)) {
+  public void add(final T item) {
+    if (selected.add(item)) {
       fire();
     }
   }
 
   @Override
-  public void remove(final T theItem) {
-    if (mySelected.remove(theItem)) {
+  public void remove(final T item) {
+    if (selected.remove(item)) {
       fire();
     }
   }
 
   @Override
-  public void toggle(final T theItem) {
-    if (!mySelected.remove(theItem)) {
-      mySelected.add(theItem);
+  public void toggle(final T item) {
+    if (!selected.remove(item)) {
+      selected.add(item);
     }
     fire();
   }
 
   @Override
   public void clearSelection() {
-    if (mySelected.isEmpty()) {
+    if (selected.isEmpty()) {
       return;
     }
-    mySelected.clear();
+    selected.clear();
     fire();
   }
 
   @Override
-  public void addSelectionListener(final PillSelectionListener<T> theListener) {
-    if (theListener != null && !myListeners.contains(theListener)) {
-      myListeners.add(theListener);
+  public void addSelectionListener(final PillSelectionListener<T> listener) {
+    if (listener != null && !listeners.contains(listener)) {
+      listeners.add(listener);
     }
   }
 
   @Override
-  public void removeSelectionListener(final PillSelectionListener<T> theListener) {
-    myListeners.remove(theListener);
+  public void removeSelectionListener(final PillSelectionListener<T> listener) {
+    listeners.remove(listener);
   }
 
   private void fire() {
     final List<T> snapshot = getSelected();
     final PillSelectionEvent<T> evt = new PillSelectionEvent<>(this, snapshot);
-    for (PillSelectionListener<T> l : new ArrayList<>(myListeners)) {
+    for (PillSelectionListener<T> l : new ArrayList<>(listeners)) {
       l.selectionChanged(evt);
     }
   }

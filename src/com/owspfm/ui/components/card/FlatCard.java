@@ -103,55 +103,55 @@ public class FlatCard extends JPanel {
   private static final int ANIMATION_STEPS = 10;
 
   // Configuration ----------------------------------------------------------
-  private CardVariant myVariant = CardVariant.ELEVATED;
-  private CardInteractionMode myInteractionMode = CardInteractionMode.STATIC;
-  private int myElevation = 1;
-  private Integer myCornerRadius;
-  private Insets myPadding =
+  private CardVariant variant = CardVariant.ELEVATED;
+  private CardInteractionMode interactionMode = CardInteractionMode.STATIC;
+  private int elevation = 1;
+  private Integer cornerRadius;
+  private Insets padding =
       new Insets(DEFAULT_PADDING, DEFAULT_PADDING, DEFAULT_PADDING, DEFAULT_PADDING);
-  private Color myBorderColor;
-  private Color mySurfaceColorOverride;
-  private int myBorderWidth = 1;
-  private boolean myAnimateCollapse;
+  private Color borderColor;
+  private Color surfaceColorOverride;
+  private int borderWidth = 1;
+  private boolean animateCollapse;
 
   // State ------------------------------------------------------------------
-  private boolean myHovered;
-  private boolean myPressed;
-  private boolean mySelected;
-  private boolean myCollapsible;
-  private boolean myCollapsed;
-  private boolean myKeepSummaryWhenExpanded;
-  private boolean myPendingHeaderToggle;
+  private boolean hovered;
+  private boolean pressed;
+  private boolean selected;
+  private boolean collapsible;
+  private boolean collapsed;
+  private boolean keepSummaryWhenExpanded;
+  private boolean pendingHeaderToggle;
 
   // Header sub-components --------------------------------------------------
-  private JPanel myHeaderRow;
-  private JLabel myLeadingIconLabel;
-  private JPanel myTextStack;
-  private JLabel myTitleLabel;
-  private JLabel mySubtitleLabel;
-  private JPanel myLeadingActionsPanel;
-  private JPanel myTrailingActionsPanel;
-  private JLabel myChevronLabel;
+  private JPanel headerRow;
+  private JLabel leadingIconLabel;
+  private JPanel textStack;
+  private JLabel titleLabel;
+  private JLabel subtitleLabel;
+  private JPanel leadingActionsPanel;
+  private JPanel trailingActionsPanel;
+  private JLabel chevronLabel;
 
   // Slot containers --------------------------------------------------------
-  private CollapsibleContainer myCollapsibleBody;
-  private JPanel myMediaHolder;
-  private JPanel myBodyHolder;
-  private JPanel myFooterHolder;
-  private JPanel myCollapsedSummaryHolder;
+  private CollapsibleContainer collapsibleBody;
+  private JPanel mediaHolder;
+  private JPanel bodyHolder;
+  private JPanel footerHolder;
+  private JPanel collapsedSummaryHolder;
 
   // User-supplied content --------------------------------------------------
-  private JComponent myMedia;
-  private JComponent myBody;
-  private JComponent myFooter;
-  private JComponent myCollapsedSummary;
+  private JComponent media;
+  private JComponent body;
+  private JComponent footer;
+  private JComponent collapsedSummary;
 
   // Listeners --------------------------------------------------------------
-  private final List<ActionListener> myActionListeners = new ArrayList<>();
+  private final List<ActionListener> actionListeners = new ArrayList<>();
 
   // Animation --------------------------------------------------------------
-  private Timer myAnimationTimer;
-  private float myAnimationFraction = 1f;
+  private Timer animationTimer;
+  private float animationFraction = 1f;
 
   // ------------------------------------------------------------------ ctor
 
@@ -168,68 +168,68 @@ public class FlatCard extends JPanel {
   // ----------------------------------------------------------------- slots
 
   private void initSlots() {
-    myHeaderRow = newStretchingRow(new BorderLayout(DEFAULT_INNER_GAP, 0), 0);
-    myHeaderRow.setVisible(false);
+    headerRow = newStretchingRow(new BorderLayout(DEFAULT_INNER_GAP, 0), 0);
+    headerRow.setVisible(false);
 
-    myLeadingIconLabel = new JLabel();
-    myLeadingIconLabel.setVisible(false);
+    leadingIconLabel = new JLabel();
+    leadingIconLabel.setVisible(false);
     final JPanel westGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, DEFAULT_INNER_GAP / 2, 0));
     westGroup.setOpaque(false);
-    westGroup.add(myLeadingIconLabel);
-    myLeadingActionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, DEFAULT_INNER_GAP / 2, 0));
-    myLeadingActionsPanel.setOpaque(false);
-    myLeadingActionsPanel.setVisible(false);
-    westGroup.add(myLeadingActionsPanel);
-    myHeaderRow.add(westGroup, BorderLayout.WEST);
+    westGroup.add(leadingIconLabel);
+    leadingActionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, DEFAULT_INNER_GAP / 2, 0));
+    leadingActionsPanel.setOpaque(false);
+    leadingActionsPanel.setVisible(false);
+    westGroup.add(leadingActionsPanel);
+    headerRow.add(westGroup, BorderLayout.WEST);
 
-    myTextStack = new JPanel();
-    myTextStack.setOpaque(false);
-    myTextStack.setLayout(new BoxLayout(myTextStack, BoxLayout.Y_AXIS));
-    myTitleLabel = new JLabel();
-    myTitleLabel.putClientProperty("FlatLaf.styleClass", "h4");
-    myTitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-    mySubtitleLabel = new JLabel();
-    mySubtitleLabel.putClientProperty("FlatLaf.styleClass", "small");
-    mySubtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-    mySubtitleLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
-    mySubtitleLabel.setVisible(false);
-    myTextStack.add(myTitleLabel);
-    myTextStack.add(mySubtitleLabel);
-    myHeaderRow.add(myTextStack, BorderLayout.CENTER);
+    textStack = new JPanel();
+    textStack.setOpaque(false);
+    textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
+    titleLabel = new JLabel();
+    titleLabel.putClientProperty("FlatLaf.styleClass", "h4");
+    titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    subtitleLabel = new JLabel();
+    subtitleLabel.putClientProperty("FlatLaf.styleClass", "small");
+    subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    subtitleLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
+    subtitleLabel.setVisible(false);
+    textStack.add(titleLabel);
+    textStack.add(subtitleLabel);
+    headerRow.add(textStack, BorderLayout.CENTER);
 
     JPanel eastGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, DEFAULT_INNER_GAP / 2, 0));
     eastGroup.setOpaque(false);
-    myTrailingActionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, DEFAULT_INNER_GAP / 2, 0));
-    myTrailingActionsPanel.setOpaque(false);
-    myTrailingActionsPanel.setVisible(false);
-    eastGroup.add(myTrailingActionsPanel);
-    myChevronLabel = new JLabel(chevronGlyph(myCollapsed));
-    myChevronLabel.setHorizontalAlignment(SwingConstants.CENTER);
-    myChevronLabel.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
-    myChevronLabel.setVisible(false);
+    trailingActionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, DEFAULT_INNER_GAP / 2, 0));
+    trailingActionsPanel.setOpaque(false);
+    trailingActionsPanel.setVisible(false);
+    eastGroup.add(trailingActionsPanel);
+    chevronLabel = new JLabel(chevronGlyph(collapsed));
+    chevronLabel.setHorizontalAlignment(SwingConstants.CENTER);
+    chevronLabel.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
+    chevronLabel.setVisible(false);
     // Chevron is a button-like affordance and should always show the click cursor, even when
     // the host card has a different cursor (e.g., MOVE_CURSOR set by FlatCardList for drag).
-    myChevronLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-    eastGroup.add(myChevronLabel);
-    myHeaderRow.add(eastGroup, BorderLayout.EAST);
+    chevronLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    eastGroup.add(chevronLabel);
+    headerRow.add(eastGroup, BorderLayout.EAST);
 
-    myMediaHolder = newSlotHolder();
-    myBodyHolder = newSlotHolder();
-    myFooterHolder = newSlotHolder();
-    myCollapsedSummaryHolder = newSlotHolder();
+    mediaHolder = newSlotHolder();
+    bodyHolder = newSlotHolder();
+    footerHolder = newSlotHolder();
+    collapsedSummaryHolder = newSlotHolder();
 
-    myCollapsibleBody = new CollapsibleContainer();
-    myCollapsibleBody.setOpaque(false);
-    myCollapsibleBody.setLayout(new BoxLayout(myCollapsibleBody, BoxLayout.Y_AXIS));
-    myCollapsibleBody.setAlignmentX(0f);
-    myCollapsibleBody.add(myMediaHolder);
-    myCollapsibleBody.add(myBodyHolder);
-    myCollapsibleBody.add(myFooterHolder);
+    collapsibleBody = new CollapsibleContainer();
+    collapsibleBody.setOpaque(false);
+    collapsibleBody.setLayout(new BoxLayout(collapsibleBody, BoxLayout.Y_AXIS));
+    collapsibleBody.setAlignmentX(0f);
+    collapsibleBody.add(mediaHolder);
+    collapsibleBody.add(bodyHolder);
+    collapsibleBody.add(footerHolder);
 
-    add(myHeaderRow);
-    add(myCollapsedSummaryHolder);
-    add(myCollapsibleBody);
-    myCollapsedSummaryHolder.setVisible(false);
+    add(headerRow);
+    add(collapsedSummaryHolder);
+    add(collapsibleBody);
+    collapsedSummaryHolder.setVisible(false);
   }
 
   /**
@@ -277,16 +277,16 @@ public class FlatCard extends JPanel {
         new MouseAdapter() {
           @Override
           public void mouseEntered(MouseEvent e) {
-            if (myInteractionMode != CardInteractionMode.STATIC && isEnabled()) {
-              myHovered = true;
+            if (interactionMode != CardInteractionMode.STATIC && isEnabled()) {
+              hovered = true;
               repaint();
             }
           }
 
           @Override
           public void mouseExited(MouseEvent e) {
-            myHovered = false;
-            myPressed = false;
+            hovered = false;
+            pressed = false;
             repaint();
           }
 
@@ -295,16 +295,16 @@ public class FlatCard extends JPanel {
             if (!isEnabled()) {
               return;
             }
-            if (myCollapsible && isInHeader(e)) {
+            if (collapsible && isInHeader(e)) {
               // Defer the actual collapse toggle to mouseReleased — that way a hosting list can
               // call cancelPendingClick() if the press turns into a drag, suppressing what
               // would otherwise be an unwanted toggle on every drag start.
-              myPendingHeaderToggle = true;
+              pendingHeaderToggle = true;
             }
-            if (myInteractionMode == CardInteractionMode.CLICKABLE
-                || myInteractionMode == CardInteractionMode.SELECTABLE
-                || myPendingHeaderToggle) {
-              myPressed = true;
+            if (interactionMode == CardInteractionMode.CLICKABLE
+                || interactionMode == CardInteractionMode.SELECTABLE
+                || pendingHeaderToggle) {
+              pressed = true;
               requestFocusInWindow();
               repaint();
             }
@@ -312,32 +312,32 @@ public class FlatCard extends JPanel {
 
           @Override
           public void mouseReleased(MouseEvent e) {
-            if (!myPressed || !isEnabled()) {
-              myPressed = false;
-              myPendingHeaderToggle = false;
+            if (!pressed || !isEnabled()) {
+              pressed = false;
+              pendingHeaderToggle = false;
               repaint();
               return;
             }
-            myPressed = false;
+            pressed = false;
             if (contains(e.getPoint())) {
-              if (myPendingHeaderToggle) {
-                myPendingHeaderToggle = false;
-                setCollapsed(!myCollapsed);
+              if (pendingHeaderToggle) {
+                pendingHeaderToggle = false;
+                setCollapsed(!collapsed);
               } else {
                 activate(e.getModifiersEx());
               }
             }
-            myPendingHeaderToggle = false;
+            pendingHeaderToggle = false;
             repaint();
           }
         };
     addMouseListener(ma);
-    // Intentionally NOT installing this listener on myHeaderRow: when a child has its own
+    // Intentionally NOT installing this listener on headerRow: when a child has its own
     // mouse listener, AWT delivers the event there and stops, which prevents outer listeners
     // (e.g., a host FlatCardList that wants to handle selection on header clicks) from ever
     // seeing the event. The card-level listener detects header clicks via Y-bounds in
     // isInHeader(), so the toggle still fires correctly.
-    myChevronLabel.addMouseListener(ma);
+    chevronLabel.addMouseListener(ma);
 
     addFocusListener(
         new FocusAdapter() {
@@ -348,7 +348,7 @@ public class FlatCard extends JPanel {
 
           @Override
           public void focusLost(FocusEvent e) {
-            myPressed = false;
+            pressed = false;
             repaint();
           }
         });
@@ -362,7 +362,7 @@ public class FlatCard extends JPanel {
             if (!isEnabled()) {
               return;
             }
-            if (myCollapsible) {
+            if (collapsible) {
               toggleCollapsed(null);
             }
             activate(0);
@@ -377,31 +377,30 @@ public class FlatCard extends JPanel {
 
   private boolean isInHeader(MouseEvent e) {
     Component src = e.getComponent();
-    if (src == myHeaderRow || src == myChevronLabel) {
+    if (src == headerRow || src == chevronLabel) {
       return true;
     }
     if (src == this) {
-      return e.getY() < myHeaderRow.getY() + myHeaderRow.getHeight()
-          && e.getY() >= myHeaderRow.getY();
+      return e.getY() < headerRow.getY() + headerRow.getHeight() && e.getY() >= headerRow.getY();
     }
     return false;
   }
 
   private void activate(int modifiers) {
-    if (myInteractionMode == CardInteractionMode.SELECTABLE) {
-      setSelected(!mySelected);
+    if (interactionMode == CardInteractionMode.SELECTABLE) {
+      setSelected(!selected);
     }
-    if (myInteractionMode == CardInteractionMode.CLICKABLE
-        || myInteractionMode == CardInteractionMode.SELECTABLE) {
+    if (interactionMode == CardInteractionMode.CLICKABLE
+        || interactionMode == CardInteractionMode.SELECTABLE) {
       ActionEvent evt = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "click", modifiers);
-      for (ActionListener l : new ArrayList<>(myActionListeners)) {
+      for (ActionListener l : new ArrayList<>(actionListeners)) {
         l.actionPerformed(evt);
       }
     }
   }
 
   private void toggleCollapsed(MouseEvent ignored) {
-    setCollapsed(!myCollapsed);
+    setCollapsed(!collapsed);
   }
 
   // ----------------------------------------------------------- public API
@@ -409,16 +408,16 @@ public class FlatCard extends JPanel {
   /**
    * Sets the surface variant.
    *
-   * @param theVariant one of {@link CardVariant}; ignored if null
+   * @param variant one of {@link CardVariant}; ignored if null
    * @return this card for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setVariant(final CardVariant theVariant) {
-    if (theVariant == null || theVariant == myVariant) {
+  public FlatCard setVariant(final CardVariant variant) {
+    if (variant == null || variant == this.variant) {
       return this;
     }
-    myVariant = theVariant;
+    this.variant = variant;
     rebuildBorder();
     repaint();
     return this;
@@ -432,26 +431,25 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public CardVariant getVariant() {
-    return myVariant;
+    return variant;
   }
 
   /**
    * Sets the interaction mode.
    *
-   * @param theMode one of {@link CardInteractionMode}; ignored if null
+   * @param mode one of {@link CardInteractionMode}; ignored if null
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setInteractionMode(final CardInteractionMode theMode) {
-    if (theMode == null || theMode == myInteractionMode) {
+  public FlatCard setInteractionMode(final CardInteractionMode mode) {
+    if (mode == null || mode == interactionMode) {
       return this;
     }
-    myInteractionMode = theMode;
-    setFocusable(
-        theMode == CardInteractionMode.CLICKABLE || theMode == CardInteractionMode.SELECTABLE);
+    interactionMode = mode;
+    setFocusable(mode == CardInteractionMode.CLICKABLE || mode == CardInteractionMode.SELECTABLE);
     setCursor(
-        theMode == CardInteractionMode.STATIC
+        mode == CardInteractionMode.STATIC
             ? Cursor.getDefaultCursor()
             : Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     repaint();
@@ -466,24 +464,24 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public CardInteractionMode getInteractionMode() {
-    return myInteractionMode;
+    return interactionMode;
   }
 
   /**
    * Sets the elevation level (clamped to {@code 0..MAX_ELEVATION}). Only effective on the {@link
    * CardVariant#ELEVATED} variant.
    *
-   * @param theElevation desired elevation (0 disables shadow)
+   * @param elevation desired elevation (0 disables shadow)
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setElevation(final int theElevation) {
-    int v = Math.max(0, Math.min(MAX_ELEVATION, theElevation));
-    if (v == myElevation) {
+  public FlatCard setElevation(final int elevation) {
+    int v = Math.max(0, Math.min(MAX_ELEVATION, elevation));
+    if (v == this.elevation) {
       return this;
     }
-    myElevation = v;
+    this.elevation = v;
     rebuildBorder();
     repaint();
     return this;
@@ -497,20 +495,20 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public int getElevation() {
-    return myElevation;
+    return elevation;
   }
 
   /**
    * Overrides the corner radius. Pass {@code null} to fall back to the FlatLaf {@code
    * Component.arc} key.
    *
-   * @param theRadius the new arc, or null for theme default
+   * @param radius the new arc, or null for theme default
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setCornerRadius(final Integer theRadius) {
-    myCornerRadius = theRadius;
+  public FlatCard setCornerRadius(final Integer radius) {
+    cornerRadius = radius;
     repaint();
     return this;
   }
@@ -523,8 +521,8 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public int getEffectiveCornerRadius() {
-    if (myCornerRadius != null) {
-      return myCornerRadius;
+    if (cornerRadius != null) {
+      return cornerRadius;
     }
     Object arc = UIManager.get("Component.arc");
     if (arc instanceof Number n) {
@@ -536,13 +534,13 @@ public class FlatCard extends JPanel {
   /**
    * Replaces the content padding (the gap between the rounded surface and the slots).
    *
-   * @param theInsets new padding; null is treated as zero on all sides
+   * @param insets new padding; null is treated as zero on all sides
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setPadding(final Insets theInsets) {
-    myPadding = theInsets == null ? new Insets(0, 0, 0, 0) : (Insets) theInsets.clone();
+  public FlatCard setPadding(final Insets insets) {
+    padding = insets == null ? new Insets(0, 0, 0, 0) : (Insets) insets.clone();
     rebuildBorder();
     revalidate();
     repaint();
@@ -552,13 +550,13 @@ public class FlatCard extends JPanel {
   /**
    * Convenience for {@link #setPadding(Insets)} with uniform spacing.
    *
-   * @param thePadding spacing applied to all four sides
+   * @param padding spacing applied to all four sides
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setPadding(final int thePadding) {
-    return setPadding(new Insets(thePadding, thePadding, thePadding, thePadding));
+  public FlatCard setPadding(final int padding) {
+    return setPadding(new Insets(padding, padding, padding, padding));
   }
 
   /**
@@ -569,19 +567,19 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public Insets getPadding() {
-    return (Insets) myPadding.clone();
+    return (Insets) padding.clone();
   }
 
   /**
    * Overrides the border color. Pass {@code null} to derive from the theme.
    *
-   * @param theColor explicit border color, or null
+   * @param color explicit border color, or null
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setBorderColor(final Color theColor) {
-    myBorderColor = theColor;
+  public FlatCard setBorderColor(final Color color) {
+    borderColor = color;
     repaint();
     return this;
   }
@@ -589,13 +587,13 @@ public class FlatCard extends JPanel {
   /**
    * Sets border width in pixels. Only visible on the {@link CardVariant#OUTLINED} variant.
    *
-   * @param theWidth border thickness, clamped to {@code >= 0}
+   * @param width border thickness, clamped to {@code >= 0}
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setBorderWidth(final int theWidth) {
-    myBorderWidth = Math.max(0, theWidth);
+  public FlatCard setBorderWidth(final int width) {
+    borderWidth = Math.max(0, width);
     repaint();
     return this;
   }
@@ -605,13 +603,13 @@ public class FlatCard extends JPanel {
   /**
    * Sets the header title. Pass null or empty to hide the title row entirely.
    *
-   * @param theTitle the header title text
+   * @param title the header title text
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setHeader(final String theTitle) {
-    return setHeader(theTitle, null);
+  public FlatCard setHeader(final String title) {
+    return setHeader(title, null);
   }
 
   /**
@@ -619,51 +617,50 @@ public class FlatCard extends JPanel {
    * #setLeadingIcon(Icon)} or the three-arg {@link #setHeader(String, String, Icon)} overload to
    * change it.
    *
-   * @param theTitle the title text (null/empty hides the title text)
-   * @param theSubtitle the subtitle text (null/empty hides the subtitle line)
+   * @param title the title text (null/empty hides the title text)
+   * @param subtitle the subtitle text (null/empty hides the subtitle line)
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setHeader(final String theTitle, final String theSubtitle) {
-    boolean hasTitle = theTitle != null && !theTitle.isEmpty();
-    myTitleLabel.setText(hasTitle ? theTitle : "");
-    boolean hasSub = theSubtitle != null && !theSubtitle.isEmpty();
-    mySubtitleLabel.setText(hasSub ? theSubtitle : "");
-    mySubtitleLabel.setVisible(hasSub);
+  public FlatCard setHeader(final String title, final String subtitle) {
+    boolean hasTitle = title != null && !title.isEmpty();
+    titleLabel.setText(hasTitle ? title : "");
+    boolean hasSub = subtitle != null && !subtitle.isEmpty();
+    subtitleLabel.setText(hasSub ? subtitle : "");
+    subtitleLabel.setVisible(hasSub);
     refreshHeaderVisibility();
     return this;
   }
 
   /**
-   * Sets the header title, subtitle, and leading icon. Pass {@code null} for {@code theLeadingIcon}
-   * to explicitly clear the icon.
+   * Sets the header title, subtitle, and leading icon. Pass {@code null} for {@code leadingIcon} to
+   * explicitly clear the icon.
    *
-   * @param theTitle the title text
-   * @param theSubtitle the subtitle text (may be null)
-   * @param theLeadingIcon the icon shown before the title (may be null to clear)
+   * @param title the title text
+   * @param subtitle the subtitle text (may be null)
+   * @param leadingIcon the icon shown before the title (may be null to clear)
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setHeader(
-      final String theTitle, final String theSubtitle, final Icon theLeadingIcon) {
-    setHeader(theTitle, theSubtitle);
-    setLeadingIcon(theLeadingIcon);
+  public FlatCard setHeader(final String title, final String subtitle, final Icon leadingIcon) {
+    setHeader(title, subtitle);
+    setLeadingIcon(leadingIcon);
     return this;
   }
 
   /**
    * Replaces the leading icon shown to the left of the header text.
    *
-   * @param theIcon the icon, or null to clear
+   * @param icon the icon, or null to clear
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setLeadingIcon(final Icon theIcon) {
-    myLeadingIconLabel.setIcon(theIcon);
-    myLeadingIconLabel.setVisible(theIcon != null);
+  public FlatCard setLeadingIcon(final Icon icon) {
+    leadingIconLabel.setIcon(icon);
+    leadingIconLabel.setVisible(icon != null);
     refreshHeaderVisibility();
     return this;
   }
@@ -673,22 +670,22 @@ public class FlatCard extends JPanel {
    * the leading icon (if any) and before the title — useful for an info or context button you want
    * sitting next to the title rather than lost on the far right of a wide card.
    *
-   * @param theActions zero or more action components rendered in order from left to right
+   * @param actions zero or more action components rendered in order from left to right
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setLeadingActions(final Component... theActions) {
-    myLeadingActionsPanel.removeAll();
-    if (theActions != null) {
-      for (Component c : theActions) {
+  public FlatCard setLeadingActions(final Component... actions) {
+    leadingActionsPanel.removeAll();
+    if (actions != null) {
+      for (Component c : actions) {
         if (c != null) {
-          myLeadingActionsPanel.add(c);
+          leadingActionsPanel.add(c);
         }
       }
     }
-    boolean has = myLeadingActionsPanel.getComponentCount() > 0;
-    myLeadingActionsPanel.setVisible(has);
+    boolean has = leadingActionsPanel.getComponentCount() > 0;
+    leadingActionsPanel.setVisible(has);
     refreshHeaderVisibility();
     return this;
   }
@@ -702,7 +699,7 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public JLabel getTitleLabel() {
-    return myTitleLabel;
+    return titleLabel;
   }
 
   /**
@@ -713,28 +710,28 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public JLabel getSubtitleLabel() {
-    return mySubtitleLabel;
+    return subtitleLabel;
   }
 
   /**
    * Replaces the trailing actions row of the header.
    *
-   * @param theActions zero or more action components rendered in order from left to right
+   * @param actions zero or more action components rendered in order from left to right
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setTrailingActions(final Component... theActions) {
-    myTrailingActionsPanel.removeAll();
-    if (theActions != null) {
-      for (Component c : theActions) {
+  public FlatCard setTrailingActions(final Component... actions) {
+    trailingActionsPanel.removeAll();
+    if (actions != null) {
+      for (Component c : actions) {
         if (c != null) {
-          myTrailingActionsPanel.add(c);
+          trailingActionsPanel.add(c);
         }
       }
     }
-    boolean has = myTrailingActionsPanel.getComponentCount() > 0;
-    myTrailingActionsPanel.setVisible(has);
+    boolean has = trailingActionsPanel.getComponentCount() > 0;
+    trailingActionsPanel.setVisible(has);
     refreshHeaderVisibility();
     return this;
   }
@@ -744,18 +741,18 @@ public class FlatCard extends JPanel {
   /**
    * Sets the optional media slot, rendered between the header and the body.
    *
-   * @param theMedia the component to display (typically a thumbnail or hero image); null clears
+   * @param media the component to display (typically a thumbnail or hero image); null clears
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setMedia(final JComponent theMedia) {
-    myMediaHolder.removeAll();
-    myMedia = theMedia;
-    if (theMedia != null) {
-      myMediaHolder.add(theMedia, BorderLayout.CENTER);
+  public FlatCard setMedia(final JComponent media) {
+    mediaHolder.removeAll();
+    this.media = media;
+    if (media != null) {
+      mediaHolder.add(media, BorderLayout.CENTER);
     }
-    myMediaHolder.setVisible(theMedia != null);
+    mediaHolder.setVisible(media != null);
     revalidate();
     repaint();
     return this;
@@ -766,18 +763,18 @@ public class FlatCard extends JPanel {
   /**
    * Sets the body content. The body fills any remaining vertical space.
    *
-   * @param theBody the body component; null clears it
+   * @param body the body component; null clears it
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setBody(final JComponent theBody) {
-    myBodyHolder.removeAll();
-    myBody = theBody;
-    if (theBody != null) {
-      myBodyHolder.add(theBody, BorderLayout.CENTER);
+  public FlatCard setBody(final JComponent body) {
+    bodyHolder.removeAll();
+    this.body = body;
+    if (body != null) {
+      bodyHolder.add(body, BorderLayout.CENTER);
     }
-    myBodyHolder.setVisible(theBody != null);
+    bodyHolder.setVisible(body != null);
     revalidate();
     repaint();
     return this;
@@ -788,18 +785,18 @@ public class FlatCard extends JPanel {
   /**
    * Sets the footer content (single component variant).
    *
-   * @param theFooter the footer component; null clears it
+   * @param footer the footer component; null clears it
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setFooter(final JComponent theFooter) {
-    myFooterHolder.removeAll();
-    myFooter = theFooter;
-    if (theFooter != null) {
-      myFooterHolder.add(theFooter, BorderLayout.CENTER);
+  public FlatCard setFooter(final JComponent footer) {
+    footerHolder.removeAll();
+    this.footer = footer;
+    if (footer != null) {
+      footerHolder.add(footer, BorderLayout.CENTER);
     }
-    myFooterHolder.setVisible(theFooter != null);
+    footerHolder.setVisible(footer != null);
     revalidate();
     repaint();
     return this;
@@ -808,18 +805,18 @@ public class FlatCard extends JPanel {
   /**
    * Convenience: sets the footer to a right-aligned actions row.
    *
-   * @param theActions zero or more components rendered as a flow at the bottom of the card
+   * @param actions zero or more components rendered as a flow at the bottom of the card
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setFooter(final Component... theActions) {
-    if (theActions == null || theActions.length == 0) {
+  public FlatCard setFooter(final Component... actions) {
+    if (actions == null || actions.length == 0) {
       return setFooter((JComponent) null);
     }
     JPanel row = new JPanel(new FlowLayout(FlowLayout.RIGHT, DEFAULT_INNER_GAP, 0));
     row.setOpaque(false);
-    for (Component c : theActions) {
+    for (Component c : actions) {
       if (c != null) {
         row.add(c);
       }
@@ -832,18 +829,18 @@ public class FlatCard extends JPanel {
   /**
    * Enables or disables the header chevron and click-to-collapse behavior.
    *
-   * @param theCollapsible whether the card can be collapsed
+   * @param collapsible whether the card can be collapsed
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setCollapsible(final boolean theCollapsible) {
-    if (theCollapsible == myCollapsible) {
+  public FlatCard setCollapsible(final boolean collapsible) {
+    if (collapsible == this.collapsible) {
       return this;
     }
-    myCollapsible = theCollapsible;
-    myChevronLabel.setVisible(theCollapsible);
-    if (!theCollapsible && myCollapsed) {
+    this.collapsible = collapsible;
+    chevronLabel.setVisible(collapsible);
+    if (!collapsible && collapsed) {
       setCollapsed(false);
     }
     refreshHeaderVisibility();
@@ -858,34 +855,34 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public boolean isCollapsible() {
-    return myCollapsible;
+    return collapsible;
   }
 
   /**
    * Programmatically sets the collapsed state. Fires a {@code "collapsed"} property change.
    *
-   * @param theCollapsed the new state
+   * @param collapsed the new state
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setCollapsed(final boolean theCollapsed) {
-    if (theCollapsed == myCollapsed) {
+  public FlatCard setCollapsed(final boolean collapsed) {
+    if (collapsed == this.collapsed) {
       return this;
     }
-    final boolean old = myCollapsed;
-    myCollapsed = theCollapsed;
-    myChevronLabel.setText(chevronGlyph(myCollapsed));
-    myCollapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
-    if (myAnimateCollapse) {
-      animateTo(myCollapsed ? 0f : 1f);
+    final boolean old = collapsed;
+    this.collapsed = collapsed;
+    chevronLabel.setText(chevronGlyph(collapsed));
+    collapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
+    if (animateCollapse) {
+      animateTo(collapsed ? 0f : 1f);
     } else {
-      myAnimationFraction = myCollapsed ? 0f : 1f;
-      myCollapsibleBody.setVisible(!myCollapsed);
+      animationFraction = collapsed ? 0f : 1f;
+      collapsibleBody.setVisible(!collapsed);
     }
     revalidate();
     repaint();
-    firePropertyChange(PROPERTY_COLLAPSED, old, myCollapsed);
+    firePropertyChange(PROPERTY_COLLAPSED, old, collapsed);
     return this;
   }
 
@@ -897,24 +894,24 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public boolean isCollapsed() {
-    return myCollapsed;
+    return collapsed;
   }
 
   /**
    * Optional summary slot shown only when the card is collapsed.
    *
-   * @param theSummary the compact summary component, or null
+   * @param summary the compact summary component, or null
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setCollapsedSummary(final JComponent theSummary) {
-    myCollapsedSummaryHolder.removeAll();
-    myCollapsedSummary = theSummary;
-    if (theSummary != null) {
-      myCollapsedSummaryHolder.add(theSummary, BorderLayout.CENTER);
+  public FlatCard setCollapsedSummary(final JComponent summary) {
+    collapsedSummaryHolder.removeAll();
+    collapsedSummary = summary;
+    if (summary != null) {
+      collapsedSummaryHolder.add(summary, BorderLayout.CENTER);
     }
-    myCollapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
+    collapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
     revalidate();
     repaint();
     return this;
@@ -928,18 +925,18 @@ public class FlatCard extends JPanel {
    * encoding metadata) that should remain reachable while the user studies the expanded body — so
    * the user doesn't have to collapse the card to interact with the summary again.
    *
-   * @param theKeep true to keep the collapsed-summary visible while expanded; false (default) to
+   * @param keep true to keep the collapsed-summary visible while expanded; false (default) to
    *     restore the standard "summary visible only when collapsed" behavior
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setKeepSummaryWhenExpanded(final boolean theKeep) {
-    if (theKeep == myKeepSummaryWhenExpanded) {
+  public FlatCard setKeepSummaryWhenExpanded(final boolean keep) {
+    if (keep == keepSummaryWhenExpanded) {
       return this;
     }
-    myKeepSummaryWhenExpanded = theKeep;
-    myCollapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
+    keepSummaryWhenExpanded = keep;
+    collapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
     revalidate();
     repaint();
     return this;
@@ -953,26 +950,26 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public boolean isKeepSummaryWhenExpanded() {
-    return myKeepSummaryWhenExpanded;
+    return keepSummaryWhenExpanded;
   }
 
   private boolean shouldShowCollapsedSummary() {
-    if (myCollapsedSummary == null) {
+    if (collapsedSummary == null) {
       return false;
     }
-    return myCollapsed || myKeepSummaryWhenExpanded;
+    return collapsed || keepSummaryWhenExpanded;
   }
 
   /**
    * Toggles smooth height interpolation when collapsing or expanding.
    *
-   * @param theAnimate whether to animate
+   * @param animate whether to animate
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setAnimateCollapse(final boolean theAnimate) {
-    myAnimateCollapse = theAnimate;
+  public FlatCard setAnimateCollapse(final boolean animate) {
+    animateCollapse = animate;
     return this;
   }
 
@@ -982,19 +979,19 @@ public class FlatCard extends JPanel {
    * Sets the selected state (only meaningful for {@link CardInteractionMode#SELECTABLE} cards).
    * Fires a {@code "selected"} property change.
    *
-   * @param theSelected the new selection state
+   * @param selected the new selection state
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setSelected(final boolean theSelected) {
-    if (theSelected == mySelected) {
+  public FlatCard setSelected(final boolean selected) {
+    if (selected == this.selected) {
       return this;
     }
-    boolean old = mySelected;
-    mySelected = theSelected;
+    boolean old = selected;
+    this.selected = selected;
     repaint();
-    firePropertyChange(PROPERTY_SELECTED, old, mySelected);
+    firePropertyChange(PROPERTY_SELECTED, old, selected);
     return this;
   }
 
@@ -1006,7 +1003,7 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public boolean isSelected() {
-    return mySelected;
+    return selected;
   }
 
   // --- listeners -------
@@ -1025,8 +1022,8 @@ public class FlatCard extends JPanel {
    * @since v0.1.0
    */
   public FlatCard cancelPendingClick() {
-    myPressed = false;
-    myPendingHeaderToggle = false;
+    pressed = false;
+    pendingHeaderToggle = false;
     repaint();
     return this;
   }
@@ -1034,25 +1031,25 @@ public class FlatCard extends JPanel {
   /**
    * Registers an action listener that fires on click (clickable) or toggle (selectable).
    *
-   * @param theListener the listener to add; null is ignored
+   * @param listener the listener to add; null is ignored
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void addActionListener(final ActionListener theListener) {
-    if (theListener != null) {
-      myActionListeners.add(theListener);
+  public void addActionListener(final ActionListener listener) {
+    if (listener != null) {
+      actionListeners.add(listener);
     }
   }
 
   /**
    * Removes a previously registered action listener.
    *
-   * @param theListener the listener to remove
+   * @param listener the listener to remove
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void removeActionListener(final ActionListener theListener) {
-    myActionListeners.remove(theListener);
+  public void removeActionListener(final ActionListener listener) {
+    actionListeners.remove(listener);
   }
 
   /**
@@ -1060,44 +1057,44 @@ public class FlatCard extends JPanel {
    * #PROPERTY_COLLAPSED} or {@link #PROPERTY_SELECTED}. Equivalent to {@link
    * #addPropertyChangeListener(String, PropertyChangeListener)}.
    *
-   * @param thePropertyName one of {@link #PROPERTY_COLLAPSED} or {@link #PROPERTY_SELECTED}
-   * @param theListener the listener to add
+   * @param propertyName one of {@link #PROPERTY_COLLAPSED} or {@link #PROPERTY_SELECTED}
+   * @param listener the listener to add
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void onChange(final String thePropertyName, final PropertyChangeListener theListener) {
-    addPropertyChangeListener(thePropertyName, theListener);
+  public void onChange(final String propertyName, final PropertyChangeListener listener) {
+    addPropertyChangeListener(propertyName, listener);
   }
 
   // ------------------------------------------------------------- internals
 
   private void refreshHeaderVisibility() {
-    boolean hasTitle = myTitleLabel.getText() != null && !myTitleLabel.getText().isEmpty();
-    boolean hasSub = mySubtitleLabel.isVisible();
-    boolean hasIcon = myLeadingIconLabel.isVisible();
-    boolean hasLeadingActions = myLeadingActionsPanel.isVisible();
-    boolean hasActions = myTrailingActionsPanel.isVisible();
-    boolean hasChevron = myCollapsible;
-    myHeaderRow.setVisible(
+    boolean hasTitle = titleLabel.getText() != null && !titleLabel.getText().isEmpty();
+    boolean hasSub = subtitleLabel.isVisible();
+    boolean hasIcon = leadingIconLabel.isVisible();
+    boolean hasLeadingActions = leadingActionsPanel.isVisible();
+    boolean hasActions = trailingActionsPanel.isVisible();
+    boolean hasChevron = collapsible;
+    headerRow.setVisible(
         hasTitle || hasSub || hasIcon || hasLeadingActions || hasActions || hasChevron);
-    myHeaderRow.revalidate();
+    headerRow.revalidate();
   }
 
   private void rebuildBorder() {
     Insets shadow = shadowInsets();
     setBorder(
         BorderFactory.createEmptyBorder(
-            myPadding.top + shadow.top,
-            myPadding.left + shadow.left,
-            myPadding.bottom + shadow.bottom,
-            myPadding.right + shadow.right));
+            padding.top + shadow.top,
+            padding.left + shadow.left,
+            padding.bottom + shadow.bottom,
+            padding.right + shadow.right));
   }
 
   private Insets shadowInsets() {
-    if (myVariant != CardVariant.ELEVATED || myElevation <= 0) {
+    if (variant != CardVariant.ELEVATED || elevation <= 0) {
       return new Insets(0, 0, 0, 0);
     }
-    int e = myElevation;
+    int e = elevation;
     return new Insets(e, e, e * 2, e);
   }
 
@@ -1106,35 +1103,35 @@ public class FlatCard extends JPanel {
   }
 
   private void animateTo(final float target) {
-    if (myAnimationTimer != null && myAnimationTimer.isRunning()) {
-      myAnimationTimer.stop();
+    if (animationTimer != null && animationTimer.isRunning()) {
+      animationTimer.stop();
     }
-    final float start = myAnimationFraction;
+    final float start = animationFraction;
     final long startTime = System.currentTimeMillis();
     if (target > 0) {
-      myCollapsibleBody.setVisible(true);
+      collapsibleBody.setVisible(true);
     }
-    myAnimationTimer =
+    animationTimer =
         new Timer(
             ANIMATION_MS / ANIMATION_STEPS,
             e -> {
               float t =
                   Math.min(1f, (System.currentTimeMillis() - startTime) / (float) ANIMATION_MS);
               float ease = (float) (1 - Math.pow(1 - t, 3));
-              myAnimationFraction = start + (target - start) * ease;
-              myCollapsibleBody.revalidate();
-              myCollapsibleBody.repaint();
+              animationFraction = start + (target - start) * ease;
+              collapsibleBody.revalidate();
+              collapsibleBody.repaint();
               revalidate();
               repaint();
               if (t >= 1f) {
                 ((Timer) e.getSource()).stop();
-                myAnimationFraction = target;
+                animationFraction = target;
                 if (target == 0f) {
-                  myCollapsibleBody.setVisible(false);
+                  collapsibleBody.setVisible(false);
                 }
               }
             });
-    myAnimationTimer.start();
+    animationTimer.start();
   }
 
   // ------------------------------------------------------------- painting
@@ -1161,10 +1158,10 @@ public class FlatCard extends JPanel {
   }
 
   private void paintShadow(final Graphics2D g2, int x, int y, int w, int h, int arc) {
-    if (myVariant != CardVariant.ELEVATED || myElevation <= 0) {
+    if (variant != CardVariant.ELEVATED || elevation <= 0) {
       return;
     }
-    int e = myElevation + (myHovered && isEnabled() ? 1 : 0);
+    int e = elevation + (hovered && isEnabled() ? 1 : 0);
     int layers = Math.max(2, e + 1);
     for (int i = layers; i >= 1; i--) {
       int alpha = Math.max(8, 60 / i);
@@ -1178,12 +1175,12 @@ public class FlatCard extends JPanel {
 
   private void paintBackground(final Graphics2D g2, int x, int y, int w, int h, int arc) {
     Color bg = surfaceColor();
-    if (myPressed) {
+    if (pressed) {
       bg = blend(bg, UIManager.getColor("Component.focusedBorderColor"), 0.10f);
-    } else if (myHovered && isEnabled() && myInteractionMode != CardInteractionMode.STATIC) {
+    } else if (hovered && isEnabled() && interactionMode != CardInteractionMode.STATIC) {
       bg = blend(bg, foregroundForBlend(), 0.06f);
     }
-    if (mySelected) {
+    if (selected) {
       bg = blend(bg, accentColor(), 0.12f);
     }
     g2.setColor(bg);
@@ -1195,11 +1192,11 @@ public class FlatCard extends JPanel {
     if (border == null) {
       return;
     }
-    int bw = myBorderWidth;
-    if (myVariant != CardVariant.OUTLINED && !mySelected) {
+    int bw = borderWidth;
+    if (variant != CardVariant.OUTLINED && !selected) {
       return;
     }
-    if (mySelected) {
+    if (selected) {
       bw = Math.max(bw, 2);
       border = accentColor();
     }
@@ -1210,7 +1207,7 @@ public class FlatCard extends JPanel {
   }
 
   private void paintFocusRing(final Graphics2D g2, int x, int y, int w, int h, int arc) {
-    if (!isFocusOwner() || myInteractionMode == CardInteractionMode.STATIC || !isEnabled()) {
+    if (!isFocusOwner() || interactionMode == CardInteractionMode.STATIC || !isEnabled()) {
       return;
     }
     Color ring = UIManager.getColor("Component.focusColor");
@@ -1226,20 +1223,20 @@ public class FlatCard extends JPanel {
    * restore variant-default behavior. Hover, pressed, and selected blends are still applied on top
    * of the override.
    *
-   * @param theColor the surface fill color, or null to clear
+   * @param color the surface fill color, or null to clear
    * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatCard setSurfaceColor(final Color theColor) {
-    mySurfaceColorOverride = theColor;
+  public FlatCard setSurfaceColor(final Color color) {
+    surfaceColorOverride = color;
     repaint();
     return this;
   }
 
   private Color surfaceColor() {
-    if (mySurfaceColorOverride != null) {
-      return mySurfaceColorOverride;
+    if (surfaceColorOverride != null) {
+      return surfaceColorOverride;
     }
     Color panel = UIManager.getColor("Panel.background");
     if (panel == null) {
@@ -1247,7 +1244,7 @@ public class FlatCard extends JPanel {
     }
     final boolean light = isLight(panel);
     Color c;
-    switch (myVariant) {
+    switch (variant) {
       case ELEVATED ->
           c = light ? blend(panel, Color.WHITE, 1.0f) : blend(panel, Color.WHITE, 0.10f);
       case OUTLINED ->
@@ -1266,8 +1263,8 @@ public class FlatCard extends JPanel {
   }
 
   private Color effectiveBorderColor() {
-    if (myBorderColor != null) {
-      return myBorderColor;
+    if (borderColor != null) {
+      return borderColor;
     }
     Color c = UIManager.getColor("Component.borderColor");
     if (c == null) {
@@ -1319,10 +1316,10 @@ public class FlatCard extends JPanel {
   public void updateUI() {
     super.updateUI();
     setOpaque(false);
-    if (mySubtitleLabel != null) {
-      mySubtitleLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
+    if (subtitleLabel != null) {
+      subtitleLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
     }
-    if (myPadding != null) {
+    if (padding != null) {
       rebuildBorder();
     }
     repaint();
@@ -1332,7 +1329,7 @@ public class FlatCard extends JPanel {
   public void setEnabled(final boolean enabled) {
     super.setEnabled(enabled);
     setCursor(
-        enabled && myInteractionMode != CardInteractionMode.STATIC
+        enabled && interactionMode != CardInteractionMode.STATIC
             ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             : Cursor.getDefaultCursor());
     repaint();
@@ -1341,7 +1338,7 @@ public class FlatCard extends JPanel {
   // ------------------------------------------------------------- container
 
   /**
-   * Wrapper panel whose preferred height is multiplied by {@link #myAnimationFraction}, used to
+   * Wrapper panel whose preferred height is multiplied by {@link #animationFraction}, used to
    * animate the collapse/expand transition without breaking layout managers further out. Width
    * stretches to fill the outer BoxLayout.
    *
@@ -1352,10 +1349,10 @@ public class FlatCard extends JPanel {
     @Override
     public Dimension getPreferredSize() {
       Dimension d = super.getPreferredSize();
-      if (myAnimationFraction >= 1f) {
+      if (animationFraction >= 1f) {
         return d;
       }
-      return new Dimension(d.width, (int) Math.max(0, d.height * myAnimationFraction));
+      return new Dimension(d.width, (int) Math.max(0, d.height * animationFraction));
     }
 
     @Override
@@ -1367,8 +1364,7 @@ public class FlatCard extends JPanel {
     @Override
     public Dimension getMaximumSize() {
       Dimension d = super.getPreferredSize();
-      int h =
-          myAnimationFraction >= 1f ? d.height : (int) Math.max(0, d.height * myAnimationFraction);
+      int h = animationFraction >= 1f ? d.height : (int) Math.max(0, d.height * animationFraction);
       return new Dimension(Integer.MAX_VALUE, h);
     }
   }

@@ -164,10 +164,10 @@ public final class CursorReferencePanel extends JPanel {
    * @version v0.1.0
    * @since v0.1.0
    */
-  private static Cursor loadCustomCursor(final String theName) {
+  private static Cursor loadCustomCursor(final String name) {
     try {
       final Class<?> clazz = Class.forName("com.owspfm.ui.components.card.list.Cursors");
-      final Method method = clazz.getDeclaredMethod(theName);
+      final Method method = clazz.getDeclaredMethod(name);
       method.setAccessible(true);
       return (Cursor) method.invoke(null);
     } catch (ReflectiveOperationException e) {
@@ -175,13 +175,13 @@ public final class CursorReferencePanel extends JPanel {
     }
   }
 
-  private static Image loadCustomImage(final String theBaseName) {
+  private static Image loadCustomImage(final String baseName) {
     try {
       final Class<?> clazz = Class.forName("com.owspfm.ui.components.card.list.Cursors");
       final Method method = clazz.getDeclaredMethod("previewImage", String.class, boolean.class);
       method.setAccessible(true);
       final boolean dark = isDarkTheme();
-      return (Image) method.invoke(null, theBaseName, dark);
+      return (Image) method.invoke(null, baseName, dark);
     } catch (ReflectiveOperationException e) {
       return null;
     }
@@ -195,59 +195,58 @@ public final class CursorReferencePanel extends JPanel {
     return (panel.getRed() + panel.getGreen() + panel.getBlue()) / 3 < 128;
   }
 
-  private static void addSectionHeader(
-      final JPanel theTable, final int theRow, final JLabel theLabel) {
-    theLabel.setBorder(BorderFactory.createEmptyBorder(theRow == 0 ? 0 : 16, 0, 6, 0));
+  private static void addSectionHeader(final JPanel table, final int row, final JLabel label) {
+    label.setBorder(BorderFactory.createEmptyBorder(row == 0 ? 0 : 16, 0, 6, 0));
     final GridBagConstraints gc = new GridBagConstraints();
     gc.gridx = 0;
-    gc.gridy = theRow;
+    gc.gridy = row;
     gc.gridwidth = 3;
     gc.fill = GridBagConstraints.HORIZONTAL;
     gc.insets = new Insets(0, 0, 0, 0);
-    theTable.add(theLabel, gc);
+    table.add(label, gc);
   }
 
   private static void addRowWithIcon(
-      final JPanel theTable,
-      final int theRow,
-      final String theName,
-      final String theDescription,
-      final Cursor theCursor,
-      final Image theIcon) {
-    addRow(theTable, theRow, theName, theDescription, theCursor);
-    if (theIcon == null) {
+      final JPanel table,
+      final int row,
+      final String name,
+      final String description,
+      final Cursor cursor,
+      final Image icon) {
+    addRow(table, row, name, description, cursor);
+    if (icon == null) {
       return;
     }
     final GridBagConstraints gc = new GridBagConstraints();
     gc.gridx = 3;
-    gc.gridy = theRow;
+    gc.gridy = row;
     gc.insets = new Insets(4, 8, 4, 0);
-    final JLabel iconLbl = new JLabel(new ImageIcon(theIcon));
+    final JLabel iconLbl = new JLabel(new ImageIcon(icon));
     iconLbl.setToolTipText("Cursor artwork preview");
-    theTable.add(iconLbl, gc);
+    table.add(iconLbl, gc);
   }
 
   private static void addRow(
-      final JPanel theTable,
-      final int theRow,
-      final String theName,
-      final String theDescription,
-      final Cursor theCursor) {
+      final JPanel table,
+      final int row,
+      final String name,
+      final String description,
+      final Cursor cursor) {
     final GridBagConstraints gc = new GridBagConstraints();
-    gc.gridy = theRow;
+    gc.gridy = row;
     gc.fill = GridBagConstraints.HORIZONTAL;
     gc.insets = new Insets(4, 0, 4, 12);
 
-    final JLabel nameLbl = new JLabel(theName);
+    final JLabel nameLbl = new JLabel(name);
     nameLbl.putClientProperty("FlatLaf.styleClass", "monospaced");
-    final JLabel descLbl = new JLabel(theDescription);
+    final JLabel descLbl = new JLabel(description);
     descLbl.setForeground(UIManager.getColor("Label.disabledForeground"));
 
     final JPanel hover = new JPanel(new BorderLayout());
     final Color base = UIManager.getColor("Component.borderColor");
     hover.setBackground(blend(UIManager.getColor("Panel.background"), base, 0.15f));
     hover.setBorder(BorderFactory.createLineBorder(base != null ? base : Color.GRAY));
-    hover.setCursor(theCursor);
+    hover.setCursor(cursor);
     hover.setPreferredSize(new Dimension(180, 32));
     final JLabel hint = new JLabel("hover here", SwingConstants.CENTER);
     hint.putClientProperty("FlatLaf.styleClass", "small");
@@ -255,27 +254,27 @@ public final class CursorReferencePanel extends JPanel {
 
     gc.gridx = 0;
     gc.weightx = 0;
-    theTable.add(nameLbl, gc);
+    table.add(nameLbl, gc);
     gc.gridx = 1;
     gc.weightx = 1;
-    theTable.add(descLbl, gc);
+    table.add(descLbl, gc);
     gc.gridx = 2;
     gc.weightx = 0;
     gc.fill = GridBagConstraints.NONE;
-    theTable.add(hover, gc);
+    table.add(hover, gc);
   }
 
-  private static Color blend(final Color theA, final Color theB, final float theT) {
-    if (theA == null) {
-      return theB == null ? Color.LIGHT_GRAY : theB;
+  private static Color blend(final Color a, final Color b, final float t) {
+    if (a == null) {
+      return b == null ? Color.LIGHT_GRAY : b;
     }
-    if (theB == null) {
-      return theA;
+    if (b == null) {
+      return a;
     }
-    final float t = Math.max(0f, Math.min(1f, theT));
-    final int r = (int) (theA.getRed() * (1 - t) + theB.getRed() * t);
-    final int g = (int) (theA.getGreen() * (1 - t) + theB.getGreen() * t);
-    final int b = (int) (theA.getBlue() * (1 - t) + theB.getBlue() * t);
-    return new Color(r, g, b);
+    final float clamped = Math.max(0f, Math.min(1f, t));
+    final int red = (int) (a.getRed() * (1 - clamped) + b.getRed() * clamped);
+    final int green = (int) (a.getGreen() * (1 - clamped) + b.getGreen() * clamped);
+    final int blue = (int) (a.getBlue() * (1 - clamped) + b.getBlue() * clamped);
+    return new Color(red, green, blue);
   }
 }

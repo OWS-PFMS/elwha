@@ -22,7 +22,7 @@ import javax.swing.JTextArea;
  */
 public final class SnippetPanel extends JPanel {
 
-  private final JTextArea myArea;
+  private final JTextArea area;
 
   /** Builds the snippet view with an empty initial body. */
   public SnippetPanel() {
@@ -32,17 +32,17 @@ public final class SnippetPanel extends JPanel {
     JLabel heading = new JLabel("Java snippet");
     heading.putClientProperty("FlatLaf.styleClass", "h4");
 
-    myArea = new JTextArea();
-    myArea.setEditable(false);
-    myArea.putClientProperty("FlatLaf.styleClass", "monospaced");
-    myArea.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+    area = new JTextArea();
+    area.setEditable(false);
+    area.putClientProperty("FlatLaf.styleClass", "monospaced");
+    area.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
     JButton copy = new JButton("Copy");
     copy.addActionListener(
         e ->
             Toolkit.getDefaultToolkit()
                 .getSystemClipboard()
-                .setContents(new StringSelection(myArea.getText()), null));
+                .setContents(new StringSelection(area.getText()), null));
 
     JPanel header = new JPanel(new BorderLayout());
     header.add(heading, BorderLayout.WEST);
@@ -50,19 +50,19 @@ public final class SnippetPanel extends JPanel {
     header.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
 
     add(header, BorderLayout.NORTH);
-    add(new JScrollPane(myArea), BorderLayout.CENTER);
+    add(new JScrollPane(area), BorderLayout.CENTER);
   }
 
   /**
    * Recomputes and displays the snippet for the supplied snapshot.
    *
-   * @param theSnapshot the latest config snapshot from {@link LiveConfigPanel}
+   * @param snapshot the latest config snapshot from {@link LiveConfigPanel}
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void update(final LiveConfigPanel.Snapshot theSnapshot) {
-    myArea.setText(render(theSnapshot));
-    myArea.setCaretPosition(0);
+  public void update(final LiveConfigPanel.Snapshot snapshot) {
+    area.setText(render(snapshot));
+    area.setCaretPosition(0);
   }
 
   private static String render(final LiveConfigPanel.Snapshot s) {

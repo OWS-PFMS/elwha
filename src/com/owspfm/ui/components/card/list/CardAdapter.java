@@ -31,11 +31,11 @@ public interface CardAdapter<T> {
   /**
    * Builds a card for the given item.
    *
-   * @param theItem the domain item
-   * @param theIndex the visible index of the item in the list
+   * @param item the domain item
+   * @param index the visible index of the item in the list
    * @return a non-null {@link FlatCard}
    * @version v0.1.0
    * @since v0.1.0
    */
-  FlatCard cardFor(T theItem, int theIndex);
+  FlatCard cardFor(T item, int index);
 }

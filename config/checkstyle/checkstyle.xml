@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  FlatComp Checkstyle config — Google Java Style naming with project-specific
+  bans on the legacy "my*" / "the*" prefixes inherited from the OWS-tool source.
+
+  Scope:
+    - Naming rules (members, parameters, locals, statics, constants, classes,
+      methods, types, packages).
+    - Banned-prefix regex via RegexpSinglelineJava that flags the literal
+      "my*" / "the*" patterns even when they appear in identifiers that
+      otherwise pass MemberName / ParameterName.
+    - A small set of import / size sanity checks.
+
+  Formatting (indent, line length, brace style, etc.) is NOT enforced here —
+  Spotless with googleJavaFormat owns formatting. Keeping the two tools
+  scoped to non-overlapping concerns avoids duplicated rules.
+-->
+<module name="Checker">
+  <property name="severity" value="warning"/>
+  <property name="fileExtensions" value="java"/>
+
+  <module name="TreeWalker">
+    <!-- Naming: Google patterns, tightened to ban my* / the* prefixes. -->
+    <module name="MemberName">
+      <!-- Instance fields. Disallow names starting with my[A-Z] or the[A-Z]. -->
+      <property name="format" value="^(?!my[A-Z])(?!the[A-Z])[a-z][a-zA-Z0-9]*$"/>
+    </module>
+    <module name="ParameterName">
+      <property name="format" value="^(?!my[A-Z])(?!the[A-Z])[a-z]([a-z0-9][a-zA-Z0-9]*)?$"/>
+    </module>
+    <module name="LocalVariableName">
+      <property name="format" value="^(?!my[A-Z])(?!the[A-Z])[a-z]([a-z0-9][a-zA-Z0-9]*)?$"/>
+      <property name="allowOneCharVarInForLoop" value="true"/>
+    </module>
+    <module name="LocalFinalVariableName">
+      <property name="format" value="^(?!my[A-Z])(?!the[A-Z])[a-z]([a-z0-9][a-zA-Z0-9]*)?$"/>
+    </module>
+    <module name="StaticVariableName">
+      <!-- Non-final static fields. -->
+      <property name="format" value="^(?!my[A-Z])(?!the[A-Z])[a-z][a-zA-Z0-9]*$"/>
+    </module>
+    <module name="ConstantName">
+      <!-- final static. Google style: UPPER_SNAKE_CASE. -->
+      <property name="format" value="^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"/>
+    </module>
+    <module name="MethodName">
+      <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+    </module>
+    <module name="TypeName">
+      <property name="format" value="^[A-Z][a-zA-Z0-9]*$"/>
+    </module>
+    <module name="PackageName">
+      <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
+    </module>
+
+    <!-- Belt-and-suspenders: explicit regex ban on my* / the* identifiers.
+         Catches the same patterns reported via Name checks above, plus any
+         edge cases where a name passes the Name pattern (e.g. classes,
+         methods) but still uses a banned prefix. Method names get the same
+         treatment — myFoo() is just as legacy as myFoo. -->
+    <module name="RegexpSinglelineJava">
+      <property name="format" value="\bmy[A-Z]\w*"/>
+      <property name="message" value="Identifier uses banned legacy 'my' prefix. Rename to drop the prefix per Google Java Style adoption (epic #5)."/>
+      <property name="ignoreComments" value="true"/>
+    </module>
+    <module name="RegexpSinglelineJava">
+      <property name="format" value="\bthe[A-Z]\w*"/>
+      <property name="message" value="Identifier uses banned legacy 'the' prefix. Rename to drop the prefix per Google Java Style adoption (epic #5)."/>
+      <property name="ignoreComments" value="true"/>
+    </module>
+
+    <!-- Light sanity checks. -->
+    <module name="AvoidStarImport"/>
+    <module name="UnusedImports">
+      <property name="processJavadoc" value="true"/>
+    </module>
+  </module>
+
+  <module name="FileTabCharacter">
+    <property name="eachLine" value="true"/>
+  </module>
+</module>

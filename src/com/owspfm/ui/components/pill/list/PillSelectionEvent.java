@@ -13,19 +13,19 @@ import java.util.List;
  */
 public class PillSelectionEvent<T> extends EventObject {
 
-  private final List<T> mySelected;
+  private final List<T> selected;
 
   /**
    * Constructs a new selection event.
    *
-   * @param theSource the originating selection model
-   * @param theSelected the new selected items (defensive copy expected from caller)
+   * @param source the originating selection model
+   * @param selected the new selected items (defensive copy expected from caller)
    * @version v0.1.0
    * @since v0.1.0
    */
-  public PillSelectionEvent(final Object theSource, final List<T> theSelected) {
-    super(theSource);
-    mySelected = theSelected;
+  public PillSelectionEvent(final Object source, final List<T> selected) {
+    super(source);
+    this.selected = selected;
   }
 
   /**
@@ -36,6 +36,6 @@ public class PillSelectionEvent<T> extends EventObject {
    * @since v0.1.0
    */
   public List<T> getSelected() {
-    return mySelected;
+    return selected;
   }
 }

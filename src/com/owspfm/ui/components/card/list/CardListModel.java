@@ -35,13 +35,13 @@ public interface CardListModel<T> extends Iterable<T> {
   /**
    * Returns the item at the given index.
    *
-   * @param theIndex the zero-based index
+   * @param index the zero-based index
    * @return the item
-   * @throws IndexOutOfBoundsException if {@code theIndex} is out of range
+   * @throws IndexOutOfBoundsException if {@code index} is out of range
    * @version v0.1.0
    * @since v0.1.0
    */
-  T getElementAt(int theIndex);
+  T getElementAt(int index);
 
   /**
    * Returns an iterator over the model's items in order.
@@ -58,18 +58,18 @@ public interface CardListModel<T> extends Iterable<T> {
   /**
    * Registers a listener for change events.
    *
-   * @param theListener the listener; null is ignored
+   * @param listener the listener; null is ignored
    * @version v0.1.0
    * @since v0.1.0
    */
-  void addCardListDataListener(CardListDataListener theListener);
+  void addCardListDataListener(CardListDataListener listener);
 
   /**
    * Removes a previously registered listener.
    *
-   * @param theListener the listener to remove
+   * @param listener the listener to remove
    * @version v0.1.0
    * @since v0.1.0
    */
-  void removeCardListDataListener(CardListDataListener theListener);
+  void removeCardListDataListener(CardListDataListener listener);
 }

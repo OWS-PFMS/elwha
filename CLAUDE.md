@@ -55,7 +55,7 @@ The pre-extraction audit confirmed **zero coupling sites** between these compone
 - **Material Symbols icon house style:** Rounded / weight 400 / fill 0 / 20px. Override only when fill1 is semantically needed for a "selected/active" state. Source from `gstatic` for crisp variants. Use `MaterialIcons` helper, not raw `FlatSVGIcon`.
 - **JDK target:** 21 (`maven.compiler.release=21`). Stays at 21 until OWS-tool migrates off 21 — bumping prematurely cuts off consumers.
 - **PRs need a milestone at creation.** The Validate `@version` workflow hard-fails without one.
-- **Branch protection:** `main` requires both `build` and `Validate @version and @since tags`; force-push and deletion are blocked.
+- **Branch protection:** `main` requires `build`, `Validate @version and @since tags`, `Validate formatting (Spotless)`, and `Validate naming (Checkstyle)`; force-push and deletion are blocked.
 
 ## Release process
 
