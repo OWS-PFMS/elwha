@@ -53,12 +53,8 @@ jobs:
           EXPECTED="${{ steps.get_milestone.outputs.milestone }}"
           echo "Validating JavaDoc tags against milestone: $EXPECTED (PR diff scope)"
 
-          # TEMPORARY: --allow-since-mutation is set ONLY to permit the
-          # one-shot v0.1.0 baseline-reset PR (issue #1 / PR opening this).
-          # The follow-up PR must remove this flag to restore strict
-          # @since-immutability enforcement.
           if python3 scripts/update_javadoc_version.py \
-               --check --changed-only --allow-since-mutation \
+               --check --changed-only \
                --expected "$EXPECTED" --base-ref origin/main; then
             echo "::notice::✅ All modified/added Java files have correct @version and @since for $EXPECTED"
           else
