@@ -27,14 +27,10 @@ public class CardListDataEvent extends EventObject {
 
   /** The kind of structural change a {@link CardListDataEvent} represents. */
   public enum Type {
-     * @version v0.1.0
-     * @since v0.1.0
     /** One or more contiguous items were inserted at {@code [index0, index1]}. */
     ADDED,
     /** One or more contiguous items were removed from {@code [index0, index1]}. */
     REMOVED,
-     * @version v0.1.0
-     * @since v0.1.0
     /** One or more contiguous items at {@code [index0, index1]} were replaced in place. */
     CHANGED,
     /** Exactly one item moved from {@code index0} to {@code index1}. */

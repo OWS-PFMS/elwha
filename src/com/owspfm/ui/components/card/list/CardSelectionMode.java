@@ -12,7 +12,9 @@ public enum CardSelectionMode {
   /** Selection is disabled; cards never enter the selected state. */
   NONE,
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** At most one card may be selected at a time; selecting another deselects the previous. */
   SINGLE,
+
+  /** Any number of cards may be selected; supports Shift-click range and Cmd/Ctrl-click toggle. */
+  MULTIPLE
+}

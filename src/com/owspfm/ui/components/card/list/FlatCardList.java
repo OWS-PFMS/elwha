@@ -99,8 +99,6 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
     /** Single-column vertical stack (default). */
     public static final FlatListOrientation VERTICAL = FlatListOrientation.VERTICAL;
 
-     * @version v0.1.0
-     * @since v0.1.0
     /** N-column grid (set with {@link FlatCardList#setColumns(int)}). */
     public static final FlatListOrientation GRID = FlatListOrientation.GRID;
 
@@ -1201,8 +1199,6 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
     /** Press point in card-local coordinates; used to keep the card under the cursor. */
     Point grabOffset;
 
-     * @version v0.1.0
-     * @since v0.1.0
     /** False until the cursor has moved past {@link #DRAG_THRESHOLD} pixels from press. */
     boolean active;
   }
@@ -1686,3 +1682,30 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
     }
     return accessibleContext;
   }
+
+  /** Accessible role of the list itself; rendered cards expose their own LIST_ITEM context. */
+  protected class AccessibleFlatCardList extends AccessibleJPanel {
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.LIST;
+    }
+
+    @Override
+    public int getAccessibleChildrenCount() {
+      return myVisibleItems.size();
+    }
+
+    @Override
+    public javax.accessibility.Accessible getAccessibleChild(final int theIndex) {
+      if (theIndex < 0 || theIndex >= myVisibleItems.size()) {
+        return null;
+      }
+      final FlatCard card = myCardByItem.get(myVisibleItems.get(theIndex));
+      if (card == null) {
+        return null;
+      }
+      final Component c = card;
+      return c instanceof Accessible a ? a : null;
+    }
+  }
+}

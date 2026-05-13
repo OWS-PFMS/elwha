@@ -90,8 +90,6 @@ public class FlatCard extends JPanel {
   /** Property name fired when the collapsed state changes. */
   public static final String PROPERTY_COLLAPSED = "collapsed";
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
 
@@ -157,8 +155,6 @@ public class FlatCard extends JPanel {
 
   // ------------------------------------------------------------------ ctor
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Creates a card with default ELEVATED variant and STATIC interaction. */
   public FlatCard() {
     super();

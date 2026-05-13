@@ -53,8 +53,6 @@ public final class MaterialIcons {
     return load("push_pin");
   }
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Pushpin glyph (filled / solid) — pairs with {@link #pushPin()} as the "active" state. */
   public static FlatSVGIcon pushPinFilled() {
     return load("push_pin_fill");
@@ -65,8 +63,6 @@ public final class MaterialIcons {
     return load("delete");
   }
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Pencil / edit glyph. */
   public static FlatSVGIcon edit() {
     return load("edit");
@@ -77,8 +73,6 @@ public final class MaterialIcons {
     return load("info");
   }
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Heart / favorite glyph. */
   public static FlatSVGIcon favorite() {
     return load("favorite");
@@ -89,8 +83,6 @@ public final class MaterialIcons {
     return load("star");
   }
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Plus / add glyph. */
   public static FlatSVGIcon add() {
     return load("add");
@@ -101,8 +93,6 @@ public final class MaterialIcons {
     return load("check");
   }
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Eye / visibility glyph. */
   public static FlatSVGIcon visibility() {
     return load("visibility");
@@ -113,8 +103,6 @@ public final class MaterialIcons {
     return load("anchor");
   }
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Anchor glyph (filled / solid) — pairs with {@link #anchor()} as the "active" state. */
   public static FlatSVGIcon anchorFilled() {
     return load("anchor_fill");
@@ -125,8 +113,6 @@ public final class MaterialIcons {
     return load("grid_view");
   }
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Generic table glyph. */
   public static FlatSVGIcon table() {
     return load("table");
@@ -137,8 +123,6 @@ public final class MaterialIcons {
     return load("background_grid_small");
   }
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Select-all glyph. */
   public static FlatSVGIcon selectAll() {
     return load("select_all");

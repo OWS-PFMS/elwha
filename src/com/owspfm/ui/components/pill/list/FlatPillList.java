@@ -2044,8 +2044,6 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     }
   }
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Vertical stack layout — pills sized to preferred height, stretched to fill width. */
   private final class VerticalLayout implements LayoutManager {
     @Override
@@ -2488,3 +2486,26 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     }
     return accessibleContext;
   }
+
+  /** Accessible role of the list itself; rendered pills expose their own roles. */
+  protected class AccessibleFlatPillList extends AccessibleJPanel {
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.LIST;
+    }
+
+    @Override
+    public int getAccessibleChildrenCount() {
+      return myVisibleItems.size();
+    }
+
+    @Override
+    public javax.accessibility.Accessible getAccessibleChild(final int theIndex) {
+      if (theIndex < 0 || theIndex >= myVisibleItems.size()) {
+        return null;
+      }
+      final FlatPill pill = myPillByItem.get(myVisibleItems.get(theIndex));
+      return pill;
+    }
+  }
+}

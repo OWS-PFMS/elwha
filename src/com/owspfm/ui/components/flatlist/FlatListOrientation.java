@@ -28,16 +28,12 @@ public enum FlatListOrientation {
   /** Single-column vertical stack. */
   VERTICAL,
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Single-row horizontal flow with clip / scroll overflow. */
   HORIZONTAL,
 
   /** Multi-row wrapping flow ({@link java.awt.FlowLayout}-derivative). */
   WRAP,
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** N-column grid with configurable column count. */
   GRID
 }

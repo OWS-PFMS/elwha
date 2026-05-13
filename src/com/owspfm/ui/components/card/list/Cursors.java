@@ -259,3 +259,9 @@ public final class Cursors {
         theArc * theScale,
         theArc * theScale);
   }
+
+  /** Convenience for the playground reference panel: returns the raw PNG image. */
+  static Image previewImage(final String theBaseName, final boolean theDark) {
+    return loadPng(theBaseName + "-" + (theDark ? "dark" : "light") + "-32.png");
+  }
+}

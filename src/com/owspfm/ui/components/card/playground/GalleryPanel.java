@@ -175,8 +175,6 @@ public final class GalleryPanel extends JPanel {
     return b;
   }
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Solid colored circle used as a header leading icon stand-in. */
   private static final class DotIcon implements javax.swing.Icon {
     private final Color color;
@@ -204,3 +202,24 @@ public final class GalleryPanel extends JPanel {
       return 16;
     }
   }
+
+  /** Stand-in for an image asset; paints a soft gradient plate. */
+  private static final class MediaPlaceholder extends JComponent {
+    MediaPlaceholder() {
+      setPreferredSize(new Dimension(160, 80));
+    }
+
+    @Override
+    protected void paintComponent(final Graphics g) {
+      java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      Color a = new Color(98, 142, 207);
+      Color b = new Color(202, 142, 207);
+      g2.setPaint(new java.awt.GradientPaint(0, 0, a, getWidth(), getHeight(), b));
+      g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+      g2.setColor(new Color(255, 255, 255, 180));
+      g2.drawString("media", 12, 22);
+      g2.dispose();
+    }
+  }
+}

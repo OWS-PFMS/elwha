@@ -87,8 +87,6 @@ public class FlatPill extends JPanel {
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** Client-property key for the per-instance style escape hatch (FlatLaf-style key=value). */
   public static final String STYLE_PROPERTY = "FlatPill.style";
 
@@ -96,8 +94,6 @@ public class FlatPill extends JPanel {
   /** UIManager key for the default surface fill. */
   public static final String K_BACKGROUND = "FlatPill.background";
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** UIManager key for the default border stroke color. */
   public static final String K_BORDER_COLOR = "FlatPill.borderColor";
 
@@ -120,24 +116,18 @@ public class FlatPill extends JPanel {
   /** UIManager key for the hover-state background tint. */
   public static final String K_HOVER_BACKGROUND = "FlatPill.hoverBackground";
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** UIManager key for the pressed-state background tint. */
   public static final String K_PRESSED_BACKGROUND = "FlatPill.pressedBackground";
 
   /** UIManager key for the selected-state background tint. */
   public static final String K_SELECTED_BACKGROUND = "FlatPill.selectedBackground";
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** UIManager key for the selected-state border color. */
   public static final String K_SELECTED_BORDER_COLOR = "FlatPill.selectedBorderColor";
 
   /** UIManager key for the focus-ring color. */
   public static final String K_FOCUS_COLOR = "FlatPill.focusColor";
 
-   * @version v0.1.0
-   * @since v0.1.0
   /** UIManager key for the disabled-state background. */
   public static final String K_DISABLED_BACKGROUND = "FlatPill.disabledBackground";
 

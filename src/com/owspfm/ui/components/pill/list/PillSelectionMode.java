@@ -30,3 +30,7 @@ public enum PillSelectionMode {
     * @since v0.1.0
    */
   SINGLE_MANDATORY,
+
+  /** Any number of pills may be selected; supports Shift-click range and Cmd/Ctrl-click toggle. */
+  MULTIPLE
+}
