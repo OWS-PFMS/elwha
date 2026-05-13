@@ -21,11 +21,11 @@ mvn checkstyle:check     # check naming (read-only)
 mvn verify               # run everything: compile + spotless:check + checkstyle:check + tests + package
 ```
 
-### JDK version requirement
+### JDK version
 
-**Spotless + `googleJavaFormat` require JDK 21 to run.** Newer JDKs (22+) hit a binary-API drift in `com.sun.tools.javac.util.Log` (`DeferredDiagnosticHandler.getDiagnostics()` return type changed from `Queue` to `List`). Tracked upstream at [diffplug/spotless#2468](https://github.com/diffplug/spotless/issues/2468). The library itself targets JDK 21 (`maven.compiler.release=21`) regardless of runtime, so this only affects which JDK runs `mvn spotless:*`.
+Use **JDK 21**. The library compiles for JDK 21 (`maven.compiler.release=21`), CI runs on JDK 21, and the upstream consumer (`OWS-Local-Search-GUI`) is on JDK 21 — see [`CLAUDE.md`](../../CLAUDE.md) "Conventions" → JDK target.
 
-Quick fix if you're on a newer JDK:
+If you've drifted onto a newer JDK locally, Spotless will surface the mistake fast: `spotless:check` / `spotless:apply` fail on JDK 22+ because of a binary-API drift in `com.sun.tools.javac.util.Log.DeferredDiagnosticHandler.getDiagnostics()` (return type changed from `Queue` to `List`), tracked upstream at [diffplug/spotless#2468](https://github.com/diffplug/spotless/issues/2468). The fix is just to be on the project JDK:
 
 ```bash
 export JAVA_HOME=/path/to/jdk-21
