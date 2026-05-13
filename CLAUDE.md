@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-**FlatComp** — a Swing component library built on [FlatLaf](https://www.formdev.com/flatlaf/) providing `FlatCard`, `FlatPill`, their list containers, a shared `FlatList<T>` contract, and a `MaterialIcons` helper. Apache 2.0, JDK 21, currently `0.1.0` (pre-1.0 — API not stable).
+**FlatComp** — a Swing component library built on [FlatLaf](https://www.formdev.com/flatlaf/) providing `FlatCard`, `FlatChip`, their list containers, a shared `FlatList<T>` contract, and a `MaterialIcons` helper. Apache 2.0, JDK 21, currently `0.1.0` (pre-1.0 — API not stable).
 
 `groupId = com.owspfm`, `artifactId = flatcomp`. Single maintainer: Charles Bryan (`cfb3@uw.edu`). GitHub org: `OWS-PFMS`.
 
@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 mvn clean package                                                    # → target/flatcomp-<version>.jar + sources + javadoc jars
-mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.pill.FlatPillPlayground"
+mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.chip.FlatChipPlayground"
 mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.card.playground.FlatCardListShowcase"
 ```
 
@@ -31,8 +31,8 @@ Component packages under `src/com/owspfm/ui/components/`:
 | `card/` | `FlatCard` primitive + variants (`FILLED` / `OUTLINED` / `GHOST` / `WARM_ACCENT`) + interaction modes |
 | `card/list/` | `FlatCardList<T>` + `CardListModel` + `CardSelectionModel` + drag-handle cursor PNGs |
 | `card/playground/` | `FlatCardListShowcase` interactive demo |
-| `pill/` | `FlatPill` + variants + interaction modes |
-| `pill/list/` | `FlatPillList<T>` + `PillListModel` + `PillSelectionModel` (including `SINGLE_MANDATORY` tab-strip semantics) + `MovementMode` + `IconAffordance` |
+| `chip/` | `FlatChip` + variants + interaction modes |
+| `chip/list/` | `FlatChipList<T>` + `ChipListModel` + `ChipSelectionModel` (including `SINGLE_MANDATORY` tab-strip semantics) + `MovementMode` + `IconAffordance` |
 | `flatlist/` | `FlatList<T>` — the narrow cross-cutting interface both list families implement (orientation / gap / padding / empty / loading / filter / sort). **Does not include selection or drag-reorder by design** — those are family-specific today (see epic #252) |
 | `icons/` | `MaterialIcons` — wraps `FlatSVGIcon` over 17 bundled Material Symbols (Rounded / 400 / fill0 / 20px), auto-themed via a shared `Label.foreground` color filter |
 
@@ -72,15 +72,14 @@ The workflow validates the version matches `CHANGELOG.md` and publishes the jar 
 
 ## Open epics — expect breaking changes until these land
 
-These are queued post-extraction and are currently filed on **OWS-PFMS/OWS-Local-Search-GUI** (the lib didn't exist when they were opened). They'll transfer here via `gh issue transfer` over time, so issue numbers may shift. **1.0.0 ships only after all three complete.**
+`FlatPill` → `FlatChip` (epic [#27](https://github.com/OWS-PFMS/flatcomp/issues/27) — mirrored from the closed OWS-Local-Search-GUI epic #251) is **complete in the lib** once the rename PRs land; consumer-side migration is tracked in **OWS-PFMS/OWS-Local-Search-GUI#258**. The remaining open epics are queued and still filed on the consumer repo (the lib didn't exist when they were opened). They'll move here over time. **1.0.0 ships only after both complete.**
 
-- **#251 — `FlatPill` → `FlatChip` rename** (taxonomy alignment with Material). 5 pre-planned sub-issues (#254 inventory / #255 atomic rename / #256 UIManager keys / #257 docs / #258 consumer migration).
-- **#252 — Extend `FlatList<T>`** to share selection + drag-reorder surface across both list families. Today the surface is family-specific (`CardSelectionMode` vs `PillSelectionMode`, `CardSelectionModel` vs `PillSelectionModel`); the pill side has richer semantics (`SINGLE_MANDATORY`, toggleable `SINGLE`, deferred drag-vs-click) that the card side lacks.
-- **#253 — `FlatCard` V2 API** replacing accumulated escape-hatches (raw label getters, `setSurfaceColor` bolt-on, `setKeepSummaryWhenExpanded`, `setHeader` overload pattern).
+- **OWS-Local-Search-GUI#252 — Extend `FlatList<T>`** to share selection + drag-reorder surface across both list families. Today the surface is family-specific (`CardSelectionMode` vs `ChipSelectionMode`, `CardSelectionModel` vs `ChipSelectionModel`); the chip side has richer semantics (`SINGLE_MANDATORY`, toggleable `SINGLE`, deferred drag-vs-click) that the card side lacks.
+- **OWS-Local-Search-GUI#253 — `FlatCard` V2 API** replacing accumulated escape-hatches (raw label getters, `setSurfaceColor` bolt-on, `setKeepSummaryWhenExpanded`, `setHeader` overload pattern).
 
 Org-level project board tracking this work: **Project #5 — Material Flat Component Library** at `https://github.com/orgs/OWS-PFMS/projects/5`.
 
-Known consumer: **OWS-PFMS/OWS-Local-Search-GUI** (via PR #266 swap-out). That repo's issues #243 / #244 are the OWS-tool-side migration of `FactorPill` / `InnerViewTabStrip` onto `FlatPill` (they'll target `FlatChip` post-rename).
+Known consumer: **OWS-PFMS/OWS-Local-Search-GUI** (via PR #266 swap-out). That repo's issues #243 / #244 are the OWS-tool-side migration of `FactorPill` / `InnerViewTabStrip` onto `FlatChip` (originally written against the pre-rename `FlatPill` name).
 
 ## Working-style preferences (from the operator)
 

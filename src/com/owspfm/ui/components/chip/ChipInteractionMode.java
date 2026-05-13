@@ -1,22 +1,22 @@
-package com.owspfm.ui.components.pill;
+package com.owspfm.ui.components.chip;
 
 /**
- * Interaction semantics for a {@link FlatPill}.
+ * Interaction semantics for a {@link FlatChip}.
  *
  * <p>The interaction mode controls cursor, focus, keyboard handling, and the visual feedback
- * applied on hover, press, and selection. It is independent of the visual {@link PillVariant}.
+ * applied on hover, press, and selection. It is independent of the visual {@link ChipVariant}.
  *
  * @author Charles Bryan
  * @version v0.1.0
  * @since v0.1.0
  */
-public enum PillInteractionMode {
+public enum ChipInteractionMode {
 
-  /** Non-interactive surface. The pill does not respond to mouse or keyboard input. */
+  /** Non-interactive surface. The chip does not respond to mouse or keyboard input. */
   STATIC,
 
   /**
-   * Provides hover feedback but does not fire actions or hold selection state. Useful for pills
+   * Provides hover feedback but does not fire actions or hold selection state. Useful for chips
    * whose trailing button handles its own click.
    *
    * @version v0.1.0

@@ -1,9 +1,9 @@
-package com.owspfm.ui.components.pill.list;
+package com.owspfm.ui.components.chip.list;
 
 import java.util.Iterator;
 
 /**
- * Observable, ordered collection of items rendered by a {@link FlatPillList}.
+ * Observable, ordered collection of items rendered by a {@link FlatChipList}.
  *
  * <p>Modeled on {@link javax.swing.ListModel} and on the sibling {@link
  * com.owspfm.ui.components.card.list.CardListModel}, with the same MOVED-event extension.
@@ -16,7 +16,7 @@ import java.util.Iterator;
  * @version v0.1.0
  * @since v0.1.0
  */
-public interface PillListModel<T> extends Iterable<T> {
+public interface ChipListModel<T> extends Iterable<T> {
 
   /**
    * Returns the current item count.
@@ -55,7 +55,7 @@ public interface PillListModel<T> extends Iterable<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  void addPillListDataListener(PillListDataListener listener);
+  void addChipListDataListener(ChipListDataListener listener);
 
   /**
    * Removes a previously registered listener.
@@ -64,5 +64,5 @@ public interface PillListModel<T> extends Iterable<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  void removePillListDataListener(PillListDataListener listener);
+  void removeChipListDataListener(ChipListDataListener listener);
 }

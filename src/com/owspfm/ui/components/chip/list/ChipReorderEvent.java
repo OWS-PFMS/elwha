@@ -1,19 +1,19 @@
-package com.owspfm.ui.components.pill.list;
+package com.owspfm.ui.components.chip.list;
 
 import java.util.EventObject;
 
 /**
- * Fired by a {@link FlatPillList} after the user drops a dragged pill.
+ * Fired by a {@link FlatChipList} after the user drops a dragged chip.
  *
  * <p>By the time listeners run, the model has already been mutated via {@link
- * DefaultPillListModel#move(int, int)}.
+ * DefaultChipListModel#move(int, int)}.
  *
  * @param <T> the item type
  * @author Charles Bryan
  * @version v0.1.0
  * @since v0.1.0
  */
-public class PillReorderEvent<T> extends EventObject {
+public class ChipReorderEvent<T> extends EventObject {
 
   private final T item;
   private final int fromIndex;
@@ -29,7 +29,7 @@ public class PillReorderEvent<T> extends EventObject {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public PillReorderEvent(
+  public ChipReorderEvent(
       final Object source, final T item, final int fromIndex, final int toIndex) {
     super(source);
     this.item = item;

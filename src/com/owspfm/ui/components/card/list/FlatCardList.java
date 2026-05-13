@@ -1381,7 +1381,7 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   /**
-   * Single-row horizontal layout (story #242 back-port of FlatPillList's HorizontalLayout). Cards
+   * Single-row horizontal layout (story #242 back-port of FlatChipList's HorizontalLayout). Cards
    * are placed left-to-right at preferred width and a shared row height (max of preferred heights).
    * Overflow is clipped on the right — wrap the list in a {@link javax.swing.JScrollPane} for
    * horizontal scrolling. Drag-while-active is not specially supported for this orientation; the
@@ -1442,7 +1442,7 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   /**
-   * Multi-row wrapping layout (story #242 back-port of FlatPillList's WrapLayout). Cards flow
+   * Multi-row wrapping layout (story #242 back-port of FlatChipList's WrapLayout). Cards flow
    * left-to-right and wrap to a new row when the container's available width is exhausted. Respects
    * {@link #itemGap} for both row and column spacing. As with horizontal, drag is not specially
    * supported here.

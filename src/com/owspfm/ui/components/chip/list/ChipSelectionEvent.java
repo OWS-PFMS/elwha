@@ -1,17 +1,17 @@
-package com.owspfm.ui.components.pill.list;
+package com.owspfm.ui.components.chip.list;
 
 import java.util.EventObject;
 import java.util.List;
 
 /**
- * Fired when the selection of a {@link FlatPillList} changes.
+ * Fired when the selection of a {@link FlatChipList} changes.
  *
  * @param <T> the item type
  * @author Charles Bryan
  * @version v0.1.0
  * @since v0.1.0
  */
-public class PillSelectionEvent<T> extends EventObject {
+public class ChipSelectionEvent<T> extends EventObject {
 
   private final List<T> selected;
 
@@ -23,7 +23,7 @@ public class PillSelectionEvent<T> extends EventObject {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public PillSelectionEvent(final Object source, final List<T> selected) {
+  public ChipSelectionEvent(final Object source, final List<T> selected) {
     super(source);
     this.selected = selected;
   }

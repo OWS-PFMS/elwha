@@ -1,7 +1,7 @@
-package com.owspfm.ui.components.pill.list;
+package com.owspfm.ui.components.chip.list;
 
 /**
- * Receives selection-change events from a {@link PillSelectionModel}.
+ * Receives selection-change events from a {@link ChipSelectionModel}.
  *
  * @param <T> the item type
  * @author Charles Bryan
@@ -9,7 +9,7 @@ package com.owspfm.ui.components.pill.list;
  * @since v0.1.0
  */
 @FunctionalInterface
-public interface PillSelectionListener<T> {
+public interface ChipSelectionListener<T> {
 
   /**
    * Invoked after the selection set changes.
@@ -18,5 +18,5 @@ public interface PillSelectionListener<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  void selectionChanged(PillSelectionEvent<T> event);
+  void selectionChanged(ChipSelectionEvent<T> event);
 }

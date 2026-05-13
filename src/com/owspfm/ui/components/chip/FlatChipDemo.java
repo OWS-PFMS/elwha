@@ -1,4 +1,4 @@
-package com.owspfm.ui.components.pill;
+package com.owspfm.ui.components.chip;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.BorderLayout;
@@ -17,27 +17,27 @@ import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 
 /**
- * Starter smoke-test for {@link FlatPill}: a 4-by-5 variant × state matrix.
+ * Starter smoke-test for {@link FlatChip}: a 4-by-5 variant × state matrix.
  *
- * <p>Rows are the four {@link PillVariant} values; columns are the five visual states (default,
+ * <p>Rows are the four {@link ChipVariant} values; columns are the five visual states (default,
  * hover, pressed, focused, disabled). This is the minimal demo that ships with sub-story #235; the
  * full interactive playground (with orientations, drag, right-click, trailing-button, and the live
- * LAF-tweak panel) lives in {@code FlatPillPlayground} (sub-story #241).
+ * LAF-tweak panel) lives in {@code FlatChipPlayground} (sub-story #241).
  *
  * <p>Run:
  *
  * <pre>
  *   mvn -q exec:java \
- *     -Dexec.mainClass=com.owspfm.ui.components.pill.FlatPillDemo
+ *     -Dexec.mainClass=com.owspfm.ui.components.chip.FlatChipDemo
  * </pre>
  *
  * @author Charles Bryan
  * @version v0.1.0
  * @since v0.1.0
  */
-public final class FlatPillDemo {
+public final class FlatChipDemo {
 
-  private FlatPillDemo() {
+  private FlatChipDemo() {
     // utility class — invoked via main()
   }
 
@@ -49,13 +49,13 @@ public final class FlatPillDemo {
    * @since v0.1.0
    */
   public static void main(final String[] args) {
-    SwingUtilities.invokeLater(FlatPillDemo::launch);
+    SwingUtilities.invokeLater(FlatChipDemo::launch);
   }
 
   private static void launch() {
     FlatLightLaf.setup();
 
-    final JFrame frame = new JFrame("FlatPill demo");
+    final JFrame frame = new JFrame("FlatChip demo");
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     frame.setLayout(new BorderLayout());
 
@@ -75,9 +75,9 @@ public final class FlatPillDemo {
       matrix.add(headerLabel(cols[c]), gbc);
     }
 
-    final PillVariant[] variants = PillVariant.values();
+    final ChipVariant[] variants = ChipVariant.values();
     for (int r = 0; r < variants.length; r++) {
-      final PillVariant v = variants[r];
+      final ChipVariant v = variants[r];
       gbc.gridy = r + 1;
       gbc.gridx = 0;
       matrix.add(headerLabel(v.name()), gbc);
@@ -102,36 +102,36 @@ public final class FlatPillDemo {
     return l;
   }
 
-  private static Component buildSample(final PillVariant variant, final String state) {
-    final FlatPill pill = new FlatPill(variant.name().toLowerCase().replace('_', ' '));
-    pill.setVariant(variant);
+  private static Component buildSample(final ChipVariant variant, final String state) {
+    final FlatChip chip = new FlatChip(variant.name().toLowerCase().replace('_', ' '));
+    chip.setVariant(variant);
 
     final boolean disabled = "disabled".equals(state);
     final boolean selected = "selected".equals(state);
     final boolean clickable = !disabled;
 
-    pill.setInteractionMode(
-        clickable ? PillInteractionMode.SELECTABLE : PillInteractionMode.STATIC);
-    pill.setEnabled(!disabled);
-    pill.setSelected(selected);
+    chip.setInteractionMode(
+        clickable ? ChipInteractionMode.SELECTABLE : ChipInteractionMode.STATIC);
+    chip.setEnabled(!disabled);
+    chip.setSelected(selected);
 
     // Static states (hover / pressed / focused) are simulated for the matrix view by overriding
     // the surface color directly — the matrix is a visual reference, not a live interaction.
     switch (state) {
-      case "hover" -> pill.setSurfaceColor(blendForState(variant, 0.18f));
-      case "pressed" -> pill.setSurfaceColor(blendForState(variant, 0.28f));
+      case "hover" -> chip.setSurfaceColor(blendForState(variant, 0.18f));
+      case "pressed" -> chip.setSurfaceColor(blendForState(variant, 0.28f));
       case "focused" -> {
         // We can't synthetically focus without owning the window — outline approximates it.
-        pill.setBorderWidth(2);
+        chip.setBorderWidth(2);
       }
       default -> {
         // default / disabled / selected — leave as-is
       }
     }
-    return pill;
+    return chip;
   }
 
-  private static Color blendForState(final PillVariant variant, final float amount) {
+  private static Color blendForState(final ChipVariant variant, final float amount) {
     Color base = UIManager.getColor("Panel.background");
     if (base == null) {
       base = new Color(245, 245, 245);
@@ -140,7 +140,7 @@ public final class FlatPillDemo {
     if (tint == null) {
       tint = Color.DARK_GRAY;
     }
-    if (variant == PillVariant.WARM_ACCENT) {
+    if (variant == ChipVariant.WARM_ACCENT) {
       base = new Color(248, 226, 165);
     }
     final int r = (int) (base.getRed() * (1 - amount) + tint.getRed() * amount);
@@ -152,10 +152,10 @@ public final class FlatPillDemo {
   private static JPanel buildFooter() {
     final JPanel p = new JPanel(new BorderLayout());
     p.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
-    final FlatPill interactive =
-        new FlatPill("click me")
-            .setInteractionMode(PillInteractionMode.SELECTABLE)
-            .setVariant(PillVariant.OUTLINED);
+    final FlatChip interactive =
+        new FlatChip("click me")
+            .setInteractionMode(ChipInteractionMode.SELECTABLE)
+            .setVariant(ChipVariant.OUTLINED);
     interactive.setTrailingAction(
         new AbstractAction("×") {
           @Override

@@ -1,4 +1,4 @@
-package com.owspfm.ui.components.pill;
+package com.owspfm.ui.components.chip;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import java.awt.AlphaComposite;
@@ -45,66 +45,66 @@ import javax.swing.Timer;
 import javax.swing.UIManager;
 
 /**
- * A compact FlatLaf-aware pill / chip primitive: a single-row leading-icon + text + optional
- * trailing icon-button surface, themable via FlatLaf {@link UIManager} keys.
+ * A compact FlatLaf-aware chip primitive: a single-row leading-icon + text + optional trailing
+ * icon-button surface, themable via FlatLaf {@link UIManager} keys.
  *
  * <p><strong>Three-layer styling</strong>: every visual property (background, border color, corner
  * arc, padding, etc.) is resolved through three layers, last-wins:
  *
  * <ol>
- *   <li>Variant defaults — selected by {@link #setVariant(PillVariant)}. Each variant pre-fills a
+ *   <li>Variant defaults — selected by {@link #setVariant(ChipVariant)}. Each variant pre-fills a
  *       coherent set of property values from FlatLaf {@link UIManager} keys.
- *   <li>{@link UIManager} overrides — {@code FlatPill.background}, {@code FlatPill.borderColor},
- *       {@code FlatPill.arc}, {@code FlatPill.padding}, {@code FlatPill.hoverBackground}, {@code
- *       FlatPill.pressedBackground}, {@code FlatPill.selectedBackground}, {@code
- *       FlatPill.selectedBorderColor}, {@code FlatPill.focusColor}, {@code
- *       FlatPill.disabledBackground}. These let a FlatLaf properties file theme every pill in the
+ *   <li>{@link UIManager} overrides — {@code FlatChip.background}, {@code FlatChip.borderColor},
+ *       {@code FlatChip.arc}, {@code FlatChip.padding}, {@code FlatChip.hoverBackground}, {@code
+ *       FlatChip.pressedBackground}, {@code FlatChip.selectedBackground}, {@code
+ *       FlatChip.selectedBorderColor}, {@code FlatChip.focusColor}, {@code
+ *       FlatChip.disabledBackground}. These let a FlatLaf properties file theme every chip in the
  *       app without per-instance intervention.
  *   <li>Per-instance overrides — call setters (e.g. {@link #setCornerRadius(Integer)}, {@link
- *       #setSurfaceColor(Color)}) or put a {@code "FlatPill.style"} client property with a
+ *       #setSurfaceColor(Color)}) or put a {@code "FlatChip.style"} client property with a
  *       key=value string (FlatLaf-style) for ad-hoc tweaks.
  * </ol>
  *
  * <p><strong>Quick start</strong>:
  *
  * <pre>{@code
- * FlatPill pill = new FlatPill("Demand")
- *     .setVariant(PillVariant.FILLED)
+ * FlatChip chip = new FlatChip("Demand")
+ *     .setVariant(ChipVariant.FILLED)
  *     .setLeadingIcon(icon)
- *     .setInteractionMode(PillInteractionMode.SELECTABLE);
- * pill.addActionListener(evt -> System.out.println("toggled: " + pill.isSelected()));
+ *     .setInteractionMode(ChipInteractionMode.SELECTABLE);
+ * chip.addActionListener(evt -> System.out.println("toggled: " + chip.isSelected()));
  * }</pre>
  *
- * <p>This class has no dependencies on application code; the {@code com.owspfm.ui.components.pill}
+ * <p>This class has no dependencies on application code; the {@code com.owspfm.ui.components.chip}
  * directory can be lifted into its own library.
  *
  * @author Charles Bryan
  * @version v0.1.0
  * @since v0.1.0
  */
-public class FlatPill extends JPanel {
+public class FlatChip extends JPanel {
 
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
 
   /** Client-property key for the per-instance style escape hatch (FlatLaf-style key=value). */
-  public static final String STYLE_PROPERTY = "FlatPill.style";
+  public static final String STYLE_PROPERTY = "FlatChip.style";
 
   // ----- UIManager key names (publicly documented contract) ----
   /** UIManager key for the default surface fill. */
-  public static final String K_BACKGROUND = "FlatPill.background";
+  public static final String K_BACKGROUND = "FlatChip.background";
 
   /** UIManager key for the default border stroke color. */
-  public static final String K_BORDER_COLOR = "FlatPill.borderColor";
+  public static final String K_BORDER_COLOR = "FlatChip.borderColor";
 
   /** UIManager key for the corner arc (Integer, pixels). */
-  public static final String K_ARC = "FlatPill.arc";
+  public static final String K_ARC = "FlatChip.arc";
 
   /**
    * UIManager key for the padding ({@link Insets}). Unlike color and arc keys (which are read at
-   * paint time and pick up runtime changes automatically), padding is baked into each pill's Swing
+   * paint time and pick up runtime changes automatically), padding is baked into each chip's Swing
    * {@link javax.swing.border.Border} at construction. To propagate a live {@code
-   * UIManager.put(K_PADDING, ...)} call to existing pills, run {@link
+   * UIManager.put(K_PADDING, ...)} call to existing chips, run {@link
    * javax.swing.SwingUtilities#updateComponentTreeUI(java.awt.Component)} on the host container —
    * this is the standard Swing pattern for runtime UIManager tweaks and matches what FlatLaf's own
    * theme-switching does.
@@ -112,31 +112,31 @@ public class FlatPill extends JPanel {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public static final String K_PADDING = "FlatPill.padding";
+  public static final String K_PADDING = "FlatChip.padding";
 
   /** UIManager key for the hover-state background tint. */
-  public static final String K_HOVER_BACKGROUND = "FlatPill.hoverBackground";
+  public static final String K_HOVER_BACKGROUND = "FlatChip.hoverBackground";
 
   /** UIManager key for the pressed-state background tint. */
-  public static final String K_PRESSED_BACKGROUND = "FlatPill.pressedBackground";
+  public static final String K_PRESSED_BACKGROUND = "FlatChip.pressedBackground";
 
   /** UIManager key for the selected-state background tint. */
-  public static final String K_SELECTED_BACKGROUND = "FlatPill.selectedBackground";
+  public static final String K_SELECTED_BACKGROUND = "FlatChip.selectedBackground";
 
   /** UIManager key for the selected-state border color. */
-  public static final String K_SELECTED_BORDER_COLOR = "FlatPill.selectedBorderColor";
+  public static final String K_SELECTED_BORDER_COLOR = "FlatChip.selectedBorderColor";
 
   /** UIManager key for the focus-ring color. */
-  public static final String K_FOCUS_COLOR = "FlatPill.focusColor";
+  public static final String K_FOCUS_COLOR = "FlatChip.focusColor";
 
   /** UIManager key for the disabled-state background. */
-  public static final String K_DISABLED_BACKGROUND = "FlatPill.disabledBackground";
+  public static final String K_DISABLED_BACKGROUND = "FlatChip.disabledBackground";
 
-  /** UIManager key for the warm-accent fill (used by {@link PillVariant#WARM_ACCENT}). */
-  public static final String K_WARM_ACCENT = "FlatPill.warmAccent";
+  /** UIManager key for the warm-accent fill (used by {@link ChipVariant#WARM_ACCENT}). */
+  public static final String K_WARM_ACCENT = "FlatChip.warmAccent";
 
   /**
-   * UIManager key for the text + icon foreground. When unset (the default), the pill auto-computes
+   * UIManager key for the text + icon foreground. When unset (the default), the chip auto-computes
    * a softened light or dark foreground from the surface luminance — guaranteeing readability even
    * when callers override the background to an unusual color. Set this (or use the per-instance
    * {@link #setForegroundColor(Color)} override) only when you want to pin a specific color
@@ -145,7 +145,7 @@ public class FlatPill extends JPanel {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public static final String K_FOREGROUND = "FlatPill.foreground";
+  public static final String K_FOREGROUND = "FlatChip.foreground";
 
   private static final int DEFAULT_ARC = 999; // capsule by default
   private static final int DEFAULT_PADX = 10;
@@ -163,8 +163,8 @@ public class FlatPill extends JPanel {
   private static final int BUTTON_MIN_HIT_TARGET = 22;
 
   // Configuration ----------------------------------------------------------
-  private PillVariant variant = PillVariant.FILLED;
-  private PillInteractionMode interactionMode = PillInteractionMode.STATIC;
+  private ChipVariant variant = ChipVariant.FILLED;
+  private ChipInteractionMode interactionMode = ChipInteractionMode.STATIC;
   private Integer cornerRadius;
   private Insets padding;
   private Color borderColor;
@@ -185,11 +185,11 @@ public class FlatPill extends JPanel {
 
   /**
    * Backup poll timer for hover-clear: Swing's {@code mouseExited} fires unreliably on macOS, and
-   * even when it fires, boundary-precision can leave the live cursor "just inside" the pill for
+   * even when it fires, boundary-precision can leave the live cursor "just inside" the chip for
    * slow exits. The timer queries the current cursor position every {@link
    * #HOVER_POLL_INTERVAL_MS}ms while {@link #hovered} is true and clears hover when it confirms the
-   * cursor is outside the pill. Started in {@code mouseEntered}, stops itself once hover clears or
-   * the pill leaves the hierarchy.
+   * cursor is outside the chip. Started in {@code mouseEntered}, stops itself once hover clears or
+   * the chip leaves the hierarchy.
    *
    * @version v0.1.0
    * @since v0.1.0
@@ -213,7 +213,7 @@ public class FlatPill extends JPanel {
   private boolean leadingAffordanceHoverRevealIdle;
 
   // Icon recoloring --------------------------------------------------------
-  // Pill-local color filter for FlatSVGIcons in the leading / trailing slots. The filter's
+  // Chip-local color filter for FlatSVGIcons in the leading / trailing slots. The filter's
   // function is invoked at paint time, so a foreground-resolution change (selection, theme
   // switch, surface override, etc.) re-tints the icons on the next repaint with no manual
   // refresh. Bound to icons as they're set via setLeadingIcon / setTrailingAction /
@@ -228,19 +228,19 @@ public class FlatPill extends JPanel {
 
   // ----------------------------------------------------------------- ctor
 
-  /** Creates a pill with empty text and default FILLED variant. */
-  public FlatPill() {
+  /** Creates a chip with empty text and default FILLED variant. */
+  public FlatChip() {
     this("");
   }
 
   /**
-   * Creates a pill with the given text.
+   * Creates a chip with the given text.
    *
-   * @param text the pill label
+   * @param text the chip label
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill(final String text) {
+  public FlatChip(final String text) {
     super(new BorderLayout());
     setOpaque(false);
 
@@ -250,16 +250,16 @@ public class FlatPill extends JPanel {
     leadingIconLabel = new JLabel();
     leadingIconLabel.setVisible(false);
 
-    textLabel = new PillTextLabel(text == null ? "" : text);
+    textLabel = new ChipTextLabel(text == null ? "" : text);
     textLabel.setHorizontalAlignment(SwingConstants.LEADING);
 
     trailingButton = new TrailingIconButton();
     trailingButton.setVisible(false);
 
     // Leading cluster packs leading-button + leading-icon-label + text tight-left via FlowLayout.
-    // The cluster itself is placed in BorderLayout.WEST so it stays anchored to the pill's leading
+    // The cluster itself is placed in BorderLayout.WEST so it stays anchored to the chip's leading
     // edge — and crucially, the trailing button goes to BorderLayout.EAST so it floats to the
-    // pill's trailing edge when the pill is stretched (grid cells, horizontal-stretch parents).
+    // chip's trailing edge when the chip is stretched (grid cells, horizontal-stretch parents).
     // At preferred size the layout matches the historical FlowLayout result because FlowLayout's
     // own horizontal insets supply the same gap between cluster and trailing button.
     leadingCluster = new JPanel(new FlowLayout(FlowLayout.LEADING, DEFAULT_INNER_GAP, 0));
@@ -279,7 +279,7 @@ public class FlatPill extends JPanel {
   }
 
   /**
-   * Returns the current pill text.
+   * Returns the current chip text.
    *
    * @return the current text (never null)
    * @version v0.1.0
@@ -290,14 +290,14 @@ public class FlatPill extends JPanel {
   }
 
   /**
-   * Sets the pill text.
+   * Sets the chip text.
    *
    * @param text label text; null is treated as the empty string
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setText(final String text) {
+  public FlatChip setText(final String text) {
     textLabel.setText(text == null ? "" : text);
     revalidate();
     repaint();
@@ -321,11 +321,11 @@ public class FlatPill extends JPanel {
    * Sets the surface variant.
    *
    * @param variant the new variant; ignored if null
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setVariant(final PillVariant variant) {
+  public FlatChip setVariant(final ChipVariant variant) {
     if (variant == null || variant == this.variant) {
       return this;
     }
@@ -341,7 +341,7 @@ public class FlatPill extends JPanel {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public PillVariant getVariant() {
+  public ChipVariant getVariant() {
     return variant;
   }
 
@@ -351,18 +351,18 @@ public class FlatPill extends JPanel {
    * Sets the interaction mode.
    *
    * @param mode the new mode; ignored if null
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setInteractionMode(final PillInteractionMode mode) {
+  public FlatChip setInteractionMode(final ChipInteractionMode mode) {
     if (mode == null || mode == interactionMode) {
       return this;
     }
     interactionMode = mode;
-    setFocusable(mode == PillInteractionMode.CLICKABLE || mode == PillInteractionMode.SELECTABLE);
+    setFocusable(mode == ChipInteractionMode.CLICKABLE || mode == ChipInteractionMode.SELECTABLE);
     setCursor(
-        mode == PillInteractionMode.STATIC
+        mode == ChipInteractionMode.STATIC
             ? Cursor.getDefaultCursor()
             : Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     repaint();
@@ -376,7 +376,7 @@ public class FlatPill extends JPanel {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public PillInteractionMode getInteractionMode() {
+  public ChipInteractionMode getInteractionMode() {
     return interactionMode;
   }
 
@@ -387,11 +387,11 @@ public class FlatPill extends JPanel {
    * alternative).
    *
    * @param icon the icon; null clears
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setLeadingIcon(final Icon icon) {
+  public FlatChip setLeadingIcon(final Icon icon) {
     applyIconColorFilter(icon);
     leadingIconLabel.setIcon(icon);
     // Don't overwrite the leading-button's claim on the slot: when an affordance is active, the
@@ -406,11 +406,11 @@ public class FlatPill extends JPanel {
   }
 
   /**
-   * Re-binds an SVG icon's color filter to this pill's foreground resolver, so the icon paints in
-   * the pill-resolved color (auto-contrast, per-instance override, or UIManager) rather than
+   * Re-binds an SVG icon's color filter to this chip's foreground resolver, so the icon paints in
+   * the chip-resolved color (auto-contrast, per-instance override, or UIManager) rather than
    * whatever filter the caller supplied — typically {@link
    * com.owspfm.ui.components.icons.MaterialIcons}'s app-wide {@code Label.foreground} filter, which
-   * is the right default outside a pill but wrong inside one with a custom surface.
+   * is the right default outside a chip but wrong inside one with a custom surface.
    *
    * <p>No-op for non-SVG icons (raster bitmaps and the like — those don't have a color filter
    * concept and stay whatever color they were authored).
@@ -426,13 +426,13 @@ public class FlatPill extends JPanel {
 
   /**
    * Installs (or clears) a clickable leading-slot affordance with two visual states. Used by host
-   * containers like {@code FlatPillList} to render pin / anchor / etc. buttons that the user can
+   * containers like {@code FlatChipList} to render pin / anchor / etc. buttons that the user can
    * click directly.
    *
    * <ul>
    *   <li>{@code idleIcon} renders when {@code active == false}. If {@code hoverRevealIdle ==
-   *       true}, the idle icon is only painted while the pill body is hovered — the slot still
-   *       reserves its hit-area so the pill width doesn't jump.
+   *       true}, the idle icon is only painted while the chip body is hovered — the slot still
+   *       reserves its hit-area so the chip width doesn't jump.
    *   <li>{@code activeIcon} (or {@code idleIcon} if active is null) renders persistently when
    *       {@code active == true} — for the pinned / anchored state.
    *   <li>Pass {@code null} for both icons to clear the affordance entirely. The leading-icon slot
@@ -442,14 +442,14 @@ public class FlatPill extends JPanel {
    * @param idleIcon icon when the affordance is in the idle / off state
    * @param activeIcon icon when the affordance is active / on (falls back to idle when null)
    * @param active whether the affordance is currently active
-   * @param hoverRevealIdle when true and not active, hide the idle icon until pill hover
+   * @param hoverRevealIdle when true and not active, hide the idle icon until chip hover
    * @param tooltip tooltip text; null suppresses
    * @param onClick click handler; null disables clicks but the slot still reserves its area
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setLeadingAffordance(
+  public FlatChip setLeadingAffordance(
       final Icon idleIcon,
       final Icon activeIcon,
       final boolean active,
@@ -484,7 +484,7 @@ public class FlatPill extends JPanel {
 
   /**
    * Refreshes the leading-button's visible icon based on the active state and hover-reveal flag.
-   * Called whenever pill hover state changes, or when the affordance configuration changes.
+   * Called whenever chip hover state changes, or when the affordance configuration changes.
    *
    * @version v0.1.0
    * @since v0.1.0
@@ -509,14 +509,14 @@ public class FlatPill extends JPanel {
 
   /**
    * Installs an {@link Action}-bound trailing icon button. The button has its own hover and press
-   * states; its click does <em>not</em> bubble up to the pill's own action listeners.
+   * states; its click does <em>not</em> bubble up to the chip's own action listeners.
    *
    * @param action the action backing the trailing button; null clears
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setTrailingAction(final Action action) {
+  public FlatChip setTrailingAction(final Action action) {
     if (action != null && action.getValue(Action.SMALL_ICON) instanceof Icon icon) {
       applyIconColorFilter(icon);
     }
@@ -543,15 +543,15 @@ public class FlatPill extends JPanel {
 
   /**
    * Installs a callback invoked when the user requests a context menu (right-click, or platform
-   * menu key) on the pill body. The callback receives the originating event so it can position a
+   * menu key) on the chip body. The callback receives the originating event so it can position a
    * {@link JPopupMenu} relative to the click point. Pass null to clear.
    *
    * @param callback the callback, or null
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setContextMenuCallback(final Consumer<MouseEvent> callback) {
+  public FlatChip setContextMenuCallback(final Consumer<MouseEvent> callback) {
     contextMenuCallback = callback;
     return this;
   }
@@ -562,11 +562,11 @@ public class FlatPill extends JPanel {
    * default-positioning callback. Pass null to clear.
    *
    * @param popup the popup to attach, or null
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill attachContextMenu(final JPopupMenu popup) {
+  public FlatChip attachContextMenu(final JPopupMenu popup) {
     if (popup == null) {
       contextMenuCallback = null;
       return this;
@@ -588,11 +588,11 @@ public class FlatPill extends JPanel {
    * (e.g., based on selection state at click-time).
    *
    * @param supplier the supplier; null clears
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill attachContextMenu(final java.util.function.Supplier<JPopupMenu> supplier) {
+  public FlatChip attachContextMenu(final java.util.function.Supplier<JPopupMenu> supplier) {
     if (supplier == null) {
       contextMenuCallback = null;
       return this;
@@ -621,11 +621,11 @@ public class FlatPill extends JPanel {
    * @param icon the icon shown in the trailing slot (null hides the trailing button)
    * @param tooltip optional tooltip text (null suppresses)
    * @param onClick callback invoked when the button is clicked
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setTrailingIcon(final Icon icon, final String tooltip, final Runnable onClick) {
+  public FlatChip setTrailingIcon(final Icon icon, final String tooltip, final Runnable onClick) {
     if (icon == null) {
       return setTrailingAction(null);
     }
@@ -651,11 +651,11 @@ public class FlatPill extends JPanel {
    * Sets the selected state. Fires a {@link #PROPERTY_SELECTED} property change.
    *
    * @param selected the new selection state
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setSelected(final boolean selected) {
+  public FlatChip setSelected(final boolean selected) {
     if (selected == this.selected) {
       return this;
     }
@@ -680,15 +680,15 @@ public class FlatPill extends JPanel {
   // ----------------------------------------------------------- style API
 
   /**
-   * Overrides the corner radius. Pass null to fall back to {@code FlatPill.arc} (or capsule
+   * Overrides the corner radius. Pass null to fall back to {@code FlatChip.arc} (or capsule
    * default).
    *
    * @param radius the radius, or null for theme default
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setCornerRadius(final Integer radius) {
+  public FlatChip setCornerRadius(final Integer radius) {
     cornerRadius = radius;
     repaint();
     return this;
@@ -696,7 +696,7 @@ public class FlatPill extends JPanel {
 
   /**
    * Returns the effective corner radius — overriding setter if non-null, otherwise the {@code
-   * FlatPill.arc} UIManager value, otherwise the capsule default ({@value #DEFAULT_ARC}).
+   * FlatChip.arc} UIManager value, otherwise the capsule default ({@value #DEFAULT_ARC}).
    *
    * @return effective arc in pixels
    * @version v0.1.0
@@ -718,11 +718,11 @@ public class FlatPill extends JPanel {
    * icon/text/trailing button row).
    *
    * @param insets the padding; null restores theme default
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setPadding(final Insets insets) {
+  public FlatChip setPadding(final Insets insets) {
     padding = insets == null ? null : (Insets) insets.clone();
     rebuildBorder();
     revalidate();
@@ -735,11 +735,11 @@ public class FlatPill extends JPanel {
    *
    * @param horizontal left/right padding
    * @param vertical top/bottom padding
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setPadding(final int horizontal, final int vertical) {
+  public FlatChip setPadding(final int horizontal, final int vertical) {
     return setPadding(new Insets(vertical, horizontal, vertical, horizontal));
   }
 
@@ -755,14 +755,14 @@ public class FlatPill extends JPanel {
   }
 
   /**
-   * Overrides the border color. Pass null to fall back to {@code FlatPill.borderColor} or theme.
+   * Overrides the border color. Pass null to fall back to {@code FlatChip.borderColor} or theme.
    *
    * @param color the border color, or null
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setBorderColor(final Color color) {
+  public FlatChip setBorderColor(final Color color) {
     borderColor = color;
     repaint();
     return this;
@@ -772,11 +772,11 @@ public class FlatPill extends JPanel {
    * Sets the border thickness in pixels.
    *
    * @param width the width, clamped to {@code >= 0}
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setBorderWidth(final int width) {
+  public FlatChip setBorderWidth(final int width) {
     borderWidth = Math.max(0, width);
     repaint();
     return this;
@@ -786,11 +786,11 @@ public class FlatPill extends JPanel {
    * Overrides the variant-derived surface color. Pass null to restore variant default.
    *
    * @param color the surface color, or null
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setSurfaceColor(final Color color) {
+  public FlatChip setSurfaceColor(final Color color) {
     surfaceColorOverride = color;
     repaint();
     return this;
@@ -801,11 +801,11 @@ public class FlatPill extends JPanel {
    * the auto-contrast default. Pass null to restore the resolution chain.
    *
    * @param color the foreground color, or null
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill setForegroundColor(final Color color) {
+  public FlatChip setForegroundColor(final Color color) {
     foregroundOverride = color;
     repaint();
     return this;
@@ -880,8 +880,8 @@ public class FlatPill extends JPanel {
   // ------------------------------------------------------------ listeners
 
   /**
-   * Installs a mouse listener on both the pill body and the inner content row, so callers (such as
-   * a hosting {@code FlatPillList} wiring drag-to-reorder) receive events regardless of which inner
+   * Installs a mouse listener on both the chip body and the inner content row, so callers (such as
+   * a hosting {@code FlatChipList} wiring drag-to-reorder) receive events regardless of which inner
    * subcomponent the user actually pressed on. Without this, presses on the text label or
    * leading-icon area would be trapped by the content row's internal listener and never reach the
    * caller.
@@ -890,7 +890,7 @@ public class FlatPill extends JPanel {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void addPillMouseListener(final java.awt.event.MouseListener listener) {
+  public void addChipMouseListener(final java.awt.event.MouseListener listener) {
     if (listener == null) {
       return;
     }
@@ -903,14 +903,14 @@ public class FlatPill extends JPanel {
   }
 
   /**
-   * Mirror of {@link #addPillMouseListener(java.awt.event.MouseListener)} for {@link
+   * Mirror of {@link #addChipMouseListener(java.awt.event.MouseListener)} for {@link
    * java.awt.event.MouseMotionListener}.
    *
    * @param listener the listener to install
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void addPillMouseMotionListener(final java.awt.event.MouseMotionListener listener) {
+  public void addChipMouseMotionListener(final java.awt.event.MouseMotionListener listener) {
     if (listener == null) {
       return;
     }
@@ -973,11 +973,11 @@ public class FlatPill extends JPanel {
    * mouseReleased. Hosting containers that convert presses into drags should call this when the
    * drag activates so the pending click doesn't fire on release.
    *
-   * @return this pill
+   * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill cancelPendingClick() {
+  public FlatChip cancelPendingClick() {
     pressed = false;
     repaint();
     return this;
@@ -990,7 +990,7 @@ public class FlatPill extends JPanel {
         new MouseAdapter() {
           @Override
           public void mouseEntered(final MouseEvent e) {
-            if (interactionMode != PillInteractionMode.STATIC && isEnabled()) {
+            if (interactionMode != ChipInteractionMode.STATIC && isEnabled()) {
               hovered = true;
               refreshLeadingAffordanceIcon();
               repaint();
@@ -1001,10 +1001,10 @@ public class FlatPill extends JPanel {
           @Override
           public void mouseExited(final MouseEvent e) {
             // Fast-path hover-clear when mouseExited fires reliably and the live cursor confirms
-            // we're truly outside the pill. The hover-poll timer started in mouseEntered is the
+            // we're truly outside the chip. The hover-poll timer started in mouseEntered is the
             // backup for the cases this path misses (macOS dispatch quirks, boundary-precision
             // for slow exits).
-            if (isCursorStillInsidePill(e)) {
+            if (isCursorStillInsideChip(e)) {
               return;
             }
             hovered = false;
@@ -1021,16 +1021,16 @@ public class FlatPill extends JPanel {
               return;
             }
             // Press/release from the inline button children own their own click semantics —
-            // treating them as a pill press would create a phantom pressed-tint on the whole
-            // pill on every pin/trash click.
+            // treating them as a chip press would create a phantom pressed-tint on the whole
+            // chip on every pin/trash click.
             if (isFromInlineButton(e)) {
               return;
             }
             if (!isEnabled() || e.getButton() != MouseEvent.BUTTON1) {
               return;
             }
-            if (interactionMode == PillInteractionMode.CLICKABLE
-                || interactionMode == PillInteractionMode.SELECTABLE) {
+            if (interactionMode == ChipInteractionMode.CLICKABLE
+                || interactionMode == ChipInteractionMode.SELECTABLE) {
               pressed = true;
               requestFocusInWindow();
               repaint();
@@ -1061,9 +1061,9 @@ public class FlatPill extends JPanel {
     addMouseListener(ma);
     contentRow.addMouseListener(ma);
     // Children (cluster + buttons) get the same hover-tracking listener so an exit that fires on
-    // a child (cursor moves from a button straight off the pill) reaches our hover-clear logic
+    // a child (cursor moves from a button straight off the chip) reaches our hover-clear logic
     // — without this, the button's mouseExited went to its own listener only and the parent
-    // pill kept hovered=true. The isCursorStillInsidePill guard in mouseExited handles the
+    // chip kept hovered=true. The isCursorStillInsideChip guard in mouseExited handles the
     // benign "moved to a sibling child" case for free.
     leadingCluster.addMouseListener(ma);
     leadingButton.addMouseListener(ma);
@@ -1105,7 +1105,7 @@ public class FlatPill extends JPanel {
             final Point p = new Point(getWidth() / 2, getHeight() / 2);
             final MouseEvent synthetic =
                 new MouseEvent(
-                    FlatPill.this,
+                    FlatChip.this,
                     MouseEvent.MOUSE_RELEASED,
                     System.currentTimeMillis(),
                     0,
@@ -1117,23 +1117,23 @@ public class FlatPill extends JPanel {
             contextMenuCallback.accept(synthetic);
           }
         };
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "flatpill.activate");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "flatpill.activate");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_CONTEXT_MENU, 0), "flatpill.contextMenu");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "flatchip.activate");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "flatchip.activate");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_CONTEXT_MENU, 0), "flatchip.contextMenu");
     // Shift+F10 is the standard Swing/Windows accelerator for "show context menu".
     im.put(
         KeyStroke.getKeyStroke(KeyEvent.VK_F10, java.awt.event.InputEvent.SHIFT_DOWN_MASK),
-        "flatpill.contextMenu");
-    am.put("flatpill.activate", activate);
-    am.put("flatpill.contextMenu", contextMenu);
+        "flatchip.contextMenu");
+    am.put("flatchip.activate", activate);
+    am.put("flatchip.contextMenu", contextMenu);
   }
 
   private void activate(final int modifiers) {
-    if (interactionMode == PillInteractionMode.SELECTABLE) {
+    if (interactionMode == ChipInteractionMode.SELECTABLE) {
       setSelected(!selected);
     }
-    if (interactionMode == PillInteractionMode.CLICKABLE
-        || interactionMode == PillInteractionMode.SELECTABLE) {
+    if (interactionMode == ChipInteractionMode.CLICKABLE
+        || interactionMode == ChipInteractionMode.SELECTABLE) {
       final ActionEvent evt =
           new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "click", modifiers);
       for (ActionListener l : new ArrayList<>(actionListeners)) {
@@ -1153,9 +1153,9 @@ public class FlatPill extends JPanel {
   }
 
   /**
-   * Returns true when the event source is one of the inline pill buttons (leading affordance or
-   * trailing action). The pill-level press/release handlers skip these so a click on the pin or
-   * trash glyph doesn't paint a phantom pressed-tint on the entire pill — the buttons own their own
+   * Returns true when the event source is one of the inline chip buttons (leading affordance or
+   * trailing action). The chip-level press/release handlers skip these so a click on the pin or
+   * trash glyph doesn't paint a phantom pressed-tint on the entire chip — the buttons own their own
    * click semantics.
    *
    * @version v0.1.0
@@ -1170,7 +1170,7 @@ public class FlatPill extends JPanel {
    * Starts (or no-ops if already running) the hover-poll timer that backs up Swing's unreliable
    * {@code mouseExited} dispatch on macOS. The timer queries {@link java.awt.MouseInfo} for the
    * live cursor position every {@link #HOVER_POLL_INTERVAL_MS}ms and clears hover state when it
-   * confirms the cursor is outside the pill bounds.
+   * confirms the cursor is outside the chip bounds.
    *
    * @version v0.1.0
    * @since v0.1.0
@@ -1196,8 +1196,8 @@ public class FlatPill extends JPanel {
       return;
     }
     if (!isShowing()) {
-      // Pill is no longer realized — clear and stop. Defensive; removeNotify also stops the
-      // timer when the pill leaves the hierarchy.
+      // Chip is no longer realized — clear and stop. Defensive; removeNotify also stops the
+      // timer when the chip leaves the hierarchy.
       hovered = false;
       pressed = false;
       refreshLeadingAffordanceIcon();
@@ -1211,9 +1211,9 @@ public class FlatPill extends JPanel {
       return;
     }
     final Point screenPt = info.getLocation();
-    final Point pillPt = new Point(screenPt);
-    SwingUtilities.convertPointFromScreen(pillPt, this);
-    if (!containsPoint(pillPt)) {
+    final Point chipPt = new Point(screenPt);
+    SwingUtilities.convertPointFromScreen(chipPt, this);
+    if (!containsPoint(chipPt)) {
       hovered = false;
       pressed = false;
       refreshLeadingAffordanceIcon();
@@ -1224,23 +1224,23 @@ public class FlatPill extends JPanel {
 
   @Override
   public void removeNotify() {
-    // Stop the hover-poll timer when the pill leaves its parent hierarchy — otherwise the
-    // timer's strong reference to the lambda (which captures `this`) keeps the pill alive past
+    // Stop the hover-poll timer when the chip leaves its parent hierarchy — otherwise the
+    // timer's strong reference to the lambda (which captures `this`) keeps the chip alive past
     // its useful life.
     stopHoverPolling();
     super.removeNotify();
   }
 
   /**
-   * Returns true when the live cursor is currently inside this pill's bounds. Fast-path guard for
+   * Returns true when the live cursor is currently inside this chip's bounds. Fast-path guard for
    * {@code mouseExited} so a "cursor moved into a child component" event doesn't get treated as a
-   * real pill exit. The hover-poll timer is the authoritative backup for slow exits and platforms
+   * real chip exit. The hover-poll timer is the authoritative backup for slow exits and platforms
    * where {@code mouseExited} fires unreliably.
    *
    * @version v0.1.0
    * @since v0.1.0
    */
-  private boolean isCursorStillInsidePill(final MouseEvent event) {
+  private boolean isCursorStillInsideChip(final MouseEvent event) {
     if (!isShowing()) {
       return false;
     }
@@ -1253,9 +1253,9 @@ public class FlatPill extends JPanel {
       // fall back to event-time coords. Imperfect but better than treating as "outside."
       screenPt = new Point(event.getXOnScreen(), event.getYOnScreen());
     }
-    final Point pillPt = new Point(screenPt);
-    javax.swing.SwingUtilities.convertPointFromScreen(pillPt, this);
-    return containsPoint(pillPt);
+    final Point chipPt = new Point(screenPt);
+    javax.swing.SwingUtilities.convertPointFromScreen(chipPt, this);
+    return containsPoint(chipPt);
   }
 
   // ---------------------------------------------------------------- border
@@ -1300,20 +1300,20 @@ public class FlatPill extends JPanel {
   }
 
   /**
-   * Builds the canonical pill outline. Centered on the half-pixel grid so a 1px AA stroke renders
+   * Builds the canonical chip outline. Centered on the half-pixel grid so a 1px AA stroke renders
    * crisp without straddling integer columns; both fill and stroke use this same shape so the
    * surface edge and border edge stay co-located across all variants and states.
    *
    * @version v0.1.0
    * @since v0.1.0
    */
-  private RoundRectangle2D.Float pillShape(final int w, final int h, final int arc) {
+  private RoundRectangle2D.Float chipShape(final int w, final int h, final int arc) {
     return new RoundRectangle2D.Float(0.5f, 0.5f, w - 1f, h - 1f, arc, arc);
   }
 
   private void paintBackground(final Graphics2D g2, final int w, final int h, final int arc) {
     Color bg = resolveSurfaceColor();
-    final boolean interactive = interactionMode != PillInteractionMode.STATIC && isEnabled();
+    final boolean interactive = interactionMode != ChipInteractionMode.STATIC && isEnabled();
     if (selected) {
       bg = composeSelectedBackground(bg);
     }
@@ -1332,11 +1332,11 @@ public class FlatPill extends JPanel {
       return;
     }
     g2.setColor(bg);
-    g2.fill(pillShape(w, h, arc));
+    g2.fill(chipShape(w, h, arc));
   }
 
   /**
-   * Paints the pill's single state-driven outline. Focus is folded in here — no separate ring at a
+   * Paints the chip's single state-driven outline. Focus is folded in here — no separate ring at a
    * different radius. State precedence: focused → accent at thicker stroke; selected → accent at
    * baseline width; otherwise variant border. GHOST suppresses the border in its idle state for the
    * "no chrome" look but reveals it once hovered, pressed, selected, or focused.
@@ -1348,10 +1348,10 @@ public class FlatPill extends JPanel {
     if (borderWidth <= 0) {
       return;
     }
-    final boolean interactive = interactionMode != PillInteractionMode.STATIC && isEnabled();
+    final boolean interactive = interactionMode != ChipInteractionMode.STATIC && isEnabled();
     final boolean focused = isFocusOwner() && interactive;
     final boolean idleGhost =
-        variant == PillVariant.GHOST && !selected && !hovered && !pressed && !focused;
+        variant == ChipVariant.GHOST && !selected && !hovered && !pressed && !focused;
     if (idleGhost) {
       return;
     }
@@ -1370,7 +1370,7 @@ public class FlatPill extends JPanel {
     }
     g2.setColor(border);
     g2.setStroke(new BasicStroke(strokeWidth));
-    g2.draw(pillShape(w, h, arc));
+    g2.draw(chipShape(w, h, arc));
   }
 
   /**
@@ -1542,7 +1542,7 @@ public class FlatPill extends JPanel {
   public void setEnabled(final boolean enabled) {
     super.setEnabled(enabled);
     setCursor(
-        enabled && interactionMode != PillInteractionMode.STATIC
+        enabled && interactionMode != ChipInteractionMode.STATIC
             ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             : Cursor.getDefaultCursor());
     trailingButton.setEnabled(enabled);
@@ -1557,7 +1557,7 @@ public class FlatPill extends JPanel {
   @Override
   public AccessibleContext getAccessibleContext() {
     if (accessibleContext == null) {
-      accessibleContext = new AccessibleFlatPill();
+      accessibleContext = new AccessibleFlatChip();
     }
     return accessibleContext;
   }
@@ -1568,10 +1568,10 @@ public class FlatPill extends JPanel {
    * @version v0.1.0
    * @since v0.1.0
    */
-  protected class AccessibleFlatPill extends AccessibleJPanel {
+  protected class AccessibleFlatChip extends AccessibleJPanel {
     @Override
     public AccessibleRole getAccessibleRole() {
-      return interactionMode == PillInteractionMode.SELECTABLE
+      return interactionMode == ChipInteractionMode.SELECTABLE
           ? AccessibleRole.TOGGLE_BUTTON
           : AccessibleRole.PUSH_BUTTON;
     }
@@ -1590,28 +1590,28 @@ public class FlatPill extends JPanel {
 
   /**
    * JLabel subclass whose {@code getForeground()} is dynamic: it returns whatever {@link
-   * FlatPill#resolveForegroundColor()} resolves to at paint time. This sidesteps the usual chain of
+   * FlatChip#resolveForegroundColor()} resolves to at paint time. This sidesteps the usual chain of
    * "manually call setForeground on every state transition that might affect color" — instead the
-   * label always paints in the pill's current resolved foreground (auto-contrast against the
+   * label always paints in the chip's current resolved foreground (auto-contrast against the
    * surface, per-instance override, or UIManager key) without any explicit refresh.
    *
-   * <p>Inner (non-static) so it can read the outer pill's resolver. The outer reference is stable
-   * for the label's lifetime — labels never migrate between pills.
+   * <p>Inner (non-static) so it can read the outer chip's resolver. The outer reference is stable
+   * for the label's lifetime — labels never migrate between chips.
    *
    * @version v0.1.0
    * @since v0.1.0
    */
-  private final class PillTextLabel extends JLabel {
+  private final class ChipTextLabel extends JLabel {
 
-    PillTextLabel(final String text) {
+    ChipTextLabel(final String text) {
       super(text);
     }
 
     @Override
     public Color getForeground() {
-      // FlatPill's resolveForegroundColor reads default-initialized state (variant, selection,
+      // FlatChip's resolveForegroundColor reads default-initialized state (variant, selection,
       // surface override) plus UIManager, so it's safe to invoke during JLabel's superclass
-      // construction too — no NPE on partially-initialized FlatPill fields.
+      // construction too — no NPE on partially-initialized FlatChip fields.
       return resolveForegroundColor();
     }
   }
@@ -1619,11 +1619,11 @@ public class FlatPill extends JPanel {
   // ----------------------------------------------------------- leading btn
 
   /**
-   * Leading-slot clickable affordance — used by host containers (like {@code FlatPillList}) to
-   * render pin/anchor toggle buttons that the user can click directly on the pill. Independent of
+   * Leading-slot clickable affordance — used by host containers (like {@code FlatChipList}) to
+   * render pin/anchor toggle buttons that the user can click directly on the chip. Independent of
    * the trailing button: it has its own hover/press tint, its own hit-area floor of {@code
    * MIN_HIT_TARGET} pixels (so a 14px glyph still gets a 22×22 click target), and it consumes its
-   * own mouse events so the click is never interpreted as a pill drag or selection.
+   * own mouse events so the click is never interpreted as a chip drag or selection.
    *
    * <p>The icon is set via {@link #setRenderedIcon} rather than {@code setIcon} so the host can
    * swap glyphs (outline/filled, hover-revealed/hidden) without re-binding a fresh Action each time
@@ -1667,7 +1667,7 @@ public class FlatPill extends JPanel {
               }
               pressed = true;
               repaint();
-              // Consume so the host pill's drag-start handler can detect that the press
+              // Consume so the host chip's drag-start handler can detect that the press
               // originated on the button and skip its drag-threshold tracking entirely.
               e.consume();
             }
@@ -1737,7 +1737,7 @@ public class FlatPill extends JPanel {
 
     @Override
     public Dimension getPreferredSize() {
-      // BorderLayout (used by FlatPill's content row) doesn't skip invisible components when
+      // BorderLayout (used by FlatChip's content row) doesn't skip invisible components when
       // computing preferred sizes, so report zero when invisible to avoid reserving the leading
       // slot when no affordance is active.
       if (!isVisible()) {
@@ -1745,7 +1745,7 @@ public class FlatPill extends JPanel {
       }
       final Dimension d = super.getPreferredSize();
       // Always reserve the hit-area floor even when no icon is rendered, so a hover-revealed
-      // affordance doesn't make the pill width jump on hover-enter / hover-exit.
+      // affordance doesn't make the chip width jump on hover-enter / hover-exit.
       final int side = Math.max(BUTTON_MIN_HIT_TARGET, Math.max(d.width, d.height));
       return new Dimension(side, side);
     }
@@ -1756,7 +1756,7 @@ public class FlatPill extends JPanel {
   /**
    * A minimal {@link JLabel}-based button used for the trailing slot. Renders the {@link Action}'s
    * {@code SMALL_ICON} (or its {@code NAME} as fallback text) and forwards click to the action
-   * without bubbling to the host pill.
+   * without bubbling to the host chip.
    *
    * @version v0.1.0
    * @since v0.1.0
@@ -1874,7 +1874,7 @@ public class FlatPill extends JPanel {
 
     @Override
     public Dimension getPreferredSize() {
-      // BorderLayout-anchored trailing slot — report zero when invisible so a pill without a
+      // BorderLayout-anchored trailing slot — report zero when invisible so a chip without a
       // trailing action doesn't reserve 22px of empty space at its trailing edge.
       if (!isVisible()) {
         return new Dimension(0, 0);

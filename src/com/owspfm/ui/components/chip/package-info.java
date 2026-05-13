@@ -1,6 +1,6 @@
 /**
- * Standalone, reusable FlatLaf-styled pill / chip primitive ({@link
- * com.owspfm.ui.components.pill.FlatPill}) plus its supporting types.
+ * Standalone, reusable FlatLaf-styled chip primitive ({@link
+ * com.owspfm.ui.components.chip.FlatChip}) plus its supporting types.
  *
  * <p>This package is intentionally free of OWS-specific imports. It depends only on FlatLaf and
  * standard Swing so it can be lifted into a separate library by moving this directory into a
@@ -13,4 +13,4 @@
  * @version v0.1.0
  * @since v0.1.0
  */
-package com.owspfm.ui.components.pill;
+package com.owspfm.ui.components.chip;

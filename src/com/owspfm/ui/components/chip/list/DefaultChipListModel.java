@@ -1,4 +1,4 @@
-package com.owspfm.ui.components.pill.list;
+package com.owspfm.ui.components.chip.list;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Default {@link PillListModel} implementation backed by an {@link ArrayList}.
+ * Default {@link ChipListModel} implementation backed by an {@link ArrayList}.
  *
  * <p>Mirrors the API surface of {@link com.owspfm.ui.components.card.list.DefaultCardListModel}.
  *
@@ -16,13 +16,13 @@ import java.util.List;
  * @version v0.1.0
  * @since v0.1.0
  */
-public class DefaultPillListModel<T> implements PillListModel<T> {
+public class DefaultChipListModel<T> implements ChipListModel<T> {
 
   private final List<T> items = new ArrayList<>();
-  private final List<PillListDataListener> listeners = new ArrayList<>();
+  private final List<ChipListDataListener> listeners = new ArrayList<>();
 
   /** Creates an empty model. */
-  public DefaultPillListModel() {
+  public DefaultChipListModel() {
     super();
   }
 
@@ -33,7 +33,7 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public DefaultPillListModel(final Collection<? extends T> items) {
+  public DefaultChipListModel(final Collection<? extends T> items) {
     super();
     if (items != null) {
       this.items.addAll(items);
@@ -65,7 +65,7 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
   public void add(final T item) {
     final int index = items.size();
     items.add(item);
-    fire(PillListDataEvent.Type.ADDED, index, index);
+    fire(ChipListDataEvent.Type.ADDED, index, index);
   }
 
   /**
@@ -78,7 +78,7 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
    */
   public void add(final int index, final T item) {
     items.add(index, item);
-    fire(PillListDataEvent.Type.ADDED, index, index);
+    fire(ChipListDataEvent.Type.ADDED, index, index);
   }
 
   /**
@@ -94,7 +94,7 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
     }
     final int from = this.items.size();
     this.items.addAll(items);
-    fire(PillListDataEvent.Type.ADDED, from, this.items.size() - 1);
+    fire(ChipListDataEvent.Type.ADDED, from, this.items.size() - 1);
   }
 
   /**
@@ -111,7 +111,7 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
       return false;
     }
     items.remove(idx);
-    fire(PillListDataEvent.Type.REMOVED, idx, idx);
+    fire(ChipListDataEvent.Type.REMOVED, idx, idx);
     return true;
   }
 
@@ -125,7 +125,7 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
    */
   public T remove(final int index) {
     final T removed = items.remove(index);
-    fire(PillListDataEvent.Type.REMOVED, index, index);
+    fire(ChipListDataEvent.Type.REMOVED, index, index);
     return removed;
   }
 
@@ -140,7 +140,7 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
    */
   public T set(final int index, final T item) {
     final T old = items.set(index, item);
-    fire(PillListDataEvent.Type.CHANGED, index, index);
+    fire(ChipListDataEvent.Type.CHANGED, index, index);
     return old;
   }
 
@@ -161,7 +161,7 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
     }
     final T item = items.remove(from);
     items.add(to, item);
-    fire(PillListDataEvent.Type.MOVED, from, to);
+    fire(ChipListDataEvent.Type.MOVED, from, to);
   }
 
   /** Removes every item, firing a single REMOVED event spanning the prior range. */
@@ -171,7 +171,7 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
     }
     final int last = items.size() - 1;
     items.clear();
-    fire(PillListDataEvent.Type.REMOVED, 0, last);
+    fire(ChipListDataEvent.Type.REMOVED, 0, last);
   }
 
   /**
@@ -199,20 +199,20 @@ public class DefaultPillListModel<T> implements PillListModel<T> {
   }
 
   @Override
-  public void addPillListDataListener(final PillListDataListener listener) {
+  public void addChipListDataListener(final ChipListDataListener listener) {
     if (listener != null && !listeners.contains(listener)) {
       listeners.add(listener);
     }
   }
 
   @Override
-  public void removePillListDataListener(final PillListDataListener listener) {
+  public void removeChipListDataListener(final ChipListDataListener listener) {
     listeners.remove(listener);
   }
 
-  private void fire(final PillListDataEvent.Type type, final int i0, final int i1) {
-    final PillListDataEvent evt = new PillListDataEvent(this, type, i0, i1);
-    for (PillListDataListener l : new ArrayList<>(listeners)) {
+  private void fire(final ChipListDataEvent.Type type, final int i0, final int i1) {
+    final ChipListDataEvent evt = new ChipListDataEvent(this, type, i0, i1);
+    for (ChipListDataListener l : new ArrayList<>(listeners)) {
       l.contentsChanged(evt);
     }
   }

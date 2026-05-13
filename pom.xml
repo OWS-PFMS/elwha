@@ -10,7 +10,7 @@
   <packaging>jar</packaging>
 
   <name>FlatComp</name>
-  <description>A Swing component library built on FlatLaf — FlatCard, FlatPill, and related primitives.</description>
+  <description>A Swing component library built on FlatLaf — FlatCard, FlatChip, and related primitives.</description>
   <url>https://github.com/OWS-PFMS/flatcomp</url>
 
   <licenses>
