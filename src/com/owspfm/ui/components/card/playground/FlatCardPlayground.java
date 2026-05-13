@@ -54,8 +54,8 @@ public final class FlatCardPlayground {
    * Entry point for the playground app.
    *
    * @param args command-line arguments (unused)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public static void main(final String[] args) {
     SwingUtilities.invokeLater(FlatCardPlayground::launch);

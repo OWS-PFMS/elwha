@@ -31,8 +31,8 @@ public interface PillAdapter<T> {
    * @param theItem the domain item
    * @param theIndex the visible index of the item in the list
    * @return a non-null {@link FlatPill}
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   FlatPill pillFor(T theItem, int theIndex);
 }

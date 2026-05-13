@@ -27,8 +27,8 @@ public class CardReorderEvent<T> extends EventObject {
    * @param theItem the moved item
    * @param theFromIndex the source index
    * @param theToIndex the destination index
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public CardReorderEvent(
       final Object theSource, final T theItem, final int theFromIndex, final int theToIndex) {
@@ -42,8 +42,8 @@ public class CardReorderEvent<T> extends EventObject {
    * Returns the moved item.
    *
    * @return the item
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public T getItem() {
     return myItem;
@@ -53,8 +53,8 @@ public class CardReorderEvent<T> extends EventObject {
    * Returns the source index in the underlying model.
    *
    * @return the from index
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public int getFromIndex() {
     return myFromIndex;
@@ -64,8 +64,8 @@ public class CardReorderEvent<T> extends EventObject {
    * Returns the destination index in the underlying model.
    *
    * @return the to index
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public int getToIndex() {
     return myToIndex;

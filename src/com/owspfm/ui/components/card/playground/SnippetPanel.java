@@ -57,8 +57,8 @@ public final class SnippetPanel extends JPanel {
    * Recomputes and displays the snippet for the supplied snapshot.
    *
    * @param theSnapshot the latest config snapshot from {@link LiveConfigPanel}
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public void update(final LiveConfigPanel.Snapshot theSnapshot) {
     myArea.setText(render(theSnapshot));
