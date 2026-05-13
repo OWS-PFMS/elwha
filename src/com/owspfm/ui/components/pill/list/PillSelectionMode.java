@@ -4,8 +4,8 @@ package com.owspfm.ui.components.pill.list;
  * Selection semantics for {@link FlatPillList}.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public enum PillSelectionMode {
 
@@ -15,6 +15,8 @@ public enum PillSelectionMode {
   /**
    * Zero or one pill selected — click an unselected pill to select it; click the already- selected
    * pill to deselect it. Filter-chip / toggle-style semantics.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   SINGLE,
 
@@ -24,6 +26,8 @@ public enum PillSelectionMode {
    * auto-selects the first visible item whenever the mode is entered and no item is currently
    * selected, and re-selects the first remaining item whenever a model change leaves the selection
    * empty.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   SINGLE_MANDATORY,
 

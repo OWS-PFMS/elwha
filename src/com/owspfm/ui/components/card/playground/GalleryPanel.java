@@ -27,8 +27,8 @@ import javax.swing.JScrollPane;
  * handles "what does it look like under <em>my</em> settings".
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public final class GalleryPanel extends JPanel {
 

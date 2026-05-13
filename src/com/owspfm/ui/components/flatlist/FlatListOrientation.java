@@ -20,8 +20,8 @@ package com.owspfm.ui.components.flatlist;
  * implementation's own documentation.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public enum FlatListOrientation {
 

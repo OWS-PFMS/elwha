@@ -20,8 +20,8 @@ import java.util.EventObject;
  * </ul>
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public class CardListDataEvent extends EventObject {
 
@@ -48,6 +48,8 @@ public class CardListDataEvent extends EventObject {
    * @param theType the kind of change
    * @param theIndex0 the first affected index (or source index for {@link Type#MOVED})
    * @param theIndex1 the last affected index (or destination index for {@link Type#MOVED})
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public CardListDataEvent(
       final Object theSource, final Type theType, final int theIndex0, final int theIndex1) {
@@ -61,6 +63,8 @@ public class CardListDataEvent extends EventObject {
    * Returns the change type.
    *
    * @return the change type
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public Type getType() {
     return myType;
@@ -70,6 +74,8 @@ public class CardListDataEvent extends EventObject {
    * Returns the lower bound index, or the source index for moves.
    *
    * @return index0
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public int getIndex0() {
     return myIndex0;
@@ -79,6 +85,8 @@ public class CardListDataEvent extends EventObject {
    * Returns the upper bound index, or the destination index for moves.
    *
    * @return index1
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public int getIndex1() {
     return myIndex1;

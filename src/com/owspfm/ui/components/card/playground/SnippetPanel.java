@@ -17,8 +17,8 @@ import javax.swing.JTextArea;
  * <p>The "Copy" button copies the snippet text to the system clipboard.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public final class SnippetPanel extends JPanel {
 
@@ -57,6 +57,8 @@ public final class SnippetPanel extends JPanel {
    * Recomputes and displays the snippet for the supplied snapshot.
    *
    * @param theSnapshot the latest config snapshot from {@link LiveConfigPanel}
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void update(final LiveConfigPanel.Snapshot theSnapshot) {
     myArea.setText(render(theSnapshot));

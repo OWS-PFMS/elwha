@@ -79,8 +79,8 @@ import javax.swing.UIManager;
  * directory can be lifted into its own library.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public class FlatPill extends JPanel {
 
@@ -108,6 +108,8 @@ public class FlatPill extends JPanel {
    * javax.swing.SwingUtilities#updateComponentTreeUI(java.awt.Component)} on the host container —
    * this is the standard Swing pattern for runtime UIManager tweaks and matches what FlatLaf's own
    * theme-switching does.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public static final String K_PADDING = "FlatPill.padding";
 
@@ -138,6 +140,8 @@ public class FlatPill extends JPanel {
    * when callers override the background to an unusual color. Set this (or use the per-instance
    * {@link #setForegroundColor(Color)} override) only when you want to pin a specific color
    * (branding, accessibility, etc.).
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public static final String K_FOREGROUND = "FlatPill.foreground";
 
@@ -150,6 +154,8 @@ public class FlatPill extends JPanel {
   /**
    * Minimum hit-target side for the leading and trailing inline buttons. Keeps a 14px glyph
    * clickable at a reasonable 22×22 area without inflating the visible glyph itself.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private static final int BUTTON_MIN_HIT_TARGET = 22;
 
@@ -181,6 +187,8 @@ public class FlatPill extends JPanel {
    * #HOVER_POLL_INTERVAL_MS}ms while {@link #myHovered} is true and clears hover when it confirms
    * the cursor is outside the pill. Started in {@code mouseEntered}, stops itself once hover clears
    * or the pill leaves the hierarchy.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private Timer myHoverPollTimer;
 
@@ -225,6 +233,8 @@ public class FlatPill extends JPanel {
    * Creates a pill with the given text.
    *
    * @param theText the pill label
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill(final String theText) {
     super(new BorderLayout());
@@ -268,6 +278,8 @@ public class FlatPill extends JPanel {
    * Returns the current pill text.
    *
    * @return the current text (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public String getText() {
     return myTextLabel.getText() == null ? "" : myTextLabel.getText();
@@ -278,6 +290,8 @@ public class FlatPill extends JPanel {
    *
    * @param theText label text; null is treated as the empty string
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setText(final String theText) {
     myTextLabel.setText(theText == null ? "" : theText);
@@ -290,6 +304,8 @@ public class FlatPill extends JPanel {
    * Returns the live text label for font / color / FlatLaf style-class customization.
    *
    * @return the text label (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public JLabel getTextLabel() {
     return myTextLabel;
@@ -302,6 +318,8 @@ public class FlatPill extends JPanel {
    *
    * @param theVariant the new variant; ignored if null
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setVariant(final PillVariant theVariant) {
     if (theVariant == null || theVariant == myVariant) {
@@ -316,6 +334,8 @@ public class FlatPill extends JPanel {
    * Returns the active variant.
    *
    * @return the active variant (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public PillVariant getVariant() {
     return myVariant;
@@ -328,6 +348,8 @@ public class FlatPill extends JPanel {
    *
    * @param theMode the new mode; ignored if null
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setInteractionMode(final PillInteractionMode theMode) {
     if (theMode == null || theMode == myInteractionMode) {
@@ -348,6 +370,8 @@ public class FlatPill extends JPanel {
    * Returns the active interaction mode.
    *
    * @return the active interaction mode (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public PillInteractionMode getInteractionMode() {
     return myInteractionMode;
@@ -361,6 +385,8 @@ public class FlatPill extends JPanel {
    *
    * @param theIcon the icon; null clears
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setLeadingIcon(final Icon theIcon) {
     applyIconColorFilter(theIcon);
@@ -385,6 +411,8 @@ public class FlatPill extends JPanel {
    *
    * <p>No-op for non-SVG icons (raster bitmaps and the like — those don't have a color filter
    * concept and stay whatever color they were authored).
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void applyIconColorFilter(final Icon theIcon) {
     if (theIcon instanceof FlatSVGIcon svg) {
@@ -414,6 +442,8 @@ public class FlatPill extends JPanel {
    * @param theTooltip tooltip text; null suppresses
    * @param theOnClick click handler; null disables clicks but the slot still reserves its area
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setLeadingAffordance(
       final Icon theIdleIcon,
@@ -451,6 +481,8 @@ public class FlatPill extends JPanel {
   /**
    * Refreshes the leading-button's visible icon based on the active state and hover-reveal flag.
    * Called whenever pill hover state changes, or when the affordance configuration changes.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void refreshLeadingAffordanceIcon() {
     if (!myLeadingButton.isVisible()) {
@@ -476,6 +508,8 @@ public class FlatPill extends JPanel {
    *
    * @param theAction the action backing the trailing button; null clears
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setTrailingAction(final Action theAction) {
     if (theAction != null && theAction.getValue(Action.SMALL_ICON) instanceof Icon icon) {
@@ -493,6 +527,8 @@ public class FlatPill extends JPanel {
    * or test-drive the button programmatically.
    *
    * @return the trailing button (always present, may be invisible)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public JComponent getTrailingButton() {
     return myTrailingButton;
@@ -507,6 +543,8 @@ public class FlatPill extends JPanel {
    *
    * @param theCallback the callback, or null
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setContextMenuCallback(final Consumer<MouseEvent> theCallback) {
     myContextMenuCallback = theCallback;
@@ -520,6 +558,8 @@ public class FlatPill extends JPanel {
    *
    * @param thePopup the popup to attach, or null
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill attachContextMenu(final JPopupMenu thePopup) {
     if (thePopup == null) {
@@ -544,6 +584,8 @@ public class FlatPill extends JPanel {
    *
    * @param theSupplier the supplier; null clears
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill attachContextMenu(final java.util.function.Supplier<JPopupMenu> theSupplier) {
     if (theSupplier == null) {
@@ -575,6 +617,8 @@ public class FlatPill extends JPanel {
    * @param theTooltip optional tooltip text (null suppresses)
    * @param theOnClick callback invoked when the button is clicked
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setTrailingIcon(
       final Icon theIcon, final String theTooltip, final Runnable theOnClick) {
@@ -604,6 +648,8 @@ public class FlatPill extends JPanel {
    *
    * @param theSelected the new selection state
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setSelected(final boolean theSelected) {
     if (theSelected == mySelected) {
@@ -620,6 +666,8 @@ public class FlatPill extends JPanel {
    * Returns the current selection state.
    *
    * @return current selection state
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public boolean isSelected() {
     return mySelected;
@@ -633,6 +681,8 @@ public class FlatPill extends JPanel {
    *
    * @param theRadius the radius, or null for theme default
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setCornerRadius(final Integer theRadius) {
     myCornerRadius = theRadius;
@@ -645,6 +695,8 @@ public class FlatPill extends JPanel {
    * FlatPill.arc} UIManager value, otherwise the capsule default ({@value #DEFAULT_ARC}).
    *
    * @return effective arc in pixels
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public int getEffectiveCornerRadius() {
     if (myCornerRadius != null) {
@@ -663,6 +715,8 @@ public class FlatPill extends JPanel {
    *
    * @param theInsets the padding; null restores theme default
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setPadding(final Insets theInsets) {
     myPadding = theInsets == null ? null : (Insets) theInsets.clone();
@@ -678,6 +732,8 @@ public class FlatPill extends JPanel {
    * @param theHorizontal left/right padding
    * @param theVertical top/bottom padding
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setPadding(final int theHorizontal, final int theVertical) {
     return setPadding(new Insets(theVertical, theHorizontal, theVertical, theHorizontal));
@@ -687,6 +743,8 @@ public class FlatPill extends JPanel {
    * Returns the active padding.
    *
    * @return the active padding (defensive copy)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public Insets getPadding() {
     return (Insets) effectivePadding().clone();
@@ -697,6 +755,8 @@ public class FlatPill extends JPanel {
    *
    * @param theColor the border color, or null
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setBorderColor(final Color theColor) {
     myBorderColor = theColor;
@@ -709,6 +769,8 @@ public class FlatPill extends JPanel {
    *
    * @param theWidth the width, clamped to {@code >= 0}
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setBorderWidth(final int theWidth) {
     myBorderWidth = Math.max(0, theWidth);
@@ -721,6 +783,8 @@ public class FlatPill extends JPanel {
    *
    * @param theColor the surface color, or null
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setSurfaceColor(final Color theColor) {
     mySurfaceColorOverride = theColor;
@@ -734,6 +798,8 @@ public class FlatPill extends JPanel {
    *
    * @param theColor the foreground color, or null
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill setForegroundColor(final Color theColor) {
     myForegroundOverride = theColor;
@@ -753,6 +819,8 @@ public class FlatPill extends JPanel {
    * </ol>
    *
    * @return the resolved foreground color (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   protected Color resolveForegroundColor() {
     if (myForegroundOverride != null) {
@@ -775,6 +843,8 @@ public class FlatPill extends JPanel {
    * override + selection blend — ignoring hover/press so a passing cursor doesn't flicker the
    * foreground color. GHOST returns null (transparent surface; contrast caller falls through to
    * theme foreground).
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private Color effectiveSurfaceForContrast() {
     final Color base = resolveSurfaceColor();
@@ -793,6 +863,8 @@ public class FlatPill extends JPanel {
    * Perceived-brightness threshold. {@code true} means the color is light enough that dark
    * foreground reads better; {@code false} means a light foreground is needed. Uses ITU-R BT.601
    * luma — cheap, well-established, gives good results across saturated and muted colors alike.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private static boolean isLight(final Color theColor) {
     final double luma =
@@ -810,6 +882,8 @@ public class FlatPill extends JPanel {
    * caller.
    *
    * @param theListener the listener to install
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void addPillMouseListener(final java.awt.event.MouseListener theListener) {
     if (theListener == null) {
@@ -828,6 +902,8 @@ public class FlatPill extends JPanel {
    * java.awt.event.MouseMotionListener}.
    *
    * @param theListener the listener to install
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void addPillMouseMotionListener(final java.awt.event.MouseMotionListener theListener) {
     if (theListener == null) {
@@ -842,6 +918,8 @@ public class FlatPill extends JPanel {
    * Registers an action listener that fires on click (clickable) or toggle (selectable).
    *
    * @param theListener the listener; null is ignored
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void addActionListener(final ActionListener theListener) {
     if (theListener != null) {
@@ -853,6 +931,8 @@ public class FlatPill extends JPanel {
    * Removes a previously registered action listener.
    *
    * @param theListener the listener to remove
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void removeActionListener(final ActionListener theListener) {
     myActionListeners.remove(theListener);
@@ -863,6 +943,8 @@ public class FlatPill extends JPanel {
    * to {@link #addPropertyChangeListener(String, PropertyChangeListener)}.
    *
    * @param theListener the listener
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void addSelectionChangeListener(final PropertyChangeListener theListener) {
     addPropertyChangeListener(PROPERTY_SELECTED, theListener);
@@ -874,6 +956,8 @@ public class FlatPill extends JPanel {
    * existing menu.
    *
    * @return true if any context-menu callback is installed
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public boolean hasContextMenu() {
     return myContextMenuCallback != null;
@@ -885,6 +969,8 @@ public class FlatPill extends JPanel {
    * drag activates so the pending click doesn't fire on release.
    *
    * @return this pill
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill cancelPendingClick() {
     myPressed = false;
@@ -1069,6 +1155,8 @@ public class FlatPill extends JPanel {
    * trailing action). The pill-level press/release handlers skip these so a click on the pin or
    * trash glyph doesn't paint a phantom pressed-tint on the entire pill — the buttons own their own
    * click semantics.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private boolean isFromInlineButton(final MouseEvent theEvent) {
     final Object src = theEvent.getSource();
@@ -1080,6 +1168,8 @@ public class FlatPill extends JPanel {
    * {@code mouseExited} dispatch on macOS. The timer queries {@link java.awt.MouseInfo} for the
    * live cursor position every {@link #HOVER_POLL_INTERVAL_MS}ms and clears hover state when it
    * confirms the cursor is outside the pill bounds.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void ensureHoverPolling() {
     if (myHoverPollTimer != null && myHoverPollTimer.isRunning()) {
@@ -1142,6 +1232,8 @@ public class FlatPill extends JPanel {
    * {@code mouseExited} so a "cursor moved into a child component" event doesn't get treated as a
    * real pill exit. The hover-poll timer is the authoritative backup for slow exits and platforms
    * where {@code mouseExited} fires unreliably.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private boolean isCursorStillInsidePill(final MouseEvent theEvent) {
     if (!isShowing()) {
@@ -1206,6 +1298,8 @@ public class FlatPill extends JPanel {
    * Builds the canonical pill outline. Centered on the half-pixel grid so a 1px AA stroke renders
    * crisp without straddling integer columns; both fill and stroke use this same shape so the
    * surface edge and border edge stay co-located across all variants and states.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private RoundRectangle2D.Float pillShape(final int w, final int h, final int arc) {
     return new RoundRectangle2D.Float(0.5f, 0.5f, w - 1f, h - 1f, arc, arc);
@@ -1240,6 +1334,8 @@ public class FlatPill extends JPanel {
    * different radius. State precedence: focused → accent at thicker stroke; selected → accent at
    * baseline width; otherwise variant border. GHOST suppresses the border in its idle state for the
    * "no chrome" look but reveals it once hovered, pressed, selected, or focused.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void paintBorder(final Graphics2D g2, final int w, final int h, final int arc) {
     if (myBorderWidth <= 0) {
@@ -1274,6 +1370,8 @@ public class FlatPill extends JPanel {
    * Per-variant strength of the selected-state fill blend. FILLED/GHOST go all-in for a bold accent
    * surface; OUTLINED stays mostly transparent so the variant's "outline" character isn't
    * overwritten into a generic blue blob; WARM_ACCENT splits the difference.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private float selectedFillStrength() {
     return switch (myVariant) {
@@ -1338,6 +1436,8 @@ public class FlatPill extends JPanel {
    * is explicitly set, that color is the result (no blend with {@code base}). If unset, the
    * theme-default hover tint is blended into {@code base} at 45% to produce a subtle "the surface
    * leaned toward hover" effect.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private Color composeHoverBackground(final Color theBase) {
     final Color explicit = UIManager.getColor(K_HOVER_BACKGROUND);
@@ -1362,6 +1462,8 @@ public class FlatPill extends JPanel {
    * Selected counterpart of {@link #composeHoverBackground(Color)}. When unset, the theme-default
    * accent tint is blended at {@link #selectedFillStrength()} so OUTLINED stays mostly transparent
    * and FILLED/GHOST go all-in.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private Color composeSelectedBackground(final Color theBase) {
     final Color explicit = UIManager.getColor(K_SELECTED_BACKGROUND);
@@ -1452,6 +1554,8 @@ public class FlatPill extends JPanel {
 
   /**
    * Accessible role: PUSH_BUTTON for clickable / static / hoverable; TOGGLE_BUTTON for selectable.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   protected class AccessibleFlatPill extends AccessibleJPanel {
     @Override
@@ -1482,6 +1586,8 @@ public class FlatPill extends JPanel {
    *
    * <p>Inner (non-static) so it can read the outer pill's resolver. The outer reference is stable
    * for the label's lifetime — labels never migrate between pills.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private final class PillTextLabel extends JLabel {
 
@@ -1510,6 +1616,8 @@ public class FlatPill extends JPanel {
    * <p>The icon is set via {@link #setRenderedIcon} rather than {@code setIcon} so the host can
    * swap glyphs (outline/filled, hover-revealed/hidden) without re-binding a fresh Action each time
    * and losing its tooltip.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private static final class LeadingButton extends JLabel {
 
@@ -1580,6 +1688,8 @@ public class FlatPill extends JPanel {
      * Swaps the rendered icon without going through {@code setAction}, preserving the tooltip and
      * click binding. A null icon leaves the slot empty but the component still reserves its hit
      * area via {@link #getPreferredSize()}.
+      * @version v0.1.0
+      * @since v0.1.0
      */
     void setRenderedIcon(final Icon theIcon) {
       setIcon(theIcon);
@@ -1633,6 +1743,8 @@ public class FlatPill extends JPanel {
    * A minimal {@link JLabel}-based button used for the trailing slot. Renders the {@link Action}'s
    * {@code SMALL_ICON} (or its {@code NAME} as fallback text) and forwards click to the action
    * without bubbling to the host pill.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private static final class TrailingIconButton extends JLabel {
 

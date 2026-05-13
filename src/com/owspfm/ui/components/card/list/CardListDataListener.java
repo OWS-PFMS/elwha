@@ -7,8 +7,8 @@ package com.owspfm.ui.components.card.list;
  * with respect to the firing model — re-entrant mutations are not supported.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 @FunctionalInterface
 public interface CardListDataListener {
@@ -17,6 +17,8 @@ public interface CardListDataListener {
    * Invoked after the model state changes.
    *
    * @param theEvent the change event describing what was added, removed, changed, or moved
+    * @version v0.1.0
+    * @since v0.1.0
    */
   void contentsChanged(CardListDataEvent theEvent);
 }

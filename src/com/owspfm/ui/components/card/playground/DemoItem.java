@@ -13,7 +13,7 @@ import java.time.LocalDate;
  * @param date the item date
  * @param priority the item priority (1 = lowest)
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public record DemoItem(String title, String subtitle, LocalDate date, int priority) {}

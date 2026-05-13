@@ -11,8 +11,8 @@ import java.util.Set;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public class DefaultPillSelectionModel<T> implements PillSelectionModel<T> {
 

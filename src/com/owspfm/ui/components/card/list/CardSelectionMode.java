@@ -4,8 +4,8 @@ package com.owspfm.ui.components.card.list;
  * Selection semantics for {@link FlatCardList}.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public enum CardSelectionMode {
 

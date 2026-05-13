@@ -73,8 +73,8 @@ import javax.swing.event.MouseInputAdapter;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
 
@@ -86,12 +86,16 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * <p>For back-compat, {@link #setReorderable(boolean)} maps to {@link #STATIC} (false) or {@link
    * #MOVABLE} (true), and {@link #setPinPredicate(Predicate)} implicitly flips the mode to {@link
    * #PINNED}.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public enum MovementMode {
     /**
      * Pills are display-only. No drag, no Move-Up/Down menu items, no grab cursor; the pin API is
      * inert. Default for a fresh list (matches the historical {@code setReorderable(false)}
      * behavior).
+      * @version v0.1.0
+      * @since v0.1.0
      */
     STATIC,
     /** Pills can be freely reordered via drag. No pinned partition. */
@@ -101,6 +105,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
      * predicate render before unpinned items, regardless of comparator. Pin/Unpin is auto-injected
      * into the context menu when the predicate, action, and no caller-installed menu are all
      * present.
+      * @version v0.1.0
+      * @since v0.1.0
      */
     PINNED,
     /**
@@ -109,6 +115,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
      * reorder freely but cannot drop onto slot 0. Set as anchor / Remove anchor is auto-injected
      * into the context menu when the predicate, action, and no caller-installed menu are all
      * present. Mutually exclusive with {@link #PINNED}.
+      * @version v0.1.0
+      * @since v0.1.0
      */
     ANCHORED
   }
@@ -117,6 +125,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Visual treatment for the pin / anchor leading-slot affordance. Both pin and anchor get their
    * own independent setting — many callers will want a clickable pin but a menu-only anchor (or
    * vice versa).
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public enum IconAffordance {
     /** No leading-icon affordance shown. The pin/anchor state remains queryable via API. */
@@ -124,12 +134,16 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     /**
      * Static glyph shown only when the item is pinned/anchored — not clickable. Default; matches
      * the historical "leading icon as state indicator" behavior.
+      * @version v0.1.0
+      * @since v0.1.0
      */
     INDICATOR,
     /**
      * Clickable button. For pin: outline glyph on every pill, filled when pinned; click toggles.
      * For anchor: persistent filled glyph on the anchored pill; hover-revealed outline glyph on
      * non-anchored pills; click sets/clears the anchor.
+      * @version v0.1.0
+      * @since v0.1.0
      */
     BUTTON
   }
@@ -197,6 +211,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theModel the backing model (required)
    * @param theAdapter the adapter that maps items to pills (required)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPillList(final PillListModel<T> theModel, final PillAdapter<T> theAdapter) {
     super(new BorderLayout());
@@ -237,6 +253,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the backing model.
    *
    * @return the model
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public PillListModel<T> getModel() {
     return myModel;
@@ -246,6 +264,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the selection model. Always non-null even when selection is disabled.
    *
    * @return the selection model
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public PillSelectionModel<T> getSelectionModel() {
     return mySelectionModel;
@@ -255,6 +275,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the current orientation.
    *
    * @return the orientation (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatListOrientation getOrientation() {
@@ -266,6 +288,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theOrientation one of {@link FlatListOrientation}; null is ignored
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatPillList<T> setOrientation(final FlatListOrientation theOrientation) {
@@ -283,6 +307,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theColumns column count, clamped to {@code >= 1}
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatPillList<T> setColumns(final int theColumns) {
@@ -302,6 +328,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the column count for grid mode.
    *
    * @return the column count
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public int getColumns() {
@@ -313,6 +341,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theGap pixels, clamped to {@code >= 0}
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatPillList<T> setItemGap(final int theGap) {
@@ -330,6 +360,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the active item gap.
    *
    * @return the gap in pixels
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public int getItemGap() {
@@ -341,6 +373,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theInsets the insets; null treated as zero
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatPillList<T> setListPadding(final Insets theInsets) {
@@ -356,6 +390,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theMode the selection mode; null is ignored
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPillList<T> setSelectionMode(final PillSelectionMode theMode) {
     if (theMode == null || theMode == mySelectionMode) {
@@ -375,6 +411,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Guarantees that {@link PillSelectionMode#SINGLE_MANDATORY}'s "always exactly one" contract
    * holds: if no item is currently selected and the visible list is non-empty, auto-select the
    * first visible item. No-op otherwise (including when mode isn't mandatory).
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void ensureMandatorySelection() {
     if (mySelectionMode != PillSelectionMode.SINGLE_MANDATORY) {
@@ -391,6 +429,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the active selection mode.
    *
    * @return the selection mode (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public PillSelectionMode getSelectionMode() {
     return mySelectionMode;
@@ -403,6 +443,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theMode the movement mode; null is ignored
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPillList<T> setMovementMode(final MovementMode theMode) {
     if (theMode == null || theMode == myMovementMode) {
@@ -429,6 +471,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the active movement mode.
    *
    * @return the active mode (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public MovementMode getMovementMode() {
     return myMovementMode;
@@ -442,6 +486,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theReorderable whether reorder is enabled
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPillList<T> setReorderable(final boolean theReorderable) {
     if (theReorderable) {
@@ -460,6 +506,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * MovementMode.STATIC}.
    *
    * @return reorder flag
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public boolean isReorderable() {
     return myMovementMode != MovementMode.STATIC;
@@ -470,6 +518,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theFilter the predicate; null clears filtering
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatPillList<T> setFilter(final Predicate<T> theFilter) {
@@ -484,6 +534,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theComparator the comparator; null clears sorting
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatPillList<T> setSortOrder(final Comparator<T> theComparator) {
@@ -508,6 +560,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theIsPinned the predicate, or null to disable partitioning
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPillList<T> setPinPredicate(final Predicate<T> theIsPinned) {
     myPinPredicate = theIsPinned;
@@ -529,6 +583,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theAction the action, or null
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPillList<T> setPinAction(final BiConsumer<T, Boolean> theAction) {
     myPinAction = theAction;
@@ -542,6 +598,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theItem the item
    * @return whether the item is currently pinned
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public boolean isPinned(final T theItem) {
     return myMovementMode == MovementMode.PINNED
@@ -556,6 +614,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * when no action is installed.
    *
    * @param theItem the item to toggle
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void togglePin(final T theItem) {
     if (myMovementMode != MovementMode.PINNED || myPinAction == null || theItem == null) {
@@ -568,6 +628,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Signals that the pin predicate's answers have changed for at least one item, without the model
    * itself changing. Triggers a rebuild so the partition reflects current predicate state. Cheaper
    * than firing a synthetic model event.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void pinStateChanged() {
     rebuildVisibleItems();
@@ -581,6 +643,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * The returned list does not track subsequent updates.
    *
    * @return rendered items in render order (never null, may be empty)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public List<T> getVisibleItems() {
     return List.copyOf(myVisibleItems);
@@ -595,6 +659,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theItem the item to toggle
    * @return a fresh menu item; never null
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public JMenuItem createPinMenuItem(final T theItem) {
     final JMenuItem item = new JMenuItem(isPinned(theItem) ? "Unpin" : "Pin");
@@ -615,6 +681,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theIsAnchored the predicate, or null
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPillList<T> setAnchorPredicate(final Predicate<T> theIsAnchored) {
     myAnchorPredicate = theIsAnchored;
@@ -636,6 +704,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theAction the action, or null
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPillList<T> setAnchorAction(final Consumer<T> theAction) {
     myAnchorAction = theAction;
@@ -648,6 +718,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theItem the item
    * @return whether the item is currently anchored
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public boolean isAnchored(final T theItem) {
     return myMovementMode == MovementMode.ANCHORED
@@ -660,6 +732,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * item is anchored or the list is not in {@link MovementMode#ANCHORED} mode.
    *
    * @return the anchored item, or null
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public T getAnchoredItem() {
     if (myMovementMode != MovementMode.ANCHORED || myAnchorPredicate == null) {
@@ -678,6 +752,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * anchor. No-op outside {@link MovementMode#ANCHORED} mode or when no action is installed.
    *
    * @param theItem the item to anchor, or null to clear
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void setAnchor(final T theItem) {
     if (myMovementMode != MovementMode.ANCHORED || myAnchorAction == null) {
@@ -694,6 +770,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * Signals that the anchor predicate's answers have changed without a model event firing. Triggers
    * a rebuild so the partition reflects current predicate state.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void anchorStateChanged() {
     rebuildVisibleItems();
@@ -708,6 +786,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theItem the item to toggle
    * @return a fresh menu item; never null
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public JMenuItem createAnchorMenuItem(final T theItem) {
     final JMenuItem item = new JMenuItem(isAnchored(theItem) ? "Remove anchor" : "Set as anchor");
@@ -734,6 +814,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theAffordance the affordance treatment; null is ignored
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPillList<T> setPinAffordance(final IconAffordance theAffordance) {
     if (theAffordance == null || theAffordance == myPinAffordance) {
@@ -748,6 +830,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the current pin affordance treatment.
    *
    * @return the pin affordance (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public IconAffordance getPinAffordance() {
     return myPinAffordance;
@@ -763,6 +847,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theAffordance the affordance treatment; null is ignored
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPillList<T> setAnchorAffordance(final IconAffordance theAffordance) {
     if (theAffordance == null || theAffordance == myAnchorAffordance) {
@@ -777,6 +863,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the current anchor affordance treatment.
    *
    * @return the anchor affordance (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public IconAffordance getAnchorAffordance() {
     return myAnchorAffordance;
@@ -787,6 +875,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theComponent the placeholder; null restores the default
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatPillList<T> setEmptyState(final JComponent theComponent) {
@@ -802,6 +892,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theLoading whether to show the loading state
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatPillList<T> setLoading(final boolean theLoading) {
@@ -818,6 +910,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theComponent the loading component
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatPillList<T> setLoadingComponent(final JComponent theComponent) {
@@ -832,6 +926,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Registers a reorder listener. (Reorder events are not fired until #239 wires drag.)
    *
    * @param theListener the listener; null is ignored
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void addReorderListener(final PillReorderListener<T> theListener) {
     if (theListener != null && !myReorderListeners.contains(theListener)) {
@@ -843,6 +939,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Removes a previously registered reorder listener.
    *
    * @param theListener the listener
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void removeReorderListener(final PillReorderListener<T> theListener) {
     myReorderListeners.remove(theListener);
@@ -854,6 +952,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theItem the item
    * @return the pill, or null
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatPill getPillFor(final T theItem) {
     return myPillByItem.get(theItem);
@@ -1128,6 +1228,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Renders the pin affordance on a pill in PINNED mode. INDICATOR shows the filled pin glyph only
    * on pinned items (historical behavior). BUTTON renders a clickable affordance on every pill
    * (outline glyph on unpinned, filled on pinned). NONE skips both.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void applyPinAffordance(final FlatPill thePill, final T theItem) {
     switch (myPinAffordance) {
@@ -1162,6 +1264,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * on the anchored pill (historical behavior). BUTTON renders a clickable affordance on every pill
    * — persistent filled glyph on the anchored pill, hover-revealed outline glyph on non-anchored
    * pills. NONE skips both.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void applyAnchorAffordance(final FlatPill thePill, final T theItem) {
     switch (myAnchorAffordance) {
@@ -1260,6 +1364,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * one carrying the authoritative final cursor position.
    *
    * @param theEvent the release event
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void refreshDropFromReleaseEvent(final MouseEvent theEvent) {
     if (myDrag == null) {
@@ -1325,6 +1431,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * </ul>
    *
    * @return the anchor point used by {@code computeDropIndex}
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private Point computeDropAnchor() {
     final int draggedLeftX = myDrag.currentPoint.x - myDrag.grabOffset.x;
@@ -1349,6 +1457,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * is partway through its slide, the drop calculation observes the in-progress position,
    * recomputes targets, the slide accelerates, and the answer oscillates. Natural positions are
    * stable — the slot the cursor maps to depends only on the cursor.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private int computeDropIndex(final Point thePoint) {
     return switch (myOrientation) {
@@ -1413,6 +1523,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * y} (within-row) and {@code anchor.y > rowBottom} (below-row) would both be false for every
    * pill, leaving slot stuck at 0 regardless of {@code anchor.x}. Drifts below the component are
    * already handled correctly by the existing below-row branch firing for every row.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private int dropIndexWrap(final Point thePoint) {
     final Insets in = myContent.getInsets();
@@ -1461,6 +1573,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * <p>{@code row} is clamped to the last occupied row so a far-past-the-last-row anchor doesn't
    * compute idx > nonDraggedCount and get pinned to the end.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private int dropIndexGrid(final Point thePoint) {
     final Insets in = myContent.getInsets();
@@ -1515,6 +1629,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Recomputes target X/Y for every non-dragged pill, based on the order produced by removing the
    * dragged pill and reinserting it at {@code myDrag.toIndex}. The animation timer then
    * interpolates each pill toward its target.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void recomputeDragTargets() {
     myTargetX.clear();
@@ -1713,6 +1829,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Clamps a post-removal visible slot into the dragged item's pin-partition. Pinned items can only
    * land in [0..pinnedCountAfterRemoval]; unpinned items can only land in
    * [pinnedCountAfterRemoval..size]. With no pin predicate this is a no-op pass-through.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private int clampSlotToPartition(final int theSlotVis, final T theDraggedItem) {
     if (myMovementMode == MovementMode.ANCHORED && myAnchorPredicate != null) {
@@ -1744,6 +1862,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * sits at the requested visible slot. Strategy: identify the neighbor that should follow the
    * dragged item in the new visible order, and return that neighbor's post-removal model index.
    * When the slot is past the last item, returns the post-removal end-of-model index.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private int translateVisibleSlotToModelIndex(final int theSlotVis, final T theDraggedItem) {
     final List<T> postVis = new ArrayList<>(myVisibleItems);
@@ -1789,6 +1909,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * visually places the dragged pill at row 0 / col 0 even though the model is untouched.
    * Successful drops sidestep this because model.move → rebuildContent rebuilds the child list from
    * scratch in visible order.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void restoreContentOrder() {
     int targetIndex = 0;
@@ -1837,6 +1959,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Convenience for selecting an item programmatically (no event mutation).
    *
    * @param theItem the item
+    * @version v0.1.0
+    * @since v0.1.0
    */
   protected void selectItem(final T theItem) {
     mySelectionModel.setSelected(List.of(theItem));
@@ -1900,6 +2024,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @param theItem the moved item
    * @param theFrom source index in the model
    * @param theTo destination index in the model
+    * @version v0.1.0
+    * @since v0.1.0
    */
   protected void fireReorder(final T theItem, final int theFrom, final int theTo) {
     final PillReorderEvent<T> evt = new PillReorderEvent<>(this, theItem, theFrom, theTo);
@@ -1975,6 +2101,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * the container, pills are simply clipped on the right — the host is expected to wrap the list in
    * a {@link javax.swing.JScrollPane} for the clip+scroll overflow strategy. An ellipsis-menu
    * overflow strategy is deferred to a future story.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private final class HorizontalLayout implements LayoutManager {
     @Override
@@ -2034,6 +2162,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Multi-row wrapping layout — a {@link java.awt.FlowLayout}-derivative that breaks to a new row
    * when the container width is exhausted, and respects the configured {@code itemGap} for both row
    * and column spacing. Drag-reorder across row breaks lands in #239.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private final class WrapLayout implements LayoutManager {
     @Override
@@ -2068,6 +2198,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     /**
      * Single pass that both measures and (optionally) lays out. The {@code apply} flag separates
      * the two modes so the layout manager honors the standard contract without computing twice.
+      * @version v0.1.0
+      * @since v0.1.0
      */
     private Dimension layoutCore(
         final Container theParent, final int theAvailWidth, final boolean theApply) {
@@ -2102,6 +2234,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * N-column grid layout with uniform cell width and uniform cell height. Mirrors the geometry of
    * {@link com.owspfm.ui.components.card.list.FlatCardList}'s grid mode, but for pill-sized
    * children.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private final class GridLayoutImpl implements LayoutManager {
     @Override
@@ -2177,6 +2311,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * preferred size, so drag mode reuses that. For GRID the static layout stretches pills to a
    * uniform cellW × cellH; drag mode preserves the stretch — including for the dragged pill — so
    * the user sees no size jump between idle and dragging.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void layoutDuringDrag(final Container theParent) {
     final Insets in = theParent.getInsets();

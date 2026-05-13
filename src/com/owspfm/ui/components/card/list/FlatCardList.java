@@ -78,8 +78,8 @@ import javax.swing.event.MouseInputAdapter;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
 
@@ -92,6 +92,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * however, all new code should reference {@link FlatListOrientation} directly. Story #242 added
    * support for {@link FlatListOrientation#HORIZONTAL} and {@link FlatListOrientation#WRAP}, which
    * are also reachable through this class now.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public static final class Orientation {
     /** Single-column vertical stack (default). */
@@ -110,6 +112,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
      * FlatListOrientation#values()} directly.
      *
      * @return the legacy two-value array
+      * @version v0.1.0
+      * @since v0.1.0
      */
     public static FlatListOrientation[] values() {
       return new FlatListOrientation[] {VERTICAL, GRID};
@@ -182,6 +186,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theModel the backing model (required)
    * @param theAdapter the adapter that maps items to cards (required)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatCardList(final CardListModel<T> theModel, final CardAdapter<T> theAdapter) {
     super(new BorderLayout());
@@ -222,6 +228,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the backing model.
    *
    * @return the model
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public CardListModel<T> getModel() {
     return myModel;
@@ -231,6 +239,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the selection model. Always non-null even when selection is disabled.
    *
    * @return the selection model
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public CardSelectionModel<T> getSelectionModel() {
     return mySelectionModel;
@@ -242,6 +252,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * @param theOrientation one of {@link FlatListOrientation}; null is ignored. All four
    *     orientations are supported as of story #242.
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatCardList<T> setOrientation(final FlatListOrientation theOrientation) {
@@ -258,6 +270,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the current orientation.
    *
    * @return the orientation (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatListOrientation getOrientation() {
@@ -269,6 +283,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theColumns column count, clamped to {@code >= 1}
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatCardList<T> setColumns(final int theColumns) {
@@ -288,6 +304,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the column count for grid mode.
    *
    * @return the column count
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public int getColumns() {
@@ -299,6 +317,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theGap pixels, clamped to {@code >= 0}
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatCardList<T> setItemGap(final int theGap) {
@@ -316,6 +336,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the active item gap.
    *
    * @return the gap in pixels
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public int getItemGap() {
@@ -327,6 +349,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theInsets the insets; null treated as zero
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatCardList<T> setListPadding(final Insets theInsets) {
@@ -342,6 +366,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theMode the selection mode; null is ignored
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatCardList<T> setSelectionMode(final CardSelectionMode theMode) {
     if (theMode == null || theMode == mySelectionMode) {
@@ -359,6 +385,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns the active selection mode.
    *
    * @return the selection mode (never null)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public CardSelectionMode getSelectionMode() {
     return mySelectionMode;
@@ -369,6 +397,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theReorderable whether reorder is enabled
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatCardList<T> setReorderable(final boolean theReorderable) {
     if (theReorderable == myReorderable) {
@@ -383,6 +413,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Returns whether reorder is currently enabled.
    *
    * @return reorder flag
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public boolean isReorderable() {
     return myReorderable;
@@ -393,6 +425,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theHandle one of {@link ReorderHandle}; null is ignored
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatCardList<T> setReorderHandle(final ReorderHandle theHandle) {
     if (theHandle == null || theHandle == myReorderHandle) {
@@ -408,6 +442,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theFilter the predicate; null clears filtering
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatCardList<T> setFilter(final Predicate<T> theFilter) {
@@ -425,6 +461,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theComparator the comparator; null clears sorting
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatCardList<T> setSortOrder(final Comparator<T> theComparator) {
@@ -444,6 +482,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theComponent the placeholder; null restores the default
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatCardList<T> setEmptyState(final JComponent theComponent) {
@@ -459,6 +499,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theLoading whether to show the loading state
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatCardList<T> setLoading(final boolean theLoading) {
@@ -475,6 +517,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theComponent the loading component
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   @Override
   public FlatCardList<T> setLoadingComponent(final JComponent theComponent) {
@@ -490,6 +534,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theAnimate whether to animate
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatCardList<T> setAnimateChanges(final boolean theAnimate) {
     myAnimateChanges = theAnimate;
@@ -501,6 +547,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theMs the duration; clamped to {@code >= 50}
    * @return this list
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatCardList<T> setAnimationDuration(final int theMs) {
     myAnimationDurationMs = Math.max(50, theMs);
@@ -511,6 +559,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Registers a reorder listener.
    *
    * @param theListener the listener; null is ignored
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void addReorderListener(final CardReorderListener<T> theListener) {
     if (theListener != null && !myReorderListeners.contains(theListener)) {
@@ -522,6 +572,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Removes a previously registered reorder listener.
    *
    * @param theListener the listener
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public void removeReorderListener(final CardReorderListener<T> theListener) {
     myReorderListeners.remove(theListener);
@@ -533,6 +585,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    *
    * @param theItem the item
    * @return the card, or null
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public FlatCard getCardFor(final T theItem) {
     return myCardByItem.get(theItem);
@@ -819,6 +873,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Records drag intent without committing to it yet — the user might just be clicking. Visuals
    * (cursor swap, Z-order, animation, pending-click cancellation) are deferred to {@link
    * #activateDrag()} once the cursor crosses {@link #DRAG_THRESHOLD}.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void initiateDrag(final T theItem, final FlatCard theCard, final MouseEvent theEvent) {
     myDrag = new DragState();
@@ -837,6 +893,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Promotes a pending drag (set up by {@link #initiateDrag}) to the active state: cancels any
    * deferred header-click toggle, swaps the cursor to grabbing, brings the card to the top of the
    * Z-order, snapshots displaced positions, and starts the animation timer.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void activateDrag() {
     if (myDrag == null || myDrag.active) {
@@ -885,6 +943,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * Computes the slot the dragged card would land in. Uses a stable "natural" position formula
    * (independent of in-flight animation), so the answer doesn't oscillate as cards slide.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private int computeDropIndex(final Point thePoint) {
     if (myOrientation == FlatListOrientation.GRID) {
@@ -934,6 +994,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * Recomputes target X / Y for every non-dragged card, based on the visual order produced by
    * removing the dragged card and reinserting it at {@code myDrag.toIndex}.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void recomputeDragTargets() {
     myTargetY.clear();
@@ -1008,6 +1070,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * Lerps a single axis (x or y) for {@code theCard} toward {@code theTarget}; returns true if it
    * moved.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private static boolean animateAxis(
       final FlatCard theCard,
@@ -1085,6 +1149,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * visual front — which also rearranges the children array. The idle layouts (Stacking and
    * GridStacking) place children by index, so a scrambled order after a no-op drop visually
    * relocates the dragged card to position 0 even though the model is untouched.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void restoreContentOrder() {
     int targetIndex = 0;
@@ -1158,6 +1224,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * Layout manager for vertical mode. Stacks cards top-to-bottom with the configured gap when idle;
    * during a drag, places the dragged card under the cursor and reads the per-card displaced Y
    * (driven by the drag animation timer) for everything else.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private final class StackingLayout implements java.awt.LayoutManager {
     @Override
@@ -1231,6 +1299,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * (max-card preferred height across the visible set, mirroring {@code GridLayout}). During a
    * drag, the dragged card follows the cursor in both axes; others use the per-card displaced X / Y
    * driven by the animation timer.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private final class GridStackingLayout implements java.awt.LayoutManager {
     @Override
@@ -1320,6 +1390,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * horizontal scrolling. Drag-while-active is not specially supported for this orientation; the
    * layout falls back to the static positions during a drag, which is acceptable since horizontal
    * card rows are typically read-only.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private final class HorizontalStackingLayout implements java.awt.LayoutManager {
     @Override
@@ -1376,6 +1448,8 @@ public class FlatCardList<T> extends JPanel implements Accessible, FlatList<T> {
    * left-to-right and wrap to a new row when the container's available width is exhausted. Respects
    * {@link #myItemGap} for both row and column spacing. As with horizontal, drag is not specially
    * supported here.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private final class WrapStackingLayout implements java.awt.LayoutManager {
     @Override

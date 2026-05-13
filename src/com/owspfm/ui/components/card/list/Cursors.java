@@ -39,8 +39,8 @@ import javax.swing.UIManager;
  * <p>Theme switches at runtime invalidate the cache; the next call rebuilds with the new variant.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public final class Cursors {
 
@@ -59,6 +59,8 @@ public final class Cursors {
    * Returns the open-hand "grab" cursor (signals "this surface is draggable").
    *
    * @return the grab cursor
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public static Cursor grab() {
     refreshIfThemeChanged();
@@ -72,6 +74,8 @@ public final class Cursors {
    * Returns the closed-fist "grabbing" cursor (signals "you are currently dragging").
    *
    * @return the grabbing cursor
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public static Cursor grabbing() {
     refreshIfThemeChanged();
@@ -102,6 +106,8 @@ public final class Cursors {
   /**
    * Tries to load a PNG cursor at the platform's preferred size, then falls back to the bundled
    * smaller PNG, then to Java2D-painted shapes if no PNG is available.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private static Cursor loadCursor(
       final String theBaseName,

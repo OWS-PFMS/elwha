@@ -10,8 +10,8 @@ import java.util.EventObject;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public class PillReorderEvent<T> extends EventObject {
 
@@ -26,6 +26,8 @@ public class PillReorderEvent<T> extends EventObject {
    * @param theItem the moved item
    * @param theFromIndex the source index
    * @param theToIndex the destination index
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public PillReorderEvent(
       final Object theSource, final T theItem, final int theFromIndex, final int theToIndex) {
@@ -39,6 +41,8 @@ public class PillReorderEvent<T> extends EventObject {
    * Returns the moved item.
    *
    * @return the item
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public T getItem() {
     return myItem;
@@ -48,6 +52,8 @@ public class PillReorderEvent<T> extends EventObject {
    * Returns the source index in the underlying model.
    *
    * @return the from index
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public int getFromIndex() {
     return myFromIndex;
@@ -57,6 +63,8 @@ public class PillReorderEvent<T> extends EventObject {
    * Returns the destination index in the underlying model.
    *
    * @return the to index
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public int getToIndex() {
     return myToIndex;

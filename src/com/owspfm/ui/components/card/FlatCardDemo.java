@@ -21,8 +21,8 @@ import javax.swing.WindowConstants;
  * see {@link com.owspfm.ui.components.card.playground.FlatCardPlayground}.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public final class FlatCardDemo {
 
@@ -34,6 +34,8 @@ public final class FlatCardDemo {
    * Launches the demo frame.
    *
    * @param args command-line arguments (unused)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public static void main(final String[] args) {
     SwingUtilities.invokeLater(
