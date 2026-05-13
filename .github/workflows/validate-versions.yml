@@ -1,0 +1,76 @@
+name: Validate JavaDoc Versions
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    name: Validate @version and @since tags
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        # fetch-depth: 0 pulls full history for both the PR branch AND
+        # origin/main, so `git diff origin/main...HEAD` (triple-dot) can
+        # resolve a merge-base. With the default shallow clone, the
+        # merge-base is unreachable and the validator exits with
+        # "fatal: origin/main...HEAD: no merge base".
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Get PR milestone
+        id: get_milestone
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MILESTONE=$(gh pr view ${{ github.event.pull_request.number }} --json milestone --jq '.milestone.title')
+
+          if [ -z "$MILESTONE" ] || [ "$MILESTONE" = "null" ]; then
+            echo "::error::Pull request has no milestone set"
+            echo "::error::Please set a milestone (e.g., v0.2.0) before requesting review"
+            echo "::error::Command: gh pr edit ${{ github.event.pull_request.number }} --milestone \"v0.N.0\""
+            exit 1
+          fi
+
+          echo "milestone=$MILESTONE" >> $GITHUB_OUTPUT
+          echo "✓ PR milestone: $MILESTONE"
+
+      - name: Validate version tags
+        run: |
+          EXPECTED="${{ steps.get_milestone.outputs.milestone }}"
+          echo "Validating JavaDoc tags against milestone: $EXPECTED (PR diff scope)"
+
+          if python3 scripts/update_javadoc_version.py \
+               --check --changed-only \
+               --expected "$EXPECTED" --base-ref origin/main; then
+            echo "::notice::✅ All modified/added Java files have correct @version and @since for $EXPECTED"
+          else
+            echo "::error::JavaDoc version tag validation failed"
+            echo "::error::See errors above for specific files needing updates"
+            echo "::error::Refer to docs/development/versioning.md for tagging guidelines"
+            exit 1
+          fi
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "### ✅ JavaDoc Version Validation Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Milestone**: ${{ steps.get_milestone.outputs.milestone }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Scope**: Files modified or added in this PR" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: All modified/added files have correct @version and @since" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📖 See [versioning.md](docs/development/versioning.md) for tag conventions" >> $GITHUB_STEP_SUMMARY
