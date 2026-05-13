@@ -44,8 +44,8 @@ final class CycleCardExample {
    * Builds the demo cycle card with the screenshot's BIO→COP→GOV→LAT→TER→AGP1→SML loop.
    *
    * @return a configured {@link FlatCard} ready to drop into a parent layout
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   static FlatCard build() {
     final String[] factors = {"BIO", "COP", "GOV", "LAT", "TER", "AGP1", "SML"};
@@ -148,8 +148,9 @@ final class CycleCardExample {
   /**
    * Custom component that paints the factors arranged on a circle with reinforcing-green arrows
    * looping between consecutive members. Mirrors the cycle-viewer's ring diagram.
-    * @version v0.1.0
-    * @since v0.1.0
+   *
+   * @version v0.1.0
+   * @since v0.1.0
    */
   private static final class CycleRing extends JComponent {
     private final String[] myFactors;

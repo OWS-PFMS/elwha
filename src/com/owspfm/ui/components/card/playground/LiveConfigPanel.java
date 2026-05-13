@@ -328,8 +328,8 @@ public final class LiveConfigPanel extends JPanel {
    * Registers a listener that is notified after every config change with the latest snapshot.
    *
    * @param theListener consumer invoked with the snapshot; null is ignored
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public void addConfigChangeListener(final Consumer<Snapshot> theListener) {
     if (theListener != null) {
@@ -341,8 +341,8 @@ public final class LiveConfigPanel extends JPanel {
    * Returns an immutable snapshot of the current configuration suitable for snippet rendering.
    *
    * @return a defensive snapshot
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public Snapshot snapshot() {
     return new Snapshot(
@@ -404,8 +404,8 @@ public final class LiveConfigPanel extends JPanel {
    * @param showHeader whether the header slot is populated
    * @param showMedia whether the media slot is populated
    * @param showFooter whether the footer slot is populated
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public record Snapshot(
       CardVariant variant,

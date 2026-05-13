@@ -27,8 +27,8 @@ public interface CardListModel<T> extends Iterable<T> {
    * Returns the current item count.
    *
    * @return number of items in the model
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   int getSize();
 
@@ -38,8 +38,8 @@ public interface CardListModel<T> extends Iterable<T> {
    * @param theIndex the zero-based index
    * @return the item
    * @throws IndexOutOfBoundsException if {@code theIndex} is out of range
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   T getElementAt(int theIndex);
 
@@ -49,8 +49,8 @@ public interface CardListModel<T> extends Iterable<T> {
    * <p>Iterators are not required to be fail-fast; do not mutate the model while iterating.
    *
    * @return an iterator over the items
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   @Override
   Iterator<T> iterator();
@@ -59,8 +59,8 @@ public interface CardListModel<T> extends Iterable<T> {
    * Registers a listener for change events.
    *
    * @param theListener the listener; null is ignored
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   void addCardListDataListener(CardListDataListener theListener);
 
@@ -68,8 +68,8 @@ public interface CardListModel<T> extends Iterable<T> {
    * Removes a previously registered listener.
    *
    * @param theListener the listener to remove
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   void removeCardListDataListener(CardListDataListener theListener);
 }

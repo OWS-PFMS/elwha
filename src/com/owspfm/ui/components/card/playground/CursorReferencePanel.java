@@ -160,8 +160,9 @@ public final class CursorReferencePanel extends JPanel {
   /**
    * Reflectively asks the package-private {@code Cursors} helper for one of its custom cursors —
    * keeps the playground's no-app-dependency property without making {@code Cursors} public.
-    * @version v0.1.0
-    * @since v0.1.0
+   *
+   * @version v0.1.0
+   * @since v0.1.0
    */
   private static Cursor loadCustomCursor(final String theName) {
     try {

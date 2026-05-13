@@ -45,8 +45,8 @@ public final class FlatPillDemo {
    * Launches the demo.
    *
    * @param args unused
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public static void main(final String[] args) {
     SwingUtilities.invokeLater(FlatPillDemo::launch);

@@ -32,8 +32,8 @@ public class DefaultCardListModel<T> implements CardListModel<T> {
    * Creates a model pre-populated with the given items.
    *
    * @param theItems the initial items (copied; null treated as empty)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public DefaultCardListModel(final Collection<? extends T> theItems) {
     super();
@@ -61,8 +61,8 @@ public class DefaultCardListModel<T> implements CardListModel<T> {
    * Appends an item.
    *
    * @param theItem the item to append (null is permitted)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public void add(final T theItem) {
     final int index = myItems.size();
@@ -75,8 +75,8 @@ public class DefaultCardListModel<T> implements CardListModel<T> {
    *
    * @param theIndex the insertion index (0..size)
    * @param theItem the item to insert
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public void add(final int theIndex, final T theItem) {
     myItems.add(theIndex, theItem);
@@ -87,8 +87,8 @@ public class DefaultCardListModel<T> implements CardListModel<T> {
    * Appends a batch of items, firing a single ADDED event covering the inserted range.
    *
    * @param theItems the items to append (null/empty is a no-op)
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public void addAll(final Collection<? extends T> theItems) {
     if (theItems == null || theItems.isEmpty()) {
@@ -104,8 +104,8 @@ public class DefaultCardListModel<T> implements CardListModel<T> {
    *
    * @param theItem the item to remove
    * @return true if a matching item was found and removed
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public boolean remove(final T theItem) {
     final int idx = myItems.indexOf(theItem);
@@ -122,8 +122,8 @@ public class DefaultCardListModel<T> implements CardListModel<T> {
    *
    * @param theIndex the index to remove
    * @return the removed item
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public T remove(final int theIndex) {
     final T removed = myItems.remove(theIndex);
@@ -137,8 +137,8 @@ public class DefaultCardListModel<T> implements CardListModel<T> {
    * @param theIndex the index to replace
    * @param theItem the replacement item
    * @return the previous item
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public T set(final int theIndex, final T theItem) {
     final T old = myItems.set(theIndex, theItem);
@@ -154,8 +154,8 @@ public class DefaultCardListModel<T> implements CardListModel<T> {
    *
    * @param theFrom the source index
    * @param theTo the destination index
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public void move(final int theFrom, final int theTo) {
     if (theFrom == theTo) {
@@ -184,8 +184,8 @@ public class DefaultCardListModel<T> implements CardListModel<T> {
    *
    * @param theItem the item
    * @return true if present
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public boolean contains(final T theItem) {
     return myItems.contains(theItem);
@@ -196,8 +196,8 @@ public class DefaultCardListModel<T> implements CardListModel<T> {
    *
    * @param theItem the item
    * @return the index, or -1 if not present
-    * @version v0.1.0
-    * @since v0.1.0
+   * @version v0.1.0
+   * @since v0.1.0
    */
   public int indexOf(final T theItem) {
     return myItems.indexOf(theItem);

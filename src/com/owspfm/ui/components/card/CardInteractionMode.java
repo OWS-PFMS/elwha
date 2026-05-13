@@ -19,16 +19,18 @@ public enum CardInteractionMode {
   /**
    * Provides hover feedback (subtle background lift) but does not fire actions or hold selection
    * state. Useful for cards whose internal controls handle their own clicks.
-    * @version v0.1.0
-    * @since v0.1.0
+   *
+   * @version v0.1.0
+   * @since v0.1.0
    */
   HOVERABLE,
 
   /**
    * Behaves like a button. Hover and press feedback, focusable, fires an {@link
    * java.awt.event.ActionEvent} on click and on Space/Enter when focused.
-    * @version v0.1.0
-    * @since v0.1.0
+   *
+   * @version v0.1.0
+   * @since v0.1.0
    */
   CLICKABLE,
 
@@ -36,8 +38,9 @@ public enum CardInteractionMode {
    * Toggle behavior. Click or Space/Enter flips a persistent selected state with a distinct visual
    * indicator. Fires an {@link java.awt.event.ActionEvent} on toggle and a "selected" {@link
    * java.beans.PropertyChangeEvent}.
-    * @version v0.1.0
-    * @since v0.1.0
+   *
+   * @version v0.1.0
+   * @since v0.1.0
    */
   SELECTABLE
 }
