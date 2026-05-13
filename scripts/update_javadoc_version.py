@@ -219,14 +219,18 @@ def _read_tag(content: str, tag: str) -> Optional[str]:
 
 
 def check_changed_only(modified: List[Path], added: List[Path],
-                       milestone: str, base_ref: str) -> Tuple[int, List[str]]:
+                       milestone: str, base_ref: str,
+                       allow_since_mutation: bool = False
+                       ) -> Tuple[int, List[str], List[str]]:
     """Validate the PR-scoped diff against the canonical Javadoc rules.
 
-    Returns ``(violation_count, messages)``. The count is the number of
-    distinct files with at least one problem (matches the legacy
-    tree-wide return shape); ``messages`` lists every individual violation.
+    Returns ``(violation_count, error_messages, warning_messages)``. The
+    count is the number of distinct files with at least one **blocking**
+    problem; warnings (currently only @since-immutability violations
+    when ``allow_since_mutation`` is set) do not contribute to the count.
     """
     violations: List[str] = []
+    warnings: List[str] = []
     bad_files: set = set()
 
     def _flag(file_path: Path, message: str) -> None:
@@ -265,10 +269,15 @@ def check_changed_only(modified: List[Path], added: List[Path],
                       f"({current_since}) must equal milestone ({milestone}) "
                       f"as a fix-forward: {file_path}")
         elif current_since != base_since:
-            _flag(file_path,
-                  f"@since IS IMMUTABLE ({current_since} != {base_since} on "
-                  f"{base_ref}): {file_path} "
-                  f"(do not edit @since on existing files)")
+            immutability_msg = (
+                f"@since IS IMMUTABLE ({current_since} != {base_since} on "
+                f"{base_ref}): {file_path} "
+                f"(do not edit @since on existing files)"
+            )
+            if allow_since_mutation:
+                warnings.append(immutability_msg)
+            else:
+                _flag(file_path, immutability_msg)
 
     for file_path in added:
         if not file_path.exists():
@@ -292,7 +301,7 @@ def check_changed_only(modified: List[Path], added: List[Path],
                   f"WRONG @since ({current_since} != {milestone}): {file_path} "
                   f"(new files must set @since to current milestone)")
 
-    return len(bad_files), violations
+    return len(bad_files), violations, warnings
 
 
 def _ensure_base_ref(base_ref: str) -> Optional[str]:
@@ -323,6 +332,11 @@ def main():
     parser.add_argument('--base-ref', default='origin/main',
                         help='Git ref to diff against in --changed-only mode '
                              '(default: origin/main).')
+    parser.add_argument('--allow-since-mutation', action='store_true',
+                        help='Downgrade @since-immutability violations to '
+                             'warnings (PR still passes). One-shot escape '
+                             'hatch for repo-wide baseline resets; do NOT '
+                             'use for normal development.')
 
     args = parser.parse_args()
 
@@ -367,19 +381,27 @@ def main():
               f'{len(modified)} modified, {len(added)} added '
               f'(milestone: {args.expected})')
 
-        bad_count, messages = check_changed_only(
+        bad_count, messages, warnings = check_changed_only(
             modified, added, args.expected, args.base_ref,
+            allow_since_mutation=args.allow_since_mutation,
         )
         for message in messages:
             print(f'  ✗ {message}')
+        for warning in warnings:
+            print(f'  ⚠ (downgraded by --allow-since-mutation) {warning}')
 
         if bad_count > 0:
             print(f'\nERROR: Found {bad_count} file(s) with violations',
                   file=sys.stderr)
             return 1
 
-        print(f'INFO: All {total_changed} changed Java file(s) have correct '
-              f'@version and @since for {args.expected}')
+        if warnings:
+            print(f'INFO: {len(warnings)} @since mutation(s) accepted under '
+                  f'--allow-since-mutation; all blocking checks passed for '
+                  f'{args.expected}')
+        else:
+            print(f'INFO: All {total_changed} changed Java file(s) have correct '
+                  f'@version and @since for {args.expected}')
         return 0
 
     # Tree-wide (legacy) mode ----------------------------------------------
