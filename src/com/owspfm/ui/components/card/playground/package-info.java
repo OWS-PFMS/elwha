@@ -8,7 +8,7 @@
  * artifact.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 package com.owspfm.ui.components.card.playground;

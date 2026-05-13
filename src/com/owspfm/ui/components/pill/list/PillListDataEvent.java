@@ -20,17 +20,21 @@ import java.util.EventObject;
  * </ul>
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public class PillListDataEvent extends EventObject {
 
   /** The kind of structural change a {@link PillListDataEvent} represents. */
   public enum Type {
+     * @version v0.1.0
+     * @since v0.1.0
     /** One or more contiguous items were inserted at {@code [index0, index1]}. */
     ADDED,
     /** One or more contiguous items were removed from {@code [index0, index1]}. */
     REMOVED,
+     * @version v0.1.0
+     * @since v0.1.0
     /** One or more contiguous items at {@code [index0, index1]} were replaced in place. */
     CHANGED,
     /** Exactly one item moved from {@code index0} to {@code index1}. */
@@ -48,6 +52,8 @@ public class PillListDataEvent extends EventObject {
    * @param theType the kind of change
    * @param theIndex0 the first affected index (or source index for {@link Type#MOVED})
    * @param theIndex1 the last affected index (or destination index for {@link Type#MOVED})
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public PillListDataEvent(
       final Object theSource, final Type theType, final int theIndex0, final int theIndex1) {
@@ -61,6 +67,8 @@ public class PillListDataEvent extends EventObject {
    * Returns the change type.
    *
    * @return the change type
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public Type getType() {
     return myType;
@@ -70,6 +78,8 @@ public class PillListDataEvent extends EventObject {
    * Returns the lower bound index, or the source index for moves.
    *
    * @return index0
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public int getIndex0() {
     return myIndex0;
@@ -79,6 +89,8 @@ public class PillListDataEvent extends EventObject {
    * Returns the upper bound index, or the destination index for moves.
    *
    * @return index1
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public int getIndex1() {
     return myIndex1;

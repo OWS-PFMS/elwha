@@ -22,8 +22,8 @@ import com.owspfm.ui.components.card.FlatCard;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 @FunctionalInterface
 public interface CardAdapter<T> {
@@ -34,6 +34,8 @@ public interface CardAdapter<T> {
    * @param theItem the domain item
    * @param theIndex the visible index of the item in the list
    * @return a non-null {@link FlatCard}
+    * @version v0.1.0
+    * @since v0.1.0
    */
   FlatCard cardFor(T theItem, int theIndex);
 }

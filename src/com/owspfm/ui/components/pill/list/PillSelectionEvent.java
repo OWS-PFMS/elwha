@@ -8,8 +8,8 @@ import java.util.List;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public class PillSelectionEvent<T> extends EventObject {
 
@@ -20,6 +20,8 @@ public class PillSelectionEvent<T> extends EventObject {
    *
    * @param theSource the originating selection model
    * @param theSelected the new selected items (defensive copy expected from caller)
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public PillSelectionEvent(final Object theSource, final List<T> theSelected) {
     super(theSource);
@@ -30,6 +32,8 @@ public class PillSelectionEvent<T> extends EventObject {
    * Returns the selected items in the order they appear in the underlying model.
    *
    * @return immutable view of the new selection
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public List<T> getSelected() {
     return mySelected;

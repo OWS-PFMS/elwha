@@ -12,7 +12,7 @@
  * only FlatLaf and standard Swing.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 package com.owspfm.ui.components.pill.list;

@@ -5,8 +5,8 @@ package com.owspfm.ui.components.card.list;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v1.1.0-alpha.2
- * @since v1.1.0-alpha.2
+ * @version v0.1.0
+ * @since v0.1.0
  */
 @FunctionalInterface
 public interface CardReorderListener<T> {
@@ -15,6 +15,8 @@ public interface CardReorderListener<T> {
    * Invoked after the user drops a dragged card and the model has been updated.
    *
    * @param theEvent the reorder event
+    * @version v0.1.0
+    * @since v0.1.0
    */
   void cardReordered(CardReorderEvent<T> theEvent);
 }

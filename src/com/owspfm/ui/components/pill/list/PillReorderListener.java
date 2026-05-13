@@ -5,8 +5,8 @@ package com.owspfm.ui.components.pill.list;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 @FunctionalInterface
 public interface PillReorderListener<T> {
@@ -15,6 +15,8 @@ public interface PillReorderListener<T> {
    * Invoked after the user drops a dragged pill and the model has been updated.
    *
    * @param theEvent the reorder event
+    * @version v0.1.0
+    * @since v0.1.0
    */
   void pillReordered(PillReorderEvent<T> theEvent);
 }

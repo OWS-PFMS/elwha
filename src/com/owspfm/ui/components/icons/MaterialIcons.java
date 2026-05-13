@@ -19,8 +19,8 @@ import javax.swing.UIManager;
  * Symbols are licensed Apache-2.0; see the project LICENSE-NOTICES file for attribution.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public final class MaterialIcons {
 
@@ -34,6 +34,8 @@ public final class MaterialIcons {
    * Label.foreground}. Material Symbols are monochrome, so a blanket remap is safe and avoids the
    * per-color "map black to foreground" enumeration. The function runs at paint time, so a runtime
    * LAF switch (light ↔ dark) re-themes the icons on the next repaint with no re-allocation.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private static final FlatSVGIcon.ColorFilter THEME_FILTER =
       new FlatSVGIcon.ColorFilter(
@@ -51,6 +53,8 @@ public final class MaterialIcons {
     return load("push_pin");
   }
 
+   * @version v0.1.0
+   * @since v0.1.0
   /** Pushpin glyph (filled / solid) — pairs with {@link #pushPin()} as the "active" state. */
   public static FlatSVGIcon pushPinFilled() {
     return load("push_pin_fill");
@@ -61,6 +65,8 @@ public final class MaterialIcons {
     return load("delete");
   }
 
+   * @version v0.1.0
+   * @since v0.1.0
   /** Pencil / edit glyph. */
   public static FlatSVGIcon edit() {
     return load("edit");
@@ -71,6 +77,8 @@ public final class MaterialIcons {
     return load("info");
   }
 
+   * @version v0.1.0
+   * @since v0.1.0
   /** Heart / favorite glyph. */
   public static FlatSVGIcon favorite() {
     return load("favorite");
@@ -81,6 +89,8 @@ public final class MaterialIcons {
     return load("star");
   }
 
+   * @version v0.1.0
+   * @since v0.1.0
   /** Plus / add glyph. */
   public static FlatSVGIcon add() {
     return load("add");
@@ -91,6 +101,8 @@ public final class MaterialIcons {
     return load("check");
   }
 
+   * @version v0.1.0
+   * @since v0.1.0
   /** Eye / visibility glyph. */
   public static FlatSVGIcon visibility() {
     return load("visibility");
@@ -101,6 +113,8 @@ public final class MaterialIcons {
     return load("anchor");
   }
 
+   * @version v0.1.0
+   * @since v0.1.0
   /** Anchor glyph (filled / solid) — pairs with {@link #anchor()} as the "active" state. */
   public static FlatSVGIcon anchorFilled() {
     return load("anchor_fill");
@@ -111,6 +125,8 @@ public final class MaterialIcons {
     return load("grid_view");
   }
 
+   * @version v0.1.0
+   * @since v0.1.0
   /** Generic table glyph. */
   public static FlatSVGIcon table() {
     return load("table");
@@ -121,6 +137,8 @@ public final class MaterialIcons {
     return load("background_grid_small");
   }
 
+   * @version v0.1.0
+   * @since v0.1.0
   /** Select-all glyph. */
   public static FlatSVGIcon selectAll() {
     return load("select_all");
@@ -137,6 +155,8 @@ public final class MaterialIcons {
    *
    * @param theName the bare icon name (no path, no extension), e.g. {@code "push_pin"}
    * @return a fresh icon sized to {@link #DEFAULT_SIZE}
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public static FlatSVGIcon get(final String theName) {
     return load(theName);

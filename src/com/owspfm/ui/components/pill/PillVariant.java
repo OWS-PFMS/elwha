@@ -12,20 +12,24 @@ package com.owspfm.ui.components.pill;
  * spacing, or interaction behavior — those are governed by separate setters on {@link FlatPill}.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public enum PillVariant {
 
   /**
    * Filled background tinted from the panel surface. The workhorse default for chip / tag rows that
    * need to read as a distinct cluster against the surrounding surface.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   FILLED,
 
   /**
    * Hairline border with a transparent fill. Best for dense rows where multiple FILLED pills would
    * crowd the visual field, or when the pill needs to look "lighter" than nearby surfaces.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   OUTLINED,
 
@@ -33,12 +37,16 @@ public enum PillVariant {
    * No fill, no border. Renders as text-with-padding until hovered; the surface only appears on
    * hover/press/selected. Useful for tab-strip uses where the unselected pills should disappear
    * into the surface.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   GHOST,
 
   /**
    * Tinted with the application's warm accent (gold/amber range). Reserved for emphasizing a small
    * subset of pills — e.g., favorited factors, "you are here" view tabs.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   WARM_ACCENT
 }

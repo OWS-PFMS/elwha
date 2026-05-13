@@ -67,8 +67,8 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 public final class FlatPillPlayground {
 
@@ -104,6 +104,8 @@ public final class FlatPillPlayground {
    * Launches the playground.
    *
    * @param args unused
+    * @version v0.1.0
+    * @since v0.1.0
    */
   public static void main(final String[] args) {
     SwingUtilities.invokeLater(
@@ -278,6 +280,8 @@ public final class FlatPillPlayground {
    * because {@link FlatPillList#setMovementMode} clears the inactive side's predicate/action under
    * the PINNED↔ANCHORED mutex — so switching mode in the combo wipes the prior side's bindings, and
    * the next flip back needs them re-armed.
+    * @version v0.1.0
+    * @since v0.1.0
    */
   private void armBindingsForMode(final FlatPillList.MovementMode theMode) {
     if (theMode == FlatPillList.MovementMode.PINNED) {

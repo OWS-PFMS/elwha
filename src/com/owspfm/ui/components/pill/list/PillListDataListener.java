@@ -6,8 +6,8 @@ package com.owspfm.ui.components.pill.list;
  * <p>Listeners are invoked on the Swing EDT.
  *
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 @FunctionalInterface
 public interface PillListDataListener {
@@ -16,6 +16,8 @@ public interface PillListDataListener {
    * Invoked after the model state changes.
    *
    * @param theEvent the change event describing what was added, removed, changed, or moved
+    * @version v0.1.0
+    * @since v0.1.0
    */
   void contentsChanged(PillListDataEvent theEvent);
 }

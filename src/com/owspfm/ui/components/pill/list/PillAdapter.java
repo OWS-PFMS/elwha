@@ -19,8 +19,8 @@ import com.owspfm.ui.components.pill.FlatPill;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v1.1.0-alpha.3
- * @since v1.1.0-alpha.3
+ * @version v0.1.0
+ * @since v0.1.0
  */
 @FunctionalInterface
 public interface PillAdapter<T> {
@@ -31,6 +31,8 @@ public interface PillAdapter<T> {
    * @param theItem the domain item
    * @param theIndex the visible index of the item in the list
    * @return a non-null {@link FlatPill}
+    * @version v0.1.0
+    * @since v0.1.0
    */
   FlatPill pillFor(T theItem, int theIndex);
 }
