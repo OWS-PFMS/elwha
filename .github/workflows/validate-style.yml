@@ -1,0 +1,69 @@
+name: Validate Style
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  spotless:
+    name: Validate formatting (Spotless)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        # Spotless + google-java-format hits a binary-API drift on JDK 22+
+        # (DeferredDiagnosticHandler.getDiagnostics() return type changed).
+        # Pin to 21 until upstream Spotless / GJF ship a JDK 25-compatible
+        # release. Tracked: https://github.com/diffplug/spotless/issues/2468
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run Spotless check
+        run: mvn -B spotless:check --file pom.xml
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "### ✅ Spotless check passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All source files match \`googleJavaFormat\` formatting. Run \`mvn spotless:apply\` locally on JDK 21 to fix any future drift." >> $GITHUB_STEP_SUMMARY
+
+  checkstyle:
+    name: Validate naming (Checkstyle)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run Checkstyle check
+        run: mvn -B checkstyle:check --file pom.xml
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "### ✅ Checkstyle check passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Config**: \`config/checkstyle/checkstyle.xml\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Scope**: Google Java Style naming + project-specific ban on \`my*\` / \`the*\` identifier prefixes" >> $GITHUB_STEP_SUMMARY

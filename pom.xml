@@ -149,8 +149,8 @@
           </sourceDirectories>
           <includeTestSourceDirectory>false</includeTestSourceDirectory>
           <consoleOutput>true</consoleOutput>
-          <failsOnError>false</failsOnError>
-          <failOnViolation>false</failOnViolation>
+          <failsOnError>true</failsOnError>
+          <failOnViolation>true</failOnViolation>
           <violationSeverity>warning</violationSeverity>
         </configuration>
         <executions>
