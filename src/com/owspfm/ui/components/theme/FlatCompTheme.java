@@ -6,6 +6,8 @@ import java.awt.Window;
 import java.util.Objects;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.plaf.ColorUIResource;
+import javax.swing.plaf.FontUIResource;
 
 /**
  * The static entry point that turns a {@link Config} into a live theme.
@@ -105,9 +107,11 @@ public final class FlatCompTheme {
   }
 
   // Step 4: write the FlatComp.* keys — the namespace FlatComp's own components resolve against.
+  // Colors are stored as ColorUIResource so updateUI() will re-install any that also reach a
+  // component through LookAndFeel.installColors; see FlatLafKeyMapping for why this matters.
   private static void writeTokenKeys(Palette palette) {
     for (ColorRole role : ColorRole.values()) {
-      UIManager.put(role.uiKey(), palette.get(role));
+      UIManager.put(role.uiKey(), new ColorUIResource(palette.get(role)));
     }
     for (ShapeScale shape : ShapeScale.values()) {
       UIManager.put(shape.uiKey(), shape.defaultPx());
@@ -123,11 +127,12 @@ public final class FlatCompTheme {
   }
 
   // Step 7: register the fonts and write the FlatComp.type.* keys plus the global defaultFont.
+  // Fonts are stored as FontUIResource for the same updateUI() re-install reason as colors.
   private static void applyTypography(Typography typography) {
     for (TypeRole role : TypeRole.values()) {
-      UIManager.put(role.uiKey(), typography.get(role));
+      UIManager.put(role.uiKey(), new FontUIResource(typography.get(role)));
     }
-    UIManager.put("defaultFont", typography.get(TypeRole.BODY_MEDIUM));
+    UIManager.put("defaultFont", new FontUIResource(typography.get(TypeRole.BODY_MEDIUM)));
   }
 
   // Step 8: the only step that touches live components — they re-resolve tokens per the binding

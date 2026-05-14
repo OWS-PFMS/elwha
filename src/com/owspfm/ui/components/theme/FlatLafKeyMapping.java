@@ -2,6 +2,7 @@ package com.owspfm.ui.components.theme;
 
 import java.awt.Color;
 import javax.swing.UIManager;
+import javax.swing.plaf.ColorUIResource;
 
 /**
  * The bridge that makes raw Swing inherit the FlatComp design language — the curated mapping of
@@ -23,7 +24,10 @@ import javax.swing.UIManager;
  *
  * <p>Values are pulled from the {@link Palette} being installed rather than re-resolved through
  * {@link ColorRole#resolve()} — the palette is the single source of truth for the install in
- * progress.
+ * progress. Every color is written as a {@link ColorUIResource}: a plain {@code Color} would be
+ * installed onto a component once and then never replaced on a subsequent {@code updateUI()} (Swing
+ * treats non-{@code UIResource} values as developer-owned), which would freeze raw Swing on the
+ * first-installed theme and break runtime mode switching.
  *
  * @author Charles Bryan
  * @version v0.1.0
@@ -59,117 +63,116 @@ final class FlatLafKeyMapping {
     Color inverseOnSurface = palette.get(ColorRole.INVERSE_ON_SURFACE);
 
     // --- Global component defaults ---
-    UIManager.put("Component.focusColor", primary);
-    UIManager.put("Component.focusedBorderColor", primary);
-    UIManager.put("Component.borderColor", outline);
-    UIManager.put("Component.disabledBorderColor", outlineVariant);
+    putColor("Component.focusColor", primary);
+    putColor("Component.focusedBorderColor", primary);
+    putColor("Component.borderColor", outline);
+    putColor("Component.disabledBorderColor", outlineVariant);
     UIManager.put("Component.arc", ShapeScale.SM.px());
-    UIManager.put("Component.error.borderColor", error);
-    UIManager.put("Component.error.focusedBorderColor", error);
+    putColor("Component.error.borderColor", error);
+    putColor("Component.error.focusedBorderColor", error);
 
     // --- Panels and root surfaces ---
-    UIManager.put("Panel.background", surface);
-    UIManager.put("Panel.foreground", onSurface);
-    UIManager.put("Viewport.background", surface);
-    UIManager.put("RootPane.background", surface);
-    UIManager.put("Separator.foreground", outlineVariant);
-    UIManager.put("Label.foreground", onSurface);
-    UIManager.put("Label.disabledForeground", onSurfaceVariant);
+    putColor("Panel.background", surface);
+    putColor("Panel.foreground", onSurface);
+    putColor("Viewport.background", surface);
+    putColor("RootPane.background", surface);
+    putColor("Separator.foreground", outlineVariant);
+    putColor("Label.foreground", onSurface);
+    putColor("Label.disabledForeground", onSurfaceVariant);
 
     // --- Buttons ---
-    UIManager.put("Button.background", surfaceContainerLow);
-    UIManager.put("Button.foreground", onSurface);
-    UIManager.put("Button.borderColor", outline);
-    UIManager.put("Button.disabledBorderColor", outlineVariant);
-    UIManager.put("Button.default.background", primary);
-    UIManager.put("Button.default.foreground", onPrimary);
-    UIManager.put("Button.default.borderColor", primary);
-    UIManager.put("ToggleButton.background", surfaceContainerLow);
-    UIManager.put("ToggleButton.foreground", onSurface);
-    UIManager.put("ToggleButton.selectedBackground", primaryContainer);
-    UIManager.put("ToggleButton.selectedForeground", onPrimaryContainer);
+    putColor("Button.background", surfaceContainerLow);
+    putColor("Button.foreground", onSurface);
+    putColor("Button.borderColor", outline);
+    putColor("Button.disabledBorderColor", outlineVariant);
+    putColor("Button.default.background", primary);
+    putColor("Button.default.foreground", onPrimary);
+    putColor("Button.default.borderColor", primary);
+    putColor("ToggleButton.background", surfaceContainerLow);
+    putColor("ToggleButton.foreground", onSurface);
+    putColor("ToggleButton.selectedBackground", primaryContainer);
+    putColor("ToggleButton.selectedForeground", onPrimaryContainer);
 
     // --- Text components ---
-    UIManager.put("TextField.background", surface);
-    UIManager.put("TextField.foreground", onSurface);
-    UIManager.put("TextField.placeholderForeground", onSurfaceVariant);
-    UIManager.put("TextField.border", null);
-    UIManager.put("FormattedTextField.background", surface);
-    UIManager.put("FormattedTextField.foreground", onSurface);
-    UIManager.put("PasswordField.background", surface);
-    UIManager.put("PasswordField.foreground", onSurface);
-    UIManager.put("TextArea.background", surface);
-    UIManager.put("TextArea.foreground", onSurface);
-    UIManager.put("EditorPane.background", surface);
-    UIManager.put("EditorPane.foreground", onSurface);
-    UIManager.put("TextComponent.selectionBackground", primaryContainer);
-    UIManager.put("TextComponent.selectionForeground", onPrimaryContainer);
+    putColor("TextField.background", surface);
+    putColor("TextField.foreground", onSurface);
+    putColor("TextField.placeholderForeground", onSurfaceVariant);
+    putColor("FormattedTextField.background", surface);
+    putColor("FormattedTextField.foreground", onSurface);
+    putColor("PasswordField.background", surface);
+    putColor("PasswordField.foreground", onSurface);
+    putColor("TextArea.background", surface);
+    putColor("TextArea.foreground", onSurface);
+    putColor("EditorPane.background", surface);
+    putColor("EditorPane.foreground", onSurface);
+    putColor("TextComponent.selectionBackground", primaryContainer);
+    putColor("TextComponent.selectionForeground", onPrimaryContainer);
 
     // --- Combo / spinner ---
-    UIManager.put("ComboBox.background", surface);
-    UIManager.put("ComboBox.foreground", onSurface);
-    UIManager.put("ComboBox.buttonBackground", surfaceContainerLow);
-    UIManager.put("Spinner.background", surface);
-    UIManager.put("Spinner.foreground", onSurface);
+    putColor("ComboBox.background", surface);
+    putColor("ComboBox.foreground", onSurface);
+    putColor("ComboBox.buttonBackground", surfaceContainerLow);
+    putColor("Spinner.background", surface);
+    putColor("Spinner.foreground", onSurface);
 
     // --- Selection controls ---
-    UIManager.put("CheckBox.background", surface);
-    UIManager.put("CheckBox.foreground", onSurface);
-    UIManager.put("CheckBox.icon.checkmarkColor", onPrimary);
-    UIManager.put("CheckBox.icon.selectedBackground", primary);
-    UIManager.put("RadioButton.background", surface);
-    UIManager.put("RadioButton.foreground", onSurface);
-    UIManager.put("RadioButton.icon.centerColor", onPrimary);
-    UIManager.put("RadioButton.icon.selectedBackground", primary);
+    putColor("CheckBox.background", surface);
+    putColor("CheckBox.foreground", onSurface);
+    putColor("CheckBox.icon.checkmarkColor", onPrimary);
+    putColor("CheckBox.icon.selectedBackground", primary);
+    putColor("RadioButton.background", surface);
+    putColor("RadioButton.foreground", onSurface);
+    putColor("RadioButton.icon.centerColor", onPrimary);
+    putColor("RadioButton.icon.selectedBackground", primary);
 
     // --- Lists, tables, trees ---
-    UIManager.put("List.background", surface);
-    UIManager.put("List.foreground", onSurface);
-    UIManager.put("List.selectionBackground", primaryContainer);
-    UIManager.put("List.selectionForeground", onPrimaryContainer);
-    UIManager.put("Table.background", surface);
-    UIManager.put("Table.foreground", onSurface);
-    UIManager.put("Table.gridColor", outlineVariant);
-    UIManager.put("Table.selectionBackground", primaryContainer);
-    UIManager.put("Table.selectionForeground", onPrimaryContainer);
-    UIManager.put("TableHeader.background", surfaceContainerHigh);
-    UIManager.put("TableHeader.foreground", onSurfaceVariant);
-    UIManager.put("Tree.background", surface);
-    UIManager.put("Tree.foreground", onSurface);
-    UIManager.put("Tree.selectionBackground", primaryContainer);
-    UIManager.put("Tree.selectionForeground", onPrimaryContainer);
+    putColor("List.background", surface);
+    putColor("List.foreground", onSurface);
+    putColor("List.selectionBackground", primaryContainer);
+    putColor("List.selectionForeground", onPrimaryContainer);
+    putColor("Table.background", surface);
+    putColor("Table.foreground", onSurface);
+    putColor("Table.gridColor", outlineVariant);
+    putColor("Table.selectionBackground", primaryContainer);
+    putColor("Table.selectionForeground", onPrimaryContainer);
+    putColor("TableHeader.background", surfaceContainerHigh);
+    putColor("TableHeader.foreground", onSurfaceVariant);
+    putColor("Tree.background", surface);
+    putColor("Tree.foreground", onSurface);
+    putColor("Tree.selectionBackground", primaryContainer);
+    putColor("Tree.selectionForeground", onPrimaryContainer);
 
     // --- Scrollbars ---
-    UIManager.put("ScrollPane.background", surface);
-    UIManager.put("ScrollBar.track", surface);
-    UIManager.put("ScrollBar.thumb", outlineVariant);
-    UIManager.put("ScrollBar.hoverThumbColor", outline);
-    UIManager.put("ScrollBar.pressedThumbColor", onSurfaceVariant);
+    putColor("ScrollPane.background", surface);
+    putColor("ScrollBar.track", surface);
+    putColor("ScrollBar.thumb", outlineVariant);
+    putColor("ScrollBar.hoverThumbColor", outline);
+    putColor("ScrollBar.pressedThumbColor", onSurfaceVariant);
 
     // --- Tabs ---
-    UIManager.put("TabbedPane.background", surface);
-    UIManager.put("TabbedPane.foreground", onSurfaceVariant);
-    UIManager.put("TabbedPane.underlineColor", primary);
-    UIManager.put("TabbedPane.selectedForeground", onSurface);
-    UIManager.put("TabbedPane.hoverColor", surfaceVariant);
+    putColor("TabbedPane.background", surface);
+    putColor("TabbedPane.foreground", onSurfaceVariant);
+    putColor("TabbedPane.underlineColor", primary);
+    putColor("TabbedPane.selectedForeground", onSurface);
+    putColor("TabbedPane.hoverColor", surfaceVariant);
 
     // --- Progress, slider ---
-    UIManager.put("ProgressBar.background", surfaceVariant);
-    UIManager.put("ProgressBar.foreground", primary);
-    UIManager.put("Slider.background", surface);
-    UIManager.put("Slider.trackColor", surfaceVariant);
-    UIManager.put("Slider.thumbColor", primary);
+    putColor("ProgressBar.background", surfaceVariant);
+    putColor("ProgressBar.foreground", primary);
+    putColor("Slider.background", surface);
+    putColor("Slider.trackColor", surfaceVariant);
+    putColor("Slider.thumbColor", primary);
 
     // --- Menus ---
-    UIManager.put("MenuBar.background", surface);
-    UIManager.put("MenuBar.foreground", onSurface);
-    UIManager.put("PopupMenu.background", surfaceContainerHigh);
-    UIManager.put("MenuItem.foreground", onSurface);
-    UIManager.put("Menu.foreground", onSurface);
+    putColor("MenuBar.background", surface);
+    putColor("MenuBar.foreground", onSurface);
+    putColor("PopupMenu.background", surfaceContainerHigh);
+    putColor("MenuItem.foreground", onSurface);
+    putColor("Menu.foreground", onSurface);
 
     // --- Tooltips — M3 uses the inverse surface ---
-    UIManager.put("ToolTip.background", inverseSurface);
-    UIManager.put("ToolTip.foreground", inverseOnSurface);
+    putColor("ToolTip.background", inverseSurface);
+    putColor("ToolTip.foreground", inverseOnSurface);
   }
 
   /**
@@ -197,28 +200,33 @@ final class FlatLafKeyMapping {
     Color buttonPressed = StateLayer.PRESSED.over(surfaceContainerLow, onSurface);
     Color buttonFocused = StateLayer.FOCUS.over(surfaceContainerLow, onSurface);
 
-    UIManager.put("Button.hoverBackground", buttonHover);
-    UIManager.put("Button.pressedBackground", buttonPressed);
-    UIManager.put("Button.focusedBackground", buttonFocused);
-    UIManager.put("Button.default.hoverBackground", StateLayer.HOVER.over(primary, onPrimary));
-    UIManager.put("Button.default.pressedBackground", StateLayer.PRESSED.over(primary, onPrimary));
-    UIManager.put("Button.default.focusedBackground", StateLayer.FOCUS.over(primary, onPrimary));
+    putColor("Button.hoverBackground", buttonHover);
+    putColor("Button.pressedBackground", buttonPressed);
+    putColor("Button.focusedBackground", buttonFocused);
+    putColor("Button.default.hoverBackground", StateLayer.HOVER.over(primary, onPrimary));
+    putColor("Button.default.pressedBackground", StateLayer.PRESSED.over(primary, onPrimary));
+    putColor("Button.default.focusedBackground", StateLayer.FOCUS.over(primary, onPrimary));
 
-    UIManager.put("ToggleButton.hoverBackground", buttonHover);
-    UIManager.put("ToggleButton.pressedBackground", buttonPressed);
+    putColor("ToggleButton.hoverBackground", buttonHover);
+    putColor("ToggleButton.pressedBackground", buttonPressed);
 
-    UIManager.put("List.hoverBackground", StateLayer.HOVER.over(surface, onSurface));
-    UIManager.put("List.selectionInactiveBackground", StateLayer.SELECTED.over(surface, onSurface));
-    UIManager.put("Table.hoverBackground", StateLayer.HOVER.over(surface, onSurface));
-    UIManager.put("Tree.hoverBackground", StateLayer.HOVER.over(surface, onSurface));
+    putColor("List.hoverBackground", StateLayer.HOVER.over(surface, onSurface));
+    putColor("List.selectionInactiveBackground", StateLayer.SELECTED.over(surface, onSurface));
+    putColor("Table.hoverBackground", StateLayer.HOVER.over(surface, onSurface));
+    putColor("Tree.hoverBackground", StateLayer.HOVER.over(surface, onSurface));
 
-    UIManager.put("MenuItem.hoverBackground", StateLayer.HOVER.over(surface, onSurface));
-    UIManager.put("MenuItem.selectionBackground", primaryContainer);
+    putColor("MenuItem.hoverBackground", StateLayer.HOVER.over(surface, onSurface));
+    putColor("MenuItem.selectionBackground", primaryContainer);
 
-    UIManager.put("TabbedPane.hoverColor", StateLayer.HOVER.over(surface, onSurface));
-    UIManager.put("TabbedPane.focusColor", StateLayer.FOCUS.over(surface, primary));
+    putColor("TabbedPane.hoverColor", StateLayer.HOVER.over(surface, onSurface));
+    putColor("TabbedPane.focusColor", StateLayer.FOCUS.over(surface, primary));
 
-    UIManager.put("ComboBox.buttonHoverBackground", buttonHover);
-    UIManager.put("ComboBox.buttonPressedBackground", buttonPressed);
+    putColor("ComboBox.buttonHoverBackground", buttonHover);
+    putColor("ComboBox.buttonPressedBackground", buttonPressed);
+  }
+
+  // Always store colors as ColorUIResource so updateUI() will re-install them on a theme switch.
+  private static void putColor(String key, Color value) {
+    UIManager.put(key, new ColorUIResource(value));
   }
 }
