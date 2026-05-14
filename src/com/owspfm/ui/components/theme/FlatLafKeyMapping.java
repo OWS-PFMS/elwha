@@ -88,14 +88,18 @@ final class FlatLafKeyMapping {
     putColor("Button.default.background", primary);
     putColor("Button.default.foreground", onPrimary);
     putColor("Button.default.borderColor", primary);
-    // Focus: every *.focused* key must be mapped — an unmapped one falls through to FlatLaf's
-    // blue default. focusedBackground is set equal to the normal background so focus does not
-    // swap the fill (which reads as a stuck pressed / toggled state); a focused button is
-    // distinguished only by its border color.
+    // Focus & hover borders: FlatLaf shows focus/hover as border-color and fill changes, not an
+    // outer ring (Component.focusWidth defaults to 0). EVERY such key must be mapped — an
+    // unmapped one falls through to FlatLaf's blue accent default. focusedBackground is kept
+    // equal to the normal background so focus never swaps the fill (which reads as a stuck
+    // pressed / toggled state); a focused control is distinguished by its border color alone.
     putColor("Button.focusedBackground", surfaceContainerLow);
     putColor("Button.focusedBorderColor", primary);
+    putColor("Button.hoverBorderColor", outline);
     putColor("Button.default.focusedBackground", primary);
+    putColor("Button.default.focusedBorderColor", onPrimary);
     putColor("Button.default.focusColor", onPrimary);
+    putColor("Button.default.hoverBorderColor", primary);
     putColor("ToggleButton.background", surfaceContainerLow);
     putColor("ToggleButton.foreground", onSurface);
     putColor("ToggleButton.selectedBackground", primaryContainer);
@@ -128,19 +132,31 @@ final class FlatLafKeyMapping {
     putColor("CheckBox.foreground", onSurface);
     putColor("CheckBox.icon.checkmarkColor", onPrimary);
     putColor("CheckBox.icon.selectedBackground", primary);
+    putColor("CheckBox.icon.focusedBackground", surface);
+    putColor("CheckBox.icon.focusedBorderColor", primary);
+    putColor("CheckBox.icon[filled].focusedSelectedBackground", primary);
+    putColor("CheckBox.icon[filled].focusedSelectedBorderColor", primary);
+    putColor("CheckBox.icon[filled].focusedCheckmarkColor", onPrimary);
     putColor("RadioButton.background", surface);
     putColor("RadioButton.foreground", onSurface);
     putColor("RadioButton.icon.centerColor", onPrimary);
     putColor("RadioButton.icon.selectedBackground", primary);
+    putColor("RadioButton.icon.focusedBackground", surface);
+    putColor("RadioButton.icon.focusedBorderColor", primary);
+    putColor("RadioButton.icon[filled].focusedSelectedBackground", primary);
+    putColor("RadioButton.icon[filled].focusedSelectedBorderColor", primary);
+    putColor("RadioButton.icon[filled].focusedCenterColor", onPrimary);
 
     // --- Lists, tables, trees ---
     putColor("List.background", surface);
     putColor("List.foreground", onSurface);
     putColor("List.selectionBackground", primaryContainer);
     putColor("List.selectionForeground", onPrimaryContainer);
+    putColor("List.cellFocusColor", primary);
     putColor("Table.background", surface);
     putColor("Table.foreground", onSurface);
     putColor("Table.gridColor", outlineVariant);
+    putColor("Table.cellFocusColor", primary);
     putColor("Table.selectionBackground", primaryContainer);
     putColor("Table.selectionForeground", onPrimaryContainer);
     putColor("TableHeader.background", surfaceContainerHigh);
@@ -171,6 +187,7 @@ final class FlatLafKeyMapping {
     putColor("Slider.trackColor", surfaceVariant);
     putColor("Slider.trackValueColor", primary);
     putColor("Slider.thumbColor", primary);
+    putColor("Slider.focusedColor", primary);
 
     // --- Menus ---
     putColor("MenuBar.background", surface);

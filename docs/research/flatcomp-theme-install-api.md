@@ -181,6 +181,8 @@ With the theme API fixed, the next deliverable is the `FlatChip` variant retrofi
 
 The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes hundreds of keys; FlatComp maps the ones that make raw Swing read as coherent next to a `FlatChip`.
 
+**Focus-key completeness within the curated scope.** FlatLaf models focus and hover as border-color / background changes, *not* an outer ring (`Component.focusWidth` defaults to `0`). An unmapped `*.focused*` or `*.hover*` key does not mean "no effect" — it falls through to FlatLaf's built-in blue accent default. So for every component in the curated scope, *all* of its focus/hover keys are mapped, not just the resting-state ones. Components deliberately left out of v1 scope — `HelpButton` (the `?` button) and tab-style toggle buttons (`ToggleButton.tab.*`) — keep FlatLaf's defaults; a consumer using those will see FlatLaf's blue focus styling until they are brought into scope.
+
 ### A.1 Static keys — direct role assignments (`applyStaticKeys`)
 
 | FlatLaf key | Role / token |
@@ -202,8 +204,10 @@ The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes
 | `Button.default.foreground` | `ON_PRIMARY` |
 | `Button.focusedBackground` | `SURFACE_CONTAINER_LOW` — equal to `Button.background`; focus must not swap the fill |
 | `Button.focusedBorderColor` | `PRIMARY` — focus shows as a colored border |
+| `Button.hoverBorderColor` | `OUTLINE` |
 | `Button.default.focusedBackground` | `PRIMARY` — equal to `Button.default.background` |
-| `Button.default.focusColor` | `ON_PRIMARY` |
+| `Button.default.focusedBorderColor`, `Button.default.focusColor` | `ON_PRIMARY` |
+| `Button.default.hoverBorderColor` | `PRIMARY` |
 | `ToggleButton.selectedBackground` | `PRIMARY_CONTAINER` |
 | `ToggleButton.selectedForeground` | `ON_PRIMARY_CONTAINER` |
 | `TextField.background`, `FormattedTextField.background`, `PasswordField.background`, `TextArea.background`, `EditorPane.background` | `SURFACE` |
@@ -218,10 +222,15 @@ The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes
 | `CheckBox.foreground`, `RadioButton.foreground` | `ON_SURFACE` |
 | `CheckBox.icon.selectedBackground`, `RadioButton.icon.selectedBackground` | `PRIMARY` |
 | `CheckBox.icon.checkmarkColor`, `RadioButton.icon.centerColor` | `ON_PRIMARY` |
+| `CheckBox.icon.focusedBackground`, `RadioButton.icon.focusedBackground` | `SURFACE` |
+| `CheckBox.icon.focusedBorderColor`, `RadioButton.icon.focusedBorderColor` | `PRIMARY` |
+| `CheckBox.icon[filled].focusedSelectedBackground`, `…focusedSelectedBorderColor` (+ `RadioButton` equivalents) | `PRIMARY` |
+| `CheckBox.icon[filled].focusedCheckmarkColor`, `RadioButton.icon[filled].focusedCenterColor` | `ON_PRIMARY` |
 | `List.background`, `Table.background`, `Tree.background` | `SURFACE` |
 | `List.foreground`, `Table.foreground`, `Tree.foreground` | `ON_SURFACE` |
 | `List.selectionBackground`, `Table.selectionBackground`, `Tree.selectionBackground` | `PRIMARY_CONTAINER` |
 | `List.selectionForeground`, `Table.selectionForeground`, `Tree.selectionForeground` | `ON_PRIMARY_CONTAINER` |
+| `List.cellFocusColor`, `Table.cellFocusColor` | `PRIMARY` |
 | `Table.gridColor` | `OUTLINE_VARIANT` |
 | `TableHeader.background` | `SURFACE_CONTAINER_HIGH` |
 | `TableHeader.foreground` | `ON_SURFACE_VARIANT` |
@@ -238,7 +247,7 @@ The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes
 | `Slider.background` | `SURFACE` |
 | `Slider.trackColor` | `SURFACE_VARIANT` — inactive (unfilled) track |
 | `Slider.trackValueColor` | `PRIMARY` — active (filled) track |
-| `Slider.thumbColor` | `PRIMARY` |
+| `Slider.thumbColor`, `Slider.focusedColor` | `PRIMARY` |
 | `MenuBar.background` | `SURFACE` |
 | `MenuBar.foreground`, `MenuItem.foreground`, `Menu.foreground` | `ON_SURFACE` |
 | `PopupMenu.background` | `SURFACE_CONTAINER_HIGH` |
