@@ -142,68 +142,13 @@ Total: 12 + 4 + 11 + 2 + 3 + 3 + 2 + 12 = **49**.
 
 ### 1.2 M3 baseline reference values
 
-The M3 *baseline* scheme — the default the M3 theme builder produces before a custom source color is chosen. Ships as `MaterialPalettes.baseline()`.
+The M3 *baseline* scheme — the default the M3 theme builder produces before a custom source color is chosen — ships as `MaterialPalettes.baseline()`.
 
-> **Verification note:** the hex values below are the M3 baseline scheme recorded for reference. Before they become `MaterialPalettes.baseline()` in code, transcribe them from a current M3 theme builder export — that export, not this table, is the authoritative source. The locked decision here is the **role set** (§1.1); these values are reference data pending generator verification.
-
-**Mode-varying roles (37)**
-
-| Role | Light | Dark |
-|---|---|---|
-| `primary` | `#6750A4` | `#D0BCFF` |
-| `onPrimary` | `#FFFFFF` | `#381E72` |
-| `primaryContainer` | `#EADDFF` | `#4F378B` |
-| `onPrimaryContainer` | `#4F378B` | `#EADDFF` |
-| `secondary` | `#625B71` | `#CCC2DC` |
-| `onSecondary` | `#FFFFFF` | `#332D41` |
-| `secondaryContainer` | `#E8DEF8` | `#4A4458` |
-| `onSecondaryContainer` | `#4A4458` | `#E8DEF8` |
-| `tertiary` | `#7D5260` | `#EFB8C8` |
-| `onTertiary` | `#FFFFFF` | `#492532` |
-| `tertiaryContainer` | `#FFD8E4` | `#633B48` |
-| `onTertiaryContainer` | `#633B48` | `#FFD8E4` |
-| `error` | `#B3261E` | `#F2B8B5` |
-| `onError` | `#FFFFFF` | `#601410` |
-| `errorContainer` | `#F9DEDC` | `#8C1D18` |
-| `onErrorContainer` | `#8C1D18` | `#F9DEDC` |
-| `surface` | `#FEF7FF` | `#141218` |
-| `onSurface` | `#1D1B20` | `#E6E0E9` |
-| `surfaceVariant` | `#E7E0EC` | `#49454F` |
-| `onSurfaceVariant` | `#49454F` | `#CAC4D0` |
-| `surfaceDim` | `#DED8E1` | `#141218` |
-| `surfaceBright` | `#FEF7FF` | `#3B383E` |
-| `surfaceContainerLowest` | `#FFFFFF` | `#0F0D13` |
-| `surfaceContainerLow` | `#F7F2FA` | `#1D1B20` |
-| `surfaceContainer` | `#F3EDF7` | `#211F26` |
-| `surfaceContainerHigh` | `#ECE6F0` | `#2B2930` |
-| `surfaceContainerHighest` | `#E6E0E9` | `#36343B` |
-| `outline` | `#79747E` | `#938F99` |
-| `outlineVariant` | `#CAC4D0` | `#49454F` |
-| `inverseSurface` | `#322F35` | `#E6E0E9` |
-| `inverseOnSurface` | `#F5EFF7` | `#322F35` |
-| `inversePrimary` | `#D0BCFF` | `#6750A4` |
-| `shadow` | `#000000` | `#000000` |
-| `scrim` | `#000000` | `#000000` |
-| `surfaceTint` | `#6750A4` | `#D0BCFF` |
-| `background` | `#FEF7FF` | `#141218` |
-| `onBackground` | `#1D1B20` | `#E6E0E9` |
-
-**Fixed roles (12)** — single value, identical in light and dark:
-
-| Role | Value |
-|---|---|
-| `primaryFixed` | `#EADDFF` |
-| `primaryFixedDim` | `#D0BCFF` |
-| `onPrimaryFixed` | `#21005D` |
-| `onPrimaryFixedVariant` | `#4F378B` |
-| `secondaryFixed` | `#E8DEF8` |
-| `secondaryFixedDim` | `#CCC2DC` |
-| `onSecondaryFixed` | `#1D192B` |
-| `onSecondaryFixedVariant` | `#4A4458` |
-| `tertiaryFixed` | `#FFD8E4` |
-| `tertiaryFixedDim` | `#EFB8C8` |
-| `onTertiaryFixed` | `#31111D` |
-| `onTertiaryFixedVariant` | `#633B48` |
+> **Verification note (resolved 2026-05-14):** the original draft of this section carried a hand-recorded hex table flagged as "reference data pending generator verification." That verification is now done. The authoritative baseline values were transcribed from an operator-supplied M3 theme builder export and live in **`src/main/resources/com/owspfm/ui/components/theme/palettes/baseline.json`** — that file, loaded by `PaletteLoader`, is the single source of truth. The schema and the (mechanical, automatable) conversion from the M3 export are documented in **Appendix B of `flatcomp-theme-install-api.md`**.
+>
+> Four roles the current M3 builder omits are derived by canonical M3 rule: `surfaceTint` = `primary`, `background` = `surface`, `onBackground` = `onSurface`, and `surfaceVariant` from the M3 baseline reference (consistent with the export's `onSurfaceVariant`).
+>
+> The locked decision in this document remains the **role set** (§1.1) — 49 roles, 37 mode-varying + 12 mode-invariant fixed. The concrete values are palette data, not a locked decision, and are owned by the JSON resource.
 
 ### 1.3 What is and isn't deferred
 

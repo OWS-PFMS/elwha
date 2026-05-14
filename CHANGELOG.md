@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Design-token foundation** ([epic #30](https://github.com/OWS-PFMS/flatcomp/issues/30)) — the token layer the design-system direction is built on, implemented under the new `com.owspfm.ui.components.theme` package. No component code; foundation only.
+    - **Token facade enums** ([#32](https://github.com/OWS-PFMS/flatcomp/issues/32)) — `ColorRole` (49 roles, the full M3 scheme, with `on`-pairing lookup and baseline fallback), `ShapeScale` (7), `SpaceScale` (6), `TypeRole` (12), `StateLayer` (5, with sRGB overlay blending). Every enum resolves from `UIManager` under the `FlatComp.*` namespace at call time per the taxonomy's paint-time binding rule.
+    - **`FlatCompTheme` install API** ([#33](https://github.com/OWS-PFMS/flatcomp/issues/33)) — `Palette` (completeness-validated 49-role color map), `Theme` (`{light, dark}`), `Mode` (`LIGHT` / `DARK` / `SYSTEM` with install-time OS detection), `Typography`, `Config`, and the static `FlatCompTheme.install(Config)` facade running the locked 8-step sequence. Idempotent and re-callable — runtime theme/mode switching is just re-installing.
+    - **FlatLaf-native key mapping** ([#34](https://github.com/OWS-PFMS/flatcomp/issues/34)) — `FlatLafKeyMapping` maps a curated subset of FlatLaf's `UIManager` keys onto token roles (and bakes M3 state-layer overlays into FlatLaf's discrete `*hoverBackground` keys) so raw Swing inherits the design language. Enumerated as Appendix A of `flatcomp-theme-install-api.md`.
+    - **Baseline palette + JSON loader** ([#35](https://github.com/OWS-PFMS/flatcomp/issues/35)) — `MaterialPalettes.baseline()` ships the M3 baseline scheme as a FlatComp-normalized JSON resource loaded by `PaletteLoader`. Schema and the M3-export conversion are Appendix B of `flatcomp-theme-install-api.md`.
+- **Bundled Inter font** — the Inter Regular and Medium faces ship under `src/main/resources/com/owspfm/ui/components/theme/fonts/` (SIL OFL 1.1), giving `Typography.defaults()` real M3 400/500 weight rendering. Attribution added to `NOTICE`.
+- **`ThemePlayground`** — interactive visual harness for the token foundation (color-role swatches, the type scale, and a raw-Swing-next-to-`FlatChip` components gallery with a live light/dark/system mode toggle).
+
 ### Changed
 
 - **`FlatPill` renamed to `FlatChip`** ([epic #27](https://github.com/OWS-PFMS/flatcomp/issues/27)) — aligns the component name with Material Design's chip taxonomy. **Breaking change** for any consumer importing the old names, even though no consumer has shipped yet against this lib. The rename is mechanical and 1:1; no behavior changes.

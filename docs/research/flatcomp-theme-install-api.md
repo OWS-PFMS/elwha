@@ -171,4 +171,125 @@ All five questions that gated the lock, resolved 2026-05-14:
 | Q4 | Palette JSON schema — M3 builder's native export shape, or a FlatComp-normalized shape? | **FlatComp-normalized schema** (1:1 with `ColorRole`), with a documented, automatable conversion from the M3 export. |
 | Q5 | Is `FlatCompTheme` a static facade or an instantiable object? | **Static facade** — one LAF per JVM (design-direction §12), so a global static API matches physical reality. |
 
-With the theme API fixed, the next deliverables are the `FlatChip` variant retrofit (design-direction §15 step 4 — variants expressed as token role-sets) and the FlatLaf-native key-mapping appendix (Q1).
+With the theme API fixed, the next deliverable is the `FlatChip` variant retrofit (design-direction §15 step 4 — variants expressed as token role-sets). The FlatLaf-native key-mapping appendix (Q1) and the palette JSON schema (Q4) are delivered below as Appendix A and Appendix B.
+
+---
+
+## Appendix A — FlatLaf-native key mapping (locked)
+
+**Status:** LOCKED. The curated FlatLaf `UIManager` key → token role mapping resolving Q1. Implemented in `FlatLafKeyMapping` and applied by `install()` as steps 5 and 6. **Visual validation in the playground (`ThemePlayground`) is still pending an operator eyeball — the table below is the locked intent; a role reassignment after visual review is an appendix amendment, not an API change.**
+
+The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes hundreds of keys; FlatComp maps the ones that make raw Swing read as coherent next to a `FlatChip`.
+
+### A.1 Static keys — direct role assignments (`applyStaticKeys`)
+
+| FlatLaf key | Role / token |
+|---|---|
+| `Component.focusColor`, `Component.focusedBorderColor` | `PRIMARY` |
+| `Component.borderColor` | `OUTLINE` |
+| `Component.disabledBorderColor` | `OUTLINE_VARIANT` |
+| `Component.arc` | `ShapeScale.SM` |
+| `Component.error.borderColor`, `Component.error.focusedBorderColor` | `ERROR` |
+| `Panel.background`, `Viewport.background`, `RootPane.background` | `SURFACE` |
+| `Panel.foreground`, `Label.foreground` | `ON_SURFACE` |
+| `Label.disabledForeground` | `ON_SURFACE_VARIANT` |
+| `Separator.foreground` | `OUTLINE_VARIANT` |
+| `Button.background`, `ToggleButton.background` | `SURFACE_CONTAINER_LOW` |
+| `Button.foreground`, `ToggleButton.foreground` | `ON_SURFACE` |
+| `Button.borderColor` | `OUTLINE` |
+| `Button.disabledBorderColor` | `OUTLINE_VARIANT` |
+| `Button.default.background`, `Button.default.borderColor` | `PRIMARY` |
+| `Button.default.foreground` | `ON_PRIMARY` |
+| `ToggleButton.selectedBackground` | `PRIMARY_CONTAINER` |
+| `ToggleButton.selectedForeground` | `ON_PRIMARY_CONTAINER` |
+| `TextField.background`, `FormattedTextField.background`, `PasswordField.background`, `TextArea.background`, `EditorPane.background` | `SURFACE` |
+| `TextField.foreground`, `FormattedTextField.foreground`, `PasswordField.foreground`, `TextArea.foreground`, `EditorPane.foreground` | `ON_SURFACE` |
+| `TextField.placeholderForeground` | `ON_SURFACE_VARIANT` |
+| `TextComponent.selectionBackground` | `PRIMARY_CONTAINER` |
+| `TextComponent.selectionForeground` | `ON_PRIMARY_CONTAINER` |
+| `ComboBox.background`, `Spinner.background` | `SURFACE` |
+| `ComboBox.foreground`, `Spinner.foreground` | `ON_SURFACE` |
+| `ComboBox.buttonBackground` | `SURFACE_CONTAINER_LOW` |
+| `CheckBox.background`, `RadioButton.background` | `SURFACE` |
+| `CheckBox.foreground`, `RadioButton.foreground` | `ON_SURFACE` |
+| `CheckBox.icon.selectedBackground`, `RadioButton.icon.selectedBackground` | `PRIMARY` |
+| `CheckBox.icon.checkmarkColor`, `RadioButton.icon.centerColor` | `ON_PRIMARY` |
+| `List.background`, `Table.background`, `Tree.background` | `SURFACE` |
+| `List.foreground`, `Table.foreground`, `Tree.foreground` | `ON_SURFACE` |
+| `List.selectionBackground`, `Table.selectionBackground`, `Tree.selectionBackground` | `PRIMARY_CONTAINER` |
+| `List.selectionForeground`, `Table.selectionForeground`, `Tree.selectionForeground` | `ON_PRIMARY_CONTAINER` |
+| `Table.gridColor` | `OUTLINE_VARIANT` |
+| `TableHeader.background` | `SURFACE_CONTAINER_HIGH` |
+| `TableHeader.foreground` | `ON_SURFACE_VARIANT` |
+| `ScrollPane.background`, `ScrollBar.track` | `SURFACE` |
+| `ScrollBar.thumb` | `OUTLINE_VARIANT` |
+| `ScrollBar.hoverThumbColor` | `OUTLINE` |
+| `ScrollBar.pressedThumbColor` | `ON_SURFACE_VARIANT` |
+| `TabbedPane.background` | `SURFACE` |
+| `TabbedPane.foreground` | `ON_SURFACE_VARIANT` |
+| `TabbedPane.selectedForeground` | `ON_SURFACE` |
+| `TabbedPane.underlineColor` | `PRIMARY` |
+| `ProgressBar.background` | `SURFACE_VARIANT` |
+| `ProgressBar.foreground` | `PRIMARY` |
+| `Slider.background` | `SURFACE` |
+| `Slider.trackColor` | `SURFACE_VARIANT` |
+| `Slider.thumbColor` | `PRIMARY` |
+| `MenuBar.background` | `SURFACE` |
+| `MenuBar.foreground`, `MenuItem.foreground`, `Menu.foreground` | `ON_SURFACE` |
+| `PopupMenu.background` | `SURFACE_CONTAINER_HIGH` |
+| `ToolTip.background` | `INVERSE_SURFACE` |
+| `ToolTip.foreground` | `INVERSE_ON_SURFACE` |
+
+### A.2 State-layer keys — computed and baked (`applyStateLayerKeys`)
+
+Each value is the M3 state-layer overlay alpha-blended over a base role, baked once per install (install-API §5).
+
+| FlatLaf key | Overlay | Base → tint |
+|---|---|---|
+| `Button.hoverBackground`, `ToggleButton.hoverBackground` | `HOVER` | `SURFACE_CONTAINER_LOW` → `ON_SURFACE` |
+| `Button.pressedBackground`, `ToggleButton.pressedBackground` | `PRESSED` | `SURFACE_CONTAINER_LOW` → `ON_SURFACE` |
+| `Button.focusedBackground` | `FOCUS` | `SURFACE_CONTAINER_LOW` → `ON_SURFACE` |
+| `Button.default.hoverBackground` | `HOVER` | `PRIMARY` → `ON_PRIMARY` |
+| `Button.default.pressedBackground` | `PRESSED` | `PRIMARY` → `ON_PRIMARY` |
+| `Button.default.focusedBackground` | `FOCUS` | `PRIMARY` → `ON_PRIMARY` |
+| `List.hoverBackground`, `Table.hoverBackground`, `Tree.hoverBackground`, `MenuItem.hoverBackground`, `TabbedPane.hoverColor` | `HOVER` | `SURFACE` → `ON_SURFACE` |
+| `List.selectionInactiveBackground` | `SELECTED` | `SURFACE` → `ON_SURFACE` |
+| `TabbedPane.focusColor` | `FOCUS` | `SURFACE` → `PRIMARY` |
+| `ComboBox.buttonHoverBackground` | `HOVER` | `SURFACE_CONTAINER_LOW` → `ON_SURFACE` |
+| `ComboBox.buttonPressedBackground` | `PRESSED` | `SURFACE_CONTAINER_LOW` → `ON_SURFACE` |
+| `MenuItem.selectionBackground` | (direct) | `PRIMARY_CONTAINER` |
+
+---
+
+## Appendix B — Palette JSON schema (locked)
+
+**Status:** LOCKED. The FlatComp-normalized palette JSON schema resolving Q4. Loaded by `PaletteLoader`; the bundled `MaterialPalettes.baseline()` resource is its reference instance.
+
+### B.1 Shape
+
+A single JSON object:
+
+```json
+{
+  "name": "Material Baseline",
+  "description": "optional free text — ignored by the loader",
+  "light": { "<roleKey>": "#rrggbb", ... 49 entries },
+  "dark":  { "<roleKey>": "#rrggbb", ... 49 entries }
+}
+```
+
+- `name` — string. The `Theme` name. Falls back to the resource path if absent.
+- `description` — optional string, ignored by the loader (provenance / notes only).
+- `light` / `dark` — objects, each holding **all 49** `ColorRole` keys in `camelCase` (`primary`, `onPrimaryContainer`, `surfaceContainerHighest`, …) mapped to a `#rrggbb` hex string.
+- Completeness is enforced at load: `Palette.Builder.build()` reports every missing role at once. Unknown keys are ignored.
+- The 12 mode-invariant **fixed** roles appear in *both* `light` and `dark` with identical values.
+
+### B.2 Conversion from the M3 theme builder export
+
+The M3 builder exports CSS custom properties named `--md-sys-color-<role>-<mode>` (e.g. `--md-sys-color-on-primary-container-light`). The automatable conversion is mechanical:
+
+1. Strip the `--md-sys-color-` prefix and the `-light` / `-dark` suffix; route each into the matching mode object.
+2. Convert the hyphenated role name to `camelCase` (`on-primary-container` → `onPrimaryContainer`).
+3. Four roles the current M3 builder omits are **derived by canonical M3 rule**: `surfaceTint` = `primary`, `background` = `surface`, `onBackground` = `onSurface`, and `surfaceVariant` from the M3 baseline reference (consistent with the export's `onSurfaceVariant`).
+
+The baseline resource (`src/main/resources/com/owspfm/ui/components/theme/palettes/baseline.json`) was produced this way from an operator-supplied M3 builder export, with the four derived roles filled per step 3.
