@@ -59,6 +59,7 @@ public final class ThemePlayground {
 
   private final List<Runnable> tokenRefreshers = new ArrayList<>();
   private JLabel statusLabel;
+  private JButton defaultButton;
 
   private ThemePlayground() {}
 
@@ -89,6 +90,9 @@ public final class ThemePlayground {
     root.add(tabs, java.awt.BorderLayout.CENTER);
 
     frame.setContentPane(root);
+    if (defaultButton != null) {
+      frame.getRootPane().setDefaultButton(defaultButton);
+    }
     frame.setSize(960, 720);
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
@@ -212,8 +216,9 @@ public final class ThemePlayground {
     row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
 
     JButton normal = new JButton("Button");
-    JButton primary = new JButton("Default");
-    primary.putClientProperty("JButton.buttonType", "default");
+    // Becomes the frame's default button in buildAndShow() — the genuine FlatLaf mechanism for
+    // the emphasis-button look, rather than a client property.
+    defaultButton = new JButton("Default");
     JToggleButton toggle = new JToggleButton("Toggle");
     toggle.setSelected(true);
     JTextField field = new JTextField("Text field", 12);
@@ -233,7 +238,7 @@ public final class ThemePlayground {
     listScroll.setPreferredSize(new Dimension(140, 80));
 
     row.add(normal);
-    row.add(primary);
+    row.add(defaultButton);
     row.add(toggle);
     row.add(field);
     row.add(check);

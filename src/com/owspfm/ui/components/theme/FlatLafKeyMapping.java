@@ -88,6 +88,14 @@ final class FlatLafKeyMapping {
     putColor("Button.default.background", primary);
     putColor("Button.default.foreground", onPrimary);
     putColor("Button.default.borderColor", primary);
+    // Focus: every *.focused* key must be mapped — an unmapped one falls through to FlatLaf's
+    // blue default. focusedBackground is set equal to the normal background so focus does not
+    // swap the fill (which reads as a stuck pressed / toggled state); a focused button is
+    // distinguished only by its border color.
+    putColor("Button.focusedBackground", surfaceContainerLow);
+    putColor("Button.focusedBorderColor", primary);
+    putColor("Button.default.focusedBackground", primary);
+    putColor("Button.default.focusColor", onPrimary);
     putColor("ToggleButton.background", surfaceContainerLow);
     putColor("ToggleButton.foreground", onSurface);
     putColor("ToggleButton.selectedBackground", primaryContainer);
