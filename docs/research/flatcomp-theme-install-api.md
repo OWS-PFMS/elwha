@@ -200,6 +200,10 @@ The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes
 | `Button.disabledBorderColor` | `OUTLINE_VARIANT` |
 | `Button.default.background`, `Button.default.borderColor` | `PRIMARY` |
 | `Button.default.foreground` | `ON_PRIMARY` |
+| `Button.focusedBackground` | `SURFACE_CONTAINER_LOW` — equal to `Button.background`; focus must not swap the fill |
+| `Button.focusedBorderColor` | `PRIMARY` — focus shows as a colored border |
+| `Button.default.focusedBackground` | `PRIMARY` — equal to `Button.default.background` |
+| `Button.default.focusColor` | `ON_PRIMARY` |
 | `ToggleButton.selectedBackground` | `PRIMARY_CONTAINER` |
 | `ToggleButton.selectedForeground` | `ON_PRIMARY_CONTAINER` |
 | `TextField.background`, `FormattedTextField.background`, `PasswordField.background`, `TextArea.background`, `EditorPane.background` | `SURFACE` |
