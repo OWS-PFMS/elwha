@@ -9,7 +9,7 @@ Bugs, feature requests, and design discussions: [GitHub Issues](https://github.c
 When filing an issue, include:
 
 - Java + FlatLaf version
-- A minimal reproducer (the playground apps are a good base — `FlatChipPlayground`, `FlatCardListShowcase`)
+- A minimal reproducer (the playground apps are a good base — `FlatChipPlayground`, `FlatCardPlayground`)
 - Screenshot or screen recording for visual bugs
 
 ## Development
@@ -26,7 +26,7 @@ Produces `target/flatcomp-<version>.jar`, `flatcomp-<version>-sources.jar`, and 
 
 ```bash
 mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.chip.FlatChipPlayground"
-mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.card.playground.FlatCardListShowcase"
+mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.card.playground.FlatCardPlayground"
 ```
 
 ### Java version

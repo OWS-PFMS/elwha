@@ -93,7 +93,7 @@ public class Demo {
 
 The library ships interactive playground apps that exercise the full surface of each component family:
 
-- `com.owspfm.ui.components.card.playground.FlatCardListShowcase`
+- `com.owspfm.ui.components.card.playground.FlatCardPlayground`
 - `com.owspfm.ui.components.chip.FlatChipPlayground`
 
 Run them directly from a checkout: `mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.chip.FlatChipPlayground"`.

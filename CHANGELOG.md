@@ -33,7 +33,7 @@ Initial release. Library extracted from the [OWS-Local-Search-GUI](https://githu
 - **`FlatPillList<T>`** — list of `FlatPill` items with selection modes (`NONE` / `SINGLE` / `SINGLE_MANDATORY` / `MULTIPLE`), drag-to-reorder, pinned-partition + anchored modes (`MovementMode` enum), icon affordances (`IconAffordance` enum).
 - **`FlatList<T>`** — shared cross-cutting interface implemented by both `FlatCardList` and `FlatPillList` (orientation, gap, padding, empty / loading state, filter, sort).
 - **`MaterialIcons`** — helper that exposes 17 Material Symbols SVGs (Rounded / 400 / fill0 / 20px) via `FlatSVGIcon` with a theme-aware color filter.
-- **`FlatCardListShowcase`** — interactive playground for the card list family.
+- **`FlatCardPlayground`** — interactive playground for the card family (embeds `FlatCardListShowcase` + `GalleryPanel` panels for the list view, single-card variants, and cycle/cursor examples).
 - **`FlatPillPlayground`** — interactive playground for the pill list family, including a LAF tweak panel for live UIManager-key experimentation.
 
 ### Notes

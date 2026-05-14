@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 mvn clean package                                                    # → target/flatcomp-<version>.jar + sources + javadoc jars
 mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.chip.FlatChipPlayground"
-mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.card.playground.FlatCardListShowcase"
+mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.card.playground.FlatCardPlayground"
 ```
 
 **No tests yet.** The lib has zero JUnit tests today — components are validated visually via the two playground apps above. There's no test infrastructure to lean on; if you change behavior, exercise the playground.
@@ -30,7 +30,7 @@ Component packages under `src/com/owspfm/ui/components/`:
 |---|---|
 | `card/` | `FlatCard` primitive + variants (`FILLED` / `OUTLINED` / `GHOST` / `WARM_ACCENT`) + interaction modes |
 | `card/list/` | `FlatCardList<T>` + `CardListModel` + `CardSelectionModel` + drag-handle cursor PNGs |
-| `card/playground/` | `FlatCardListShowcase` interactive demo |
+| `card/playground/` | `FlatCardPlayground` interactive demo (embeds `FlatCardListShowcase` + `GalleryPanel` panels) |
 | `chip/` | `FlatChip` + variants + interaction modes |
 | `chip/list/` | `FlatChipList<T>` + `ChipListModel` + `ChipSelectionModel` (including `SINGLE_MANDATORY` tab-strip semantics) + `MovementMode` + `IconAffordance` |
 | `flatlist/` | `FlatList<T>` — the narrow cross-cutting interface both list families implement (orientation / gap / padding / empty / loading / filter / sort). **Does not include selection or drag-reorder by design** — those are family-specific today (see epic #252) |
