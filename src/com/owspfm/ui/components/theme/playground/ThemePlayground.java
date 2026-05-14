@@ -309,15 +309,31 @@ public final class ThemePlayground {
     @Override
     protected void paintComponent(Graphics g) {
       Color fill = role.resolve();
-      Color text = role.on().map(ColorRole::resolve).orElse(ColorRole.ON_SURFACE.resolve());
       g.setColor(fill);
       g.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
       g.setColor(ColorRole.OUTLINE_VARIANT.resolve());
       g.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
-      g.setColor(text);
+      g.setColor(labelColor(fill));
       g.setFont(getFont().deriveFont(Font.PLAIN, 11f));
       g.drawString(role.name(), 10, 22);
       g.drawString(toHex(fill), 10, 40);
+    }
+
+    // Surface roles pair with a contrast-guaranteed on-role; the ON_* roles and the utility
+    // colors (shadow / scrim / surfaceTint) have no on-pair — they are never a surface a
+    // component paints text onto — so this swatch chart falls back to a luminance-picked
+    // black/white. This is a display concern of the chart, not a gap in the token system.
+    private Color labelColor(Color fill) {
+      return role.on().map(ColorRole::resolve).orElseGet(() -> readableOn(fill));
+    }
+
+    private static Color readableOn(Color background) {
+      double luminance =
+          (0.299 * background.getRed()
+                  + 0.587 * background.getGreen()
+                  + 0.114 * background.getBlue())
+              / 255.0;
+      return luminance > 0.55 ? Color.BLACK : Color.WHITE;
     }
 
     private static String toHex(Color color) {
