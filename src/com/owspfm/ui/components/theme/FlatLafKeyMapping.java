@@ -161,6 +161,7 @@ final class FlatLafKeyMapping {
     putColor("ProgressBar.foreground", primary);
     putColor("Slider.background", surface);
     putColor("Slider.trackColor", surfaceVariant);
+    putColor("Slider.trackValueColor", primary);
     putColor("Slider.thumbColor", primary);
 
     // --- Menus ---
@@ -198,14 +199,14 @@ final class FlatLafKeyMapping {
 
     Color buttonHover = StateLayer.HOVER.over(surfaceContainerLow, onSurface);
     Color buttonPressed = StateLayer.PRESSED.over(surfaceContainerLow, onSurface);
-    Color buttonFocused = StateLayer.FOCUS.over(surfaceContainerLow, onSurface);
 
+    // Hover and pressed only — deliberately no *.focusedBackground bake. Focus is shown by
+    // FlatLaf's focus ring (Component.focusColor); a focused-background fill persists after a
+    // click and reads as a stuck "pressed" / toggled state, which it is not.
     putColor("Button.hoverBackground", buttonHover);
     putColor("Button.pressedBackground", buttonPressed);
-    putColor("Button.focusedBackground", buttonFocused);
     putColor("Button.default.hoverBackground", StateLayer.HOVER.over(primary, onPrimary));
     putColor("Button.default.pressedBackground", StateLayer.PRESSED.over(primary, onPrimary));
-    putColor("Button.default.focusedBackground", StateLayer.FOCUS.over(primary, onPrimary));
 
     putColor("ToggleButton.hoverBackground", buttonHover);
     putColor("ToggleButton.pressedBackground", buttonPressed);

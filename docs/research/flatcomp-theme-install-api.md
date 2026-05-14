@@ -101,7 +101,7 @@ The bridge that makes raw Swing inherit the theme. FlatLaf exposes hundreds of `
 |---|---|---|
 | `Button.background` | `surface` | default (non-emphasis) button |
 | `Button.foreground` | `onSurface` | |
-| `Button.focusedBackground` | `SELECTED` over `surface` | baked, see §5 |
+| `Button.hoverBackground` | `HOVER` over `surfaceContainerLow` | baked, see §5 |
 | `Component.focusColor` | `primary` | focus ring |
 | `Component.borderColor` | `outline` | |
 | `Component.arc` | `ShapeScale.SM.px()` | global default corner radius |
@@ -232,7 +232,8 @@ The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes
 | `ProgressBar.background` | `SURFACE_VARIANT` |
 | `ProgressBar.foreground` | `PRIMARY` |
 | `Slider.background` | `SURFACE` |
-| `Slider.trackColor` | `SURFACE_VARIANT` |
+| `Slider.trackColor` | `SURFACE_VARIANT` — inactive (unfilled) track |
+| `Slider.trackValueColor` | `PRIMARY` — active (filled) track |
 | `Slider.thumbColor` | `PRIMARY` |
 | `MenuBar.background` | `SURFACE` |
 | `MenuBar.foreground`, `MenuItem.foreground`, `Menu.foreground` | `ON_SURFACE` |
@@ -248,10 +249,8 @@ Each value is the M3 state-layer overlay alpha-blended over a base role, baked o
 |---|---|---|
 | `Button.hoverBackground`, `ToggleButton.hoverBackground` | `HOVER` | `SURFACE_CONTAINER_LOW` → `ON_SURFACE` |
 | `Button.pressedBackground`, `ToggleButton.pressedBackground` | `PRESSED` | `SURFACE_CONTAINER_LOW` → `ON_SURFACE` |
-| `Button.focusedBackground` | `FOCUS` | `SURFACE_CONTAINER_LOW` → `ON_SURFACE` |
 | `Button.default.hoverBackground` | `HOVER` | `PRIMARY` → `ON_PRIMARY` |
 | `Button.default.pressedBackground` | `PRESSED` | `PRIMARY` → `ON_PRIMARY` |
-| `Button.default.focusedBackground` | `FOCUS` | `PRIMARY` → `ON_PRIMARY` |
 | `List.hoverBackground`, `Table.hoverBackground`, `Tree.hoverBackground`, `MenuItem.hoverBackground`, `TabbedPane.hoverColor` | `HOVER` | `SURFACE` → `ON_SURFACE` |
 | `List.selectionInactiveBackground` | `SELECTED` | `SURFACE` → `ON_SURFACE` |
 | `TabbedPane.focusColor` | `FOCUS` | `SURFACE` → `PRIMARY` |
