@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- **`FlatPill` renamed to `FlatChip`** ([epic #27](https://github.com/OWS-PFMS/flatcomp/issues/27)) — aligns the component name with Material Design's chip taxonomy. **Breaking change** for any consumer importing the old names, even though no consumer has shipped yet against this lib. The rename is mechanical and 1:1; no behavior changes.
+    - **Package:** `com.owspfm.ui.components.pill` → `com.owspfm.ui.components.chip`; `pill.list` → `chip.list`.
+    - **Classes:** every `FlatPill*` and `Pill*` type renamed (`FlatPill` → `FlatChip`, `FlatPillList` → `FlatChipList`, `FlatPillPlayground` → `FlatChipPlayground`, `FlatPillDemo` → `FlatChipDemo`, `PillVariant` → `ChipVariant`, `PillInteractionMode` → `ChipInteractionMode`, `PillListModel` / `DefaultPillListModel` → `ChipListModel` / `DefaultChipListModel`, `PillSelectionModel` / `DefaultPillSelectionModel` → `ChipSelectionModel` / `DefaultChipSelectionModel`, `PillSelectionMode` → `ChipSelectionMode`, `PillSelectionEvent` / `PillSelectionListener` → `ChipSelectionEvent` / `ChipSelectionListener`, `PillAdapter` → `ChipAdapter`, `PillReorderEvent` / `PillReorderListener` → `ChipReorderEvent` / `ChipReorderListener`, `PillListDataEvent` / `PillListDataListener` → `ChipListDataEvent` / `ChipListDataListener`).
+    - **UIManager keys:** every `"FlatPill.*"` string value renamed to `"FlatChip.*"` (`FlatChip.background`, `FlatChip.hoverBackground`, `FlatChip.padding`, `FlatChip.arc`, `FlatChip.warmAccent`, `FlatChip.foreground`, …). Java constant names (`K_*`, `STYLE_PROPERTY`) are unchanged; only the string values move. The client-property key `"FlatPill.style"` is now `"FlatChip.style"`, and the ad-hoc `"FlatPill.removeIcon"` override slot used by the playground is now `"FlatChip.removeIcon"`.
+    - **Consumer migration:** any consumer that previously overrode `UIManager.put("FlatPill.*", ...)` at app startup must update its overrides to the `FlatChip.*` namespace. Imports of `com.owspfm.ui.components.pill.*` must update to `com.owspfm.ui.components.chip.*`. Tracked downstream in [OWS-PFMS/OWS-Local-Search-GUI#258](https://github.com/OWS-PFMS/OWS-Local-Search-GUI/issues/258).
+    - **History:** the component was originally named `FlatPill` because its shape is a capsule ("pill"); the Material industry-standard name is "chip" for interactive token elements (input / choice / filter / action chips). Pre-flight inventory of every renamed touchpoint lives at `docs/research/flatpill-to-flatchip-rename-inventory.md`.
 - **Naming convention switched to Google Java Style** ([epic #5](https://github.com/OWS-PFMS/flatcomp/issues/5)). Every `my*`-prefixed instance field and every `the*`-prefixed parameter / local was renamed to its unprefixed equivalent across the source tree. Public API parameter names move with this change — Java does not bind to parameter names at the call site, but Javadoc `@param` references and consumers reading reflection metadata will see the new names. No method signatures, class names, package names, or behavior changed.
 
 ### Tooling
@@ -27,7 +33,7 @@ Initial release. Library extracted from the [OWS-Local-Search-GUI](https://githu
 - **`FlatPillList<T>`** — list of `FlatPill` items with selection modes (`NONE` / `SINGLE` / `SINGLE_MANDATORY` / `MULTIPLE`), drag-to-reorder, pinned-partition + anchored modes (`MovementMode` enum), icon affordances (`IconAffordance` enum).
 - **`FlatList<T>`** — shared cross-cutting interface implemented by both `FlatCardList` and `FlatPillList` (orientation, gap, padding, empty / loading state, filter, sort).
 - **`MaterialIcons`** — helper that exposes 17 Material Symbols SVGs (Rounded / 400 / fill0 / 20px) via `FlatSVGIcon` with a theme-aware color filter.
-- **`FlatCardListShowcase`** — interactive playground for the card list family.
+- **`FlatCardPlayground`** — interactive playground for the card family (embeds `FlatCardListShowcase` + `GalleryPanel` panels for the list view, single-card variants, and cycle/cursor examples).
 - **`FlatPillPlayground`** — interactive playground for the pill list family, including a LAF tweak panel for live UIManager-key experimentation.
 
 ### Notes

@@ -2,7 +2,7 @@ package com.owspfm.ui.components.flatlist;
 
 /**
  * Layout orientation shared across the {@code FlatList} component family ({@code FlatCardList},
- * {@code FlatPillList}, and future siblings).
+ * {@code FlatChipList}, and future siblings).
  *
  * <p>Hoisted out of the per-family inner enums in story #237 so that consumers can write code
  * against the abstraction:
@@ -15,7 +15,7 @@ package com.owspfm.ui.components.flatlist;
  *
  * <p>Not every implementation supports every orientation at every release — for instance, {@code
  * FlatCardList} ships VERTICAL and GRID only (HORIZONTAL and WRAP land in #242), while {@code
- * FlatPillList} adds the wider set in #238. Implementations may throw {@link
+ * FlatChipList} adds the wider set in #238. Implementations may throw {@link
  * UnsupportedOperationException} or fall back to a supported orientation; check the
  * implementation's own documentation.
  *

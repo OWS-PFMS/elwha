@@ -1,11 +1,11 @@
-package com.owspfm.ui.components.pill.list;
+package com.owspfm.ui.components.chip.list;
 
 import java.util.EventObject;
 
 /**
- * Fine-grained change event fired by a {@link PillListModel}.
+ * Fine-grained change event fired by a {@link ChipListModel}.
  *
- * <p>Mirrors {@link com.owspfm.ui.components.card.list.CardListDataEvent} but lives in the pill
+ * <p>Mirrors {@link com.owspfm.ui.components.card.list.CardListDataEvent} but lives in the chip
  * namespace so the two component families stay independent. Both eventually share a common base via
  * the {@code components.flatlist} package extracted in story #237 — see that package's {@code
  * package-info} for the cross-family contract.
@@ -23,9 +23,9 @@ import java.util.EventObject;
  * @version v0.1.0
  * @since v0.1.0
  */
-public class PillListDataEvent extends EventObject {
+public class ChipListDataEvent extends EventObject {
 
-  /** The kind of structural change a {@link PillListDataEvent} represents. */
+  /** The kind of structural change a {@link ChipListDataEvent} represents. */
   public enum Type {
     /** One or more contiguous items were inserted at {@code [index0, index1]}. */
     ADDED,
@@ -51,7 +51,7 @@ public class PillListDataEvent extends EventObject {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public PillListDataEvent(
+  public ChipListDataEvent(
       final Object source, final Type type, final int index0, final int index1) {
     super(source);
     this.type = type;

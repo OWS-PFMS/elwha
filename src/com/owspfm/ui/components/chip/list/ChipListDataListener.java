@@ -1,7 +1,7 @@
-package com.owspfm.ui.components.pill.list;
+package com.owspfm.ui.components.chip.list;
 
 /**
- * Receives fine-grained change events from a {@link PillListModel}.
+ * Receives fine-grained change events from a {@link ChipListModel}.
  *
  * <p>Listeners are invoked on the Swing EDT.
  *
@@ -10,7 +10,7 @@ package com.owspfm.ui.components.pill.list;
  * @since v0.1.0
  */
 @FunctionalInterface
-public interface PillListDataListener {
+public interface ChipListDataListener {
 
   /**
    * Invoked after the model state changes.
@@ -19,5 +19,5 @@ public interface PillListDataListener {
    * @version v0.1.0
    * @since v0.1.0
    */
-  void contentsChanged(PillListDataEvent event);
+  void contentsChanged(ChipListDataEvent event);
 }

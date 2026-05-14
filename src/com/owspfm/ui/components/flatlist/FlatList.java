@@ -7,7 +7,7 @@ import javax.swing.JComponent;
 
 /**
  * The shared contract implemented by every {@code FlatList} component family member — {@code
- * FlatCardList}, {@code FlatPillList}, and any future siblings (e.g. {@code FlatTagList}).
+ * FlatCardList}, {@code FlatChipList}, and any future siblings (e.g. {@code FlatTagList}).
  *
  * <p>Extracted in story #237 so consumers can write orientation-agnostic and family-agnostic code:
  *
@@ -29,7 +29,7 @@ import javax.swing.JComponent;
  * </ul>
  *
  * <p>Selection, drag-to-reorder, and per-family model types stay on the concrete classes since they
- * have family-specific signatures ({@code FlatPill} vs {@code FlatCard}, {@code PillSelectionMode}
+ * have family-specific signatures ({@code FlatChip} vs {@code FlatCard}, {@code ChipSelectionMode}
  * vs {@code CardSelectionMode}, etc.). Those cross the abstraction barrier only via the
  * per-implementation API.
  *

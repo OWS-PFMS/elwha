@@ -1,11 +1,11 @@
-package com.owspfm.ui.components.pill.list;
+package com.owspfm.ui.components.chip.list;
 
 import com.owspfm.ui.components.card.list.Cursors;
+import com.owspfm.ui.components.chip.ChipInteractionMode;
+import com.owspfm.ui.components.chip.FlatChip;
 import com.owspfm.ui.components.flatlist.FlatList;
 import com.owspfm.ui.components.flatlist.FlatListOrientation;
 import com.owspfm.ui.components.icons.MaterialIcons;
-import com.owspfm.ui.components.pill.FlatPill;
-import com.owspfm.ui.components.pill.PillInteractionMode;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
@@ -49,24 +49,24 @@ import javax.swing.UIManager;
 import javax.swing.event.MouseInputAdapter;
 
 /**
- * A reusable, observable, model-driven list of {@link FlatPill}s.
+ * A reusable, observable, model-driven list of {@link FlatChip}s.
  *
  * <p>Selection (single / multiple / none), filter, sort, empty / loading state, keyboard
  * navigation, and accessibility ship from sub-story #236; all four {@link FlatListOrientation}
  * values (VERTICAL, HORIZONTAL, WRAP, GRID) are wired by sub-story #238; drag-to-reorder works on
  * every orientation as of sub-story #239. {@link FlatListOrientation#HORIZONTAL} uses a clip+scroll
  * overflow strategy — wrap the list in a {@link javax.swing.JScrollPane} for horizontally-scrolling
- * pill rows.
+ * chip rows.
  *
  * <p><strong>Quick start</strong>:
  *
  * <pre>{@code
- * DefaultPillListModel<Factor> model = new DefaultPillListModel<>(factors);
- * PillAdapter<Factor> adapter =
- *     (factor, idx) -> new FlatPill(factor.name()).setVariant(PillVariant.OUTLINED);
+ * DefaultChipListModel<Factor> model = new DefaultChipListModel<>(factors);
+ * ChipAdapter<Factor> adapter =
+ *     (factor, idx) -> new FlatChip(factor.name()).setVariant(ChipVariant.OUTLINED);
  *
- * FlatPillList<Factor> list = new FlatPillList<>(model, adapter)
- *     .setSelectionMode(PillSelectionMode.SINGLE);
+ * FlatChipList<Factor> list = new FlatChipList<>(model, adapter)
+ *     .setSelectionMode(ChipSelectionMode.SINGLE);
  * list.getSelectionModel().addSelectionListener(evt ->
  *     System.out.println("selection: " + evt.getSelected()));
  * }</pre>
@@ -76,7 +76,7 @@ import javax.swing.event.MouseInputAdapter;
  * @version v0.1.0
  * @since v0.1.0
  */
-public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
+public class FlatChipList<T> extends JPanel implements Accessible, FlatList<T> {
 
   /**
    * Movement semantics for the list. Mutually exclusive — the list is in exactly one mode at a
@@ -92,7 +92,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    */
   public enum MovementMode {
     /**
-     * Pills are display-only. No drag, no Move-Up/Down menu items, no grab cursor; the pin API is
+     * Chips are display-only. No drag, no Move-Up/Down menu items, no grab cursor; the pin API is
      * inert. Default for a fresh list (matches the historical {@code setReorderable(false)}
      * behavior).
      *
@@ -100,7 +100,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
      * @since v0.1.0
      */
     STATIC,
-    /** Pills can be freely reordered via drag. No pinned partition. */
+    /** Chips can be freely reordered via drag. No pinned partition. */
     MOVABLE,
     /**
      * As {@link #MOVABLE}, plus a pinned partition: items reporting {@code true} from the pin
@@ -113,8 +113,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
      */
     PINNED,
     /**
-     * As {@link #MOVABLE}, plus a single-pill anchor: the item reporting {@code true} from the
-     * anchor predicate is locked at the leading slot and cannot be dragged. Non-anchor pills can
+     * As {@link #MOVABLE}, plus a single-chip anchor: the item reporting {@code true} from the
+     * anchor predicate is locked at the leading slot and cannot be dragged. Non-anchor chips can
      * reorder freely but cannot drop onto slot 0. Set as anchor / Remove anchor is auto-injected
      * into the context menu when the predicate, action, and no caller-installed menu are all
      * present. Mutually exclusive with {@link #PINNED}.
@@ -145,9 +145,9 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
      */
     INDICATOR,
     /**
-     * Clickable button. For pin: outline glyph on every pill, filled when pinned; click toggles.
-     * For anchor: persistent filled glyph on the anchored pill; hover-revealed outline glyph on
-     * non-anchored pills; click sets/clears the anchor.
+     * Clickable button. For pin: outline glyph on every chip, filled when pinned; click toggles.
+     * For anchor: persistent filled glyph on the anchored chip; hover-revealed outline glyph on
+     * non-anchored chips; click sets/clears the anchor.
      *
      * @version v0.1.0
      * @since v0.1.0
@@ -158,23 +158,23 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   /** Pixels the cursor must travel from press before a drag is considered activated. */
   static final int DRAG_THRESHOLD = 5;
 
-  private static final Logger LOG = Logger.getLogger(FlatPillList.class.getName());
+  private static final Logger LOG = Logger.getLogger(FlatChipList.class.getName());
   private static final int DEFAULT_GAP = 6;
   private static final int DEFAULT_COLUMNS = 4;
   private static final int ANIMATION_TICK_MS = 16;
 
   // Backing model + adapter -----------------------------------------------
-  private final PillListModel<T> model;
-  private final PillAdapter<T> adapter;
-  private final PillListDataListener modelListener = this::onModelChanged;
-  private final PillSelectionModel<T> selectionModel = new DefaultPillSelectionModel<>();
+  private final ChipListModel<T> model;
+  private final ChipAdapter<T> adapter;
+  private final ChipListDataListener modelListener = this::onModelChanged;
+  private final ChipSelectionModel<T> selectionModel = new DefaultChipSelectionModel<>();
 
   // Configuration ---------------------------------------------------------
   private FlatListOrientation orientation = FlatListOrientation.VERTICAL;
   private int columns = DEFAULT_COLUMNS;
   private int itemGap = DEFAULT_GAP;
   private Insets listPadding = new Insets(DEFAULT_GAP, DEFAULT_GAP, DEFAULT_GAP, DEFAULT_GAP);
-  private PillSelectionMode selectionMode = PillSelectionMode.NONE;
+  private ChipSelectionMode selectionMode = ChipSelectionMode.NONE;
   private MovementMode movementMode = MovementMode.STATIC;
   private boolean reorderWarningLogged;
   private Predicate<T> filter;
@@ -190,11 +190,11 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   private boolean loading;
 
   // Listeners -------------------------------------------------------------
-  private final List<PillReorderListener<T>> reorderListeners = new ArrayList<>();
+  private final List<ChipReorderListener<T>> reorderListeners = new ArrayList<>();
 
   // Render cache: visible items in render order ---------------------------
   private final List<T> visibleItems = new ArrayList<>();
-  private final Map<T, FlatPill> pillByItem = new LinkedHashMap<>();
+  private final Map<T, FlatChip> chipByItem = new LinkedHashMap<>();
   private int focusedVisibleIndex = -1;
   private T selectionAnchor;
 
@@ -205,10 +205,10 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
 
   // Drag state ------------------------------------------------------------
   private DragState drag;
-  private final Map<FlatPill, Integer> displacedX = new HashMap<>();
-  private final Map<FlatPill, Integer> displacedY = new HashMap<>();
-  private final Map<FlatPill, Integer> targetX = new HashMap<>();
-  private final Map<FlatPill, Integer> targetY = new HashMap<>();
+  private final Map<FlatChip, Integer> displacedX = new HashMap<>();
+  private final Map<FlatChip, Integer> displacedY = new HashMap<>();
+  private final Map<FlatChip, Integer> targetX = new HashMap<>();
+  private final Map<FlatChip, Integer> targetY = new HashMap<>();
   private Timer dragAnimTimer;
 
   // ------------------------------------------------------------------ ctor
@@ -217,11 +217,11 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Builds a list bound to the given model and adapter.
    *
    * @param model the backing model (required)
-   * @param adapter the adapter that maps items to pills (required)
+   * @param adapter the adapter that maps items to chips (required)
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPillList(final PillListModel<T> model, final PillAdapter<T> adapter) {
+  public FlatChipList(final ChipListModel<T> model, final ChipAdapter<T> adapter) {
     super(new BorderLayout());
     if (model == null) {
       throw new IllegalArgumentException("model must not be null");
@@ -247,7 +247,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     add(content, BorderLayout.CENTER);
     rebuildPadding();
 
-    model.addPillListDataListener(modelListener);
+    model.addChipListDataListener(modelListener);
     rebuildVisibleItems();
     rebuildContent();
 
@@ -263,7 +263,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public PillListModel<T> getModel() {
+  public ChipListModel<T> getModel() {
     return model;
   }
 
@@ -274,7 +274,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public PillSelectionModel<T> getSelectionModel() {
+  public ChipSelectionModel<T> getSelectionModel() {
     return selectionModel;
   }
 
@@ -299,7 +299,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   @Override
-  public FlatPillList<T> setOrientation(final FlatListOrientation orientation) {
+  public FlatChipList<T> setOrientation(final FlatListOrientation orientation) {
     if (orientation == null || orientation == this.orientation) {
       return this;
     }
@@ -318,7 +318,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   @Override
-  public FlatPillList<T> setColumns(final int columns) {
+  public FlatChipList<T> setColumns(final int columns) {
     final int v = Math.max(1, columns);
     if (v == this.columns) {
       return this;
@@ -344,7 +344,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   /**
-   * Sets the gap between rendered pills.
+   * Sets the gap between rendered chips.
    *
    * @param gap pixels, clamped to {@code >= 0}
    * @return this list
@@ -352,7 +352,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   @Override
-  public FlatPillList<T> setItemGap(final int gap) {
+  public FlatChipList<T> setItemGap(final int gap) {
     final int v = Math.max(0, gap);
     if (v == itemGap) {
       return this;
@@ -384,7 +384,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   @Override
-  public FlatPillList<T> setListPadding(final Insets insets) {
+  public FlatChipList<T> setListPadding(final Insets insets) {
     listPadding = insets == null ? new Insets(0, 0, 0, 0) : (Insets) insets.clone();
     rebuildPadding();
     revalidate();
@@ -400,14 +400,14 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPillList<T> setSelectionMode(final PillSelectionMode mode) {
+  public FlatChipList<T> setSelectionMode(final ChipSelectionMode mode) {
     if (mode == null || mode == selectionMode) {
       return this;
     }
     selectionMode = mode;
-    if (mode == PillSelectionMode.NONE) {
+    if (mode == ChipSelectionMode.NONE) {
       selectionModel.clearSelection();
-    } else if (mode == PillSelectionMode.SINGLE_MANDATORY) {
+    } else if (mode == ChipSelectionMode.SINGLE_MANDATORY) {
       ensureMandatorySelection();
     }
     rebuildContent();
@@ -415,7 +415,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   /**
-   * Guarantees that {@link PillSelectionMode#SINGLE_MANDATORY}'s "always exactly one" contract
+   * Guarantees that {@link ChipSelectionMode#SINGLE_MANDATORY}'s "always exactly one" contract
    * holds: if no item is currently selected and the visible list is non-empty, auto-select the
    * first visible item. No-op otherwise (including when mode isn't mandatory).
    *
@@ -423,7 +423,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   private void ensureMandatorySelection() {
-    if (selectionMode != PillSelectionMode.SINGLE_MANDATORY) {
+    if (selectionMode != ChipSelectionMode.SINGLE_MANDATORY) {
       return;
     }
     if (selectionModel.getSelected().isEmpty() && !visibleItems.isEmpty()) {
@@ -440,7 +440,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public PillSelectionMode getSelectionMode() {
+  public ChipSelectionMode getSelectionMode() {
     return selectionMode;
   }
 
@@ -454,18 +454,18 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPillList<T> setMovementMode(final MovementMode mode) {
+  public FlatChipList<T> setMovementMode(final MovementMode mode) {
     if (mode == null || mode == movementMode) {
       return this;
     }
     movementMode = mode;
     // Mutual exclusion between PINNED and ANCHORED — caller can re-install on a future flip.
     if (mode == MovementMode.ANCHORED && (pinPredicate != null || pinAction != null)) {
-      LOG.fine("FlatPillList: switching to ANCHORED clears pin predicate/action");
+      LOG.fine("FlatChipList: switching to ANCHORED clears pin predicate/action");
       pinPredicate = null;
       pinAction = null;
     } else if (mode == MovementMode.PINNED && (anchorPredicate != null || anchorAction != null)) {
-      LOG.fine("FlatPillList: switching to PINNED clears anchor predicate/action");
+      LOG.fine("FlatChipList: switching to PINNED clears anchor predicate/action");
       anchorPredicate = null;
       anchorAction = null;
     }
@@ -496,7 +496,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPillList<T> setReorderable(final boolean reorderable) {
+  public FlatChipList<T> setReorderable(final boolean reorderable) {
     if (reorderable) {
       // Stay in PINNED if already there — flipping a pin-partitioned list to MOVABLE would
       // silently drop the partition and surprise the caller.
@@ -529,7 +529,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   @Override
-  public FlatPillList<T> setFilter(final Predicate<T> filter) {
+  public FlatChipList<T> setFilter(final Predicate<T> filter) {
     this.filter = filter;
     rebuildVisibleItems();
     rebuildContent();
@@ -545,7 +545,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   @Override
-  public FlatPillList<T> setSortOrder(final Comparator<T> comparator) {
+  public FlatChipList<T> setSortOrder(final Comparator<T> comparator) {
     this.comparator = comparator;
     rebuildVisibleItems();
     rebuildContent();
@@ -570,10 +570,10 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPillList<T> setPinPredicate(final Predicate<T> isPinned) {
+  public FlatChipList<T> setPinPredicate(final Predicate<T> isPinned) {
     pinPredicate = isPinned;
     if (isPinned != null && movementMode != MovementMode.PINNED) {
-      LOG.fine("FlatPillList: pin predicate installed; flipping movement mode to PINNED");
+      LOG.fine("FlatChipList: pin predicate installed; flipping movement mode to PINNED");
       // setMovementMode rebuilds, so don't call rebuild* below.
       return setMovementMode(MovementMode.PINNED);
     }
@@ -593,7 +593,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPillList<T> setPinAction(final BiConsumer<T, Boolean> action) {
+  public FlatChipList<T> setPinAction(final BiConsumer<T, Boolean> action) {
     pinAction = action;
     return this;
   }
@@ -660,7 +660,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * Builds a "Pin" / "Unpin" {@link JMenuItem} bound to the given item. Label reflects the current
    * pin state at the moment this is called — refresh by rebuilding the menu on each popup show.
    * Intended for callers who install their own context menu and want to compose the pin toggle into
-   * it. Auto-injection only fires when the pill has no caller-installed menu, so this is the path
+   * it. Auto-injection only fires when the chip has no caller-installed menu, so this is the path
    * to use when you want both.
    *
    * @param item the item to toggle
@@ -690,10 +690,10 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPillList<T> setAnchorPredicate(final Predicate<T> isAnchored) {
+  public FlatChipList<T> setAnchorPredicate(final Predicate<T> isAnchored) {
     anchorPredicate = isAnchored;
     if (isAnchored != null && movementMode != MovementMode.ANCHORED) {
-      LOG.fine("FlatPillList: anchor predicate installed; flipping movement mode to ANCHORED");
+      LOG.fine("FlatChipList: anchor predicate installed; flipping movement mode to ANCHORED");
       // setMovementMode handles the mutex with PINNED and rebuilds.
       return setMovementMode(MovementMode.ANCHORED);
     }
@@ -713,7 +713,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPillList<T> setAnchorAction(final Consumer<T> action) {
+  public FlatChipList<T> setAnchorAction(final Consumer<T> action) {
     anchorAction = action;
     return this;
   }
@@ -813,8 +813,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
 
   /**
    * Sets the visual treatment for the pin affordance. Default {@link IconAffordance#INDICATOR}
-   * preserves the historical behavior (filled pin glyph shown only on pinned pills, not clickable).
-   * {@link IconAffordance#BUTTON} renders an outline pin on every pill, filled when pinned, with
+   * preserves the historical behavior (filled pin glyph shown only on pinned chips, not clickable).
+   * {@link IconAffordance#BUTTON} renders an outline pin on every chip, filled when pinned, with
    * click-to-toggle.
    *
    * <p>Only effective in {@link MovementMode#PINNED}; ignored in other modes.
@@ -824,7 +824,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPillList<T> setPinAffordance(final IconAffordance affordance) {
+  public FlatChipList<T> setPinAffordance(final IconAffordance affordance) {
     if (affordance == null || affordance == pinAffordance) {
       return this;
     }
@@ -846,9 +846,9 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
 
   /**
    * Sets the visual treatment for the anchor affordance. Default {@link IconAffordance#INDICATOR}
-   * shows the anchor glyph only on the anchored pill, not clickable. {@link IconAffordance#BUTTON}
-   * adds a persistent filled glyph on the anchored pill plus a hover-revealed outline glyph on
-   * non-anchored pills, both clickable.
+   * shows the anchor glyph only on the anchored chip, not clickable. {@link IconAffordance#BUTTON}
+   * adds a persistent filled glyph on the anchored chip plus a hover-revealed outline glyph on
+   * non-anchored chips, both clickable.
    *
    * <p>Only effective in {@link MovementMode#ANCHORED}; ignored in other modes.
    *
@@ -857,7 +857,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPillList<T> setAnchorAffordance(final IconAffordance affordance) {
+  public FlatChipList<T> setAnchorAffordance(final IconAffordance affordance) {
     if (affordance == null || affordance == anchorAffordance) {
       return this;
     }
@@ -886,7 +886,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   @Override
-  public FlatPillList<T> setEmptyState(final JComponent component) {
+  public FlatChipList<T> setEmptyState(final JComponent component) {
     emptyState = component;
     if (visibleItems.isEmpty()) {
       rebuildContent();
@@ -903,7 +903,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   @Override
-  public FlatPillList<T> setLoading(final boolean loading) {
+  public FlatChipList<T> setLoading(final boolean loading) {
     if (loading == this.loading) {
       return this;
     }
@@ -921,7 +921,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   @Override
-  public FlatPillList<T> setLoadingComponent(final JComponent component) {
+  public FlatChipList<T> setLoadingComponent(final JComponent component) {
     loadingComponent = component;
     if (loading) {
       rebuildContent();
@@ -936,7 +936,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void addReorderListener(final PillReorderListener<T> listener) {
+  public void addReorderListener(final ChipReorderListener<T> listener) {
     if (listener != null && !reorderListeners.contains(listener)) {
       reorderListeners.add(listener);
     }
@@ -949,21 +949,21 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void removeReorderListener(final PillReorderListener<T> listener) {
+  public void removeReorderListener(final ChipReorderListener<T> listener) {
     reorderListeners.remove(listener);
   }
 
   /**
-   * Returns the rendered pill for the given item, or {@code null} if the item is not currently
+   * Returns the rendered chip for the given item, or {@code null} if the item is not currently
    * visible.
    *
    * @param item the item
-   * @return the pill, or null
+   * @return the chip, or null
    * @version v0.1.0
    * @since v0.1.0
    */
-  public FlatPill getPillFor(final T item) {
-    return pillByItem.get(item);
+  public FlatChip getChipFor(final T item) {
+    return chipByItem.get(item);
   }
 
   // -------------------------------------------------------------- internals
@@ -985,7 +985,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
             listPadding.top, listPadding.left, listPadding.bottom, listPadding.right));
   }
 
-  private void onModelChanged(final PillListDataEvent event) {
+  private void onModelChanged(final ChipListDataEvent event) {
     rebuildVisibleItems();
     // Mandatory mode must re-assert "exactly one selected" if a removal just emptied the
     // selection. Runs after rebuildVisibleItems so the auto-pick lands on a still-visible item.
@@ -1083,19 +1083,19 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       return;
     }
 
-    pillByItem.clear();
+    chipByItem.clear();
     content.removeAll();
     applyOrientationLayout();
 
     for (int i = 0; i < visibleItems.size(); i++) {
       final T item = visibleItems.get(i);
-      final FlatPill pill = adapter.pillFor(item, i);
-      if (pill == null) {
+      final FlatChip chip = adapter.chipFor(item, i);
+      if (chip == null) {
         continue;
       }
-      pillByItem.put(item, pill);
-      configurePillForList(pill, item, i);
-      content.add(pill);
+      chipByItem.put(item, chip);
+      configureChipForList(chip, item, i);
+      content.add(chip);
     }
     add(content, BorderLayout.CENTER);
 
@@ -1107,28 +1107,28 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     repaint();
   }
 
-  private void configurePillForList(final FlatPill pill, final T item, final int index) {
-    if (selectionMode != PillSelectionMode.NONE) {
-      // CLICKABLE (not SELECTABLE) so the pill fires action events but does NOT auto-toggle its
+  private void configureChipForList(final FlatChip chip, final T item, final int index) {
+    if (selectionMode != ChipSelectionMode.NONE) {
+      // CLICKABLE (not SELECTABLE) so the chip fires action events but does NOT auto-toggle its
       // own selected state — the list owns selection through its model.
-      pill.setInteractionMode(PillInteractionMode.CLICKABLE);
-      pill.setSelected(selectionModel.isSelected(item));
+      chip.setInteractionMode(ChipInteractionMode.CLICKABLE);
+      chip.setSelected(selectionModel.isSelected(item));
     }
 
     if (movementMode == MovementMode.PINNED) {
-      applyPinAffordance(pill, item);
+      applyPinAffordance(chip, item);
     } else if (movementMode == MovementMode.ANCHORED) {
-      applyAnchorAffordance(pill, item);
+      applyAnchorAffordance(chip, item);
     }
 
     if (movementMode == MovementMode.PINNED
         && pinPredicate != null
         && pinAction != null
-        && !pill.hasContextMenu()) {
+        && !chip.hasContextMenu()) {
       // Auto-inject Pin/Unpin only when the caller's adapter hasn't installed its own context
       // menu. Callers who DO have their own menu should compose the pin entry themselves via
       // createPinMenuItem(T) — that's the documented way to combine the two.
-      pill.attachContextMenu(
+      chip.attachContextMenu(
           () -> {
             final JPopupMenu menu = new JPopupMenu();
             menu.add(createPinMenuItem(item));
@@ -1137,9 +1137,9 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     } else if (movementMode == MovementMode.ANCHORED
         && anchorPredicate != null
         && anchorAction != null
-        && !pill.hasContextMenu()) {
+        && !chip.hasContextMenu()) {
       // Mirror of the pin auto-injection: Set as anchor / Remove anchor when no caller menu.
-      pill.attachContextMenu(
+      chip.attachContextMenu(
           () -> {
             final JPopupMenu menu = new JPopupMenu();
             menu.add(createAnchorMenuItem(item));
@@ -1147,19 +1147,19 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
           });
     }
 
-    // Anchored item is locked; even though the mode permits drag, this specific pill refuses it.
+    // Anchored item is locked; even though the mode permits drag, this specific chip refuses it.
     final boolean draggableItem = !isAnchored(item);
     final boolean canReorder =
         movementMode != MovementMode.STATIC && comparator == null && draggableItem;
     if (canReorder && comparator != null && !reorderWarningLogged) {
-      LOG.warning("FlatPillList: reorder disabled while a sort order is active");
+      LOG.warning("FlatChipList: reorder disabled while a sort order is active");
       reorderWarningLogged = true;
     }
     if (canReorder) {
-      // Open-hand "grab" while hovering signals draggable. Override FlatPill's default HAND_CURSOR
+      // Open-hand "grab" while hovering signals draggable. Override FlatChip's default HAND_CURSOR
       // (which it set during setInteractionMode above) so the gesture affordance is correct: open
       // hand on hover → closed fist while dragging.
-      pill.setCursor(Cursors.grab());
+      chip.setCursor(Cursors.grab());
     }
 
     final MouseInputAdapter handler =
@@ -1167,7 +1167,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
           // Selection commits on release-without-drag, not on press. This matches Finder /
           // Explorer behavior: a click selects, a drag moves. Without this deferral, every
           // drag-press updated selection as a side effect of the press itself — and the
-          // dragged pill always ended up selected even when the user just wanted to
+          // dragged chip always ended up selected even when the user just wanted to
           // rearrange. Drag activation discards the pending click; release commits it.
           private boolean pendingClick;
           private int pendingModifiers;
@@ -1182,7 +1182,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
             pendingClick = true;
             pendingModifiers = event.getModifiersEx();
             if (canReorder) {
-              initiateDrag(item, pill, event);
+              initiateDrag(item, chip, event);
             }
           }
 
@@ -1223,22 +1223,22 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
             }
           }
         };
-    // Install on both the pill body and its inner content row so presses on the text or leading-
+    // Install on both the chip body and its inner content row so presses on the text or leading-
     // icon area participate in drag detection. The content row has its own internal listener that
     // would otherwise trap these events.
-    pill.addPillMouseListener(handler);
-    pill.addPillMouseMotionListener(handler);
+    chip.addChipMouseListener(handler);
+    chip.addChipMouseMotionListener(handler);
   }
 
   /**
-   * Renders the pin affordance on a pill in PINNED mode. INDICATOR shows the filled pin glyph only
-   * on pinned items (historical behavior). BUTTON renders a clickable affordance on every pill
+   * Renders the pin affordance on a chip in PINNED mode. INDICATOR shows the filled pin glyph only
+   * on pinned items (historical behavior). BUTTON renders a clickable affordance on every chip
    * (outline glyph on unpinned, filled on pinned). NONE skips both.
    *
    * @version v0.1.0
    * @since v0.1.0
    */
-  private void applyPinAffordance(final FlatPill pill, final T item) {
+  private void applyPinAffordance(final FlatChip chip, final T item) {
     switch (pinAffordance) {
       case NONE -> {
         // Explicit no-op; the adapter's leading icon remains whatever it set.
@@ -1249,11 +1249,11 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
           // inactive, filled = active, every affordance mode. Anything else makes the icon mean
           // different things depending on the affordance setting, which is exactly the
           // inconsistency we want to avoid.
-          pill.setLeadingIcon(MaterialIcons.pushPinFilled());
+          chip.setLeadingIcon(MaterialIcons.pushPinFilled());
         }
       }
       case BUTTON ->
-          pill.setLeadingAffordance(
+          chip.setLeadingAffordance(
               MaterialIcons.pushPin(),
               MaterialIcons.pushPinFilled(),
               isPinned(item),
@@ -1267,15 +1267,15 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   /**
-   * Renders the anchor affordance on a pill in ANCHORED mode. INDICATOR shows the anchor glyph only
-   * on the anchored pill (historical behavior). BUTTON renders a clickable affordance on every pill
-   * — persistent filled glyph on the anchored pill, hover-revealed outline glyph on non-anchored
-   * pills. NONE skips both.
+   * Renders the anchor affordance on a chip in ANCHORED mode. INDICATOR shows the anchor glyph only
+   * on the anchored chip (historical behavior). BUTTON renders a clickable affordance on every chip
+   * — persistent filled glyph on the anchored chip, hover-revealed outline glyph on non-anchored
+   * chips. NONE skips both.
    *
    * @version v0.1.0
    * @since v0.1.0
    */
-  private void applyAnchorAffordance(final FlatPill pill, final T item) {
+  private void applyAnchorAffordance(final FlatChip chip, final T item) {
     switch (anchorAffordance) {
       case NONE -> {
         // Explicit no-op.
@@ -1283,12 +1283,12 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       case INDICATOR -> {
         if (isAnchored(item)) {
           // Filled glyph for "actively anchored" — same convention as the pin affordance.
-          pill.setLeadingIcon(MaterialIcons.anchorFilled());
+          chip.setLeadingIcon(MaterialIcons.anchorFilled());
         }
       }
       case BUTTON -> {
         final boolean anchored = isAnchored(item);
-        pill.setLeadingAffordance(
+        chip.setLeadingAffordance(
             MaterialIcons.anchor(),
             MaterialIcons.anchorFilled(),
             anchored,
@@ -1311,20 +1311,20 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
 
   // ----------------------------------------------------------------- drag
 
-  private void initiateDrag(final T item, final FlatPill pill, final MouseEvent event) {
+  private void initiateDrag(final T item, final FlatChip chip, final MouseEvent event) {
     drag = new DragState();
     drag.item = item;
-    drag.pill = pill;
+    drag.chip = chip;
     drag.fromIndex = visibleItems.indexOf(item);
     drag.toIndex = drag.fromIndex;
-    // The mouse-listener handler is attached to both pill and pill.contentRow (see
-    // addPillMouseListener / addPillMouseMotionListener), so event.getComponent() may be
+    // The mouse-listener handler is attached to both chip and chip.contentRow (see
+    // addChipMouseListener / addChipMouseMotionListener), so event.getComponent() may be
     // either of them. convertPoint(source, p, dest) interprets `p` in `source`'s coordinate
-    // system — using pill as the source when the event originated on contentRow gives
+    // system — using chip as the source when the event originated on contentRow gives
     // wrong absolute coordinates, so always pass the actual source component.
     drag.startPoint = SwingUtilities.convertPoint(event.getComponent(), event.getPoint(), content);
     drag.currentPoint = drag.startPoint;
-    drag.grabOffset = SwingUtilities.convertPoint(event.getComponent(), event.getPoint(), pill);
+    drag.grabOffset = SwingUtilities.convertPoint(event.getComponent(), event.getPoint(), chip);
     drag.active = false;
   }
 
@@ -1343,17 +1343,17 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       return;
     }
     drag.active = true;
-    drag.pill.cancelPendingClick();
+    drag.chip.cancelPendingClick();
 
     displacedX.clear();
     displacedY.clear();
-    for (FlatPill p : pillByItem.values()) {
+    for (FlatChip p : chipByItem.values()) {
       displacedX.put(p, p.getX());
       displacedY.put(p, p.getY());
     }
     recomputeDragTargets();
-    content.setComponentZOrder(drag.pill, 0);
-    drag.pill.setCursor(Cursors.grabbing());
+    content.setComponentZOrder(drag.chip, 0);
+    drag.chip.setCursor(Cursors.grabbing());
     startDragAnimation();
     content.revalidate();
     content.repaint();
@@ -1361,7 +1361,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
 
   /**
    * Recomputes {@code drag.toIndex} using the release event's cursor position. Called from {@code
-   * mouseReleased} so the committed slot reflects where the user actually let go of the pill, not
+   * mouseReleased} so the committed slot reflects where the user actually let go of the chip, not
    * the slightly-stale last-sampled mouseDragged position.
    *
    * <p>Throws (release while moving fast) need this because Swing/OS event coalescing means
@@ -1407,7 +1407,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     final Point dropAnchor = computeDropAnchor();
     final int rawDrop = computeDropIndex(dropAnchor);
     // Clamp to dragged item's partition so visual feedback during the drag matches what the drop
-    // will commit. Without this the user sees unpinned items shuffle as a pinned pill drags over
+    // will commit. Without this the user sees unpinned items shuffle as a pinned chip drags over
     // them, only to snap back on release.
     final int newDrop = clampSlotToPartition(rawDrop, drag.item);
     if (newDrop != drag.toIndex) {
@@ -1423,15 +1423,15 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * orientation's needs.
    *
    * <ul>
-   *   <li><strong>HORIZONTAL / VERTICAL</strong>: leading-edge anchor — the dragged pill's top-left
-   *       corner. When dragging a wide pill over narrow neighbors, the swap fires as soon as the
+   *   <li><strong>HORIZONTAL / VERTICAL</strong>: leading-edge anchor — the dragged chip's top-left
+   *       corner. When dragging a wide chip over narrow neighbors, the swap fires as soon as the
    *       leading edge crosses the target's midline, rather than waiting for the cursor (which is
-   *       somewhere inside the wider pill) to do so.
-   *   <li><strong>GRID</strong>: dragged-pill center — natural for 2D uniform-cell layouts.
+   *       somewhere inside the wider chip) to do so.
+   *   <li><strong>GRID</strong>: dragged-chip center — natural for 2D uniform-cell layouts.
    *   <li><strong>WRAP</strong>: bare cursor. Leading-edge anchoring breaks WRAP because the
    *       anchor.y depends on grabOffset.y, which routinely lands the y component <em>above</em>
-   *       row 0 when the user grabs near the pill's bottom (and similarly anchor.x lands far left
-   *       when the user grabs the pill's right edge). The cursor itself doesn't have that problem:
+   *       row 0 when the user grabs near the chip's bottom (and similarly anchor.x lands far left
+   *       when the user grabs the chip's right edge). The cursor itself doesn't have that problem:
    *       it's always in the user's row at the user's column.
    * </ul>
    *
@@ -1445,7 +1445,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     return switch (orientation) {
       case GRID ->
           new Point(
-              draggedLeftX + drag.pill.getWidth() / 2, draggedTopY + drag.pill.getHeight() / 2);
+              draggedLeftX + drag.chip.getWidth() / 2, draggedTopY + drag.chip.getHeight() / 2);
       case WRAP -> new Point(drag.currentPoint);
       case HORIZONTAL, VERTICAL -> new Point(draggedLeftX, draggedTopY);
     };
@@ -1457,8 +1457,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * end-of-list is represented by {@code size}.
    *
    * <p>Every strategy walks the <strong>natural</strong> (preferred-size-based) positions of the
-   * non-dragged pills rather than reading {@code getX()/getY()}. The latter return mid-animation
-   * displaced positions and create a feedback loop: a small pill covered by a larger dragged pill
+   * non-dragged chips rather than reading {@code getX()/getY()}. The latter return mid-animation
+   * displaced positions and create a feedback loop: a small chip covered by a larger dragged chip
    * is partway through its slide, the drop calculation observes the in-progress position,
    * recomputes targets, the slide accelerates, and the answer oscillates. Natural positions are
    * stable — the slot the cursor maps to depends only on the cursor.
@@ -1483,7 +1483,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       if (item == drag.item) {
         continue;
       }
-      final FlatPill p = pillByItem.get(item);
+      final FlatChip p = chipByItem.get(item);
       if (p == null) {
         continue;
       }
@@ -1505,7 +1505,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       if (item == drag.item) {
         continue;
       }
-      final FlatPill p = pillByItem.get(item);
+      final FlatChip p = chipByItem.get(item);
       if (p == null) {
         continue;
       }
@@ -1522,12 +1522,12 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * For WRAP, recreates the natural row-break layout for the non-dragged sequence. The drop slot
    * advances on every center the cursor has passed in reading order (rows top-to-bottom, within a
-   * row left-to-right). Cursor below the bottom of a row counts as past every pill on that row.
+   * row left-to-right). Cursor below the bottom of a row counts as past every chip on that row.
    *
    * <p>{@code anchor.y} is clamped to {@code in.top} so cursor drifts <em>above</em> the component
-   * (negative y) don't silently fail both per-pill checks — without the clamp, {@code anchor.y >=
+   * (negative y) don't silently fail both per-chip checks — without the clamp, {@code anchor.y >=
    * y} (within-row) and {@code anchor.y > rowBottom} (below-row) would both be false for every
-   * pill, leaving slot stuck at 0 regardless of {@code anchor.x}. Drifts below the component are
+   * chip, leaving slot stuck at 0 regardless of {@code anchor.x}. Drifts below the component are
    * already handled correctly by the existing below-row branch firing for every row.
    *
    * @version v0.1.0
@@ -1545,7 +1545,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       if (item == drag.item) {
         continue;
       }
-      final FlatPill p = pillByItem.get(item);
+      final FlatChip p = chipByItem.get(item);
       if (p == null) {
         continue;
       }
@@ -1571,10 +1571,10 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * For GRID, drop slot is the cell coordinate the anchor sits in.
    *
-   * <p>Cell dimensions are read from the rendered bounds of the non-dragged pills (which the layout
+   * <p>Cell dimensions are read from the rendered bounds of the non-dragged chips (which the layout
    * uniformly stretches to cellW × cellH), not from {@code content.getWidth()} divided by column
    * count. The container-derived formula was occasionally producing huge cellW values — apparently
-   * when {@code content.getWidth()} was inflated by the dragged pill's wide drag mode or by a stale
+   * when {@code content.getWidth()} was inflated by the dragged chip's wide drag mode or by a stale
    * layout — and pushing every anchor into col=0, manifesting as random "move to front" drops.
    * Reading the actual rendered widths sidesteps that entirely.
    *
@@ -1593,7 +1593,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       if (item == drag.item) {
         continue;
       }
-      final FlatPill p = pillByItem.get(item);
+      final FlatChip p = chipByItem.get(item);
       if (p == null) {
         continue;
       }
@@ -1608,7 +1608,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
         if (item == drag.item) {
           continue;
         }
-        final FlatPill p = pillByItem.get(item);
+        final FlatChip p = chipByItem.get(item);
         if (p == null) {
           continue;
         }
@@ -1632,9 +1632,9 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   /**
-   * Recomputes target X/Y for every non-dragged pill, based on the order produced by removing the
-   * dragged pill and reinserting it at {@code drag.toIndex}. The animation timer then interpolates
-   * each pill toward its target.
+   * Recomputes target X/Y for every non-dragged chip, based on the order produced by removing the
+   * dragged chip and reinserting it at {@code drag.toIndex}. The animation timer then interpolates
+   * each chip toward its target.
    *
    * @version v0.1.0
    * @since v0.1.0
@@ -1642,22 +1642,22 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   private void recomputeDragTargets() {
     targetX.clear();
     targetY.clear();
-    final List<FlatPill> ordered = new ArrayList<>();
+    final List<FlatChip> ordered = new ArrayList<>();
     for (T item : visibleItems) {
-      final FlatPill p = pillByItem.get(item);
+      final FlatChip p = chipByItem.get(item);
       if (p != null) {
         ordered.add(p);
       }
     }
-    ordered.remove(drag.pill);
+    ordered.remove(drag.chip);
     final int clamp = Math.max(0, Math.min(ordered.size(), drag.toIndex));
-    ordered.add(clamp, drag.pill);
+    ordered.add(clamp, drag.chip);
 
     final Insets in = content.getInsets();
     switch (orientation) {
       case VERTICAL -> {
         int y = in.top;
-        for (FlatPill p : ordered) {
+        for (FlatChip p : ordered) {
           targetX.put(p, in.left);
           targetY.put(p, y);
           y += p.getPreferredSize().height + itemGap;
@@ -1666,10 +1666,10 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       case HORIZONTAL -> {
         int x = in.left;
         int rowH = 0;
-        for (FlatPill p : ordered) {
+        for (FlatChip p : ordered) {
           rowH = Math.max(rowH, p.getPreferredSize().height);
         }
-        for (FlatPill p : ordered) {
+        for (FlatChip p : ordered) {
           targetX.put(p, x);
           targetY.put(p, in.top);
           x += p.getPreferredSize().width + itemGap;
@@ -1680,7 +1680,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
         int x = in.left;
         int y = in.top;
         int rowH = 0;
-        for (FlatPill p : ordered) {
+        for (FlatChip p : ordered) {
           final Dimension pref = p.getPreferredSize();
           if (x > in.left && x + pref.width > maxRight) {
             x = in.left;
@@ -1697,14 +1697,14 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
         final int availW = Math.max(1, content.getWidth() - in.left - in.right);
         final int cellW = Math.max(1, (availW - (columns - 1) * itemGap) / columns);
         int cellH = 0;
-        for (FlatPill p : ordered) {
+        for (FlatChip p : ordered) {
           cellH = Math.max(cellH, p.getPreferredSize().height);
         }
         if (cellH == 0) {
           cellH = 24;
         }
         for (int i = 0; i < ordered.size(); i++) {
-          final FlatPill p = ordered.get(i);
+          final FlatChip p = ordered.get(i);
           final int col = i % columns;
           final int row = i / columns;
           targetX.put(p, in.left + col * (cellW + itemGap));
@@ -1730,9 +1730,9 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
                 return;
               }
               boolean moved = false;
-              for (Map.Entry<FlatPill, Integer> entry : targetY.entrySet()) {
-                final FlatPill p = entry.getKey();
-                if (p == drag.pill) {
+              for (Map.Entry<FlatChip, Integer> entry : targetY.entrySet()) {
+                final FlatChip p = entry.getKey();
+                if (p == drag.chip) {
                   continue;
                 }
                 if (animateAxis(p, entry.getValue(), displacedY, p.getY())) {
@@ -1752,8 +1752,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   private static boolean animateAxis(
-      final FlatPill pill, final int target, final Map<FlatPill, Integer> map, final int fallback) {
-    final Integer curBoxed = map.get(pill);
+      final FlatChip chip, final int target, final Map<FlatChip, Integer> map, final int fallback) {
+    final Integer curBoxed = map.get(chip);
     final int cur = curBoxed != null ? curBoxed : fallback;
     if (cur == target) {
       return false;
@@ -1763,7 +1763,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     if (step == 0 || Math.abs(diff) <= 1) {
       step = diff;
     }
-    map.put(pill, cur + step);
+    map.put(chip, cur + step);
     return true;
   }
 
@@ -1778,11 +1778,11 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     if (drag == null) {
       return;
     }
-    // Flip the dragged pill back to the open-hand "grab" cursor. On a successful move, the
-    // subsequent rebuildContent runs configurePillForList over fresh pills and sets grab() there
-    // too — but on noop paths the original pill instance is reused, so restoring it here is what
+    // Flip the dragged chip back to the open-hand "grab" cursor. On a successful move, the
+    // subsequent rebuildContent runs configureChipForList over fresh chips and sets grab() there
+    // too — but on noop paths the original chip instance is reused, so restoring it here is what
     // makes the cursor switch back as soon as the user releases.
-    drag.pill.setCursor(Cursors.grab());
+    drag.chip.setCursor(Cursors.grab());
     final int fromVis = drag.fromIndex;
     final int toVis = drag.toIndex;
     final T item = drag.item;
@@ -1791,7 +1791,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       restoreContentOrder();
       return;
     }
-    if (model instanceof DefaultPillListModel<T> mutable) {
+    if (model instanceof DefaultChipListModel<T> mutable) {
       final int fromModel = indexOfInModel(item);
       // toVis is in *slot space* (0..non_dragged_count), not in visible-list index space.
       // Without partition, visible-order == model-order so the slot is the model index directly
@@ -1824,7 +1824,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       mutable.move(fromModel, toModel);
       fireReorder(item, fromModel, toModel);
     } else {
-      LOG.warning("FlatPillList: reorder requires a mutable DefaultPillListModel; drop ignored");
+      LOG.warning("FlatChipList: reorder requires a mutable DefaultChipListModel; drop ignored");
       restoreContentOrder();
     }
   }
@@ -1909,10 +1909,10 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   /**
    * Restores the child component order of content to match {@code visibleItems}, then revalidates
    * and repaints. Required after a no-op drag-drop because {@code activateDrag} calls {@code
-   * content.setComponentZOrder(drag.pill, 0)} to bring the dragged pill to the visual front during
+   * content.setComponentZOrder(drag.chip, 0)} to bring the dragged chip to the visual front during
    * drag — which also reorders the children array. The idle layout (e.g., GridLayoutImpl) places
    * children by their index, so a scrambled child order after a noop drag visually places the
-   * dragged pill at row 0 / col 0 even though the model is untouched. Successful drops sidestep
+   * dragged chip at row 0 / col 0 even though the model is untouched. Successful drops sidestep
    * this because model.move → rebuildContent rebuilds the child list from scratch in visible order.
    *
    * @version v0.1.0
@@ -1921,14 +1921,14 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   private void restoreContentOrder() {
     int targetIndex = 0;
     for (T item : visibleItems) {
-      final FlatPill pill = pillByItem.get(item);
-      if (pill == null) {
+      final FlatChip chip = chipByItem.get(item);
+      if (chip == null) {
         continue;
       }
       // setComponentZOrder is a no-op if the component is already at the desired index, so this
       // is safe to call even when nothing actually changed.
-      if (pill.getParent() == content) {
-        content.setComponentZOrder(pill, targetIndex);
+      if (chip.getParent() == content) {
+        content.setComponentZOrder(chip, targetIndex);
         targetIndex++;
       }
     }
@@ -1950,7 +1950,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   /** Tracks an in-progress drag. */
   private final class DragState {
     T item;
-    FlatPill pill;
+    FlatChip chip;
     int fromIndex;
     int toIndex;
     Point startPoint;
@@ -1976,20 +1976,20 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   // ------------------------------------------------------------- selection
 
   private void handleSelectionPress(final T item, final int index, final int modifiers) {
-    if (selectionMode == PillSelectionMode.NONE) {
+    if (selectionMode == ChipSelectionMode.NONE) {
       return;
     }
     final boolean shift = (modifiers & InputEvent.SHIFT_DOWN_MASK) != 0;
     final int meta = InputEvent.META_DOWN_MASK | InputEvent.CTRL_DOWN_MASK;
     final boolean toggle = (modifiers & meta) != 0;
 
-    if (selectionMode == PillSelectionMode.SINGLE_MANDATORY) {
-      // Click selects; click on the already-selected pill is a no-op (mandatory: never zero).
+    if (selectionMode == ChipSelectionMode.SINGLE_MANDATORY) {
+      // Click selects; click on the already-selected chip is a no-op (mandatory: never zero).
       if (!selectionModel.isSelected(item)) {
         selectionModel.setSelected(List.of(item));
         selectionAnchor = item;
       }
-    } else if (selectionMode == PillSelectionMode.SINGLE) {
+    } else if (selectionMode == ChipSelectionMode.SINGLE) {
       // Toggleable single: click selects, click again deselects (filter-chip semantics).
       if (selectionModel.isSelected(item)) {
         selectionModel.clearSelection();
@@ -2019,7 +2019,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   private void syncSelectionVisuals() {
-    for (Map.Entry<T, FlatPill> entry : pillByItem.entrySet()) {
+    for (Map.Entry<T, FlatChip> entry : chipByItem.entrySet()) {
       entry.getValue().setSelected(selectionModel.isSelected(entry.getKey()));
     }
   }
@@ -2034,9 +2034,9 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
    * @since v0.1.0
    */
   protected void fireReorder(final T item, final int from, final int to) {
-    final PillReorderEvent<T> evt = new PillReorderEvent<>(this, item, from, to);
-    for (PillReorderListener<T> l : new ArrayList<>(reorderListeners)) {
-      l.pillReordered(evt);
+    final ChipReorderEvent<T> evt = new ChipReorderEvent<>(this, item, from, to);
+    for (ChipReorderListener<T> l : new ArrayList<>(reorderListeners)) {
+      l.chipReordered(evt);
     }
   }
 
@@ -2050,7 +2050,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     }
   }
 
-  /** Vertical stack layout — pills sized to preferred height, stretched to fill width. */
+  /** Vertical stack layout — chips sized to preferred height, stretched to fill width. */
   private final class VerticalLayout implements LayoutManager {
     @Override
     public void addLayoutComponent(final String name, final Component comp) {
@@ -2102,9 +2102,9 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   /**
-   * Single-row horizontal layout. Pills are placed left-to-right at their preferred width and a
-   * shared row height (the max of all pill preferred heights). If the total preferred width exceeds
-   * the container, pills are simply clipped on the right — the host is expected to wrap the list in
+   * Single-row horizontal layout. Chips are placed left-to-right at their preferred width and a
+   * shared row height (the max of all chip preferred heights). If the total preferred width exceeds
+   * the container, chips are simply clipped on the right — the host is expected to wrap the list in
    * a {@link javax.swing.JScrollPane} for the clip+scroll overflow strategy. An ellipsis-menu
    * overflow strategy is deferred to a future story.
    *
@@ -2241,7 +2241,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
 
   /**
    * N-column grid layout with uniform cell width and uniform cell height. Mirrors the geometry of
-   * {@link com.owspfm.ui.components.card.list.FlatCardList}'s grid mode, but for pill-sized
+   * {@link com.owspfm.ui.components.card.list.FlatCardList}'s grid mode, but for chip-sized
    * children.
    *
    * @version v0.1.0
@@ -2312,14 +2312,14 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   }
 
   /**
-   * Shared drag-mode positioning: dragged pill follows the cursor (with grab offset compensation
-   * and clamping to the content bounds); every other pill reads its current animated position from
+   * Shared drag-mode positioning: dragged chip follows the cursor (with grab offset compensation
+   * and clamping to the content bounds); every other chip reads its current animated position from
    * the per-axis displaced maps. All four layouts delegate here while a drag is active.
    *
-   * <p>Pill <em>dimensions</em> during drag mirror the orientation's static layout so the visual
-   * doesn't snap on drag start. For VERTICAL / HORIZONTAL / WRAP the static layout uses each pill's
-   * preferred size, so drag mode reuses that. For GRID the static layout stretches pills to a
-   * uniform cellW × cellH; drag mode preserves the stretch — including for the dragged pill — so
+   * <p>Chip <em>dimensions</em> during drag mirror the orientation's static layout so the visual
+   * doesn't snap on drag start. For VERTICAL / HORIZONTAL / WRAP the static layout uses each chip's
+   * preferred size, so drag mode reuses that. For GRID the static layout stretches chips to a
+   * uniform cellW × cellH; drag mode preserves the stretch — including for the dragged chip — so
    * the user sees no size jump between idle and dragging.
    *
    * @version v0.1.0
@@ -2347,7 +2347,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       final Dimension pref = c.getPreferredSize();
       final int w = isGrid ? gridCellW : pref.width;
       final int h = isGrid ? gridCellH : pref.height;
-      if (c == drag.pill) {
+      if (c == drag.chip) {
         int x = drag.currentPoint.x - drag.grabOffset.x;
         int y = drag.currentPoint.y - drag.grabOffset.y;
         final int maxX = Math.max(in.left, parent.getWidth() - in.right - w);
@@ -2392,23 +2392,23 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
     final Action activate = new ActivateFocused();
     final Action selectAll = new SelectAllAction();
 
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), "flatpill.up");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), "flatpill.down");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), "flatpill.up");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), "flatpill.down");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0), "flatpill.home");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0), "flatpill.end");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "flatpill.activate");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "flatpill.activate");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, InputEvent.CTRL_DOWN_MASK), "flatpill.selectAll");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, InputEvent.META_DOWN_MASK), "flatpill.selectAll");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), "flatchip.up");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), "flatchip.down");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), "flatchip.up");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), "flatchip.down");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0), "flatchip.home");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0), "flatchip.end");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "flatchip.activate");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "flatchip.activate");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, InputEvent.CTRL_DOWN_MASK), "flatchip.selectAll");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, InputEvent.META_DOWN_MASK), "flatchip.selectAll");
 
-    am.put("flatpill.up", up);
-    am.put("flatpill.down", down);
-    am.put("flatpill.home", home);
-    am.put("flatpill.end", end);
-    am.put("flatpill.activate", activate);
-    am.put("flatpill.selectAll", selectAll);
+    am.put("flatchip.up", up);
+    am.put("flatchip.down", down);
+    am.put("flatchip.home", home);
+    am.put("flatchip.end", end);
+    am.put("flatchip.activate", activate);
+    am.put("flatchip.selectAll", selectAll);
   }
 
   private void moveFocus(final int delta) {
@@ -2423,10 +2423,10 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       next = visibleItems.size() - 1;
     }
     focusedVisibleIndex = next;
-    final FlatPill pill = pillByItem.get(visibleItems.get(next));
-    if (pill != null) {
-      pill.requestFocusInWindow();
-      scrollRectToVisible(pill.getBounds());
+    final FlatChip chip = chipByItem.get(visibleItems.get(next));
+    if (chip != null) {
+      chip.requestFocusInWindow();
+      scrollRectToVisible(chip.getBounds());
     }
   }
 
@@ -2473,7 +2473,7 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   private final class SelectAllAction extends AbstractAction {
     @Override
     public void actionPerformed(final ActionEvent event) {
-      if (selectionMode != PillSelectionMode.MULTIPLE) {
+      if (selectionMode != ChipSelectionMode.MULTIPLE) {
         return;
       }
       selectionModel.setSelected(new ArrayList<>(visibleItems));
@@ -2493,13 +2493,13 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
   @Override
   public AccessibleContext getAccessibleContext() {
     if (accessibleContext == null) {
-      accessibleContext = new AccessibleFlatPillList();
+      accessibleContext = new AccessibleFlatChipList();
     }
     return accessibleContext;
   }
 
-  /** Accessible role of the list itself; rendered pills expose their own roles. */
-  protected class AccessibleFlatPillList extends AccessibleJPanel {
+  /** Accessible role of the list itself; rendered chips expose their own roles. */
+  protected class AccessibleFlatChipList extends AccessibleJPanel {
     @Override
     public AccessibleRole getAccessibleRole() {
       return AccessibleRole.LIST;
@@ -2515,8 +2515,8 @@ public class FlatPillList<T> extends JPanel implements Accessible, FlatList<T> {
       if (index < 0 || index >= visibleItems.size()) {
         return null;
       }
-      final FlatPill pill = pillByItem.get(visibleItems.get(index));
-      return pill;
+      final FlatChip chip = chipByItem.get(visibleItems.get(index));
+      return chip;
     }
   }
 }

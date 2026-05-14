@@ -24,7 +24,7 @@ import javax.swing.UIManager;
  */
 public final class MaterialIcons {
 
-  /** Default render size in pixels — matches the leading-icon footprint on FlatPill. */
+  /** Default render size in pixels — matches the leading-icon footprint on FlatChip. */
   public static final int DEFAULT_SIZE = 14;
 
   private static final String BASE = "com/owspfm/icons/material/";

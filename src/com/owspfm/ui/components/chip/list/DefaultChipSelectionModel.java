@@ -1,4 +1,4 @@
-package com.owspfm.ui.components.pill.list;
+package com.owspfm.ui.components.chip.list;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -7,20 +7,20 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Default {@link PillSelectionModel} backed by a {@link LinkedHashSet}.
+ * Default {@link ChipSelectionModel} backed by a {@link LinkedHashSet}.
  *
  * @param <T> the item type
  * @author Charles Bryan
  * @version v0.1.0
  * @since v0.1.0
  */
-public class DefaultPillSelectionModel<T> implements PillSelectionModel<T> {
+public class DefaultChipSelectionModel<T> implements ChipSelectionModel<T> {
 
   private final Set<T> selected = new LinkedHashSet<>();
-  private final List<PillSelectionListener<T>> listeners = new ArrayList<>();
+  private final List<ChipSelectionListener<T>> listeners = new ArrayList<>();
 
   /** Creates an empty selection model. */
-  public DefaultPillSelectionModel() {
+  public DefaultChipSelectionModel() {
     super();
   }
 
@@ -75,21 +75,21 @@ public class DefaultPillSelectionModel<T> implements PillSelectionModel<T> {
   }
 
   @Override
-  public void addSelectionListener(final PillSelectionListener<T> listener) {
+  public void addSelectionListener(final ChipSelectionListener<T> listener) {
     if (listener != null && !listeners.contains(listener)) {
       listeners.add(listener);
     }
   }
 
   @Override
-  public void removeSelectionListener(final PillSelectionListener<T> listener) {
+  public void removeSelectionListener(final ChipSelectionListener<T> listener) {
     listeners.remove(listener);
   }
 
   private void fire() {
     final List<T> snapshot = getSelected();
-    final PillSelectionEvent<T> evt = new PillSelectionEvent<>(this, snapshot);
-    for (PillSelectionListener<T> l : new ArrayList<>(listeners)) {
+    final ChipSelectionEvent<T> evt = new ChipSelectionEvent<>(this, snapshot);
+    for (ChipSelectionListener<T> l : new ArrayList<>(listeners)) {
       l.selectionChanged(evt);
     }
   }

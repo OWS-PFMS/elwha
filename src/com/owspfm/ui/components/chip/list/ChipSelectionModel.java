@@ -1,9 +1,9 @@
-package com.owspfm.ui.components.pill.list;
+package com.owspfm.ui.components.chip.list;
 
 import java.util.List;
 
 /**
- * Tracks selection state for a {@link FlatPillList}.
+ * Tracks selection state for a {@link FlatChipList}.
  *
  * <p>Operates on item identity (not index) so selection survives filter / sort changes.
  *
@@ -12,7 +12,7 @@ import java.util.List;
  * @version v0.1.0
  * @since v0.1.0
  */
-public interface PillSelectionModel<T> {
+public interface ChipSelectionModel<T> {
 
   /**
    * Returns whether the given item is currently selected.
@@ -79,7 +79,7 @@ public interface PillSelectionModel<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  void addSelectionListener(PillSelectionListener<T> listener);
+  void addSelectionListener(ChipSelectionListener<T> listener);
 
   /**
    * Removes a previously registered selection-change listener.
@@ -88,5 +88,5 @@ public interface PillSelectionModel<T> {
    * @version v0.1.0
    * @since v0.1.0
    */
-  void removeSelectionListener(PillSelectionListener<T> listener);
+  void removeSelectionListener(ChipSelectionListener<T> listener);
 }

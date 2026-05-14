@@ -1,7 +1,7 @@
 /**
  * Shared abstractions for the {@code FlatList} component family — the umbrella over {@link
  * com.owspfm.ui.components.card.list.FlatCardList}, {@link
- * com.owspfm.ui.components.pill.list.FlatPillList}, and any future model-driven flat-list
+ * com.owspfm.ui.components.chip.list.FlatChipList}, and any future model-driven flat-list
  * primitives.
  *
  * <p>Extracted in epic #230 story #237. The package defines just the cross-cutting
