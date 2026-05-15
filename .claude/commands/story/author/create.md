@@ -8,7 +8,7 @@ Create a comprehensive GitHub issue using user story format and automatically ad
 
 1. **Display Available Milestones**: First, fetch and display available milestones:
    ```bash
-   gh api repos/OWS-PFMS/flatcomp/milestones --jq '.[] | select(.state == "open") | {number: .number, title: .title, open_issues: .open_issues}'
+   gh api repos/OWS-PFMS/elwha/milestones --jq '.[] | select(.state == "open") | {number: .number, title: .title, open_issues: .open_issues}'
    ```
    Present the list to the user in a readable format.
 
@@ -108,12 +108,12 @@ Create a comprehensive GitHub issue using user story format and automatically ad
 
    ```bash
    # 1. Get the issue node ID
-   ISSUE_NODE_ID=$(gh api repos/OWS-PFMS/flatcomp/issues/[NUMBER] --jq '.node_id')
+   ISSUE_NODE_ID=$(gh api repos/OWS-PFMS/elwha/issues/[NUMBER] --jq '.node_id')
 
    # 2. Look up the issue type ID by name (skip if using the cached Epic ID above)
    TYPE_ID=$(gh api graphql -f query='
      query {
-       repository(owner: "OWS-PFMS", name: "flatcomp") {
+       repository(owner: "OWS-PFMS", name: "elwha") {
          issueTypes(first: 20) { nodes { id name } }
        }
      }
@@ -149,7 +149,7 @@ Create a comprehensive GitHub issue using user story format and automatically ad
    ```bash
    gh api graphql -f query='
      query {
-       repository(owner: "OWS-PFMS", name: "flatcomp") {
+       repository(owner: "OWS-PFMS", name: "elwha") {
          issue(number: [NUMBER]) {
            projectItems(first: 10) {
              nodes {
@@ -208,7 +208,7 @@ Create a comprehensive GitHub issue using user story format and automatically ad
    ```bash
    gh api graphql -f query='
      query {
-       repository(owner: "OWS-PFMS", name: "flatcomp") {
+       repository(owner: "OWS-PFMS", name: "elwha") {
          issue(number: [NUMBER]) {
            projectItems(first: 10) {
              nodes {

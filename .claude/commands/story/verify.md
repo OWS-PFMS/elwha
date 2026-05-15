@@ -33,7 +33,7 @@ You are the verifying agent. Your job is to take a story whose implementation wo
 
 ## Context
 
-- **Repository:** `OWS-PFMS/flatcomp`
+- **Repository:** `OWS-PFMS/elwha`
 - **Default branch:** `main`
 - **Verification checklist file:** `docs/stories/issue-{N}/verify.md`
 - **Implementation plan (for context):** `docs/stories/issue-{N}/plan.md`

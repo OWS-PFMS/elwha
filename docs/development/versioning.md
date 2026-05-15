@@ -1,6 +1,6 @@
 # JavaDoc Versioning Guide
 
-This document describes the JavaDoc `@version` and `@since` tagging conventions for the FlatComp library.
+This document describes the JavaDoc `@version` and `@since` tagging conventions for the Elwha library.
 
 ## Table of Contents
 - [Overview](#overview)
@@ -38,7 +38,7 @@ Indicates the milestone when the class / interface / enum was last modified.
 ### `@since`
 Indicates the milestone when the class / interface / enum (or specific public method) was **first introduced**.
 
-- **For files extracted from OWS-Local-Search-GUI at v0.1.0**: carries the parent-repo `@since` they had at extraction. Files still on parent-repo alpha tags (`v1.1.0-alpha.N`) will be migrated to a flatcomp baseline at the first repo-wide normalization pass; until then the PR-diff-scoped validator ignores them.
+- **For files extracted from OWS-Local-Search-GUI at v0.1.0**: carries the parent-repo `@since` they had at extraction. Files still on parent-repo alpha tags (`v1.1.0-alpha.N`) will be migrated to a elwha baseline at the first repo-wide normalization pass; until then the PR-diff-scoped validator ignores them.
 - **For new classes**: set to the milestone where it's first added.
 - **For new public methods in existing classes**: add method-level `@since`.
 - **Never changes**: once set, `@since` is immutable. The PR-diff-scoped validator enforces byte-equality against the base ref for modified files.
@@ -92,7 +92,7 @@ Inner classes and enums inherit versioning from their enclosing class. Do not ad
 ### New Class in v0.2.0
 
 ```java
-package com.owspfm.ui.components.chip;
+package com.owspfm.elwha.chip;
 
 /**
  * Compact pill replacement aligned with Material chip taxonomy.
@@ -101,7 +101,7 @@ package com.owspfm.ui.components.chip;
  * @version v0.2.0
  * @since v0.2.0
  */
-public class FlatChip {
+public class ElwhaChip {
     // ...
 }
 ```
@@ -116,7 +116,7 @@ public class FlatChip {
  * @version v0.2.0    ← bumped (any modification bumps @version)
  * @since v0.1.0      ← unchanged (immutable)
  */
-public class FlatCard {
+public class ElwhaCard {
 
     /**
      * Sets the keep-summary-when-expanded behavior.

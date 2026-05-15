@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a defect, error, or incorrect behavior in a FlatComp component
+about: Report a defect, error, or incorrect behavior in Elwha
 title: 'bug: '
 labels: bug
 assignees: ''
@@ -12,15 +12,15 @@ assignees: ''
 
 ## Environment
 
-- FlatComp version:
+- Elwha version:
 - FlatLaf version:
 - JDK version:
 - OS / version:
-- Look & Feel (FlatLight, FlatDark, FlatDarcula, etc.):
+- Mode (LIGHT / DARK / SYSTEM) and palette (baseline / custom):
 
 ## Component
 
-<!-- Which component(s) does this affect? FlatCard, FlatCardList, FlatPill, FlatPillList, MaterialIcons, etc. -->
+<!-- Which component(s) does this affect? ElwhaTheme, ElwhaCard, ElwhaCardList, ElwhaChip, ElwhaChipList, MaterialIcons, etc. -->
 
 ## Steps to reproduce
 
@@ -28,7 +28,7 @@ assignees: ''
 2.
 3.
 
-A minimal reproducer is hugely appreciated. The `FlatPillPlayground` and `FlatCardListShowcase` apps are good starting points if the bug reproduces there.
+A minimal reproducer is hugely appreciated. The `ThemePlayground`, `ElwhaChipPlayground`, and `ElwhaCardPlayground` apps are good starting points if the bug reproduces there.
 
 ## Expected behavior
 

@@ -4,7 +4,7 @@
     "https://checkstyle.org/dtds/configuration_1_3.dtd">
 
 <!--
-  FlatComp Checkstyle config — Google Java Style naming with project-specific
+  Elwha Checkstyle config — Google Java Style naming with project-specific
   bans on the legacy "my*" / "the*" prefixes inherited from the OWS-tool source.
 
   Scope:

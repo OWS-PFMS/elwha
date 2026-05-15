@@ -27,7 +27,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: flatcomp-jars
+          name: elwha-jars
           path: |
             target/*.jar
             !target/original-*.jar

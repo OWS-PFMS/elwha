@@ -44,7 +44,7 @@ This command helps you break down large, complex issues into manageable sub-issu
 # Check if Issue Types are available
 gh api graphql -H "GraphQL-Features: issue_types" -f query='
   query {
-    repository(owner: "OWS-PFMS", name: "flatcomp") {
+    repository(owner: "OWS-PFMS", name: "elwha") {
       issueTypes(first: 5) { nodes { name } }
     }
   }'
@@ -76,7 +76,7 @@ If you see an error about `issueTypes` not existing, the feature is not enabled.
 
 2. **Get issue node ID** (required for GraphQL):
    ```bash
-   ISSUE_NODE_ID=$(gh api repos/OWS-PFMS/flatcomp/issues/{NUMBER} --jq '.node_id')
+   ISSUE_NODE_ID=$(gh api repos/OWS-PFMS/elwha/issues/{NUMBER} --jq '.node_id')
    ```
 
 3. **Display current issue summary**:
@@ -132,7 +132,7 @@ If you see an error about `issueTypes` not existing, the feature is not enabled.
 **Repository Constants**:
 ```bash
 OWNER="OWS-PFMS"
-REPO="flatcomp"
+REPO="elwha"
 REPO_ID="R_kgDOSb1IHA"
 ```
 
@@ -800,4 +800,4 @@ See `.claude/commands/.graphql-research-issue-types-subissues.md` for:
 
 **Implementation Status**: ✅ Complete
 **Tested**: GraphQL commands verified working
-**Repository**: OWS-PFMS/flatcomp
+**Repository**: OWS-PFMS/elwha

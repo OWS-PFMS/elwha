@@ -1,15 +1,15 @@
-# Contributing to FlatComp
+# Contributing to Elwha
 
-Thanks for considering a contribution! FlatComp is in early development (pre-1.0), so the contribution process is intentionally lightweight.
+Thanks for considering a contribution! Elwha is in early development (pre-1.0), so the contribution process is intentionally lightweight.
 
 ## Issue tracker
 
-Bugs, feature requests, and design discussions: [GitHub Issues](https://github.com/OWS-PFMS/flatcomp/issues).
+Bugs, feature requests, and design discussions: [GitHub Issues](https://github.com/OWS-PFMS/elwha/issues).
 
 When filing an issue, include:
 
 - Java + FlatLaf version
-- A minimal reproducer (the playground apps are a good base — `FlatChipPlayground`, `FlatCardPlayground`)
+- A minimal reproducer (the playground apps are a good base — `ElwhaChipPlayground`, `ElwhaCardPlayground`)
 - Screenshot or screen recording for visual bugs
 
 ## Development
@@ -20,13 +20,13 @@ When filing an issue, include:
 mvn clean package
 ```
 
-Produces `target/flatcomp-<version>.jar`, `flatcomp-<version>-sources.jar`, and `flatcomp-<version>-javadoc.jar`.
+Produces `target/elwha-<version>.jar`, `elwha-<version>-sources.jar`, and `elwha-<version>-javadoc.jar`.
 
 ### Run a playground
 
 ```bash
-mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.chip.FlatChipPlayground"
-mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.card.playground.FlatCardPlayground"
+mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.chip.ElwhaChipPlayground"
+mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.playground.ElwhaCardPlayground"
 ```
 
 ### Java version

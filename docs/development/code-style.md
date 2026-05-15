@@ -1,6 +1,6 @@
 # Code Style Guide
 
-FlatComp follows the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html), enforced automatically on every PR.
+Elwha follows the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html), enforced automatically on every PR.
 
 ## What's enforced
 
@@ -36,7 +36,7 @@ Checkstyle is JDK-version-agnostic — runs on whatever JDK launched Maven.
 
 ## The `my*` / `the*` prefix ban
 
-Earlier FlatComp code (inherited from the OWS-tool source it was extracted from) used `my*` for instance fields and `the*` for parameters/locals. Google Java Style doesn't address these specifically — they're syntactically `lowerCamelCase` and would pass vanilla `google_checks.xml`. The ban is a project-specific addition layered on top.
+Earlier Elwha code (inherited from the OWS-tool source it was extracted from) used `my*` for instance fields and `the*` for parameters/locals. Google Java Style doesn't address these specifically — they're syntactically `lowerCamelCase` and would pass vanilla `google_checks.xml`. The ban is a project-specific addition layered on top.
 
 Don't introduce identifiers that start with `my` or `the` followed by an uppercase letter. The Checkstyle config will reject them.
 
