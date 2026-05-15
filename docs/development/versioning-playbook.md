@@ -1,6 +1,6 @@
 # JavaDoc Versioning Playbook
 
-**Audience**: FlatComp maintainers and contributors working on milestone releases.
+**Audience**: Elwha maintainers and contributors working on milestone releases.
 
 This playbook provides step-by-step guidance for managing JavaDoc `@version` tags through the development lifecycle, from feature branches to release milestones.
 
@@ -33,9 +33,9 @@ When beginning work on a new milestone (e.g., transitioning from `v0.1.0` to `v0
 **Step 1: Create the GitHub Milestone**
 
 ```bash
-gh api repos/OWS-PFMS/flatcomp/milestones \
+gh api repos/OWS-PFMS/elwha/milestones \
   -f title="v0.2.0" \
-  -f description="FlatPill → FlatChip rename and FlatList surface extension"
+  -f description="FlatPill → ElwhaChip rename and ElwhaList surface extension"
 ```
 
 Or create manually in GitHub UI: Settings → Milestones → New Milestone.
@@ -55,7 +55,7 @@ gh pr edit 42 --milestone "v0.2.0"
 For **new files**:
 ```java
 /**
- * FlatChip.
+ * ElwhaChip.
  *
  * @version v0.2.0
  * @since v0.2.0    ← same as @version
@@ -65,7 +65,7 @@ For **new files**:
 For **modified files**:
 ```java
 /**
- * FlatCard.
+ * ElwhaCard.
  *
  * @version v0.2.0    ← bumped
  * @since v0.1.0      ← unchanged
@@ -122,17 +122,17 @@ python3 scripts/update_javadoc_version.py --check --expected v0.2.0
 After publish, close the milestone:
 
 ```bash
-gh api -X PATCH repos/OWS-PFMS/flatcomp/milestones/MILESTONE_NUMBER -f state=closed
+gh api -X PATCH repos/OWS-PFMS/elwha/milestones/MILESTONE_NUMBER -f state=closed
 ```
 
 ## Common Scenarios
 
 ### Scenario 1: Adding a New Component
 
-**Context**: You're adding `FlatBadge.java` in milestone `v0.3.0`.
+**Context**: You're adding `ElwhaBadge.java` in milestone `v0.3.0`.
 
 ```java
-package com.owspfm.ui.components.badge;
+package com.owspfm.elwha.badge;
 
 /**
  * Compact numeric/text badge for adornment of icons and lists.
@@ -141,7 +141,7 @@ package com.owspfm.ui.components.badge;
  * @version v0.3.0
  * @since v0.3.0
  */
-public class FlatBadge {
+public class ElwhaBadge {
     // ...
 }
 ```
@@ -153,17 +153,17 @@ public class FlatBadge {
 
 ### Scenario 2: Refactoring an Existing Class
 
-**Context**: You're refactoring `FlatCard.java` to introduce the V2 API.
+**Context**: You're refactoring `ElwhaCard.java` to introduce the V2 API.
 
 **Before** (last modified in `v0.1.0`):
 ```java
 /**
- * FlatCard primitive.
+ * ElwhaCard primitive.
  *
  * @version v0.1.0
  * @since v0.1.0
  */
-public class FlatCard {
+public class ElwhaCard {
     // ...
 }
 ```
@@ -171,12 +171,12 @@ public class FlatCard {
 **After** (refactored in `v0.3.0`):
 ```java
 /**
- * FlatCard primitive with V2 setter ergonomics.
+ * ElwhaCard primitive with V2 setter ergonomics.
  *
  * @version v0.3.0    ← updated
  * @since v0.1.0      ← unchanged
  */
-public class FlatCard {
+public class ElwhaCard {
     // ...
 }
 ```
@@ -188,16 +188,16 @@ public class FlatCard {
 
 ### Scenario 3: Adding a Method to an Existing Class
 
-**Context**: Adding `setSurfaceColor()` to `FlatCard.java`.
+**Context**: Adding `setSurfaceColor()` to `ElwhaCard.java`.
 
 ```java
 /**
- * FlatCard primitive.
+ * ElwhaCard primitive.
  *
  * @version v0.2.0    ← bumped (any modification bumps @version)
  * @since v0.1.0
  */
-public class FlatCard {
+public class ElwhaCard {
 
     /**
      * Sets a custom surface color, overriding the variant's default.
@@ -254,7 +254,7 @@ public class PillSelectionModel {
 ### CI failing: "WRONG @version (v0.1.0 != v0.2.0)"
 
 ```
-✗ WRONG @version (v0.1.0 != v0.2.0): src/com/owspfm/ui/components/card/FlatCard.java
+✗ WRONG @version (v0.1.0 != v0.2.0): src/com/owspfm/elwha/card/ElwhaCard.java
 ```
 
 **Solution**: bump `@version` to the PR's milestone. If the file truly should not have been modified, revert your changes to it.
@@ -320,7 +320,7 @@ python3 scripts/update_javadoc_version.py --apply --expected v0.1.0 --scope src
 
 5. **Close old milestone**
    ```bash
-   gh api -X PATCH repos/OWS-PFMS/flatcomp/milestones/MILESTONE_NUMBER -f state=closed
+   gh api -X PATCH repos/OWS-PFMS/elwha/milestones/MILESTONE_NUMBER -f state=closed
    ```
 
 6. **Announce**
@@ -342,4 +342,4 @@ For urgent fixes that skip the normal milestone flow:
 - [Main Versioning Guide](./versioning.md) — Tag semantics and examples
 - [CHANGELOG.md](../../CHANGELOG.md) — Project changelog
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) — Release process and PR conventions
-- [GitHub Milestones](https://github.com/OWS-PFMS/flatcomp/milestones) — Active milestones
+- [GitHub Milestones](https://github.com/OWS-PFMS/elwha/milestones) — Active milestones

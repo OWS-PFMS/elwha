@@ -4,18 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-**FlatComp** — a Swing component library built on [FlatLaf](https://www.formdev.com/flatlaf/) providing `FlatCard`, `FlatChip`, their list containers, a shared `FlatList<T>` contract, and a `MaterialIcons` helper. Apache 2.0, JDK 21, currently `0.1.0` (pre-1.0 — API not stable).
+**Elwha** — a Swing component library built on [FlatLaf](https://www.formdev.com/flatlaf/) providing `ElwhaCard`, `ElwhaChip`, their list containers, a shared `ElwhaList<T>` contract, and a `MaterialIcons` helper. Apache 2.0, JDK 21, currently `0.1.0` (pre-1.0 — API not stable).
 
-`groupId = com.owspfm`, `artifactId = flatcomp`. Single maintainer: Charles Bryan (`cfb3@uw.edu`). GitHub org: `OWS-PFMS`.
+`groupId = com.owspfm`, `artifactId = elwha`. Single maintainer: Charles Bryan (`cfb3@uw.edu`). GitHub org: `OWS-PFMS`.
 
-**Provenance:** extracted from [OWS-PFMS/OWS-Local-Search-GUI](https://github.com/OWS-PFMS/OWS-Local-Search-GUI) on 2026-05-12 via epic #231 with `git filter-repo --subdirectory-filter` so pre-extraction history is preserved. Rationale and the coupling audit that confirmed extraction-readiness live in `docs/research/flatcomp-extraction-decisions.md` and `docs/research/flatcomp-coupling-audit.md` — **read those before making architectural decisions; don't re-litigate them.**
+**Provenance:** extracted from [OWS-PFMS/OWS-Local-Search-GUI](https://github.com/OWS-PFMS/OWS-Local-Search-GUI) on 2026-05-12 via epic #231 with `git filter-repo --subdirectory-filter` so pre-extraction history is preserved. Rationale and the coupling audit that confirmed extraction-readiness live in `docs/research/elwha-extraction-decisions.md` and `docs/research/elwha-coupling-audit.md` — **read those before making architectural decisions; don't re-litigate them.**
 
 ## Build & run
 
 ```bash
-mvn clean package                                                    # → target/flatcomp-<version>.jar + sources + javadoc jars
-mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.chip.FlatChipPlayground"
-mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.card.playground.FlatCardPlayground"
+mvn clean package                                                    # → target/elwha-<version>.jar + sources + javadoc jars
+mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.chip.ElwhaChipPlayground"
+mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.playground.ElwhaCardPlayground"
 ```
 
 **No tests yet.** The lib has zero JUnit tests today — components are validated visually via the two playground apps above. There's no test infrastructure to lean on; if you change behavior, exercise the playground.
@@ -24,25 +24,25 @@ mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.card.playground
 
 `pom.xml` sets `<sourceDirectory>src</sourceDirectory>`, so Java sources live at `src/com/owspfm/...` rather than `src/main/java/com/owspfm/...`. Resources still follow the Maven default at `src/main/resources/`. **This layout is deliberate** — it preserves filename parity with the OWS-tool source the lib was extracted from, keeping `git blame` archeology useful across the two repos. Don't "fix" it.
 
-Component packages under `src/com/owspfm/ui/components/`:
+Component packages under `src/com/owspfm/elwha/`:
 
 | Package | What it is |
 |---|---|
-| `card/` | `FlatCard` primitive + variants (`FILLED` / `OUTLINED` / `GHOST` / `WARM_ACCENT`) + interaction modes |
-| `card/list/` | `FlatCardList<T>` + `CardListModel` + `CardSelectionModel` + drag-handle cursor PNGs |
-| `card/playground/` | `FlatCardPlayground` interactive demo (embeds `FlatCardListShowcase` + `GalleryPanel` panels) |
-| `chip/` | `FlatChip` + variants + interaction modes |
-| `chip/list/` | `FlatChipList<T>` + `ChipListModel` + `ChipSelectionModel` (including `SINGLE_MANDATORY` tab-strip semantics) + `MovementMode` + `IconAffordance` |
-| `flatlist/` | `FlatList<T>` — the narrow cross-cutting interface both list families implement (orientation / gap / padding / empty / loading / filter / sort). **Does not include selection or drag-reorder by design** — those are family-specific today (see epic #252) |
+| `card/` | `ElwhaCard` primitive + variants (`FILLED` / `OUTLINED` / `GHOST` / `WARM_ACCENT`) + interaction modes |
+| `card/list/` | `ElwhaCardList<T>` + `CardListModel` + `CardSelectionModel` + drag-handle cursor PNGs |
+| `card/playground/` | `ElwhaCardPlayground` interactive demo (embeds `ElwhaCardListShowcase` + `GalleryPanel` panels) |
+| `chip/` | `ElwhaChip` + variants + interaction modes |
+| `chip/list/` | `ElwhaChipList<T>` + `ChipListModel` + `ChipSelectionModel` (including `SINGLE_MANDATORY` tab-strip semantics) + `MovementMode` + `IconAffordance` |
+| `list/` | `ElwhaList<T>` — the narrow cross-cutting interface both list families implement (orientation / gap / padding / empty / loading / filter / sort). **Does not include selection or drag-reorder by design** — those are family-specific today (see epic #252) |
 | `icons/` | `MaterialIcons` — wraps `FlatSVGIcon` over 17 bundled Material Symbols (Rounded / 400 / fill 0; 20-dp optical-size axis, rendered at 24px by default with sized overloads), auto-themed via a shared `Label.foreground` color filter |
-| `theme/` | The design-token foundation (Epic #30): facade enums (`ColorRole` / `ShapeScale` / `SpaceScale` / `TypeRole` / `StateLayer`), the `FlatCompTheme` static install API (`Palette` / `Theme` / `Mode` / `Typography` / `Config`), `FlatLafKeyMapping` (the curated FlatLaf-native key → role bridge), `MaterialPalettes.baseline()` + `PaletteLoader`, and the bundled Inter font |
+| `theme/` | The design-token foundation (Epic #30): facade enums (`ColorRole` / `ShapeScale` / `SpaceScale` / `TypeRole` / `StateLayer`), the `ElwhaTheme` static install API (`Palette` / `Theme` / `Mode` / `Typography` / `Config`), `FlatLafKeyMapping` (the curated FlatLaf-native key → role bridge), `MaterialPalettes.baseline()` + `PaletteLoader`, and the bundled Inter font |
 | `theme/playground/` | `ThemePlayground` — visual harness for the token foundation (color swatches, type scale, components gallery + light/dark/system mode toggle) |
 
 Bundled resources:
-- `src/main/resources/com/owspfm/ui/components/card/list/cursors/` — grab / grabbing cursors, light + dark, 16/32px (Capitaine, CC BY-SA 4.0; attribution in `NOTICE`)
+- `src/main/resources/com/owspfm/elwha/card/list/cursors/` — grab / grabbing cursors, light + dark, 16/32px (Capitaine, CC BY-SA 4.0; attribution in `NOTICE`)
 - `src/main/resources/com/owspfm/icons/material/` — 17 Material Symbol SVGs (Apache 2.0 from Google; attribution in `NOTICE`)
-- `src/main/resources/com/owspfm/ui/components/theme/fonts/` — Inter Regular + Medium TTFs for `Typography.defaults()` (SIL OFL 1.1; attribution in `NOTICE`)
-- `src/main/resources/com/owspfm/ui/components/theme/palettes/` — `baseline.json`, the M3 baseline scheme loaded by `MaterialPalettes.baseline()`
+- `src/main/resources/com/owspfm/elwha/theme/fonts/` — Inter Regular + Medium TTFs for `Typography.defaults()` (SIL OFL 1.1; attribution in `NOTICE`)
+- `src/main/resources/com/owspfm/elwha/theme/palettes/` — `baseline.json`, the M3 baseline scheme loaded by `MaterialPalettes.baseline()`
 
 ## Coupling stance (defend this)
 
@@ -72,18 +72,18 @@ Tag-driven publish to GitHub Packages (`.github/workflows/publish.yml` does the 
 4. `git tag -a vX.Y.Z -m "Release X.Y.Z"`
 5. `git push origin vX.Y.Z`
 
-The workflow validates the version matches `CHANGELOG.md` and publishes the jar + sources + javadoc to `https://maven.pkg.github.com/OWS-PFMS/flatcomp`.
+The workflow validates the version matches `CHANGELOG.md` and publishes the jar + sources + javadoc to `https://maven.pkg.github.com/OWS-PFMS/elwha`.
 
 ## Open epics — expect breaking changes until these land
 
-`FlatPill` → `FlatChip` (epic [#27](https://github.com/OWS-PFMS/flatcomp/issues/27) — mirrored from the closed OWS-Local-Search-GUI epic #251) is **complete in the lib** once the rename PRs land; consumer-side migration is tracked in **OWS-PFMS/OWS-Local-Search-GUI#258**. The remaining open epics are queued and still filed on the consumer repo (the lib didn't exist when they were opened). They'll move here over time. **1.0.0 ships only after both complete.**
+`FlatPill` → `ElwhaChip` (epic [#27](https://github.com/OWS-PFMS/elwha/issues/27) — mirrored from the closed OWS-Local-Search-GUI epic #251) is **complete in the lib** once the rename PRs land; consumer-side migration is tracked in **OWS-PFMS/OWS-Local-Search-GUI#258**. The remaining open epics are queued and still filed on the consumer repo (the lib didn't exist when they were opened). They'll move here over time. **1.0.0 ships only after both complete.**
 
-- **OWS-Local-Search-GUI#252 — Extend `FlatList<T>`** to share selection + drag-reorder surface across both list families. Today the surface is family-specific (`CardSelectionMode` vs `ChipSelectionMode`, `CardSelectionModel` vs `ChipSelectionModel`); the chip side has richer semantics (`SINGLE_MANDATORY`, toggleable `SINGLE`, deferred drag-vs-click) that the card side lacks.
-- **OWS-Local-Search-GUI#253 — `FlatCard` V2 API** replacing accumulated escape-hatches (raw label getters, `setSurfaceColor` bolt-on, `setKeepSummaryWhenExpanded`, `setHeader` overload pattern).
+- **OWS-Local-Search-GUI#252 — Extend `ElwhaList<T>`** to share selection + drag-reorder surface across both list families. Today the surface is family-specific (`CardSelectionMode` vs `ChipSelectionMode`, `CardSelectionModel` vs `ChipSelectionModel`); the chip side has richer semantics (`SINGLE_MANDATORY`, toggleable `SINGLE`, deferred drag-vs-click) that the card side lacks.
+- **OWS-Local-Search-GUI#253 — `ElwhaCard` V2 API** replacing accumulated escape-hatches (raw label getters, `setSurfaceColor` bolt-on, `setKeepSummaryWhenExpanded`, `setHeader` overload pattern).
 
 Org-level project board tracking this work: **Project #5 — Material Flat Component Library** at `https://github.com/orgs/OWS-PFMS/projects/5`.
 
-Known consumer: **OWS-PFMS/OWS-Local-Search-GUI** (via PR #266 swap-out). That repo's issues #243 / #244 are the OWS-tool-side migration of `FactorPill` / `InnerViewTabStrip` onto `FlatChip` (originally written against the pre-rename `FlatPill` name).
+Known consumer: **OWS-PFMS/OWS-Local-Search-GUI** (via PR #266 swap-out). That repo's issues #243 / #244 are the OWS-tool-side migration of `FactorPill` / `InnerViewTabStrip` onto `ElwhaChip` (originally written against the pre-rename `FlatPill` name).
 
 ## Working-style preferences (from the operator)
 

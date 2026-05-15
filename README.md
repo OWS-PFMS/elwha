@@ -1,22 +1,22 @@
-# FlatComp
+# Elwha
 
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 [![JDK 21](https://img.shields.io/badge/JDK-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![FlatLaf 3.2.5](https://img.shields.io/badge/FlatLaf-3.2.5-green.svg)](https://www.formdev.com/flatlaf/)
 
-A Swing component library built on [FlatLaf](https://www.formdev.com/flatlaf/) — `FlatCard`, `FlatChip`, and related primitives.
+A Swing component library built on [FlatLaf](https://www.formdev.com/flatlaf/) — `ElwhaCard`, `ElwhaChip`, and related primitives.
 
 ## Components
 
 | Component | What it is |
 |---|---|
-| **`FlatCard`** | A theme-aware card primitive: header, body, surface variants, hover/pressed/selected states, optional collapse/expand, leading icon, trailing actions. |
-| **`FlatCardList<T>`** | A list of `FlatCard` items with selection, drag-to-reorder, filter, sort, orientation modes (vertical / horizontal / wrap / grid). |
-| **`FlatChip`** | A compact chip primitive: text + optional leading icon + optional trailing action button, themeable via UIManager keys, auto-contrast foreground. |
-| **`FlatChipList<T>`** | A list of `FlatChip` items with selection (`NONE` / `SINGLE` / `SINGLE_MANDATORY` / `MULTIPLE`), drag-to-reorder, pinned-partition + anchored modes, icon affordances. |
-| **`FlatList<T>`** | The shared cross-cutting contract implemented by both `FlatCardList` and `FlatChipList` — orientation, gap, padding, empty / loading state, filter, sort. |
+| **`ElwhaCard`** | A theme-aware card primitive: header, body, surface variants, hover/pressed/selected states, optional collapse/expand, leading icon, trailing actions. |
+| **`ElwhaCardList<T>`** | A list of `ElwhaCard` items with selection, drag-to-reorder, filter, sort, orientation modes (vertical / horizontal / wrap / grid). |
+| **`ElwhaChip`** | A compact chip primitive: text + optional leading icon + optional trailing action button, themeable via UIManager keys, auto-contrast foreground. |
+| **`ElwhaChipList<T>`** | A list of `ElwhaChip` items with selection (`NONE` / `SINGLE` / `SINGLE_MANDATORY` / `MULTIPLE`), drag-to-reorder, pinned-partition + anchored modes, icon affordances. |
+| **`ElwhaList<T>`** | The shared cross-cutting contract implemented by both `ElwhaCardList` and `ElwhaChipList` — orientation, gap, padding, empty / loading state, filter, sort. |
 | **`MaterialIcons`** | Helper that loads Material Symbols SVGs (Rounded / 400 / fill 0; 20-dp optical-size axis, rendered at 24px by default with sized overloads) via `FlatSVGIcon`, with a theme-aware color filter so icons follow `Label.foreground`. |
-| **`FlatCompTheme`** | The design-token install API: a `Palette` / `Theme` / `Mode` / `Typography` / `Config` value-object chain plus a single static `install(Config)` that writes the full `FlatComp.*` token namespace and a curated FlatLaf-native key bridge so raw Swing inherits the design language. Ships `MaterialPalettes.baseline()` (M3 baseline) and bundles Inter (Regular + Medium) for `Typography.defaults()`. |
+| **`ElwhaTheme`** | The design-token install API: a `Palette` / `Theme` / `Mode` / `Typography` / `Config` value-object chain plus a single static `install(Config)` that writes the full `Elwha.*` token namespace and a curated FlatLaf-native key bridge so raw Swing inherits the design language. Ships `MaterialPalettes.baseline()` (M3 baseline) and bundles Inter (Regular + Medium) for `Typography.defaults()`. |
 
 ## Install
 
@@ -29,15 +29,15 @@ Add the repository and dependency to your `pom.xml`:
 ```xml
 <repositories>
   <repository>
-    <id>github-flatcomp</id>
-    <url>https://maven.pkg.github.com/OWS-PFMS/flatcomp</url>
+    <id>github-elwha</id>
+    <url>https://maven.pkg.github.com/OWS-PFMS/elwha</url>
   </repository>
 </repositories>
 
 <dependencies>
   <dependency>
     <groupId>com.owspfm</groupId>
-    <artifactId>flatcomp</artifactId>
+    <artifactId>elwha</artifactId>
     <version>0.1.0</version>
   </dependency>
 </dependencies>
@@ -48,7 +48,7 @@ You'll need a GitHub Personal Access Token with `read:packages` scope in your `~
 ```xml
 <servers>
   <server>
-    <id>github-flatcomp</id>
+    <id>github-elwha</id>
     <username>YOUR_GITHUB_USERNAME</username>
     <password>YOUR_PAT_WITH_READ_PACKAGES</password>
   </server>
@@ -59,8 +59,8 @@ You'll need a GitHub Personal Access Token with `read:packages` scope in your `~
 
 ```java
 import com.formdev.flatlaf.FlatLightLaf;
-import com.owspfm.ui.components.card.FlatCard;
-import com.owspfm.ui.components.chip.FlatChip;
+import com.owspfm.elwha.card.ElwhaCard;
+import com.owspfm.elwha.chip.ElwhaChip;
 import javax.swing.*;
 import java.awt.*;
 
@@ -69,17 +69,17 @@ public class Demo {
     SwingUtilities.invokeLater(() -> {
       FlatLightLaf.setup();
 
-      JFrame frame = new JFrame("FlatComp Demo");
+      JFrame frame = new JFrame("Elwha Demo");
       frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
       frame.getContentPane().setLayout(new FlowLayout());
 
       // A simple card
-      FlatCard card = new FlatCard()
+      ElwhaCard card = new ElwhaCard()
           .setHeader("Recent activity", "Last 30 days");
       frame.add(card);
 
       // A simple chip
-      FlatChip chip = new FlatChip("Tag");
+      ElwhaChip chip = new ElwhaChip("Tag");
       frame.add(chip);
 
       frame.pack();
@@ -94,20 +94,20 @@ public class Demo {
 
 The library ships interactive playground apps that exercise the full surface of each component family:
 
-- `com.owspfm.ui.components.card.playground.FlatCardPlayground`
-- `com.owspfm.ui.components.chip.FlatChipPlayground`
-- `com.owspfm.ui.components.theme.playground.ThemePlayground` — visual harness for the token foundation (color swatches, type scale, raw-Swing components gallery, live light/dark/system mode toggle).
+- `com.owspfm.elwha.card.playground.ElwhaCardPlayground`
+- `com.owspfm.elwha.chip.ElwhaChipPlayground`
+- `com.owspfm.elwha.theme.playground.ThemePlayground` — visual harness for the token foundation (color swatches, type scale, raw-Swing components gallery, live light/dark/system mode toggle).
 
-Run them directly from a checkout: `mvn compile exec:java -Dexec.mainClass="com.owspfm.ui.components.theme.playground.ThemePlayground"`.
+Run them directly from a checkout: `mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.theme.playground.ThemePlayground"`.
 
 ## Theming
 
-Every component reads theme defaults via `UIManager` under a component-specific namespace (`FlatChip.*`, etc.). Override at app startup before any component is created:
+Every component reads theme defaults via `UIManager` under a component-specific namespace (`ElwhaChip.*`, etc.). Override at app startup before any component is created:
 
 ```java
-UIManager.put("FlatChip.arc", 20);
-UIManager.put("FlatChip.padding", new Insets(4, 12, 4, 12));
-UIManager.put("FlatChip.background", new Color(0xEBF5FF));
+UIManager.put("ElwhaChip.arc", 20);
+UIManager.put("ElwhaChip.padding", new Insets(4, 12, 4, 12));
+UIManager.put("ElwhaChip.background", new Color(0xEBF5FF));
 ```
 
 See the playground apps for the full list of available keys and their effects.
@@ -124,8 +124,8 @@ This library was extracted from the [OWS-Local-Search-GUI](https://github.com/OW
 
 - API may change between minor versions (`0.x.y`)
 - Two breaking-change epics are queued post-extraction:
-  - `FlatChip` → `FlatChip` rename, aligning with Material's chip taxonomy
-  - `FlatList<T>` extended to share selection + drag-reorder surface across both list families
+  - `ElwhaChip` → `ElwhaChip` rename, aligning with Material's chip taxonomy
+  - `ElwhaList<T>` extended to share selection + drag-reorder surface across both list families
 
 API will stabilize at **1.0.0** after those land.
 

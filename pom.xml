@@ -5,13 +5,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.owspfm</groupId>
-  <artifactId>flatcomp</artifactId>
+  <artifactId>elwha</artifactId>
   <version>0.1.0</version>
   <packaging>jar</packaging>
 
-  <name>FlatComp</name>
-  <description>A Swing component library built on FlatLaf — FlatCard, FlatChip, and related primitives.</description>
-  <url>https://github.com/OWS-PFMS/flatcomp</url>
+  <name>Elwha</name>
+  <description>A Swing component library built on FlatLaf — ElwhaCard, ElwhaChip, and related primitives.</description>
+  <url>https://github.com/OWS-PFMS/elwha</url>
 
   <licenses>
     <license>
@@ -32,9 +32,9 @@
   </developers>
 
   <scm>
-    <connection>scm:git:git://github.com/OWS-PFMS/flatcomp.git</connection>
-    <developerConnection>scm:git:ssh://github.com:OWS-PFMS/flatcomp.git</developerConnection>
-    <url>https://github.com/OWS-PFMS/flatcomp/tree/main</url>
+    <connection>scm:git:git://github.com/OWS-PFMS/elwha.git</connection>
+    <developerConnection>scm:git:ssh://github.com:OWS-PFMS/elwha.git</developerConnection>
+    <url>https://github.com/OWS-PFMS/elwha/tree/main</url>
   </scm>
 
   <properties>
@@ -67,7 +67,7 @@
     <repository>
       <id>github</id>
       <name>GitHub OWS-PFMS Apache Maven Packages</name>
-      <url>https://maven.pkg.github.com/OWS-PFMS/flatcomp</url>
+      <url>https://maven.pkg.github.com/OWS-PFMS/elwha</url>
     </repository>
   </distributionManagement>
 

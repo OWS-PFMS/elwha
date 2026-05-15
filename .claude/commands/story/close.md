@@ -80,7 +80,7 @@ gh issue view {ISSUE_NUMBER} --json labels,milestone --jq '{labels: [.labels[].n
 
 See [docs/development/changelog-policy.md](../../docs/development/changelog-policy.md) for full criteria.
 
-Quick check (FlatComp label set):
+Quick check (Elwha label set):
 - **Required** ✅: Change adds/renames/removes public API, changes default visual behavior, or fixes a consumer-observable bug. Typical labels: `enhancement`, `user-experience`, `bug` (when user-observable).
 - **Recommended** 💡: Measurable performance change, or doc fix that corrects consumer-visible misinformation.
 - **Skip** ⏭️: Issue has only `technical-debt`, `documentation` (internal), `developer-experience`, or `bug` (internal-only).
@@ -316,7 +316,7 @@ Use the GraphQL API to update project status (reference the successful Issue #14
 ```bash
 gh api graphql -f query='
   query {
-    repository(owner: "OWS-PFMS", name: "flatcomp") {
+    repository(owner: "OWS-PFMS", name: "elwha") {
       issue(number: {ISSUE_NUMBER}) {
         projectItems(first: 10) {
           nodes {
@@ -389,7 +389,7 @@ gh issue view {ISSUE_NUMBER} --json milestone --jq '.milestone'
 ### 5.2 Check Milestone Status
 
 ```bash
-gh api repos/OWS-PFMS/flatcomp/milestones/{MILESTONE_NUMBER} --jq '{title: .title, open: .open_issues, closed: .closed_issues}'
+gh api repos/OWS-PFMS/elwha/milestones/{MILESTONE_NUMBER} --jq '{title: .title, open: .open_issues, closed: .closed_issues}'
 ```
 
 ### 5.3 Prompt for Closure (If Last Open Issue)
@@ -408,7 +408,7 @@ Would you like to close this milestone? (yes/no)
 If user says yes:
 
 ```bash
-gh api -X PATCH repos/OWS-PFMS/flatcomp/milestones/{MILESTONE_NUMBER} -f state=closed
+gh api -X PATCH repos/OWS-PFMS/elwha/milestones/{MILESTONE_NUMBER} -f state=closed
 ```
 
 Confirm success and display closure message.

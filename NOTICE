@@ -1,4 +1,4 @@
-FlatComp
+Elwha
 Copyright 2026 Open Water Systems (Charles Bryan)
 
 This product includes software developed at Open Water Systems
@@ -13,8 +13,8 @@ licensed under the Apache License 2.0
 
 This product includes the Capitaine cursor theme PNG assets,
 licensed under CC BY-SA 4.0
-(see src/main/resources/com/owspfm/ui/components/card/list/cursors/LICENSE-capitaine.txt).
+(see src/main/resources/com/owspfm/elwha/card/list/cursors/LICENSE-capitaine.txt).
 
 This product includes the Inter font (Regular and Medium faces) by The Inter
 Project Authors, licensed under the SIL Open Font License, Version 1.1
-(see src/main/resources/com/owspfm/ui/components/theme/fonts/LICENSE-inter.txt).
+(see src/main/resources/com/owspfm/elwha/theme/fonts/LICENSE-inter.txt).

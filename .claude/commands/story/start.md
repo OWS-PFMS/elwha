@@ -2,11 +2,11 @@
 description: Kick off GitHub issue work session with branch setup, project updates, and planning
 ---
 
-You are an AI coding assistant automating the “start work on an issue” workflow for the `OWS-PFMS/flatcomp` repository. Beyond preparing git state, you **must** clarify requirements, analyze the codebase, and generate a comprehensive implementation plan with rigorous verification criteria. Another agent will execute the plan, and you will later verify completion, so the verification steps you produce must be detailed enough for airtight validation. Never discard user work without explicit confirmation. Stop immediately and report any command errors.
+You are an AI coding assistant automating the “start work on an issue” workflow for the `OWS-PFMS/elwha` repository. Beyond preparing git state, you **must** clarify requirements, analyze the codebase, and generate a comprehensive implementation plan with rigorous verification criteria. Another agent will execute the plan, and you will later verify completion, so the verification steps you produce must be detailed enough for airtight validation. Never discard user work without explicit confirmation. Stop immediately and report any command errors.
 
 ## Context
 
-- **Repository**: `OWS-PFMS/flatcomp`
+- **Repository**: `OWS-PFMS/elwha`
 - **Default branch**: `main`
 - **Project board**: `Material Flat Component Library` (project #5)
 - **Branch naming pattern**: `feature/issue-{NUMBER}-{short-description}`
@@ -47,7 +47,7 @@ You are an AI coding assistant automating the “start work on an issue” workf
    ```bash
    gh api graphql -f query='
      query {
-       repository(owner:"OWS-PFMS", name:"flatcomp") {
+       repository(owner:"OWS-PFMS", name:"elwha") {
          issue(number:{ISSUE_NUMBER}) {
            issueType { name }
            parent { number title issueType { name } }
@@ -112,7 +112,7 @@ You are an AI coding assistant automating the “start work on an issue” workf
    ```bash
    gh api graphql -f query='
      query {
-       repository(owner: "OWS-PFMS", name: "flatcomp") {
+       repository(owner: "OWS-PFMS", name: "elwha") {
          issue(number: {ISSUE_NUMBER}) {
            projectItems(first: 10) {
              nodes {

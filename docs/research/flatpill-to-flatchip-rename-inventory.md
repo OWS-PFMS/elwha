@@ -1,8 +1,8 @@
 # FlatPill → FlatChip Rename Inventory
 
-**Deliverable for:** [issue #23](https://github.com/OWS-PFMS/flatcomp/issues/23) — pre-flight inventory of FlatPill → FlatChip rename touchpoints.
+**Deliverable for:** [issue #23](https://github.com/OWS-PFMS/elwha/issues/23) — pre-flight inventory of FlatPill → FlatChip rename touchpoints.
 
-**Part of epic:** [#27](https://github.com/OWS-PFMS/flatcomp/issues/27) — Rename `FlatPill` → `FlatChip` to align with Material chip taxonomy.
+**Part of epic:** [#27](https://github.com/OWS-PFMS/elwha/issues/27) — Rename `FlatPill` → `FlatChip` to align with Material chip taxonomy.
 
 **Inventory date:** 2026-05-13
 **Inventoried path:** Repo-wide (`src/`, `docs/`, top-level docs, `pom.xml`).
@@ -18,7 +18,7 @@ The rename has **clean boundaries**:
 - **3 javadoc cross-references** in *non-pill* source files (`flatlist/`, `icons/`, `card/list/FlatCardList.java`) that mention `FlatPill` / `FlatPillList` in prose only.
 - **14 UIManager string keys** under the `"FlatPill."` namespace (13 declared as `K_*` constants in `FlatPill.java`, 1 ad-hoc `"FlatPill.removeIcon"` used only in `FlatPillPlayground`).
 - **1 client-property key** `"FlatPill.style"` (`STYLE_PROPERTY` constant).
-- **6 prose / config files** outside `src/` mention pill (`README.md`, `CHANGELOG.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `docs/research/flatcomp-coupling-audit.md`, plus 3 dev-docs that mention pill incidentally and need no change).
+- **6 prose / config files** outside `src/` mention pill (`README.md`, `CHANGELOG.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `docs/research/elwha-coupling-audit.md`, plus 3 dev-docs that mention pill incidentally and need no change).
 - **Zero** reflective lookups, classpath scans, ServiceLoader files, `META-INF`, `.properties`, or other tricky cases. No FlatLaf `styleClass` strings referencing pill (the `FlatLaf.styleClass` usages in playground/demo are generic FlatLaf class names like `"small"` / `"h4"`).
 - **One incidental "pill" usage to leave alone:** `card/playground/CycleCardExample.java` defines a local `factorPill(...)` helper and `drawPill(...)` chart-rendering method, plus `PILL_PAD_X` / `PILL_ARC` constants. These describe a *visual shape* in a card-related chart demo and have no relationship to the `FlatPill` class — they stay unchanged.
 
@@ -133,9 +133,9 @@ Java constant names (`K_*`, `STYLE_PROPERTY`) stay — only the string values mo
 |---|---|
 | `README.md`                     | 106–108 (the snippet shows `UIManager.put("FlatPill.arc", 20)` etc.) |
 | `src/com/owspfm/ui/components/pill/README.md` | 108 (`"FlatPill.style"` client property example) |
-| `docs/research/flatcomp-coupling-audit.md`    | 74 (audit table cell referencing `FlatPill.removeIcon`) |
+| `docs/research/elwha-coupling-audit.md`    | 74 (audit table cell referencing `FlatPill.removeIcon`) |
 
-The `docs/research/flatcomp-coupling-audit.md` reference is a **historical audit artifact**; recommendation is to leave it intact (with a one-line note that the lib subsequently renamed to FlatChip) rather than rewriting history. Decision deferred to the docs PR (#26).
+The `docs/research/elwha-coupling-audit.md` reference is a **historical audit artifact**; recommendation is to leave it intact (with a one-line note that the lib subsequently renamed to FlatChip) rather than rewriting history. Decision deferred to the docs PR (#26).
 
 ---
 
@@ -171,8 +171,8 @@ All eight references are documentation only — no compilation impact. Update in
 | `CONTRIBUTING.md`                                     | 2 places (mention of `FlatPillPlayground` and `mvn exec:java -Dexec.mainClass=...FlatPillPlayground`) | Update to FlatChip |
 | `CLAUDE.md`                                           | Many places (component table, playground commands, conventions reference)         | Update to FlatChip — handled in #26 |
 | `src/com/owspfm/ui/components/pill/README.md`         | Throughout                                                                        | Move to `chip/README.md`, fully rewritten — handled in #26 |
-| `docs/research/flatcomp-extraction-decisions.md`      | Mentions FlatPill as a member of the extracted set                                | **Leave alone** — historical research artifact frozen at extraction date 2026-05-12 |
-| `docs/research/flatcomp-coupling-audit.md`            | Cites `FlatPill.removeIcon` audit cell                                            | **Leave alone** — historical audit artifact; the rename note belongs in the new inventory (this file) and the CHANGELOG |
+| `docs/research/elwha-extraction-decisions.md`      | Mentions FlatPill as a member of the extracted set                                | **Leave alone** — historical research artifact frozen at extraction date 2026-05-12 |
+| `docs/research/elwha-coupling-audit.md`            | Cites `FlatPill.removeIcon` audit cell                                            | **Leave alone** — historical audit artifact; the rename note belongs in the new inventory (this file) and the CHANGELOG |
 | `docs/development/versioning.md`, `versioning-playbook.md`, `changelog-policy.md` | Casual mentions in examples | **Leave alone** unless examples become misleading; revisit if any do |
 
 ---

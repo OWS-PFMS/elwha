@@ -30,7 +30,7 @@ The project CHANGELOG documents **user-visible changes** at a high level. It fol
 ### Required ✅
 
 CHANGELOG entry is **REQUIRED** if the change:
-- Introduces a new user-visible feature or public API surface (FlatComp is a library — every new public class, method, or UIManager key counts)
+- Introduces a new user-visible feature or public API surface (Elwha is a library — every new public class, method, or UIManager key counts)
 - Renames or removes existing public API
 - Changes default visual behavior (theming, sizing, hover/press/select states, etc.)
 - Fixes a bug that consumers could observe (e.g., layout glitch, theming bug, NPE in public API)
@@ -88,7 +88,7 @@ Use these standard categories in order:
 - **Brief Title**: 3-5 words summarizing the change
 - **Issue Number**: Always include `(#{N})` for traceability
 - **Description**: What the user gains, not how it's implemented
-- Use active voice: "Adds FlatChip component" not "FlatChip component was added"
+- Use active voice: "Adds ElwhaChip component" not "ElwhaChip component was added"
 - Focus on benefits: "Reduces load time by 40%" not "Optimized algorithm"
 
 ### Version Sections
@@ -99,7 +99,7 @@ Use these standard categories in order:
 ## [Unreleased]
 
 ### Added
-- **FlatChip component** (#N): Replaces FlatPill for Material chip taxonomy alignment.
+- **ElwhaChip component** (#N): Replaces FlatPill for Material chip taxonomy alignment.
 ```
 
 **At release time:** Rename `[Unreleased]` to the version number per the release process in [CONTRIBUTING.md](../../CONTRIBUTING.md#release-process):
@@ -108,7 +108,7 @@ Use these standard categories in order:
 ## [0.2.0] - 2026-06-15
 
 ### Added
-- **FlatChip component** (#N): Replaces FlatPill for Material chip taxonomy alignment.
+- **ElwhaChip component** (#N): Replaces FlatPill for Material chip taxonomy alignment.
 ```
 
 ## Workflow Integration
@@ -147,7 +147,7 @@ Example:
 ```bash
 git commit -m "docs(issue-18): update CHANGELOG for Added
 
-Added 'Added' entry documenting FlatChip component.
+Added 'Added' entry documenting ElwhaChip component.
 
 Related to #18
 
@@ -163,18 +163,18 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 **Example 1: New Feature**
 ```markdown
 ### Added
-- **FlatChip component** (#N): Compact pill replacement aligned with Material's chip taxonomy. Drop-in for `FlatPill` with the same UIManager keys under the `FlatChip.*` namespace.
+- **ElwhaChip component** (#N): Compact pill replacement aligned with Material's chip taxonomy. Drop-in for `FlatPill` with the same UIManager keys under the `ElwhaChip.*` namespace.
 ```
 
 Why good:
-- Names the new public surface (`FlatChip`)
+- Names the new public surface (`ElwhaChip`)
 - Tells consumers what they can do with it
 - Mentions theming/migration nuance
 
 **Example 2: Breaking API Change**
 ```markdown
 ### Changed
-- **FlatList<T> selection surface** (#N): `FlatCardList` and `FlatPillList` now share a single `ListSelectionModel<T>` via `FlatList<T>`. **Breaking:** `CardSelectionModel` / `PillSelectionModel` removed — migrate to `ListSelectionModel<T>` (sed-replaceable for most consumers).
+- **ElwhaList<T> selection surface** (#N): `ElwhaCardList` and `FlatPillList` now share a single `ListSelectionModel<T>` via `ElwhaList<T>`. **Breaking:** `CardSelectionModel` / `PillSelectionModel` removed — migrate to `ListSelectionModel<T>` (sed-replaceable for most consumers).
 ```
 
 Why good:
@@ -195,11 +195,11 @@ Why good:
 **Example 4: Theming Change**
 ```markdown
 ### Changed
-- **FlatCard default arc** (#N): Default `FlatCard.arc` lowered from 12 to 8 to match FlatLaf 3.x card defaults. Override `UIManager.put("FlatCard.arc", 12)` to restore previous behavior.
+- **ElwhaCard default arc** (#N): Default `ElwhaCard.arc` lowered from 12 to 8 to match FlatLaf 3.x card defaults. Override `UIManager.put("ElwhaCard.arc", 12)` to restore previous behavior.
 ```
 
 Why good:
-- Names the UIManager key (`FlatCard.arc`)
+- Names the UIManager key (`ElwhaCard.arc`)
 - Gives the exact override needed to revert
 
 ### Bad Entries ❌
@@ -233,13 +233,13 @@ Why bad:
 **Better version:**
 ```markdown
 ### Changed
-- **FlatCard.setHeader IllegalArgumentException** (#N): `FlatCard.setHeader` now throws `IllegalArgumentException` (was: silent no-op) when both title and subtitle are null.
+- **ElwhaCard.setHeader IllegalArgumentException** (#N): `ElwhaCard.setHeader` now throws `IllegalArgumentException` (was: silent no-op) when both title and subtitle are null.
 ```
 
 **Example 3: Internal Refactoring**
 ```markdown
 ### Changed
-- Refactored FlatPill painter to share base class with FlatCard (#N)
+- Refactored FlatPill painter to share base class with ElwhaCard (#N)
 ```
 
 Why bad:
@@ -256,8 +256,8 @@ If a PR addresses multiple issues, add separate CHANGELOG entries for each:
 
 ```markdown
 ### Added
-- **FlatChip component** (#N): ...
-- **FlatChipList<T>** (#M): ...
+- **ElwhaChip component** (#N): ...
+- **ElwhaChipList<T>** (#M): ...
 ```
 
 ### Q: Issue spans multiple milestones?

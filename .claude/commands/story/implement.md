@@ -118,7 +118,7 @@ Extract the following sections:
 
 1. Determine current milestone for @version tagging:
    ```bash
-   gh api repos/OWS-PFMS/flatcomp/milestones --jq '.[] | select(.state == "open") | select(.title | startswith("v")) | .title' | head -1
+   gh api repos/OWS-PFMS/elwha/milestones --jq '.[] | select(.state == "open") | select(.title | startswith("v")) | .title' | head -1
    ```
 2. Store milestone for use in @version tags (e.g., `v0.1.0`)
 

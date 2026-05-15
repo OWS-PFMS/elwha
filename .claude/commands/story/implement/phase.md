@@ -246,7 +246,7 @@ Please resolve blockers and re-run /story:implement:phase {issue} {phase}.
 
 If not already extracted from plan.md metadata:
 ```bash
-gh api repos/OWS-PFMS/flatcomp/milestones --jq '.[] | select(.state == "open") | select(.title | startswith("v")) | .title' | head -1
+gh api repos/OWS-PFMS/elwha/milestones --jq '.[] | select(.state == "open") | select(.title | startswith("v")) | .title' | head -1
 ```
 
 Store for @version tag updates (Implementation and Bug Fix phases only).
