@@ -246,7 +246,7 @@ public class PillSelectionModel {
 ### CI failing: "MISSING @version"
 
 ```
-✗ MISSING @version: src/com/owspfm/ui/components/FlatNew.java
+✗ MISSING @version: src/com/owspfm/elwha/badge/ElwhaBadge.java
 ```
 
 **Solution**: add a class-level JavaDoc block with `@version` and `@since` matching your PR milestone.

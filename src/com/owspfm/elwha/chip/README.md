@@ -2,7 +2,7 @@
 
 A reusable, FlatLaf-aware chip primitive — text + leading icon + optional trailing icon-button — plus a model-driven list-of-chips container supporting four orientations, selection, drag-to-reorder, filter, sort, empty / loading state, keyboard navigation, and accessibility.
 
-Mirrors the structure of the sibling [`ElwhaCard` + `ElwhaCardList`](../card/README.md) package, sharing the cross-cutting [`ElwhaList<T>`](../flatlist/ElwhaList.java) abstraction.
+Mirrors the structure of the sibling [`ElwhaCard` + `ElwhaCardList`](../card/README.md) package, sharing the cross-cutting [`ElwhaList<T>`](../list/ElwhaList.java) abstraction.
 
 ---
 
@@ -179,4 +179,4 @@ mvn -q exec:java -Dexec.mainClass=com.owspfm.elwha.chip.ElwhaChipPlayground
 
 ## Independence
 
-This package has **no dependencies on application code**. It depends only on FlatLaf and standard Swing. The `chip/`, `chip/list/`, and `flatlist/` directories together can be lifted into a standalone library.
+This package has **no dependencies on application code**. It depends only on FlatLaf and standard Swing. The `chip/`, `chip/list/`, and `list/` directories together can be lifted into a standalone library.

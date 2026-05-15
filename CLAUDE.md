@@ -76,7 +76,7 @@ The workflow validates the version matches `CHANGELOG.md` and publishes the jar 
 
 ## Open epics — expect breaking changes until these land
 
-`FlatPill` → `ElwhaChip` (epic [#27](https://github.com/OWS-PFMS/elwha/issues/27) — mirrored from the closed OWS-Local-Search-GUI epic #251) is **complete in the lib** once the rename PRs land; consumer-side migration is tracked in **OWS-PFMS/OWS-Local-Search-GUI#258**. The remaining open epics are queued and still filed on the consumer repo (the lib didn't exist when they were opened). They'll move here over time. **1.0.0 ships only after both complete.**
+The `FlatPill` → `ElwhaChip` rename (epic [#27](https://github.com/OWS-PFMS/elwha/issues/27) — mirrored from the closed OWS-Local-Search-GUI epic #251) is **complete in the lib**; consumer-side migration is tracked in **OWS-PFMS/OWS-Local-Search-GUI#258**. The FlatComp → Elwha rename (issue #42) executed on 2026-05-15 in PR #44. The remaining open epics are queued and still filed on the consumer repo (the lib didn't exist when they were opened). They'll move here over time. **1.0.0 ships only after both complete.**
 
 - **OWS-Local-Search-GUI#252 — Extend `ElwhaList<T>`** to share selection + drag-reorder surface across both list families. Today the surface is family-specific (`CardSelectionMode` vs `ChipSelectionMode`, `CardSelectionModel` vs `ChipSelectionModel`); the chip side has richer semantics (`SINGLE_MANDATORY`, toggleable `SINGLE`, deferred drag-vs-click) that the card side lacks.
 - **OWS-Local-Search-GUI#253 — `ElwhaCard` V2 API** replacing accumulated escape-hatches (raw label getters, `setSurfaceColor` bolt-on, `setKeepSummaryWhenExpanded`, `setHeader` overload pattern).
