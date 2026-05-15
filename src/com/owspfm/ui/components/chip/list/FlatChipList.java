@@ -163,6 +163,11 @@ public class FlatChipList<T> extends JPanel implements Accessible, FlatList<T> {
   private static final int DEFAULT_COLUMNS = 4;
   private static final int ANIMATION_TICK_MS = 16;
 
+  // Pin / anchor leading-icon size on chips — pinned to the pre-bump MaterialIcons default of
+  // 14px so chip visuals don't regress when MaterialIcons.DEFAULT_SIZE moves to the M3 24px
+  // standard. Chip-icon sizing will be revisited during the FlatChip V2 refresh.
+  private static final int CHIP_ICON_SIZE = 14;
+
   // Backing model + adapter -----------------------------------------------
   private final ChipListModel<T> model;
   private final ChipAdapter<T> adapter;
@@ -1249,13 +1254,13 @@ public class FlatChipList<T> extends JPanel implements Accessible, FlatList<T> {
           // inactive, filled = active, every affordance mode. Anything else makes the icon mean
           // different things depending on the affordance setting, which is exactly the
           // inconsistency we want to avoid.
-          chip.setLeadingIcon(MaterialIcons.pushPinFilled());
+          chip.setLeadingIcon(MaterialIcons.pushPinFilled(CHIP_ICON_SIZE));
         }
       }
       case BUTTON ->
           chip.setLeadingAffordance(
-              MaterialIcons.pushPin(),
-              MaterialIcons.pushPinFilled(),
+              MaterialIcons.pushPin(CHIP_ICON_SIZE),
+              MaterialIcons.pushPinFilled(CHIP_ICON_SIZE),
               isPinned(item),
               false,
               isPinned(item) ? "Unpin" : "Pin",
@@ -1283,14 +1288,14 @@ public class FlatChipList<T> extends JPanel implements Accessible, FlatList<T> {
       case INDICATOR -> {
         if (isAnchored(item)) {
           // Filled glyph for "actively anchored" — same convention as the pin affordance.
-          chip.setLeadingIcon(MaterialIcons.anchorFilled());
+          chip.setLeadingIcon(MaterialIcons.anchorFilled(CHIP_ICON_SIZE));
         }
       }
       case BUTTON -> {
         final boolean anchored = isAnchored(item);
         chip.setLeadingAffordance(
-            MaterialIcons.anchor(),
-            MaterialIcons.anchorFilled(),
+            MaterialIcons.anchor(CHIP_ICON_SIZE),
+            MaterialIcons.anchorFilled(CHIP_ICON_SIZE),
             anchored,
             !anchored,
             anchored ? "Remove anchor" : "Set as anchor",

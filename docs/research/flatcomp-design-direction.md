@@ -307,7 +307,7 @@ Roughly in order:
 
 1. ~~Lock the **token taxonomy**~~ — **DONE (2026-05-14).** See [`flatcomp-token-taxonomy.md`](flatcomp-token-taxonomy.md), now a locked-decisions doc: 46 tokens across color / type / shape / spacing / state.
 2. ~~Define the **`FlatCompTheme` install API**~~ — **DONE (2026-05-14).** See [`flatcomp-theme-install-api.md`](flatcomp-theme-install-api.md), now a locked-decisions doc.
-3. Build **one reference palette** (light + dark) — likely Material 3-aligned indigo or purple, to validate the end-to-end pipeline.
+3. ~~Build **one reference palette** (light + dark)~~ — **DONE (2026-05-14).** `MaterialPalettes.baseline()` ships the M3 baseline scheme (light + dark) as a JSON resource loaded by `PaletteLoader`. Steps 1–3 are now implemented in code under `com.owspfm.ui.components.theme` (Epic #30): the five token-facade enums, the `FlatCompTheme` install API, the FlatLaf-native key mapping, and the baseline palette + loader.
 4. ~~Retrofit `FlatChip` variants~~ — **plan LOCKED (2026-05-14):** see [`flatcomp-flatchip-rebuild.md`](flatcomp-flatchip-rebuild.md). Grew from a narrow retrofit into a token-native rebuild of FlatChip's styling API (treatment-only variants, M3 types as factory presets, typed role/scale setters, `WARM_ACCENT` removed, auto-contrast deleted). Implementation waits on steps 1–3 landing in code. Serves as the pattern for `FlatCard`.
 5. Use the token layer as the foundation of the **`FlatCard` V2 API** (#253), retiring the accumulated escape-hatches.
 6. Revisit **`FlatList<T>` selection/drag unification** (#252) once selection state has a token-based visual story.

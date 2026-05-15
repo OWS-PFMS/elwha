@@ -11,7 +11,9 @@ import javax.swing.UIManager;
  * built-in color filter.
  *
  * <p>Each lookup returns a fresh instance so per-instance derivations (color filter, resize) don't
- * leak across call sites.
+ * leak across call sites. Every icon has two overloads: a no-arg form returning the icon at {@link
+ * #DEFAULT_SIZE}, and a sized form taking an explicit pixel size, so consumers don't have to chain
+ * {@code .derive(size, size)} themselves.
  *
  * <p>Adding new icons: drop the SVG under {@code resources/com/owspfm/icons/material/} (download
  * from <a href="https://fonts.google.com/icons">fonts.google.com/icons</a> with the same style axes
@@ -24,8 +26,14 @@ import javax.swing.UIManager;
  */
 public final class MaterialIcons {
 
-  /** Default render size in pixels — matches the leading-icon footprint on FlatChip. */
-  public static final int DEFAULT_SIZE = 14;
+  /**
+   * Default render size in pixels — M3's standard for icon buttons and toolbar icons. Material
+   * Symbols are designed at the 20-dp optical-size axis, so 24px keeps them at their
+   * design-intended visual weight. Chip-context callers (FlatChipList, FlatChipPlayground) pin to a
+   * smaller explicit size today; the FlatCard V2 / FlatChip V2 refresh will revisit chip icon
+   * sizing on its own terms.
+   */
+  public static final int DEFAULT_SIZE = 24;
 
   private static final String BASE = "com/owspfm/icons/material/";
 
@@ -51,87 +59,291 @@ public final class MaterialIcons {
 
   /** Pushpin glyph (outline) — used for pinned-item affordance. */
   public static FlatSVGIcon pushPin() {
-    return load("push_pin");
+    return pushPin(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #pushPin()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon pushPin(final int size) {
+    return load("push_pin", size);
   }
 
   /** Pushpin glyph (filled / solid) — pairs with {@link #pushPin()} as the "active" state. */
   public static FlatSVGIcon pushPinFilled() {
-    return load("push_pin_fill");
+    return pushPinFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #pushPinFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon pushPinFilled(final int size) {
+    return load("push_pin_fill", size);
   }
 
   /** Trash / delete glyph. */
   public static FlatSVGIcon delete() {
-    return load("delete");
+    return delete(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #delete()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon delete(final int size) {
+    return load("delete", size);
   }
 
   /** Pencil / edit glyph. */
   public static FlatSVGIcon edit() {
-    return load("edit");
+    return edit(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #edit()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon edit(final int size) {
+    return load("edit", size);
   }
 
   /** Info "i" glyph. */
   public static FlatSVGIcon info() {
-    return load("info");
+    return info(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #info()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon info(final int size) {
+    return load("info", size);
   }
 
   /** Heart / favorite glyph. */
   public static FlatSVGIcon favorite() {
-    return load("favorite");
+    return favorite(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #favorite()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon favorite(final int size) {
+    return load("favorite", size);
   }
 
   /** Five-point star glyph. */
   public static FlatSVGIcon star() {
-    return load("star");
+    return star(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #star()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon star(final int size) {
+    return load("star", size);
   }
 
   /** Plus / add glyph. */
   public static FlatSVGIcon add() {
-    return load("add");
+    return add(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #add()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon add(final int size) {
+    return load("add", size);
   }
 
   /** Checkmark glyph. */
   public static FlatSVGIcon check() {
-    return load("check");
+    return check(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #check()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon check(final int size) {
+    return load("check", size);
   }
 
   /** Eye / visibility glyph. */
   public static FlatSVGIcon visibility() {
-    return load("visibility");
+    return visibility(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #visibility()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon visibility(final int size) {
+    return load("visibility", size);
   }
 
   /** Anchor glyph (outline) — used for "fixed/locked to position" affordances. */
   public static FlatSVGIcon anchor() {
-    return load("anchor");
+    return anchor(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #anchor()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon anchor(final int size) {
+    return load("anchor", size);
   }
 
   /** Anchor glyph (filled / solid) — pairs with {@link #anchor()} as the "active" state. */
   public static FlatSVGIcon anchorFilled() {
-    return load("anchor_fill");
+    return anchorFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #anchorFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon anchorFilled(final int size) {
+    return load("anchor_fill", size);
   }
 
   /** Grid-view (cards/tiles) glyph. */
   public static FlatSVGIcon gridView() {
-    return load("grid_view");
+    return gridView(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #gridView()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon gridView(final int size) {
+    return load("grid_view", size);
   }
 
   /** Generic table glyph. */
   public static FlatSVGIcon table() {
-    return load("table");
+    return table(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #table()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon table(final int size) {
+    return load("table", size);
   }
 
   /** Fine background-grid glyph — pairs well as a "show grid overlay" toggle. */
   public static FlatSVGIcon backgroundGridSmall() {
-    return load("background_grid_small");
+    return backgroundGridSmall(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #backgroundGridSmall()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon backgroundGridSmall(final int size) {
+    return load("background_grid_small", size);
   }
 
   /** Select-all glyph. */
   public static FlatSVGIcon selectAll() {
-    return load("select_all");
+    return selectAll(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #selectAll()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon selectAll(final int size) {
+    return load("select_all", size);
   }
 
   /** Deselect glyph (counterpart to select-all). */
   public static FlatSVGIcon deselect() {
-    return load("deselect");
+    return deselect(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #deselect()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon deselect(final int size) {
+    return load("deselect", size);
   }
 
   /**
@@ -144,11 +356,24 @@ public final class MaterialIcons {
    * @since v0.1.0
    */
   public static FlatSVGIcon get(final String name) {
-    return load(name);
+    return get(name, DEFAULT_SIZE);
   }
 
-  private static FlatSVGIcon load(final String name) {
-    final FlatSVGIcon icon = new FlatSVGIcon(BASE + name + ".svg", DEFAULT_SIZE, DEFAULT_SIZE);
+  /**
+   * Sized variant of {@link #get(String)}.
+   *
+   * @param name the bare icon name (no path, no extension), e.g. {@code "push_pin"}
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon get(final String name, final int size) {
+    return load(name, size);
+  }
+
+  private static FlatSVGIcon load(final String name, final int size) {
+    final FlatSVGIcon icon = new FlatSVGIcon(BASE + name + ".svg", size, size);
     icon.setColorFilter(THEME_FILTER);
     return icon;
   }

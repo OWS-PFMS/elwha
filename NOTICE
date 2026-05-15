@@ -14,3 +14,7 @@ licensed under the Apache License 2.0
 This product includes the Capitaine cursor theme PNG assets,
 licensed under CC BY-SA 4.0
 (see src/main/resources/com/owspfm/ui/components/card/list/cursors/LICENSE-capitaine.txt).
+
+This product includes the Inter font (Regular and Medium faces) by The Inter
+Project Authors, licensed under the SIL Open Font License, Version 1.1
+(see src/main/resources/com/owspfm/ui/components/theme/fonts/LICENSE-inter.txt).
