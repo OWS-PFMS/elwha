@@ -34,11 +34,15 @@ Component packages under `src/com/owspfm/ui/components/`:
 | `chip/` | `FlatChip` + variants + interaction modes |
 | `chip/list/` | `FlatChipList<T>` + `ChipListModel` + `ChipSelectionModel` (including `SINGLE_MANDATORY` tab-strip semantics) + `MovementMode` + `IconAffordance` |
 | `flatlist/` | `FlatList<T>` — the narrow cross-cutting interface both list families implement (orientation / gap / padding / empty / loading / filter / sort). **Does not include selection or drag-reorder by design** — those are family-specific today (see epic #252) |
-| `icons/` | `MaterialIcons` — wraps `FlatSVGIcon` over 17 bundled Material Symbols (Rounded / 400 / fill0 / 20px), auto-themed via a shared `Label.foreground` color filter |
+| `icons/` | `MaterialIcons` — wraps `FlatSVGIcon` over 17 bundled Material Symbols (Rounded / 400 / fill 0; 20-dp optical-size axis, rendered at 24px by default with sized overloads), auto-themed via a shared `Label.foreground` color filter |
+| `theme/` | The design-token foundation (Epic #30): facade enums (`ColorRole` / `ShapeScale` / `SpaceScale` / `TypeRole` / `StateLayer`), the `FlatCompTheme` static install API (`Palette` / `Theme` / `Mode` / `Typography` / `Config`), `FlatLafKeyMapping` (the curated FlatLaf-native key → role bridge), `MaterialPalettes.baseline()` + `PaletteLoader`, and the bundled Inter font |
+| `theme/playground/` | `ThemePlayground` — visual harness for the token foundation (color swatches, type scale, components gallery + light/dark/system mode toggle) |
 
 Bundled resources:
 - `src/main/resources/com/owspfm/ui/components/card/list/cursors/` — grab / grabbing cursors, light + dark, 16/32px (Capitaine, CC BY-SA 4.0; attribution in `NOTICE`)
 - `src/main/resources/com/owspfm/icons/material/` — 17 Material Symbol SVGs (Apache 2.0 from Google; attribution in `NOTICE`)
+- `src/main/resources/com/owspfm/ui/components/theme/fonts/` — Inter Regular + Medium TTFs for `Typography.defaults()` (SIL OFL 1.1; attribution in `NOTICE`)
+- `src/main/resources/com/owspfm/ui/components/theme/palettes/` — `baseline.json`, the M3 baseline scheme loaded by `MaterialPalettes.baseline()`
 
 ## Coupling stance (defend this)
 
