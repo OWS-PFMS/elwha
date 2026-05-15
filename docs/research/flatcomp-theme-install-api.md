@@ -185,6 +185,10 @@ The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes
 
 **Focus-key completeness within the curated scope.** An unmapped `*.focused*` or `*.hover*` key does *not* mean "no effect" — FlatLaf falls back to its built-in blue accent default. So for every component in the curated scope, *all* of its focus/hover keys are mapped (to their resting equivalents, per the focus model above), not just the resting-state ones. Components deliberately left out of v1 scope — `HelpButton` (the `?` button) and tab-style toggle buttons (`ToggleButton.tab.*`) — keep FlatLaf's defaults; a consumer using those will see FlatLaf's blue focus styling until they are brought into scope.
 
+**Shared icon palette for checkbox and radio.** `FlatRadioButtonIcon` extends `FlatCheckBoxIcon` and reads its color fields from the literal `CheckBox.icon.*` keys — only `RadioButton.icon.style` and `RadioButton.icon.centerDiameter` are radio-specific. So the icon-color palette below is mapped once on `CheckBox.icon.*` and serves both controls; the separate `JCheckBox` / `JRadioButton` label background/foreground keys still exist for the label colors.
+
+**`focusedSelectedBackground` must be set explicitly.** Its FlatLaf fallback is `focusedBackground` (not `selectedBackground`). With the focus-ring model, `focusedBackground` resolves to the unchecked-resting `background`, so an unset `focusedSelectedBackground` makes a focused, *checked* checkbox / radio render as empty. The mapping below sets it explicitly.
+
 ### A.1 Static keys — direct role assignments (`applyStaticKeys`)
 
 | FlatLaf key | Role / token |
@@ -220,14 +224,15 @@ The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes
 | `ComboBox.background`, `Spinner.background` | `SURFACE` |
 | `ComboBox.foreground`, `Spinner.foreground` | `ON_SURFACE` |
 | `ComboBox.buttonBackground` | `SURFACE_CONTAINER_LOW` |
-| `CheckBox.background`, `RadioButton.background` | `SURFACE` |
-| `CheckBox.foreground`, `RadioButton.foreground` | `ON_SURFACE` |
-| `CheckBox.icon.selectedBackground`, `RadioButton.icon.selectedBackground` | `PRIMARY` |
-| `CheckBox.icon.checkmarkColor`, `RadioButton.icon.centerColor` | `ON_PRIMARY` |
-| `CheckBox.icon.focusedBackground`, `RadioButton.icon.focusedBackground` | `SURFACE` |
-| `CheckBox.icon.focusedBorderColor`, `RadioButton.icon.focusedBorderColor` | `PRIMARY` |
-| `CheckBox.icon[filled].focusedSelectedBackground`, `…focusedSelectedBorderColor` (+ `RadioButton` equivalents) | `PRIMARY` |
-| `CheckBox.icon[filled].focusedCheckmarkColor`, `RadioButton.icon[filled].focusedCenterColor` | `ON_PRIMARY` |
+| `CheckBox.background`, `RadioButton.background` | `SURFACE` — label background |
+| `CheckBox.foreground`, `RadioButton.foreground` | `ON_SURFACE` — label foreground |
+| `CheckBox.icon.background` | `SURFACE` — icon palette is shared (see note) |
+| `CheckBox.icon.borderColor` | `OUTLINE` |
+| `CheckBox.icon.selectedBackground`, `CheckBox.icon.selectedBorderColor` | `PRIMARY` |
+| `CheckBox.icon.checkmarkColor` | `ON_PRIMARY` |
+| `CheckBox.icon.focusedBackground` | `SURFACE` — equal to `background` (focus = ring only) |
+| `CheckBox.icon.focusedBorderColor`, `CheckBox.icon.hoverBorderColor`, `CheckBox.icon.pressedBorderColor` | `OUTLINE` — equal to `borderColor` |
+| `CheckBox.icon.focusedSelectedBackground`, `CheckBox.icon.focusedSelectedBorderColor` | `PRIMARY` — equal to `selectedBackground` (MUST be set: fallback is `focusedBackground`, which makes a focused-checked icon render empty otherwise) |
 | `List.background`, `Table.background`, `Tree.background` | `SURFACE` |
 | `List.foreground`, `Table.foreground`, `Tree.foreground` | `ON_SURFACE` |
 | `List.selectionBackground`, `Table.selectionBackground`, `Tree.selectionBackground` | `PRIMARY_CONTAINER` |

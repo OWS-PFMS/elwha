@@ -32,6 +32,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
@@ -222,7 +223,22 @@ public final class ThemePlayground {
     JToggleButton toggle = new JToggleButton("Toggle");
     toggle.setSelected(true);
     JTextField field = new JTextField("Text field", 12);
+
+    // Checkbox + two radio buttons stacked vertically — visual validation that the shared
+    // CheckBox.icon palette colors both controls coherently (FlatRadioButtonIcon extends
+    // FlatCheckBoxIcon and reads the same keys).
     JCheckBox check = new JCheckBox("Checkbox", true);
+    JRadioButton radioA = new JRadioButton("Radio A", true);
+    JRadioButton radioB = new JRadioButton("Radio B");
+    ButtonGroup radios = new ButtonGroup();
+    radios.add(radioA);
+    radios.add(radioB);
+    JPanel selectionStack = new JPanel();
+    selectionStack.setLayout(new BoxLayout(selectionStack, BoxLayout.Y_AXIS));
+    selectionStack.add(check);
+    selectionStack.add(radioA);
+    selectionStack.add(radioB);
+
     JComboBox<String> combo = new JComboBox<>(new String[] {"One", "Two", "Three"});
     JSlider slider = new JSlider(0, 100, 60);
     JProgressBar progress = new JProgressBar(0, 100);
@@ -241,7 +257,7 @@ public final class ThemePlayground {
     row.add(defaultButton);
     row.add(toggle);
     row.add(field);
-    row.add(check);
+    row.add(selectionStack);
     row.add(combo);
     row.add(slider);
     row.add(progress);

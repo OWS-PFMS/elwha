@@ -132,24 +132,30 @@ final class FlatLafKeyMapping {
     putColor("Spinner.foreground", onSurface);
 
     // --- Selection controls ---
+    // FlatRadioButtonIcon extends FlatCheckBoxIcon and reads its color fields from literal
+    // "CheckBox.icon.*" keys (only RadioButton.icon.style and .centerDiameter are radio-specific),
+    // so this one CheckBox.icon palette colors both the checkbox and the radio. JCheckBox /
+    // JRadioButton label colors stay on their own keys.
     putColor("CheckBox.background", surface);
     putColor("CheckBox.foreground", onSurface);
-    putColor("CheckBox.icon.checkmarkColor", onPrimary);
-    putColor("CheckBox.icon.selectedBackground", primary);
-    putColor("CheckBox.icon.focusedBackground", surface);
-    putColor("CheckBox.icon.focusedBorderColor", primary);
-    putColor("CheckBox.icon[filled].focusedSelectedBackground", primary);
-    putColor("CheckBox.icon[filled].focusedSelectedBorderColor", primary);
-    putColor("CheckBox.icon[filled].focusedCheckmarkColor", onPrimary);
     putColor("RadioButton.background", surface);
     putColor("RadioButton.foreground", onSurface);
-    putColor("RadioButton.icon.centerColor", onPrimary);
-    putColor("RadioButton.icon.selectedBackground", primary);
-    putColor("RadioButton.icon.focusedBackground", surface);
-    putColor("RadioButton.icon.focusedBorderColor", primary);
-    putColor("RadioButton.icon[filled].focusedSelectedBackground", primary);
-    putColor("RadioButton.icon[filled].focusedSelectedBorderColor", primary);
-    putColor("RadioButton.icon[filled].focusedCenterColor", onPrimary);
+    putColor("CheckBox.icon.background", surface);
+    putColor("CheckBox.icon.borderColor", outline);
+    putColor("CheckBox.icon.selectedBackground", primary);
+    putColor("CheckBox.icon.selectedBorderColor", primary);
+    putColor("CheckBox.icon.checkmarkColor", onPrimary);
+    // Per the focus-ring model, state doesn't change the icon's fill or border — the icon's own
+    // primary focus ring is the cue. focusedSelectedBackground / focusedSelectedBorderColor MUST
+    // be set explicitly: their fallback is focusedBackground / focusedBorderColor (NOT the
+    // selected variants), so an unset focusedSelectedBackground makes a focused, checked icon
+    // render as empty.
+    putColor("CheckBox.icon.focusedBackground", surface);
+    putColor("CheckBox.icon.focusedBorderColor", outline);
+    putColor("CheckBox.icon.focusedSelectedBackground", primary);
+    putColor("CheckBox.icon.focusedSelectedBorderColor", primary);
+    putColor("CheckBox.icon.hoverBorderColor", outline);
+    putColor("CheckBox.icon.pressedBorderColor", outline);
 
     // --- Lists, tables, trees ---
     putColor("List.background", surface);
