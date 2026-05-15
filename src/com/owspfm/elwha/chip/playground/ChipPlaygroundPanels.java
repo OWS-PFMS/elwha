@@ -20,6 +20,7 @@ import java.awt.event.ActionEvent;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -127,9 +128,14 @@ public final class ChipPlaygroundPanels {
       matrix.add(chip, gbc);
     }
 
-    final JPanel wrap = new JPanel(new BorderLayout());
-    wrap.add(matrix, BorderLayout.NORTH);
-    wrap.add(buildTokenControlBar(), BorderLayout.SOUTH);
+    final JPanel controls = buildTokenControlBar();
+    controls.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    matrix.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+
+    final JPanel wrap = new JPanel();
+    wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
+    wrap.add(controls);
+    wrap.add(matrix);
     return wrap;
   }
 
