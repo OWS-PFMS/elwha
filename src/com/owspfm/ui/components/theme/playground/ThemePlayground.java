@@ -227,6 +227,8 @@ public final class ThemePlayground {
     area.add(Box.createVerticalStrut(12));
     area.add(rowBlock("Icon buttons", buildIconButtonsRow()));
     area.add(Box.createVerticalStrut(12));
+    area.add(rowBlock("Sized icons (SVG — crisp at any size)", buildSizedIconsRow()));
+    area.add(Box.createVerticalStrut(12));
     area.add(rowBlock("Text", buildTextRow()));
     area.add(Box.createVerticalStrut(12));
     area.add(rowBlock("Selection", buildSelectionRow()));
@@ -269,18 +271,21 @@ public final class ThemePlayground {
     iconToggle.setToolTipText("Icon toggle button");
 
     // Borderless click-toggle: a plain JButton whose icon swaps between an M3 fill-0 and
-    // fill-1 pair on click. setRequestFocusEnabled(false) keeps the click from moving focus
-    // to the button — the idiomatic toolbar-button behavior, and the visible cue is the icon
-    // swap alone (no lingering focus ring).
-    JButton pinToggle = new JButton(MaterialIcons.pushPin());
+    // fill-1 pair on click. Scaled to 32px via the MaterialIcons sized overload to demonstrate
+    // SVG icons render crisply at any size. setRequestFocusEnabled(false) keeps the click from
+    // moving focus to the button — the idiomatic toolbar-button behavior, and the visible cue
+    // is the icon swap alone (no lingering focus ring).
+    final int pinSize = 32;
+    JButton pinToggle = new JButton(MaterialIcons.pushPin(pinSize));
     pinToggle.putClientProperty("JButton.buttonType", "borderless");
     pinToggle.setRequestFocusEnabled(false);
-    pinToggle.setToolTipText("Click to toggle pin (icon swaps, focus does not move)");
+    pinToggle.setToolTipText("Click to toggle pin (icon swaps, focus does not move) — 32px");
     pinToggle.addActionListener(
         event -> {
           boolean pinned = Boolean.TRUE.equals(pinToggle.getClientProperty("pinned"));
           pinToggle.putClientProperty("pinned", !pinned);
-          pinToggle.setIcon(!pinned ? MaterialIcons.pushPinFilled() : MaterialIcons.pushPin());
+          pinToggle.setIcon(
+              !pinned ? MaterialIcons.pushPinFilled(pinSize) : MaterialIcons.pushPin(pinSize));
         });
 
     // Segmented icon-toggle group — the OWS app uses this pattern for view-mode pickers.
@@ -306,6 +311,31 @@ public final class ThemePlayground {
     row.add(iconToggle);
     row.add(pinToggle);
     row.add(segmented);
+    return row;
+  }
+
+  private JComponent buildSizedIconsRow() {
+    JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
+    int[] sizes = {16, 20, 24, 32, 48};
+    for (int size : sizes) {
+      JPanel cell = new JPanel();
+      cell.setLayout(new BoxLayout(cell, BoxLayout.Y_AXIS));
+      JLabel iconLabel = new JLabel(MaterialIcons.favorite(size));
+      iconLabel.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+      JLabel caption = new JLabel(size + "px");
+      caption.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+      Runnable refresh =
+          () -> {
+            caption.setFont(TypeRole.LABEL_SMALL.resolve());
+            caption.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+          };
+      refresh.run();
+      tokenRefreshers.add(refresh);
+      cell.add(iconLabel);
+      cell.add(Box.createVerticalStrut(4));
+      cell.add(caption);
+      row.add(cell);
+    }
     return row;
   }
 
