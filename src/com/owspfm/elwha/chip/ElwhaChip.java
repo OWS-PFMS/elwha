@@ -1,11 +1,16 @@
 package com.owspfm.elwha.chip;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.ShapeScale;
+import com.owspfm.elwha.theme.SpaceScale;
+import com.owspfm.elwha.theme.StateLayer;
+import com.owspfm.elwha.theme.SurfacePainter;
 import java.awt.AlphaComposite;
-import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -21,7 +26,6 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.geom.RoundRectangle2D;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,41 +46,38 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import javax.swing.UIManager;
 
 /**
- * A compact FlatLaf-aware chip primitive: a single-row leading-icon + text + optional trailing
- * icon-button surface, themable via FlatLaf {@link UIManager} keys.
+ * A token-native chip primitive: a single-row leading-icon + text + optional trailing icon-button
+ * surface, styled entirely from the Elwha design tokens.
  *
- * <p><strong>Three-layer styling</strong>: every visual property (background, border color, corner
- * arc, padding, etc.) is resolved through three layers, last-wins:
+ * <p><strong>Treatment + role, orthogonal.</strong> The {@link ChipVariant} declares the
+ * <em>treatment</em> (filled / outlined / ghost) and carries the {@link ColorRole}s it resolves to.
+ * The surface role is independently overridable per instance via {@link #setSurfaceRole(ColorRole)}
+ * — for example, {@code FILLED + setSurfaceRole(SECONDARY_CONTAINER)} gives the secondary-container
+ * look without bundling a color into the variant.
  *
- * <ol>
- *   <li>Variant defaults — selected by {@link #setVariant(ChipVariant)}. Each variant pre-fills a
- *       coherent set of property values from FlatLaf {@link UIManager} keys.
- *   <li>{@link UIManager} overrides — {@code ElwhaChip.background}, {@code ElwhaChip.borderColor},
- *       {@code ElwhaChip.arc}, {@code ElwhaChip.padding}, {@code ElwhaChip.hoverBackground}, {@code
- *       ElwhaChip.pressedBackground}, {@code ElwhaChip.selectedBackground}, {@code
- *       ElwhaChip.selectedBorderColor}, {@code ElwhaChip.focusColor}, {@code
- *       ElwhaChip.disabledBackground}. These let a FlatLaf properties file theme every chip in the
- *       app without per-instance intervention.
- *   <li>Per-instance overrides — call setters (e.g. {@link #setCornerRadius(Integer)}, {@link
- *       #setSurfaceColor(Color)}) or put a {@code "ElwhaChip.style"} client property with a
- *       key=value string (FlatLaf-style) for ad-hoc tweaks.
- * </ol>
+ * <p><strong>Foreground is derived, never set.</strong> Text and icons paint in the {@code on}-pair
+ * of the effective surface role (per the {@link ColorRole#on()} facade), so foreground stays
+ * correct by construction across every variant, palette, and runtime theme switch. There is no
+ * per-instance foreground setter.
  *
- * <p><strong>Quick start</strong>:
+ * <p><strong>State layers are uniform.</strong> Hover / pressed / selected feedback is composited
+ * via the {@link StateLayer} model at uniform opacities — 8% hover, 10% pressed, 12% selected —
+ * tinted by the surface's {@code on}-role.
+ *
+ * <p><strong>M3 chip-type sugar.</strong> The four canonical Material 3 chip patterns ship as
+ * factory presets over the orthogonal axes — see {@link #assistChip(String)}, {@link
+ * #filterChip(String)}, {@link #inputChip(String, Runnable)}, {@link #suggestionChip(String)} — not
+ * as a rigid {@code ChipType} enum.
+ *
+ * <p><strong>Quick start:</strong>
  *
  * <pre>{@code
- * ElwhaChip chip = new ElwhaChip("Demand")
- *     .setVariant(ChipVariant.FILLED)
- *     .setLeadingIcon(icon)
- *     .setInteractionMode(ChipInteractionMode.SELECTABLE);
+ * ElwhaChip chip = ElwhaChip.filterChip("Demand")
+ *     .setLeadingIcon(icon);
  * chip.addActionListener(evt -> System.out.println("toggled: " + chip.isSelected()));
  * }</pre>
- *
- * <p>This class has no dependencies on application code; the {@code com.owspfm.elwha.chip}
- * directory can be lifted into its own library.
  *
  * @author Charles Bryan
  * @version v0.1.0
@@ -87,96 +88,24 @@ public class ElwhaChip extends JPanel {
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
 
-  /** Client-property key for the per-instance style escape hatch (FlatLaf-style key=value). */
-  public static final String STYLE_PROPERTY = "ElwhaChip.style";
-
-  // ----- UIManager key names (publicly documented contract) ----
-  /** UIManager key for the default surface fill. */
-  public static final String K_BACKGROUND = "ElwhaChip.background";
-
-  /** UIManager key for the default border stroke color. */
-  public static final String K_BORDER_COLOR = "ElwhaChip.borderColor";
-
-  /** UIManager key for the corner arc (Integer, pixels). */
-  public static final String K_ARC = "ElwhaChip.arc";
-
-  /**
-   * UIManager key for the padding ({@link Insets}). Unlike color and arc keys (which are read at
-   * paint time and pick up runtime changes automatically), padding is baked into each chip's Swing
-   * {@link javax.swing.border.Border} at construction. To propagate a live {@code
-   * UIManager.put(K_PADDING, ...)} call to existing chips, run {@link
-   * javax.swing.SwingUtilities#updateComponentTreeUI(java.awt.Component)} on the host container —
-   * this is the standard Swing pattern for runtime UIManager tweaks and matches what FlatLaf's own
-   * theme-switching does.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public static final String K_PADDING = "ElwhaChip.padding";
-
-  /** UIManager key for the hover-state background tint. */
-  public static final String K_HOVER_BACKGROUND = "ElwhaChip.hoverBackground";
-
-  /** UIManager key for the pressed-state background tint. */
-  public static final String K_PRESSED_BACKGROUND = "ElwhaChip.pressedBackground";
-
-  /** UIManager key for the selected-state background tint. */
-  public static final String K_SELECTED_BACKGROUND = "ElwhaChip.selectedBackground";
-
-  /** UIManager key for the selected-state border color. */
-  public static final String K_SELECTED_BORDER_COLOR = "ElwhaChip.selectedBorderColor";
-
-  /** UIManager key for the focus-ring color. */
-  public static final String K_FOCUS_COLOR = "ElwhaChip.focusColor";
-
-  /** UIManager key for the disabled-state background. */
-  public static final String K_DISABLED_BACKGROUND = "ElwhaChip.disabledBackground";
-
-  /** UIManager key for the warm-accent fill (used by {@link ChipVariant#WARM_ACCENT}). */
-  public static final String K_WARM_ACCENT = "ElwhaChip.warmAccent";
-
-  /**
-   * UIManager key for the text + icon foreground. When unset (the default), the chip auto-computes
-   * a softened light or dark foreground from the surface luminance — guaranteeing readability even
-   * when callers override the background to an unusual color. Set this (or use the per-instance
-   * {@link #setForegroundColor(Color)} override) only when you want to pin a specific color
-   * (branding, accessibility, etc.).
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public static final String K_FOREGROUND = "ElwhaChip.foreground";
-
-  private static final int DEFAULT_ARC = 999; // capsule by default
-  private static final int DEFAULT_PADX = 10;
-  private static final int DEFAULT_PADY = 4;
   private static final int DEFAULT_INNER_GAP = 6;
   private static final int DEFAULT_BORDER_WIDTH = 1;
+  private static final float FOCUSED_BORDER_WIDTH = 2f;
 
   /**
    * Minimum hit-target side for the leading and trailing inline buttons. Keeps a 14px glyph
    * clickable at a reasonable 22×22 area without inflating the visible glyph itself.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
    */
   private static final int BUTTON_MIN_HIT_TARGET = 22;
 
   // Configuration ----------------------------------------------------------
   private ChipVariant variant = ChipVariant.FILLED;
   private ChipInteractionMode interactionMode = ChipInteractionMode.STATIC;
-  private Integer cornerRadius;
-  private Insets padding;
-  private Color borderColor;
-  private Color surfaceColorOverride;
-  private Color foregroundOverride;
+  private ColorRole surfaceRoleOverride;
+  private ShapeScale shape = ShapeScale.SM;
+  private SpaceScale paddingVertical = SpaceScale.XS;
+  private SpaceScale paddingHorizontal = SpaceScale.MD;
   private int borderWidth = DEFAULT_BORDER_WIDTH;
-
-  // Softened black/white poles for auto-contrast foreground. Pure #000 / #FFF tends to read
-  // harsh on saturated backgrounds; these slightly desaturated tones look more polished while
-  // still meeting WCAG-style contrast against any reasonable surface.
-  private static final Color AUTO_FG_DARK = new Color(30, 30, 30);
-  private static final Color AUTO_FG_LIGHT = new Color(240, 240, 240);
 
   // State ------------------------------------------------------------------
   private boolean hovered;
@@ -216,9 +145,7 @@ public class ElwhaChip extends JPanel {
   // Chip-local color filter for FlatSVGIcons in the leading / trailing slots. The filter's
   // function is invoked at paint time, so a foreground-resolution change (selection, theme
   // switch, surface override, etc.) re-tints the icons on the next repaint with no manual
-  // refresh. Bound to icons as they're set via setLeadingIcon / setTrailingAction /
-  // setLeadingAffordance — overriding whatever filter the icon arrived with (typically
-  // MaterialIcons' Label.foreground filter).
+  // refresh.
   private final FlatSVGIcon.ColorFilter iconFilter =
       new FlatSVGIcon.ColorFilter(c -> resolveForegroundColor());
 
@@ -228,7 +155,7 @@ public class ElwhaChip extends JPanel {
 
   // ----------------------------------------------------------------- ctor
 
-  /** Creates a chip with empty text and default FILLED variant. */
+  /** Creates a chip with empty text and the default {@link ChipVariant#FILLED} treatment. */
   public ElwhaChip() {
     this("");
   }
@@ -256,13 +183,8 @@ public class ElwhaChip extends JPanel {
     trailingButton = new TrailingIconButton();
     trailingButton.setVisible(false);
 
-    // Leading cluster packs leading-button + leading-icon-label + text tight-left via FlowLayout.
-    // The cluster itself is placed in BorderLayout.WEST so it stays anchored to the chip's leading
-    // edge — and crucially, the trailing button goes to BorderLayout.EAST so it floats to the
-    // chip's trailing edge when the chip is stretched (grid cells, horizontal-stretch parents).
-    // At preferred size the layout matches the historical FlowLayout result because FlowLayout's
-    // own horizontal insets supply the same gap between cluster and trailing button.
-    leadingCluster = new JPanel(new FlowLayout(FlowLayout.LEADING, DEFAULT_INNER_GAP, 0));
+    leadingCluster =
+        new JPanel(new BaselineCenteringFlowLayout(DEFAULT_INNER_GAP, BUTTON_MIN_HIT_TARGET));
     leadingCluster.setOpaque(false);
     leadingCluster.add(leadingButton);
     leadingCluster.add(leadingIconLabel);
@@ -277,6 +199,76 @@ public class ElwhaChip extends JPanel {
     rebuildBorder();
     initInteraction();
   }
+
+  // ---------------------------------------------------------- factory presets
+
+  /**
+   * Creates an M3 assist-chip preset — {@link ChipInteractionMode#CLICKABLE} + {@link
+   * ChipVariant#OUTLINED}. Returns a fully further-configurable chip; every preset choice is
+   * overridable through the normal setters.
+   *
+   * @param text the chip label
+   * @return a configured assist-chip
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static ElwhaChip assistChip(final String text) {
+    return new ElwhaChip(text)
+        .setVariant(ChipVariant.OUTLINED)
+        .setInteractionMode(ChipInteractionMode.CLICKABLE);
+  }
+
+  /**
+   * Creates an M3 filter-chip preset — {@link ChipInteractionMode#SELECTABLE} + {@link
+   * ChipVariant#OUTLINED}.
+   *
+   * @param text the chip label
+   * @return a configured filter-chip
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static ElwhaChip filterChip(final String text) {
+    return new ElwhaChip(text)
+        .setVariant(ChipVariant.OUTLINED)
+        .setInteractionMode(ChipInteractionMode.SELECTABLE);
+  }
+
+  /**
+   * Creates an M3 input-chip preset — {@link ChipInteractionMode#CLICKABLE} + {@link
+   * ChipVariant#OUTLINED} with a trailing remove (×) affordance wired to {@code onRemove}.
+   *
+   * @param text the chip label
+   * @param onRemove invoked when the user clicks the trailing remove button; may be {@code null} to
+   *     suppress the click but still render the affordance
+   * @return a configured input-chip
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static ElwhaChip inputChip(final String text, final Runnable onRemove) {
+    ElwhaChip chip =
+        new ElwhaChip(text)
+            .setVariant(ChipVariant.OUTLINED)
+            .setInteractionMode(ChipInteractionMode.CLICKABLE);
+    chip.setTrailingIcon(new RemoveGlyphIcon(), "Remove", onRemove);
+    return chip;
+  }
+
+  /**
+   * Creates an M3 suggestion-chip preset — {@link ChipInteractionMode#CLICKABLE} + {@link
+   * ChipVariant#OUTLINED}.
+   *
+   * @param text the chip label
+   * @return a configured suggestion-chip
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static ElwhaChip suggestionChip(final String text) {
+    return new ElwhaChip(text)
+        .setVariant(ChipVariant.OUTLINED)
+        .setInteractionMode(ChipInteractionMode.CLICKABLE);
+  }
+
+  // ----------------------------------------------------------------- text
 
   /**
    * Returns the current chip text.
@@ -305,7 +297,9 @@ public class ElwhaChip extends JPanel {
   }
 
   /**
-   * Returns the live text label for font / color / FlatLaf style-class customization.
+   * Returns the live text label for font / FlatLaf style-class customization. The foreground color
+   * is owned by the chip's token-resolved foreground — overriding it via {@code setForeground} on
+   * the returned label re-introduces unpaired surface/foreground and is not supported.
    *
    * @return the text label (never null)
    * @version v0.1.0
@@ -407,10 +401,9 @@ public class ElwhaChip extends JPanel {
 
   /**
    * Re-binds an SVG icon's color filter to this chip's foreground resolver, so the icon paints in
-   * the chip-resolved color (auto-contrast, per-instance override, or UIManager) rather than
-   * whatever filter the caller supplied — typically {@link com.owspfm.elwha.icons.MaterialIcons}'s
-   * app-wide {@code Label.foreground} filter, which is the right default outside a chip but wrong
-   * inside one with a custom surface.
+   * the chip's token-resolved foreground rather than whatever filter the caller supplied —
+   * typically {@link com.owspfm.elwha.icons.MaterialIcons}'s app-wide {@code Label.foreground}
+   * filter, which is the right default outside a chip but wrong inside one with a custom surface.
    *
    * <p>No-op for non-SVG icons (raster bitmaps and the like — those don't have a color filter
    * concept and stay whatever color they were authored).
@@ -425,19 +418,7 @@ public class ElwhaChip extends JPanel {
   }
 
   /**
-   * Installs (or clears) a clickable leading-slot affordance with two visual states. Used by host
-   * containers like {@code ElwhaChipList} to render pin / anchor / etc. buttons that the user can
-   * click directly.
-   *
-   * <ul>
-   *   <li>{@code idleIcon} renders when {@code active == false}. If {@code hoverRevealIdle ==
-   *       true}, the idle icon is only painted while the chip body is hovered — the slot still
-   *       reserves its hit-area so the chip width doesn't jump.
-   *   <li>{@code activeIcon} (or {@code idleIcon} if active is null) renders persistently when
-   *       {@code active == true} — for the pinned / anchored state.
-   *   <li>Pass {@code null} for both icons to clear the affordance entirely. The leading-icon slot
-   *       reverts to its {@link #setLeadingIcon(Icon)} value.
-   * </ul>
+   * Installs (or clears) a clickable leading-slot affordance with two visual states.
    *
    * @param idleIcon icon when the affordance is in the idle / off state
    * @param activeIcon icon when the affordance is active / on (falls back to idle when null)
@@ -464,7 +445,6 @@ public class ElwhaChip extends JPanel {
       leadingButton.setVisible(false);
       leadingButton.setOnClick(null);
       leadingButton.setToolTipText(null);
-      // Restore the user-supplied leading icon (if any).
       leadingIconLabel.setVisible(leadingIconLabel.getIcon() != null);
       revalidate();
       repaint();
@@ -482,13 +462,6 @@ public class ElwhaChip extends JPanel {
     return this;
   }
 
-  /**
-   * Refreshes the leading-button's visible icon based on the active state and hover-reveal flag.
-   * Called whenever chip hover state changes, or when the affordance configuration changes.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
   private void refreshLeadingAffordanceIcon() {
     if (!leadingButton.isVisible()) {
       return;
@@ -542,9 +515,7 @@ public class ElwhaChip extends JPanel {
   // ---------------------------------------------------------- context menu
 
   /**
-   * Installs a callback invoked when the user requests a context menu (right-click, or platform
-   * menu key) on the chip body. The callback receives the originating event so it can position a
-   * {@link JPopupMenu} relative to the click point. Pass null to clear.
+   * Installs a callback invoked when the user requests a context menu on the chip body.
    *
    * @param callback the callback, or null
    * @return this chip
@@ -558,8 +529,7 @@ public class ElwhaChip extends JPanel {
 
   /**
    * Convenience: attaches a {@link JPopupMenu} that pops up at the click point on right-click /
-   * VK_CONTEXT_MENU / Shift+F10. Equivalent to {@link #setContextMenuCallback(Consumer)} with a
-   * default-positioning callback. Pass null to clear.
+   * VK_CONTEXT_MENU / Shift+F10. Pass null to clear.
    *
    * @param popup the popup to attach, or null
    * @return this chip
@@ -584,8 +554,7 @@ public class ElwhaChip extends JPanel {
   }
 
   /**
-   * Convenience: attaches a {@code Supplier<JPopupMenu>} so callers can build the menu lazily
-   * (e.g., based on selection state at click-time).
+   * Convenience: attaches a {@code Supplier<JPopupMenu>} so callers can build the menu lazily.
    *
    * @param supplier the supplier; null clears
    * @return this chip
@@ -615,8 +584,7 @@ public class ElwhaChip extends JPanel {
 
   /**
    * Convenience overload of {@link #setTrailingAction(Action)}: installs a click-handling icon
-   * button bound to the supplied icon, tooltip, and runnable. Equivalent to building an inline
-   * {@link Action}.
+   * button bound to the supplied icon, tooltip, and runnable.
    *
    * @param icon the icon shown in the trailing slot (null hides the trailing button)
    * @param tooltip optional tooltip text (null suppresses)
@@ -659,7 +627,7 @@ public class ElwhaChip extends JPanel {
     if (selected == this.selected) {
       return this;
     }
-    final boolean old = selected;
+    final boolean old = this.selected;
     this.selected = selected;
     repaint();
     firePropertyChange(PROPERTY_SELECTED, old, selected);
@@ -677,53 +645,81 @@ public class ElwhaChip extends JPanel {
     return selected;
   }
 
-  // ----------------------------------------------------------- style API
+  // ----------------------------------------------------------- token setters
 
   /**
-   * Overrides the corner radius. Pass null to fall back to {@code ElwhaChip.arc} (or capsule
-   * default).
+   * Overrides the variant's default surface role. Pass null to fall back to the variant's surface
+   * role. The foreground re-pairs automatically against the effective surface role's {@code
+   * on}-pair.
    *
-   * @param radius the radius, or null for theme default
+   * @param role the surface role, or null to clear the override
    * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaChip setCornerRadius(final Integer radius) {
-    cornerRadius = radius;
+  public ElwhaChip setSurfaceRole(final ColorRole role) {
+    surfaceRoleOverride = role;
     repaint();
     return this;
   }
 
   /**
-   * Returns the effective corner radius — overriding setter if non-null, otherwise the {@code
-   * ElwhaChip.arc} UIManager value, otherwise the capsule default ({@value #DEFAULT_ARC}).
+   * Returns the effective surface role for this chip — the per-instance override if set, otherwise
+   * the variant's default surface role (which is {@code null} for {@link ChipVariant#GHOST}).
    *
-   * @return effective arc in pixels
+   * @return the effective surface role, or {@code null} for transparent variants without an
+   *     override
    * @version v0.1.0
    * @since v0.1.0
    */
-  public int getEffectiveCornerRadius() {
-    if (cornerRadius != null) {
-      return cornerRadius;
-    }
-    final Object v = UIManager.get(K_ARC);
-    if (v instanceof Number n) {
-      return Math.max(0, n.intValue());
-    }
-    return DEFAULT_ARC;
+  public ColorRole getEffectiveSurfaceRole() {
+    return surfaceRoleOverride != null ? surfaceRoleOverride : variant.surfaceRole();
   }
 
   /**
-   * Replaces the content padding (the inset between the rounded surface and the leading
-   * icon/text/trailing button row).
+   * Sets the corner-radius shape step. Pass null to fall back to the default ({@link
+   * ShapeScale#SM}, per the chip taxonomy decision); {@link ShapeScale#FULL} gives the legacy
+   * capsule look.
    *
-   * @param insets the padding; null restores theme default
+   * @param shape the shape step, or null for default
    * @return this chip
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaChip setPadding(final Insets insets) {
-    padding = insets == null ? null : (Insets) insets.clone();
+  public ElwhaChip setShape(final ShapeScale shape) {
+    this.shape = shape != null ? shape : ShapeScale.SM;
+    repaint();
+    return this;
+  }
+
+  /**
+   * Returns the active shape step.
+   *
+   * @return the active shape step (never null)
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ShapeScale getEffectiveShape() {
+    return shape;
+  }
+
+  /**
+   * Sets the chip's symmetric padding from the spacing scale — {@code horizontal} on the left and
+   * right, {@code vertical} on the top and bottom.
+   *
+   * @param horizontal the left/right padding step (null ignored)
+   * @param vertical the top/bottom padding step (null ignored)
+   * @return this chip
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ElwhaChip setPadding(final SpaceScale horizontal, final SpaceScale vertical) {
+    if (horizontal != null) {
+      paddingHorizontal = horizontal;
+    }
+    if (vertical != null) {
+      paddingVertical = vertical;
+    }
     rebuildBorder();
     revalidate();
     repaint();
@@ -731,41 +727,14 @@ public class ElwhaChip extends JPanel {
   }
 
   /**
-   * Convenience overload that applies a uniform horizontal and vertical padding.
+   * Returns the active padding as resolved {@link Insets}. Defensive copy.
    *
-   * @param horizontal left/right padding
-   * @param vertical top/bottom padding
-   * @return this chip
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public ElwhaChip setPadding(final int horizontal, final int vertical) {
-    return setPadding(new Insets(vertical, horizontal, vertical, horizontal));
-  }
-
-  /**
-   * Returns the active padding.
-   *
-   * @return the active padding (defensive copy)
+   * @return the active padding
    * @version v0.1.0
    * @since v0.1.0
    */
   public Insets getPadding() {
-    return (Insets) effectivePadding().clone();
-  }
-
-  /**
-   * Overrides the border color. Pass null to fall back to {@code ElwhaChip.borderColor} or theme.
-   *
-   * @param color the border color, or null
-   * @return this chip
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public ElwhaChip setBorderColor(final Color color) {
-    borderColor = color;
-    repaint();
-    return this;
+    return SpaceScale.insets(paddingVertical, paddingHorizontal);
   }
 
   /**
@@ -783,108 +752,26 @@ public class ElwhaChip extends JPanel {
   }
 
   /**
-   * Overrides the variant-derived surface color. Pass null to restore variant default.
-   *
-   * @param color the surface color, or null
-   * @return this chip
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public ElwhaChip setSurfaceColor(final Color color) {
-    surfaceColorOverride = color;
-    repaint();
-    return this;
-  }
-
-  /**
-   * Per-instance foreground override. Wins over the {@link #K_FOREGROUND} UIManager key and over
-   * the auto-contrast default. Pass null to restore the resolution chain.
-   *
-   * @param color the foreground color, or null
-   * @return this chip
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public ElwhaChip setForegroundColor(final Color color) {
-    foregroundOverride = color;
-    repaint();
-    return this;
-  }
-
-  /**
-   * Resolves the effective text + icon foreground color via a three-layer chain.
-   *
-   * <ol>
-   *   <li>Per-instance override from {@link #setForegroundColor(Color)} (non-null wins).
-   *   <li>UIManager key {@link #K_FOREGROUND} (non-null wins).
-   *   <li>Auto-contrast — picks the softened light or dark pole based on the perceived luminance of
-   *       the effective surface color (BT.601 luma). When the surface is null or transparent (GHOST
-   *       variant) the chain falls through to {@code Label.foreground}.
-   * </ol>
+   * Resolves the effective text + icon foreground color — the {@code on}-pair of the effective
+   * surface role (or {@link ColorRole#ON_SURFACE} when the surface role is null / unpaired). Always
+   * correct by construction; there is no per-instance foreground override.
    *
    * @return the resolved foreground color (never null)
    * @version v0.1.0
    * @since v0.1.0
    */
   protected Color resolveForegroundColor() {
-    if (foregroundOverride != null) {
-      return foregroundOverride;
+    ColorRole basis = getEffectiveSurfaceRole();
+    if (basis == null) {
+      basis = ColorRole.SURFACE;
     }
-    final Color managerOverride = UIManager.getColor(K_FOREGROUND);
-    if (managerOverride != null) {
-      return managerOverride;
-    }
-    final Color surface = effectiveSurfaceForContrast();
-    if (surface == null) {
-      final Color labelFg = UIManager.getColor("Label.foreground");
-      return labelFg != null ? labelFg : Color.BLACK;
-    }
-    return isLight(surface) ? AUTO_FG_DARK : AUTO_FG_LIGHT;
-  }
-
-  /**
-   * The surface color used to drive auto-contrast. Computed from the variant + per-instance
-   * override + selection blend — ignoring hover/press so a passing cursor doesn't flicker the
-   * foreground color. GHOST returns null (transparent surface; contrast caller falls through to
-   * theme foreground).
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  private Color effectiveSurfaceForContrast() {
-    final Color base = resolveSurfaceColor();
-    if (base == null) {
-      return null;
-    }
-    if (selected) {
-      // Match what paintBackground actually renders for the selected state so auto-contrast
-      // picks foreground against the rendered color, not against an intermediate value.
-      return composeSelectedBackground(base);
-    }
-    return base;
-  }
-
-  /**
-   * Perceived-brightness threshold. {@code true} means the color is light enough that dark
-   * foreground reads better; {@code false} means a light foreground is needed. Uses ITU-R BT.601
-   * luma — cheap, well-established, gives good results across saturated and muted colors alike.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  private static boolean isLight(final Color color) {
-    final double luma = 0.299 * color.getRed() + 0.587 * color.getGreen() + 0.114 * color.getBlue();
-    return luma >= 128;
+    return basis.on().orElse(ColorRole.ON_SURFACE).resolve();
   }
 
   // ------------------------------------------------------------ listeners
 
   /**
-   * Installs a mouse listener on both the chip body and the inner content row, so callers (such as
-   * a hosting {@code ElwhaChipList} wiring drag-to-reorder) receive events regardless of which
-   * inner subcomponent the user actually pressed on. Without this, presses on the text label or
-   * leading-icon area would be trapped by the content row's internal listener and never reach the
-   * caller.
+   * Installs a mouse listener on both the chip body and the inner content row.
    *
    * @param listener the listener to install
    * @version v0.1.0
@@ -896,9 +783,6 @@ public class ElwhaChip extends JPanel {
     }
     addMouseListener(listener);
     contentRow.addMouseListener(listener);
-    // The leading cluster wraps leading-button + leading-icon + text. Presses on the text label
-    // would otherwise route through the cluster (no listener) and miss the content row's listener,
-    // depending on Swing's lightweight-dispatch behavior. Installing here is belt-and-braces.
     leadingCluster.addMouseListener(listener);
   }
 
@@ -944,8 +828,7 @@ public class ElwhaChip extends JPanel {
   }
 
   /**
-   * Convenience: scopes a {@link PropertyChangeListener} to {@link #PROPERTY_SELECTED}. Equivalent
-   * to {@link #addPropertyChangeListener(String, PropertyChangeListener)}.
+   * Convenience: scopes a {@link PropertyChangeListener} to {@link #PROPERTY_SELECTED}.
    *
    * @param listener the listener
    * @version v0.1.0
@@ -956,9 +839,7 @@ public class ElwhaChip extends JPanel {
   }
 
   /**
-   * Reports whether a context-menu callback (or attached popup) is installed. Useful for hosting
-   * containers that want to layer additional context-menu items without clobbering a caller's
-   * existing menu.
+   * Reports whether a context-menu callback (or attached popup) is installed.
    *
    * @return true if any context-menu callback is installed
    * @version v0.1.0
@@ -1000,10 +881,6 @@ public class ElwhaChip extends JPanel {
 
           @Override
           public void mouseExited(final MouseEvent e) {
-            // Fast-path hover-clear when mouseExited fires reliably and the live cursor confirms
-            // we're truly outside the chip. The hover-poll timer started in mouseEntered is the
-            // backup for the cases this path misses (macOS dispatch quirks, boundary-precision
-            // for slow exits).
             if (isCursorStillInsideChip(e)) {
               return;
             }
@@ -1020,9 +897,6 @@ public class ElwhaChip extends JPanel {
               maybeShowContextMenu(e);
               return;
             }
-            // Press/release from the inline button children own their own click semantics —
-            // treating them as a chip press would create a phantom pressed-tint on the whole
-            // chip on every pin/trash click.
             if (isFromInlineButton(e)) {
               return;
             }
@@ -1060,11 +934,6 @@ public class ElwhaChip extends JPanel {
         };
     addMouseListener(ma);
     contentRow.addMouseListener(ma);
-    // Children (cluster + buttons) get the same hover-tracking listener so an exit that fires on
-    // a child (cursor moves from a button straight off the chip) reaches our hover-clear logic
-    // — without this, the button's mouseExited went to its own listener only and the parent
-    // chip kept hovered=true. The isCursorStillInsideChip guard in mouseExited handles the
-    // benign "moved to a sibling child" case for free.
     leadingCluster.addMouseListener(ma);
     leadingButton.addMouseListener(ma);
     trailingButton.addMouseListener(ma);
@@ -1117,15 +986,14 @@ public class ElwhaChip extends JPanel {
             contextMenuCallback.accept(synthetic);
           }
         };
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "flatchip.activate");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "flatchip.activate");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_CONTEXT_MENU, 0), "flatchip.contextMenu");
-    // Shift+F10 is the standard Swing/Windows accelerator for "show context menu".
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "elwhachip.activate");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "elwhachip.activate");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_CONTEXT_MENU, 0), "elwhachip.contextMenu");
     im.put(
         KeyStroke.getKeyStroke(KeyEvent.VK_F10, java.awt.event.InputEvent.SHIFT_DOWN_MASK),
-        "flatchip.contextMenu");
-    am.put("flatchip.activate", activate);
-    am.put("flatchip.contextMenu", contextMenu);
+        "elwhachip.contextMenu");
+    am.put("elwhachip.activate", activate);
+    am.put("elwhachip.contextMenu", contextMenu);
   }
 
   private void activate(final int modifiers) {
@@ -1152,29 +1020,11 @@ public class ElwhaChip extends JPanel {
     return point.x >= 0 && point.y >= 0 && point.x < getWidth() && point.y < getHeight();
   }
 
-  /**
-   * Returns true when the event source is one of the inline chip buttons (leading affordance or
-   * trailing action). The chip-level press/release handlers skip these so a click on the pin or
-   * trash glyph doesn't paint a phantom pressed-tint on the entire chip — the buttons own their own
-   * click semantics.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
   private boolean isFromInlineButton(final MouseEvent event) {
     final Object src = event.getSource();
     return src == leadingButton || src == trailingButton;
   }
 
-  /**
-   * Starts (or no-ops if already running) the hover-poll timer that backs up Swing's unreliable
-   * {@code mouseExited} dispatch on macOS. The timer queries {@link java.awt.MouseInfo} for the
-   * live cursor position every {@link #HOVER_POLL_INTERVAL_MS}ms and clears hover state when it
-   * confirms the cursor is outside the chip bounds.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
   private void ensureHoverPolling() {
     if (hoverPollTimer != null && hoverPollTimer.isRunning()) {
       return;
@@ -1196,8 +1046,6 @@ public class ElwhaChip extends JPanel {
       return;
     }
     if (!isShowing()) {
-      // Chip is no longer realized — clear and stop. Defensive; removeNotify also stops the
-      // timer when the chip leaves the hierarchy.
       hovered = false;
       pressed = false;
       refreshLeadingAffordanceIcon();
@@ -1206,8 +1054,6 @@ public class ElwhaChip extends JPanel {
     }
     final java.awt.PointerInfo info = java.awt.MouseInfo.getPointerInfo();
     if (info == null) {
-      // Headless or sandboxed environment — can't poll. Leave hover state untouched; the
-      // mouseExited fast-path is the only signal we have.
       return;
     }
     final Point screenPt = info.getLocation();
@@ -1224,22 +1070,10 @@ public class ElwhaChip extends JPanel {
 
   @Override
   public void removeNotify() {
-    // Stop the hover-poll timer when the chip leaves its parent hierarchy — otherwise the
-    // timer's strong reference to the lambda (which captures `this`) keeps the chip alive past
-    // its useful life.
     stopHoverPolling();
     super.removeNotify();
   }
 
-  /**
-   * Returns true when the live cursor is currently inside this chip's bounds. Fast-path guard for
-   * {@code mouseExited} so a "cursor moved into a child component" event doesn't get treated as a
-   * real chip exit. The hover-poll timer is the authoritative backup for slow exits and platforms
-   * where {@code mouseExited} fires unreliably.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
   private boolean isCursorStillInsideChip(final MouseEvent event) {
     if (!isShowing()) {
       return false;
@@ -1249,8 +1083,6 @@ public class ElwhaChip extends JPanel {
     if (info != null) {
       screenPt = info.getLocation();
     } else {
-      // Sandboxed environments (some security managers, headless screens) may return null —
-      // fall back to event-time coords. Imperfect but better than treating as "outside."
       screenPt = new Point(event.getXOnScreen(), event.getYOnScreen());
     }
     final Point chipPt = new Point(screenPt);
@@ -1261,271 +1093,81 @@ public class ElwhaChip extends JPanel {
   // ---------------------------------------------------------------- border
 
   private void rebuildBorder() {
-    final Insets p = effectivePadding();
+    // JPanel's constructor calls updateUI() (which calls this) before our instance-field
+    // initializers run, so the padding fields can be null on the very first invocation. Fall
+    // back to the same defaults the field declarations use until the explicit values land.
+    final SpaceScale v = paddingVertical != null ? paddingVertical : SpaceScale.XS;
+    final SpaceScale h = paddingHorizontal != null ? paddingHorizontal : SpaceScale.MD;
+    final Insets p = SpaceScale.insets(v, h);
     setBorder(BorderFactory.createEmptyBorder(p.top, p.left, p.bottom, p.right));
-  }
-
-  private Insets effectivePadding() {
-    if (padding != null) {
-      return padding;
-    }
-    final Object v = UIManager.get(K_PADDING);
-    if (v instanceof Insets in) {
-      return in;
-    }
-    return new Insets(DEFAULT_PADY, DEFAULT_PADX, DEFAULT_PADY, DEFAULT_PADX);
   }
 
   // --------------------------------------------------------------- painting
 
   @Override
   protected void paintComponent(final Graphics g) {
-    final Graphics2D g2 = (Graphics2D) g.create();
-    try {
-      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-      final int w = getWidth();
-      final int h = getHeight();
-      final int arc = clampArc(getEffectiveCornerRadius(), w, h);
-      paintBackground(g2, w, h, arc);
-      paintBorder(g2, w, h, arc);
-    } finally {
-      g2.dispose();
-    }
-  }
-
-  private int clampArc(final int arc, final int w, final int h) {
-    final int max = Math.min(w, h);
-    return Math.min(arc, max);
-  }
-
-  /**
-   * Builds the canonical chip outline. Centered on the half-pixel grid so a 1px AA stroke renders
-   * crisp without straddling integer columns; both fill and stroke use this same shape so the
-   * surface edge and border edge stay co-located across all variants and states.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  private RoundRectangle2D.Float chipShape(final int w, final int h, final int arc) {
-    return new RoundRectangle2D.Float(0.5f, 0.5f, w - 1f, h - 1f, arc, arc);
-  }
-
-  private void paintBackground(final Graphics2D g2, final int w, final int h, final int arc) {
-    Color bg = resolveSurfaceColor();
-    final boolean interactive = interactionMode != ChipInteractionMode.STATIC && isEnabled();
-    if (selected) {
-      bg = composeSelectedBackground(bg);
-    }
-    if (pressed && interactive) {
-      bg = composePressedBackground(bg);
-    } else if (hovered && interactive) {
-      bg = composeHoverBackground(bg);
-    }
-    if (!isEnabled()) {
-      final Color disabled = resolveDisabledBackground();
-      if (disabled != null) {
-        bg = disabled;
-      }
-    }
-    if (bg == null) {
-      return;
-    }
-    g2.setColor(bg);
-    g2.fill(chipShape(w, h, arc));
-  }
-
-  /**
-   * Paints the chip's single state-driven outline. Focus is folded in here — no separate ring at a
-   * different radius. State precedence: focused → accent at thicker stroke; selected → accent at
-   * baseline width; otherwise variant border. GHOST suppresses the border in its idle state for the
-   * "no chrome" look but reveals it once hovered, pressed, selected, or focused.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  private void paintBorder(final Graphics2D g2, final int w, final int h, final int arc) {
-    if (borderWidth <= 0) {
-      return;
-    }
+    final int w = getWidth();
+    final int h = getHeight();
+    final int arc = shape.px();
     final boolean interactive = interactionMode != ChipInteractionMode.STATIC && isEnabled();
     final boolean focused = isFocusOwner() && interactive;
-    final boolean idleGhost =
-        variant == ChipVariant.GHOST && !selected && !hovered && !pressed && !focused;
-    if (idleGhost) {
-      return;
-    }
-    Color border;
-    float strokeWidth = borderWidth;
-    if (focused) {
-      border = resolveFocusColor();
-      strokeWidth = Math.max(strokeWidth, 1.6f);
-    } else if (selected) {
-      border = resolveSelectedBorderColor();
-    } else {
-      border = resolveBorderColor();
-    }
-    if (border == null) {
-      return;
-    }
-    g2.setColor(border);
-    g2.setStroke(new BasicStroke(strokeWidth));
-    g2.draw(chipShape(w, h, arc));
-  }
 
-  /**
-   * Per-variant strength of the selected-state fill blend. FILLED/GHOST go all-in for a bold accent
-   * surface; OUTLINED stays mostly transparent so the variant's "outline" character isn't
-   * overwritten into a generic blue blob; WARM_ACCENT splits the difference.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  private float selectedFillStrength() {
-    return switch (variant) {
-      case FILLED, GHOST -> 1.0f;
-      case OUTLINED -> 0.22f;
-      case WARM_ACCENT -> 0.6f;
-    };
-  }
+    final ColorRole surfaceRole = getEffectiveSurfaceRole();
+    final StateLayer overlay = activeOverlay(interactive);
+    final ColorRole borderRole = effectiveBorderRole(focused);
+    final float borderStroke = focused ? Math.max(borderWidth, FOCUSED_BORDER_WIDTH) : borderWidth;
 
-  private Color resolveFocusColor() {
-    Color ring = UIManager.getColor(K_FOCUS_COLOR);
-    if (ring == null) {
-      ring = UIManager.getColor("Component.focusColor");
-    }
-    if (ring == null) {
-      ring = accentFallback();
-    }
-    return ring;
-  }
-
-  // ---------------------------------------------------------- color resolve
-
-  private Color resolveSurfaceColor() {
-    if (surfaceColorOverride != null) {
-      return surfaceColorOverride;
-    }
-    // Direct-override model: when a UIManager key is explicitly set, it IS the rendered color —
-    // no variant-blended character is added on top. This makes the LAF tweak picker WYSIWYG.
-    // Variant blend kicks in only when the caller hasn't expressed an opinion.
-    final Color managerOverride = UIManager.getColor(K_BACKGROUND);
-    if (managerOverride != null) {
-      return managerOverride;
-    }
-    final Color base = panelBackground();
-    return switch (variant) {
-      case FILLED -> blend(base, foregroundForBlend(), 0.10f);
-      case OUTLINED -> base;
-      case GHOST -> null; // transparent until hovered/pressed/selected
-      case WARM_ACCENT -> {
-        final Color warm = UIManager.getColor(K_WARM_ACCENT);
-        yield warm != null ? warm : new Color(248, 226, 165);
+    if (!isEnabled()) {
+      // M3 disabled is a compositing pass on top of the resolved surface, not a tinted overlay.
+      final Graphics2D dim = (Graphics2D) g.create();
+      try {
+        dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
+        SurfacePainter.paint(dim, w, h, arc, surfaceRole, null, borderRole, borderStroke);
+      } finally {
+        dim.dispose();
       }
-    };
+      return;
+    }
+
+    SurfacePainter.paint((Graphics2D) g, w, h, arc, surfaceRole, overlay, borderRole, borderStroke);
   }
 
-  private Color resolveBorderColor() {
-    if (borderColor != null) {
-      return borderColor;
+  private StateLayer activeOverlay(final boolean interactive) {
+    if (pressed && interactive) {
+      return StateLayer.PRESSED;
     }
-    final Color managerOverride = UIManager.getColor(K_BORDER_COLOR);
-    if (managerOverride != null) {
-      return managerOverride;
+    if (hovered && interactive) {
+      return StateLayer.HOVER;
     }
-    return switch (variant) {
-      case FILLED, WARM_ACCENT -> blend(panelBackground(), foregroundForBlend(), 0.20f);
-      case OUTLINED, GHOST -> blend(panelBackground(), foregroundForBlend(), 0.30f);
-    };
+    if (selected && variant != ChipVariant.GHOST) {
+      return StateLayer.SELECTED;
+    }
+    return null;
   }
 
   /**
-   * Composes the final hovered surface color. Direct-override model: if {@link #K_HOVER_BACKGROUND}
-   * is explicitly set, that color is the result (no blend with {@code base}). If unset, the
-   * theme-default hover tint is blended into {@code base} at 45% to produce a subtle "the surface
-   * leaned toward hover" effect.
+   * Returns the border role for the current state. Selected and focused both swap to {@link
+   * ColorRole#PRIMARY} so the chip reads as "the picked one" without relying on the fill alone —
+   * particularly relevant for OUTLINED chips under the uniform 12% selected overlay (rebuild doc §9
+   * Q2). GHOST suppresses the border at rest but reveals it on hover / press / focus, and ignores
+   * the selected state entirely (rebuild doc §9 Q2 amendment, issue #50): GHOST is M3's text-button
+   * equivalent and the spec doesn't render a selected state on that emphasis level.
    *
    * @version v0.1.0
    * @since v0.1.0
    */
-  private Color composeHoverBackground(final Color base) {
-    final Color explicit = UIManager.getColor(K_HOVER_BACKGROUND);
-    if (explicit != null) {
-      return explicit;
+  private ColorRole effectiveBorderRole(final boolean focused) {
+    if (focused) {
+      return ColorRole.PRIMARY;
     }
-    final Color tint = blend(panelBackground(), foregroundForBlend(), 0.18f);
-    return blend(base, tint, 0.45f);
-  }
-
-  /** Pressed counterpart of {@link #composeHoverBackground(Color)}; explicit wins direct. */
-  private Color composePressedBackground(final Color base) {
-    final Color explicit = UIManager.getColor(K_PRESSED_BACKGROUND);
-    if (explicit != null) {
-      return explicit;
+    if (selected && variant != ChipVariant.GHOST) {
+      return ColorRole.PRIMARY;
     }
-    final Color tint = blend(panelBackground(), foregroundForBlend(), 0.28f);
-    return blend(base, tint, 0.55f);
-  }
-
-  /**
-   * Selected counterpart of {@link #composeHoverBackground(Color)}. When unset, the theme-default
-   * accent tint is blended at {@link #selectedFillStrength()} so OUTLINED stays mostly transparent
-   * and FILLED/GHOST go all-in.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  private Color composeSelectedBackground(final Color base) {
-    final Color explicit = UIManager.getColor(K_SELECTED_BACKGROUND);
-    if (explicit != null) {
-      return explicit;
+    final boolean idleGhost = variant == ChipVariant.GHOST && !hovered && !pressed;
+    if (idleGhost) {
+      return null;
     }
-    final Color tint = blend(panelBackground(), accentFallback(), 0.45f);
-    return blend(base, tint, selectedFillStrength());
-  }
-
-  private Color resolveSelectedBorderColor() {
-    final Color v = UIManager.getColor(K_SELECTED_BORDER_COLOR);
-    if (v != null) {
-      return v;
-    }
-    return accentFallback();
-  }
-
-  private Color resolveDisabledBackground() {
-    return UIManager.getColor(K_DISABLED_BACKGROUND);
-  }
-
-  private static Color panelBackground() {
-    final Color c = UIManager.getColor("Panel.background");
-    return c == null ? new Color(245, 245, 245) : c;
-  }
-
-  private static Color foregroundForBlend() {
-    final Color c = UIManager.getColor("Label.foreground");
-    return c == null ? Color.DARK_GRAY : c;
-  }
-
-  private static Color accentFallback() {
-    Color c = UIManager.getColor("Component.accentColor");
-    if (c == null) {
-      c = UIManager.getColor("Component.focusColor");
-    }
-    return c == null ? new Color(72, 130, 180) : c;
-  }
-
-  private static Color blend(final Color a, final Color b, final float t) {
-    if (a == null) {
-      return b;
-    }
-    if (b == null) {
-      return a;
-    }
-    final float c = Math.max(0f, Math.min(1f, t));
-    final int r = (int) (a.getRed() * (1 - c) + b.getRed() * c);
-    final int g = (int) (a.getGreen() * (1 - c) + b.getGreen() * c);
-    final int bb = (int) (a.getBlue() * (1 - c) + b.getBlue() * c);
-    return new Color(r, g, bb);
+    return variant.borderRole();
   }
 
   // ----------------------------------------------------------- LAF / a11y
@@ -1592,11 +1234,7 @@ public class ElwhaChip extends JPanel {
    * JLabel subclass whose {@code getForeground()} is dynamic: it returns whatever {@link
    * ElwhaChip#resolveForegroundColor()} resolves to at paint time. This sidesteps the usual chain
    * of "manually call setForeground on every state transition that might affect color" — instead
-   * the label always paints in the chip's current resolved foreground (auto-contrast against the
-   * surface, per-instance override, or UIManager key) without any explicit refresh.
-   *
-   * <p>Inner (non-static) so it can read the outer chip's resolver. The outer reference is stable
-   * for the label's lifetime — labels never migrate between chips.
+   * the label always paints in the chip's current resolved foreground.
    *
    * @version v0.1.0
    * @since v0.1.0
@@ -1609,25 +1247,138 @@ public class ElwhaChip extends JPanel {
 
     @Override
     public Color getForeground() {
-      // ElwhaChip's resolveForegroundColor reads default-initialized state (variant, selection,
-      // surface override) plus UIManager, so it's safe to invoke during JLabel's superclass
-      // construction too — no NPE on partially-initialized ElwhaChip fields.
       return resolveForegroundColor();
+    }
+  }
+
+  // --------------------------------------------------------- remove glyph
+
+  /**
+   * Minimal Material-shaped × glyph used by {@link #inputChip(String, Runnable)} so the input-chip
+   * preset doesn't require a MaterialIcons dependency at the public-API level. Renders crisp at the
+   * chip's foreground color via the surrounding chip's icon filter — at 14px optical size to match
+   * the in-chip glyph convention.
+   *
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  private static final class RemoveGlyphIcon implements Icon {
+
+    private static final int SIZE = 14;
+
+    @Override
+    public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
+      final Graphics2D g2 = (Graphics2D) g.create();
+      try {
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(c.getForeground());
+        g2.setStroke(new java.awt.BasicStroke(1.6f, java.awt.BasicStroke.CAP_ROUND, 0));
+        final int inset = 3;
+        g2.drawLine(x + inset, y + inset, x + SIZE - inset, y + SIZE - inset);
+        g2.drawLine(x + SIZE - inset, y + inset, x + inset, y + SIZE - inset);
+      } finally {
+        g2.dispose();
+      }
+    }
+
+    @Override
+    public int getIconWidth() {
+      return SIZE;
+    }
+
+    @Override
+    public int getIconHeight() {
+      return SIZE;
+    }
+  }
+
+  // ---------------------------------------------------------- leading layout
+
+  /**
+   * {@link FlowLayout} variant for the chip's leading cluster. Differs from stock {@code
+   * FlowLayout} in two ways: floors the row height at a configurable minimum, and vertically
+   * centers the row inside the container when the container is taller than the row.
+   *
+   * <p>Both behaviors exist to keep the text baseline stable across affordance states. Stock {@code
+   * FlowLayout} skips invisible children when computing row height, so a chip with no visible
+   * leading affordance reports a shorter preferred height than one with an anchor / pin glyph
+   * showing — and when the chip's {@code BorderLayout} content row stretches the cluster vertically
+   * to match the trailing button's hit-target height, the resulting slack lands below the row
+   * instead of being split above and below. Net effect: the text label drifts ~2px up relative to
+   * the trailing icon's centerline. Flooring the row height and re-centering after the parent's
+   * layout pass fixes both halves.
+   *
+   * @author Charles Bryan
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  private static final class BaselineCenteringFlowLayout extends FlowLayout {
+
+    private static final long serialVersionUID = 1L;
+
+    private final int minRowHeight;
+
+    BaselineCenteringFlowLayout(final int hgap, final int minRowHeight) {
+      super(FlowLayout.LEADING, hgap, 0);
+      this.minRowHeight = minRowHeight;
+    }
+
+    @Override
+    public Dimension preferredLayoutSize(final Container target) {
+      final Dimension d = super.preferredLayoutSize(target);
+      d.height = Math.max(d.height, minRowHeight);
+      return d;
+    }
+
+    @Override
+    public Dimension minimumLayoutSize(final Container target) {
+      final Dimension d = super.minimumLayoutSize(target);
+      d.height = Math.max(d.height, minRowHeight);
+      return d;
+    }
+
+    @Override
+    public void layoutContainer(final Container target) {
+      super.layoutContainer(target);
+      int rowHeight = 0;
+      int rowTop = Integer.MAX_VALUE;
+      final int count = target.getComponentCount();
+      for (int i = 0; i < count; i++) {
+        final Component c = target.getComponent(i);
+        if (!c.isVisible()) {
+          continue;
+        }
+        rowHeight = Math.max(rowHeight, c.getHeight());
+        rowTop = Math.min(rowTop, c.getY());
+      }
+      if (rowHeight == 0) {
+        return;
+      }
+      final Insets in = target.getInsets();
+      final int slack = target.getHeight() - in.top - in.bottom - rowHeight;
+      if (slack <= 0) {
+        return;
+      }
+      final int desiredTop = in.top + slack / 2;
+      final int dy = desiredTop - rowTop;
+      if (dy == 0) {
+        return;
+      }
+      for (int i = 0; i < count; i++) {
+        final Component c = target.getComponent(i);
+        if (c.isVisible()) {
+          c.setLocation(c.getX(), c.getY() + dy);
+        }
+      }
     }
   }
 
   // ----------------------------------------------------------- leading btn
 
   /**
-   * Leading-slot clickable affordance — used by host containers (like {@code ElwhaChipList}) to
-   * render pin/anchor toggle buttons that the user can click directly on the chip. Independent of
-   * the trailing button: it has its own hover/press tint, its own hit-area floor of {@code
-   * MIN_HIT_TARGET} pixels (so a 14px glyph still gets a 22×22 click target), and it consumes its
-   * own mouse events so the click is never interpreted as a chip drag or selection.
-   *
-   * <p>The icon is set via {@link #setRenderedIcon} rather than {@code setIcon} so the host can
-   * swap glyphs (outline/filled, hover-revealed/hidden) without re-binding a fresh Action each time
-   * and losing its tooltip.
+   * Leading-slot clickable affordance — used by host containers to render pin/anchor toggle
+   * buttons. Independent of the trailing button: it has its own hover/press tint, its own hit-area
+   * floor of {@code BUTTON_MIN_HIT_TARGET} pixels, and it consumes its own mouse events.
    *
    * @version v0.1.0
    * @since v0.1.0
@@ -1667,8 +1418,6 @@ public class ElwhaChip extends JPanel {
               }
               pressed = true;
               repaint();
-              // Consume so the host chip's drag-start handler can detect that the press
-              // originated on the button and skip its drag-threshold tracking entirely.
               e.consume();
             }
 
@@ -1697,14 +1446,6 @@ public class ElwhaChip extends JPanel {
       onClick = runnable;
     }
 
-    /**
-     * Swaps the rendered icon without going through {@code setAction}, preserving the tooltip and
-     * click binding. A null icon leaves the slot empty but the component still reserves its hit
-     * area via {@link #getPreferredSize()}.
-     *
-     * @version v0.1.0
-     * @since v0.1.0
-     */
     void setRenderedIcon(final Icon icon) {
       setIcon(icon);
       repaint();
@@ -1713,19 +1454,13 @@ public class ElwhaChip extends JPanel {
     @Override
     protected void paintComponent(final Graphics g) {
       if ((hovered || pressed) && isEnabled() && getIcon() != null) {
-        // Tint only when there's actually a glyph to highlight — a hover-revealed empty slot
-        // shouldn't paint a phantom circle on mouseover.
         final Graphics2D g2 = (Graphics2D) g.create();
         try {
           g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-          final int alpha = pressed ? 60 : 32;
-          g2.setComposite(AlphaComposite.SrcOver.derive(1f));
-          final Color base = UIManager.getColor("Label.foreground");
-          final Color c =
-              base != null
-                  ? new Color(base.getRed(), base.getGreen(), base.getBlue(), alpha)
-                  : new Color(0, 0, 0, alpha);
-          g2.setColor(c);
+          final StateLayer overlay = pressed ? StateLayer.PRESSED : StateLayer.HOVER;
+          final Color tint =
+              overlay.over(ColorRole.SURFACE.resolve(), ColorRole.ON_SURFACE.resolve());
+          g2.setColor(tint);
           final int arc = Math.min(getWidth(), getHeight());
           g2.fillRoundRect(0, 0, getWidth(), getHeight(), arc, arc);
         } finally {
@@ -1737,15 +1472,10 @@ public class ElwhaChip extends JPanel {
 
     @Override
     public Dimension getPreferredSize() {
-      // BorderLayout (used by ElwhaChip's content row) doesn't skip invisible components when
-      // computing preferred sizes, so report zero when invisible to avoid reserving the leading
-      // slot when no affordance is active.
       if (!isVisible()) {
         return new Dimension(0, 0);
       }
       final Dimension d = super.getPreferredSize();
-      // Always reserve the hit-area floor even when no icon is rendered, so a hover-revealed
-      // affordance doesn't make the chip width jump on hover-enter / hover-exit.
       final int side = Math.max(BUTTON_MIN_HIT_TARGET, Math.max(d.width, d.height));
       return new Dimension(side, side);
     }
@@ -1772,8 +1502,6 @@ public class ElwhaChip extends JPanel {
       setOpaque(false);
       setHorizontalAlignment(SwingConstants.CENTER);
       setVerticalAlignment(SwingConstants.CENTER);
-      // No border: the hover/press circle is painted on the full component bounds, so any
-      // asymmetric padding here would offset the glyph relative to the circle.
       setBorder(BorderFactory.createEmptyBorder());
       setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
       addMouseListener(
@@ -1850,19 +1578,14 @@ public class ElwhaChip extends JPanel {
 
     @Override
     protected void paintComponent(final Graphics g) {
-      // Background hover/press tint for affordance, painted under the icon/text.
       if ((hovered || pressed) && isEnabled()) {
         final Graphics2D g2 = (Graphics2D) g.create();
         try {
           g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-          final int alpha = pressed ? 60 : 32;
-          g2.setComposite(AlphaComposite.SrcOver.derive(1f));
-          final Color base = UIManager.getColor("Label.foreground");
-          final Color c =
-              base != null
-                  ? new Color(base.getRed(), base.getGreen(), base.getBlue(), alpha)
-                  : new Color(0, 0, 0, alpha);
-          g2.setColor(c);
+          final StateLayer overlay = pressed ? StateLayer.PRESSED : StateLayer.HOVER;
+          final Color tint =
+              overlay.over(ColorRole.SURFACE.resolve(), ColorRole.ON_SURFACE.resolve());
+          g2.setColor(tint);
           final int arc = Math.min(getWidth(), getHeight());
           g2.fillRoundRect(0, 0, getWidth(), getHeight(), arc, arc);
         } finally {
@@ -1874,14 +1597,10 @@ public class ElwhaChip extends JPanel {
 
     @Override
     public Dimension getPreferredSize() {
-      // BorderLayout-anchored trailing slot — report zero when invisible so a chip without a
-      // trailing action doesn't reserve 22px of empty space at its trailing edge.
       if (!isVisible()) {
         return new Dimension(0, 0);
       }
       final Dimension d = super.getPreferredSize();
-      // Square + at-least {@code BUTTON_MIN_HIT_TARGET} so a small (14px) icon still has a
-      // reasonable click area, matching the leading-button slot's footprint.
       final int side = Math.max(BUTTON_MIN_HIT_TARGET, Math.max(d.width, d.height));
       return new Dimension(side, side);
     }

@@ -28,6 +28,15 @@ public final class MaterialPalettes {
    * <p>Loaded once from the bundled JSON resource and cached. This is the theme to install when
    * validating the pipeline or when a consumer has not yet supplied its own palette.
    *
+   * <p><strong>Known quirk:</strong> the baseline ships a single-seed M3 export, which under M3's
+   * default Tonal Spot algorithm produces near-identical {@code primaryContainer} and {@code
+   * secondaryContainer} values in <em>light</em> mode (high-tone end of the tonal palette, where
+   * the secondary hue rotation compresses toward white). The same role pair is comfortably distinct
+   * in <em>dark</em> mode (low-tone end). This is M3-correct algorithm output, not a transcription
+   * artifact. Consumers needing visibly distinct containers across both modes should ship their own
+   * palette built with a more expressive scheme variant (Expressive / Vibrant / Fidelity) or with
+   * multi-seed core colors.
+   *
    * @return the baseline theme
    * @version v0.1.0
    * @since v0.1.0

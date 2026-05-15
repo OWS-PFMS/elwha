@@ -1,15 +1,15 @@
 package com.owspfm.elwha.chip;
 
+import com.owspfm.elwha.theme.ColorRole;
+
 /**
- * Surface-style variants for {@link ElwhaChip}.
+ * Treatment-only surface variants for {@link ElwhaChip}.
  *
- * <p>The variant is ergonomic sugar over the underlying three-layer styling system: each variant
- * resolves to a curated set of {@link javax.swing.UIManager} keys (background, border color, arc,
- * padding). Callers who need per-instance tweaks can still override via the {@code
- * "ElwhaChip.style"} client property without leaving the variant API.
- *
- * <p>The variant controls only the background and border treatment; it does not affect layout,
- * spacing, or interaction behavior — those are governed by separate setters on {@link ElwhaChip}.
+ * <p>The variant declares <em>treatment</em> — filled / outlined / ghost — and carries the {@link
+ * ColorRole}s the chip resolves its surface and border from. <strong>Color and treatment are
+ * orthogonal:</strong> the variant pins the treatment, and the surface role is independently
+ * overridable on each chip via {@code setSurfaceRole(ColorRole)}. The foreground is never stored on
+ * the variant — it is always derived as the {@code on}-pair of the effective surface role.
  *
  * @author Charles Bryan
  * @version v0.1.0
@@ -18,39 +18,73 @@ package com.owspfm.elwha.chip;
 public enum ChipVariant {
 
   /**
-   * Filled background tinted from the panel surface. The workhorse default for chip / tag rows that
-   * need to read as a distinct cluster against the surrounding surface.
+   * Filled surface — the M3 default for a chip cluster that needs to read as a distinct group.
+   * Surface defaults to {@link ColorRole#PRIMARY_CONTAINER}, border to {@link
+   * ColorRole#OUTLINE_VARIANT}.
    *
    * @version v0.1.0
    * @since v0.1.0
    */
-  FILLED,
+  FILLED(ColorRole.PRIMARY_CONTAINER, ColorRole.OUTLINE_VARIANT),
 
   /**
-   * Hairline border with a transparent fill. Best for dense rows where multiple FILLED chips would
-   * crowd the visual field, or when the chip needs to look "lighter" than nearby surfaces.
+   * Hairline border with a {@link ColorRole#SURFACE} fill — the M3 resting outlined chip. Best for
+   * dense rows where multiple filled chips would crowd the visual field.
    *
    * @version v0.1.0
    * @since v0.1.0
    */
-  OUTLINED,
+  OUTLINED(ColorRole.SURFACE, ColorRole.OUTLINE),
 
   /**
-   * No fill, no border. Renders as text-with-padding until hovered; the surface only appears on
-   * hover/press/selected. Useful for tab-strip uses where the unselected chips should disappear
-   * into the surface.
+   * No resting fill, no resting border. The chip renders as text-with-padding until hovered,
+   * pressed, or focused — useful for tab strips where the unselected entries should disappear into
+   * the surface. State-layer overlays still composite over a transparent base, with the foreground
+   * paired against {@link ColorRole#SURFACE}.
+   *
+   * <p><strong>Does not participate in selection rendering</strong> (issue #50, rebuild doc §9 Q2
+   * amendment). GHOST is Elwha's equivalent of M3's Text button — the lowest of M3's five emphasis
+   * levels — and M3 doesn't define a selected state at that emphasis level. Calling {@code
+   * setSelected(true)} on a GHOST chip updates the internal state and fires the {@code
+   * PROPERTY_SELECTED} event normally (so {@code setVariant(FILLED)} later will resume rendering
+   * the selected state), but produces no visual change while the variant remains GHOST. Consumers
+   * needing a togglable chip with a visible selected state should use {@link #OUTLINED}, which is
+   * M3's default treatment for filter chips.
    *
    * @version v0.1.0
    * @since v0.1.0
    */
-  GHOST,
+  GHOST(null, null);
+
+  private final ColorRole surfaceRole;
+  private final ColorRole borderRole;
+
+  ChipVariant(ColorRole surfaceRole, ColorRole borderRole) {
+    this.surfaceRole = surfaceRole;
+    this.borderRole = borderRole;
+  }
 
   /**
-   * Tinted with the application's warm accent (gold/amber range). Reserved for emphasizing a small
-   * subset of chips — e.g., favorited factors, "you are here" view tabs.
+   * Returns the default surface role for this variant, or {@code null} for variants with no resting
+   * fill (currently only {@link #GHOST}).
    *
+   * @return the default surface role, or {@code null}
    * @version v0.1.0
    * @since v0.1.0
    */
-  WARM_ACCENT
+  public ColorRole surfaceRole() {
+    return surfaceRole;
+  }
+
+  /**
+   * Returns the default border role for this variant, or {@code null} for variants with no resting
+   * border (currently only {@link #GHOST}).
+   *
+   * @return the default border role, or {@code null}
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ColorRole borderRole() {
+    return borderRole;
+  }
 }

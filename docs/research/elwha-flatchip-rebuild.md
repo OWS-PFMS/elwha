@@ -1,8 +1,8 @@
 # ElwhaChip Token-Native Rebuild — Locked Decisions
 
-**Status:** LOCKED. Authoritative plan for rebuilding `ElwhaChip`'s styling API on the token system. Decisions are not to be re-debated during execution — any change requires reopening this document with rationale.
+**Status:** LOCKED, EXECUTED (epic #31, 2026-05-15). The plan landed end-to-end across sub-issues #36 / #37 / #38 / #39 in one bundled PR; the visual §9 Q2 risk surfaced two collapses during smoketest — the preemptive `PRIMARY` border swap on selected handles `OUTLINED` cleanly, but exposed that `GHOST + SELECTED` collapses with `OUTLINED + SELECTED`. Resolved per the §9 Q2 amendment ([#50](https://github.com/OWS-PFMS/elwha/issues/50)): `GHOST` does not participate in selection rendering, aligning with M3's treatment of its Text-button emphasis level.
 
-**Drafted:** 2026-05-13 (as a narrow "retrofit") · **Re-scoped + locked:** 2026-05-14 · **Amended:** 2026-05-14 (SurfacePainter extraction folded into #37 — see Amendment below)
+**Drafted:** 2026-05-13 (as a narrow "retrofit") · **Re-scoped + locked:** 2026-05-14 · **Amended:** 2026-05-14 (SurfacePainter extraction folded into #37 — see Amendment below) · **Executed:** 2026-05-15
 
 **Author:** Charles Bryan (`cfb3@uw.edu`), via design conversation with Claude.
 
@@ -188,3 +188,5 @@ No JUnit infrastructure exists (per `CLAUDE.md`) — validation is visual via `E
 - `setSurfaceRole` with a non-default role (e.g. `TERTIARY_CONTAINER`) — confirm the foreground re-pairs correctly.
 
 **Specific thing to eyeball (the Q2 risk):** selected `OUTLINED` under the uniform 12% `SELECTED` overlay. V1 deliberately kept it mostly-transparent so it didn't read as a generic filled chip. If the uniform overlay loses that distinction, the likely fix is to let selection preserve `OUTLINED`'s identity via the *border* (swap to the accent role) rather than by a weaker fill — uniform fill, distinct border. Decide that on observed rendering, not preemptively.
+
+**§9 Q2 amendment (2026-05-15, issue [#50](https://github.com/OWS-PFMS/elwha/issues/50)).** Observed-rendering check on PR #46 surfaced a second collapse the preemptive border swap didn't cover: `GHOST + SELECTED` and `OUTLINED + SELECTED` rendered identically (both produce no fill + 12 % overlay + 1 px `PRIMARY` border under the accent-border rule). Two of three variants lost their identity in the selected state, and `GHOST + SELECTED` additionally read as a faded `FILLED` chip — defeating GHOST's "no surface unless interacting" intent. M3 doesn't define a ghost-style chip variant; its closest analog is the Text button (lowest emphasis level), and the spec doesn't document a selected state on that emphasis level. **Resolution:** `GHOST` does not participate in selection rendering. The `selected` field and `PROPERTY_SELECTED` events remain on the API surface (so `setVariant(...)` later to a non-GHOST variant resumes rendering the selected state), but the rendering pipeline ignores `selected` while the variant is `GHOST` — no `SELECTED` state-layer overlay, no border swap. Consumers needing a togglable chip with a visible selected state should use `OUTLINED` (M3's own default treatment for filter chips). `ChipVariant × ChipInteractionMode` orthogonality is preserved at the API level — only the visual contract changes.
