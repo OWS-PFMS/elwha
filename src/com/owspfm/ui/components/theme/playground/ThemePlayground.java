@@ -268,6 +268,21 @@ public final class ThemePlayground {
     iconToggle.setSelected(true);
     iconToggle.setToolTipText("Icon toggle button");
 
+    // Borderless click-toggle: a plain JButton whose icon swaps between an M3 fill-0 and
+    // fill-1 pair on click. setRequestFocusEnabled(false) keeps the click from moving focus
+    // to the button — the idiomatic toolbar-button behavior, and the visible cue is the icon
+    // swap alone (no lingering focus ring).
+    JButton pinToggle = new JButton(MaterialIcons.pushPin());
+    pinToggle.putClientProperty("JButton.buttonType", "borderless");
+    pinToggle.setRequestFocusEnabled(false);
+    pinToggle.setToolTipText("Click to toggle pin (icon swaps, focus does not move)");
+    pinToggle.addActionListener(
+        event -> {
+          boolean pinned = Boolean.TRUE.equals(pinToggle.getClientProperty("pinned"));
+          pinToggle.putClientProperty("pinned", !pinned);
+          pinToggle.setIcon(!pinned ? MaterialIcons.pushPinFilled() : MaterialIcons.pushPin());
+        });
+
     // Segmented icon-toggle group — the OWS app uses this pattern for view-mode pickers.
     JToggleButton viewGrid = new JToggleButton(MaterialIcons.gridView());
     JToggleButton viewTable = new JToggleButton(MaterialIcons.table());
@@ -289,6 +304,7 @@ public final class ThemePlayground {
     row.add(borderless);
     row.add(iconText);
     row.add(iconToggle);
+    row.add(pinToggle);
     row.add(segmented);
     return row;
   }
