@@ -57,12 +57,34 @@ The name is used consistently across every surface — no split-brain:
 
 ```
 artifact:   com.owspfm:elwha
+packages:   com.owspfm.elwha.theme, com.owspfm.elwha.card, com.owspfm.elwha.chip,
+            com.owspfm.elwha.list, com.owspfm.elwha.icons
 classes:    ElwhaCard, ElwhaChip, ElwhaList, ElwhaSurface, ElwhaTheme, ElwhaCardList, ElwhaChipList
 UIManager:  Elwha.color.primary, Elwha.shape.md, Elwha.type.bodyMedium, ...
 repo:       OWS-PFMS/elwha
 ```
 
-`groupId` stays `com.owspfm` — it's the org, not the product. Only `artifactId`, class names, and the UIManager namespace move.
+`groupId` stays `com.owspfm` — it's the org, not the product.
+
+### 3.1 The package path collapses too
+
+The current package root is `com.owspfm.ui.components.*`, which made sense when the library was a component grab-bag. With the design-system repositioning, that umbrella is wrong for the same reason "Comp" in the artifact name was: **the theme isn't a component** — it's the design language components layer on top of (design-direction §13's "components depend on theme; never the other way"). Calling its parent package `components` understates what now lives there.
+
+The rename sweep therefore also flattens the path: drop the `ui.components` intermediate so theme sits as a *peer* of the components, with the system name as the root. This is MUI's `@mui/material/Card` pattern, and Carbon's `@carbon/react/Button` — the system name is the package root; theme and components are siblings.
+
+Concrete mapping:
+
+```
+com.owspfm.ui.components.theme.*    →  com.owspfm.elwha.theme.*
+com.owspfm.ui.components.card.*     →  com.owspfm.elwha.card.*
+com.owspfm.ui.components.chip.*     →  com.owspfm.elwha.chip.*
+com.owspfm.ui.components.flatlist.* →  com.owspfm.elwha.list.*
+com.owspfm.ui.components.icons.*    →  com.owspfm.elwha.icons.*
+```
+
+Note `flatlist` → `list` — the package name carried the same "Flat" anchor the rename removes; it drops in the same pass. Sub-packages (`card.list`, `card.playground`, `chip.list`, `theme.playground`) collapse correspondingly. Resource paths under `src/main/resources/com/owspfm/ui/components/...` move in lockstep so resource loads still resolve.
+
+**Why fold this into #42 rather than a follow-up:** the rename already rewrites every file's `package` declaration. Adding the path collapse to that same pass is nearly free; deferring would mean rewriting every package declaration twice and leave a transitional state where the lib is called `Elwha` but its packages still say `ui.components.theme` — contradicting the design direction structurally.
 
 ## 4. Churn inventory — what a rename touches
 
@@ -73,6 +95,7 @@ The packages are *already* neutral (`com.owspfm.ui.components.card`, `.chip`, �
 | Maven `artifactId` | `flatcomp` → `elwha` | `groupId` `com.owspfm` unchanged |
 | GitHub repo | `OWS-PFMS/flatcomp` → `OWS-PFMS/elwha` | GitHub redirects old URLs; low-risk |
 | Publish target | `…/OWS-PFMS/flatcomp` → `…/OWS-PFMS/elwha` | path changes; `publish.yml` updated |
+| **Package path** | `com.owspfm.ui.components.<x>` → `com.owspfm.elwha.<x>` for `theme` / `card` / `chip` / `list` / `icons` (+ sub-packages); `flatlist` → `list` | §3.1 — flattens `ui.components` intermediate; resource paths move in lockstep |
 | Public classes | `FlatCard`→`ElwhaCard`, `FlatChip`→`ElwhaChip`, `FlatList`→`ElwhaList`, `FlatCardList`/`FlatChipList`, `FlatCardPlayground`/`FlatChipPlayground`, … | the bulk of the mechanical work |
 | Theme class | `FlatCompTheme` → `ElwhaTheme` | from the LOCKED install-API doc |
 | UIManager namespace | `FlatComp.*` → `Elwha.*` (`Elwha.color.primary`, …) | from the LOCKED taxonomy doc |

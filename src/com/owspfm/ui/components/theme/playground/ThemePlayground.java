@@ -271,21 +271,19 @@ public final class ThemePlayground {
     iconToggle.setToolTipText("Icon toggle button");
 
     // Borderless click-toggle: a plain JButton whose icon swaps between an M3 fill-0 and
-    // fill-1 pair on click. Scaled to 32px via the MaterialIcons sized overload to demonstrate
-    // SVG icons render crisply at any size. setRequestFocusEnabled(false) keeps the click from
-    // moving focus to the button — the idiomatic toolbar-button behavior, and the visible cue
-    // is the icon swap alone (no lingering focus ring).
-    final int pinSize = 32;
-    JButton pinToggle = new JButton(MaterialIcons.pushPin(pinSize));
+    // fill-1 pair on click. Uses the MaterialIcons no-arg form (DEFAULT_SIZE = 24, the M3
+    // standard for icon buttons). setRequestFocusEnabled(false) keeps the click from moving
+    // focus to the button — the idiomatic toolbar-button behavior, and the visible cue is
+    // the icon swap alone (no lingering focus ring).
+    JButton pinToggle = new JButton(MaterialIcons.pushPin());
     pinToggle.putClientProperty("JButton.buttonType", "borderless");
     pinToggle.setRequestFocusEnabled(false);
-    pinToggle.setToolTipText("Click to toggle pin (icon swaps, focus does not move) — 32px");
+    pinToggle.setToolTipText("Click to toggle pin (icon swaps, focus does not move)");
     pinToggle.addActionListener(
         event -> {
           boolean pinned = Boolean.TRUE.equals(pinToggle.getClientProperty("pinned"));
           pinToggle.putClientProperty("pinned", !pinned);
-          pinToggle.setIcon(
-              !pinned ? MaterialIcons.pushPinFilled(pinSize) : MaterialIcons.pushPin(pinSize));
+          pinToggle.setIcon(!pinned ? MaterialIcons.pushPinFilled() : MaterialIcons.pushPin());
         });
 
     // Segmented icon-toggle group — the OWS app uses this pattern for view-mode pickers.
