@@ -233,6 +233,11 @@ The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes
 | `CheckBox.icon.focusedBackground` | `SURFACE` — equal to `background` (focus = ring only) |
 | `CheckBox.icon.focusedBorderColor`, `CheckBox.icon.hoverBorderColor`, `CheckBox.icon.pressedBorderColor` | `OUTLINE` — equal to `borderColor` |
 | `CheckBox.icon.focusedSelectedBackground`, `CheckBox.icon.focusedSelectedBorderColor` | `PRIMARY` — equal to `selectedBackground` (MUST be set: fallback is `focusedBackground`, which makes a focused-checked icon render empty otherwise) |
+| `RadioButton.icon.style` | `"outlined"` — splits the shared icon palette so radio takes the canonical M3 ring look while the checkbox keeps its filled look |
+| `CheckBox.icon[outlined].selectedBackground`, `…focusedSelectedBackground` | `SURFACE` — radio interior stays transparent when checked |
+| `CheckBox.icon[outlined].focusedSelectedBorderColor` | `PRIMARY` — focused-checked ring stays primary |
+| `CheckBox.icon[outlined].checkmarkColor` | `PRIMARY` — radio dot color (the "checkmark" for radio paints as the center dot) |
+| `CheckBox.icon[outlined].selectedBorderWidth` | `2` — thicker ring when checked (M3 radio spec) |
 | `List.background`, `Table.background`, `Tree.background` | `SURFACE` |
 | `List.foreground`, `Table.foreground`, `Tree.foreground` | `ON_SURFACE` |
 | `List.selectionBackground`, `Table.selectionBackground`, `Tree.selectionBackground` | `PRIMARY_CONTAINER` |

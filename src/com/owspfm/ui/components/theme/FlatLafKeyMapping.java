@@ -157,6 +157,18 @@ final class FlatLafKeyMapping {
     putColor("CheckBox.icon.hoverBorderColor", outline);
     putColor("CheckBox.icon.pressedBorderColor", outline);
 
+    // Radio button: give it a separate FlatLaf icon style ("outlined") so the shared icon
+    // palette can split — checkbox keeps its filled look (primary fill, white check) and the
+    // radio gets the canonical M3 ring (primary ring with primary dot, transparent inside,
+    // thicker ring when checked). The radio reads CheckBox.icon[outlined].* first and falls
+    // back to the base CheckBox.icon.* palette for anything not overridden.
+    UIManager.put("RadioButton.icon.style", "outlined");
+    putColor("CheckBox.icon[outlined].selectedBackground", surface);
+    putColor("CheckBox.icon[outlined].focusedSelectedBackground", surface);
+    putColor("CheckBox.icon[outlined].focusedSelectedBorderColor", primary);
+    putColor("CheckBox.icon[outlined].checkmarkColor", primary);
+    UIManager.put("CheckBox.icon[outlined].selectedBorderWidth", 2f);
+
     // --- Lists, tables, trees ---
     putColor("List.background", surface);
     putColor("List.foreground", onSurface);
