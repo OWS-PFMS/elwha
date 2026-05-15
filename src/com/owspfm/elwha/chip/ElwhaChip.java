@@ -1139,7 +1139,7 @@ public class ElwhaChip extends JPanel {
     if (hovered && interactive) {
       return StateLayer.HOVER;
     }
-    if (selected) {
+    if (selected && variant != ChipVariant.GHOST) {
       return StateLayer.SELECTED;
     }
     return null;
@@ -1149,7 +1149,9 @@ public class ElwhaChip extends JPanel {
    * Returns the border role for the current state. Selected and focused both swap to {@link
    * ColorRole#PRIMARY} so the chip reads as "the picked one" without relying on the fill alone —
    * particularly relevant for OUTLINED chips under the uniform 12% selected overlay (rebuild doc §9
-   * Q2). GHOST suppresses the border at rest but reveals it on hover / press / select / focus.
+   * Q2). GHOST suppresses the border at rest but reveals it on hover / press / focus, and ignores
+   * the selected state entirely (rebuild doc §9 Q2 amendment, issue #50): GHOST is M3's text-button
+   * equivalent and the spec doesn't render a selected state on that emphasis level.
    *
    * @version v0.1.0
    * @since v0.1.0
@@ -1158,7 +1160,7 @@ public class ElwhaChip extends JPanel {
     if (focused) {
       return ColorRole.PRIMARY;
     }
-    if (selected) {
+    if (selected && variant != ChipVariant.GHOST) {
       return ColorRole.PRIMARY;
     }
     final boolean idleGhost = variant == ChipVariant.GHOST && !hovered && !pressed;

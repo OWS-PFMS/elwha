@@ -22,6 +22,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -161,11 +162,25 @@ public final class ChipPlaygroundPanels {
     final ElwhaChip target =
         new ElwhaChip("Live chip").setInteractionMode(ChipInteractionMode.SELECTABLE);
 
+    // Forward-declared so the variant listener can flip the selected-checkbox enable state when
+    // the variant moves to or from GHOST.
+    final JCheckBox selectedBox = new JCheckBox("Selected");
+
     bar.add(new JLabel("Variant:"));
     final JComboBox<ChipVariant> variantBox = new JComboBox<>(ChipVariant.values());
     variantBox.setSelectedItem(target.getVariant());
     variantBox.addActionListener(
-        e -> target.setVariant((ChipVariant) variantBox.getSelectedItem()));
+        e -> {
+          final ChipVariant v = (ChipVariant) variantBox.getSelectedItem();
+          target.setVariant(v);
+          final boolean ghost = v == ChipVariant.GHOST;
+          selectedBox.setEnabled(!ghost);
+          selectedBox.setToolTipText(
+              ghost
+                  ? "GHOST does not render selection (issue #50, M3 alignment). "
+                      + "Selection state is preserved but invisible until the variant changes."
+                  : null);
+        });
     bar.add(variantBox);
 
     bar.add(new JLabel("Surface role:"));
@@ -195,6 +210,15 @@ public final class ChipPlaygroundPanels {
     verticalBox.addActionListener(pad);
     bar.add(horizontalBox);
     bar.add(verticalBox);
+
+    // Two-way binding: clicking the chip in SELECTABLE mode flips PROPERTY_SELECTED → checkbox
+    // mirrors the chip state; clicking the checkbox calls setSelected → chip mirrors the checkbox.
+    selectedBox.setSelected(target.isSelected());
+    selectedBox.addActionListener(e -> target.setSelected(selectedBox.isSelected()));
+    target.addPropertyChangeListener(
+        ElwhaChip.PROPERTY_SELECTED,
+        evt -> selectedBox.setSelected(Boolean.TRUE.equals(evt.getNewValue())));
+    bar.add(selectedBox);
 
     bar.add(Box.createHorizontalStrut(16));
     bar.add(target);

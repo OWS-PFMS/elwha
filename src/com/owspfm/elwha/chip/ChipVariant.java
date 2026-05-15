@@ -38,9 +38,18 @@ public enum ChipVariant {
 
   /**
    * No resting fill, no resting border. The chip renders as text-with-padding until hovered,
-   * pressed, focused, or selected — useful for tab strips where the unselected entries should
-   * disappear into the surface. State-layer overlays still composite over a transparent base, with
-   * the foreground paired against {@link ColorRole#SURFACE}.
+   * pressed, or focused — useful for tab strips where the unselected entries should disappear into
+   * the surface. State-layer overlays still composite over a transparent base, with the foreground
+   * paired against {@link ColorRole#SURFACE}.
+   *
+   * <p><strong>Does not participate in selection rendering</strong> (issue #50, rebuild doc §9 Q2
+   * amendment). GHOST is Elwha's equivalent of M3's Text button — the lowest of M3's five emphasis
+   * levels — and M3 doesn't define a selected state at that emphasis level. Calling {@code
+   * setSelected(true)} on a GHOST chip updates the internal state and fires the {@code
+   * PROPERTY_SELECTED} event normally (so {@code setVariant(FILLED)} later will resume rendering
+   * the selected state), but produces no visual change while the variant remains GHOST. Consumers
+   * needing a togglable chip with a visible selected state should use {@link #OUTLINED}, which is
+   * M3's default treatment for filter chips.
    *
    * @version v0.1.0
    * @since v0.1.0
