@@ -174,13 +174,16 @@ public final class FlatChipPlayground {
     gbc.gridx = 0;
     matrix.add(headerLabel("trailing icons"), gbc);
     final String[] iconNames = {"delete", "edit", "info", "favorite", "star", "add"};
+    // Pin to the pre-bump 14px size so chip-context icons keep their current weight after the
+    // MaterialIcons.DEFAULT_SIZE bump to 24 (M3 icon-button standard). Revisited in FlatChip V2.
+    final int chipIconSize = 14;
     final javax.swing.Icon[] icons = {
-      MaterialIcons.delete(),
-      MaterialIcons.edit(),
-      MaterialIcons.info(),
-      MaterialIcons.favorite(),
-      MaterialIcons.star(),
-      MaterialIcons.add(),
+      MaterialIcons.delete(chipIconSize),
+      MaterialIcons.edit(chipIconSize),
+      MaterialIcons.info(chipIconSize),
+      MaterialIcons.favorite(chipIconSize),
+      MaterialIcons.star(chipIconSize),
+      MaterialIcons.add(chipIconSize),
     };
     for (int c = 0; c < icons.length; c++) {
       gbc.gridx = c + 1;
@@ -317,7 +320,7 @@ public final class FlatChipPlayground {
     final javax.swing.Icon trashIcon =
         UIManager.get("FlatChip.removeIcon") instanceof javax.swing.Icon override
             ? override
-            : MaterialIcons.delete();
+            : MaterialIcons.delete(14);
     chip.setTrailingIcon(trashIcon, "Remove " + item, () -> model.remove(item));
     // Right-click → mode-appropriate toggle (pin/unpin or set/remove anchor) / details / rename
     // / remove. The mode-specific item is composed at popup time so flipping modes via the

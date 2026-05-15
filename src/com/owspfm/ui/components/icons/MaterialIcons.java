@@ -26,8 +26,14 @@ import javax.swing.UIManager;
  */
 public final class MaterialIcons {
 
-  /** Default render size in pixels — matches the leading-icon footprint on FlatChip. */
-  public static final int DEFAULT_SIZE = 14;
+  /**
+   * Default render size in pixels — M3's standard for icon buttons and toolbar icons. Material
+   * Symbols are designed at the 20-dp optical-size axis, so 24px keeps them at their
+   * design-intended visual weight. Chip-context callers (FlatChipList, FlatChipPlayground) pin to a
+   * smaller explicit size today; the FlatCard V2 / FlatChip V2 refresh will revisit chip icon
+   * sizing on its own terms.
+   */
+  public static final int DEFAULT_SIZE = 24;
 
   private static final String BASE = "com/owspfm/icons/material/";
 
