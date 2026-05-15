@@ -2,6 +2,7 @@ package com.owspfm.elwha.theme.playground;
 
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Config;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -60,6 +61,10 @@ import javax.swing.tree.DefaultMutableTreeNode;
  *   <li><strong>Chip</strong> — the canonical chip playground panels (variant gallery + live list),
  *       reused from {@link ChipPlaygroundPanels} so the standalone {@code ElwhaChipPlayground} and
  *       this tab stay in lockstep.
+ *   <li><strong>Surface</strong> — the {@code ColorRole × ShapeScale} matrix and live-control panel
+ *       for {@link com.owspfm.elwha.surface.ElwhaSurface}, reused from {@link
+ *       SurfacePlaygroundPanels} so the standalone {@code ElwhaSurfacePlayground} and this tab stay
+ *       in lockstep.
  * </ul>
  *
  * <p>The mode toggle re-installs the theme at runtime, exercising the binding rule end-to-end.
@@ -104,6 +109,7 @@ public final class ThemePlayground {
     tabs.addTab("Type Scale", new JScrollPane(buildTypeTab()));
     tabs.addTab("Swing Comps", new JScrollPane(buildSwingCompsTab()));
     tabs.addTab("Chip", buildChipTab());
+    tabs.addTab("Surface", buildSurfaceTab());
     root.add(tabs, java.awt.BorderLayout.CENTER);
 
     frame.setContentPane(root);
@@ -229,6 +235,16 @@ public final class ThemePlayground {
     JTabbedPane inner = new JTabbedPane();
     inner.addTab("Variant gallery", new JScrollPane(ChipPlaygroundPanels.buildVariantGallery()));
     inner.addTab("Live list", ChipPlaygroundPanels.buildLiveListPanel());
+    return inner;
+  }
+
+  // --- Surface tab — reuses SurfacePlaygroundPanels so this and the standalone playground stay
+  // synced. ---
+
+  private JComponent buildSurfaceTab() {
+    JTabbedPane inner = new JTabbedPane();
+    inner.addTab("Matrix", new JScrollPane(SurfacePlaygroundPanels.buildMatrixPanel()));
+    inner.addTab("Live", SurfacePlaygroundPanels.buildLivePanel());
     return inner;
   }
 

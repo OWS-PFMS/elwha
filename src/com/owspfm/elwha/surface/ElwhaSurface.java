@@ -26,8 +26,8 @@ import javax.swing.JPanel;
  * every escape hatch becomes a long-term migration cost. Pre-1.0, the typed API is the only API.
  *
  * <p><strong>Defaults.</strong> {@link ColorRole#SURFACE} fill, {@link ShapeScale#MD} (12 px)
- * corner radius, no border. These match the locked {@code ElwhaCard} default so Card V2 composing
- * a Surface inherits the right look out of the box.
+ * corner radius, no border. These match the locked {@code ElwhaCard} default so Card V2 composing a
+ * Surface inherits the right look out of the box.
  *
  * <p><strong>Binding rule.</strong> The painter resolves every token at paint time, so a runtime
  * theme/mode switch re-skins the Surface on the next paint without any per-instance listener — see
