@@ -127,7 +127,11 @@ public final class SurfacePlaygroundPanels {
 
     controls.add(new JLabel("Border width:"));
     final JSpinner widthSpinner =
-        new JSpinner(new SpinnerNumberModel(target.getBorderWidth(), 0, 8, 1));
+        new JSpinner(new SpinnerNumberModel(target.getBorderWidth(), 0, 2, 1));
+    widthSpinner.setToolTipText(
+        "Capped at 2 — the design system's max (focus ring). Wider strokes are technically "
+            + "supported but trade the inner corner radius (see ElwhaSurface.setBorderWidth "
+            + "Javadoc); not worth exposing in the validation playground.");
     widthSpinner.addChangeListener(e -> target.setBorderWidth((Integer) widthSpinner.getValue()));
     controls.add(widthSpinner);
 
