@@ -53,6 +53,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **`ElwhaChip` auto-contrast machinery** (epic #31) — `resolveForegroundColor()`'s luma branch, `AUTO_FG_DARK` / `AUTO_FG_LIGHT`, `isLight`, `effectiveSurfaceForContrast`. The token system's `on`-pairing makes them unnecessary.
 - **`ElwhaChipDemo`** (epic #31) — the minimal smoke-test demo. Redundant with `ElwhaChipPlayground` after the playground rework; the playground now covers the same matrix plus the live-list surface.
 
+### Fixed
+
+- **`ElwhaChip` text baseline drift when leading affordance is hidden** ([#49](https://github.com/OWS-PFMS/elwha/issues/49)) — chips with no visible leading affordance but a visible trailing icon read with the text sitting ~2px high relative to the trailing icon's centerline. Root cause: stock `FlowLayout` skipped invisible children for row-height computation, so the leading cluster reported a shorter preferred height than the trailing button's hit-target; when `BorderLayout` stretched the cluster to match, the slack landed below the row instead of being split above and below. Fixed by an internal `BaselineCenteringFlowLayout` that floors the row height at `BUTTON_MIN_HIT_TARGET` and re-centers the row after the parent's layout pass. Predates epic #31; surfaced by smoketesting the chip rebuild.
+- **Bundled `MaterialPalettes.baseline()` regenerated from a fresh Material Theme Builder export** ([#47](https://github.com/OWS-PFMS/elwha/issues/47)) — the prior baseline scheme produced muddy / low-legibility chip surfaces. New palette retains the `#6750A4` seed; all 49 `ColorRole` keys now come directly from `schemes.light` / `schemes.dark` (no derived roles). Raw export archived at `docs/research/baseline-palette-mtb-export-2026-05-15.json`.
+
 ### Tooling
 
 - **Spotless** (`spotless-maven-plugin` 2.46.1 + `googleJavaFormat`) wired into the Maven build as `mvn spotless:check` at the `verify` phase. Run `mvn spotless:apply` locally to fix formatting. Note: requires JDK 21 — Spotless + google-java-format hits a binary-API drift on JDK 22+ (tracked upstream at [diffplug/spotless#2468](https://github.com/diffplug/spotless/issues/2468)).

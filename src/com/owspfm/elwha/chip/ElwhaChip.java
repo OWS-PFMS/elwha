@@ -10,6 +10,7 @@ import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -182,7 +183,8 @@ public class ElwhaChip extends JPanel {
     trailingButton = new TrailingIconButton();
     trailingButton.setVisible(false);
 
-    leadingCluster = new JPanel(new FlowLayout(FlowLayout.LEADING, DEFAULT_INNER_GAP, 0));
+    leadingCluster =
+        new JPanel(new BaselineCenteringFlowLayout(DEFAULT_INNER_GAP, BUTTON_MIN_HIT_TARGET));
     leadingCluster.setOpaque(false);
     leadingCluster.add(leadingButton);
     leadingCluster.add(leadingIconLabel);
@@ -1285,6 +1287,87 @@ public class ElwhaChip extends JPanel {
     @Override
     public int getIconHeight() {
       return SIZE;
+    }
+  }
+
+  // ---------------------------------------------------------- leading layout
+
+  /**
+   * {@link FlowLayout} variant for the chip's leading cluster. Differs from stock {@code
+   * FlowLayout} in two ways: floors the row height at a configurable minimum, and vertically
+   * centers the row inside the container when the container is taller than the row.
+   *
+   * <p>Both behaviors exist to keep the text baseline stable across affordance states. Stock {@code
+   * FlowLayout} skips invisible children when computing row height, so a chip with no visible
+   * leading affordance reports a shorter preferred height than one with an anchor / pin glyph
+   * showing — and when the chip's {@code BorderLayout} content row stretches the cluster vertically
+   * to match the trailing button's hit-target height, the resulting slack lands below the row
+   * instead of being split above and below. Net effect: the text label drifts ~2px up relative to
+   * the trailing icon's centerline. Flooring the row height and re-centering after the parent's
+   * layout pass fixes both halves.
+   *
+   * @author Charles Bryan
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  private static final class BaselineCenteringFlowLayout extends FlowLayout {
+
+    private static final long serialVersionUID = 1L;
+
+    private final int minRowHeight;
+
+    BaselineCenteringFlowLayout(final int hgap, final int minRowHeight) {
+      super(FlowLayout.LEADING, hgap, 0);
+      this.minRowHeight = minRowHeight;
+    }
+
+    @Override
+    public Dimension preferredLayoutSize(final Container target) {
+      final Dimension d = super.preferredLayoutSize(target);
+      d.height = Math.max(d.height, minRowHeight);
+      return d;
+    }
+
+    @Override
+    public Dimension minimumLayoutSize(final Container target) {
+      final Dimension d = super.minimumLayoutSize(target);
+      d.height = Math.max(d.height, minRowHeight);
+      return d;
+    }
+
+    @Override
+    public void layoutContainer(final Container target) {
+      super.layoutContainer(target);
+      int rowHeight = 0;
+      int rowTop = Integer.MAX_VALUE;
+      final int count = target.getComponentCount();
+      for (int i = 0; i < count; i++) {
+        final Component c = target.getComponent(i);
+        if (!c.isVisible()) {
+          continue;
+        }
+        rowHeight = Math.max(rowHeight, c.getHeight());
+        rowTop = Math.min(rowTop, c.getY());
+      }
+      if (rowHeight == 0) {
+        return;
+      }
+      final Insets in = target.getInsets();
+      final int slack = target.getHeight() - in.top - in.bottom - rowHeight;
+      if (slack <= 0) {
+        return;
+      }
+      final int desiredTop = in.top + slack / 2;
+      final int dy = desiredTop - rowTop;
+      if (dy == 0) {
+        return;
+      }
+      for (int i = 0; i < count; i++) {
+        final Component c = target.getComponent(i);
+        if (c.isVisible()) {
+          c.setLocation(c.getX(), c.getY() + dy);
+        }
+      }
     }
   }
 
