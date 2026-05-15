@@ -181,13 +181,17 @@ With the theme API fixed, the next deliverable is the `FlatChip` variant retrofi
 
 The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes hundreds of keys; FlatComp maps the ones that make raw Swing read as coherent next to a `FlatChip`.
 
-**Focus-key completeness within the curated scope.** FlatLaf models focus and hover as border-color / background changes, *not* an outer ring (`Component.focusWidth` defaults to `0`). An unmapped `*.focused*` or `*.hover*` key does not mean "no effect" — it falls through to FlatLaf's built-in blue accent default. So for every component in the curated scope, *all* of its focus/hover keys are mapped, not just the resting-state ones. Components deliberately left out of v1 scope — `HelpButton` (the `?` button) and tab-style toggle buttons (`ToggleButton.tab.*`) — keep FlatLaf's defaults; a consumer using those will see FlatLaf's blue focus styling until they are brought into scope.
+**Focus model — a focus ring.** Focus is indicated by a `PRIMARY`-colored ring, not by a fill or border swap. `Component.focusWidth` (FlatLaf-default `0`) is raised to `2`, and `Component.focusColor` is `PRIMARY`, so any focused component draws a consistent ring. Every `*.focused*` background / border key resolves to its *resting* equivalent — focus changes neither the fill nor the border, only adds the ring. This keeps one unambiguous, accessible focus cue across buttons, fields, combos, and lists, and avoids the "focused button looks stuck-pressed" reading that a `focusedBackground` fill produces. (M3 also defines a subtle focus *state layer*; v1 uses the ring alone and may layer the state-layer tint in later.)
+
+**Focus-key completeness within the curated scope.** An unmapped `*.focused*` or `*.hover*` key does *not* mean "no effect" — FlatLaf falls back to its built-in blue accent default. So for every component in the curated scope, *all* of its focus/hover keys are mapped (to their resting equivalents, per the focus model above), not just the resting-state ones. Components deliberately left out of v1 scope — `HelpButton` (the `?` button) and tab-style toggle buttons (`ToggleButton.tab.*`) — keep FlatLaf's defaults; a consumer using those will see FlatLaf's blue focus styling until they are brought into scope.
 
 ### A.1 Static keys — direct role assignments (`applyStaticKeys`)
 
 | FlatLaf key | Role / token |
 |---|---|
-| `Component.focusColor`, `Component.focusedBorderColor` | `PRIMARY` |
+| `Component.focusColor` | `PRIMARY` — the focus-ring color |
+| `Component.focusWidth` | `2` — focus-ring width (FlatLaf default `0`) |
+| `Component.focusedBorderColor` | `OUTLINE` — equal to the resting border; the ring is the cue |
 | `Component.borderColor` | `OUTLINE` |
 | `Component.disabledBorderColor` | `OUTLINE_VARIANT` |
 | `Component.arc` | `ShapeScale.SM` |
@@ -202,12 +206,10 @@ The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes
 | `Button.disabledBorderColor` | `OUTLINE_VARIANT` |
 | `Button.default.background`, `Button.default.borderColor` | `PRIMARY` |
 | `Button.default.foreground` | `ON_PRIMARY` |
-| `Button.focusedBackground` | `SURFACE_CONTAINER_LOW` — equal to `Button.background`; focus must not swap the fill |
-| `Button.focusedBorderColor` | `PRIMARY` — focus shows as a colored border |
-| `Button.hoverBorderColor` | `OUTLINE` |
+| `Button.focusedBackground` | `SURFACE_CONTAINER_LOW` — equal to `Button.background` (focus = ring only) |
+| `Button.focusedBorderColor`, `Button.hoverBorderColor` | `OUTLINE` — equal to `Button.borderColor` |
 | `Button.default.focusedBackground` | `PRIMARY` — equal to `Button.default.background` |
-| `Button.default.focusedBorderColor`, `Button.default.focusColor` | `ON_PRIMARY` |
-| `Button.default.hoverBorderColor` | `PRIMARY` |
+| `Button.default.focusedBorderColor`, `Button.default.focusColor`, `Button.default.hoverBorderColor` | `PRIMARY` — equal to `Button.default.borderColor` |
 | `ToggleButton.selectedBackground` | `PRIMARY_CONTAINER` |
 | `ToggleButton.selectedForeground` | `ON_PRIMARY_CONTAINER` |
 | `TextField.background`, `FormattedTextField.background`, `PasswordField.background`, `TextArea.background`, `EditorPane.background` | `SURFACE` |

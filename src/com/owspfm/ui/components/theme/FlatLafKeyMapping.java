@@ -63,8 +63,13 @@ final class FlatLafKeyMapping {
     Color inverseOnSurface = palette.get(ColorRole.INVERSE_ON_SURFACE);
 
     // --- Global component defaults ---
+    // Focus model: a focus ring is the indicator. Component.focusWidth (FlatLaf-default 0) is
+    // raised so a primary-colored ring is drawn around any focused component; the resting
+    // border and fill are left unchanged on focus (the *.focused* keys below all resolve to
+    // their resting equivalents) so the ring is the single, consistent focus cue everywhere.
     putColor("Component.focusColor", primary);
-    putColor("Component.focusedBorderColor", primary);
+    putColor("Component.focusedBorderColor", outline);
+    UIManager.put("Component.focusWidth", 2);
     putColor("Component.borderColor", outline);
     putColor("Component.disabledBorderColor", outlineVariant);
     UIManager.put("Component.arc", ShapeScale.SM.px());
@@ -88,17 +93,16 @@ final class FlatLafKeyMapping {
     putColor("Button.default.background", primary);
     putColor("Button.default.foreground", onPrimary);
     putColor("Button.default.borderColor", primary);
-    // Focus & hover borders: FlatLaf shows focus/hover as border-color and fill changes, not an
-    // outer ring (Component.focusWidth defaults to 0). EVERY such key must be mapped — an
-    // unmapped one falls through to FlatLaf's blue accent default. focusedBackground is kept
-    // equal to the normal background so focus never swaps the fill (which reads as a stuck
-    // pressed / toggled state); a focused control is distinguished by its border color alone.
+    // Focus & hover borders: the focus ring (Component.focusWidth, above) is the focus cue, so
+    // every *.focused* key resolves to its resting equivalent — focus swaps neither the fill
+    // nor the border. These keys must still be mapped explicitly: an unmapped one falls through
+    // to FlatLaf's blue accent default rather than being inert.
     putColor("Button.focusedBackground", surfaceContainerLow);
-    putColor("Button.focusedBorderColor", primary);
+    putColor("Button.focusedBorderColor", outline);
     putColor("Button.hoverBorderColor", outline);
     putColor("Button.default.focusedBackground", primary);
-    putColor("Button.default.focusedBorderColor", onPrimary);
-    putColor("Button.default.focusColor", onPrimary);
+    putColor("Button.default.focusedBorderColor", primary);
+    putColor("Button.default.focusColor", primary);
     putColor("Button.default.hoverBorderColor", primary);
     putColor("ToggleButton.background", surfaceContainerLow);
     putColor("ToggleButton.foreground", onSurface);
