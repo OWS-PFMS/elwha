@@ -4,14 +4,14 @@ import java.awt.Insets;
 import javax.swing.UIManager;
 
 /**
- * The 6-step spacing scale of the Elwha token vocabulary — a 4px-based ladder for paddings,
- * gaps, and insets.
+ * The 6-step spacing scale of the Elwha token vocabulary — a 4px-based ladder for paddings, gaps,
+ * and insets.
  *
  * <p>Material 3 has no formal spacing <em>token</em> scale (it uses an informal 4px/8px grid), so
- * this is Elwha's own ladder on that grid. Each step resolves at paint time from {@link
- * UIManager} under the key {@code Elwha.space.<key>}, which {@link ElwhaTheme#install}
- * writes. As with {@link ShapeScale}, the v1 values are fixed but still resolved — see {@code
- * elwha-theme-install-api.md} §1.4.
+ * this is Elwha's own ladder on that grid. Each step resolves at paint time from {@link UIManager}
+ * under the key {@code Elwha.space.<key>}, which {@link ElwhaTheme#install} writes. As with {@link
+ * ShapeScale}, the v1 values are fixed but still resolved — see {@code elwha-theme-install-api.md}
+ * §1.4.
  *
  * <p><strong>Binding rule.</strong> Callers must invoke {@link #px()} / {@link #insets()} at paint
  * time and must not cache the result across paints.
@@ -143,9 +143,9 @@ public enum SpaceScale {
   }
 
   /**
-   * Returns the compiled-in v1 default length for this step — the value {@link ElwhaTheme}
-   * writes into {@link UIManager} at install time, and the value {@link #px()} falls back to when
-   * no theme is installed.
+   * Returns the compiled-in v1 default length for this step — the value {@link ElwhaTheme} writes
+   * into {@link UIManager} at install time, and the value {@link #px()} falls back to when no theme
+   * is installed.
    *
    * @return the default length in pixels
    * @version v0.1.0

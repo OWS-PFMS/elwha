@@ -7,8 +7,7 @@ import java.util.Map;
 import javax.swing.UIManager;
 
 /**
- * The 12 semantic type roles of the Elwha token vocabulary, derived from Material 3's type
- * scale.
+ * The 12 semantic type roles of the Elwha token vocabulary, derived from Material 3's type scale.
  *
  * <p>M3's full scale is 15 (5 sizes across display / headline / title / body / label); Elwha v1
  * drops the {@code display} tier, which a desktop tool rarely needs. Each role resolves at paint
@@ -21,8 +20,7 @@ import javax.swing.UIManager;
  * <p><strong>Baseline fallback.</strong> When no theme has been installed, {@link #resolve()}
  * degrades to a sans-serif font at this role's point size, applying {@link
  * TextAttribute#WEIGHT_MEDIUM} as a best-effort approximation for the medium-weight roles. The
- * faithful weight rendering is {@link Typography}'s job — see {@code elwha-token-taxonomy.md}
- * §2.2.
+ * faithful weight rendering is {@link Typography}'s job — see {@code elwha-token-taxonomy.md} §2.2.
  *
  * @author Charles Bryan
  * @version v0.1.0

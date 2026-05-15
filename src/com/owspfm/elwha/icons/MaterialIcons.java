@@ -29,8 +29,8 @@ public final class MaterialIcons {
   /**
    * Default render size in pixels — M3's standard for icon buttons and toolbar icons. Material
    * Symbols are designed at the 20-dp optical-size axis, so 24px keeps them at their
-   * design-intended visual weight. Chip-context callers (ElwhaChipList, ElwhaChipPlayground) pin to a
-   * smaller explicit size today; the ElwhaCard V2 / ElwhaChip V2 refresh will revisit chip icon
+   * design-intended visual weight. Chip-context callers (ElwhaChipList, ElwhaChipPlayground) pin to
+   * a smaller explicit size today; the ElwhaCard V2 / ElwhaChip V2 refresh will revisit chip icon
    * sizing on its own terms.
    */
   public static final int DEFAULT_SIZE = 24;

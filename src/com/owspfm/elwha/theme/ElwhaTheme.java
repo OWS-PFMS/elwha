@@ -31,8 +31,8 @@ import javax.swing.plaf.FontUIResource;
  *
  * <p>{@link #install(Config)} is idempotent and re-callable. It runs the ordered eight-step
  * sequence from the install-API doc §3: resolve mode, install the base LAF, select the palette,
- * write the {@code Elwha.*} keys, write the FlatLaf-native keys, compute-and-bake the
- * state-layer keys, apply typography, and repaint every live window.
+ * write the {@code Elwha.*} keys, write the FlatLaf-native keys, compute-and-bake the state-layer
+ * keys, apply typography, and repaint every live window.
  *
  * @author Charles Bryan
  * @version v0.1.0

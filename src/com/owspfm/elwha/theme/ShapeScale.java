@@ -6,9 +6,9 @@ import javax.swing.UIManager;
  * The 7-step corner-radius scale of the Elwha token vocabulary, lifted from Material 3.
  *
  * <p>Each step resolves at paint time from {@link UIManager} under the key {@code
- * Elwha.shape.<key>}, which {@link ElwhaTheme#install} writes. The values are fixed in v1 —
- * they do not vary by theme or mode — but they are still resolved (not returned as compiled-in
- * constants) so that themeable geometry stays a cheap, component-free change later. See {@code
+ * Elwha.shape.<key>}, which {@link ElwhaTheme#install} writes. The values are fixed in v1 — they do
+ * not vary by theme or mode — but they are still resolved (not returned as compiled-in constants)
+ * so that themeable geometry stays a cheap, component-free change later. See {@code
  * elwha-theme-install-api.md} §1.4.
  *
  * <p><strong>Binding rule.</strong> Callers must invoke {@link #px()} at paint time and must not
@@ -121,9 +121,9 @@ public enum ShapeScale {
   }
 
   /**
-   * Returns the compiled-in v1 default radius for this step — the value {@link ElwhaTheme}
-   * writes into {@link UIManager} at install time, and the value {@link #px()} falls back to when
-   * no theme is installed.
+   * Returns the compiled-in v1 default radius for this step — the value {@link ElwhaTheme} writes
+   * into {@link UIManager} at install time, and the value {@link #px()} falls back to when no theme
+   * is installed.
    *
    * @return the default radius in pixels
    * @version v0.1.0

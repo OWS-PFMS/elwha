@@ -1,8 +1,7 @@
 /**
  * Shared abstractions for the {@code ElwhaList} component family — the umbrella over {@link
- * com.owspfm.elwha.card.list.ElwhaCardList}, {@link
- * com.owspfm.elwha.chip.list.ElwhaChipList}, and any future model-driven flat-list
- * primitives.
+ * com.owspfm.elwha.card.list.ElwhaCardList}, {@link com.owspfm.elwha.chip.list.ElwhaChipList}, and
+ * any future model-driven flat-list primitives.
  *
  * <p>Extracted in epic #230 story #237. The package defines just the cross-cutting
  * <em>contract</em> that every family member is expected to expose (orientation, item gap, padding,

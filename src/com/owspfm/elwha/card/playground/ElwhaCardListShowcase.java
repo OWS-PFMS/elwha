@@ -429,7 +429,8 @@ public final class ElwhaCardListShowcase extends JPanel {
   // -------------------------------------------------------------- glue
 
   private void syncFromControls() {
-    final ElwhaListOrientation orientation = (ElwhaListOrientation) orientationBox.getSelectedItem();
+    final ElwhaListOrientation orientation =
+        (ElwhaListOrientation) orientationBox.getSelectedItem();
     final boolean grid = orientation == ElwhaListOrientation.GRID;
     columnsSlider.setEnabled(grid);
     columnsLabel.setEnabled(grid);

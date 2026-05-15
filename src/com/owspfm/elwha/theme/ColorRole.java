@@ -14,8 +14,8 @@ import javax.swing.UIManager;
  *
  * <p><strong>Binding rule.</strong> Components MUST call {@link #resolve()} at paint time (or
  * re-resolve on {@code updateUI()}) — never cache the returned {@link Color} in a field across
- * paints. Runtime theme switching works by re-writing the {@code Elwha.*} keys; a cached color
- * goes stale and the component silently fails to re-skin. See {@code elwha-token-taxonomy.md}.
+ * paints. Runtime theme switching works by re-writing the {@code Elwha.*} keys; a cached color goes
+ * stale and the component silently fails to re-skin. See {@code elwha-token-taxonomy.md}.
  *
  * <p><strong>Baseline fallback.</strong> When no theme has been installed, {@link #resolve()}
  * degrades gracefully to a compiled-in M3 baseline value rather than returning {@code null}. The

@@ -15,8 +15,7 @@ package com.owspfm.elwha.theme;
  */
 public final class MaterialPalettes {
 
-  private static final String BASELINE_RESOURCE =
-      "/com/owspfm/elwha/theme/palettes/baseline.json";
+  private static final String BASELINE_RESOURCE = "/com/owspfm/elwha/theme/palettes/baseline.json";
 
   private static volatile Theme baseline;
 

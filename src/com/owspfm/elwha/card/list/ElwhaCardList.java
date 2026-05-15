@@ -90,8 +90,8 @@ public class ElwhaCardList<T> extends JPanel implements Accessible, ElwhaList<T>
    * extraction and only ever shipped {@code VERTICAL} and {@code GRID}. It is preserved as an alias
    * so existing call sites such as {@code ElwhaCardList.Orientation.GRID} continue to compile;
    * however, all new code should reference {@link ElwhaListOrientation} directly. Story #242 added
-   * support for {@link ElwhaListOrientation#HORIZONTAL} and {@link ElwhaListOrientation#WRAP}, which
-   * are also reachable through this class now.
+   * support for {@link ElwhaListOrientation#HORIZONTAL} and {@link ElwhaListOrientation#WRAP},
+   * which are also reachable through this class now.
    *
    * @version v0.1.0
    * @since v0.1.0
@@ -1074,7 +1074,10 @@ public class ElwhaCardList<T> extends JPanel implements Accessible, ElwhaList<T>
    * @since v0.1.0
    */
   private static boolean animateAxis(
-      final ElwhaCard card, final int target, final Map<ElwhaCard, Integer> map, final int fallback) {
+      final ElwhaCard card,
+      final int target,
+      final Map<ElwhaCard, Integer> map,
+      final int fallback) {
     final Integer curBoxed = map.get(card);
     final int cur = curBoxed != null ? curBoxed : fallback;
     if (cur == target) {

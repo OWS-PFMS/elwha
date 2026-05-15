@@ -29,9 +29,9 @@ import javax.swing.JComponent;
  * </ul>
  *
  * <p>Selection, drag-to-reorder, and per-family model types stay on the concrete classes since they
- * have family-specific signatures ({@code ElwhaChip} vs {@code ElwhaCard}, {@code ChipSelectionMode}
- * vs {@code CardSelectionMode}, etc.). Those cross the abstraction barrier only via the
- * per-implementation API.
+ * have family-specific signatures ({@code ElwhaChip} vs {@code ElwhaCard}, {@code
+ * ChipSelectionMode} vs {@code CardSelectionMode}, etc.). Those cross the abstraction barrier only
+ * via the per-implementation API.
  *
  * <p><strong>Fluent return types</strong>: every mutator returns {@code ElwhaList<T>} so concrete
  * implementations can return their own type via covariant override and keep their existing fluent

@@ -3,9 +3,9 @@ package com.owspfm.elwha.chip.list;
 import com.owspfm.elwha.card.list.Cursors;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ElwhaChip;
+import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.list.ElwhaList;
 import com.owspfm.elwha.list.ElwhaListOrientation;
-import com.owspfm.elwha.icons.MaterialIcons;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
@@ -54,9 +54,9 @@ import javax.swing.event.MouseInputAdapter;
  * <p>Selection (single / multiple / none), filter, sort, empty / loading state, keyboard
  * navigation, and accessibility ship from sub-story #236; all four {@link ElwhaListOrientation}
  * values (VERTICAL, HORIZONTAL, WRAP, GRID) are wired by sub-story #238; drag-to-reorder works on
- * every orientation as of sub-story #239. {@link ElwhaListOrientation#HORIZONTAL} uses a clip+scroll
- * overflow strategy — wrap the list in a {@link javax.swing.JScrollPane} for horizontally-scrolling
- * chip rows.
+ * every orientation as of sub-story #239. {@link ElwhaListOrientation#HORIZONTAL} uses a
+ * clip+scroll overflow strategy — wrap the list in a {@link javax.swing.JScrollPane} for
+ * horizontally-scrolling chip rows.
  *
  * <p><strong>Quick start</strong>:
  *
@@ -1757,7 +1757,10 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
   }
 
   private static boolean animateAxis(
-      final ElwhaChip chip, final int target, final Map<ElwhaChip, Integer> map, final int fallback) {
+      final ElwhaChip chip,
+      final int target,
+      final Map<ElwhaChip, Integer> map,
+      final int fallback) {
     final Integer curBoxed = map.get(chip);
     final int cur = curBoxed != null ? curBoxed : fallback;
     if (cur == target) {
@@ -2246,8 +2249,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
 
   /**
    * N-column grid layout with uniform cell width and uniform cell height. Mirrors the geometry of
-   * {@link com.owspfm.elwha.card.list.ElwhaCardList}'s grid mode, but for chip-sized
-   * children.
+   * {@link com.owspfm.elwha.card.list.ElwhaCardList}'s grid mode, but for chip-sized children.
    *
    * @version v0.1.0
    * @since v0.1.0

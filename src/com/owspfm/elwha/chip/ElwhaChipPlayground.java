@@ -5,8 +5,8 @@ import com.formdev.flatlaf.FlatLightLaf;
 import com.owspfm.elwha.chip.list.ChipSelectionMode;
 import com.owspfm.elwha.chip.list.DefaultChipListModel;
 import com.owspfm.elwha.chip.list.ElwhaChipList;
-import com.owspfm.elwha.list.ElwhaListOrientation;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.list.ElwhaListOrientation;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -54,8 +54,8 @@ import javax.swing.WindowConstants;
  *       selection enabled. Adjust orientation, columns, gap, and reorder via the controls above the
  *       list.
  *   <li><strong>LAF tweak panel</strong>: sliders, spinners, and color pickers for every public
- *       {@code ElwhaChip.*} {@link UIManager} key. Changes apply immediately to the live list above.
- *       A "Reset" button restores theme defaults; a Light/Dark toggle switches the FlatLaf
+ *       {@code ElwhaChip.*} {@link UIManager} key. Changes apply immediately to the live list
+ *       above. A "Reset" button restores theme defaults; a Light/Dark toggle switches the FlatLaf
  *       baseline.
  * </ol>
  *
@@ -380,7 +380,8 @@ public final class ElwhaChipPlayground {
     mode.setSelectedItem(list.getMovementMode());
     mode.addActionListener(
         e -> {
-          final ElwhaChipList.MovementMode next = (ElwhaChipList.MovementMode) mode.getSelectedItem();
+          final ElwhaChipList.MovementMode next =
+              (ElwhaChipList.MovementMode) mode.getSelectedItem();
           list.setMovementMode(next);
           // PINNED↔ANCHORED mutex wiped the inactive side's predicate/action — re-arm whichever
           // side the new mode needs.

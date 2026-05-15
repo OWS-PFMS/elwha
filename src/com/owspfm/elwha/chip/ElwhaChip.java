@@ -408,9 +408,9 @@ public class ElwhaChip extends JPanel {
   /**
    * Re-binds an SVG icon's color filter to this chip's foreground resolver, so the icon paints in
    * the chip-resolved color (auto-contrast, per-instance override, or UIManager) rather than
-   * whatever filter the caller supplied — typically {@link
-   * com.owspfm.elwha.icons.MaterialIcons}'s app-wide {@code Label.foreground} filter, which
-   * is the right default outside a chip but wrong inside one with a custom surface.
+   * whatever filter the caller supplied — typically {@link com.owspfm.elwha.icons.MaterialIcons}'s
+   * app-wide {@code Label.foreground} filter, which is the right default outside a chip but wrong
+   * inside one with a custom surface.
    *
    * <p>No-op for non-SVG icons (raster bitmaps and the like — those don't have a color filter
    * concept and stay whatever color they were authored).
@@ -881,8 +881,8 @@ public class ElwhaChip extends JPanel {
 
   /**
    * Installs a mouse listener on both the chip body and the inner content row, so callers (such as
-   * a hosting {@code ElwhaChipList} wiring drag-to-reorder) receive events regardless of which inner
-   * subcomponent the user actually pressed on. Without this, presses on the text label or
+   * a hosting {@code ElwhaChipList} wiring drag-to-reorder) receive events regardless of which
+   * inner subcomponent the user actually pressed on. Without this, presses on the text label or
    * leading-icon area would be trapped by the content row's internal listener and never reach the
    * caller.
    *
@@ -1590,9 +1590,9 @@ public class ElwhaChip extends JPanel {
 
   /**
    * JLabel subclass whose {@code getForeground()} is dynamic: it returns whatever {@link
-   * ElwhaChip#resolveForegroundColor()} resolves to at paint time. This sidesteps the usual chain of
-   * "manually call setForeground on every state transition that might affect color" — instead the
-   * label always paints in the chip's current resolved foreground (auto-contrast against the
+   * ElwhaChip#resolveForegroundColor()} resolves to at paint time. This sidesteps the usual chain
+   * of "manually call setForeground on every state transition that might affect color" — instead
+   * the label always paints in the chip's current resolved foreground (auto-contrast against the
    * surface, per-instance override, or UIManager key) without any explicit refresh.
    *
    * <p>Inner (non-static) so it can read the outer chip's resolver. The outer reference is stable

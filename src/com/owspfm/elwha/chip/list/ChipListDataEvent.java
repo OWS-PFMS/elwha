@@ -5,10 +5,10 @@ import java.util.EventObject;
 /**
  * Fine-grained change event fired by a {@link ChipListModel}.
  *
- * <p>Mirrors {@link com.owspfm.elwha.card.list.CardListDataEvent} but lives in the chip
- * namespace so the two component families stay independent. Both eventually share a common base via
- * the {@code elwha.list} package extracted in story #237 — see that package's {@code
- * package-info} for the cross-family contract.
+ * <p>Mirrors {@link com.owspfm.elwha.card.list.CardListDataEvent} but lives in the chip namespace
+ * so the two component families stay independent. Both eventually share a common base via the
+ * {@code elwha.list} package extracted in story #237 — see that package's {@code package-info} for
+ * the cross-family contract.
  *
  * <p>Index semantics mirror the parent contract:
  *

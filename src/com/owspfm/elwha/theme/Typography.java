@@ -13,11 +13,11 @@ import java.util.Objects;
  * A font family resolved against all 12 {@link TypeRole}s — the typography half of a {@link
  * Config}.
  *
- * <p>{@link #defaults()} returns the bundled-Inter typography: Elwha ships Inter with real
- * Regular (400) and Medium (500) faces, so the M3 400/500 weight distinction renders correctly (see
- * {@code elwha-token-taxonomy.md} §2.2). {@link #ofFamily(String)} builds typography from any
- * installed family name, falling back to {@link TextAttribute#WEIGHT_MEDIUM} — then {@link
- * Font#BOLD} — for the medium-weight roles when the family supplies no Medium face.
+ * <p>{@link #defaults()} returns the bundled-Inter typography: Elwha ships Inter with real Regular
+ * (400) and Medium (500) faces, so the M3 400/500 weight distinction renders correctly (see {@code
+ * elwha-token-taxonomy.md} §2.2). {@link #ofFamily(String)} builds typography from any installed
+ * family name, falling back to {@link TextAttribute#WEIGHT_MEDIUM} — then {@link Font#BOLD} — for
+ * the medium-weight roles when the family supplies no Medium face.
  *
  * <p>Instances are immutable.
  *

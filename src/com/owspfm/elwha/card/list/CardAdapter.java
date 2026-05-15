@@ -5,10 +5,10 @@ import com.owspfm.elwha.card.ElwhaCard;
 /**
  * Single-method functional interface that maps a domain item to a {@link ElwhaCard}.
  *
- * <p>The adapter is invoked once per visible item by the host {@link ElwhaCardList}. Implementations
- * should return a freshly-built card for each call — the list does not pool or recycle card
- * instances (Swing handles repaints differently from Android RecyclerView, so item recycling is not
- * a clear win and complicates the API).
+ * <p>The adapter is invoked once per visible item by the host {@link ElwhaCardList}.
+ * Implementations should return a freshly-built card for each call — the list does not pool or
+ * recycle card instances (Swing handles repaints differently from Android RecyclerView, so item
+ * recycling is not a clear win and complicates the API).
  *
  * <p>Example:
  *

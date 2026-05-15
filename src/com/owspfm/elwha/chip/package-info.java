@@ -1,6 +1,6 @@
 /**
- * Standalone, reusable FlatLaf-styled chip primitive ({@link
- * com.owspfm.elwha.chip.ElwhaChip}) plus its supporting types.
+ * Standalone, reusable FlatLaf-styled chip primitive ({@link com.owspfm.elwha.chip.ElwhaChip}) plus
+ * its supporting types.
  *
  * <p>This package is intentionally free of OWS-specific imports. It depends only on FlatLaf and
  * standard Swing so it can be lifted into a separate library by moving this directory into a

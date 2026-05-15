@@ -7,8 +7,8 @@ import java.util.Objects;
  *
  * <p>A {@code Theme} carries no FlatLaf base-LAF class: the mode-to-LAF mapping ({@link Mode#LIGHT}
  * to {@code FlatLightLaf}, {@link Mode#DARK} to {@code FlatDarkLaf}) is owned by {@link
- * ElwhaTheme}, because the base-LAF choice is a property of the <em>mode</em>, not the theme.
- * See {@code elwha-theme-install-api.md} §1.2.
+ * ElwhaTheme}, because the base-LAF choice is a property of the <em>mode</em>, not the theme. See
+ * {@code elwha-theme-install-api.md} §1.2.
  *
  * <p>Instances are immutable.
  *

@@ -11,8 +11,7 @@ import javax.swing.plaf.ColorUIResource;
  * <p>FlatLaf exposes hundreds of {@code UIManager} keys; this class maps a deliberately small,
  * hand-picked subset of them onto {@link ColorRole}s, {@link ShapeScale}s, and baked {@link
  * StateLayer}s so that a plain {@code JButton} or {@code JTextField} looks like it belongs next to
- * a {@code ElwhaChip}. The full table is the locked appendix of {@code
- * elwha-theme-install-api.md}.
+ * a {@code ElwhaChip}. The full table is the locked appendix of {@code elwha-theme-install-api.md}.
  *
  * <p>Two halves, applied by {@link ElwhaTheme#install} as steps 5 and 6:
  *
@@ -229,8 +228,8 @@ final class FlatLafKeyMapping {
    *
    * <p>FlatLaf models hover / pressed / focused as separate flat colors; M3 models them as opacity
    * overlays. For each key that needs it, the overlay is alpha-blended over the base role color
-   * once, here, and the resulting opaque color is written. Elwha's own components do not use
-   * these baked keys — they apply the overlay live at paint time.
+   * once, here, and the resulting opaque color is written. Elwha's own components do not use these
+   * baked keys — they apply the overlay live at paint time.
    *
    * @param palette the palette being installed
    * @version v0.1.0

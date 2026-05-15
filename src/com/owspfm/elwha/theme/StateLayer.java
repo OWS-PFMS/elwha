@@ -4,17 +4,17 @@ import java.awt.Color;
 import javax.swing.UIManager;
 
 /**
- * The 5 interaction-state layers of the Elwha token vocabulary, expressed the Material 3 way —
- * as <em>opacity overlays on a role color</em>, not as separate colors.
+ * The 5 interaction-state layers of the Elwha token vocabulary, expressed the Material 3 way — as
+ * <em>opacity overlays on a role color</em>, not as separate colors.
  *
  * <p>Each layer resolves its opacity at paint time from {@link UIManager} under the key {@code
- * Elwha.state.<key>}, which {@link ElwhaTheme#install} writes. The {@link #over} methods
- * blend the layer over a base color in sRGB — close enough to M3's perceptual compositing at these
- * low opacities without pulling in a color-science dependency.
+ * Elwha.state.<key>}, which {@link ElwhaTheme#install} writes. The {@link #over} methods blend the
+ * layer over a base color in sRGB — close enough to M3's perceptual compositing at these low
+ * opacities without pulling in a color-science dependency.
  *
- * <p>Elwha's own components apply these overlays live at paint time. The raw-Swing bridge
- * instead bakes them into FlatLaf's discrete {@code *hoverBackground} / {@code *pressedBackground}
- * keys at install time — see {@code elwha-theme-install-api.md} §5.
+ * <p>Elwha's own components apply these overlays live at paint time. The raw-Swing bridge instead
+ * bakes them into FlatLaf's discrete {@code *hoverBackground} / {@code *pressedBackground} keys at
+ * install time — see {@code elwha-theme-install-api.md} §5.
  *
  * <p><strong>Disabled is not a state layer.</strong> M3 disabled is an opacity <em>treatment</em>
  * (content drops to 38%, container fill to 12%), applied as a compositing pass rather than a tinted
@@ -56,9 +56,9 @@ public enum StateLayer {
    */
   DRAGGED("dragged", 0.16f),
   /**
-   * Selected overlay (12%) — a Elwha-specific layer applied uniformly across chip and card
-   * lists. M3 models selection as a container-color swap rather than an overlay; Elwha keeps one
-   * uniform mechanism instead.
+   * Selected overlay (12%) — a Elwha-specific layer applied uniformly across chip and card lists.
+   * M3 models selection as a container-color swap rather than an overlay; Elwha keeps one uniform
+   * mechanism instead.
    *
    * @version v0.1.0
    * @since v0.1.0
@@ -127,9 +127,9 @@ public enum StateLayer {
   }
 
   /**
-   * Returns the compiled-in M3 default opacity for this layer — the value {@link ElwhaTheme}
-   * writes into {@link UIManager} at install time, and the value {@link #opacity()} falls back to
-   * when no theme is installed.
+   * Returns the compiled-in M3 default opacity for this layer — the value {@link ElwhaTheme} writes
+   * into {@link UIManager} at install time, and the value {@link #opacity()} falls back to when no
+   * theme is installed.
    *
    * @return the default opacity in the range {@code [0, 1]}
    * @version v0.1.0
