@@ -194,7 +194,7 @@ The mapping is deliberately a curated subset, not exhaustive — FlatLaf exposes
 | FlatLaf key | Role / token |
 |---|---|
 | `Component.focusColor` | `PRIMARY` — the focus-ring color |
-| `Component.focusWidth` | `2` — focus-ring width (FlatLaf default `0`) |
+| `Component.focusWidth` | `1` — focus-ring width (FlatLaf default `0`; integer key, so `1.5` would truncate) |
 | `Component.focusedBorderColor` | `OUTLINE` — equal to the resting border; the ring is the cue |
 | `Component.borderColor` | `OUTLINE` |
 | `Component.disabledBorderColor` | `OUTLINE_VARIANT` |

@@ -69,7 +69,7 @@ final class FlatLafKeyMapping {
     // their resting equivalents) so the ring is the single, consistent focus cue everywhere.
     putColor("Component.focusColor", primary);
     putColor("Component.focusedBorderColor", outline);
-    UIManager.put("Component.focusWidth", 2);
+    UIManager.put("Component.focusWidth", 1);
     putColor("Component.borderColor", outline);
     putColor("Component.disabledBorderColor", outlineVariant);
     UIManager.put("Component.arc", ShapeScale.SM.px());
