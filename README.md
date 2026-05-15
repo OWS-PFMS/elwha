@@ -4,15 +4,15 @@
 [![JDK 21](https://img.shields.io/badge/JDK-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![FlatLaf 3.2.5](https://img.shields.io/badge/FlatLaf-3.2.5-green.svg)](https://www.formdev.com/flatlaf/)
 
-A **Material-flavored design system for Swing**, built on [FlatLaf](https://www.formdev.com/flatlaf/). The centerpiece is a Material 3-derived **design-token layer** (color roles, shape/type/spacing scales, state-layer overlays) installed into Swing's `UIManager` — so both Elwha's own components (`ElwhaCard`, `ElwhaChip`, …) and raw Swing (`JButton`, `JTextField`, scrollbars, dialogs, …) inherit one coherent visual language.
+**Elwha is a Material 3-flavored design language for Swing.** Its public API is a vocabulary of design tokens — color roles, shape and type scales, spacing steps, state-layer overlays — that every screen in a consuming app paints against, so cohesion is enforced by construction instead of relying on developer discipline. Components (`ElwhaCard`, `ElwhaChip`, their list containers) and raw Swing widgets (`JButton`, `JTextField`, scrollbars, dialogs, …) both resolve the same tokens at paint time.
 
-> Elwha is a PNW river restored after the largest dam removal in US history — the name puts the library on [Open Water Systems](https://openwatersystems.com)' clean-water mission.
+> Elwha is a Pacific Northwest river restored after the largest dam removal in US history — the name puts the library on [Open Water Systems](https://openwatersystems.com)' clean-water mission.
 
 ## What this is — and isn't
 
-- **A token-first design system, not a component grab-bag.** Tokens are the API; components are downstream of the design language. Cohesion is enforced by construction: every component, raw or Elwha-built, paints from the same palette of color roles, corner radii, type roles, spacing steps, and state-layer opacities.
-- **Material 3-flavored, not spec-compliant.** Elwha lifts the M3 *token taxonomy* as its semantic API. It does not chase spec compliance and does not claim the Material brand. (Drift is expected — e.g., the v1 elevation system is intentionally flat; tonal-lift elevation is queued for v2.)
-- **FlatLaf is the substrate.** Elwha configures FlatLaf via `UIManager` keys; FlatLaf paints raw Swing. Elwha ships the components Swing doesn't have (Chip, Card, their list containers).
+- **A token-first design system, not a component grab-bag.** Tokens are the API; components are downstream of the design language. The cohesion problem ("our pages feel inconsistent") is a vocabulary problem, not a component problem — Elwha solves it by giving every component, raw or Elwha-built, the same fixed surface to paint against.
+- **Material 3-flavored, not spec-compliant.** Elwha lifts the M3 *token taxonomy* as its semantic API. It does not chase spec compliance and does not claim the Material brand. (Drift is expected — e.g., the v1 surface treatment is intentionally flat; M3-style tonal-lift elevation is queued for v2.)
+- **A Swing-native design system.** Elwha is implemented on top of [FlatLaf](https://www.formdev.com/flatlaf/) as its rendering substrate, but FlatLaf is plumbing — Elwha owns the design vocabulary, configures FlatLaf via `UIManager`, and ships the higher-level components Swing itself doesn't have (Chip, Card, their list containers).
 - **Pre-1.0.** API is not yet stable; breaking changes between minor versions are expected until 1.0.0. Components are mid-migration onto the just-landed token foundation — see [Roadmap](#roadmap).
 
 ## Install
