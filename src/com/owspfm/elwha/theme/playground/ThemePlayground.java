@@ -1,7 +1,6 @@
 package com.owspfm.elwha.theme.playground;
 
-import com.owspfm.elwha.chip.ChipVariant;
-import com.owspfm.elwha.chip.ElwhaChip;
+import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Config;
@@ -47,13 +46,23 @@ import javax.swing.SwingUtilities;
 import javax.swing.tree.DefaultMutableTreeNode;
 
 /**
- * Interactive visual harness for the Elwha token foundation.
+ * Interactive visual harness for the Elwha token foundation and the components built on it.
  *
- * <p>Three tabs — color-role swatches, the type scale, and a components gallery — let a maintainer
- * eyeball that the {@code Elwha.*} tokens and the FlatLaf-native key mapping land correctly, and
- * that raw Swing widgets ({@code JButton}, {@code JTextField}, …) read as coherent next to a {@link
- * ElwhaChip}. The mode toggle re-installs the theme at runtime, exercising the binding rule
- * end-to-end. This is the visual validation surface for Epic #30 sub-story #34.
+ * <p>Top-level tabs:
+ *
+ * <ul>
+ *   <li><strong>Color Roles</strong> — the 49 role swatches resolving live from {@code Elwha.*}
+ *       UIManager keys.
+ *   <li><strong>Type Scale</strong> — the 12 type roles.
+ *   <li><strong>Swing Comps</strong> — raw Swing widgets ({@code JButton}, {@code JTextField}, …)
+ *       inheriting the theme through the FlatLaf-native key mapping. Chip-specific widgets have
+ *       moved to their own top-level {@code Chip} tab.
+ *   <li><strong>Chip</strong> — the canonical chip playground panels (variant gallery + live list),
+ *       reused from {@link ChipPlaygroundPanels} so the standalone {@code ElwhaChipPlayground} and
+ *       this tab stay in lockstep.
+ * </ul>
+ *
+ * <p>The mode toggle re-installs the theme at runtime, exercising the binding rule end-to-end.
  *
  * <p>Run with: {@code mvn compile exec:java
  * -Dexec.mainClass="com.owspfm.elwha.theme.playground.ThemePlayground"}
@@ -93,7 +102,8 @@ public final class ThemePlayground {
     JTabbedPane tabs = new JTabbedPane();
     tabs.addTab("Color Roles", new JScrollPane(buildColorTab()));
     tabs.addTab("Type Scale", new JScrollPane(buildTypeTab()));
-    tabs.addTab("Components", new JScrollPane(buildComponentsTab()));
+    tabs.addTab("Swing Comps", new JScrollPane(buildSwingCompsTab()));
+    tabs.addTab("Chip", buildChipTab());
     root.add(tabs, java.awt.BorderLayout.CENTER);
 
     frame.setContentPane(root);
@@ -194,9 +204,9 @@ public final class ThemePlayground {
     return panel;
   }
 
-  // --- Components tab ---
+  // --- Swing Comps tab ---
 
-  private JComponent buildComponentsTab() {
+  private JComponent buildSwingCompsTab() {
     JPanel panel = new JPanel();
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
     panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
@@ -206,16 +216,20 @@ public final class ThemePlayground {
     panel.add(buildRawSwingRow());
     panel.add(Box.createVerticalStrut(24));
 
-    panel.add(
-        sectionLabel("ElwhaChip (V1) — should read as coherent next to the raw widgets above"));
-    panel.add(Box.createVerticalStrut(8));
-    panel.add(buildChipRow());
-    panel.add(Box.createVerticalStrut(24));
-
     panel.add(sectionLabel("Shape & spacing scales"));
     panel.add(Box.createVerticalStrut(8));
     panel.add(buildShapeSpacingRow());
     return panel;
+  }
+
+  // --- Chip tab — reuses ChipPlaygroundPanels so this and the standalone playground stay synced.
+  // ---
+
+  private JComponent buildChipTab() {
+    JTabbedPane inner = new JTabbedPane();
+    inner.addTab("Variant gallery", new JScrollPane(ChipPlaygroundPanels.buildVariantGallery()));
+    inner.addTab("Live list", ChipPlaygroundPanels.buildLiveListPanel());
+    return inner;
   }
 
   private JComponent buildRawSwingRow() {
@@ -438,17 +452,6 @@ public final class ThemePlayground {
     row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
     block.add(row);
     return block;
-  }
-
-  private JComponent buildChipRow() {
-    JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
-    row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    row.add(new ElwhaChip("Filled").setVariant(ChipVariant.FILLED));
-    row.add(new ElwhaChip("Outlined").setVariant(ChipVariant.OUTLINED));
-    row.add(new ElwhaChip("Ghost").setVariant(ChipVariant.GHOST));
-    row.add(new ElwhaChip("Warm accent").setVariant(ChipVariant.WARM_ACCENT));
-    row.add(new ElwhaChip("Selected").setVariant(ChipVariant.FILLED).setSelected(true));
-    return row;
   }
 
   private JComponent buildShapeSpacingRow() {

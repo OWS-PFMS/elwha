@@ -1,8 +1,8 @@
 # ElwhaChip Token-Native Rebuild — Locked Decisions
 
-**Status:** LOCKED. Authoritative plan for rebuilding `ElwhaChip`'s styling API on the token system. Decisions are not to be re-debated during execution — any change requires reopening this document with rationale.
+**Status:** LOCKED, EXECUTED (epic #31, 2026-05-15). The plan landed end-to-end across sub-issues #36 / #37 / #38 / #39 in one bundled PR; the visual §9 Q2 risk (selected OUTLINED under the uniform 12 % SELECTED overlay) was addressed preemptively by swapping the border role to `PRIMARY` on selected — visual eyeball still pending pre-merge.
 
-**Drafted:** 2026-05-13 (as a narrow "retrofit") · **Re-scoped + locked:** 2026-05-14 · **Amended:** 2026-05-14 (SurfacePainter extraction folded into #37 — see Amendment below)
+**Drafted:** 2026-05-13 (as a narrow "retrofit") · **Re-scoped + locked:** 2026-05-14 · **Amended:** 2026-05-14 (SurfacePainter extraction folded into #37 — see Amendment below) · **Executed:** 2026-05-15
 
 **Author:** Charles Bryan (`cfb3@uw.edu`), via design conversation with Claude.
 

@@ -1,8 +1,8 @@
 # ElwhaChip / ElwhaChipList
 
-A reusable, FlatLaf-aware chip primitive — text + leading icon + optional trailing icon-button — plus a model-driven list-of-chips container supporting four orientations, selection, drag-to-reorder, filter, sort, empty / loading state, keyboard navigation, and accessibility.
+A token-native chip primitive — text + leading icon + optional trailing icon-button — plus a model-driven list-of-chips container supporting four orientations, selection, drag-to-reorder, filter, sort, empty / loading state, keyboard navigation, and accessibility.
 
-Mirrors the structure of the sibling [`ElwhaCard` + `ElwhaCardList`](../card/README.md) package, sharing the cross-cutting [`ElwhaList<T>`](../list/ElwhaList.java) abstraction.
+`ElwhaChip` styling resolves entirely from the [Elwha design tokens](../theme/) — no raw colors / insets / pixel values reach the public setter API. Mirrors the structure of the sibling [`ElwhaCard` + `ElwhaCardList`](../card/README.md) package, sharing the cross-cutting [`ElwhaList<T>`](../list/ElwhaList.java) abstraction.
 
 ---
 
@@ -14,9 +14,8 @@ DefaultChipListModel<Factor> model = new DefaultChipListModel<>(factors);
 
 // 2. Define how each item becomes a chip
 ChipAdapter<Factor> adapter = (factor, idx) ->
-    new ElwhaChip(factor.name())
-        .setLeadingIcon(factor.icon())
-        .setVariant(ChipVariant.OUTLINED);
+    ElwhaChip.filterChip(factor.name())
+        .setLeadingIcon(factor.icon());
 
 // 3. Build the list and wire it up
 ElwhaChipList<Factor> list = new ElwhaChipList<>(model, adapter)
@@ -34,25 +33,37 @@ list.addReorderListener(evt ->
 
 ## ElwhaChip — the primitive
 
-A single-row capsule containing optional leading icon, text, and optional Action-bound trailing icon-button.
+A single-row capsule containing optional leading icon, text, and optional Action-bound trailing icon-button. **Token-native** — every visual property resolves from the Elwha tokens at paint time.
 
-### Variants
+### Variants (treatment-only)
 
-| Variant         | Description                                                                       |
-| --------------- | --------------------------------------------------------------------------------- |
-| `FILLED`        | Tinted background; the workhorse for chip / tag rows                              |
-| `OUTLINED`      | Hairline border, transparent fill; for dense rows that need to read as "lighter" |
-| `GHOST`         | No fill, no border until hovered / pressed / selected; ideal for tab strips       |
-| `WARM_ACCENT`   | Tinted with the application's warm accent (gold/amber); for emphasis              |
+The variant declares *treatment*. The surface color is independently overridable per instance via `setSurfaceRole(ColorRole)` — color and treatment are orthogonal.
+
+| Variant     | Default surface role          | Default border role          | Description                                                |
+| ----------- | ----------------------------- | ---------------------------- | ---------------------------------------------------------- |
+| `FILLED`    | `ColorRole.PRIMARY_CONTAINER` | `ColorRole.OUTLINE_VARIANT`  | The M3 default — a distinct cluster against the surrounding surface. |
+| `OUTLINED`  | `ColorRole.SURFACE`           | `ColorRole.OUTLINE`          | The M3 resting outlined chip — hairline border, surface fill. |
+| `GHOST`     | (none — transparent)          | (none — at rest)             | Text-with-padding until interacted; tab-strip use.         |
+
+### M3 chip-type factory presets
+
+Sugar over the orthogonal axes — everything stays overridable through the normal setters.
+
+```java
+ElwhaChip.assistChip("Set reminder");                  // CLICKABLE + OUTLINED
+ElwhaChip.filterChip("Demand");                        // SELECTABLE + OUTLINED
+ElwhaChip.inputChip("acme.com", () -> remove(it));     // CLICKABLE + OUTLINED + trailing × remove
+ElwhaChip.suggestionChip("Try this");                  // CLICKABLE + OUTLINED
+```
 
 ### Interaction modes
 
-| Mode          | Behavior                                                                          |
-| ------------- | --------------------------------------------------------------------------------- |
-| `STATIC`      | Non-interactive (no mouse / keyboard response)                                    |
-| `HOVERABLE`   | Hover feedback only                                                               |
-| `CLICKABLE`   | Push-button: fires `ActionEvent` on click / Space / Enter                         |
-| `SELECTABLE`  | Toggle: persistent `selected` state + `"selected"` `PropertyChangeEvent`          |
+| Mode         | Behavior                                                                  |
+| ------------ | ------------------------------------------------------------------------- |
+| `STATIC`     | Non-interactive (no mouse / keyboard response)                            |
+| `HOVERABLE`  | Hover feedback only                                                       |
+| `CLICKABLE`  | Push-button: fires `ActionEvent` on click / Space / Enter                 |
+| `SELECTABLE` | Toggle: persistent `selected` state + `"selected"` `PropertyChangeEvent`  |
 
 ### Context menus
 
@@ -64,12 +75,12 @@ chip.attachContextMenu(() -> buildPopupForCurrentState());
 chip.setContextMenuCallback(evt -> popup.show(evt.getComponent(), evt.getX(), evt.getY()));
 ```
 
-Right-click is detected on both `mousePressed` (Mac) and `mouseReleased` (Windows). `VK_CONTEXT_MENU` and `Shift+F10` keyboard accelerators invoke the same callback.
+`VK_CONTEXT_MENU` and `Shift+F10` keyboard accelerators invoke the same callback as right-click.
 
 ### Trailing icon-button
 
 ```java
-chip.setTrailingAction(action);                            // Action-bound (uses SMALL_ICON or NAME)
+chip.setTrailingAction(action);                              // Action-bound (uses SMALL_ICON or NAME)
 chip.setTrailingIcon(closeIcon, "Remove", () -> remove(it)); // convenience for icon + tooltip + click
 ```
 
@@ -77,35 +88,27 @@ The trailing button has its own hover / press states and **does not bubble** cli
 
 ---
 
-## Three-layer styling
+## Styling — typed token setters
 
-Every visual property is resolved through three layers, last-wins:
+Styling is driven by **roles** and **scale steps**, never raw `Color` / `Insets` / pixel values:
 
-1. **Variant defaults** — chosen by `setVariant(ChipVariant)`. Each variant pre-fills a coherent palette derived from `UIManager` keys.
-2. **`UIManager` overrides** — drop a FlatLaf properties file into your app's classpath to theme every chip at once. Public keys:
+```java
+chip.setSurfaceRole(ColorRole.SECONDARY_CONTAINER); // override the variant's default surface
+chip.setShape(ShapeScale.FULL);                     // capsule shape (default is SM = 8px)
+chip.setPadding(SpaceScale.MD, SpaceScale.XS);      // horizontal × vertical from the spacing ladder
+chip.setBorderWidth(2);                             // stroke width is genuine geometry; no token equivalent
+```
 
-   | Key                              | Type           | Default                           |
-   | -------------------------------- | -------------- | --------------------------------- |
-   | `ElwhaChip.background`            | `Color`        | (variant default)                 |
-   | `ElwhaChip.borderColor`           | `Color`        | (variant default)                 |
-   | `ElwhaChip.arc`                   | `Integer`      | `999` (capsule)                   |
-   | `ElwhaChip.padding`               | `Insets`       | `Insets(4, 10, 4, 10)`            |
-   | `ElwhaChip.hoverBackground`       | `Color`        | foreground-tinted panel           |
-   | `ElwhaChip.pressedBackground`     | `Color`        | foreground-tinted panel (heavier) |
-   | `ElwhaChip.selectedBackground`    | `Color`        | accent-tinted panel               |
-   | `ElwhaChip.selectedBorderColor`   | `Color`        | accent                            |
-   | `ElwhaChip.focusColor`            | `Color`        | `Component.focusColor`            |
-   | `ElwhaChip.disabledBackground`    | `Color`        | (variant default at low contrast) |
-   | `ElwhaChip.warmAccent`            | `Color`        | `Color(248, 226, 165)` (gold)     |
+### Color resolution
 
-3. **Per-instance overrides** — call setters on a specific chip:
-   ```java
-   chip.setCornerRadius(8)
-       .setPadding(new Insets(2, 6, 2, 6))
-       .setBorderColor(Color.RED)
-       .setSurfaceColor(customFill);
-   ```
-   Or use the `"ElwhaChip.style"` client property for a FlatLaf-style key=value string.
+- **Surface** — the per-instance `setSurfaceRole` override if set, else the variant's `surfaceRole()`. `GHOST` resolves to transparent until hovered / pressed / selected / focused.
+- **Foreground** — always the `on`-pair of the effective surface role (e.g. `PRIMARY_CONTAINER` → `ON_PRIMARY_CONTAINER`). No per-instance foreground setter — that would re-introduce unpaired surface/foreground.
+- **Border** — the variant's `borderRole()`, swapped to `ColorRole.PRIMARY` when the chip is selected or focused so OUTLINED chips read as "the picked one" even under the uniform 12 % selected overlay.
+- **State layers** — hover (8 %), pressed (10 %), selected (12 %) composited per the M3 `StateLayer` model, tinted by the surface's `on`-role.
+
+### Theming
+
+App-wide chip theming happens by installing a different palette through `ElwhaTheme.install(...)` — every chip re-skins on the next paint, no per-component intervention. There is **no `ElwhaChip.*` UIManager namespace** in the rebuilt API; the previous escape-hatch keys were removed because nothing is left for them to do that the role / scale system doesn't already cover.
 
 ---
 
@@ -122,7 +125,7 @@ Every visual property is resolved through three layers, last-wins:
 
 ### Selection
 
-`ChipSelectionMode.{NONE, SINGLE, MULTIPLE}`. Multi-selection supports Shift-click for range, Cmd / Ctrl-click for toggle, and `Cmd/Ctrl+A` for select-all.
+`ChipSelectionMode.{NONE, SINGLE, SINGLE_MANDATORY, MULTIPLE}`. Multi-selection supports Shift-click for range, Cmd / Ctrl-click for toggle, and `Cmd/Ctrl+A` for select-all.
 
 The selection model operates on **item identity** rather than indices, so selection survives filter / sort changes.
 
@@ -162,21 +165,19 @@ Both fall back to a built-in placeholder when `null`.
 
 ---
 
-## Demos
+## Playground
 
-| Class                 | Purpose                                                                       |
-| --------------------- | ----------------------------------------------------------------------------- |
-| `ElwhaChipDemo`        | Minimal smoke test — variant × state matrix + one interactive sample          |
-| `ElwhaChipPlayground`  | Full interactive playground: variant gallery, live list with all orientations, and a **live LAF tweak panel** with sliders / color pickers for every `ElwhaChip.*` `UIManager` key |
+`ElwhaChipPlayground` is the canonical interactive surface — a `Variant gallery` tab (every variant × every interaction mode × {idle, hover, pressed, selected, focused, disabled}, plus the factory-preset row and the trailing-icon sampler) and a `Live list` tab driven by the `chip.list` container. A light / dark / system mode toggle re-installs the Elwha theme so the binding rule is exercised end-to-end.
 
-Run either via:
+The same two panels are also surfaced inside `ThemePlayground`'s top-level `Chip` tab — both entry points compose the shared builders in [`ChipPlaygroundPanels`](playground/ChipPlaygroundPanels.java) so the validation matrix stays in lockstep.
+
 ```
-mvn -q exec:java -Dexec.mainClass=com.owspfm.elwha.chip.ElwhaChipDemo
 mvn -q exec:java -Dexec.mainClass=com.owspfm.elwha.chip.ElwhaChipPlayground
+mvn -q exec:java -Dexec.mainClass=com.owspfm.elwha.theme.playground.ThemePlayground
 ```
 
 ---
 
 ## Independence
 
-This package has **no dependencies on application code**. It depends only on FlatLaf and standard Swing. The `chip/`, `chip/list/`, and `list/` directories together can be lifted into a standalone library.
+This package depends only on FlatLaf, standard Swing, and the Elwha theme package. The `chip/`, `chip/list/`, `chip/playground/`, `list/`, `theme/`, and `icons/` directories together are the full lib.
