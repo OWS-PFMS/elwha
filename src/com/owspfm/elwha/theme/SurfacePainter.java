@@ -70,19 +70,27 @@ public final class SurfacePainter {
       g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
 
       int clampedArc = Math.min(arc, Math.min(width, height));
-      RoundRectangle2D.Float shape =
-          new RoundRectangle2D.Float(0.5f, 0.5f, width - 1f, height - 1f, clampedArc, clampedArc);
 
       Color fill = resolveFill(surfaceRole, overlay);
       if (fill != null) {
+        // Fill extends to the full component bounds so anti-aliased corners match the stroke's
+        // outer edge — and so a fill-only call (no border) doesn't leave a 1 px transparent gutter.
         g2.setColor(fill);
-        g2.fill(shape);
+        g2.fill(new RoundRectangle2D.Float(0f, 0f, width, height, clampedArc, clampedArc));
       }
 
       if (borderRole != null && borderWidthPx > 0f) {
+        // Center the stroke on a path inset by half its width so the entire stroke fits inside the
+        // component bounds at any width — without this the outer half of the stroke is clipped
+        // away and a wide border reads as a fuzzy inner band. Inset corner diameter shrinks by the
+        // stroke width so the stroke's outer edge tracks the fill's corner exactly.
+        float inset = borderWidthPx / 2f;
+        float strokeW = Math.max(0f, width - borderWidthPx);
+        float strokeH = Math.max(0f, height - borderWidthPx);
+        float strokeArc = Math.max(0f, clampedArc - borderWidthPx);
         g2.setColor(borderRole.resolve());
         g2.setStroke(new BasicStroke(borderWidthPx));
-        g2.draw(shape);
+        g2.draw(new RoundRectangle2D.Float(inset, inset, strokeW, strokeH, strokeArc, strokeArc));
       }
     } finally {
       g2.dispose();
