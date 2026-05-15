@@ -1091,7 +1091,12 @@ public class ElwhaChip extends JPanel {
   // ---------------------------------------------------------------- border
 
   private void rebuildBorder() {
-    final Insets p = SpaceScale.insets(paddingVertical, paddingHorizontal);
+    // JPanel's constructor calls updateUI() (which calls this) before our instance-field
+    // initializers run, so the padding fields can be null on the very first invocation. Fall
+    // back to the same defaults the field declarations use until the explicit values land.
+    final SpaceScale v = paddingVertical != null ? paddingVertical : SpaceScale.XS;
+    final SpaceScale h = paddingHorizontal != null ? paddingHorizontal : SpaceScale.MD;
+    final Insets p = SpaceScale.insets(v, h);
     setBorder(BorderFactory.createEmptyBorder(p.top, p.left, p.bottom, p.right));
   }
 
