@@ -2,6 +2,7 @@ package com.owspfm.ui.components.theme.playground;
 
 import com.owspfm.ui.components.chip.ChipVariant;
 import com.owspfm.ui.components.chip.FlatChip;
+import com.owspfm.ui.components.icons.MaterialIcons;
 import com.owspfm.ui.components.theme.ColorRole;
 import com.owspfm.ui.components.theme.Config;
 import com.owspfm.ui.components.theme.FlatCompTheme;
@@ -35,10 +36,15 @@ import javax.swing.JProgressBar;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
+import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
+import javax.swing.JTree;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
+import javax.swing.tree.DefaultMutableTreeNode;
 
 /**
  * Interactive visual harness for the FlatComp token foundation.
@@ -213,20 +219,96 @@ public final class ThemePlayground {
   }
 
   private JComponent buildRawSwingRow() {
-    JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
-    row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    JPanel area = new JPanel();
+    area.setLayout(new BoxLayout(area, BoxLayout.Y_AXIS));
+    area.setAlignmentX(JComponent.LEFT_ALIGNMENT);
 
+    area.add(rowBlock("Buttons", buildButtonsRow()));
+    area.add(Box.createVerticalStrut(12));
+    area.add(rowBlock("Icon buttons", buildIconButtonsRow()));
+    area.add(Box.createVerticalStrut(12));
+    area.add(rowBlock("Text", buildTextRow()));
+    area.add(Box.createVerticalStrut(12));
+    area.add(rowBlock("Selection", buildSelectionRow()));
+    area.add(Box.createVerticalStrut(12));
+    area.add(rowBlock("Range", buildRangeRow()));
+    area.add(Box.createVerticalStrut(12));
+    area.add(rowBlock("List & tree", buildListTreeRow()));
+    return area;
+  }
+
+  private JComponent buildButtonsRow() {
+    JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
     JButton normal = new JButton("Button");
     // Becomes the frame's default button in buildAndShow() — the genuine FlatLaf mechanism for
     // the emphasis-button look, rather than a client property.
     defaultButton = new JButton("Default");
     JToggleButton toggle = new JToggleButton("Toggle");
     toggle.setSelected(true);
-    JTextField field = new JTextField("Text field", 12);
+    row.add(normal);
+    row.add(defaultButton);
+    row.add(toggle);
+    return row;
+  }
 
-    // Checkbox + two radio buttons stacked vertically — visual validation that the shared
-    // CheckBox.icon palette colors both controls coherently (FlatRadioButtonIcon extends
-    // FlatCheckBoxIcon and reads the same keys).
+  private JComponent buildIconButtonsRow() {
+    JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+
+    JButton bordered = new JButton(MaterialIcons.edit());
+    bordered.setToolTipText("Bordered icon button");
+
+    JButton borderless = new JButton(MaterialIcons.delete());
+    borderless.putClientProperty("JButton.buttonType", "borderless");
+    borderless.setToolTipText("Borderless icon button (toolbar style)");
+
+    JButton iconText = new JButton("Add", MaterialIcons.add());
+    iconText.setToolTipText("Icon + text button");
+
+    JToggleButton iconToggle = new JToggleButton(MaterialIcons.visibility());
+    iconToggle.setSelected(true);
+    iconToggle.setToolTipText("Icon toggle button");
+
+    // Segmented icon-toggle group — the OWS app uses this pattern for view-mode pickers.
+    JToggleButton viewGrid = new JToggleButton(MaterialIcons.gridView());
+    JToggleButton viewTable = new JToggleButton(MaterialIcons.table());
+    JToggleButton viewBackground = new JToggleButton(MaterialIcons.backgroundGridSmall());
+    viewGrid.setToolTipText("Grid view");
+    viewTable.setToolTipText("Table view");
+    viewBackground.setToolTipText("Background view");
+    ButtonGroup viewGroup = new ButtonGroup();
+    viewGroup.add(viewGrid);
+    viewGroup.add(viewTable);
+    viewGroup.add(viewBackground);
+    viewGrid.setSelected(true);
+    JPanel segmented = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    segmented.add(viewGrid);
+    segmented.add(viewTable);
+    segmented.add(viewBackground);
+
+    row.add(bordered);
+    row.add(borderless);
+    row.add(iconText);
+    row.add(iconToggle);
+    row.add(segmented);
+    return row;
+  }
+
+  private JComponent buildTextRow() {
+    JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+    JTextField field = new JTextField("Text field", 14);
+    JTextArea area = new JTextArea("Multi-line\ntext area\nfor longer input", 3, 18);
+    area.setLineWrap(true);
+    area.setWrapStyleWord(true);
+    JScrollPane areaScroll = new JScrollPane(area);
+    areaScroll.setPreferredSize(new Dimension(220, 64));
+    row.add(field);
+    row.add(areaScroll);
+    return row;
+  }
+
+  private JComponent buildSelectionRow() {
+    JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+
     JCheckBox check = new JCheckBox("Checkbox", true);
     JRadioButton radioA = new JRadioButton("Radio A", true);
     JRadioButton radioB = new JRadioButton("Radio B");
@@ -240,29 +322,78 @@ public final class ThemePlayground {
     selectionStack.add(radioB);
 
     JComboBox<String> combo = new JComboBox<>(new String[] {"One", "Two", "Three"});
+    JSpinner spinner = new JSpinner(new SpinnerNumberModel(50, 0, 100, 1));
+
+    row.add(selectionStack);
+    row.add(combo);
+    row.add(spinner);
+    return row;
+  }
+
+  private JComponent buildRangeRow() {
+    JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
     JSlider slider = new JSlider(0, 100, 60);
+    slider.setPreferredSize(new Dimension(200, slider.getPreferredSize().height));
     JProgressBar progress = new JProgressBar(0, 100);
     progress.setValue(45);
+    progress.setPreferredSize(new Dimension(200, progress.getPreferredSize().height));
+    row.add(slider);
+    row.add(progress);
+    return row;
+  }
+
+  private JComponent buildListTreeRow() {
+    JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
 
     DefaultListModel<String> listModel = new DefaultListModel<>();
     listModel.addElement("List item A");
     listModel.addElement("List item B");
     listModel.addElement("List item C");
+    listModel.addElement("List item D");
     JList<String> list = new JList<>(listModel);
     list.setSelectedIndex(1);
     JScrollPane listScroll = new JScrollPane(list);
-    listScroll.setPreferredSize(new Dimension(140, 80));
+    listScroll.setPreferredSize(new Dimension(160, 100));
 
-    row.add(normal);
-    row.add(defaultButton);
-    row.add(toggle);
-    row.add(field);
-    row.add(selectionStack);
-    row.add(combo);
-    row.add(slider);
-    row.add(progress);
+    DefaultMutableTreeNode root = new DefaultMutableTreeNode("Project");
+    DefaultMutableTreeNode defaults = new DefaultMutableTreeNode("Defaults");
+    defaults.add(new DefaultMutableTreeNode("Default chart"));
+    defaults.add(new DefaultMutableTreeNode("Default factors"));
+    root.add(defaults);
+    DefaultMutableTreeNode custom = new DefaultMutableTreeNode("Custom");
+    custom.add(new DefaultMutableTreeNode("Scenario A"));
+    custom.add(new DefaultMutableTreeNode("Scenario B"));
+    root.add(custom);
+    JTree tree = new JTree(root);
+    tree.expandRow(0);
+    tree.expandRow(1);
+    tree.setSelectionRow(2);
+    JScrollPane treeScroll = new JScrollPane(tree);
+    treeScroll.setPreferredSize(new Dimension(200, 120));
+
     row.add(listScroll);
+    row.add(treeScroll);
     return row;
+  }
+
+  private JComponent rowBlock(String caption, JComponent row) {
+    JPanel block = new JPanel();
+    block.setLayout(new BoxLayout(block, BoxLayout.Y_AXIS));
+    block.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    JLabel cap = new JLabel(caption);
+    cap.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    Runnable refresh =
+        () -> {
+          cap.setFont(TypeRole.LABEL_MEDIUM.resolve());
+          cap.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+        };
+    refresh.run();
+    tokenRefreshers.add(refresh);
+    block.add(cap);
+    block.add(Box.createVerticalStrut(4));
+    row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    block.add(row);
+    return block;
   }
 
   private JComponent buildChipRow() {
