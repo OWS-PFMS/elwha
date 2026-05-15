@@ -154,6 +154,14 @@ public class ElwhaSurface extends JPanel {
    * {@link #getBorderRole()} is {@code null}. A value of {@code 0} or less suppresses the border
    * just as {@code setBorderRole(null)} does.
    *
+   * <p><strong>Geometry note.</strong> The stroke is centered on a path inset by {@code px / 2} so
+   * the outer edge tracks the fill corner exactly at any width. The <em>inner</em> corner radius is
+   * therefore {@code shape.px() / 2 - px}, which goes to zero (a visibly square inner edge) as the
+   * stroke width approaches the corner radius. In practice the design system uses {@code 1} and
+   * {@code 2} (focus ring) almost everywhere; thicker strokes are best paired with {@link
+   * com.owspfm.elwha.theme.ShapeScale#LG} or {@link com.owspfm.elwha.theme.ShapeScale#XL} so the
+   * inner corner retains visible rounding.
+   *
    * @param px the stroke width in pixels
    * @return {@code this} for fluent chaining
    * @version v0.1.0
