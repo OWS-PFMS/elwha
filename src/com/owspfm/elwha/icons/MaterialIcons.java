@@ -133,7 +133,7 @@ public final class MaterialIcons {
     return load("edit", size);
   }
 
-  /** Info "i" glyph. */
+  /** Info "i" glyph (outline). */
   public static FlatSVGIcon info() {
     return info(DEFAULT_SIZE);
   }
@@ -148,6 +148,57 @@ public final class MaterialIcons {
    */
   public static FlatSVGIcon info(final int size) {
     return load("info", size);
+  }
+
+  /** Info "i" glyph (filled / solid) — pairs with {@link #info()} as the "active" state. */
+  public static FlatSVGIcon infoFilled() {
+    return infoFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #infoFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon infoFilled(final int size) {
+    return load("info_fill", size);
+  }
+
+  /** Help "?" glyph (outline). */
+  public static FlatSVGIcon help() {
+    return help(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #help()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon help(final int size) {
+    return load("help", size);
+  }
+
+  /** Help "?" glyph (filled / solid) — pairs with {@link #help()} as the "active" state. */
+  public static FlatSVGIcon helpFilled() {
+    return helpFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #helpFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon helpFilled(final int size) {
+    return load("help_fill", size);
   }
 
   /** Heart / favorite glyph (outline). */
@@ -429,9 +480,9 @@ public final class MaterialIcons {
    * {@code push_pin_fill.svg}). Both icons render at {@link #DEFAULT_SIZE}.
    *
    * <p>Currently bundled outline/fill pairs: {@code push_pin}, {@code anchor}, {@code favorite},
-   * {@code star}. Calling {@code pair} on a name that lacks a bundled {@code _fill} variant throws
-   * when the missing SVG is first painted, not on construction — see {@link FlatSVGIcon}'s
-   * lazy-load semantics.
+   * {@code star}, {@code info}, {@code help}. Calling {@code pair} on a name that lacks a bundled
+   * {@code _fill} variant throws when the missing SVG is first painted, not on construction — see
+   * {@link FlatSVGIcon}'s lazy-load semantics.
    *
    * <p><strong>Why a helper, not an auto-detect inside {@link
    * com.owspfm.elwha.iconbutton.ElwhaIconButton}.</strong> The button stays icon-library-agnostic
