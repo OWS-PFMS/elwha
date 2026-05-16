@@ -23,7 +23,7 @@
 2. **Why it earns v1:** UIManager-styled `JButton` gives one look globally; M3 wants per-instance variant + toggle icon-swap. The OWS-tool playground already hand-rolls the pattern (`pushPin ↔ pushPinFilled`); this subsumes it.
 3. **Paint:** delegates the round-rect surface and border to `SurfacePainter` (shared with `ElwhaChip` and `ElwhaSurface`). No round-rect code lives in `ElwhaIconButton`.
 4. **Toggle model:** Elwha-uniform — `SELECTED` state-layer overlay (12%), icon swap via `setIcons`, focus ring swap to `PRIMARY` (2 px). Deliberate divergence from M3's per-variant surface-color swap (see §10).
-5. **One size for v1:** 40 dp container, 24 dp icon, `ShapeScale.FULL` (capsule). A `SizeScale` axis is not pre-built — added later when OWS asks for it.
+5. **Five sizes via `IconButtonSize`:** XS (24/16) / S (32/20) / M (40/24, default) / L (48/28) / XL (56/32) — the full M3 size axis, exposed as an enum because OWS has icon buttons at multiple sizes (added during PR #58 smoke-test per #59). Size and shape stay orthogonal — `setButtonSize` does not touch the corner radius.
 
 ---
 
@@ -121,8 +121,7 @@ Fluent setters return `this`. Same shape as `ElwhaChip`.
 | `variant` | `STANDARD` | Lowest emphasis. The "I just want an icon button" case — the OWS-tool's existing borderless pattern. Bumping to FILLED is one setter call. |
 | `interactionMode` | `CLICKABLE` | Most icon buttons are push buttons; toggle is opt-in via `SELECTABLE`. |
 | `shape` | `ShapeScale.FULL` | M3 spec — capsule corners on a 40×40 container produce the round icon-button look. Overrideable to `MD` / `LG` etc. for square treatments per consumer taste. |
-| `containerSize` | `40` (px) | M3 medium icon button. The only size v1 ships. |
-| `iconSize` | `24` (px) | M3 medium icon button. Matches `MaterialIcons.DEFAULT_SIZE`. |
+| `buttonSize` | `IconButtonSize.M` (40 px container, 24 px icon) | M3 medium icon button. Matches `MaterialIcons.DEFAULT_SIZE` for the icon dimension. |
 | `borderWidth` | `1` | Matches OUTLINED + chip + Surface. Focus ring bumps to 2 px. |
 
 ## 6. State model
@@ -190,8 +189,9 @@ After the round-rect surface paints, the icon paints centered on `(width/2, heig
 | FILLED toggle-off uses `surfaceContainerHighest`, toggle-on uses `primary` | FILLED always uses `primary`; selection signalled by 12% overlay + (optionally) icon swap | Elwha-uniform selection mechanism (see §6). A toggle-off FILLED that wants the M3 look uses `setSurfaceRole(SURFACE_CONTAINER_HIGHEST)`. |
 | OUTLINED toggle-on swaps surface to `inverseSurface`, foreground to `inverseOnSurface` | OUTLINED selected gets 12% overlay over the (transparent) base + PRIMARY border swap | Same reason. The `inverseSurface` swap reads as "different component" in dense rows; the overlay reads as "this one is selected." |
 | STANDARD toggle-on colors icon `primary` | STANDARD + selected colors icon `PRIMARY` (the one per-state foreground swap) | Honored — STANDARD has nothing else to carry the signal (§3). |
-| 5 size variants (XS / S / M / L / XL) | One size (M = 40 dp / 24 dp) | Test B fails for the other sizes — OWS uses one size today. Adding a `SizeScale` axis later is non-breaking. |
-| 3 width variants (narrow / default / wide) | Single width = container size | Same reason. |
+| 5 size variants (XS / S / M / L / XL) | Honored as `IconButtonSize` enum (#59) — added during the #58 smoke-test once the OWS need was confirmed. Size and shape stay orthogonal. | OWS has icon buttons at multiple sizes; the v1 one-size posture was reversed. |
+| Shape paired to size (S/M → FULL, L/XL → LG) | Size and shape stay independent | `setButtonSize` doesn't touch the corner radius; consumers pair `setShape` explicitly when the M3-spec coupling is wanted. |
+| 3 width variants (narrow / default / wide) | Single width = container size | M3 Expressive territory; defer to v2 if needed. |
 | Shape morphing on selected (FULL → MD or vice versa) | No shape morphing — `setShape` is static for the component's lifetime | Shape morphing is an animation; Elwha is static-paint pre-v2. |
 
 The divergences are documented here, not silently absorbed. If OWS hits a case where the strict M3 spec is needed (e.g. inserting an icon button into a third-party M3-themed surface that expects the surface-swap), the `setSurfaceRole` override is the escape hatch.
@@ -200,8 +200,7 @@ The divergences are documented here, not silently absorbed. If OWS hits a case w
 
 | Deferred | Why deferred |
 |---|---|
-| **Multiple sizes (XS/S/M/L/XL)** | Single size for v1 per epic. `SizeScale` axis added later if OWS needs it. |
-| **Width variants (narrow / wide)** | Same reason. |
+| **Width variants (narrow / wide)** | M3 Expressive; not in base spec. Defer to v2 if OWS needs them. |
 | **Shape morphing on toggle** | Animation system deferred to v2. |
 | **Split icon button** | Composite — separate component if a real need surfaces. |
 | **Icon button with menu** | Same — likely composes IconButton with a popup, not a new primitive. |
@@ -223,3 +222,4 @@ Both panels factored into `IconButtonPlaygroundPanels` so the standalone `ElwhaI
 - `research(#55)` — this doc
 - `feat(#56)` — `ElwhaIconButton` + `IconButtonVariant` + `IconButtonInteractionMode`
 - `feat(#57)` — `IconButtonPlaygroundPanels` + standalone playground + `ThemePlayground` `Icon Button` tab
+- `feat(#59)` — `IconButtonSize` axis (XS/S/M/L/XL), `Sizes` sub-tab, `JToolBar` mockup
