@@ -641,7 +641,13 @@ public class ElwhaIconButton extends JComponent {
               return;
             }
             pressed = true;
-            requestFocusInWindow();
+            // Honor JComponent's setRequestFocusEnabled — clicks grab focus by default, but
+            // toolbar contexts typically suppress click-focus (the toolbar action shouldn't pull
+            // focus away from the document / list / editor being acted on). Tab navigation still
+            // works regardless, since it's gated by isFocusable() not isRequestFocusEnabled().
+            if (isRequestFocusEnabled()) {
+              requestFocusInWindow();
+            }
             repaint();
           }
 

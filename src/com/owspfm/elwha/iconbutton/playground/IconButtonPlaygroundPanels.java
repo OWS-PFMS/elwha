@@ -186,7 +186,7 @@ public final class IconButtonPlaygroundPanels {
 
     column.add(
         captionLabel(
-            "JToolBar mockup at IconButtonSize.S (32 dp) — M3 toolbar-standard size. "
+            "JToolBar mockup at IconButtonSize.M (40 dp). "
                 + "Left cluster: independent SELECTABLE toggles (pin / anchor / visibility / edit "
                 + "/ delete, each its own state). Right cluster: mandatory radio group "
                 + "(favorite / star / info / help — exactly one always selected) via "
@@ -403,7 +403,7 @@ public final class IconButtonPlaygroundPanels {
     final JToolBar toolBar = new JToolBar();
     toolBar.setFloatable(false);
     toolBar.setRollover(true);
-    final IconButtonSize size = IconButtonSize.S;
+    final IconButtonSize size = IconButtonSize.M;
     final int iconPx = size.iconPx();
 
     // Independent toggles — each unrelated affordance tracks its own state.
@@ -449,6 +449,9 @@ public final class IconButtonPlaygroundPanels {
             .setInteractionMode(IconButtonInteractionMode.SELECTABLE)
             .setIcons(pair.resting(), pair.filled());
     button.setToolTipText(tooltip);
+    // Toolbar convention: clicks don't grab focus (the toolbar action shouldn't pull focus away
+    // from the document / list / editor being acted on). Tab still focuses the button normally.
+    button.setRequestFocusEnabled(false);
     return button;
   }
 
