@@ -177,20 +177,21 @@ public final class IconButtonPlaygroundPanels {
     column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
     column.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+    column.add(
+        captionLabel(
+            "JToolBar mockup at IconButtonSize.S (32 dp) — the M3 toolbar-standard size. "
+                + "All four buttons are SELECTABLE with outline↔fill icon-swap pairs."));
+    column.add(Box.createVerticalStrut(8));
+    final JToolBar toolBar = buildToolbarMockup();
+    toolBar.setAlignmentX(Component.LEFT_ALIGNMENT);
+    column.add(toolBar);
+    column.add(Box.createVerticalStrut(24));
+
     column.add(captionLabel("The 5 M3 sizes × 4 variants — favorite glyph, capsule shape."));
     column.add(Box.createVerticalStrut(12));
     final JPanel sizeMatrix = buildSizeMatrix();
     sizeMatrix.setAlignmentX(Component.LEFT_ALIGNMENT);
     column.add(sizeMatrix);
-    column.add(Box.createVerticalStrut(24));
-
-    column.add(
-        captionLabel(
-            "JToolBar mockup at IconButtonSize.S (32 dp) — the M3 toolbar-standard size."));
-    column.add(Box.createVerticalStrut(8));
-    final JToolBar toolBar = buildToolbarMockup();
-    toolBar.setAlignmentX(Component.LEFT_ALIGNMENT);
-    column.add(toolBar);
     column.add(Box.createVerticalGlue());
     return column;
   }
