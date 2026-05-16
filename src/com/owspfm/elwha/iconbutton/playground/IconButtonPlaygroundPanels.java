@@ -239,29 +239,34 @@ public final class IconButtonPlaygroundPanels {
     toolBar.setRollover(true);
     final IconButtonSize size = IconButtonSize.S;
     final int iconPx = size.iconPx();
-    addToolbarButton(toolBar, MaterialIcons.add(iconPx), size, "Add");
-    addToolbarButton(toolBar, MaterialIcons.edit(iconPx), size, "Edit");
-    addToolbarButton(toolBar, MaterialIcons.delete(iconPx), size, "Delete");
+    addToggleButton(
+        toolBar, size, "Pin", MaterialIcons.pushPin(iconPx), MaterialIcons.pushPinFilled(iconPx));
+    addToggleButton(
+        toolBar, size, "Anchor", MaterialIcons.anchor(iconPx), MaterialIcons.anchorFilled(iconPx));
     toolBar.addSeparator();
-    addToolbarButton(toolBar, MaterialIcons.visibility(iconPx), size, "Show / hide");
-    addToolbarButton(toolBar, MaterialIcons.info(iconPx), size, "Info");
-    toolBar.addSeparator();
-    // The pin toggle uses SELECTABLE so the toolbar-mockup also exercises the toggle path.
-    final ElwhaIconButton pin =
-        new ElwhaIconButton(MaterialIcons.pushPin(iconPx))
-            .setVariant(IconButtonVariant.STANDARD)
-            .setButtonSize(size)
-            .setInteractionMode(IconButtonInteractionMode.SELECTABLE)
-            .setIcons(MaterialIcons.pushPin(iconPx), MaterialIcons.pushPinFilled(iconPx));
-    pin.setToolTipText("Pin (toggle)");
-    toolBar.add(pin);
+    addToggleButton(
+        toolBar,
+        size,
+        "Favorite",
+        MaterialIcons.favorite(iconPx),
+        MaterialIcons.favoriteFilled(iconPx));
+    addToggleButton(
+        toolBar, size, "Star", MaterialIcons.star(iconPx), MaterialIcons.starFilled(iconPx));
     return toolBar;
   }
 
-  private static void addToolbarButton(
-      final JToolBar toolBar, final Icon icon, final IconButtonSize size, final String tooltip) {
+  private static void addToggleButton(
+      final JToolBar toolBar,
+      final IconButtonSize size,
+      final String tooltip,
+      final Icon resting,
+      final Icon selected) {
     final ElwhaIconButton button =
-        new ElwhaIconButton(icon).setVariant(IconButtonVariant.STANDARD).setButtonSize(size);
+        new ElwhaIconButton(resting)
+            .setVariant(IconButtonVariant.STANDARD)
+            .setButtonSize(size)
+            .setInteractionMode(IconButtonInteractionMode.SELECTABLE)
+            .setIcons(resting, selected);
     button.setToolTipText(tooltip);
     toolBar.add(button);
   }
