@@ -51,6 +51,7 @@ The pre-extraction audit confirmed **zero coupling sites** between these compone
 ## Conventions
 
 - **Code style:** Google Java Style, enforced via Spotless (`googleJavaFormat`) and Checkstyle. Run `mvn spotless:apply` to fix formatting; `mvn verify` runs both checkers. No `my*` / `the*` identifier prefixes — qualify with `this.` when a parameter shadows a field. Full convention: `docs/development/code-style.md`.
+- **Component API doctrine:** getter naming (`getX()` only — no `getEffectiveX()`), per-variant static factories, single-arg convenience constructors, border-role exposure rule, symmetric border-width getter/setter. Canonical source: `docs/development/component-api-conventions.md`. New components are expected to match.
 - **Javadoc:** every public class / method has `@author`, `@version`, `@since`. `@version` is bumped on every change that touches the entity — **the `validate-versions` workflow runs `scripts/update_javadoc_version.py --check --changed-only` against the PR's milestone and hard-fails on missed bumps.** `@since` is set once and never moves. Bump `@version` in the same commit as the code change. Full convention: `docs/development/versioning.md`; playbook: `docs/development/versioning-playbook.md`.
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `ci:`, `test:`).
 - **Semver:** `0.x.y` pre-1.0 — minor bumps may break API, patch is bug-fix only. Document every break under `## [Unreleased]` in `CHANGELOG.md` (policy: `docs/development/changelog-policy.md`).
