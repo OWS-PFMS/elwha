@@ -99,11 +99,11 @@ public final class LiveConfigPanel extends JPanel {
     body.add(new JLabel("Adjust the controls on the right."));
     body.add(new JLabel("This card mutates in real time."));
 
-    return new ElwhaCard()
-        .setHeader("Focus card", "Live-edited example")
-        .setBody(body)
-        .setFooter(new JButton("Primary"), new JButton("Cancel"))
-        .setCollapsedSummary(new JLabel("Collapsed — click chevron to expand"));
+    return new ElwhaCard("Focus card")
+        .setSubhead("Live-edited example")
+        .setMedia(body)
+        .setActions(new JButton("Primary"), new JButton("Cancel"))
+        .setSummary(new JLabel("Collapsed — click chevron to expand"));
   }
 
   // -------------------------------------------------------------- controls
@@ -276,8 +276,6 @@ public final class LiveConfigPanel extends JPanel {
       focusCard.setVariant(variant);
       focusCard.setInteractionMode(mode);
       focusCard.setElevation(elevation);
-      focusCard.setCornerRadius(cornerRadius);
-      focusCard.setPadding(padding);
       focusCard.setBorderWidth(borderWidth);
       focusCard.setCollapsible(collapsible);
       focusCard.setCollapsed(collapsed);
@@ -285,9 +283,9 @@ public final class LiveConfigPanel extends JPanel {
 
       if (appliedShowHeader == null || appliedShowHeader != showHeader) {
         if (showHeader) {
-          focusCard.setHeader("Focus card", "Live-edited example");
+          focusCard.setHeadline("Focus card").setSubhead("Live-edited example");
         } else {
-          focusCard.setHeader(null, null);
+          focusCard.setHeadline("").setSubhead("");
         }
         appliedShowHeader = showHeader;
       }
@@ -307,9 +305,9 @@ public final class LiveConfigPanel extends JPanel {
           if (cachedFooter == null) {
             cachedFooter = buildFooter();
           }
-          focusCard.setFooter(cachedFooter);
+          focusCard.setActions(cachedFooter);
         } else {
-          focusCard.setFooter((JComponent) null);
+          focusCard.setActions();
         }
         appliedShowFooter = showFooter;
       }

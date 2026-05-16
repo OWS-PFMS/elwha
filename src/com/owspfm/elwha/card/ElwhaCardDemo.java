@@ -73,26 +73,26 @@ public final class ElwhaCardDemo {
   }
 
   private static ElwhaCard simpleCard(final CardVariant v, final String label) {
-    return new ElwhaCard()
+    return new ElwhaCard(label)
         .setVariant(v)
-        .setHeader(label, v.name())
-        .setBody(new JLabel("Body content for the " + label.toLowerCase() + " card."))
-        .setFooter(new JButton("OK"));
+        .setSubhead(v.name())
+        .setSupportingText("Body content for the " + label.toLowerCase() + " card.")
+        .setActions(new JButton("OK"));
   }
 
   private static ElwhaCard modeCard(final CardInteractionMode m, final String label) {
-    return new ElwhaCard()
-        .setHeader(label, m.name())
-        .setBody(new JLabel("Hover, click, or focus."))
+    return new ElwhaCard(label)
+        .setSubhead(m.name())
+        .setSupportingText("Hover, click, or focus.")
         .setInteractionMode(m);
   }
 
   private static ElwhaCard collapsibleCard(final boolean startCollapsed) {
-    return new ElwhaCard()
-        .setHeader("Collapsible", startCollapsed ? "Collapsed" : "Expanded")
-        .setBody(new JLabel("Click the chevron in the header to toggle."))
+    return new ElwhaCard("Collapsible")
+        .setSubhead(startCollapsed ? "Collapsed" : "Expanded")
+        .setSupportingText("Click the chevron in the header to toggle.")
         .setCollapsible(true)
         .setCollapsed(startCollapsed)
-        .setCollapsedSummary(new JLabel("Hidden — toggle to expand"));
+        .setSummary(new JLabel("Hidden — toggle to expand"));
   }
 }

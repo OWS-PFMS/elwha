@@ -95,10 +95,10 @@ public final class ElwhaCardListShowcase extends JPanel {
 
     final CardAdapter<DemoItem> adapter =
         (item, index) ->
-            new ElwhaCard()
+            new ElwhaCard(item.title())
                 .setVariant(CardVariant.OUTLINED)
-                .setHeader(item.title(), item.subtitle())
-                .setBody(buildBody(item))
+                .setSubhead(item.subtitle())
+                .setMedia(buildBody(item))
                 .setCollapsible(true)
                 .setCollapsed(true)
                 .setAnimateCollapse(true);
