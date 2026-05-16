@@ -6,10 +6,12 @@ import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
 import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -19,11 +21,15 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
 import javax.swing.JToolBar;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 
@@ -182,8 +188,8 @@ public final class IconButtonPlaygroundPanels {
         captionLabel(
             "JToolBar mockup at IconButtonSize.S (32 dp) — M3 toolbar-standard size. "
                 + "Left cluster: independent SELECTABLE toggles (pin and anchor, each its own "
-                + "state). Right cluster: mandatory radio group (favorite vs star — exactly one "
-                + "always selected) via IconButtonGroup."));
+                + "state). Right cluster: mandatory radio group (favorite / star / info / help — "
+                + "exactly one always selected) via IconButtonGroup."));
     column.add(Box.createVerticalStrut(8));
     final JToolBar toolBar = buildToolbarMockup();
     toolBar.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -199,7 +205,160 @@ public final class IconButtonPlaygroundPanels {
     return column;
   }
 
+  /**
+   * Builds the live panel: a single {@link ElwhaIconButton} driven by combo boxes, a spinner, and a
+   * checkbox covering every axis the class exposes — variant, interaction mode, size, shape,
+   * surface-role override, border width, icon pair, and selected state. Mirrors the surface and
+   * chip playgrounds' live tabs; lets the viewer feel every property change live without recompile.
+   *
+   * @return the live-control panel
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static JPanel buildLivePanel() {
+    final ElwhaIconButton target =
+        new ElwhaIconButton(MaterialIcons.pushPin())
+            .setIcons(MaterialIcons.pushPin(), MaterialIcons.pushPinFilled());
+
+    final JPanel controls = new JPanel(new GridBagLayout());
+    controls.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+    final GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(4, 4, 4, 12);
+    gbc.anchor = GridBagConstraints.WEST;
+
+    int row = 0;
+
+    final JComboBox<IconButtonVariant> variantBox = new JComboBox<>(IconButtonVariant.values());
+    variantBox.setSelectedItem(target.getVariant());
+    variantBox.addActionListener(
+        e -> target.setVariant((IconButtonVariant) variantBox.getSelectedItem()));
+    addControlRow(controls, gbc, row++, "Variant", variantBox);
+
+    final JComboBox<IconButtonInteractionMode> modeBox =
+        new JComboBox<>(IconButtonInteractionMode.values());
+    modeBox.setSelectedItem(target.getInteractionMode());
+    modeBox.addActionListener(
+        e -> target.setInteractionMode((IconButtonInteractionMode) modeBox.getSelectedItem()));
+    addControlRow(controls, gbc, row++, "Interaction mode", modeBox);
+
+    final JComboBox<IconButtonSize> sizeBox = new JComboBox<>(IconButtonSize.values());
+    sizeBox.setSelectedItem(target.getButtonSize());
+    sizeBox.addActionListener(
+        e -> {
+          final IconButtonSize chosen = (IconButtonSize) sizeBox.getSelectedItem();
+          target.setButtonSize(chosen);
+          // Reload current icon pair at the new pixel size so the icon stays sharp.
+          final IconPairChoice currentPair =
+              (IconPairChoice) controls.getClientProperty("currentPair");
+          if (currentPair != null) {
+            target.setIcons(
+                currentPair.pair(chosen.iconPx()).resting(),
+                currentPair.pair(chosen.iconPx()).filled());
+          }
+        });
+    addControlRow(controls, gbc, row++, "Size", sizeBox);
+
+    final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
+    shapeBox.setSelectedItem(target.getShape());
+    shapeBox.addActionListener(e -> target.setShape((ShapeScale) shapeBox.getSelectedItem()));
+    addControlRow(controls, gbc, row++, "Shape", shapeBox);
+
+    final JComboBox<SurfaceRoleChoice> surfaceBox = new JComboBox<>(SurfaceRoleChoice.values());
+    surfaceBox.setSelectedItem(SurfaceRoleChoice.VARIANT_DEFAULT);
+    surfaceBox.addActionListener(
+        e -> target.setSurfaceRole(((SurfaceRoleChoice) surfaceBox.getSelectedItem()).role));
+    addControlRow(controls, gbc, row++, "Surface role override", surfaceBox);
+
+    final JSpinner borderWidth =
+        new JSpinner(new SpinnerNumberModel(target.getBorderWidth(), 0, 4, 1));
+    borderWidth.addChangeListener(e -> target.setBorderWidth((Integer) borderWidth.getValue()));
+    addControlRow(controls, gbc, row++, "Border width (px)", borderWidth);
+
+    final JComboBox<IconPairChoice> iconBox = new JComboBox<>(IconPairChoice.values());
+    iconBox.setSelectedItem(IconPairChoice.PIN);
+    controls.putClientProperty("currentPair", IconPairChoice.PIN);
+    iconBox.addActionListener(
+        e -> {
+          final IconPairChoice chosen = (IconPairChoice) iconBox.getSelectedItem();
+          controls.putClientProperty("currentPair", chosen);
+          final int iconPx = target.getButtonSize().iconPx();
+          target.setIcons(chosen.pair(iconPx).resting(), chosen.pair(iconPx).filled());
+        });
+    addControlRow(controls, gbc, row++, "Icon pair", iconBox);
+
+    final JCheckBox selectedBox = new JCheckBox("Selected");
+    selectedBox.addActionListener(e -> target.setSelected(selectedBox.isSelected()));
+    target.addSelectionChangeListener(
+        evt -> selectedBox.setSelected(Boolean.TRUE.equals(evt.getNewValue())));
+    addControlRow(controls, gbc, row++, "", selectedBox);
+
+    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    enabledBox.addActionListener(e -> target.setEnabled(enabledBox.isSelected()));
+    addControlRow(controls, gbc, row++, "", enabledBox);
+
+    final JPanel stage = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    stage.setBorder(BorderFactory.createEmptyBorder(20, 16, 20, 16));
+    stage.setPreferredSize(new Dimension(220, 100));
+    stage.add(target);
+
+    final JPanel wrap = new JPanel(new BorderLayout());
+    wrap.add(controls, BorderLayout.NORTH);
+    wrap.add(stage, BorderLayout.CENTER);
+    return wrap;
+  }
+
   // ----- private helpers -----
+
+  private static void addControlRow(
+      final JPanel panel,
+      final GridBagConstraints gbc,
+      final int row,
+      final String label,
+      final JComponent control) {
+    gbc.gridy = row;
+    gbc.gridx = 0;
+    panel.add(new JLabel(label), gbc);
+    gbc.gridx = 1;
+    panel.add(control, gbc);
+  }
+
+  /** Wraps a nullable {@link ColorRole} as a combo-box entry — {@code VARIANT_DEFAULT} → null. */
+  private enum SurfaceRoleChoice {
+    VARIANT_DEFAULT(null),
+    PRIMARY(ColorRole.PRIMARY),
+    PRIMARY_CONTAINER(ColorRole.PRIMARY_CONTAINER),
+    SECONDARY_CONTAINER(ColorRole.SECONDARY_CONTAINER),
+    TERTIARY_CONTAINER(ColorRole.TERTIARY_CONTAINER),
+    SURFACE(ColorRole.SURFACE),
+    SURFACE_CONTAINER_HIGHEST(ColorRole.SURFACE_CONTAINER_HIGHEST),
+    ERROR_CONTAINER(ColorRole.ERROR_CONTAINER);
+
+    final ColorRole role;
+
+    SurfaceRoleChoice(final ColorRole role) {
+      this.role = role;
+    }
+  }
+
+  /** Bundled outline/fill icon pairs, used by the live-control icon picker. */
+  private enum IconPairChoice {
+    PIN("push_pin"),
+    ANCHOR("anchor"),
+    FAVORITE("favorite"),
+    STAR("star"),
+    INFO("info"),
+    HELP("help");
+
+    final String baseName;
+
+    IconPairChoice(final String baseName) {
+      this.baseName = baseName;
+    }
+
+    MaterialIcons.IconPair pair(final int size) {
+      return MaterialIcons.pair(baseName, size);
+    }
+  }
 
   private static JPanel buildSizeMatrix() {
     final JPanel matrix = new JPanel(new GridBagLayout());
@@ -253,15 +412,19 @@ public final class IconButtonPlaygroundPanels {
 
     // Mandatory radio group via IconButtonGroup — exactly one selected at all times.
     final ElwhaIconButton favorite =
-        makeToggleButton(
-            size, "Favorite (radio: favorite vs star)", MaterialIcons.pair("favorite", iconPx));
+        makeToggleButton(size, "Favorite (radio group)", MaterialIcons.pair("favorite", iconPx));
     final ElwhaIconButton star =
-        makeToggleButton(
-            size, "Star (radio: favorite vs star)", MaterialIcons.pair("star", iconPx));
+        makeToggleButton(size, "Star (radio group)", MaterialIcons.pair("star", iconPx));
+    final ElwhaIconButton info =
+        makeToggleButton(size, "Info (radio group)", MaterialIcons.pair("info", iconPx));
+    final ElwhaIconButton help =
+        makeToggleButton(size, "Help (radio group)", MaterialIcons.pair("help", iconPx));
     favorite.setSelected(true); // initial selection — required for a mandatory group
-    new IconButtonGroup(true).add(favorite).add(star);
+    new IconButtonGroup(true).add(favorite).add(star).add(info).add(help);
     toolBar.add(favorite);
     toolBar.add(star);
+    toolBar.add(info);
+    toolBar.add(help);
     return toolBar;
   }
 
@@ -388,6 +551,7 @@ public final class IconButtonPlaygroundPanels {
     inner.addTab("Variant gallery", buildVariantGalleryPanel());
     inner.addTab("Toggle examples", buildToggleExamplesPanel());
     inner.addTab("Sizes", buildSizesPanel());
+    inner.addTab("Live", buildLivePanel());
     return inner;
   }
 }

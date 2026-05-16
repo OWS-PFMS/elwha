@@ -63,6 +63,7 @@ public final class ElwhaIconButtonPlayground {
     tabs.addTab(
         "Toggle examples", new JScrollPane(IconButtonPlaygroundPanels.buildToggleExamplesPanel()));
     tabs.addTab("Sizes", new JScrollPane(IconButtonPlaygroundPanels.buildSizesPanel()));
+    tabs.addTab("Live", IconButtonPlaygroundPanels.buildLivePanel());
     frame.add(tabs, BorderLayout.CENTER);
     frame.add(buildModeBar(), BorderLayout.NORTH);
 

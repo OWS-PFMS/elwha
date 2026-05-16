@@ -254,6 +254,7 @@ public final class ThemePlayground {
     inner.addTab(
         "Toggle examples", new JScrollPane(IconButtonPlaygroundPanels.buildToggleExamplesPanel()));
     inner.addTab("Sizes", new JScrollPane(IconButtonPlaygroundPanels.buildSizesPanel()));
+    inner.addTab("Live", IconButtonPlaygroundPanels.buildLivePanel());
     return inner;
   }
 
