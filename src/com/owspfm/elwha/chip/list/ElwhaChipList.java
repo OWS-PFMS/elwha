@@ -1,9 +1,9 @@
 package com.owspfm.elwha.chip.list;
 
-import com.owspfm.elwha.card.list.Cursors;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.list.Cursors;
 import com.owspfm.elwha.list.ElwhaList;
 import com.owspfm.elwha.list.ElwhaListOrientation;
 import java.awt.BorderLayout;

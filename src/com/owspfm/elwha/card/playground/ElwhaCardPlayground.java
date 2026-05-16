@@ -70,7 +70,7 @@ public final class ElwhaCardPlayground {
 
     final JTabbedPane tabs = new JTabbedPane();
     tabs.addTab("ElwhaCard", buildElwhaCardTab());
-    tabs.addTab("ElwhaCardList", new ElwhaCardListShowcase());
+    tabs.addTab("ElwhaItemList<Card>", new ElwhaItemListShowcase());
     tabs.addTab("Cursors", new CursorReferencePanel());
 
     frame.add(buildToolbar(frame), BorderLayout.NORTH);

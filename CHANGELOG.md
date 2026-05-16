@@ -49,6 +49,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- **Card-side list playgrounds migrated to `ElwhaItemList<T>`; legacy `ElwhaCardList<T>` deleted** ([#70](https://github.com/OWS-PFMS/elwha/issues/70)) — **breaking, pre-1.0, no shims.** `ElwhaCardListShowcase` renamed to `ElwhaItemListShowcase` and re-bound to the generic primitive; `ElwhaCardListDemo` migrated. The 14 Card-side parallel support classes (`ElwhaCardList`, `CardAdapter`, `CardListModel`, `DefaultCardListModel`, `CardListDataEvent`, `CardListDataListener`, `CardReorderEvent`, `CardReorderListener`, `CardSelectionEvent`, `CardSelectionListener`, `CardSelectionMode`, `CardSelectionModel`, `DefaultCardSelectionModel`, `ReorderHandle`) are deleted; `Cursors` moves from `com.owspfm.elwha.card.list` to `com.owspfm.elwha.list` along with the bundled grab / grabbing cursor PNG resources (`com.owspfm.elwha.chip.list.ElwhaChipList` import updated accordingly). `card/README.md` shrinks to a pointer; the new `list/README.md` is the canonical reference.
+    - **Chip-side migration deferred.** `ElwhaChipList<T>` and its 11 parallel `Chip*` classes remain in place because the generic `ElwhaItemList<T>` does not yet have visual parity for chip-specific affordances (`HOVER_ICON` reorder hint, pin / anchor leading-icon `INDICATOR` / `BUTTON` rendering, cross-fade animation timer, `GRID` / `HORIZONTAL` / `WRAP` layout managers). These deferrals are tracked in [`docs/research/elwha-list-generification-spec.md`](docs/research/elwha-list-generification-spec.md) §11 as the gating work for a chip-side cleanup follow-up.
+    - **V1 → V2 migration table** (Card-side; mirrored from the spec doc §7):
+
+      | V1 | V2 |
+      | --- | --- |
+      | `ElwhaCardList<T>` | `ElwhaItemList<T>` |
+      | `CardListModel<T>` / `DefaultCardListModel<T>` | `ElwhaListModel<T>` / `DefaultElwhaListModel<T>` |
+      | `CardAdapter<T>` — `cardFor(T, int)` | `ElwhaListAdapter<T>` — `componentFor(T, int)` |
+      | `CardListDataEvent` / `CardListDataListener` | `ElwhaListDataEvent<T>` / `ElwhaListDataListener<T>` |
+      | `CardSelectionMode.{NONE, SINGLE, MULTIPLE}` | `SelectionMode.{NONE, SINGLE, MULTI}` |
+      | `CardSelectionModel<T>` / `DefaultCardSelectionModel<T>` | `ElwhaSelectionModel<T>` / `DefaultElwhaSelectionModel<T>` |
+      | `CardSelectionEvent<T>` / `CardSelectionListener<T>` | `ElwhaSelectionEvent<T>` / `ElwhaSelectionListener<T>` |
+      | `CardReorderEvent<T>` / `CardReorderListener<T>` | `ElwhaReorderEvent<T>` / `ElwhaReorderListener<T>` |
+      | `getCardFor(T) : ElwhaCard` | `getComponentFor(T) : Component` |
+      | `ReorderHandle.WHOLE_CARD` | `ReorderHandle.WHOLE_ITEM` |
+      | `ElwhaCardList.Orientation.{VERTICAL, GRID}` | `ElwhaListOrientation.{VERTICAL, GRID}` directly |
+      | `com.owspfm.elwha.card.list.Cursors` | `com.owspfm.elwha.list.Cursors` |
 - **Effective-value getters renamed to bare `getX()`** ([#62](https://github.com/OWS-PFMS/elwha/issues/62)) — **breaking, pre-1.0, no shims.** Per the locked getter-naming rule (`docs/development/component-api-conventions.md` §1), bare `getX()` always returns the effective (resolved) value; there is no parallel `getEffectiveX()`.
     - `ElwhaChip.getEffectiveShape()` → `getShape()`
     - `ElwhaChip.getEffectiveSurfaceRole()` → `getSurfaceRole()`

@@ -1,15 +1,10 @@
 /**
- * Reusable, model-driven list-of-cards primitive built on {@link com.owspfm.elwha.card.ElwhaCard}.
- *
- * <p>The package follows the standard adapter / observable-model pattern (see {@link
- * com.owspfm.elwha.card.list.CardListModel} and {@link com.owspfm.elwha.card.list.CardAdapter}) and
- * adds modern affordances on top — selection, drag-to-reorder, filter, sort, empty/loading states,
- * fade animations, keyboard navigation, and accessibility — so callers stop hand-rolling these for
- * every list-of-cards surface.
- *
- * <p>Like the parent {@code card} package, this package has no dependencies on application code:
- * only FlatLaf and standard Swing. The two directories together can be lifted into their own
- * library by moving them to a fresh Maven module.
+ * Card-specific list demo entry-point. The generic list primitive — {@link
+ * com.owspfm.elwha.list.ElwhaItemList} — lives in {@link com.owspfm.elwha.list} as of <a
+ * href="https://github.com/OWS-PFMS/elwha/issues/67">epic #67</a>; this package holds only the
+ * {@code ElwhaCardListDemo} smoke-test launcher (kept here to preserve the demo's known main-class
+ * path until consumers migrate). The legacy {@code ElwhaCardList<T>} and its 14 parallel support
+ * classes were deleted in <a href="https://github.com/OWS-PFMS/elwha/issues/70">#70</a>.
  *
  * @author Charles Bryan
  * @version v0.1.0

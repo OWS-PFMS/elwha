@@ -2,12 +2,12 @@ package com.owspfm.elwha.card.playground;
 
 import com.owspfm.elwha.card.CardVariant;
 import com.owspfm.elwha.card.ElwhaCard;
-import com.owspfm.elwha.card.list.CardAdapter;
-import com.owspfm.elwha.card.list.CardSelectionMode;
-import com.owspfm.elwha.card.list.DefaultCardListModel;
-import com.owspfm.elwha.card.list.ElwhaCardList;
-import com.owspfm.elwha.card.list.ReorderHandle;
+import com.owspfm.elwha.list.DefaultElwhaListModel;
+import com.owspfm.elwha.list.ElwhaItemList;
+import com.owspfm.elwha.list.ElwhaListAdapter;
 import com.owspfm.elwha.list.ElwhaListOrientation;
+import com.owspfm.elwha.list.ReorderHandle;
+import com.owspfm.elwha.list.SelectionMode;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
@@ -39,13 +39,13 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 /**
- * Tabbed panel that exercises every feature of {@link ElwhaCardList} side-by-side with live
+ * Tabbed panel that exercises every feature of {@link ElwhaItemList} side-by-side with live
  * controls, a status log, and a snippet pane.
  *
  * <p>Layout:
  *
  * <ul>
- *   <li>Left: a focus {@link ElwhaCardList} backed by a {@link DefaultCardListModel} of {@link
+ *   <li>Left: a focus {@link ElwhaItemList} backed by a {@link DefaultElwhaListModel} of {@link
  *       DemoItem}, plus a status panel that tails the most recent selection / reorder events
  *   <li>Right: live controls for orientation, columns, gap, padding, selection, reorder, filter,
  *       sort, empty/loading states, animations, and add/remove/shuffle buttons that mutate the
@@ -58,13 +58,13 @@ import javax.swing.event.DocumentListener;
  * @version v0.1.0
  * @since v0.1.0
  */
-public final class ElwhaCardListShowcase extends JPanel {
+public final class ElwhaItemListShowcase extends JPanel {
 
   private static final int CONTROL_GAP = 6;
   private static final String[] PRIORITY_LABELS = {"Low", "Medium", "High", "Urgent"};
 
-  private final DefaultCardListModel<DemoItem> model = new DefaultCardListModel<>();
-  private final ElwhaCardList<DemoItem> list;
+  private final DefaultElwhaListModel<DemoItem> model = new DefaultElwhaListModel<>();
+  private final ElwhaItemList<DemoItem> list;
   private final JTextArea status;
   private final JTextArea snippet;
   private final Random random = new Random(42);
@@ -76,7 +76,7 @@ public final class ElwhaCardListShowcase extends JPanel {
   private JLabel gapLabel;
   private JSlider paddingSlider;
   private JLabel paddingLabel;
-  private JComboBox<CardSelectionMode> selectionBox;
+  private JComboBox<SelectionMode> selectionBox;
   private JCheckBox reorderableBox;
   private JComboBox<ReorderHandle> reorderHandleBox;
   private JTextField filterField;
@@ -88,12 +88,12 @@ public final class ElwhaCardListShowcase extends JPanel {
   private JLabel animationLabel;
 
   /** Builds the showcase panel and seeds the model with sample items. */
-  public ElwhaCardListShowcase() {
+  public ElwhaItemListShowcase() {
     super(new BorderLayout());
 
     seedModel();
 
-    final CardAdapter<DemoItem> adapter =
+    final ElwhaListAdapter<DemoItem> adapter =
         (item, index) ->
             new ElwhaCard()
                 .setVariant(CardVariant.OUTLINED)
@@ -103,7 +103,7 @@ public final class ElwhaCardListShowcase extends JPanel {
                 .setCollapsed(true)
                 .setAnimateCollapse(true);
 
-    list = new ElwhaCardList<>(model, adapter);
+    list = new ElwhaItemList<>(model, adapter);
     list.getSelectionModel().addSelectionListener(this::onSelectionChanged);
     list.addReorderListener(
         evt ->
@@ -174,7 +174,7 @@ public final class ElwhaCardListShowcase extends JPanel {
     final JPanel left = new JPanel(new BorderLayout());
     left.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 
-    final JLabel heading = new JLabel("ElwhaCardList");
+    final JLabel heading = new JLabel("ElwhaItemList");
     heading.putClientProperty("FlatLaf.styleClass", "h3");
     heading.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
 
@@ -321,9 +321,9 @@ public final class ElwhaCardListShowcase extends JPanel {
     return wrap;
   }
 
-  private JComboBox<CardSelectionMode> buildSelectionBox() {
-    selectionBox = new JComboBox<>(CardSelectionMode.values());
-    selectionBox.setSelectedItem(CardSelectionMode.SINGLE);
+  private JComboBox<SelectionMode> buildSelectionBox() {
+    selectionBox = new JComboBox<>(SelectionMode.values());
+    selectionBox.setSelectedItem(SelectionMode.SINGLE);
     selectionBox.addActionListener(e -> syncFromControls());
     return selectionBox;
   }
@@ -444,7 +444,7 @@ public final class ElwhaCardListShowcase extends JPanel {
                 paddingSlider.getValue(),
                 paddingSlider.getValue(),
                 paddingSlider.getValue()))
-        .setSelectionMode((CardSelectionMode) selectionBox.getSelectedItem())
+        .setSelectionMode((SelectionMode) selectionBox.getSelectedItem())
         .setReorderable(reorderableBox.isSelected())
         .setReorderHandle((ReorderHandle) reorderHandleBox.getSelectedItem())
         .setFilter(buildFilter())
@@ -483,8 +483,7 @@ public final class ElwhaCardListShowcase extends JPanel {
     };
   }
 
-  private void onSelectionChanged(
-      final com.owspfm.elwha.card.list.CardSelectionEvent<DemoItem> event) {
+  private void onSelectionChanged(final com.owspfm.elwha.list.ElwhaSelectionEvent<DemoItem> event) {
     final List<DemoItem> selected = event.getSelected();
     if (selected.isEmpty()) {
       log("Selection cleared");
@@ -540,13 +539,13 @@ public final class ElwhaCardListShowcase extends JPanel {
 
   private void updateSnippet() {
     final StringBuilder sb = new StringBuilder(512);
-    sb.append("DefaultCardListModel<DemoItem> model = new DefaultCardListModel<>(items);\n");
-    sb.append("CardAdapter<DemoItem> adapter = (item, idx) ->\n");
+    sb.append("DefaultElwhaListModel<DemoItem> model = new DefaultElwhaListModel<>(items);\n");
+    sb.append("ElwhaListAdapter<DemoItem> adapter = (item, idx) ->\n");
     sb.append("    new ElwhaCard()\n");
     sb.append("        .setVariant(CardVariant.OUTLINED)\n");
     sb.append("        .setHeader(item.title(), item.subtitle())\n");
     sb.append("        .setBody(buildBody(item));\n\n");
-    sb.append("ElwhaCardList<DemoItem> list = new ElwhaCardList<>(model, adapter)\n");
+    sb.append("ElwhaItemList<DemoItem> list = new ElwhaItemList<>(model, adapter)\n");
     sb.append("    .setOrientation(Orientation.")
         .append(((ElwhaListOrientation) orientationBox.getSelectedItem()).name())
         .append(")\n");
@@ -563,8 +562,8 @@ public final class ElwhaCardListShowcase extends JPanel {
         .append(", ")
         .append(paddingSlider.getValue())
         .append("))\n");
-    sb.append("    .setSelectionMode(CardSelectionMode.")
-        .append(((CardSelectionMode) selectionBox.getSelectedItem()).name())
+    sb.append("    .setSelectionMode(SelectionMode.")
+        .append(((SelectionMode) selectionBox.getSelectedItem()).name())
         .append(")\n");
     if (reorderableBox.isSelected()) {
       sb.append("    .setReorderable(true)\n");

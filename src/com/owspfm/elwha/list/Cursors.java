@@ -1,4 +1,4 @@
-package com.owspfm.elwha.card.list;
+package com.owspfm.elwha.list;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
