@@ -186,16 +186,21 @@ public final class IconButtonPlaygroundPanels {
 
     column.add(
         captionLabel(
-            "JToolBar mockup at IconButtonSize.M (40 dp). "
-                + "Left cluster: independent SELECTABLE toggles (pin / anchor / visibility / edit "
-                + "/ delete, each its own state). Right cluster: mandatory radio group "
-                + "(favorite / star / info / help — exactly one always selected) via "
-                + "IconButtonGroup."));
+            "JToolBar mockups at IconButtonSize.M (40 dp), each at a different ShapeScale "
+                + "(FULL / LG / SM). Left cluster: independent SELECTABLE toggles (pin / anchor "
+                + "/ visibility / edit / delete, each its own state). Right cluster: mandatory "
+                + "radio group (favorite / star / info / help — exactly one always selected) via "
+                + "IconButtonGroup. Toolbar buttons suppress click-focus (setRequestFocusEnabled "
+                + "false) so the toolbar action doesn't pull focus from the document; Tab still "
+                + "focuses them."));
     column.add(Box.createVerticalStrut(8));
-    final JToolBar toolBar = buildToolbarMockup();
-    toolBar.setAlignmentX(Component.LEFT_ALIGNMENT);
-    column.add(toolBar);
-    column.add(Box.createVerticalStrut(24));
+    for (ShapeScale shape : new ShapeScale[] {ShapeScale.FULL, ShapeScale.LG, ShapeScale.SM}) {
+      final JToolBar toolBar = buildToolbarMockup(shape);
+      toolBar.setAlignmentX(Component.LEFT_ALIGNMENT);
+      column.add(toolBar);
+      column.add(Box.createVerticalStrut(8));
+    }
+    column.add(Box.createVerticalStrut(16));
 
     column.add(captionLabel("The 5 M3 sizes × 4 variants — favorite glyph, capsule shape."));
     column.add(Box.createVerticalStrut(12));
