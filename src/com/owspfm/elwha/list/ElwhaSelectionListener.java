@@ -1,0 +1,23 @@
+package com.owspfm.elwha.list;
+
+/**
+ * Receives selection-change events from an {@link ElwhaSelectionModel}. Replaces {@code
+ * CardSelectionListener} / {@code ChipSelectionListener}.
+ *
+ * @param <T> the item type
+ * @author Charles Bryan
+ * @version v0.1.0
+ * @since v0.1.0
+ */
+@FunctionalInterface
+public interface ElwhaSelectionListener<T> {
+
+  /**
+   * Invoked after the selection set changes.
+   *
+   * @param event the event carrying the new selection
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  void selectionChanged(ElwhaSelectionEvent<T> event);
+}
