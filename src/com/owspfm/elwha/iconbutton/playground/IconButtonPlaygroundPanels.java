@@ -2,6 +2,7 @@ package com.owspfm.elwha.iconbutton.playground;
 
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
+import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ShapeScale;
@@ -21,6 +22,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
+import javax.swing.JToolBar;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 
@@ -160,7 +162,108 @@ public final class IconButtonPlaygroundPanels {
     return column;
   }
 
+  /**
+   * Builds the sizes panel: a {@link IconButtonSize} × {@link IconButtonVariant} matrix (5 sizes ×
+   * 4 variants = 20 buttons) at the {@link ShapeScale#FULL} capsule shape, plus a small {@link
+   * JToolBar} mockup at {@link IconButtonSize#S} so the toolbar-usage case is visible end-to-end
+   * (focus, hover, press all behave the same as in a free-standing layout).
+   *
+   * @return the sizes panel
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static JPanel buildSizesPanel() {
+    final JPanel column = new JPanel();
+    column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+    column.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+    column.add(captionLabel("The 5 M3 sizes × 4 variants — favorite glyph, capsule shape."));
+    column.add(Box.createVerticalStrut(12));
+    final JPanel sizeMatrix = buildSizeMatrix();
+    sizeMatrix.setAlignmentX(Component.LEFT_ALIGNMENT);
+    column.add(sizeMatrix);
+    column.add(Box.createVerticalStrut(24));
+
+    column.add(
+        captionLabel(
+            "JToolBar mockup at IconButtonSize.S (32 dp) — the M3 toolbar-standard size."));
+    column.add(Box.createVerticalStrut(8));
+    final JToolBar toolBar = buildToolbarMockup();
+    toolBar.setAlignmentX(Component.LEFT_ALIGNMENT);
+    column.add(toolBar);
+    column.add(Box.createVerticalGlue());
+    return column;
+  }
+
   // ----- private helpers -----
+
+  private static JPanel buildSizeMatrix() {
+    final JPanel matrix = new JPanel(new GridBagLayout());
+    matrix.setOpaque(false);
+
+    final GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(CELL_GAP, CELL_GAP, CELL_GAP, CELL_GAP);
+    gbc.anchor = GridBagConstraints.CENTER;
+
+    gbc.gridy = 0;
+    gbc.gridx = 0;
+    matrix.add(headerLabel("Variant \\ Size"), gbc);
+    final IconButtonSize[] sizes = IconButtonSize.values();
+    for (int c = 0; c < sizes.length; c++) {
+      gbc.gridx = c + 1;
+      matrix.add(headerLabel(sizes[c].name() + " (" + sizes[c].containerPx() + ")"), gbc);
+    }
+
+    int row = 1;
+    for (IconButtonVariant variant : IconButtonVariant.values()) {
+      gbc.gridy = row++;
+      gbc.gridx = 0;
+      matrix.add(rowLabel(variant.name()), gbc);
+      for (int c = 0; c < sizes.length; c++) {
+        gbc.gridx = c + 1;
+        final ElwhaIconButton button =
+            new ElwhaIconButton(MaterialIcons.favorite(sizes[c].iconPx()))
+                .setVariant(variant)
+                .setButtonSize(sizes[c]);
+        button.setToolTipText(variant.name() + " · " + sizes[c].name());
+        matrix.add(button, gbc);
+      }
+    }
+    return matrix;
+  }
+
+  private static JToolBar buildToolbarMockup() {
+    final JToolBar toolBar = new JToolBar();
+    toolBar.setFloatable(false);
+    toolBar.setRollover(true);
+    final IconButtonSize size = IconButtonSize.S;
+    final int iconPx = size.iconPx();
+    addToolbarButton(toolBar, MaterialIcons.add(iconPx), size, "Add");
+    addToolbarButton(toolBar, MaterialIcons.edit(iconPx), size, "Edit");
+    addToolbarButton(toolBar, MaterialIcons.delete(iconPx), size, "Delete");
+    toolBar.addSeparator();
+    addToolbarButton(toolBar, MaterialIcons.visibility(iconPx), size, "Show / hide");
+    addToolbarButton(toolBar, MaterialIcons.info(iconPx), size, "Info");
+    toolBar.addSeparator();
+    // The pin toggle uses SELECTABLE so the toolbar-mockup also exercises the toggle path.
+    final ElwhaIconButton pin =
+        new ElwhaIconButton(MaterialIcons.pushPin(iconPx))
+            .setVariant(IconButtonVariant.STANDARD)
+            .setButtonSize(size)
+            .setInteractionMode(IconButtonInteractionMode.SELECTABLE)
+            .setIcons(MaterialIcons.pushPin(iconPx), MaterialIcons.pushPinFilled(iconPx));
+    pin.setToolTipText("Pin (toggle)");
+    toolBar.add(pin);
+    return toolBar;
+  }
+
+  private static void addToolbarButton(
+      final JToolBar toolBar, final Icon icon, final IconButtonSize size, final String tooltip) {
+    final ElwhaIconButton button =
+        new ElwhaIconButton(icon).setVariant(IconButtonVariant.STANDARD).setButtonSize(size);
+    button.setToolTipText(tooltip);
+    toolBar.add(button);
+  }
 
   private static JComponent buildGalleryCell(
       final IconButtonVariant variant, final int columnIndex) {
@@ -260,10 +363,11 @@ public final class IconButtonPlaygroundPanels {
   }
 
   /**
-   * Convenience that bundles the two panels under one {@link JTabbedPane}, used by both the
+   * Convenience that bundles all three panels under one {@link JTabbedPane}, used by both the
    * standalone playground and the {@code ThemePlayground} tab.
    *
-   * @return a tabbed pane with {@code Variant gallery} and {@code Toggle examples} sub-tabs
+   * @return a tabbed pane with {@code Variant gallery}, {@code Toggle examples}, and {@code Sizes}
+   *     sub-tabs
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -271,6 +375,7 @@ public final class IconButtonPlaygroundPanels {
     final JTabbedPane inner = new JTabbedPane();
     inner.addTab("Variant gallery", buildVariantGalleryPanel());
     inner.addTab("Toggle examples", buildToggleExamplesPanel());
+    inner.addTab("Sizes", buildSizesPanel());
     return inner;
   }
 }

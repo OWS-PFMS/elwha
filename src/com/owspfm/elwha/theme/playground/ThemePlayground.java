@@ -253,6 +253,7 @@ public final class ThemePlayground {
         "Variant gallery", new JScrollPane(IconButtonPlaygroundPanels.buildVariantGalleryPanel()));
     inner.addTab(
         "Toggle examples", new JScrollPane(IconButtonPlaygroundPanels.buildToggleExamplesPanel()));
+    inner.addTab("Sizes", new JScrollPane(IconButtonPlaygroundPanels.buildSizesPanel()));
     return inner;
   }
 
