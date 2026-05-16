@@ -99,7 +99,7 @@ public final class MaterialIcons {
     return load("push_pin_fill", size);
   }
 
-  /** Trash / delete glyph. */
+  /** Trash / delete glyph (outline). */
   public static FlatSVGIcon delete() {
     return delete(DEFAULT_SIZE);
   }
@@ -116,7 +116,24 @@ public final class MaterialIcons {
     return load("delete", size);
   }
 
-  /** Pencil / edit glyph. */
+  /** Trash / delete glyph (filled / solid) — pairs with {@link #delete()} as the "active" state. */
+  public static FlatSVGIcon deleteFilled() {
+    return deleteFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #deleteFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon deleteFilled(final int size) {
+    return load("delete_fill", size);
+  }
+
+  /** Pencil / edit glyph (outline). */
   public static FlatSVGIcon edit() {
     return edit(DEFAULT_SIZE);
   }
@@ -131,6 +148,23 @@ public final class MaterialIcons {
    */
   public static FlatSVGIcon edit(final int size) {
     return load("edit", size);
+  }
+
+  /** Pencil / edit glyph (filled / solid) — pairs with {@link #edit()} as the "active" state. */
+  public static FlatSVGIcon editFilled() {
+    return editFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #editFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon editFilled(final int size) {
+    return load("edit_fill", size);
   }
 
   /** Info "i" glyph (outline). */
@@ -305,7 +339,7 @@ public final class MaterialIcons {
     return load("check", size);
   }
 
-  /** Eye / visibility glyph. */
+  /** Eye / visibility glyph (outline). */
   public static FlatSVGIcon visibility() {
     return visibility(DEFAULT_SIZE);
   }
@@ -320,6 +354,26 @@ public final class MaterialIcons {
    */
   public static FlatSVGIcon visibility(final int size) {
     return load("visibility", size);
+  }
+
+  /**
+   * Eye / visibility glyph (filled / solid) — pairs with {@link #visibility()} as the "active"
+   * state.
+   */
+  public static FlatSVGIcon visibilityFilled() {
+    return visibilityFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #visibilityFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon visibilityFilled(final int size) {
+    return load("visibility_fill", size);
   }
 
   /** Anchor glyph (outline) — used for "fixed/locked to position" affordances. */
@@ -480,9 +534,10 @@ public final class MaterialIcons {
    * {@code push_pin_fill.svg}). Both icons render at {@link #DEFAULT_SIZE}.
    *
    * <p>Currently bundled outline/fill pairs: {@code push_pin}, {@code anchor}, {@code favorite},
-   * {@code star}, {@code info}, {@code help}. Calling {@code pair} on a name that lacks a bundled
-   * {@code _fill} variant throws when the missing SVG is first painted, not on construction — see
-   * {@link FlatSVGIcon}'s lazy-load semantics.
+   * {@code star}, {@code info}, {@code help}, {@code delete}, {@code edit}, {@code visibility}.
+   * Calling {@code pair} on a name that lacks a bundled {@code _fill} variant throws when the
+   * missing SVG is first painted, not on construction — see {@link FlatSVGIcon}'s lazy-load
+   * semantics.
    *
    * <p><strong>Why a helper, not an auto-detect inside {@link
    * com.owspfm.elwha.iconbutton.ElwhaIconButton}.</strong> The button stays icon-library-agnostic

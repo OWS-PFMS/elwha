@@ -187,9 +187,10 @@ public final class IconButtonPlaygroundPanels {
     column.add(
         captionLabel(
             "JToolBar mockup at IconButtonSize.S (32 dp) — M3 toolbar-standard size. "
-                + "Left cluster: independent SELECTABLE toggles (pin and anchor, each its own "
-                + "state). Right cluster: mandatory radio group (favorite / star / info / help — "
-                + "exactly one always selected) via IconButtonGroup."));
+                + "Left cluster: independent SELECTABLE toggles (pin / anchor / visibility / edit "
+                + "/ delete, each its own state). Right cluster: mandatory radio group "
+                + "(favorite / star / info / help — exactly one always selected) via "
+                + "IconButtonGroup."));
     column.add(Box.createVerticalStrut(8));
     final JToolBar toolBar = buildToolbarMockup();
     toolBar.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -347,7 +348,10 @@ public final class IconButtonPlaygroundPanels {
     FAVORITE("favorite"),
     STAR("star"),
     INFO("info"),
-    HELP("help");
+    HELP("help"),
+    DELETE("delete"),
+    EDIT("edit"),
+    VISIBILITY("visibility");
 
     final String baseName;
 
@@ -402,12 +406,20 @@ public final class IconButtonPlaygroundPanels {
     final IconButtonSize size = IconButtonSize.S;
     final int iconPx = size.iconPx();
 
-    // Independent toggles — pin and anchor are unrelated affordances; each tracks its own state.
+    // Independent toggles — each unrelated affordance tracks its own state.
     toolBar.add(
         makeToggleButton(size, "Pin (independent toggle)", MaterialIcons.pair("push_pin", iconPx)));
     toolBar.add(
         makeToggleButton(
             size, "Anchor (independent toggle)", MaterialIcons.pair("anchor", iconPx)));
+    toolBar.add(
+        makeToggleButton(
+            size, "Visibility (independent toggle)", MaterialIcons.pair("visibility", iconPx)));
+    toolBar.add(
+        makeToggleButton(size, "Edit (independent toggle)", MaterialIcons.pair("edit", iconPx)));
+    toolBar.add(
+        makeToggleButton(
+            size, "Delete (independent toggle)", MaterialIcons.pair("delete", iconPx)));
     toolBar.addSeparator();
 
     // Mandatory radio group via IconButtonGroup — exactly one selected at all times.
