@@ -4,6 +4,7 @@ import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.theme.ShapeScale;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -44,11 +45,12 @@ public final class IconButtonPlaygroundPanels {
 
   /**
    * Builds the variant gallery panel: every {@link IconButtonVariant} as a row × every visual state
-   * (idle / hover / pressed / selected / focused / disabled) as a column. The buttons in the
-   * "hover" / "pressed" / "selected" / "focused" columns aren't programmatically driven into those
-   * states — instead each column's leftmost button starts in the natural state, and the viewer
-   * interacts with the live buttons to validate transitions. The {@code disabled} column buttons
-   * are actually disabled.
+   * (idle / hover / pressed / selected / focused / disabled) as a column. Hover and pressed cells
+   * use {@link ElwhaIconButton#setHovered}/{@link ElwhaIconButton#setPressed} to pre-render the
+   * state-layer overlay so the M3 spec rendering is visible side-by-side without requiring live
+   * interaction (pressed in particular is normally too transient to inspect). The {@code focused}
+   * column still requires Tab-to since focus is bound to actual focus ownership; the {@code
+   * disabled} column buttons are actually disabled.
    *
    * <p>The matrix re-skins end-to-end on a theme/mode switch — the binding-rule contract for the
    * whole component set.
@@ -66,7 +68,7 @@ public final class IconButtonPlaygroundPanels {
     gbc.anchor = GridBagConstraints.CENTER;
 
     final String[] columnLabels = {
-      "Idle", "Hover (live)", "Pressed (live)", "Selected", "Focused (Tab to)", "Disabled"
+      "Idle", "Hover", "Pressed", "Selected", "Focused (Tab to)", "Disabled"
     };
 
     gbc.gridy = 0;
@@ -93,9 +95,10 @@ public final class IconButtonPlaygroundPanels {
   }
 
   /**
-   * Builds the toggle-examples panel: one row per variant, each row exercising the {@code
-   * setIcons(resting, selected)} pair pattern (and one state-layer-only row that drops the
-   * selected-icon swap so the overlay carries the signal alone).
+   * Builds the toggle-examples panel: one row per icon-swap pair (pin / anchor / favorite / star),
+   * each row spanning all 4 variants, plus a square-shape row at the bottom that re-uses the pin
+   * pair with {@link ShapeScale#MD} so the playground covers both the capsule (M3 default) and the
+   * square treatments.
    *
    * @return the toggle-examples panel
    * @version v0.1.0
@@ -114,30 +117,45 @@ public final class IconButtonPlaygroundPanels {
 
     column.add(
         buildToggleRow(
-            "Pin (icon swap pair)",
+            "Pin (push_pin ↔ push_pin_fill)",
             () -> MaterialIcons.pushPin(),
-            () -> MaterialIcons.pushPinFilled()));
+            () -> MaterialIcons.pushPinFilled(),
+            ShapeScale.FULL));
     column.add(Box.createVerticalStrut(12));
 
     column.add(
         buildToggleRow(
-            "Anchor (icon swap pair)",
+            "Anchor (anchor ↔ anchor_fill)",
             () -> MaterialIcons.anchor(),
-            () -> MaterialIcons.anchorFilled()));
+            () -> MaterialIcons.anchorFilled(),
+            ShapeScale.FULL));
     column.add(Box.createVerticalStrut(12));
 
     column.add(
         buildToggleRow(
-            "Favorite (state-layer only — same glyph in both states)",
+            "Favorite (favorite ↔ favorite_fill)",
             () -> MaterialIcons.favorite(),
-            null));
+            () -> MaterialIcons.favoriteFilled(),
+            ShapeScale.FULL));
     column.add(Box.createVerticalStrut(12));
 
     column.add(
         buildToggleRow(
-            "Star (state-layer only — same glyph in both states)",
+            "Star (star ↔ star_fill)",
             () -> MaterialIcons.star(),
-            null));
+            () -> MaterialIcons.starFilled(),
+            ShapeScale.FULL));
+    column.add(Box.createVerticalStrut(20));
+
+    column.add(captionLabel("Same pin pair, square shape (ShapeScale.MD = 12 px corner radius)."));
+    column.add(Box.createVerticalStrut(12));
+
+    column.add(
+        buildToggleRow(
+            "Pin, square (setShape(MD))",
+            () -> MaterialIcons.pushPin(),
+            () -> MaterialIcons.pushPinFilled(),
+            ShapeScale.MD));
     column.add(Box.createVerticalGlue());
     return column;
   }
@@ -154,10 +172,11 @@ public final class IconButtonPlaygroundPanels {
       case 0 -> {
         /* idle — nothing */
       }
-      case 1, 2 -> button.setToolTipText(variant.name() + " — hover/press the button");
+      case 1 -> button.setHovered(true);
+      case 2 -> button.setPressed(true);
       case 3 -> {
         button.setInteractionMode(IconButtonInteractionMode.SELECTABLE);
-        button.setIcons(MaterialIcons.favorite(), MaterialIcons.favorite());
+        button.setIcons(MaterialIcons.favorite(), MaterialIcons.favoriteFilled());
         button.setSelected(true);
       }
       case 4 -> button.setToolTipText(variant.name() + " — focus this with Tab");
@@ -170,7 +189,10 @@ public final class IconButtonPlaygroundPanels {
   }
 
   private static JPanel buildToggleRow(
-      final String label, final Supplier<Icon> resting, final Supplier<Icon> selected) {
+      final String label,
+      final Supplier<Icon> resting,
+      final Supplier<Icon> selected,
+      final ShapeScale shape) {
     final JPanel row = new JPanel(new BorderLayout(16, 0));
     row.setOpaque(false);
     row.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -185,11 +207,8 @@ public final class IconButtonPlaygroundPanels {
     for (IconButtonVariant variant : IconButtonVariant.values()) {
       final ElwhaIconButton button = new ElwhaIconButton(resting.get()).setVariant(variant);
       button.setInteractionMode(IconButtonInteractionMode.SELECTABLE);
-      if (selected != null) {
-        button.setIcons(resting.get(), selected.get());
-      } else {
-        button.setIcons(resting.get(), resting.get());
-      }
+      button.setShape(shape);
+      button.setIcons(resting.get(), selected.get());
       button.setToolTipText(variant.name());
       buttons.add(labeledButton(button, variant.name()));
     }
