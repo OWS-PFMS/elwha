@@ -175,7 +175,7 @@ mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.iconbutton.playground.E
 
 ## Roadmap
 
-The token foundation (epic [#30](https://github.com/OWS-PFMS/elwha/issues/30)) landed. `ElwhaChip` is rebuilt onto it ([#31](https://github.com/OWS-PFMS/elwha/issues/31)), `ElwhaSurface` ([#43](https://github.com/OWS-PFMS/elwha/issues/43)) and `ElwhaIconButton` ([#45](https://github.com/OWS-PFMS/elwha/issues/45)) shipped on top. The locked v1 component cut lives in [`docs/research/elwha-v1-component-scope.md`](docs/research/elwha-v1-component-scope.md).
+The token foundation (epic [#30](https://github.com/OWS-PFMS/elwha/issues/30)) landed. `ElwhaChip` is rebuilt onto it ([#31](https://github.com/OWS-PFMS/elwha/issues/31)), `ElwhaSurface` ([#43](https://github.com/OWS-PFMS/elwha/issues/43)) and `ElwhaIconButton` ([#45](https://github.com/OWS-PFMS/elwha/issues/45)) shipped on top. The remaining v1 component cut is still being finalized.
 
 **1.0.0 ships after** these still-open epics complete:
 
