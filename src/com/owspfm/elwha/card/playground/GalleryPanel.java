@@ -102,19 +102,18 @@ public final class GalleryPanel extends JPanel {
   }
 
   private static ElwhaCard variantCard(final String label, final CardVariant v) {
-    return new ElwhaCard()
+    return new ElwhaCard(label)
         .setVariant(v)
-        .setHeader(label, "Variant: " + v.name())
-        .setBody(
-            new JLabel("This card shows the " + v.name().toLowerCase() + " surface treatment."))
-        .setFooter(new JButton("Action"));
+        .setSubhead("Variant: " + v.name())
+        .setSupportingText("This card shows the " + v.name().toLowerCase() + " surface treatment.")
+        .setActions(new JButton("Action"));
   }
 
   private static ElwhaCard modeCard(final String label, final CardInteractionMode m) {
     ElwhaCard c =
-        new ElwhaCard()
-            .setHeader(label, "Mode: " + m.name())
-            .setBody(new JLabel("Hover, click, or focus to see feedback."))
+        new ElwhaCard(label)
+            .setSubhead("Mode: " + m.name())
+            .setSupportingText("Hover, click, or focus to see feedback.")
             .setInteractionMode(m);
     if (m == CardInteractionMode.SELECTABLE) {
       c.addActionListener(
@@ -132,38 +131,36 @@ public final class GalleryPanel extends JPanel {
     body.add(new JLabel("Detail line one."));
     body.add(new JLabel("Detail line two."));
     body.add(new JLabel("Detail line three."));
-    return new ElwhaCard()
-        .setHeader(
-            "Advanced options", startCollapsed ? "Collapsed by default" : "Expanded by default")
-        .setBody(body)
+    return new ElwhaCard("Advanced options")
+        .setSubhead(startCollapsed ? "Collapsed by default" : "Expanded by default")
+        .setMedia(body)
         .setCollapsible(true)
         .setCollapsed(startCollapsed)
-        .setCollapsedSummary(new JLabel("3 options hidden — click to expand"))
+        .setSummary(new JLabel("3 options hidden — click to expand"))
         .setAnimateCollapse(true);
   }
 
   private static ElwhaCard fullSlotCard() {
-    return new ElwhaCard()
-        .setHeader("Project alpha", "Updated 2 minutes ago")
+    return new ElwhaCard("Project alpha")
+        .setSubhead("Updated 2 minutes ago")
         .setLeadingIcon(new DotIcon(new Color(72, 130, 180)))
         .setTrailingActions(toolbarButton("⋯"))
         .setMedia(new MediaPlaceholder())
-        .setBody(
-            new JLabel(
-                "<html>The card uses every slot: leading icon, title,"
-                    + " subtitle, trailing actions, media, body, and footer.</html>"))
-        .setFooter(new JButton("Open"), new JButton("Dismiss"));
+        .setSupportingText(
+            "The card uses every slot: leading icon, headline, subhead, trailing actions,"
+                + " media, supporting text, and actions.")
+        .setActions(new JButton("Open"), new JButton("Dismiss"));
   }
 
   private static ElwhaCard minimalCard() {
-    return new ElwhaCard().setBody(new JLabel("A card with only a body and the defaults."));
+    return new ElwhaCard().setSupportingText("A card with only a body and the defaults.");
   }
 
   private static ElwhaCard disabledCard(final CardInteractionMode m, final String label) {
     ElwhaCard c =
-        new ElwhaCard()
-            .setHeader(label, "Disabled — " + m.name())
-            .setBody(new JLabel("Interaction is suppressed."))
+        new ElwhaCard(label)
+            .setSubhead("Disabled — " + m.name())
+            .setSupportingText("Interaction is suppressed.")
             .setInteractionMode(m);
     c.setEnabled(false);
     return c;

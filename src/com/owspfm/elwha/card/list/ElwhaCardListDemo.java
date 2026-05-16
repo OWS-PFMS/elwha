@@ -5,7 +5,6 @@ import com.owspfm.elwha.card.CardVariant;
 import com.owspfm.elwha.card.ElwhaCard;
 import java.awt.BorderLayout;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
@@ -55,10 +54,10 @@ public final class ElwhaCardListDemo {
 
     final CardAdapter<String> adapter =
         (item, index) ->
-            new ElwhaCard()
+            new ElwhaCard(item)
                 .setVariant(CardVariant.OUTLINED)
-                .setHeader(item, "Index " + index)
-                .setBody(new JLabel("Sample body for " + item));
+                .setSubhead("Index " + index)
+                .setSupportingText("Sample body for " + item);
 
     final ElwhaCardList<String> list =
         new ElwhaCardList<>(model, adapter)

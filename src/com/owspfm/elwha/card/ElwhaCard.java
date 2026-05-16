@@ -1,5 +1,14 @@
 package com.owspfm.elwha.card;
 
+import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.surface.ElwhaSurface;
+import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.ShapeScale;
+import com.owspfm.elwha.theme.SpaceScale;
+import com.owspfm.elwha.theme.StateLayer;
+import com.owspfm.elwha.theme.SurfacePainter;
+import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -36,211 +45,276 @@ import javax.swing.Timer;
 import javax.swing.UIManager;
 
 /**
- * A standalone, FlatLaf-aware card primitive that mirrors modern web/React card semantics.
+ * Token-native, M3-aligned card primitive. Composes a header strip (leading icon + leading actions
+ * + headline / subhead + trailing actions + chevron), an optional summary band, a media slot, a
+ * supporting-text slot, and a bottom actions row inside an {@link ElwhaSurface} chassis whose fill,
+ * shape, and border are token-bound through {@link ColorRole} / {@link ShapeScale}.
  *
- * <p>{@code ElwhaCard} composes optional <em>header</em>, <em>media</em>, <em>body</em>, and
- * <em>footer</em> slots into a single panel with a unified rounded surface. The visual treatment is
- * selectable via {@link CardVariant}; the interaction semantics are selectable via {@link
- * CardInteractionMode}; both can be combined freely with collapsible behavior.
+ * <p><strong>Composition.</strong> {@code ElwhaCard} extends {@link ElwhaSurface} — the round-rect
+ * fill, border stroke, and shape are inherited; the four token-typed setters ({@link
+ * #setSurfaceRole(ColorRole)}, {@link #setShape(ShapeScale)}, {@link #setBorderRole(ColorRole)},
+ * {@link #setBorderWidth(int)}) come from Surface. Card overlays state-layer paint (hover /
+ * pressed), a drop-shadow keyed off the elevation axis, a focus ring, and an M3-style top-trailing
+ * checked-icon overlay when selected.
  *
- * <p>The component reads colors and the corner radius from FlatLaf {@link UIManager} keys, so it
- * tracks light/dark theme switches without caller intervention.
+ * <p><strong>Slot vocabulary.</strong> The M3 formal slots are {@link #setHeadline(String)}, {@link
+ * #setSubhead(String)}, {@link #setSupportingText(String)}, {@link #setMedia(JComponent)}, and
+ * {@link #setActions(Component...)}. The OWS-specific header extensions are {@link
+ * #setLeadingIcon(Icon)}, {@link #setLeadingActions(Component...)}, and {@link
+ * #setTrailingActions(Component...)}; the disclosure axis is {@link #setCollapsible(boolean)} +
+ * {@link #setCollapsed(boolean)} + {@link #setSummary(JComponent)} + {@link
+ * #setSummaryVisibility(SummaryVisibility)} + {@link #setAnimateCollapse(boolean)}. Each extension
+ * is justified in {@code docs/research/elwha-card-v2-spec.md} §4.
  *
- * <p><strong>Quick start</strong>:
+ * <p><strong>Construction.</strong>
  *
  * <pre>{@code
- * ElwhaCard card = new ElwhaCard()
- *     .setVariant(CardVariant.ELEVATED)
- *     .setHeader("Recent activity", "Last 30 days")
- *     .setBody(new JLabel("12 cycles found across 4 factors."))
- *     .setFooter(new JButton("Open"), new JButton("Dismiss"))
+ * ElwhaCard card = ElwhaCard.elevatedCard("Recent activity")
+ *     .setSubhead("Last 30 days")
+ *     .setSupportingText("12 cycles found across 4 factors.")
+ *     .setActions(new JButton("Open"), new JButton("Dismiss"))
  *     .setInteractionMode(CardInteractionMode.HOVERABLE);
  * }</pre>
  *
- * <p><strong>Collapsible</strong>:
+ * <p><strong>Collapsible:</strong>
  *
  * <pre>{@code
- * ElwhaCard card = new ElwhaCard()
- *     .setHeader("Advanced options")
- *     .setBody(buildOptionsPanel())
+ * ElwhaCard card = new ElwhaCard("Advanced options")
+ *     .setSupportingText("...")
  *     .setCollapsible(true)
- *     .setCollapsed(true);
- * card.addPropertyChangeListener("collapsed", evt -> ...);
+ *     .setCollapsed(true)
+ *     .setSummary(new JLabel("3 options hidden"));
+ * card.addExpansionChangeListener(evt -> ...);
  * }</pre>
  *
- * <p><strong>Click-as-button</strong>:
- *
- * <pre>{@code
- * ElwhaCard card = new ElwhaCard()
- *     .setHeader("Open project")
- *     .setBody(buildPreview())
- *     .setInteractionMode(CardInteractionMode.CLICKABLE);
- * card.addActionListener(evt -> openProject());
- * }</pre>
- *
- * <p>This class has no dependencies on application code; it can be lifted into its own library by
- * moving the {@code com.owspfm.elwha.card} directory.
+ * <p><strong>Doctrine.</strong> Matches every rule in {@code
+ * docs/development/component-api-conventions.md}: {@code getX()}-only getters; per-variant static
+ * factories ({@link #elevatedCard(String)}, {@link #filledCard(String)}, {@link
+ * #outlinedCard(String)}); single-arg convenience constructor; the inherited {@code
+ * setBorderRole(ColorRole)} is not part of Card's advertised API (Card is variant-bearing — border
+ * role is variant-derived); symmetric border-width getter/setter (inherited).
  *
  * @author Charles Bryan
  * @version v0.1.0
  * @since v0.1.0
  */
-public class ElwhaCard extends JPanel {
+public class ElwhaCard extends ElwhaSurface {
 
-  /** Property name fired when the collapsed state changes. */
+  /**
+   * Property name fired when the collapsed state changes — wire via {@link
+   * #addExpansionChangeListener(PropertyChangeListener)}.
+   *
+   * @version v0.1.0
+   * @since v0.1.0
+   */
   public static final String PROPERTY_COLLAPSED = "collapsed";
 
-  /** Property name fired when the selected state changes. */
+  /**
+   * Property name fired when the selected state changes — wire via {@link
+   * #addSelectionChangeListener(PropertyChangeListener)}.
+   *
+   * @version v0.1.0
+   * @since v0.1.0
+   */
   public static final String PROPERTY_SELECTED = "selected";
 
-  /** Maximum supported elevation level (0 disables the shadow entirely). */
-  public static final int MAX_ELEVATION = 5;
+  /**
+   * Maximum supported elevation level (0 disables the shadow entirely). Carried forward from V1 for
+   * clamp semantics.
+   *
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static final int MAX_ELEVATION = 8;
 
-  private static final int DEFAULT_PADDING = 16;
-  private static final int DEFAULT_INNER_GAP = 8;
-  private static final int DEFAULT_ARC = 12;
   private static final int ANIMATION_MS = 160;
   private static final int ANIMATION_STEPS = 10;
+  private static final int CHECKED_BADGE_DIAMETER = 24;
+  private static final int CHECKED_BADGE_ICON_PX = 16;
+  private static final SpaceScale DEFAULT_PADDING_H = SpaceScale.LG;
+  private static final SpaceScale DEFAULT_PADDING_V = SpaceScale.LG;
+  private static final int INNER_GAP_PX = SpaceScale.SM.px();
 
-  // Configuration ----------------------------------------------------------
   private CardVariant variant = CardVariant.ELEVATED;
   private CardInteractionMode interactionMode = CardInteractionMode.STATIC;
-  private int elevation = 1;
-  private Integer cornerRadius;
-  private Insets padding =
-      new Insets(DEFAULT_PADDING, DEFAULT_PADDING, DEFAULT_PADDING, DEFAULT_PADDING);
-  private Color borderColor;
-  private Color surfaceColorOverride;
-  private int borderWidth = 1;
+  private SummaryVisibility summaryVisibility = SummaryVisibility.COLLAPSED_ONLY;
+  private int elevation = CardVariant.ELEVATED.restingElevation();
+  private boolean elevationUserSet;
+  private boolean dragged;
   private boolean animateCollapse;
+  private SpaceScale paddingHorizontal = DEFAULT_PADDING_H;
+  private SpaceScale paddingVertical = DEFAULT_PADDING_V;
 
-  // State ------------------------------------------------------------------
   private boolean hovered;
   private boolean pressed;
   private boolean selected;
   private boolean collapsible;
   private boolean collapsed;
-  private boolean keepSummaryWhenExpanded;
   private boolean pendingHeaderToggle;
 
-  // Header sub-components --------------------------------------------------
   private JPanel headerRow;
   private JLabel leadingIconLabel;
-  private JPanel textStack;
-  private JLabel titleLabel;
-  private JLabel subtitleLabel;
   private JPanel leadingActionsPanel;
+  private JPanel textStack;
+  private JLabel headlineLabel;
+  private JLabel subheadLabel;
   private JPanel trailingActionsPanel;
   private JLabel chevronLabel;
 
-  // Slot containers --------------------------------------------------------
   private CollapsibleContainer collapsibleBody;
   private JPanel mediaHolder;
-  private JPanel bodyHolder;
-  private JPanel footerHolder;
-  private JPanel collapsedSummaryHolder;
+  private JLabel supportingTextLabel;
+  private JPanel actionsHolder;
+  private JPanel summaryHolder;
 
-  // User-supplied content --------------------------------------------------
   private JComponent media;
-  private JComponent body;
-  private JComponent footer;
-  private JComponent collapsedSummary;
+  private String supportingText;
+  private JComponent summary;
+  private Icon leadingIcon;
 
-  // Listeners --------------------------------------------------------------
   private final List<ActionListener> actionListeners = new ArrayList<>();
 
-  // Animation --------------------------------------------------------------
   private Timer animationTimer;
   private float animationFraction = 1f;
 
-  // ------------------------------------------------------------------ ctor
-
-  /** Creates a card with default ELEVATED variant and STATIC interaction. */
+  /**
+   * Creates a card with the default {@link CardVariant#ELEVATED} variant and {@link
+   * CardInteractionMode#STATIC} interaction; no headline.
+   *
+   * @version v0.1.0
+   * @since v0.1.0
+   */
   public ElwhaCard() {
+    this(null);
+  }
+
+  /**
+   * Convenience constructor — sets the headline in one call. Equivalent to {@code new
+   * ElwhaCard().setHeadline(headline)}.
+   *
+   * @param headline the headline text (may be {@code null} or empty for no headline)
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ElwhaCard(final String headline) {
     super();
-    setOpaque(false);
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+    applyVariantDefaults(variant);
     initSlots();
     initInteraction();
     rebuildBorder();
+    if (headline != null && !headline.isEmpty()) {
+      setHeadline(headline);
+    }
   }
 
-  // ----------------------------------------------------------------- slots
+  /**
+   * Creates an {@link CardVariant#ELEVATED} card with the headline already set.
+   *
+   * @param headline the headline text
+   * @return a configured elevated card
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static ElwhaCard elevatedCard(final String headline) {
+    return new ElwhaCard(headline).setVariant(CardVariant.ELEVATED);
+  }
+
+  /**
+   * Creates a {@link CardVariant#FILLED} card with the headline already set.
+   *
+   * @param headline the headline text
+   * @return a configured filled card
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static ElwhaCard filledCard(final String headline) {
+    return new ElwhaCard(headline).setVariant(CardVariant.FILLED);
+  }
+
+  /**
+   * Creates an {@link CardVariant#OUTLINED} card with the headline already set.
+   *
+   * @param headline the headline text
+   * @return a configured outlined card
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static ElwhaCard outlinedCard(final String headline) {
+    return new ElwhaCard(headline).setVariant(CardVariant.OUTLINED);
+  }
+
+  // ---------------------------------------------------------------- slots
 
   private void initSlots() {
-    headerRow = newStretchingRow(new BorderLayout(DEFAULT_INNER_GAP, 0), 0);
+    headerRow = newStretchingRow(new BorderLayout(INNER_GAP_PX, 0));
     headerRow.setVisible(false);
 
     leadingIconLabel = new JLabel();
     leadingIconLabel.setVisible(false);
-    final JPanel westGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, DEFAULT_INNER_GAP / 2, 0));
-    westGroup.setOpaque(false);
-    westGroup.add(leadingIconLabel);
-    leadingActionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, DEFAULT_INNER_GAP / 2, 0));
+    leadingActionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, INNER_GAP_PX / 2, 0));
     leadingActionsPanel.setOpaque(false);
     leadingActionsPanel.setVisible(false);
+
+    final JPanel westGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, INNER_GAP_PX / 2, 0));
+    westGroup.setOpaque(false);
+    westGroup.add(leadingIconLabel);
     westGroup.add(leadingActionsPanel);
     headerRow.add(westGroup, BorderLayout.WEST);
 
     textStack = new JPanel();
     textStack.setOpaque(false);
     textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
-    titleLabel = new JLabel();
-    titleLabel.putClientProperty("FlatLaf.styleClass", "h4");
-    titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-    subtitleLabel = new JLabel();
-    subtitleLabel.putClientProperty("FlatLaf.styleClass", "small");
-    subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-    subtitleLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
-    subtitleLabel.setVisible(false);
-    textStack.add(titleLabel);
-    textStack.add(subtitleLabel);
+    headlineLabel = new JLabel();
+    headlineLabel.putClientProperty("FlatLaf.styleClass", "h4");
+    headlineLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    subheadLabel = new JLabel();
+    subheadLabel.putClientProperty("FlatLaf.styleClass", "small");
+    subheadLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    subheadLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
+    subheadLabel.setVisible(false);
+    textStack.add(headlineLabel);
+    textStack.add(subheadLabel);
     headerRow.add(textStack, BorderLayout.CENTER);
 
-    JPanel eastGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, DEFAULT_INNER_GAP / 2, 0));
-    eastGroup.setOpaque(false);
-    trailingActionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, DEFAULT_INNER_GAP / 2, 0));
+    trailingActionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, INNER_GAP_PX / 2, 0));
     trailingActionsPanel.setOpaque(false);
     trailingActionsPanel.setVisible(false);
-    eastGroup.add(trailingActionsPanel);
     chevronLabel = new JLabel(chevronGlyph(collapsed));
     chevronLabel.setHorizontalAlignment(SwingConstants.CENTER);
     chevronLabel.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
     chevronLabel.setVisible(false);
-    // Chevron is a button-like affordance and should always show the click cursor, even when
-    // the host card has a different cursor (e.g., MOVE_CURSOR set by ElwhaCardList for drag).
     chevronLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+    final JPanel eastGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, INNER_GAP_PX / 2, 0));
+    eastGroup.setOpaque(false);
+    eastGroup.add(trailingActionsPanel);
     eastGroup.add(chevronLabel);
     headerRow.add(eastGroup, BorderLayout.EAST);
 
+    summaryHolder = newSlotHolder();
     mediaHolder = newSlotHolder();
-    bodyHolder = newSlotHolder();
-    footerHolder = newSlotHolder();
-    collapsedSummaryHolder = newSlotHolder();
+    actionsHolder = newSlotHolder();
+
+    supportingTextLabel = new JLabel();
+    supportingTextLabel.setAlignmentX(0f);
+    supportingTextLabel.setVisible(false);
 
     collapsibleBody = new CollapsibleContainer();
     collapsibleBody.setOpaque(false);
     collapsibleBody.setLayout(new BoxLayout(collapsibleBody, BoxLayout.Y_AXIS));
     collapsibleBody.setAlignmentX(0f);
     collapsibleBody.add(mediaHolder);
-    collapsibleBody.add(bodyHolder);
-    collapsibleBody.add(footerHolder);
+    collapsibleBody.add(supportingTextLabel);
+    collapsibleBody.add(actionsHolder);
 
     add(headerRow);
-    add(collapsedSummaryHolder);
+    add(summaryHolder);
     add(collapsibleBody);
-    collapsedSummaryHolder.setVisible(false);
   }
 
-  /**
-   * Creates a row panel that stretches horizontally to fill its parent BoxLayout but locks
-   * vertically to its preferred height.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  private static JPanel newStretchingRow(final BorderLayout layout, final int topGap) {
-    JPanel p =
+  private static JPanel newStretchingRow(final BorderLayout layout) {
+    final JPanel p =
         new JPanel(layout) {
           @Override
           public Dimension getMaximumSize() {
@@ -249,14 +323,11 @@ public class ElwhaCard extends JPanel {
         };
     p.setOpaque(false);
     p.setAlignmentX(0f);
-    if (topGap > 0) {
-      p.setBorder(BorderFactory.createEmptyBorder(topGap, 0, 0, 0));
-    }
     return p;
   }
 
   private static JPanel newSlotHolder() {
-    JPanel p =
+    final JPanel p =
         new JPanel(new BorderLayout()) {
           @Override
           public Dimension getMaximumSize() {
@@ -264,19 +335,19 @@ public class ElwhaCard extends JPanel {
           }
         };
     p.setOpaque(false);
-    p.setBorder(BorderFactory.createEmptyBorder(DEFAULT_INNER_GAP, 0, 0, 0));
+    p.setBorder(BorderFactory.createEmptyBorder(INNER_GAP_PX, 0, 0, 0));
     p.setAlignmentX(0f);
     p.setVisible(false);
     return p;
   }
 
-  // ------------------------------------------------------------- interaction
+  // ------------------------------------------------------------ interaction
 
   private void initInteraction() {
-    MouseAdapter ma =
+    final MouseAdapter ma =
         new MouseAdapter() {
           @Override
-          public void mouseEntered(MouseEvent e) {
+          public void mouseEntered(final MouseEvent e) {
             if (interactionMode != CardInteractionMode.STATIC && isEnabled()) {
               hovered = true;
               repaint();
@@ -284,21 +355,18 @@ public class ElwhaCard extends JPanel {
           }
 
           @Override
-          public void mouseExited(MouseEvent e) {
+          public void mouseExited(final MouseEvent e) {
             hovered = false;
             pressed = false;
             repaint();
           }
 
           @Override
-          public void mousePressed(MouseEvent e) {
+          public void mousePressed(final MouseEvent e) {
             if (!isEnabled()) {
               return;
             }
             if (collapsible && isInHeader(e)) {
-              // Defer the actual collapse toggle to mouseReleased — that way a hosting list can
-              // call cancelPendingClick() if the press turns into a drag, suppressing what
-              // would otherwise be an unwanted toggle on every drag start.
               pendingHeaderToggle = true;
             }
             if (interactionMode == CardInteractionMode.CLICKABLE
@@ -311,7 +379,7 @@ public class ElwhaCard extends JPanel {
           }
 
           @Override
-          public void mouseReleased(MouseEvent e) {
+          public void mouseReleased(final MouseEvent e) {
             if (!pressed || !isEnabled()) {
               pressed = false;
               pendingHeaderToggle = false;
@@ -332,51 +400,44 @@ public class ElwhaCard extends JPanel {
           }
         };
     addMouseListener(ma);
-    // Intentionally NOT installing this listener on headerRow: when a child has its own
-    // mouse listener, AWT delivers the event there and stops, which prevents outer listeners
-    // (e.g., a host ElwhaCardList that wants to handle selection on header clicks) from ever
-    // seeing the event. The card-level listener detects header clicks via Y-bounds in
-    // isInHeader(), so the toggle still fires correctly.
     chevronLabel.addMouseListener(ma);
 
     addFocusListener(
         new FocusAdapter() {
           @Override
-          public void focusGained(FocusEvent e) {
+          public void focusGained(final FocusEvent e) {
             repaint();
           }
 
           @Override
-          public void focusLost(FocusEvent e) {
+          public void focusLost(final FocusEvent e) {
             pressed = false;
             repaint();
           }
         });
 
-    InputMap im = getInputMap(WHEN_FOCUSED);
-    ActionMap am = getActionMap();
-    Action activate =
+    final InputMap im = getInputMap(WHEN_FOCUSED);
+    final ActionMap am = getActionMap();
+    final Action activate =
         new AbstractAction() {
           @Override
-          public void actionPerformed(ActionEvent e) {
+          public void actionPerformed(final ActionEvent e) {
             if (!isEnabled()) {
               return;
             }
             if (collapsible) {
-              toggleCollapsed(null);
+              setCollapsed(!collapsed);
             }
             activate(0);
           }
         };
-    KeyStroke space = KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0);
-    KeyStroke enter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0);
-    im.put(space, "flatcard.activate");
-    im.put(enter, "flatcard.activate");
-    am.put("flatcard.activate", activate);
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "elwhacard.activate");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "elwhacard.activate");
+    am.put("elwhacard.activate", activate);
   }
 
-  private boolean isInHeader(MouseEvent e) {
-    Component src = e.getComponent();
+  private boolean isInHeader(final MouseEvent e) {
+    final Component src = e.getComponent();
     if (src == headerRow || src == chevronLabel) {
       return true;
     }
@@ -386,30 +447,29 @@ public class ElwhaCard extends JPanel {
     return false;
   }
 
-  private void activate(int modifiers) {
+  private void activate(final int modifiers) {
     if (interactionMode == CardInteractionMode.SELECTABLE) {
       setSelected(!selected);
     }
     if (interactionMode == CardInteractionMode.CLICKABLE
         || interactionMode == CardInteractionMode.SELECTABLE) {
-      ActionEvent evt = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "click", modifiers);
+      final ActionEvent evt =
+          new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "click", modifiers);
       for (ActionListener l : new ArrayList<>(actionListeners)) {
         l.actionPerformed(evt);
       }
     }
   }
 
-  private void toggleCollapsed(MouseEvent ignored) {
-    setCollapsed(!collapsed);
-  }
-
-  // ----------------------------------------------------------- public API
+  // ---------------------------------------------------------------- variant
 
   /**
-   * Sets the surface variant.
+   * Sets the surface variant and applies the variant's default surface role, border role, and
+   * elevation. Any prior {@link #setElevation(int)} override is preserved; explicit {@link
+   * #setSurfaceRole(ColorRole)} / inherited border setters are reset to the new variant's defaults.
    *
-   * @param variant one of {@link CardVariant}; ignored if null
-   * @return this card for fluent chaining
+   * @param variant the new variant; ignored if {@code null}
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -418,6 +478,7 @@ public class ElwhaCard extends JPanel {
       return this;
     }
     this.variant = variant;
+    applyVariantDefaults(variant);
     rebuildBorder();
     repaint();
     return this;
@@ -426,7 +487,7 @@ public class ElwhaCard extends JPanel {
   /**
    * Returns the active surface variant.
    *
-   * @return the active variant (never null)
+   * @return the active variant (never {@code null})
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -434,11 +495,23 @@ public class ElwhaCard extends JPanel {
     return variant;
   }
 
+  private void applyVariantDefaults(final CardVariant v) {
+    setSurfaceRole(v.surfaceRole());
+    setBorderRole(v.borderRole());
+    setBorderWidth(v.borderRole() == null ? 0 : 1);
+    if (!elevationUserSet) {
+      elevation = v.restingElevation();
+    }
+  }
+
+  // ---------------------------------------------------------- interaction
+
   /**
-   * Sets the interaction mode.
+   * Sets the interaction mode. Drives cursor, focus, hover feedback, and which inputs fire {@link
+   * ActionListener}s.
    *
-   * @param mode one of {@link CardInteractionMode}; ignored if null
-   * @return this card
+   * @param mode the new mode; ignored if {@code null}
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -459,7 +532,7 @@ public class ElwhaCard extends JPanel {
   /**
    * Returns the active interaction mode.
    *
-   * @return the active interaction mode (never null)
+   * @return the active interaction mode (never {@code null})
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -467,30 +540,33 @@ public class ElwhaCard extends JPanel {
     return interactionMode;
   }
 
+  // ------------------------------------------------------------ elevation
+
   /**
-   * Sets the elevation level (clamped to {@code 0..MAX_ELEVATION}). Only effective on the {@link
-   * CardVariant#ELEVATED} variant.
+   * Overrides the variant-derived resting elevation (0..{@link #MAX_ELEVATION}). A subsequent
+   * {@link #setVariant(CardVariant)} call will not reset this override.
    *
-   * @param elevation desired elevation (0 disables shadow)
-   * @return this card
+   * @param elevation desired resting elevation (0 disables the shadow)
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
   public ElwhaCard setElevation(final int elevation) {
-    int v = Math.max(0, Math.min(MAX_ELEVATION, elevation));
-    if (v == this.elevation) {
+    final int clamped = Math.max(0, Math.min(MAX_ELEVATION, elevation));
+    elevationUserSet = true;
+    if (clamped == this.elevation) {
       return this;
     }
-    this.elevation = v;
+    this.elevation = clamped;
     rebuildBorder();
     repaint();
     return this;
   }
 
   /**
-   * Returns the current elevation level.
+   * Returns the resting elevation in dp.
    *
-   * @return current elevation level (0..MAX_ELEVATION)
+   * @return the resting elevation (0..{@link #MAX_ELEVATION})
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -499,48 +575,59 @@ public class ElwhaCard extends JPanel {
   }
 
   /**
-   * Overrides the corner radius. Pass {@code null} to fall back to the FlatLaf {@code
-   * Component.arc} key.
+   * Toggles the dragged-state flag — paint switches to the variant's dragged elevation (Elevated→2,
+   * Filled→8, Outlined→8 dp). Called by {@code ElwhaCardList} drag plumbing; not typically called
+   * by application code.
    *
-   * @param radius the new arc, or null for theme default
-   * @return this card
+   * @param dragged whether the card is participating in a drag
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setCornerRadius(final Integer radius) {
-    cornerRadius = radius;
+  public ElwhaCard setDragged(final boolean dragged) {
+    if (dragged == this.dragged) {
+      return this;
+    }
+    this.dragged = dragged;
+    rebuildBorder();
     repaint();
     return this;
   }
 
   /**
-   * Returns the corner radius actually used by paint, resolving the override or theme default.
+   * Returns whether the card is currently in the dragged state.
    *
-   * @return effective corner radius, resolved against UIManager when not overridden
+   * @return {@code true} if dragged
    * @version v0.1.0
    * @since v0.1.0
    */
-  public int getEffectiveCornerRadius() {
-    if (cornerRadius != null) {
-      return cornerRadius;
-    }
-    Object arc = UIManager.get("Component.arc");
-    if (arc instanceof Number n) {
-      return Math.max(0, n.intValue());
-    }
-    return DEFAULT_ARC;
+  public boolean isDragged() {
+    return dragged;
   }
 
+  private int effectiveElevation() {
+    return dragged ? variant.draggedElevation() : elevation;
+  }
+
+  // -------------------------------------------------------------- padding
+
   /**
-   * Replaces the content padding (the gap between the rounded surface and the slots).
+   * Sets the content padding from the spacing scale — {@code horizontal} on left/right, {@code
+   * vertical} on top/bottom. Token-typed; the V1 raw-{@code Insets} / int setters are gone.
    *
-   * @param insets new padding; null is treated as zero on all sides
-   * @return this card
+   * @param horizontal left/right padding step ({@code null} ignored)
+   * @param vertical top/bottom padding step ({@code null} ignored)
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setPadding(final Insets insets) {
-    padding = insets == null ? new Insets(0, 0, 0, 0) : (Insets) insets.clone();
+  public ElwhaCard setPadding(final SpaceScale horizontal, final SpaceScale vertical) {
+    if (horizontal != null) {
+      paddingHorizontal = horizontal;
+    }
+    if (vertical != null) {
+      paddingVertical = vertical;
+    }
     rebuildBorder();
     revalidate();
     repaint();
@@ -548,201 +635,110 @@ public class ElwhaCard extends JPanel {
   }
 
   /**
-   * Convenience for {@link #setPadding(Insets)} with uniform spacing.
+   * Returns the active content padding as resolved {@link Insets} (defensive copy).
    *
-   * @param padding spacing applied to all four sides
-   * @return this card
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public ElwhaCard setPadding(final int padding) {
-    return setPadding(new Insets(padding, padding, padding, padding));
-  }
-
-  /**
-   * Returns the configured content padding.
-   *
-   * @return current content padding (defensive copy)
+   * @return the content padding
    * @version v0.1.0
    * @since v0.1.0
    */
   public Insets getPadding() {
-    return (Insets) padding.clone();
+    return SpaceScale.insets(paddingVertical, paddingHorizontal);
   }
 
+  // ------------------------------------------------------ M3 formal slots
+
   /**
-   * Overrides the border color. Pass {@code null} to derive from the theme.
+   * Sets the headline text. Pass {@code null} or empty to hide the headline row.
    *
-   * @param color explicit border color, or null
-   * @return this card
+   * @param headline the headline text
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setBorderColor(final Color color) {
-    borderColor = color;
+  public ElwhaCard setHeadline(final String headline) {
+    headlineLabel.setText(headline == null ? "" : headline);
+    refreshHeaderVisibility();
+    return this;
+  }
+
+  /**
+   * Returns the current headline text (never {@code null}; empty if unset).
+   *
+   * @return the headline
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public String getHeadline() {
+    return headlineLabel.getText() == null ? "" : headlineLabel.getText();
+  }
+
+  /**
+   * Sets the subhead text. Pass {@code null} or empty to hide the subhead.
+   *
+   * @param subhead the subhead text
+   * @return {@code this} for fluent chaining
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ElwhaCard setSubhead(final String subhead) {
+    final boolean has = subhead != null && !subhead.isEmpty();
+    subheadLabel.setText(has ? subhead : "");
+    subheadLabel.setVisible(has);
+    refreshHeaderVisibility();
+    return this;
+  }
+
+  /**
+   * Returns the current subhead text (never {@code null}; empty if unset).
+   *
+   * @return the subhead
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public String getSubhead() {
+    return subheadLabel.getText() == null ? "" : subheadLabel.getText();
+  }
+
+  /**
+   * Sets the supporting-text block (multi-line text body, M3 formal slot). Pass {@code null} or
+   * empty to hide.
+   *
+   * @param text the supporting text
+   * @return {@code this} for fluent chaining
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ElwhaCard setSupportingText(final String text) {
+    supportingText = text;
+    final boolean has = text != null && !text.isEmpty();
+    supportingTextLabel.setText(has ? wrapHtml(text) : "");
+    supportingTextLabel.setVisible(has);
+    revalidate();
     repaint();
     return this;
   }
 
   /**
-   * Sets border width in pixels. Only visible on the {@link CardVariant#OUTLINED} variant.
+   * Returns the current supporting text, or {@code null} if unset.
    *
-   * @param width border thickness, clamped to {@code >= 0}
-   * @return this card
+   * @return the supporting text
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setBorderWidth(final int width) {
-    borderWidth = Math.max(0, width);
-    repaint();
-    return this;
+  public String getSupportingText() {
+    return supportingText;
   }
 
-  // --- header slot -----
-
-  /**
-   * Sets the header title. Pass null or empty to hide the title row entirely.
-   *
-   * @param title the header title text
-   * @return this card
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public ElwhaCard setHeader(final String title) {
-    return setHeader(title, null);
+  private static String wrapHtml(final String text) {
+    return "<html><body style='width: 100%'>" + text + "</body></html>";
   }
 
   /**
-   * Sets the header title and subtitle. Does not modify the leading icon — use {@link
-   * #setLeadingIcon(Icon)} or the three-arg {@link #setHeader(String, String, Icon)} overload to
-   * change it.
+   * Sets the media slot (rendered above the supporting text, full-bleed by parent layout). Pass
+   * {@code null} to clear.
    *
-   * @param title the title text (null/empty hides the title text)
-   * @param subtitle the subtitle text (null/empty hides the subtitle line)
-   * @return this card
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public ElwhaCard setHeader(final String title, final String subtitle) {
-    boolean hasTitle = title != null && !title.isEmpty();
-    titleLabel.setText(hasTitle ? title : "");
-    boolean hasSub = subtitle != null && !subtitle.isEmpty();
-    subtitleLabel.setText(hasSub ? subtitle : "");
-    subtitleLabel.setVisible(hasSub);
-    refreshHeaderVisibility();
-    return this;
-  }
-
-  /**
-   * Sets the header title, subtitle, and leading icon. Pass {@code null} for {@code leadingIcon} to
-   * explicitly clear the icon.
-   *
-   * @param title the title text
-   * @param subtitle the subtitle text (may be null)
-   * @param leadingIcon the icon shown before the title (may be null to clear)
-   * @return this card
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public ElwhaCard setHeader(final String title, final String subtitle, final Icon leadingIcon) {
-    setHeader(title, subtitle);
-    setLeadingIcon(leadingIcon);
-    return this;
-  }
-
-  /**
-   * Replaces the leading icon shown to the left of the header text.
-   *
-   * @param icon the icon, or null to clear
-   * @return this card
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public ElwhaCard setLeadingIcon(final Icon icon) {
-    leadingIconLabel.setIcon(icon);
-    leadingIconLabel.setVisible(icon != null);
-    refreshHeaderVisibility();
-    return this;
-  }
-
-  /**
-   * Replaces the leading actions row of the header. Leading actions render in the WEST slot, after
-   * the leading icon (if any) and before the title — useful for an info or context button you want
-   * sitting next to the title rather than lost on the far right of a wide card.
-   *
-   * @param actions zero or more action components rendered in order from left to right
-   * @return this card
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public ElwhaCard setLeadingActions(final Component... actions) {
-    leadingActionsPanel.removeAll();
-    if (actions != null) {
-      for (Component c : actions) {
-        if (c != null) {
-          leadingActionsPanel.add(c);
-        }
-      }
-    }
-    boolean has = leadingActionsPanel.getComponentCount() > 0;
-    leadingActionsPanel.setVisible(has);
-    refreshHeaderVisibility();
-    return this;
-  }
-
-  /**
-   * Returns the title label so callers can customize fonts, foreground, alignment, or FlatLaf style
-   * class (e.g., {@code label.putClientProperty("FlatLaf.styleClass", "h2")} for a bigger title).
-   *
-   * @return the live title label; never null
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public JLabel getTitleLabel() {
-    return titleLabel;
-  }
-
-  /**
-   * Returns the subtitle label so callers can customize fonts, foreground, or FlatLaf style class.
-   *
-   * @return the live subtitle label; never null
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public JLabel getSubtitleLabel() {
-    return subtitleLabel;
-  }
-
-  /**
-   * Replaces the trailing actions row of the header.
-   *
-   * @param actions zero or more action components rendered in order from left to right
-   * @return this card
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public ElwhaCard setTrailingActions(final Component... actions) {
-    trailingActionsPanel.removeAll();
-    if (actions != null) {
-      for (Component c : actions) {
-        if (c != null) {
-          trailingActionsPanel.add(c);
-        }
-      }
-    }
-    boolean has = trailingActionsPanel.getComponentCount() > 0;
-    trailingActionsPanel.setVisible(has);
-    refreshHeaderVisibility();
-    return this;
-  }
-
-  // --- media slot ------
-
-  /**
-   * Sets the optional media slot, rendered between the header and the body.
-   *
-   * @param media the component to display (typically a thumbnail or hero image); null clears
-   * @return this card
+   * @param media the media component
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -758,79 +754,126 @@ public class ElwhaCard extends JPanel {
     return this;
   }
 
-  // --- body slot -------
-
   /**
-   * Sets the body content. The body fills any remaining vertical space.
+   * Returns the current media component, or {@code null}.
    *
-   * @param body the body component; null clears it
-   * @return this card
+   * @return the media component
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setBody(final JComponent body) {
-    bodyHolder.removeAll();
-    this.body = body;
-    if (body != null) {
-      bodyHolder.add(body, BorderLayout.CENTER);
+  public JComponent getMedia() {
+    return media;
+  }
+
+  /**
+   * Sets the bottom actions row (M3 formal "actions" slot — right-aligned by default). Pass an
+   * empty array (or {@code null}) to clear.
+   *
+   * @param actions zero or more action components rendered left to right
+   * @return {@code this} for fluent chaining
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ElwhaCard setActions(final Component... actions) {
+    actionsHolder.removeAll();
+    if (actions != null && actions.length > 0) {
+      final JPanel row = new JPanel(new FlowLayout(FlowLayout.RIGHT, INNER_GAP_PX, 0));
+      row.setOpaque(false);
+      for (Component c : actions) {
+        if (c != null) {
+          row.add(c);
+        }
+      }
+      actionsHolder.add(row, BorderLayout.CENTER);
     }
-    bodyHolder.setVisible(body != null);
+    actionsHolder.setVisible(actions != null && actions.length > 0);
     revalidate();
     repaint();
     return this;
   }
 
-  // --- footer slot -----
+  // ------------------------------------------------ OWS header extensions
 
   /**
-   * Sets the footer content (single component variant).
+   * Replaces the leading icon shown at the left edge of the header row. Pass {@code null} to clear.
    *
-   * @param footer the footer component; null clears it
-   * @return this card
+   * @param icon the icon, or {@code null}
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setFooter(final JComponent footer) {
-    footerHolder.removeAll();
-    this.footer = footer;
-    if (footer != null) {
-      footerHolder.add(footer, BorderLayout.CENTER);
-    }
-    footerHolder.setVisible(footer != null);
-    revalidate();
-    repaint();
+  public ElwhaCard setLeadingIcon(final Icon icon) {
+    leadingIcon = icon;
+    leadingIconLabel.setIcon(icon);
+    leadingIconLabel.setVisible(icon != null);
+    refreshHeaderVisibility();
     return this;
   }
 
   /**
-   * Convenience: sets the footer to a right-aligned actions row.
+   * Returns the leading icon, or {@code null}.
    *
-   * @param actions zero or more components rendered as a flow at the bottom of the card
-   * @return this card
+   * @return the leading icon
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setFooter(final Component... actions) {
-    if (actions == null || actions.length == 0) {
-      return setFooter((JComponent) null);
-    }
-    JPanel row = new JPanel(new FlowLayout(FlowLayout.RIGHT, DEFAULT_INNER_GAP, 0));
-    row.setOpaque(false);
-    for (Component c : actions) {
-      if (c != null) {
-        row.add(c);
+  public Icon getLeadingIcon() {
+    return leadingIcon;
+  }
+
+  /**
+   * Replaces the leading actions row — sits between the leading icon and the headline. Pass an
+   * empty array (or {@code null}) to clear.
+   *
+   * @param actions zero or more action components rendered left to right
+   * @return {@code this} for fluent chaining
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ElwhaCard setLeadingActions(final Component... actions) {
+    leadingActionsPanel.removeAll();
+    if (actions != null) {
+      for (Component c : actions) {
+        if (c != null) {
+          leadingActionsPanel.add(c);
+        }
       }
     }
-    return setFooter(row);
+    leadingActionsPanel.setVisible(leadingActionsPanel.getComponentCount() > 0);
+    refreshHeaderVisibility();
+    return this;
   }
 
-  // --- collapsible -----
+  /**
+   * Replaces the trailing actions row — sits to the right of the headline, before the chevron. Pass
+   * an empty array (or {@code null}) to clear.
+   *
+   * @param actions zero or more action components rendered left to right
+   * @return {@code this} for fluent chaining
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ElwhaCard setTrailingActions(final Component... actions) {
+    trailingActionsPanel.removeAll();
+    if (actions != null) {
+      for (Component c : actions) {
+        if (c != null) {
+          trailingActionsPanel.add(c);
+        }
+      }
+    }
+    trailingActionsPanel.setVisible(trailingActionsPanel.getComponentCount() > 0);
+    refreshHeaderVisibility();
+    return this;
+  }
+
+  // ----------------------------------------------------- disclosure axis
 
   /**
-   * Enables or disables the header chevron and click-to-collapse behavior.
+   * Enables or disables the chevron + click-to-collapse behavior.
    *
-   * @param collapsible whether the card can be collapsed
-   * @return this card
+   * @param collapsible whether the card can collapse
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -848,9 +891,9 @@ public class ElwhaCard extends JPanel {
   }
 
   /**
-   * Returns whether the card supports collapse/expand.
+   * Returns whether the card supports collapse / expand.
    *
-   * @return true if the chevron and toggle behavior are enabled
+   * @return {@code true} if collapsible
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -859,10 +902,10 @@ public class ElwhaCard extends JPanel {
   }
 
   /**
-   * Programmatically sets the collapsed state. Fires a {@code "collapsed"} property change.
+   * Programmatically sets the collapsed state. Fires a {@link #PROPERTY_COLLAPSED} change event.
    *
-   * @param collapsed the new state
-   * @return this card
+   * @param collapsed the new collapsed state
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -870,10 +913,10 @@ public class ElwhaCard extends JPanel {
     if (collapsed == this.collapsed) {
       return this;
     }
-    final boolean old = collapsed;
+    final boolean old = this.collapsed;
     this.collapsed = collapsed;
     chevronLabel.setText(chevronGlyph(collapsed));
-    collapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
+    summaryHolder.setVisible(shouldShowSummary());
     if (animateCollapse) {
       animateTo(collapsed ? 0f : 1f);
     } else {
@@ -887,9 +930,9 @@ public class ElwhaCard extends JPanel {
   }
 
   /**
-   * Returns the current collapsed state.
+   * Returns whether the card is currently collapsed.
    *
-   * @return current collapsed state
+   * @return {@code true} if collapsed
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -898,73 +941,82 @@ public class ElwhaCard extends JPanel {
   }
 
   /**
-   * Optional summary slot shown only when the card is collapsed.
+   * Sets the summary band — visibility governed by {@link
+   * #setSummaryVisibility(SummaryVisibility)}. Replaces V1's {@code
+   * setCollapsedSummary(JComponent)}.
    *
-   * @param summary the compact summary component, or null
-   * @return this card
+   * @param summary the summary component (typically a chip row, metric, or one-line label), or
+   *     {@code null} to clear
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setCollapsedSummary(final JComponent summary) {
-    collapsedSummaryHolder.removeAll();
-    collapsedSummary = summary;
+  public ElwhaCard setSummary(final JComponent summary) {
+    summaryHolder.removeAll();
+    this.summary = summary;
     if (summary != null) {
-      collapsedSummaryHolder.add(summary, BorderLayout.CENTER);
+      summaryHolder.add(summary, BorderLayout.CENTER);
     }
-    collapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
+    summaryHolder.setVisible(shouldShowSummary());
     revalidate();
     repaint();
     return this;
   }
 
   /**
-   * Opts the card into showing the collapsed-summary slot in <em>both</em> states (collapsed
-   * <em>and</em> expanded), instead of only when collapsed.
+   * Returns the current summary component, or {@code null}.
    *
-   * <p>Useful when the summary carries affordances (click targets, hover highlights, glyphs
-   * encoding metadata) that should remain reachable while the user studies the expanded body — so
-   * the user doesn't have to collapse the card to interact with the summary again.
-   *
-   * @param keep true to keep the collapsed-summary visible while expanded; false (default) to
-   *     restore the standard "summary visible only when collapsed" behavior
-   * @return this card
+   * @return the summary component
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setKeepSummaryWhenExpanded(final boolean keep) {
-    if (keep == keepSummaryWhenExpanded) {
+  public JComponent getSummary() {
+    return summary;
+  }
+
+  /**
+   * Sets the summary visibility policy — see {@link SummaryVisibility}. Replaces V1's {@code
+   * setKeepSummaryWhenExpanded(boolean)} escape hatch with a first-class enum.
+   *
+   * @param visibility the new visibility policy; ignored if {@code null}
+   * @return {@code this} for fluent chaining
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ElwhaCard setSummaryVisibility(final SummaryVisibility visibility) {
+    if (visibility == null || visibility == summaryVisibility) {
       return this;
     }
-    keepSummaryWhenExpanded = keep;
-    collapsedSummaryHolder.setVisible(shouldShowCollapsedSummary());
+    summaryVisibility = visibility;
+    summaryHolder.setVisible(shouldShowSummary());
     revalidate();
     repaint();
     return this;
   }
 
   /**
-   * Returns whether the card keeps the collapsed-summary slot visible while expanded.
+   * Returns the active summary visibility policy.
    *
-   * @return true if the summary is shown in both collapsed and expanded states
+   * @return the policy (never {@code null})
    * @version v0.1.0
    * @since v0.1.0
    */
-  public boolean isKeepSummaryWhenExpanded() {
-    return keepSummaryWhenExpanded;
+  public SummaryVisibility getSummaryVisibility() {
+    return summaryVisibility;
   }
 
-  private boolean shouldShowCollapsedSummary() {
-    if (collapsedSummary == null) {
+  private boolean shouldShowSummary() {
+    if (summary == null) {
       return false;
     }
-    return collapsed || keepSummaryWhenExpanded;
+    return summaryVisibility == SummaryVisibility.ALWAYS || collapsed;
   }
 
   /**
-   * Toggles smooth height interpolation when collapsing or expanding.
+   * Toggles smooth height interpolation when collapsing / expanding. Off by default.
    *
    * @param animate whether to animate
-   * @return this card
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -973,14 +1025,25 @@ public class ElwhaCard extends JPanel {
     return this;
   }
 
-  // --- selection -------
+  /**
+   * Returns whether the collapse / expand transition is animated.
+   *
+   * @return {@code true} if animated
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public boolean isAnimateCollapse() {
+    return animateCollapse;
+  }
+
+  // ------------------------------------------------------------- selection
 
   /**
-   * Sets the selected state (only meaningful for {@link CardInteractionMode#SELECTABLE} cards).
-   * Fires a {@code "selected"} property change.
+   * Sets the selected state. Fires a {@link #PROPERTY_SELECTED} change event; paint composites the
+   * M3 top-trailing checked-icon overlay when {@code true}.
    *
-   * @param selected the new selection state
-   * @return this card
+   * @param selected the new selected state
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -988,7 +1051,7 @@ public class ElwhaCard extends JPanel {
     if (selected == this.selected) {
       return this;
     }
-    boolean old = selected;
+    final boolean old = this.selected;
     this.selected = selected;
     repaint();
     firePropertyChange(PROPERTY_SELECTED, old, selected);
@@ -996,9 +1059,9 @@ public class ElwhaCard extends JPanel {
   }
 
   /**
-   * Returns the current selection state.
+   * Returns the current selected state.
    *
-   * @return current selection state
+   * @return {@code true} if selected
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -1006,18 +1069,14 @@ public class ElwhaCard extends JPanel {
     return selected;
   }
 
-  // --- listeners -------
+  // ------------------------------------------------------------- listeners
 
   /**
-   * Cancels any in-flight click that's been seen by mousePressed but not yet completed by
-   * mouseReleased.
+   * Cancels any in-flight click that {@link #initInteraction()} saw on {@code mousePressed} but
+   * hasn't completed via {@code mouseReleased}. Called by {@code ElwhaCardList} drag plumbing once
+   * it commits to a drag, suppressing the otherwise-spurious header toggle or activation.
    *
-   * <p>Specifically clears the deferred header-collapse toggle and the {@code pressed} state, so
-   * the in-progress press-release sequence won't fire either of them. Hosting components that
-   * convert presses into drags (e.g., a list with reorder enabled) should call this once they
-   * decide a drag has started, to suppress an otherwise-spurious header toggle on every drag.
-   *
-   * @return this card
+   * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -1029,9 +1088,10 @@ public class ElwhaCard extends JPanel {
   }
 
   /**
-   * Registers an action listener that fires on click (clickable) or toggle (selectable).
+   * Registers an action listener — fires on click ({@link CardInteractionMode#CLICKABLE}) or on
+   * toggle ({@link CardInteractionMode#SELECTABLE}).
    *
-   * @param listener the listener to add; null is ignored
+   * @param listener the listener (ignored if {@code null})
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -1053,48 +1113,81 @@ public class ElwhaCard extends JPanel {
   }
 
   /**
-   * Convenience overload that scopes a {@link PropertyChangeListener} to either {@link
-   * #PROPERTY_COLLAPSED} or {@link #PROPERTY_SELECTED}. Equivalent to {@link
-   * #addPropertyChangeListener(String, PropertyChangeListener)}.
+   * Registers a {@link PropertyChangeListener} scoped to {@link #PROPERTY_SELECTED}. Replaces V1's
+   * generic {@code onChange(String, PCL)} subscription.
    *
-   * @param propertyName one of {@link #PROPERTY_COLLAPSED} or {@link #PROPERTY_SELECTED}
-   * @param listener the listener to add
+   * @param listener the listener
    * @version v0.1.0
    * @since v0.1.0
    */
-  public void onChange(final String propertyName, final PropertyChangeListener listener) {
-    addPropertyChangeListener(propertyName, listener);
+  public void addSelectionChangeListener(final PropertyChangeListener listener) {
+    addPropertyChangeListener(PROPERTY_SELECTED, listener);
   }
 
-  // ------------------------------------------------------------- internals
+  /**
+   * Removes a previously registered selection-change listener.
+   *
+   * @param listener the listener
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public void removeSelectionChangeListener(final PropertyChangeListener listener) {
+    removePropertyChangeListener(PROPERTY_SELECTED, listener);
+  }
+
+  /**
+   * Registers a {@link PropertyChangeListener} scoped to {@link #PROPERTY_COLLAPSED}.
+   *
+   * @param listener the listener
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public void addExpansionChangeListener(final PropertyChangeListener listener) {
+    addPropertyChangeListener(PROPERTY_COLLAPSED, listener);
+  }
+
+  /**
+   * Removes a previously registered expansion-change listener.
+   *
+   * @param listener the listener
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public void removeExpansionChangeListener(final PropertyChangeListener listener) {
+    removePropertyChangeListener(PROPERTY_COLLAPSED, listener);
+  }
+
+  // -------------------------------------------------------------- internals
 
   private void refreshHeaderVisibility() {
-    boolean hasTitle = titleLabel.getText() != null && !titleLabel.getText().isEmpty();
-    boolean hasSub = subtitleLabel.isVisible();
-    boolean hasIcon = leadingIconLabel.isVisible();
-    boolean hasLeadingActions = leadingActionsPanel.isVisible();
-    boolean hasActions = trailingActionsPanel.isVisible();
-    boolean hasChevron = collapsible;
-    headerRow.setVisible(
-        hasTitle || hasSub || hasIcon || hasLeadingActions || hasActions || hasChevron);
+    final boolean hasHeadline =
+        headlineLabel.getText() != null && !headlineLabel.getText().isEmpty();
+    final boolean any =
+        hasHeadline
+            || subheadLabel.isVisible()
+            || leadingIconLabel.isVisible()
+            || leadingActionsPanel.isVisible()
+            || trailingActionsPanel.isVisible()
+            || collapsible;
+    headerRow.setVisible(any);
     headerRow.revalidate();
   }
 
   private void rebuildBorder() {
-    Insets shadow = shadowInsets();
+    final Insets shadow = shadowInsets();
     setBorder(
         BorderFactory.createEmptyBorder(
-            padding.top + shadow.top,
-            padding.left + shadow.left,
-            padding.bottom + shadow.bottom,
-            padding.right + shadow.right));
+            paddingVertical.px() + shadow.top,
+            paddingHorizontal.px() + shadow.left,
+            paddingVertical.px() + shadow.bottom,
+            paddingHorizontal.px() + shadow.right));
   }
 
   private Insets shadowInsets() {
-    if (variant != CardVariant.ELEVATED || elevation <= 0) {
+    final int e = effectiveElevation();
+    if (e <= 0) {
       return new Insets(0, 0, 0, 0);
     }
-    int e = elevation;
     return new Insets(e, e, e * 2, e);
   }
 
@@ -1115,9 +1208,9 @@ public class ElwhaCard extends JPanel {
         new Timer(
             ANIMATION_MS / ANIMATION_STEPS,
             e -> {
-              float t =
+              final float t =
                   Math.min(1f, (System.currentTimeMillis() - startTime) / (float) ANIMATION_MS);
-              float ease = (float) (1 - Math.pow(1 - t, 3));
+              final float ease = (float) (1 - Math.pow(1 - t, 3));
               animationFraction = start + (target - start) * ease;
               collapsibleBody.revalidate();
               collapsibleBody.repaint();
@@ -1134,197 +1227,146 @@ public class ElwhaCard extends JPanel {
     animationTimer.start();
   }
 
-  // ------------------------------------------------------------- painting
+  // -------------------------------------------------------------- painting
 
+  /**
+   * Paints the card — drop shadow (elevation-driven), Surface-painter pass for the rounded fill and
+   * border (with hover / pressed state-layer overlay), focus ring, and the M3 top-trailing
+   * checked-icon overlay when selected.
+   *
+   * @param g the graphics context
+   * @version v0.1.0
+   * @since v0.1.0
+   */
   @Override
   protected void paintComponent(final Graphics g) {
-    Graphics2D g2 = (Graphics2D) g.create();
+    final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      Insets shadow = shadowInsets();
-      int x = shadow.left;
-      int y = shadow.top;
-      int w = getWidth() - shadow.left - shadow.right;
-      int h = getHeight() - shadow.top - shadow.bottom;
-      int arc = getEffectiveCornerRadius();
+      final Insets shadow = shadowInsets();
+      final int x = shadow.left;
+      final int y = shadow.top;
+      final int w = getWidth() - shadow.left - shadow.right;
+      final int h = getHeight() - shadow.top - shadow.bottom;
+      final int arc = getShape().px();
 
       paintShadow(g2, x, y, w, h, arc);
-      paintBackground(g2, x, y, w, h, arc);
-      paintBorderShape(g2, x, y, w, h, arc);
-      paintFocusRing(g2, x, y, w, h, arc);
+
+      final Graphics2D inner = (Graphics2D) g2.create(x, y, w, h);
+      try {
+        inner.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        SurfacePainter.paint(
+            inner, w, h, arc, getSurfaceRole(), activeOverlay(), getBorderRole(), getBorderWidth());
+      } finally {
+        inner.dispose();
+      }
+
+      if (!isEnabled()) {
+        final Graphics2D dim = (Graphics2D) g2.create();
+        try {
+          dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
+          dim.setColor(getBackground() == null ? Color.WHITE : getBackground());
+          dim.fillRoundRect(x, y, w, h, arc, arc);
+        } finally {
+          dim.dispose();
+        }
+      }
+
+      if (isFocusOwner() && interactionMode != CardInteractionMode.STATIC && isEnabled()) {
+        paintFocusRing(g2, x, y, w, h, arc);
+      }
+
+      if (selected) {
+        paintCheckedBadge(g2, x, y, w);
+      }
     } finally {
       g2.dispose();
     }
   }
 
-  private void paintShadow(final Graphics2D g2, int x, int y, int w, int h, int arc) {
-    if (variant != CardVariant.ELEVATED || elevation <= 0) {
+  private StateLayer activeOverlay() {
+    if (!isEnabled() || interactionMode == CardInteractionMode.STATIC) {
+      return null;
+    }
+    if (pressed) {
+      return StateLayer.PRESSED;
+    }
+    if (hovered) {
+      return StateLayer.HOVER;
+    }
+    return null;
+  }
+
+  private void paintShadow(
+      final Graphics2D g2, final int x, final int y, final int w, final int h, final int arc) {
+    final int e = effectiveElevation();
+    if (e <= 0) {
       return;
     }
-    int e = elevation + (hovered && isEnabled() ? 1 : 0);
-    int layers = Math.max(2, e + 1);
+    final int layers = Math.max(2, e + 1);
     for (int i = layers; i >= 1; i--) {
-      int alpha = Math.max(8, 60 / i);
+      final int alpha = Math.max(8, 60 / i);
       g2.setColor(new Color(0, 0, 0, alpha));
-      int spread = i;
-      int offsetY = Math.max(1, e + i / 2);
+      final int spread = i;
+      final int offsetY = Math.max(1, e + i / 2);
       g2.fillRoundRect(
           x - spread, y + offsetY, w + 2 * spread, h + spread, arc + spread, arc + spread);
     }
   }
 
-  private void paintBackground(final Graphics2D g2, int x, int y, int w, int h, int arc) {
-    Color bg = surfaceColor();
-    if (pressed) {
-      bg = blend(bg, UIManager.getColor("Component.focusedBorderColor"), 0.10f);
-    } else if (hovered && isEnabled() && interactionMode != CardInteractionMode.STATIC) {
-      bg = blend(bg, foregroundForBlend(), 0.06f);
-    }
-    if (selected) {
-      bg = blend(bg, accentColor(), 0.12f);
-    }
-    g2.setColor(bg);
-    g2.fillRoundRect(x, y, w, h, arc, arc);
-  }
-
-  private void paintBorderShape(final Graphics2D g2, int x, int y, int w, int h, int arc) {
-    Color border = effectiveBorderColor();
-    if (border == null) {
-      return;
-    }
-    int bw = borderWidth;
-    if (variant != CardVariant.OUTLINED && !selected) {
-      return;
-    }
-    if (selected) {
-      bw = Math.max(bw, 2);
-      border = accentColor();
-    }
-    g2.setColor(border);
-    for (int i = 0; i < bw; i++) {
-      g2.drawRoundRect(x + i, y + i, w - 1 - 2 * i, h - 1 - 2 * i, arc, arc);
-    }
-  }
-
-  private void paintFocusRing(final Graphics2D g2, int x, int y, int w, int h, int arc) {
-    if (!isFocusOwner() || interactionMode == CardInteractionMode.STATIC || !isEnabled()) {
-      return;
-    }
-    Color ring = UIManager.getColor("Component.focusColor");
-    if (ring == null) {
-      ring = accentColor();
-    }
-    g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 160));
+  private void paintFocusRing(
+      final Graphics2D g2, final int x, final int y, final int w, final int h, final int arc) {
+    final Color ring = ColorRole.PRIMARY.resolve();
+    g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 200));
     g2.drawRoundRect(x - 1, y - 1, w + 1, h + 1, arc + 2, arc + 2);
   }
 
+  private void paintCheckedBadge(final Graphics2D g2, final int x, final int y, final int w) {
+    final int pad = SpaceScale.SM.px();
+    final int diameter = CHECKED_BADGE_DIAMETER;
+    final int bx = x + w - diameter - pad;
+    final int by = y + pad;
+    final Color fill = ColorRole.PRIMARY.resolve();
+    final Color glyph = ColorRole.PRIMARY.on().orElse(ColorRole.ON_PRIMARY).resolve();
+    g2.setColor(fill);
+    g2.fillOval(bx, by, diameter, diameter);
+    final FlatSVGIcon check = MaterialIcons.check(CHECKED_BADGE_ICON_PX);
+    check.setColorFilter(new FlatSVGIcon.ColorFilter(orig -> glyph));
+    final int iconOffset = (diameter - CHECKED_BADGE_ICON_PX) / 2;
+    check.paintIcon(this, g2, bx + iconOffset, by + iconOffset);
+  }
+
+  // --------------------------------------------------------------- LAF hooks
+
   /**
-   * Overrides the variant-derived surface color with a caller-supplied tint. Pass {@code null} to
-   * restore variant-default behavior. Hover, pressed, and selected blends are still applied on top
-   * of the override.
+   * Re-applies the subhead's disabled-foreground colour after a LAF change.
    *
-   * @param color the surface fill color, or null to clear
-   * @return this card
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setSurfaceColor(final Color color) {
-    surfaceColorOverride = color;
-    repaint();
-    return this;
-  }
-
-  private Color surfaceColor() {
-    if (surfaceColorOverride != null) {
-      return surfaceColorOverride;
-    }
-    Color panel = UIManager.getColor("Panel.background");
-    if (panel == null) {
-      panel = Color.WHITE;
-    }
-    final boolean light = isLight(panel);
-    Color c;
-    switch (variant) {
-      case ELEVATED ->
-          c = light ? blend(panel, Color.WHITE, 1.0f) : blend(panel, Color.WHITE, 0.10f);
-      case OUTLINED ->
-          c = light ? blend(panel, Color.WHITE, 1.0f) : blend(panel, Color.WHITE, 0.06f);
-      case FILLED -> c = blend(panel, foregroundForBlend(), 0.07f);
-      default -> c = panel;
-    }
-    return c == null ? Color.WHITE : c;
-  }
-
-  private static boolean isLight(final Color c) {
-    if (c == null) {
-      return true;
-    }
-    return (c.getRed() + c.getGreen() + c.getBlue()) / 3 > 128;
-  }
-
-  private Color effectiveBorderColor() {
-    if (borderColor != null) {
-      return borderColor;
-    }
-    Color c = UIManager.getColor("Component.borderColor");
-    if (c == null) {
-      c = UIManager.getColor("Separator.foreground");
-    }
-    return c;
-  }
-
-  private Color foregroundForBlend() {
-    Color c = UIManager.getColor("Label.foreground");
-    return c == null ? Color.DARK_GRAY : c;
-  }
-
-  private Color accentColor() {
-    Color c = UIManager.getColor("Component.accentColor");
-    if (c == null) {
-      c = UIManager.getColor("Component.focusColor");
-    }
-    return c == null ? new Color(72, 130, 180) : c;
-  }
-
-  private Color pickFirstNonNull(final String... keys) {
-    for (String k : keys) {
-      Color c = UIManager.getColor(k);
-      if (c != null) {
-        return c;
-      }
-    }
-    return null;
-  }
-
-  private static Color blend(final Color a, final Color b, final float t) {
-    if (a == null) {
-      return b;
-    }
-    if (b == null) {
-      return a;
-    }
-    float clamp = Math.max(0f, Math.min(1f, t));
-    int r = (int) (a.getRed() * (1 - clamp) + b.getRed() * clamp);
-    int g = (int) (a.getGreen() * (1 - clamp) + b.getGreen() * clamp);
-    int bl = (int) (a.getBlue() * (1 - clamp) + b.getBlue() * clamp);
-    return new Color(r, g, bl);
-  }
-
-  // ------------------------------------------------------------- LAF hooks
-
   @Override
   public void updateUI() {
     super.updateUI();
     setOpaque(false);
-    if (subtitleLabel != null) {
-      subtitleLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
+    if (subheadLabel != null) {
+      subheadLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
     }
-    if (padding != null) {
+    // updateUI() fires from the JPanel super-ctor before our field initializers run;
+    // skip the border rebuild on that first call and let the explicit rebuildBorder()
+    // in our own constructor pick it up.
+    if (paddingHorizontal != null && paddingVertical != null) {
       rebuildBorder();
     }
     repaint();
   }
 
+  /**
+   * Re-applies the cursor for the current interaction mode after an enabled-state change.
+   *
+   * @param enabled the new enabled state
+   * @version v0.1.0
+   * @since v0.1.0
+   */
   @Override
   public void setEnabled(final boolean enabled) {
     super.setEnabled(enabled);
@@ -1335,20 +1377,12 @@ public class ElwhaCard extends JPanel {
     repaint();
   }
 
-  // ------------------------------------------------------------- container
+  // --------------------------------------------------------------- container
 
-  /**
-   * Wrapper panel whose preferred height is multiplied by {@link #animationFraction}, used to
-   * animate the collapse/expand transition without breaking layout managers further out. Width
-   * stretches to fill the outer BoxLayout.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
   private final class CollapsibleContainer extends JPanel {
     @Override
     public Dimension getPreferredSize() {
-      Dimension d = super.getPreferredSize();
+      final Dimension d = super.getPreferredSize();
       if (animationFraction >= 1f) {
         return d;
       }
@@ -1357,14 +1391,15 @@ public class ElwhaCard extends JPanel {
 
     @Override
     public Dimension getMinimumSize() {
-      Dimension p = getPreferredSize();
+      final Dimension p = getPreferredSize();
       return new Dimension(0, p.height);
     }
 
     @Override
     public Dimension getMaximumSize() {
-      Dimension d = super.getPreferredSize();
-      int h = animationFraction >= 1f ? d.height : (int) Math.max(0, d.height * animationFraction);
+      final Dimension d = super.getPreferredSize();
+      final int h =
+          animationFraction >= 1f ? d.height : (int) Math.max(0, d.height * animationFraction);
       return new Dimension(Integer.MAX_VALUE, h);
     }
   }

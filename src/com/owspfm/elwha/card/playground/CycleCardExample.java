@@ -53,12 +53,12 @@ final class CycleCardExample {
     CycleRing ring = new CycleRing(factors);
     ring.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-    return new ElwhaCard()
+    return new ElwhaCard("1.4897")
         .setVariant(CardVariant.OUTLINED)
         .setLeadingIcon(new ReinforcingIcon())
-        .setHeader("1.4897", "Reinforcing cycle  ·  7 factors")
+        .setSubhead("Reinforcing cycle  ·  7 factors")
         .setTrailingActions(buildChainPanel(factors))
-        .setBody(ring)
+        .setMedia(ring)
         .setCollapsible(true);
   }
 
