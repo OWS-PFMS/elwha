@@ -142,7 +142,7 @@ public final class MaterialIcons {
     return load("info", size);
   }
 
-  /** Heart / favorite glyph. */
+  /** Heart / favorite glyph (outline). */
   public static FlatSVGIcon favorite() {
     return favorite(DEFAULT_SIZE);
   }
@@ -159,7 +159,26 @@ public final class MaterialIcons {
     return load("favorite", size);
   }
 
-  /** Five-point star glyph. */
+  /**
+   * Heart / favorite glyph (filled / solid) — pairs with {@link #favorite()} as the "active" state.
+   */
+  public static FlatSVGIcon favoriteFilled() {
+    return favoriteFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #favoriteFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon favoriteFilled(final int size) {
+    return load("favorite_fill", size);
+  }
+
+  /** Five-point star glyph (outline). */
   public static FlatSVGIcon star() {
     return star(DEFAULT_SIZE);
   }
@@ -174,6 +193,23 @@ public final class MaterialIcons {
    */
   public static FlatSVGIcon star(final int size) {
     return load("star", size);
+  }
+
+  /** Five-point star glyph (filled / solid) — pairs with {@link #star()} as the "active" state. */
+  public static FlatSVGIcon starFilled() {
+    return starFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #starFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon starFilled(final int size) {
+    return load("star_fill", size);
   }
 
   /** Plus / add glyph. */
