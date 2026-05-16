@@ -60,8 +60,9 @@ import javax.swing.Timer;
  * the same {@link FlatSVGIcon.ColorFilter} mechanism the chip uses.
  *
  * <p><strong>Defaults.</strong> {@link IconButtonVariant#STANDARD} variant, {@link
- * IconButtonInteractionMode#CLICKABLE} mode, {@link ShapeScale#FULL} shape, 40 px container, 24 px
- * icon, border width 1 (only visible when a border role is set).
+ * IconButtonInteractionMode#CLICKABLE} mode, {@link ShapeScale#FULL} shape, {@link
+ * IconButtonSize#M} (40 px container, 24 px icon), border width 1 (only visible when a border role
+ * is set).
  *
  * <p><strong>Quick start:</strong>
  *
@@ -81,8 +82,7 @@ public class ElwhaIconButton extends JComponent {
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
 
-  private static final int DEFAULT_CONTAINER_SIZE = 40;
-  private static final int DEFAULT_ICON_SIZE = 24;
+  private static final IconButtonSize DEFAULT_SIZE = IconButtonSize.M;
   private static final int DEFAULT_BORDER_WIDTH = 1;
   private static final float FOCUSED_BORDER_WIDTH = 2f;
   private static final int HOVER_POLL_INTERVAL_MS = 100;
@@ -92,8 +92,9 @@ public class ElwhaIconButton extends JComponent {
   private IconButtonInteractionMode interactionMode = IconButtonInteractionMode.CLICKABLE;
   private ColorRole surfaceRoleOverride;
   private ShapeScale shape = ShapeScale.FULL;
-  private int containerSize = DEFAULT_CONTAINER_SIZE;
-  private int iconSize = DEFAULT_ICON_SIZE;
+  private IconButtonSize buttonSize = DEFAULT_SIZE;
+  private int containerSize = DEFAULT_SIZE.containerPx();
+  private int iconSize = DEFAULT_SIZE.iconPx();
   private int borderWidth = DEFAULT_BORDER_WIDTH;
 
   // State ------------------------------------------------------------------
@@ -367,9 +368,50 @@ public class ElwhaIconButton extends JComponent {
   // -------------------------------------------------------------- sizing
 
   /**
-   * Sets the container side length in pixels (the icon button is square). M3 spec is 40 dp; the
-   * setter exists so the playground and consumers wanting a non-standard size can override without
-   * waiting for a {@code SizeScale} axis.
+   * Sets both container and icon dimensions in one call from the {@link IconButtonSize} preset —
+   * the primary sizing API, covering all five M3 size tiers.
+   *
+   * <p>The shape is not touched — selecting a size leaves the corner radius alone, so {@code
+   * setButtonSize(L)} on a default button stays {@link ShapeScale#FULL} (the capsule); pair with
+   * {@link #setShape} for a square treatment at any size.
+   *
+   * @param size the size preset; ignored if {@code null}
+   * @return {@code this} for fluent chaining
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ElwhaIconButton setButtonSize(final IconButtonSize size) {
+    if (size == null) {
+      return this;
+    }
+    this.buttonSize = size;
+    this.containerSize = size.containerPx();
+    this.iconSize = size.iconPx();
+    revalidate();
+    repaint();
+    return this;
+  }
+
+  /**
+   * Returns the active {@link IconButtonSize} preset. Note that the returned value reflects the
+   * last preset selected via {@link #setButtonSize}; calling the lower-level {@link
+   * #setContainerSize(int)} / {@link #setIconSize(int)} does not change it (those setters drive the
+   * raw {@code containerSize} / {@code iconSize} fields directly, last-write-wins, but leave the
+   * preset enum unchanged for {@link #getButtonSize} bookkeeping).
+   *
+   * @return the active size preset (never {@code null})
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public IconButtonSize getButtonSize() {
+    return buttonSize;
+  }
+
+  /**
+   * Sets the container side length in pixels (the icon button is square). Lower-level escape hatch
+   * — prefer {@link #setButtonSize(IconButtonSize)} for the M3-spec sizes. Both setters are
+   * last-write-wins; a {@code setButtonSize} call after a {@code setContainerSize} call overrides
+   * this value.
    *
    * @param px the container side length, clamped to {@code >= 1}
    * @return {@code this} for fluent chaining
@@ -395,10 +437,11 @@ public class ElwhaIconButton extends JComponent {
   }
 
   /**
-   * Sets the rendered icon size in pixels. M3 spec is 24 dp; the icon size is only a layout hint —
-   * the actual rendered icon is whatever {@link Icon} was installed via {@link #setIcon(Icon)} /
-   * {@link #setIcons(Icon, Icon)} (the {@link FlatSVGIcon}s {@link
-   * com.owspfm.elwha.icons.MaterialIcons} returns already carry their own size).
+   * Sets the rendered icon size in pixels. Lower-level escape hatch — prefer {@link
+   * #setButtonSize(IconButtonSize)} for the M3-spec sizes. The icon size is only a layout hint; the
+   * actual rendered icon is whatever {@link Icon} was installed via {@link #setIcon(Icon)} / {@link
+   * #setIcons(Icon, Icon)} (the {@link FlatSVGIcon}s {@link com.owspfm.elwha.icons.MaterialIcons}
+   * returns already carry their own size).
    *
    * @param px the icon size, clamped to {@code >= 1}
    * @return {@code this} for fluent chaining
