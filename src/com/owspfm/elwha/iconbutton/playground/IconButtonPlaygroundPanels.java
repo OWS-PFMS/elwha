@@ -566,7 +566,11 @@ public final class IconButtonPlaygroundPanels {
   }
 
   private static JLabel captionLabel(final String text) {
-    final JLabel label = new JLabel(text);
+    // Wrap in HTML with an explicit width hint so the label actually breaks long captions —
+    // raw-text JLabels don't wrap. 720 px is the sweet spot for the playground tab content area
+    // at typical window widths; over-wide content falls back to wrapping at the window edge
+    // anyway. Not a production technique — fine for the harness.
+    final JLabel label = new JLabel("<html><div style='width: 720px'>" + text + "</div></html>");
     label.putClientProperty("FlatLaf.styleClass", "small");
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
     return label;
