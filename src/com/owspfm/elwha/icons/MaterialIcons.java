@@ -421,4 +421,61 @@ public final class MaterialIcons {
     icon.setColorFilter(THEME_FILTER);
     return icon;
   }
+
+  /**
+   * Returns the outline / fill pair for a Material Symbol that has both axes bundled — the
+   * canonical M3 toggle-icon-swap pattern. The {@code filled} variant is resolved by appending
+   * {@code _fill} to the base name (so {@code pair("push_pin")} loads {@code push_pin.svg} and
+   * {@code push_pin_fill.svg}). Both icons render at {@link #DEFAULT_SIZE}.
+   *
+   * <p>Currently bundled outline/fill pairs: {@code push_pin}, {@code anchor}, {@code favorite},
+   * {@code star}. Calling {@code pair} on a name that lacks a bundled {@code _fill} variant throws
+   * when the missing SVG is first painted, not on construction — see {@link FlatSVGIcon}'s
+   * lazy-load semantics.
+   *
+   * <p><strong>Why a helper, not an auto-detect inside {@link
+   * com.owspfm.elwha.iconbutton.ElwhaIconButton}.</strong> The button stays icon-library-agnostic
+   * (no import of {@code com.owspfm.elwha.icons.*}); the outline/fill convention lives here, in the
+   * icon library that actually knows about Material Symbol naming. Consumers using non-Material
+   * icons supply their own pair via the existing {@code setIcons(resting, selected)} setter.
+   *
+   * @param name the bare Material Symbol name (no path, no extension, no {@code _fill} suffix)
+   * @return the resting + filled pair
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static IconPair pair(final String name) {
+    return pair(name, DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #pair(String)}.
+   *
+   * @param name the bare Material Symbol name
+   * @param size pixel size for both icons in the returned pair
+   * @return the resting + filled pair at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static IconPair pair(final String name, final int size) {
+    return new IconPair(load(name, size), load(name + "_fill", size));
+  }
+
+  /**
+   * The outline / fill icon pair returned by {@link #pair(String)}. Use with {@link
+   * com.owspfm.elwha.iconbutton.ElwhaIconButton#setIcons(javax.swing.Icon, javax.swing.Icon)
+   * setIcons}:
+   *
+   * <pre>{@code
+   * MaterialIcons.IconPair p = MaterialIcons.pair("push_pin");
+   * button.setIcons(p.resting(), p.filled());
+   * }</pre>
+   *
+   * @param resting the resting (outline) icon — rendered when the button is unselected
+   * @param filled the filled icon — rendered when the button is selected
+   * @author Charles Bryan
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public record IconPair(FlatSVGIcon resting, FlatSVGIcon filled) {}
 }

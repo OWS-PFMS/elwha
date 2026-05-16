@@ -239,19 +239,11 @@ public final class IconButtonPlaygroundPanels {
     toolBar.setRollover(true);
     final IconButtonSize size = IconButtonSize.S;
     final int iconPx = size.iconPx();
-    addToggleButton(
-        toolBar, size, "Pin", MaterialIcons.pushPin(iconPx), MaterialIcons.pushPinFilled(iconPx));
-    addToggleButton(
-        toolBar, size, "Anchor", MaterialIcons.anchor(iconPx), MaterialIcons.anchorFilled(iconPx));
+    addToggleButton(toolBar, size, "Pin", MaterialIcons.pair("push_pin", iconPx));
+    addToggleButton(toolBar, size, "Anchor", MaterialIcons.pair("anchor", iconPx));
     toolBar.addSeparator();
-    addToggleButton(
-        toolBar,
-        size,
-        "Favorite",
-        MaterialIcons.favorite(iconPx),
-        MaterialIcons.favoriteFilled(iconPx));
-    addToggleButton(
-        toolBar, size, "Star", MaterialIcons.star(iconPx), MaterialIcons.starFilled(iconPx));
+    addToggleButton(toolBar, size, "Favorite", MaterialIcons.pair("favorite", iconPx));
+    addToggleButton(toolBar, size, "Star", MaterialIcons.pair("star", iconPx));
     return toolBar;
   }
 
@@ -259,14 +251,13 @@ public final class IconButtonPlaygroundPanels {
       final JToolBar toolBar,
       final IconButtonSize size,
       final String tooltip,
-      final Icon resting,
-      final Icon selected) {
+      final MaterialIcons.IconPair pair) {
     final ElwhaIconButton button =
-        new ElwhaIconButton(resting)
+        new ElwhaIconButton(pair.resting())
             .setVariant(IconButtonVariant.STANDARD)
             .setButtonSize(size)
             .setInteractionMode(IconButtonInteractionMode.SELECTABLE)
-            .setIcons(resting, selected);
+            .setIcons(pair.resting(), pair.filled());
     button.setToolTipText(tooltip);
     toolBar.add(button);
   }
