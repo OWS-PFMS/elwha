@@ -1,5 +1,8 @@
 package com.owspfm.elwha.theme.playground;
 
+import com.owspfm.elwha.card.playground.GalleryPanel;
+import com.owspfm.elwha.card.playground.LiveConfigPanel;
+import com.owspfm.elwha.card.playground.SnippetPanel;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
@@ -12,6 +15,7 @@ import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.TypeRole;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -70,6 +74,10 @@ import javax.swing.tree.DefaultMutableTreeNode;
  *       for {@link com.owspfm.elwha.surface.ElwhaSurface}, reused from {@link
  *       SurfacePlaygroundPanels} so the standalone {@code ElwhaSurfacePlayground} and this tab stay
  *       in lockstep.
+ *   <li><strong>Card</strong> — the V2 {@link com.owspfm.elwha.card.ElwhaCard} gallery and
+ *       live-config + snippet panes, reused from {@link GalleryPanel} / {@link LiveConfigPanel} /
+ *       {@link SnippetPanel} so the standalone {@code ElwhaCardPlayground} and this tab stay in
+ *       lockstep.
  * </ul>
  *
  * <p>The mode toggle re-installs the theme at runtime, exercising the binding rule end-to-end.
@@ -116,6 +124,7 @@ public final class ThemePlayground {
     tabs.addTab("Chip", buildChipTab());
     tabs.addTab("Icon Button", buildIconButtonTab());
     tabs.addTab("Surface", buildSurfaceTab());
+    tabs.addTab("Card", buildCardTab());
     root.add(tabs, java.awt.BorderLayout.CENTER);
 
     frame.setContentPane(root);
@@ -265,6 +274,27 @@ public final class ThemePlayground {
     JTabbedPane inner = new JTabbedPane();
     inner.addTab("Matrix", new JScrollPane(SurfacePlaygroundPanels.buildMatrixPanel()));
     inner.addTab("Live", SurfacePlaygroundPanels.buildLivePanel());
+    return inner;
+  }
+
+  // --- Card tab — reuses the same panels the standalone playground composes
+  // (GalleryPanel + LiveConfigPanel + SnippetPanel) so this and ElwhaCardPlayground stay synced.
+  // ---
+
+  private JComponent buildCardTab() {
+    JTabbedPane inner = new JTabbedPane();
+    inner.addTab("Gallery", new GalleryPanel());
+
+    final LiveConfigPanel live = new LiveConfigPanel();
+    final SnippetPanel snippet = new SnippetPanel();
+    snippet.update(live.snapshot());
+    live.addConfigChangeListener(snippet::update);
+    snippet.setPreferredSize(new Dimension(600, 220));
+    final JPanel liveTab = new JPanel(new BorderLayout());
+    liveTab.add(live, BorderLayout.CENTER);
+    liveTab.add(snippet, BorderLayout.SOUTH);
+    inner.addTab("Live", liveTab);
+
     return inner;
   }
 
