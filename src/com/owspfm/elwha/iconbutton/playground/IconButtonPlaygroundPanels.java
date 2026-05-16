@@ -204,9 +204,14 @@ public final class IconButtonPlaygroundPanels {
 
     column.add(captionLabel("The 5 M3 sizes × 4 variants — favorite glyph, capsule shape."));
     column.add(Box.createVerticalStrut(12));
-    final JPanel sizeMatrix = buildSizeMatrix();
-    sizeMatrix.setAlignmentX(Component.LEFT_ALIGNMENT);
-    column.add(sizeMatrix);
+    // Wrap the matrix in a leading-flow row so it sits flush left under the toolbars instead of
+    // stretching across the column (BoxLayout would otherwise let the GridBagLayout panel expand
+    // to full width and re-center its content).
+    final JPanel sizeMatrixRow = new JPanel(new FlowLayout(FlowLayout.LEADING, 0, 0));
+    sizeMatrixRow.setOpaque(false);
+    sizeMatrixRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+    sizeMatrixRow.add(buildSizeMatrix());
+    column.add(sizeMatrixRow);
     column.add(Box.createVerticalGlue());
     return column;
   }
