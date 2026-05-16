@@ -1,6 +1,7 @@
 package com.owspfm.elwha.iconbutton.playground;
 
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
+import com.owspfm.elwha.iconbutton.IconButtonGroup;
 import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
 import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
@@ -179,8 +180,10 @@ public final class IconButtonPlaygroundPanels {
 
     column.add(
         captionLabel(
-            "JToolBar mockup at IconButtonSize.S (32 dp) — the M3 toolbar-standard size. "
-                + "All four buttons are SELECTABLE with outline↔fill icon-swap pairs."));
+            "JToolBar mockup at IconButtonSize.S (32 dp) — M3 toolbar-standard size. "
+                + "Left cluster: independent SELECTABLE toggles (pin and anchor, each its own "
+                + "state). Right cluster: mandatory radio group (favorite vs star — exactly one "
+                + "always selected) via IconButtonGroup."));
     column.add(Box.createVerticalStrut(8));
     final JToolBar toolBar = buildToolbarMockup();
     toolBar.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -239,19 +242,31 @@ public final class IconButtonPlaygroundPanels {
     toolBar.setRollover(true);
     final IconButtonSize size = IconButtonSize.S;
     final int iconPx = size.iconPx();
-    addToggleButton(toolBar, size, "Pin", MaterialIcons.pair("push_pin", iconPx));
-    addToggleButton(toolBar, size, "Anchor", MaterialIcons.pair("anchor", iconPx));
+
+    // Independent toggles — pin and anchor are unrelated affordances; each tracks its own state.
+    toolBar.add(
+        makeToggleButton(size, "Pin (independent toggle)", MaterialIcons.pair("push_pin", iconPx)));
+    toolBar.add(
+        makeToggleButton(
+            size, "Anchor (independent toggle)", MaterialIcons.pair("anchor", iconPx)));
     toolBar.addSeparator();
-    addToggleButton(toolBar, size, "Favorite", MaterialIcons.pair("favorite", iconPx));
-    addToggleButton(toolBar, size, "Star", MaterialIcons.pair("star", iconPx));
+
+    // Mandatory radio group via IconButtonGroup — exactly one selected at all times.
+    final ElwhaIconButton favorite =
+        makeToggleButton(
+            size, "Favorite (radio: favorite vs star)", MaterialIcons.pair("favorite", iconPx));
+    final ElwhaIconButton star =
+        makeToggleButton(
+            size, "Star (radio: favorite vs star)", MaterialIcons.pair("star", iconPx));
+    favorite.setSelected(true); // initial selection — required for a mandatory group
+    new IconButtonGroup(true).add(favorite).add(star);
+    toolBar.add(favorite);
+    toolBar.add(star);
     return toolBar;
   }
 
-  private static void addToggleButton(
-      final JToolBar toolBar,
-      final IconButtonSize size,
-      final String tooltip,
-      final MaterialIcons.IconPair pair) {
+  private static ElwhaIconButton makeToggleButton(
+      final IconButtonSize size, final String tooltip, final MaterialIcons.IconPair pair) {
     final ElwhaIconButton button =
         new ElwhaIconButton(pair.resting())
             .setVariant(IconButtonVariant.STANDARD)
@@ -259,7 +274,7 @@ public final class IconButtonPlaygroundPanels {
             .setInteractionMode(IconButtonInteractionMode.SELECTABLE)
             .setIcons(pair.resting(), pair.filled());
     button.setToolTipText(tooltip);
-    toolBar.add(button);
+    return button;
   }
 
   private static JComponent buildGalleryCell(
