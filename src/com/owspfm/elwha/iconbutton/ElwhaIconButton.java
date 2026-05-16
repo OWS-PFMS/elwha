@@ -454,6 +454,44 @@ public class ElwhaIconButton extends JComponent {
     return selected;
   }
 
+  /**
+   * Forces the hover visual state on or off. Primarily for visual-validation tools (the playground
+   * pre-renders the hover column without requiring a live cursor) and snapshot tests — under normal
+   * use the mouse listeners drive this automatically. A genuine {@code mouseExited} will clear a
+   * forced-on state on its next firing.
+   *
+   * @param hovered whether to render the hover overlay
+   * @return {@code this} for fluent chaining
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ElwhaIconButton setHovered(final boolean hovered) {
+    if (this.hovered == hovered) {
+      return this;
+    }
+    this.hovered = hovered;
+    repaint();
+    return this;
+  }
+
+  /**
+   * Forces the pressed visual state on or off. Primarily for visual-validation tools — pressed is
+   * normally transient (cleared on mouse-up), so previewing it statically requires this hook.
+   *
+   * @param pressed whether to render the pressed overlay
+   * @return {@code this} for fluent chaining
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public ElwhaIconButton setPressed(final boolean pressed) {
+    if (this.pressed == pressed) {
+      return this;
+    }
+    this.pressed = pressed;
+    repaint();
+    return this;
+  }
+
   // ------------------------------------------------------------- listeners
 
   /**
