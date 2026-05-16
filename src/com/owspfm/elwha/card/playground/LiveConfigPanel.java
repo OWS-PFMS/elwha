@@ -3,6 +3,8 @@ package com.owspfm.elwha.card.playground;
 import com.owspfm.elwha.card.CardInteractionMode;
 import com.owspfm.elwha.card.CardVariant;
 import com.owspfm.elwha.card.ElwhaCard;
+import com.owspfm.elwha.theme.ShapeScale;
+import com.owspfm.elwha.theme.SpaceScale;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -27,10 +29,10 @@ import javax.swing.JSlider;
 
 /**
  * Live-config side of the playground: a focus card on the left and a stack of widgets on the right
- * that mutate the card's properties in real time.
+ * that mutate the card's V2 properties in real time.
  *
  * <p>Listeners registered via {@link #addConfigChangeListener(Consumer)} fire after every mutation
- * with the latest snapshot — used to keep the snippet panel in sync.
+ * with the latest snapshot — used to keep the {@link SnippetPanel} in sync.
  *
  * @author Charles Bryan
  * @version v0.1.0
@@ -40,32 +42,29 @@ public final class LiveConfigPanel extends JPanel {
 
   private final ElwhaCard focusCard;
 
-  // Mutable config state ---------------------------------------------------
   private CardVariant variant = CardVariant.ELEVATED;
   private CardInteractionMode mode = CardInteractionMode.STATIC;
   private int elevation = 1;
-  private int cornerRadius = 12;
-  private int padding = 16;
+  private ShapeScale shape = ShapeScale.MD;
+  private SpaceScale padding = SpaceScale.LG;
   private int borderWidth = 1;
   private boolean collapsible;
   private boolean collapsed;
   private boolean disabled;
   private boolean showHeader = true;
   private boolean showMedia;
-  private boolean showFooter = true;
+  private boolean showActions = true;
 
   private final List<Consumer<Snapshot>> listeners = new ArrayList<>();
   private boolean updating;
 
-  // Cached slot components (created once, swapped in/out by show* toggles only).
   private MediaPlate cachedMedia;
-  private JComponent cachedFooter;
-  // Track previously-applied slot visibility so we only rebuild the slot when it flips.
+  private JComponent cachedActions;
   private Boolean appliedShowHeader;
   private Boolean appliedShowMedia;
-  private Boolean appliedShowFooter;
+  private Boolean appliedShowActions;
 
-  /** Builds the live-config view with a default ELEVATED static card. */
+  /** Builds the live-config view with the V2 defaults. */
   public LiveConfigPanel() {
     super(new BorderLayout(16, 0));
     setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
@@ -82,9 +81,7 @@ public final class LiveConfigPanel extends JPanel {
     applyAll();
   }
 
-  // ----------------------------------------------------------------- focus
-
-  private static JComponent buildFooter() {
+  private static JComponent buildActions() {
     JPanel row = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 8, 0));
     row.setOpaque(false);
     row.add(new JButton("Primary"));
@@ -106,11 +103,10 @@ public final class LiveConfigPanel extends JPanel {
         .setSummary(new JLabel("Collapsed — click chevron to expand"));
   }
 
-  // -------------------------------------------------------------- controls
+  // ------------------------------------------------------------- controls
 
   private JComponent buildControls() {
     JPanel panel = new JPanel(new GridBagLayout());
-    panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
     GridBagConstraints gbc = new GridBagConstraints();
     gbc.gridx = 0;
     gbc.gridy = 0;
@@ -142,23 +138,25 @@ public final class LiveConfigPanel extends JPanel {
           elevation = elevationSlider.getValue();
           applyAll();
         });
-    addLabeledRow(panel, gbc, "Elevation", elevationSlider);
+    addLabeledRow(panel, gbc, "Elevation (dp)", elevationSlider);
 
-    JSlider radiusSlider = newSlider(0, 36, cornerRadius);
-    radiusSlider.addChangeListener(
+    JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
+    shapeBox.setSelectedItem(shape);
+    shapeBox.addActionListener(
         e -> {
-          cornerRadius = radiusSlider.getValue();
+          shape = (ShapeScale) shapeBox.getSelectedItem();
           applyAll();
         });
-    addLabeledRow(panel, gbc, "Corner radius", radiusSlider);
+    addLabeledRow(panel, gbc, "Shape (ShapeScale)", shapeBox);
 
-    JSlider paddingSlider = newSlider(0, 48, padding);
-    paddingSlider.addChangeListener(
+    JComboBox<SpaceScale> paddingBox = new JComboBox<>(SpaceScale.values());
+    paddingBox.setSelectedItem(padding);
+    paddingBox.addActionListener(
         e -> {
-          padding = paddingSlider.getValue();
+          padding = (SpaceScale) paddingBox.getSelectedItem();
           applyAll();
         });
-    addLabeledRow(panel, gbc, "Padding", paddingSlider);
+    addLabeledRow(panel, gbc, "Padding (SpaceScale)", paddingBox);
 
     JSlider borderWidthSlider = newSlider(0, 6, borderWidth);
     borderWidthSlider.addChangeListener(
@@ -166,7 +164,7 @@ public final class LiveConfigPanel extends JPanel {
           borderWidth = borderWidthSlider.getValue();
           applyAll();
         });
-    addLabeledRow(panel, gbc, "Border width", borderWidthSlider);
+    addLabeledRow(panel, gbc, "Border width (px)", borderWidthSlider);
 
     JCheckBox collapsibleBox =
         newCheck(
@@ -198,7 +196,7 @@ public final class LiveConfigPanel extends JPanel {
 
     JCheckBox showHeaderBox =
         newCheck(
-            "Header",
+            "Header (headline + subhead)",
             showHeader,
             v -> {
               showHeader = v;
@@ -212,27 +210,27 @@ public final class LiveConfigPanel extends JPanel {
               showMedia = v;
               applyAll();
             });
-    JCheckBox showFooterBox =
+    JCheckBox showActionsBox =
         newCheck(
-            "Footer",
-            showFooter,
+            "Actions",
+            showActions,
             v -> {
-              showFooter = v;
+              showActions = v;
               applyAll();
             });
     addRow(panel, gbc, showHeaderBox);
     addRow(panel, gbc, showMediaBox);
-    addRow(panel, gbc, showFooterBox);
+    addRow(panel, gbc, showActionsBox);
 
     gbc.weighty = 1;
     panel.add(Box.createVerticalGlue(), gbc);
 
-    panel.setPreferredSize(new Dimension(260, 1));
+    panel.setPreferredSize(new Dimension(280, 1));
 
     JScrollPane scroll = new JScrollPane(panel);
     scroll.setBorder(null);
     scroll.getVerticalScrollBar().setUnitIncrement(16);
-    scroll.setPreferredSize(new Dimension(280, 1));
+    scroll.setPreferredSize(new Dimension(300, 1));
     return scroll;
   }
 
@@ -276,6 +274,8 @@ public final class LiveConfigPanel extends JPanel {
       focusCard.setVariant(variant);
       focusCard.setInteractionMode(mode);
       focusCard.setElevation(elevation);
+      focusCard.setShape(shape);
+      focusCard.setPadding(padding, padding);
       focusCard.setBorderWidth(borderWidth);
       focusCard.setCollapsible(collapsible);
       focusCard.setCollapsed(collapsed);
@@ -300,16 +300,16 @@ public final class LiveConfigPanel extends JPanel {
         }
         appliedShowMedia = showMedia;
       }
-      if (appliedShowFooter == null || appliedShowFooter != showFooter) {
-        if (showFooter) {
-          if (cachedFooter == null) {
-            cachedFooter = buildFooter();
+      if (appliedShowActions == null || appliedShowActions != showActions) {
+        if (showActions) {
+          if (cachedActions == null) {
+            cachedActions = buildActions();
           }
-          focusCard.setActions(cachedFooter);
+          focusCard.setActions(cachedActions);
         } else {
           focusCard.setActions();
         }
-        appliedShowFooter = showFooter;
+        appliedShowActions = showActions;
       }
     } finally {
       updating = false;
@@ -347,7 +347,7 @@ public final class LiveConfigPanel extends JPanel {
         variant,
         mode,
         elevation,
-        cornerRadius,
+        shape,
         padding,
         borderWidth,
         collapsible,
@@ -355,12 +355,12 @@ public final class LiveConfigPanel extends JPanel {
         disabled,
         showHeader,
         showMedia,
-        showFooter);
+        showActions);
   }
 
   private void notifyListeners() {
     Snapshot s = snapshot();
-    for (Consumer<Snapshot> l : listeners) {
+    for (Consumer<Snapshot> l : new ArrayList<>(listeners)) {
       l.accept(s);
     }
   }
@@ -387,21 +387,21 @@ public final class LiveConfigPanel extends JPanel {
   }
 
   /**
-   * Immutable snapshot of the focus card's configuration. Safe to pass to snippet rendering or any
-   * other listener.
+   * Immutable snapshot of the focus card's V2 configuration. Safe to pass to snippet rendering or
+   * any other listener.
    *
    * @param variant active variant
    * @param mode active interaction mode
    * @param elevation current elevation level
-   * @param cornerRadius current corner radius
-   * @param padding uniform content padding
+   * @param shape current shape step (token-typed)
+   * @param padding uniform content padding step (token-typed)
    * @param borderWidth current border width
    * @param collapsible whether the card supports collapse/expand
    * @param collapsed current collapsed state
    * @param disabled whether the card is disabled
-   * @param showHeader whether the header slot is populated
+   * @param showHeader whether the headline+subhead slots are populated
    * @param showMedia whether the media slot is populated
-   * @param showFooter whether the footer slot is populated
+   * @param showActions whether the bottom actions row is populated
    * @version v0.1.0
    * @since v0.1.0
    */
@@ -409,13 +409,13 @@ public final class LiveConfigPanel extends JPanel {
       CardVariant variant,
       CardInteractionMode mode,
       int elevation,
-      int cornerRadius,
-      int padding,
+      ShapeScale shape,
+      SpaceScale padding,
       int borderWidth,
       boolean collapsible,
       boolean collapsed,
       boolean disabled,
       boolean showHeader,
       boolean showMedia,
-      boolean showFooter) {}
+      boolean showActions) {}
 }

@@ -13,10 +13,10 @@ package. Both directories can be lifted into a separate Maven module unchanged.
 ```java
 DefaultCardListModel<Cycle> model = new DefaultCardListModel<>(cycles);
 CardAdapter<Cycle> adapter = (cycle, idx) ->
-    new ElwhaCard()
+    new ElwhaCard("Cycle #" + (idx + 1))
         .setVariant(CardVariant.OUTLINED)
-        .setHeader("Cycle #" + (idx + 1), cycle.summary())
-        .setBody(buildCycleBody(cycle));
+        .setSubhead(cycle.summary())
+        .setMedia(buildCycleBody(cycle));
 
 ElwhaCardList<Cycle> list = new ElwhaCardList<>(model, adapter)
     .setSelectionMode(CardSelectionMode.SINGLE)

@@ -67,21 +67,26 @@ public final class SnippetPanel extends JPanel {
 
   private static String render(final LiveConfigPanel.Snapshot s) {
     StringBuilder sb = new StringBuilder(512);
-    sb.append("ElwhaCard card = new ElwhaCard()\n");
+    final String ctor = s.showHeader() ? "new ElwhaCard(\"Focus card\")" : "new ElwhaCard()";
+    sb.append("ElwhaCard card = ").append(ctor).append('\n');
     sb.append("    .setVariant(CardVariant.").append(s.variant().name()).append(")\n");
     sb.append("    .setInteractionMode(CardInteractionMode.").append(s.mode().name()).append(")\n");
     sb.append("    .setElevation(").append(s.elevation()).append(")\n");
-    sb.append("    .setCornerRadius(").append(s.cornerRadius()).append(")\n");
-    sb.append("    .setPadding(").append(s.padding()).append(")\n");
+    sb.append("    .setShape(ShapeScale.").append(s.shape().name()).append(")\n");
+    sb.append("    .setPadding(SpaceScale.")
+        .append(s.padding().name())
+        .append(", SpaceScale.")
+        .append(s.padding().name())
+        .append(")\n");
     sb.append("    .setBorderWidth(").append(s.borderWidth()).append(")\n");
     if (s.showHeader()) {
-      sb.append("    .setHeader(\"Focus card\", \"Live-edited example\")\n");
+      sb.append("    .setSubhead(\"Live-edited example\")\n");
     }
     if (s.showMedia()) {
       sb.append("    .setMedia(buildMediaComponent())\n");
     }
-    if (s.showFooter()) {
-      sb.append("    .setFooter(new JButton(\"Primary\"), new JButton(\"Cancel\"))\n");
+    if (s.showActions()) {
+      sb.append("    .setActions(new JButton(\"Primary\"), new JButton(\"Cancel\"))\n");
     }
     if (s.collapsible()) {
       sb.append("    .setCollapsible(true)\n");

@@ -1,139 +1,148 @@
 # ElwhaCard
 
-A standalone, reusable FlatLaf-styled card primitive for Swing. Mirrors the slot-based
-shape of modern web/React card components (header, media, body, footer) and exposes the
-variant taxonomy from Material 3 / shadcn (`ELEVATED`, `OUTLINED`, `FILLED`).
+A token-native, M3-aligned card primitive for Swing. Composes the M3 formal Card slots (`headline` / `subhead` / `supportingText` / `media` / `actions`), four documented OWS extension slots (leading icon, leading actions, trailing actions, disclosure axis), and an M3 top-trailing checked-icon overlay on selection. Background, border, and corner radius come from the inherited [`ElwhaSurface`](../surface/) chassis — Card never paints raw colors.
 
-This package has **no dependencies on application code** — only FlatLaf and standard
-Swing — so the directory can be lifted into a separate Maven module when extracted as a
-library.
+Spec: [`docs/research/elwha-card-v2-spec.md`](../../../../../docs/research/elwha-card-v2-spec.md).
 
 ## Quick start
 
 ```java
-ElwhaCard card = new ElwhaCard()
-    .setVariant(CardVariant.ELEVATED)
-    .setHeader("Recent activity", "Last 30 days")
-    .setBody(new JLabel("12 cycles found across 4 factors."))
-    .setFooter(new JButton("Open"), new JButton("Dismiss"))
+ElwhaCard card = ElwhaCard.elevatedCard("Recent activity")
+    .setSubhead("Last 30 days")
+    .setSupportingText("12 cycles found across 4 factors.")
+    .setActions(new JButton("Open"), new JButton("Dismiss"))
     .setInteractionMode(CardInteractionMode.HOVERABLE);
 ```
 
-Sensible defaults: `ELEVATED` variant, `STATIC` interaction, elevation `1`, padding `16`,
-corner radius from FlatLaf's `Component.arc` key.
+Defaults: `CardVariant.ELEVATED`, `CardInteractionMode.STATIC`, `elevation = 1` (variant-derived), `ShapeScale.MD` (inherited from Surface), `SpaceScale.LG` padding on both axes.
 
-## API reference
+## Variants — `CardVariant`
 
-### Variants — `CardVariant`
+Each variant carries a surface role + resting elevation + dragged elevation + default border treatment, applied automatically on `setVariant(...)`.
 
-| Variant    | Background           | Border        | Shadow |
-|------------|----------------------|---------------|--------|
-| `ELEVATED` | Card / Panel surface | none          | yes    |
-| `OUTLINED` | Card / Panel surface | hairline      | no     |
-| `FILLED`   | Tinted surface       | none          | no     |
+| Variant            | Surface role               | Elevation | Dragged elevation | Border                  |
+| ------------------ | -------------------------- | --------- | ----------------- | ----------------------- |
+| `ELEVATED` (default) | `SURFACE_CONTAINER_LOW`     | 1 dp      | 2 dp              | none                    |
+| `FILLED`           | `SURFACE_CONTAINER_HIGHEST` | 0 dp      | 8 dp              | none                    |
+| `OUTLINED`         | `SURFACE`                   | 0 dp      | 8 dp              | `OUTLINE_VARIANT`, 1 px |
 
-### Interaction modes — `CardInteractionMode`
-
-| Mode         | Cursor | Focusable | Fires `ActionEvent` | Holds selection |
-|--------------|--------|-----------|---------------------|-----------------|
-| `STATIC`     | default | no       | no                  | no              |
-| `HOVERABLE`  | hand    | no       | no                  | no              |
-| `CLICKABLE`  | hand    | yes      | yes (click + Space/Enter) | no       |
-| `SELECTABLE` | hand    | yes      | yes (toggle)        | yes             |
-
-### Slots
+Per-variant static factories — discoverability shorthand:
 
 ```java
-card.setHeader(title);
-card.setHeader(title, subtitle);
-card.setHeader(title, subtitle, leadingIcon);
-card.setLeadingIcon(icon);
-card.setTrailingActions(button1, button2);
-
-card.setMedia(component);
-card.setBody(component);
-
-card.setFooter(component);                         // single component
-card.setFooter(button1, button2);                  // right-aligned actions row
+ElwhaCard.elevatedCard("...");
+ElwhaCard.filledCard("...");
+ElwhaCard.outlinedCard("...");
 ```
 
-### Surface properties
+## Interaction modes — `CardInteractionMode`
+
+| Mode         | Cursor  | Focusable | Fires `ActionEvent`         | Holds selection |
+| ------------ | ------- | --------- | --------------------------- | --------------- |
+| `STATIC`     | default | no        | no                          | no              |
+| `HOVERABLE`  | hand    | no        | no                          | no              |
+| `CLICKABLE`  | hand    | yes       | yes (click + Space / Enter) | no              |
+| `SELECTABLE` | hand    | yes       | yes (toggle)                | yes             |
+
+## Slot vocabulary
+
+### M3 formal slots
 
 ```java
-card.setElevation(0..5);       // ELEVATED variant only — drop-shadow depth
-card.setCornerRadius(int);     // null falls back to FlatLaf Component.arc
-card.setCornerRadius(null);
-card.setPadding(int);          // uniform spacing on all four sides
-card.setPadding(insets);       // per-side override
-card.setBorderWidth(int);
-card.setBorderColor(color);    // null = derived from theme
+card.setHeadline("Project alpha");
+card.setSubhead("Updated 2 minutes ago");
+card.setSupportingText("Long-form text body — HTML-wrapped automatically.");
+card.setMedia(new ChartPanel(...));
+card.setActions(new JButton("Open"), new JButton("Dismiss"));
 ```
 
-### Collapsible / expandable
+### OWS header extensions
 
 ```java
-card.setCollapsible(true)
-    .setCollapsed(true)
-    .setCollapsedSummary(new JLabel("3 items hidden"))
-    .setAnimateCollapse(true);
-
-card.addPropertyChangeListener(ElwhaCard.PROPERTY_COLLAPSED, evt -> ...);
+card.setLeadingIcon(MaterialIcons.info());
+card.setLeadingActions(pinButton, anchorButton);
+card.setTrailingActions(menuButton);
 ```
 
-When `collapsible` is enabled, the header gains a chevron (`▾` / `▸`); clicking the
-header (or pressing `Space`/`Enter` when focused) toggles the state. The optional
-`collapsedSummary` slot is shown only while collapsed.
+Each extension is justified against a concrete OWS use case in [the spec doc](../../../../../docs/research/elwha-card-v2-spec.md) §4.
 
-### Selection (toggle)
+### Disclosure axis
 
 ```java
-card.setInteractionMode(CardInteractionMode.SELECTABLE);
-card.addActionListener(evt -> System.out.println("selected=" + card.isSelected()));
-card.addPropertyChangeListener(ElwhaCard.PROPERTY_SELECTED, evt -> ...);
+card.setCollapsible(true);
+card.setCollapsed(true);
+card.setSummary(new JLabel("3 options hidden"));        // shown per visibility policy
+card.setSummaryVisibility(SummaryVisibility.ALWAYS);    // or COLLAPSED_ONLY (default)
+card.setAnimateCollapse(true);
 ```
 
-Selected cards display an accent-colored border in addition to the variant's normal
-treatment.
+`SummaryVisibility` replaces V1's `setKeepSummaryWhenExpanded(boolean)` escape hatch with a first-class enum.
 
-### Theme awareness
+## Token-bound chassis
 
-Colors and the corner radius are read from `UIManager` keys — the card repaints
-correctly when FlatLaf themes are switched. No caller code is required.
+All paint axes are token-typed; raw `Color` / `int` setters from V1 are gone.
 
-## Variant gallery & live editor
-
-Run the playground for an interactive tour:
-
-```
-mvn -q exec:java \
-  -Dexec.mainClass=com.owspfm.elwha.card.playground.ElwhaCardPlayground
+```java
+card.setSurfaceRole(ColorRole.SURFACE_CONTAINER);       // inherited from ElwhaSurface
+card.setShape(ShapeScale.LG);                           // inherited
+card.setBorderWidth(2);                                  // inherited
+card.setPadding(SpaceScale.LG, SpaceScale.MD);          // Card-level (token-typed)
+card.setElevation(3);                                    // 0..MAX_ELEVATION
 ```
 
-The playground shows every variant + every mode + collapsed/expanded states side-by-side
-on the left, and a live-editing focus card with code-snippet output on the right.
+Card is **variant-bearing**, so per [#62 doctrine §4](../../../../../docs/development/component-api-conventions.md), it does not advertise `setBorderRole(ColorRole)` — the border role is variant-derived. To opt into a different border, change the variant.
 
-A minimal smoke-test demo (`ElwhaCardDemo`) is also included in this package for use as a
-developer-only entry point.
+## Selection — M3 checked-icon overlay
 
-## See also: `ElwhaCardList`
+`setSelected(true)` paints a 24 dp `PRIMARY`-filled circle in the top-trailing corner with an `ON_PRIMARY` `check` glyph centered inside. Variant- and interaction-mode-agnostic — visible on `STATIC` cards too (V1's surface-tint approach was not).
 
-For lists of cards, see the sibling [`com.owspfm.elwha.card.list`](./list/README.md)
-package — it provides a reusable, model-driven `ElwhaCardList<T>` with selection,
-drag-to-reorder, filter, sort, empty/loading states, fade animations, and full
-keyboard navigation, all backed by an observable model and a single-method adapter.
-The playground includes a dedicated **ElwhaCardList** tab that exercises every option
-live alongside the existing ElwhaCard tab.
+```java
+card.setSelected(true);
+card.addSelectionChangeListener(evt -> updateModel(card.isSelected()));
+```
 
-## Extracting to a separate library
+## Listeners
 
-The package was designed for a clean lift-and-shift:
+```java
+card.addActionListener(evt -> openProject());                // CLICKABLE / SELECTABLE only
+card.addSelectionChangeListener(evt -> ...);                 // PROPERTY_SELECTED
+card.addExpansionChangeListener(evt -> ...);                 // PROPERTY_COLLAPSED
+```
 
-1. Move the `com/owspfm/elwha/card` directory into a new Maven module's
-   `src/main/java/`.
-2. Move the `playground` sub-package into the new module's test or examples source root.
-3. Rename the package root if you prefer a non-OWS namespace (e.g.,
-   `dev.charlesbryan.flatcard`); the only references are intra-package.
-4. Add `com.formdev:flatlaf` as the only runtime dependency.
+`addSelectionChangeListener` / `addExpansionChangeListener` are scoped property-change listeners per the [#62 doctrine](../../../../../docs/development/component-api-conventions.md) — they replace V1's generic `onChange(String, PCL)`.
 
-There are no Singleton, static factory, or app-scope dependencies to unwind — every
-collaborator is constructed directly by the caller.
+## Drag plumbing
+
+`ElwhaCardList<T>` uses `setDragged(boolean)` to switch the card to its variant's dragged elevation during a reorder operation, and `cancelPendingClick()` to suppress an in-flight header toggle once a drag commits.
+
+## Carousel-readiness contract
+
+Card cooperates with externally-imposed widths, exposes its `getShape()` for parent masking, and **never** installs internal scroll. Expansion grows the card; sibling layout reacts as the parent's `LayoutManager` allows. Spec §9 for the full contract.
+
+## Migration from V1
+
+| V1 method                                       | V2 replacement                                              |
+| ----------------------------------------------- | ----------------------------------------------------------- |
+| `setHeader(String)`                             | `setHeadline(String)`                                       |
+| `setHeader(String, String)`                     | `setHeadline(...).setSubhead(...)`                          |
+| `setHeader(String, String, Icon)`               | three independent setters (no silent leading-icon clearing) |
+| `setBody(JComponent)`                           | `setSupportingText(String)` or `add(Component)` directly    |
+| `setFooter(JComponent)` / `setFooter(...)`      | `setActions(Component...)`                                  |
+| `setCornerRadius(Integer)`                      | `setShape(ShapeScale)` (inherited)                          |
+| `getEffectiveCornerRadius()`                    | `getShape()` (inherited)                                    |
+| `setPadding(Insets)` / `setPadding(int)`        | `setPadding(SpaceScale, SpaceScale)`                        |
+| `setBorderColor(Color)`                         | variant change (border role is variant-derived)             |
+| `setSurfaceColor(Color)`                        | `setSurfaceRole(ColorRole)` (inherited)                     |
+| `setCollapsedSummary(JComponent)`               | `setSummary(JComponent)`                                    |
+| `setKeepSummaryWhenExpanded(boolean)`           | `setSummaryVisibility(SummaryVisibility.ALWAYS)`            |
+| `getTitleLabel()` / `getSubtitleLabel()`        | **dropped** — no replacement                                |
+| `onChange(String, PCL)`                         | `addSelectionChangeListener` / `addExpansionChangeListener` |
+| `CardVariant.GHOST` / `WARM_ACCENT`             | **dropped** — use one of the three V2 variants              |
+
+## Playground
+
+```bash
+mvn -q compile exec:java \
+  -Dexec.mainClass="com.owspfm.elwha.card.playground.ElwhaCardPlayground"
+```
+
+Three top-level tabs: **ElwhaCard** (gallery + live-config + rendered snippet), **ElwhaCardList** (showcase), **Cursors** (drag-handle cursor reference).

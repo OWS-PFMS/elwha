@@ -59,9 +59,9 @@ import javax.swing.event.MouseInputAdapter;
  * <pre>{@code
  * DefaultCardListModel<Cycle> model = new DefaultCardListModel<>(cycles);
  * CardAdapter<Cycle> adapter = (cycle, idx) ->
- *     new ElwhaCard()
- *         .setHeader("Cycle #" + (idx + 1), cycle.summary())
- *         .setBody(buildCycleBody(cycle));
+ *     new ElwhaCard("Cycle #" + (idx + 1))
+ *         .setSubhead(cycle.summary())
+ *         .setMedia(buildCycleBody(cycle));
  *
  * ElwhaCardList<Cycle> list = new ElwhaCardList<>(model, adapter)
  *     .setSelectionMode(CardSelectionMode.SINGLE)

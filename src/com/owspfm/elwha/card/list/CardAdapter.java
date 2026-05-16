@@ -14,10 +14,10 @@ import com.owspfm.elwha.card.ElwhaCard;
  *
  * <pre>{@code
  * CardAdapter<Cycle> adapter = (cycle, index) ->
- *     new ElwhaCard()
+ *     new ElwhaCard("Cycle #" + (index + 1))
  *         .setVariant(CardVariant.OUTLINED)
- *         .setHeader("Cycle #" + (index + 1), cycle.summary())
- *         .setBody(buildCycleBody(cycle));
+ *         .setSubhead(cycle.summary())
+ *         .setMedia(buildCycleBody(cycle));
  * }</pre>
  *
  * @param <T> the item type

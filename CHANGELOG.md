@@ -54,8 +54,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
     - **Dragged elevation:** new `setDragged(boolean)` / `isDragged()` hook used by `ElwhaCardList` reorder plumbing; effective elevation switches to the variant's dragged value (Elevated→2, Filled→8, Outlined→8 dp) and restores on drop.
     - **Listeners:** named per #62 doctrine — `addSelectionChangeListener(PCL)` / `addExpansionChangeListener(PCL)` scoped to `PROPERTY_SELECTED` and `PROPERTY_COLLAPSED`. V1's generic `onChange(String, PCL)` is gone.
     - **Construction:** convenience ctor `new ElwhaCard(String headline)`; three per-variant static factories `elevatedCard(String)` / `filledCard(String)` / `outlinedCard(String)`.
-    - **Playgrounds (`ElwhaCardPlayground`, `ElwhaCardListShowcase`, `GalleryPanel`, `CycleCardExample`, `ElwhaCardDemo`, `LiveConfigPanel`, `ElwhaCardListDemo`)** are migrated minimally to compile against the V2 API; the live config sliders for "corner radius" and "padding" no longer drive the card (their values stay in the snapshot for the snippet panel's render, which still emits the V1 strings). Full UX polish + README + CHANGELOG-migration table lands in [#66](https://github.com/OWS-PFMS/elwha/issues/66).
+    - **Playgrounds, demos, and READMEs migrated** ([#66](https://github.com/OWS-PFMS/elwha/issues/66)). `LiveConfigPanel`'s corner-radius and padding sliders become `ShapeScale` and `SpaceScale` combo boxes that drive the card via the V2 token-typed setters; the "Footer" toggle becomes "Actions"; `Snapshot` now carries `ShapeScale` + `SpaceScale` instead of raw `int`s. `SnippetPanel` emits V2 calls (`setHeadline(...).setSubhead(...)` instead of `setHeader(...)`, `setActions(...)` instead of `setFooter(...)`, token-typed `setShape` / `setPadding`). `GalleryPanel`, `CycleCardExample`, `ElwhaCardDemo`, `ElwhaCardListShowcase`, `ElwhaCardListDemo` migrated to V2 slot vocabulary. `card/README.md` rewritten for the V2 API with the full V1 → V2 migration table; `card/list/README.md` snippet updated; `CardAdapter` and `ElwhaCardList` javadoc examples updated.
     - **`ElwhaCardList<T>` is untouched** — V2 preserves every API surface ElwhaCardList depends on (`setInteractionMode`, `setSelected`, `setTrailingActions`, `cancelPendingClick`).
+    - **V1 → V2 migration table** (mirrored from [`docs/research/elwha-card-v2-spec.md`](docs/research/elwha-card-v2-spec.md) §8 — the canonical source):
+
+      | V1 method | V2 replacement |
+      | --- | --- |
+      | `setHeader(String)` | `setHeadline(String)` |
+      | `setHeader(String, String)` | `setHeadline(...).setSubhead(...)` |
+      | `setHeader(String, String, Icon)` | three independent setters — no silent leading-icon clearing |
+      | `setBody(JComponent)` | `setSupportingText(String)` for text, or `add(Component)` for arbitrary children |
+      | `setFooter(JComponent)` / `setFooter(Component...)` | `setActions(Component...)` |
+      | `setCornerRadius(Integer)` | `setShape(ShapeScale)` (inherited from Surface) |
+      | `getEffectiveCornerRadius()` | `getShape()` (inherited) |
+      | `setPadding(Insets)` / `setPadding(int)` | `setPadding(SpaceScale, SpaceScale)` |
+      | `setBorderColor(Color)` | variant change (border role is variant-derived) |
+      | `setSurfaceColor(Color)` | `setSurfaceRole(ColorRole)` (inherited from Surface) |
+      | `setCollapsedSummary(JComponent)` | `setSummary(JComponent)` |
+      | `setKeepSummaryWhenExpanded(boolean)` / `isKeepSummaryWhenExpanded()` | `setSummaryVisibility(SummaryVisibility)` / `getSummaryVisibility()` |
+      | `getTitleLabel()` / `getSubtitleLabel()` | **dropped** — no replacement |
+      | `onChange(String, PCL)` | `addSelectionChangeListener(PCL)` / `addExpansionChangeListener(PCL)` |
+      | `CardVariant.GHOST` / `CardVariant.WARM_ACCENT` | **dropped** — use one of the three V2 variants |
 - **Effective-value getters renamed to bare `getX()`** ([#62](https://github.com/OWS-PFMS/elwha/issues/62)) — **breaking, pre-1.0, no shims.** Per the locked getter-naming rule (`docs/development/component-api-conventions.md` §1), bare `getX()` always returns the effective (resolved) value; there is no parallel `getEffectiveX()`.
     - `ElwhaChip.getEffectiveShape()` → `getShape()`
     - `ElwhaChip.getEffectiveSurfaceRole()` → `getSurfaceRole()`
