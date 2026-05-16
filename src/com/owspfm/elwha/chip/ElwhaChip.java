@@ -672,7 +672,7 @@ public class ElwhaChip extends JPanel {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ColorRole getEffectiveSurfaceRole() {
+  public ColorRole getSurfaceRole() {
     return surfaceRoleOverride != null ? surfaceRoleOverride : variant.surfaceRole();
   }
 
@@ -699,7 +699,7 @@ public class ElwhaChip extends JPanel {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ShapeScale getEffectiveShape() {
+  public ShapeScale getShape() {
     return shape;
   }
 
@@ -752,6 +752,18 @@ public class ElwhaChip extends JPanel {
   }
 
   /**
+   * Returns the resting border-stroke width in pixels. Focus bumps the effective stroke width to
+   * {@code 2}; the value returned here is only the resting width.
+   *
+   * @return the resting stroke width
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public int getBorderWidth() {
+    return borderWidth;
+  }
+
+  /**
    * Resolves the effective text + icon foreground color — the {@code on}-pair of the effective
    * surface role (or {@link ColorRole#ON_SURFACE} when the surface role is null / unpaired). Always
    * correct by construction; there is no per-instance foreground override.
@@ -761,7 +773,7 @@ public class ElwhaChip extends JPanel {
    * @since v0.1.0
    */
   protected Color resolveForegroundColor() {
-    ColorRole basis = getEffectiveSurfaceRole();
+    ColorRole basis = getSurfaceRole();
     if (basis == null) {
       basis = ColorRole.SURFACE;
     }
@@ -1112,7 +1124,7 @@ public class ElwhaChip extends JPanel {
     final boolean interactive = interactionMode != ChipInteractionMode.STATIC && isEnabled();
     final boolean focused = isFocusOwner() && interactive;
 
-    final ColorRole surfaceRole = getEffectiveSurfaceRole();
+    final ColorRole surfaceRole = getSurfaceRole();
     final StateLayer overlay = activeOverlay(interactive);
     final ColorRole borderRole = effectiveBorderRole(focused);
     final float borderStroke = focused ? Math.max(borderWidth, FOCUSED_BORDER_WIDTH) : borderWidth;

@@ -192,7 +192,7 @@ public final class ChipPlaygroundPanels {
 
     bar.add(new JLabel("Shape:"));
     final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
-    shapeBox.setSelectedItem(target.getEffectiveShape());
+    shapeBox.setSelectedItem(target.getShape());
     shapeBox.addActionListener(e -> target.setShape((ShapeScale) shapeBox.getSelectedItem()));
     bar.add(shapeBox);
 

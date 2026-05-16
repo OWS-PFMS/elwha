@@ -148,6 +148,58 @@ public class ElwhaIconButton extends JComponent {
     initInteraction();
   }
 
+  // ---------------------------------------------------------- factory presets
+
+  /**
+   * Creates an M3 filled icon-button preset — {@link IconButtonVariant#FILLED}. Returns a fully
+   * further-configurable button; every preset choice is overridable through the normal setters.
+   *
+   * @param icon the resting icon (may be {@code null} for deferred install)
+   * @return a configured filled icon-button
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static ElwhaIconButton filledIconButton(final Icon icon) {
+    return new ElwhaIconButton(icon).setVariant(IconButtonVariant.FILLED);
+  }
+
+  /**
+   * Creates an M3 filled-tonal icon-button preset — {@link IconButtonVariant#FILLED_TONAL}.
+   *
+   * @param icon the resting icon (may be {@code null} for deferred install)
+   * @return a configured filled-tonal icon-button
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static ElwhaIconButton filledTonalIconButton(final Icon icon) {
+    return new ElwhaIconButton(icon).setVariant(IconButtonVariant.FILLED_TONAL);
+  }
+
+  /**
+   * Creates an M3 outlined icon-button preset — {@link IconButtonVariant#OUTLINED}.
+   *
+   * @param icon the resting icon (may be {@code null} for deferred install)
+   * @return a configured outlined icon-button
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static ElwhaIconButton outlinedIconButton(final Icon icon) {
+    return new ElwhaIconButton(icon).setVariant(IconButtonVariant.OUTLINED);
+  }
+
+  /**
+   * Creates an M3 standard icon-button preset — {@link IconButtonVariant#STANDARD}, the
+   * transparent/glyph-only treatment.
+   *
+   * @param icon the resting icon (may be {@code null} for deferred install)
+   * @return a configured standard icon-button
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static ElwhaIconButton standardIconButton(final Icon icon) {
+    return new ElwhaIconButton(icon).setVariant(IconButtonVariant.STANDARD);
+  }
+
   // -------------------------------------------------------------- variant
 
   /**
@@ -318,7 +370,7 @@ public class ElwhaIconButton extends JComponent {
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ColorRole getEffectiveSurfaceRole() {
+  public ColorRole getSurfaceRole() {
     return surfaceRoleOverride != null ? surfaceRoleOverride : variant.surfaceRole();
   }
 
@@ -602,7 +654,7 @@ public class ElwhaIconButton extends JComponent {
         && interactionMode == IconButtonInteractionMode.SELECTABLE) {
       return ColorRole.PRIMARY.resolve();
     }
-    final ColorRole effective = getEffectiveSurfaceRole();
+    final ColorRole effective = getSurfaceRole();
     if (effective != null) {
       return effective.on().orElse(ColorRole.ON_SURFACE_VARIANT).resolve();
     }
@@ -784,7 +836,7 @@ public class ElwhaIconButton extends JComponent {
     final int arc = shape.px();
     final boolean focused = isFocusOwner() && isEnabled();
 
-    final ColorRole surfaceRole = getEffectiveSurfaceRole();
+    final ColorRole surfaceRole = getSurfaceRole();
     final StateLayer overlay = activeOverlay();
     final ColorRole borderRole = effectiveBorderRole(focused);
     final float borderStroke = focused ? Math.max(borderWidth, FOCUSED_BORDER_WIDTH) : borderWidth;
