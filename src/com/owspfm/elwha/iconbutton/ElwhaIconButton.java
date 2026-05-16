@@ -229,8 +229,17 @@ public class ElwhaIconButton extends JComponent {
    * both states (and the selected indicator falls through to the state-layer overlay and — for
    * {@link IconButtonVariant#STANDARD} — the primary foreground tint).
    *
-   * @param resting the icon rendered when not selected
-   * @param selected the icon rendered when selected, or {@code null} to reuse {@code resting}
+   * <p><strong>Press preview.</strong> The selected icon also flashes during a live press
+   * regardless of interaction mode. For {@link IconButtonInteractionMode#CLICKABLE} buttons this is
+   * pure tactile feedback (the fill momentarily punches in and reverts on release); for {@link
+   * IconButtonInteractionMode#SELECTABLE} buttons it doubles as a toggle preview (the user sees the
+   * toggled-on look on press, and on release the icon either stays filled if the toggle flipped on,
+   * or returns to outline if the toggle flipped off — no flicker either way). Pass {@code null} for
+   * {@code selected} to opt out (the press still composites a state-layer overlay regardless).
+   *
+   * @param resting the icon rendered when not selected and not being pressed
+   * @param selected the icon rendered when selected or pressed, or {@code null} to reuse {@code
+   *     resting}
    * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
@@ -268,7 +277,11 @@ public class ElwhaIconButton extends JComponent {
   }
 
   private Icon currentIcon() {
-    if (selected && selectedIcon != null) {
+    // Show the selected icon when the button is selected OR being pressed — the press case gives a
+    // tactile press-preview for CLICKABLE buttons (the fill flashes during the click) and a
+    // smooth-transition preview for SELECTABLE buttons (the fill appears on press and stays after
+    // release if the toggle flipped on, or reverts to outline if the toggle flipped off).
+    if (selectedIcon != null && (selected || pressed)) {
       return selectedIcon;
     }
     return restingIcon;
