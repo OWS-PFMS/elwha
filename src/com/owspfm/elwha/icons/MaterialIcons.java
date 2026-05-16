@@ -22,11 +22,11 @@ import javax.swing.UIManager;
  *
  * <p><strong>Per-glyph optical centering varies.</strong> Material Symbols are designed for
  * text-baseline alignment in font usage, not optical centering when consumed as standalone
- * round-bbox icons. The {@code favorite} glyph in particular has a slightly low optical bias in
- * its 24×24 viewBox (the heart artwork's bbox center sits a fraction of a pixel below geometric
- * center) — visible as a faint asymmetry inside an {@link
- * com.owspfm.elwha.iconbutton.ElwhaIconButton}. Accepted as an upstream-asset characteristic; not
- * worth a per-icon nudge API on the consuming components.
+ * round-bbox icons. The {@code favorite} glyph in particular has a slightly low optical bias in its
+ * 24×24 viewBox (the heart artwork's bbox center sits a fraction of a pixel below geometric center)
+ * — visible as a faint asymmetry inside an {@link com.owspfm.elwha.iconbutton.ElwhaIconButton}.
+ * Accepted as an upstream-asset characteristic; not worth a per-icon nudge API on the consuming
+ * components.
  *
  * @author Charles Bryan
  * @version v0.1.0
