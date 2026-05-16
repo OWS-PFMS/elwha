@@ -404,7 +404,7 @@ public final class IconButtonPlaygroundPanels {
     return matrix;
   }
 
-  private static JToolBar buildToolbarMockup() {
+  private static JToolBar buildToolbarMockup(final ShapeScale shape) {
     final JToolBar toolBar = new JToolBar();
     toolBar.setFloatable(false);
     toolBar.setRollover(true);
@@ -413,29 +413,35 @@ public final class IconButtonPlaygroundPanels {
 
     // Independent toggles — each unrelated affordance tracks its own state.
     toolBar.add(
-        makeToggleButton(size, "Pin (independent toggle)", MaterialIcons.pair("push_pin", iconPx)));
+        makeToggleButton(
+            size, shape, "Pin (independent toggle)", MaterialIcons.pair("push_pin", iconPx)));
     toolBar.add(
         makeToggleButton(
-            size, "Anchor (independent toggle)", MaterialIcons.pair("anchor", iconPx)));
+            size, shape, "Anchor (independent toggle)", MaterialIcons.pair("anchor", iconPx)));
     toolBar.add(
         makeToggleButton(
-            size, "Visibility (independent toggle)", MaterialIcons.pair("visibility", iconPx)));
-    toolBar.add(
-        makeToggleButton(size, "Edit (independent toggle)", MaterialIcons.pair("edit", iconPx)));
+            size,
+            shape,
+            "Visibility (independent toggle)",
+            MaterialIcons.pair("visibility", iconPx)));
     toolBar.add(
         makeToggleButton(
-            size, "Delete (independent toggle)", MaterialIcons.pair("delete", iconPx)));
+            size, shape, "Edit (independent toggle)", MaterialIcons.pair("edit", iconPx)));
+    toolBar.add(
+        makeToggleButton(
+            size, shape, "Delete (independent toggle)", MaterialIcons.pair("delete", iconPx)));
     toolBar.addSeparator();
 
     // Mandatory radio group via IconButtonGroup — exactly one selected at all times.
     final ElwhaIconButton favorite =
-        makeToggleButton(size, "Favorite (radio group)", MaterialIcons.pair("favorite", iconPx));
+        makeToggleButton(
+            size, shape, "Favorite (radio group)", MaterialIcons.pair("favorite", iconPx));
     final ElwhaIconButton star =
-        makeToggleButton(size, "Star (radio group)", MaterialIcons.pair("star", iconPx));
+        makeToggleButton(size, shape, "Star (radio group)", MaterialIcons.pair("star", iconPx));
     final ElwhaIconButton info =
-        makeToggleButton(size, "Info (radio group)", MaterialIcons.pair("info", iconPx));
+        makeToggleButton(size, shape, "Info (radio group)", MaterialIcons.pair("info", iconPx));
     final ElwhaIconButton help =
-        makeToggleButton(size, "Help (radio group)", MaterialIcons.pair("help", iconPx));
+        makeToggleButton(size, shape, "Help (radio group)", MaterialIcons.pair("help", iconPx));
     favorite.setSelected(true); // initial selection — required for a mandatory group
     new IconButtonGroup(true).add(favorite).add(star).add(info).add(help);
     toolBar.add(favorite);
@@ -446,11 +452,15 @@ public final class IconButtonPlaygroundPanels {
   }
 
   private static ElwhaIconButton makeToggleButton(
-      final IconButtonSize size, final String tooltip, final MaterialIcons.IconPair pair) {
+      final IconButtonSize size,
+      final ShapeScale shape,
+      final String tooltip,
+      final MaterialIcons.IconPair pair) {
     final ElwhaIconButton button =
         new ElwhaIconButton(pair.resting())
             .setVariant(IconButtonVariant.STANDARD)
             .setButtonSize(size)
+            .setShape(shape)
             .setInteractionMode(IconButtonInteractionMode.SELECTABLE)
             .setIcons(pair.resting(), pair.filled());
     button.setToolTipText(tooltip);
