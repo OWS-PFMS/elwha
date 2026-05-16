@@ -20,6 +20,14 @@ import javax.swing.UIManager;
  * — Rounded, 400, fill 0, 20px — to keep visual consistency) and add a lookup here. Material
  * Symbols are licensed Apache-2.0; see the project LICENSE-NOTICES file for attribution.
  *
+ * <p><strong>Per-glyph optical centering varies.</strong> Material Symbols are designed for
+ * text-baseline alignment in font usage, not optical centering when consumed as standalone
+ * round-bbox icons. The {@code favorite} glyph in particular has a slightly low optical bias in its
+ * 24×24 viewBox (the heart artwork's bbox center sits a fraction of a pixel below geometric center)
+ * — visible as a faint asymmetry inside an {@link com.owspfm.elwha.iconbutton.ElwhaIconButton}.
+ * Accepted as an upstream-asset characteristic; not worth a per-icon nudge API on the consuming
+ * components.
+ *
  * @author Charles Bryan
  * @version v0.1.0
  * @since v0.1.0
@@ -91,7 +99,7 @@ public final class MaterialIcons {
     return load("push_pin_fill", size);
   }
 
-  /** Trash / delete glyph. */
+  /** Trash / delete glyph (outline). */
   public static FlatSVGIcon delete() {
     return delete(DEFAULT_SIZE);
   }
@@ -108,7 +116,24 @@ public final class MaterialIcons {
     return load("delete", size);
   }
 
-  /** Pencil / edit glyph. */
+  /** Trash / delete glyph (filled / solid) — pairs with {@link #delete()} as the "active" state. */
+  public static FlatSVGIcon deleteFilled() {
+    return deleteFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #deleteFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon deleteFilled(final int size) {
+    return load("delete_fill", size);
+  }
+
+  /** Pencil / edit glyph (outline). */
   public static FlatSVGIcon edit() {
     return edit(DEFAULT_SIZE);
   }
@@ -125,7 +150,24 @@ public final class MaterialIcons {
     return load("edit", size);
   }
 
-  /** Info "i" glyph. */
+  /** Pencil / edit glyph (filled / solid) — pairs with {@link #edit()} as the "active" state. */
+  public static FlatSVGIcon editFilled() {
+    return editFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #editFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon editFilled(final int size) {
+    return load("edit_fill", size);
+  }
+
+  /** Info "i" glyph (outline). */
   public static FlatSVGIcon info() {
     return info(DEFAULT_SIZE);
   }
@@ -142,7 +184,58 @@ public final class MaterialIcons {
     return load("info", size);
   }
 
-  /** Heart / favorite glyph. */
+  /** Info "i" glyph (filled / solid) — pairs with {@link #info()} as the "active" state. */
+  public static FlatSVGIcon infoFilled() {
+    return infoFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #infoFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon infoFilled(final int size) {
+    return load("info_fill", size);
+  }
+
+  /** Help "?" glyph (outline). */
+  public static FlatSVGIcon help() {
+    return help(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #help()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon help(final int size) {
+    return load("help", size);
+  }
+
+  /** Help "?" glyph (filled / solid) — pairs with {@link #help()} as the "active" state. */
+  public static FlatSVGIcon helpFilled() {
+    return helpFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #helpFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon helpFilled(final int size) {
+    return load("help_fill", size);
+  }
+
+  /** Heart / favorite glyph (outline). */
   public static FlatSVGIcon favorite() {
     return favorite(DEFAULT_SIZE);
   }
@@ -159,7 +252,26 @@ public final class MaterialIcons {
     return load("favorite", size);
   }
 
-  /** Five-point star glyph. */
+  /**
+   * Heart / favorite glyph (filled / solid) — pairs with {@link #favorite()} as the "active" state.
+   */
+  public static FlatSVGIcon favoriteFilled() {
+    return favoriteFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #favoriteFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon favoriteFilled(final int size) {
+    return load("favorite_fill", size);
+  }
+
+  /** Five-point star glyph (outline). */
   public static FlatSVGIcon star() {
     return star(DEFAULT_SIZE);
   }
@@ -174,6 +286,23 @@ public final class MaterialIcons {
    */
   public static FlatSVGIcon star(final int size) {
     return load("star", size);
+  }
+
+  /** Five-point star glyph (filled / solid) — pairs with {@link #star()} as the "active" state. */
+  public static FlatSVGIcon starFilled() {
+    return starFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #starFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon starFilled(final int size) {
+    return load("star_fill", size);
   }
 
   /** Plus / add glyph. */
@@ -210,7 +339,7 @@ public final class MaterialIcons {
     return load("check", size);
   }
 
-  /** Eye / visibility glyph. */
+  /** Eye / visibility glyph (outline). */
   public static FlatSVGIcon visibility() {
     return visibility(DEFAULT_SIZE);
   }
@@ -225,6 +354,26 @@ public final class MaterialIcons {
    */
   public static FlatSVGIcon visibility(final int size) {
     return load("visibility", size);
+  }
+
+  /**
+   * Eye / visibility glyph (filled / solid) — pairs with {@link #visibility()} as the "active"
+   * state.
+   */
+  public static FlatSVGIcon visibilityFilled() {
+    return visibilityFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #visibilityFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon visibilityFilled(final int size) {
+    return load("visibility_fill", size);
   }
 
   /** Anchor glyph (outline) — used for "fixed/locked to position" affordances. */
@@ -377,4 +526,62 @@ public final class MaterialIcons {
     icon.setColorFilter(THEME_FILTER);
     return icon;
   }
+
+  /**
+   * Returns the outline / fill pair for a Material Symbol that has both axes bundled — the
+   * canonical M3 toggle-icon-swap pattern. The {@code filled} variant is resolved by appending
+   * {@code _fill} to the base name (so {@code pair("push_pin")} loads {@code push_pin.svg} and
+   * {@code push_pin_fill.svg}). Both icons render at {@link #DEFAULT_SIZE}.
+   *
+   * <p>Currently bundled outline/fill pairs: {@code push_pin}, {@code anchor}, {@code favorite},
+   * {@code star}, {@code info}, {@code help}, {@code delete}, {@code edit}, {@code visibility}.
+   * Calling {@code pair} on a name that lacks a bundled {@code _fill} variant throws when the
+   * missing SVG is first painted, not on construction — see {@link FlatSVGIcon}'s lazy-load
+   * semantics.
+   *
+   * <p><strong>Why a helper, not an auto-detect inside {@link
+   * com.owspfm.elwha.iconbutton.ElwhaIconButton}.</strong> The button stays icon-library-agnostic
+   * (no import of {@code com.owspfm.elwha.icons.*}); the outline/fill convention lives here, in the
+   * icon library that actually knows about Material Symbol naming. Consumers using non-Material
+   * icons supply their own pair via the existing {@code setIcons(resting, selected)} setter.
+   *
+   * @param name the bare Material Symbol name (no path, no extension, no {@code _fill} suffix)
+   * @return the resting + filled pair
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static IconPair pair(final String name) {
+    return pair(name, DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #pair(String)}.
+   *
+   * @param name the bare Material Symbol name
+   * @param size pixel size for both icons in the returned pair
+   * @return the resting + filled pair at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static IconPair pair(final String name, final int size) {
+    return new IconPair(load(name, size), load(name + "_fill", size));
+  }
+
+  /**
+   * The outline / fill icon pair returned by {@link #pair(String)}. Use with {@link
+   * com.owspfm.elwha.iconbutton.ElwhaIconButton#setIcons(javax.swing.Icon, javax.swing.Icon)
+   * setIcons}:
+   *
+   * <pre>{@code
+   * MaterialIcons.IconPair p = MaterialIcons.pair("push_pin");
+   * button.setIcons(p.resting(), p.filled());
+   * }</pre>
+   *
+   * @param resting the resting (outline) icon — rendered when the button is unselected
+   * @param filled the filled icon — rendered when the button is selected
+   * @author Charles Bryan
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public record IconPair(FlatSVGIcon resting, FlatSVGIcon filled) {}
 }

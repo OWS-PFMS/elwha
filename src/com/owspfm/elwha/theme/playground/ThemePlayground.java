@@ -1,6 +1,7 @@
 package com.owspfm.elwha.theme.playground;
 
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
+import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
 import com.owspfm.elwha.theme.ColorRole;
@@ -61,6 +62,10 @@ import javax.swing.tree.DefaultMutableTreeNode;
  *   <li><strong>Chip</strong> — the canonical chip playground panels (variant gallery + live list),
  *       reused from {@link ChipPlaygroundPanels} so the standalone {@code ElwhaChipPlayground} and
  *       this tab stay in lockstep.
+ *   <li><strong>Icon Button</strong> — the variant gallery and toggle-examples panels for {@link
+ *       com.owspfm.elwha.iconbutton.ElwhaIconButton}, reused from {@link
+ *       IconButtonPlaygroundPanels} so the standalone {@code ElwhaIconButtonPlayground} and this
+ *       tab stay in lockstep.
  *   <li><strong>Surface</strong> — the {@code ColorRole × ShapeScale} matrix and live-control panel
  *       for {@link com.owspfm.elwha.surface.ElwhaSurface}, reused from {@link
  *       SurfacePlaygroundPanels} so the standalone {@code ElwhaSurfacePlayground} and this tab stay
@@ -109,6 +114,7 @@ public final class ThemePlayground {
     tabs.addTab("Type Scale", new JScrollPane(buildTypeTab()));
     tabs.addTab("Swing Comps", new JScrollPane(buildSwingCompsTab()));
     tabs.addTab("Chip", buildChipTab());
+    tabs.addTab("Icon Button", buildIconButtonTab());
     tabs.addTab("Surface", buildSurfaceTab());
     root.add(tabs, java.awt.BorderLayout.CENTER);
 
@@ -235,6 +241,20 @@ public final class ThemePlayground {
     JTabbedPane inner = new JTabbedPane();
     inner.addTab("Variant gallery", new JScrollPane(ChipPlaygroundPanels.buildVariantGallery()));
     inner.addTab("Live list", ChipPlaygroundPanels.buildLiveListPanel());
+    return inner;
+  }
+
+  // --- Icon Button tab — reuses IconButtonPlaygroundPanels so this and the standalone playground
+  // stay synced. ---
+
+  private JComponent buildIconButtonTab() {
+    JTabbedPane inner = new JTabbedPane();
+    inner.addTab(
+        "Variant gallery", new JScrollPane(IconButtonPlaygroundPanels.buildVariantGalleryPanel()));
+    inner.addTab(
+        "Toggle examples", new JScrollPane(IconButtonPlaygroundPanels.buildToggleExamplesPanel()));
+    inner.addTab("Sizes", new JScrollPane(IconButtonPlaygroundPanels.buildSizesPanel()));
+    inner.addTab("Live", IconButtonPlaygroundPanels.buildLivePanel());
     return inner;
   }
 
