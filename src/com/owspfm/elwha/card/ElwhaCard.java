@@ -1,6 +1,7 @@
 package com.owspfm.elwha.card;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
@@ -280,7 +281,7 @@ public class ElwhaCard extends ElwhaSurface {
     trailingActionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, INNER_GAP_PX / 2, 0));
     trailingActionsPanel.setOpaque(false);
     trailingActionsPanel.setVisible(false);
-    chevronLabel = new JLabel(new ChevronIcon(collapsed));
+    chevronLabel = new JLabel(chevronIcon(collapsed));
     chevronLabel.setHorizontalAlignment(SwingConstants.CENTER);
     chevronLabel.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
     chevronLabel.setVisible(false);
@@ -822,20 +823,21 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
-   * Replaces the leading actions row — sits between the leading icon and the headline. Pass an
-   * empty array (or {@code null}) to clear.
+   * Replaces the leading actions row — sits between the leading icon and the headline. Typed to
+   * {@link ElwhaIconButton} per the M3 Top App Bar convention for header trailing/leading
+   * affordances. Pass an empty array (or {@code null}) to clear.
    *
-   * @param actions zero or more action components rendered left to right
+   * @param actions zero or more {@link ElwhaIconButton}s rendered left to right
    * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setLeadingActions(final Component... actions) {
+  public ElwhaCard setLeadingActions(final ElwhaIconButton... actions) {
     leadingActionsPanel.removeAll();
     if (actions != null) {
-      for (Component c : actions) {
-        if (c != null) {
-          leadingActionsPanel.add(c);
+      for (ElwhaIconButton b : actions) {
+        if (b != null) {
+          leadingActionsPanel.add(b);
         }
       }
     }
@@ -845,20 +847,23 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
-   * Replaces the trailing actions row — sits to the right of the headline, before the chevron. Pass
-   * an empty array (or {@code null}) to clear.
+   * Replaces the trailing actions row — sits to the right of the headline, before the chevron.
+   * Typed to {@link ElwhaIconButton} per the M3 Top App Bar convention. For a single overflow
+   * affordance the M3-conventional choice is {@code
+   * ElwhaIconButton.standardIconButton(MaterialIcons.moreVert())}. Pass an empty array (or {@code
+   * null}) to clear.
    *
-   * @param actions zero or more action components rendered left to right
+   * @param actions zero or more {@link ElwhaIconButton}s rendered left to right
    * @return {@code this} for fluent chaining
    * @version v0.1.0
    * @since v0.1.0
    */
-  public ElwhaCard setTrailingActions(final Component... actions) {
+  public ElwhaCard setTrailingActions(final ElwhaIconButton... actions) {
     trailingActionsPanel.removeAll();
     if (actions != null) {
-      for (Component c : actions) {
-        if (c != null) {
-          trailingActionsPanel.add(c);
+      for (ElwhaIconButton b : actions) {
+        if (b != null) {
+          trailingActionsPanel.add(b);
         }
       }
     }
@@ -915,7 +920,7 @@ public class ElwhaCard extends ElwhaSurface {
     }
     final boolean old = this.collapsed;
     this.collapsed = collapsed;
-    chevronLabel.setIcon(new ChevronIcon(collapsed));
+    chevronLabel.setIcon(chevronIcon(collapsed));
     summaryHolder.setVisible(shouldShowSummary());
     if (animateCollapse) {
       animateTo(collapsed ? 0f : 1f);
@@ -1191,54 +1196,12 @@ public class ElwhaCard extends ElwhaSurface {
     return new Insets(e, e, e * 2, e);
   }
 
-  /**
-   * Small painted triangle Icon used for the disclosure chevron. Renders pointing right when the
-   * card is collapsed and down when expanded. Painted directly rather than relying on a Unicode
-   * glyph because Inter (the bundled font) doesn't ship U+25BE / U+25B8 and the system fallback
-   * renders the glyph as a font-name tofu on macOS.
-   *
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  private static final class ChevronIcon implements Icon {
-    private static final int SIZE = 10;
-    private final boolean collapsed;
+  private static final int CHEVRON_ICON_PX = 20;
 
-    ChevronIcon(final boolean collapsed) {
-      this.collapsed = collapsed;
-    }
-
-    @Override
-    public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-      final Graphics2D g2 = (Graphics2D) g.create();
-      try {
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        final Color fg = ColorRole.SURFACE.on().orElse(ColorRole.ON_SURFACE).resolve();
-        g2.setColor(fg);
-        final int[] xs;
-        final int[] ys;
-        if (collapsed) {
-          xs = new int[] {x + 2, x + SIZE - 2, x + 2};
-          ys = new int[] {y + 1, y + SIZE / 2, y + SIZE - 1};
-        } else {
-          xs = new int[] {x + 1, x + SIZE - 1, x + SIZE / 2};
-          ys = new int[] {y + 2, y + 2, y + SIZE - 2};
-        }
-        g2.fillPolygon(xs, ys, 3);
-      } finally {
-        g2.dispose();
-      }
-    }
-
-    @Override
-    public int getIconWidth() {
-      return SIZE;
-    }
-
-    @Override
-    public int getIconHeight() {
-      return SIZE;
-    }
+  private static Icon chevronIcon(final boolean collapsed) {
+    return collapsed
+        ? MaterialIcons.expandMore(CHEVRON_ICON_PX)
+        : MaterialIcons.expandLess(CHEVRON_ICON_PX);
   }
 
   private void animateTo(final float target) {

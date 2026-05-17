@@ -521,6 +521,60 @@ public final class MaterialIcons {
     return load(name, size);
   }
 
+  /** Downward chevron — disclosure / dropdown / expand indicator. */
+  public static FlatSVGIcon expandMore() {
+    return expandMore(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #expandMore()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon expandMore(final int size) {
+    return load("expand_more", size);
+  }
+
+  /** Upward chevron — collapse indicator (pairs with {@link #expandMore()}). */
+  public static FlatSVGIcon expandLess() {
+    return expandLess(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #expandLess()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon expandLess(final int size) {
+    return load("expand_less", size);
+  }
+
+  /**
+   * Vertical 3-dot overflow glyph — M3 standard for "more actions" affordance in headers, app bars,
+   * list items, and card trailing-actions slots.
+   */
+  public static FlatSVGIcon moreVert() {
+    return moreVert(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #moreVert()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon moreVert(final int size) {
+    return load("more_vert", size);
+  }
+
   private static FlatSVGIcon load(final String name, final int size) {
     final FlatSVGIcon icon = new FlatSVGIcon(BASE + name + ".svg", size, size);
     icon.setColorFilter(THEME_FILTER);

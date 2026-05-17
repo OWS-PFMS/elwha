@@ -17,7 +17,6 @@ import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -753,9 +752,8 @@ public class ElwhaCardList<T> extends JPanel implements Accessible, ElwhaList<T>
     card.addMouseListener(handler);
     card.addMouseMotionListener(handler);
 
-    if (canReorder && reorderHandle == ReorderHandle.TRAILING_HANDLE) {
-      installTrailingHandle(card, item, index);
-    }
+    // TRAILING_HANDLE visual grip removed alongside Card V2's typed trailing-actions slot —
+    // see comment above the removed installTrailingHandle method.
 
     // Cursor strategy: distinguish "draggable surface" (MOVE) from "click affordance" (HAND).
     // - WHOLE_CARD: the entire card body is draggable, so the card cursor is MOVE.
@@ -782,49 +780,12 @@ public class ElwhaCardList<T> extends JPanel implements Accessible, ElwhaList<T>
     return dx * dx + dy * dy >= DRAG_THRESHOLD * DRAG_THRESHOLD;
   }
 
-  private void installTrailingHandle(final ElwhaCard card, final T item, final int index) {
-    final JLabel grip = new JLabel("⋮⋮");
-    grip.setHorizontalAlignment(SwingConstants.CENTER);
-    grip.setForeground(UIManager.getColor("Label.disabledForeground"));
-    grip.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
-    grip.setCursor(Cursors.grab());
-    grip.setToolTipText("Drag to reorder");
-    grip.addMouseListener(
-        new MouseAdapter() {
-          @Override
-          public void mousePressed(final MouseEvent event) {
-            initiateDrag(item, card, event);
-          }
-
-          @Override
-          public void mouseReleased(final MouseEvent event) {
-            if (drag == null) {
-              return;
-            }
-            if (drag.active) {
-              endDrag(event);
-            } else {
-              drag = null;
-            }
-          }
-        });
-    grip.addMouseMotionListener(
-        new MouseInputAdapter() {
-          @Override
-          public void mouseDragged(final MouseEvent event) {
-            if (drag == null) {
-              return;
-            }
-            if (!drag.active && hasMovedPastThreshold(event, card)) {
-              activateDrag();
-            }
-            if (drag.active) {
-              continueDrag(event);
-            }
-          }
-        });
-    card.setTrailingActions(grip);
-  }
+  // installTrailingHandle was the V1 hack stuffing a "⋮⋮" Unicode glyph into the trailing-actions
+  // slot. With Card V2's typed setTrailingActions(ElwhaIconButton...) the slot only accepts icon
+  // buttons, and the legacy glyph rendered as a font-name tofu anyway. ElwhaCardList itself is
+  // slated for deletion in #70 — V2 consumers use ElwhaItemList<T> + ReorderAffordance.HOVER_ICON
+  // for an M3-aligned hover-revealed drag handle. Until #70 deletes this class, TRAILING_HANDLE
+  // mode silently degrades to WHOLE_CARD drag detection (the cursor-based drag still works).
 
   // -------------------------------------------------------------- selection
 

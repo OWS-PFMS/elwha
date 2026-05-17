@@ -144,7 +144,9 @@ public final class GalleryPanel extends JPanel {
     return new ElwhaCard("Project alpha")
         .setSubhead("Updated 2 minutes ago")
         .setLeadingIcon(new DotIcon(new Color(72, 130, 180)))
-        .setTrailingActions(toolbarButton("⋯"))
+        .setTrailingActions(
+            com.owspfm.elwha.iconbutton.ElwhaIconButton.standardIconButton(
+                com.owspfm.elwha.icons.MaterialIcons.moreVert(20)))
         .setMedia(new MediaPlaceholder())
         .setSupportingText(
             "The card uses every slot: leading icon, headline, subhead, trailing actions,"
@@ -164,12 +166,6 @@ public final class GalleryPanel extends JPanel {
             .setInteractionMode(m);
     c.setEnabled(false);
     return c;
-  }
-
-  private static JButton toolbarButton(final String text) {
-    JButton b = new JButton(text);
-    b.putClientProperty("JButton.buttonType", "toolBarButton");
-    return b;
   }
 
   /** Solid colored circle used as a header leading icon stand-in. */

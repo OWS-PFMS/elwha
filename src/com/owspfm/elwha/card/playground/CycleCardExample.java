@@ -57,7 +57,8 @@ final class CycleCardExample {
         .setVariant(CardVariant.OUTLINED)
         .setLeadingIcon(new ReinforcingIcon())
         .setSubhead("Reinforcing cycle  ·  7 factors")
-        .setTrailingActions(buildChainPanel(factors))
+        .setSummary(buildChainPanel(factors))
+        .setSummaryVisibility(com.owspfm.elwha.card.SummaryVisibility.ALWAYS)
         .setMedia(ring)
         .setCollapsible(true);
   }
