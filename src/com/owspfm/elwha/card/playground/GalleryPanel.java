@@ -140,7 +140,8 @@ public final class GalleryPanel extends JPanel {
         .setLeadingIcon(new DotIcon(new Color(72, 130, 180)))
         .setTrailingActions(
             com.owspfm.elwha.iconbutton.ElwhaIconButton.standardIconButton(
-                com.owspfm.elwha.icons.MaterialIcons.moreVert(20)))
+                    com.owspfm.elwha.icons.MaterialIcons.moreVert(20))
+                .setButtonSize(com.owspfm.elwha.iconbutton.IconButtonSize.S))
         .setMedia(new MediaPlaceholder())
         .setSupportingText(
             "The card uses every slot: leading icon, headline, subhead, trailing actions,"

@@ -282,6 +282,7 @@ public class ElwhaCard extends ElwhaSurface {
     trailingActionsPanel.setOpaque(false);
     trailingActionsPanel.setVisible(false);
     chevronButton = ElwhaIconButton.standardIconButton(chevronIcon(collapsed));
+    chevronButton.setButtonSize(com.owspfm.elwha.iconbutton.IconButtonSize.S);
     chevronButton.setVisible(false);
     chevronButton.addActionListener(e -> setCollapsed(!collapsed));
 
