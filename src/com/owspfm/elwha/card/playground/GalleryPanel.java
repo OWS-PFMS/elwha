@@ -125,15 +125,9 @@ public final class GalleryPanel extends JPanel {
   }
 
   private static ElwhaCard collapsibleCard(final boolean startCollapsed) {
-    JPanel body = new JPanel();
-    body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-    body.setOpaque(false);
-    body.add(new JLabel("Detail line one."));
-    body.add(new JLabel("Detail line two."));
-    body.add(new JLabel("Detail line three."));
     return new ElwhaCard("Advanced options")
         .setSubhead(startCollapsed ? "Collapsed by default" : "Expanded by default")
-        .setMedia(body)
+        .setSupportingText("Detail line one.<br>Detail line two.<br>Detail line three.")
         .setCollapsible(true)
         .setCollapsed(startCollapsed)
         .setSummary(new JLabel("3 options hidden — click to expand"))

@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -90,15 +89,9 @@ public final class LiveConfigPanel extends JPanel {
   }
 
   private ElwhaCard buildFocusCard() {
-    JPanel body = new JPanel();
-    body.setOpaque(false);
-    body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-    body.add(new JLabel("Adjust the controls on the right."));
-    body.add(new JLabel("This card mutates in real time."));
-
     return new ElwhaCard("Focus card")
         .setSubhead("Live-edited example")
-        .setMedia(body)
+        .setSupportingText("Adjust the controls on the right.<br>This card mutates in real time.")
         .setActions(new JButton("Primary"), new JButton("Cancel"))
         .setSummary(new JLabel("Collapsed — click chevron to expand"));
   }

@@ -98,7 +98,7 @@ public final class ElwhaCardListShowcase extends JPanel {
             new ElwhaCard(item.title())
                 .setVariant(CardVariant.OUTLINED)
                 .setSubhead(item.subtitle())
-                .setMedia(buildBody(item))
+                .setSupportingText(buildBodyText(item))
                 .setCollapsible(true)
                 .setCollapsed(true)
                 .setAnimateCollapse(true);
@@ -157,15 +157,8 @@ public final class ElwhaCardListShowcase extends JPanel {
     model.add(new DemoItem("Cycle kappa", "Balancing loop, length 4", LocalDate.of(2026, 5, 2), 2));
   }
 
-  private static JPanel buildBody(final DemoItem item) {
-    final JPanel body = new JPanel(new BorderLayout());
-    body.setOpaque(false);
-    final JLabel meta =
-        new JLabel(
-            "Date: " + item.date() + "    Priority: " + PRIORITY_LABELS[item.priority() - 1]);
-    meta.putClientProperty("FlatLaf.styleClass", "small");
-    body.add(meta, BorderLayout.CENTER);
-    return body;
+  private static String buildBodyText(final DemoItem item) {
+    return "Date: " + item.date() + "    Priority: " + PRIORITY_LABELS[item.priority() - 1];
   }
 
   // ------------------------------------------------------------- left pane
