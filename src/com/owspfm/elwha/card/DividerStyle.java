@@ -10,9 +10,10 @@ package com.owspfm.elwha.card;
  */
 public enum DividerStyle {
   /**
-   * Spans card edge-to-edge — intended to ignore the card's content padding. (Visual edge-bleed is
-   * achieved via Card layout integration; in the v0.2 stub the divider paints across its own
-   * bounds, so consumers wanting true edge bleed must configure the Card padding accordingly.)
+   * Spans card edge-to-edge — ignores the card's content padding. The card's {@code
+   * VerticalCardLayout} lays a {@code FULL} divider at full card width with {@code x=0}, regardless
+   * of its position in the child order, so the painted 1 dp line meets the chassis's rounded outer
+   * corners.
    */
   FULL,
 

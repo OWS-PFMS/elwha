@@ -1275,9 +1275,9 @@ public class ElwhaCard extends ElwhaSurface {
           continue;
         }
         final Dimension p = c.getPreferredSize();
-        final boolean edgeMedia = isEdgeMedia(c, firstVisible, lastVisible);
+        final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
         totalH += p.height;
-        maxW = Math.max(maxW, edgeMedia ? p.width : p.width + 2 * padH);
+        maxW = Math.max(maxW, bleed ? p.width : p.width + 2 * padH);
       }
       if (!(lastVisible instanceof ElwhaCardMedia)) {
         totalH += padV;
@@ -1317,17 +1317,31 @@ public class ElwhaCard extends ElwhaSurface {
         if (!c.isVisible()) {
           continue;
         }
-        final boolean edgeMedia = isEdgeMedia(c, firstVisible, lastVisible);
-        final int x = edgeMedia ? 0 : padH;
-        final int w = edgeMedia ? width : Math.max(0, width - 2 * padH);
+        final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
+        final int x = bleed ? 0 : padH;
+        final int w = bleed ? width : Math.max(0, width - 2 * padH);
         final Dimension p = c.getPreferredSize();
         c.setBounds(x, y, w, p.height);
         y += p.height;
       }
     }
 
-    private boolean isEdgeMedia(final Component c, final Component first, final Component last) {
-      return c instanceof ElwhaCardMedia && (c == first || c == last);
+    /**
+     * A child gets full card width (no horizontal padding) when:
+     *
+     * <ul>
+     *   <li>It's an {@link ElwhaCardMedia} at the first or last visible position (spec §5.2 — gives
+     *       the cubic-Bezier corner clip a chassis-edge anchor).
+     *   <li>It's an {@link ElwhaCardDivider} with {@link DividerStyle#FULL} (spec §5.4 — "FULL
+     *       spans card edge-to-edge ignoring parent content padding"). FULL dividers bleed at any
+     *       position; INSET dividers respect padding like a regular child.
+     * </ul>
+     */
+    private boolean isEdgeBleed(final Component c, final Component first, final Component last) {
+      if (c instanceof ElwhaCardMedia && (c == first || c == last)) {
+        return true;
+      }
+      return c instanceof ElwhaCardDivider d && d.getStyle() == DividerStyle.FULL;
     }
   }
 
