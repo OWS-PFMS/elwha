@@ -8,6 +8,7 @@ import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
 import java.util.Objects;
 import javax.swing.JPanel;
 
@@ -72,6 +73,16 @@ public class ElwhaSurface extends JPanel {
    * can momentarily override the painted elevation via try/finally around super.paintComponent.
    */
   protected int elevation;
+
+  // Cached shadow image — recomputed only when (bodyW, bodyH, arc, elevation) changes. Critical
+  // for drag performance: without the cache, paintComponent's ConvolveOp two-pass blur fires on
+  // every mouseDragged event (~60 Hz), which dominates the paint budget.
+  private BufferedImage cachedShadow;
+
+  private int cachedShadowBodyW = -1;
+  private int cachedShadowBodyH = -1;
+  private int cachedShadowArc = -1;
+  private int cachedShadowElevation = -1;
 
   /**
    * Creates a Surface with the default look — {@link ColorRole#SURFACE} fill, {@link ShapeScale#MD}
@@ -279,8 +290,10 @@ public class ElwhaSurface extends JPanel {
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      if (paintElevation > 0) {
-        SurfacePainter.paintShadow(g2, bodyX, bodyY, bodyW, bodyH, arc, paintElevation);
+      if (paintElevation > 0 && bodyW > 0 && bodyH > 0) {
+        final BufferedImage shadow = shadowImageForCurrentState(bodyW, bodyH, arc, paintElevation);
+        final Insets shadowReserve = SurfacePainter.shadowInsets(paintElevation);
+        g2.drawImage(shadow, bodyX - shadowReserve.left, bodyY - shadowReserve.top, null);
       }
       final Graphics2D body = (Graphics2D) g2.create(bodyX, bodyY, bodyW, bodyH);
       try {
@@ -291,6 +304,27 @@ public class ElwhaSurface extends JPanel {
     } finally {
       g2.dispose();
     }
+  }
+
+  /**
+   * Returns the cached shadow image if the body dimensions / arc / elevation match the cached key;
+   * otherwise re-renders + caches. Drag-loop hot path — at 60 Hz the same key is requested every
+   * frame, so the cache hit is what keeps drag fluid.
+   */
+  private BufferedImage shadowImageForCurrentState(
+      final int bodyW, final int bodyH, final int arc, final int elevation) {
+    if (cachedShadow == null
+        || cachedShadowBodyW != bodyW
+        || cachedShadowBodyH != bodyH
+        || cachedShadowArc != arc
+        || cachedShadowElevation != elevation) {
+      cachedShadow = SurfacePainter.renderShadowImage(bodyW, bodyH, arc, elevation);
+      cachedShadowBodyW = bodyW;
+      cachedShadowBodyH = bodyH;
+      cachedShadowArc = arc;
+      cachedShadowElevation = elevation;
+    }
+    return cachedShadow;
   }
 
   /**

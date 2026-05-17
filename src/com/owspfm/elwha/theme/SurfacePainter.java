@@ -160,11 +160,36 @@ public final class SurfacePainter {
     if (elevation <= 0 || w <= 0 || h <= 0) {
       return;
     }
+    final BufferedImage shadow = renderShadowImage(w, h, arc, elevation);
+    final Insets insets = shadowInsets(elevation);
+    g.drawImage(shadow, x - insets.left, y - insets.top, null);
+  }
+
+  /**
+   * Renders the shadow image for a body of {@code w × h} px with corner radius {@code arc} at the
+   * given {@code elevation}. Returns the blurred image — callers place it via {@code
+   * g.drawImage(img, bodyX - shadowInsets(elevation).left, bodyY - shadowInsets(elevation).top,
+   * null)}.
+   *
+   * <p>Split out from {@link #paintShadow} so callers that paint at high frequency ({@code
+   * ElwhaSurface} during a drag) can cache the result and re-render only when the inputs change,
+   * instead of paying the {@link ConvolveOp} cost on every paint.
+   *
+   * @param w body width in pixels
+   * @param h body height in pixels
+   * @param arc corner radius in pixels
+   * @param elevation the M3 elevation level (must be {@code > 0})
+   * @return the blurred shadow image, sized to body + lateral blur halo + bottom blur halo + key
+   *     downward offset
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public static BufferedImage renderShadowImage(int w, int h, int arc, int elevation) {
     final int e = Math.max(1, elevation);
     final int blur = blurRadius(e);
     final int offsetY = keyOffsetY(e);
-    final int padX = blur + 1;
-    final int padY = blur + 1;
+    final int padX = blur;
+    final int padY = blur;
     final int imgW = w + padX * 2;
     final int imgH = h + padY * 2 + offsetY;
 
@@ -188,11 +213,10 @@ public final class SurfacePainter {
 
     // Two-pass box blur — approximates a Gaussian without the cost of a real Gaussian kernel.
     // First pass at full blur, second at half — gives a smooth, directional falloff with no
-    // visible layer-stepping at the corners (which the previous stacked-RoundRect approach had).
+    // visible layer-stepping at the corners.
     BufferedImage blurred = boxBlur(shadow, blur);
     blurred = boxBlur(blurred, Math.max(1, blur / 2));
-
-    g.drawImage(blurred, x - padX, y - padY, null);
+    return blurred;
   }
 
   /**
