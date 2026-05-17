@@ -95,7 +95,7 @@ public final class ElwhaCardV3Demo {
     scroll.getVerticalScrollBar().setUnitIncrement(16);
     scroll.setBorder(null);
     frame.setContentPane(scroll);
-    frame.setSize(1100, 900);
+    frame.setSize(820, 900);
     frame.setLocationRelativeTo(null);
     return frame;
   }
@@ -131,7 +131,7 @@ public final class ElwhaCardV3Demo {
   }
 
   private static JPanel anatomyRow() {
-    final JPanel g = grid(3);
+    final JPanel g = grid(2);
 
     // Title only
     final ElwhaCard a = ElwhaCard.elevatedCard();
@@ -156,7 +156,7 @@ public final class ElwhaCardV3Demo {
     final ElwhaCard d = ElwhaCard.elevatedCard();
     d.add(
         new ElwhaCardHeader()
-            .setLeading(new ElwhaCardThumbnail(stripeImage(96, 96, new Color(0xFF7043))))
+            .setLeading(new ElwhaCardThumbnail(stripeImage(80, 80, new Color(0xFF7043))))
             .setTitle("Daniel Maas")
             .setSubtitle("daniel@example.com"));
     g.add(d);
@@ -187,11 +187,11 @@ public final class ElwhaCardV3Demo {
   }
 
   private static JPanel mediaRow() {
-    final JPanel g = grid(3);
+    final JPanel g = grid(2);
 
     // Image media at top
     final ElwhaCard a = ElwhaCard.elevatedCard();
-    a.add(ElwhaCardMedia.image(stripeImage(400, 225, new Color(0x42A5F5))));
+    a.add(ElwhaCardMedia.image(stripeImage(320, 180, new Color(0x42A5F5))));
     a.add(Box.createVerticalStrut(8));
     a.add(new ElwhaCardHeader().setTitle("Image media").setSubtitle("Auto-clipped top corners"));
     a.add(new ElwhaCardSupportingText("16:9 aspect ratio by default."));
@@ -202,8 +202,8 @@ public final class ElwhaCardV3Demo {
     b.add(
         ElwhaCardMedia.painter(
             g2 -> {
-              final int w = 400;
-              final int h = 225;
+              final int w = 320;
+              final int h = 180;
               g2.setPaint(new GradientPaint(0, 0, new Color(0x9C27B0), w, h, new Color(0xFFEB3B)));
               g2.fillRect(0, 0, w, h);
             }));
@@ -313,10 +313,10 @@ public final class ElwhaCardV3Demo {
 
     final JPanel leading = new JPanel(new BorderLayout());
     leading.setOpaque(false);
-    leading.setPreferredSize(new Dimension(180, 120));
+    leading.setPreferredSize(new Dimension(160, 110));
     leading.add(
         new JLabel(
-            new javax.swing.ImageIcon(stripeImage(180, 120, new Color(0x26A69A))),
+            new javax.swing.ImageIcon(stripeImage(160, 110, new Color(0x26A69A))),
             SwingConstants.CENTER),
         BorderLayout.CENTER);
     card.setLeadingColumn(leading);
@@ -333,7 +333,7 @@ public final class ElwhaCardV3Demo {
     card.setTrailingColumn(trailing);
 
     g.add(card, BorderLayout.CENTER);
-    g.setPreferredSize(new Dimension(800, 160));
+    g.setPreferredSize(new Dimension(720, 150));
     return g;
   }
 
@@ -343,7 +343,7 @@ public final class ElwhaCardV3Demo {
     final ElwhaCard card = ElwhaCard.outlinedCard();
     card.add(
         new ElwhaCardHeader()
-            .setLeading(new ElwhaCardThumbnail(stripeImage(96, 96, new Color(0xE91E63))))
+            .setLeading(new ElwhaCardThumbnail(stripeImage(80, 80, new Color(0xE91E63))))
             .setTitle("REI")
             .setSubtitle("Your order has shipped")
             .addTrailing(ElwhaIconButton.standardIconButton(MaterialIcons.moreVert())));
@@ -354,7 +354,7 @@ public final class ElwhaCardV3Demo {
                 + "Includes: 1× CAMP Speed Comp helmet, 2× Petzl Tikkina headlamp, "
                 + "1× Black Diamond Z-Pole.</html>"));
     g.add(card, BorderLayout.CENTER);
-    g.setPreferredSize(new Dimension(800, 220));
+    g.setPreferredSize(new Dimension(720, 200));
     return g;
   }
 
@@ -371,7 +371,7 @@ public final class ElwhaCardV3Demo {
       card.add(new ElwhaCardSupportingText("Line " + i + " — body exceeds the 320 dp cap."));
     }
     g.add(card, BorderLayout.CENTER);
-    g.setPreferredSize(new Dimension(600, 340));
+    g.setPreferredSize(new Dimension(560, 340));
     return g;
   }
 
@@ -399,7 +399,7 @@ public final class ElwhaCardV3Demo {
           return card;
         });
     g.add(list, BorderLayout.CENTER);
-    g.setPreferredSize(new Dimension(700, 480));
+    g.setPreferredSize(new Dimension(640, 460));
     return g;
   }
 
