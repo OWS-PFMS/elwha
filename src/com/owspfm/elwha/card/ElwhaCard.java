@@ -4,7 +4,9 @@ import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -16,6 +18,7 @@ import java.util.Objects;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 
 /**
  * M3-aligned card chrome — Layer 1 of the V3 architecture. {@code ElwhaCard} extends {@link
@@ -84,8 +87,25 @@ public class ElwhaCard extends ElwhaSurface {
   private boolean selected;
   private boolean collapsible;
   private boolean collapsed;
-  private boolean animateCollapse;
+  private boolean animateCollapse = !GraphicsEnvironment.isHeadless();
   private boolean dragged;
+
+  /** 250 ms M3 collapse-tween duration. */
+  private static final int COLLAPSE_ANIMATION_MS = 250;
+
+  /** Default cap for SCROLL expansion overflow (320 dp per spec §22). */
+  private static final int SCROLL_MAX_EXPANDED_HEIGHT_PX = 320;
+
+  /** Animation progress, 0..1; 1f means animation is idle / complete. */
+  private float animationFraction = 1f;
+
+  /** Pixel height at the start of the current animation. */
+  private int animationStartHeight;
+
+  /** Pixel height at the end of the current animation. */
+  private int animationEndHeight;
+
+  private Timer collapseTimer;
 
   private final Map<Component, CollapseRule> collapseConstraints = new IdentityHashMap<>();
   private final java.util.List<ActionListener> actionListeners = new java.util.ArrayList<>();
@@ -436,12 +456,79 @@ public class ElwhaCard extends ElwhaSurface {
       return this;
     }
     final boolean old = this.collapsed;
+    final int beforeHeight = computeContentHeight();
     this.collapsed = newCollapsed;
+    applyCollapseVisibility();
+    final int afterHeight = computeContentHeight();
     firePropertyChange(PROPERTY_COLLAPSED, old, newCollapsed);
     expansionChange.firePropertyChange(PROPERTY_COLLAPSED, old, newCollapsed);
-    revalidate();
-    repaint();
+    if (animateCollapse && beforeHeight != afterHeight) {
+      startCollapseAnimation(beforeHeight, afterHeight);
+    } else {
+      animationFraction = 1f;
+      revalidate();
+      repaint();
+    }
     return this;
+  }
+
+  /** Returns the height of all currently-visible children plus the chassis insets. */
+  private int computeContentHeight() {
+    int sum = 0;
+    for (int i = 0; i < getComponentCount(); i++) {
+      final Component child = getComponent(i);
+      if (child.isVisible()) {
+        sum += child.getPreferredSize().height;
+      }
+    }
+    final Insets ins = getInsets();
+    return sum + ins.top + ins.bottom;
+  }
+
+  /** Sets each child's visibility according to the card's collapsed state and the child's rule. */
+  private void applyCollapseVisibility() {
+    for (int i = 0; i < getComponentCount(); i++) {
+      final Component child = getComponent(i);
+      final CollapseRule rule = collapseConstraints.getOrDefault(child, CollapseRule.COLLAPSIBLE);
+      final boolean visible = rule == CollapseRule.ALWAYS_VISIBLE || !collapsed;
+      if (child.isVisible() != visible) {
+        child.setVisible(visible);
+      }
+    }
+  }
+
+  private void startCollapseAnimation(final int from, final int to) {
+    animationStartHeight = from;
+    animationEndHeight = to;
+    animationFraction = 0f;
+    if (collapseTimer != null && collapseTimer.isRunning()) {
+      collapseTimer.stop();
+    }
+    final int frameMs = 16;
+    final long startNanos = System.nanoTime();
+    collapseTimer =
+        new Timer(
+            frameMs,
+            e -> {
+              final long now = System.nanoTime();
+              final float t =
+                  Math.min(1f, (now - startNanos) / (COLLAPSE_ANIMATION_MS * 1_000_000f));
+              // M3 standard-easing approximation: cubic ease-in-out.
+              animationFraction =
+                  t < 0.5f ? 4 * t * t * t : 1 - (float) Math.pow(-2 * t + 2, 3) / 2;
+              revalidate();
+              repaint();
+              if (t >= 1f) {
+                animationFraction = 1f;
+                ((Timer) e.getSource()).stop();
+                if (getParent() != null) {
+                  getParent().revalidate();
+                }
+              }
+            });
+    collapseTimer.setRepeats(true);
+    collapseTimer.setInitialDelay(0);
+    collapseTimer.start();
   }
 
   /**
@@ -489,6 +576,7 @@ public class ElwhaCard extends ElwhaSurface {
     Objects.requireNonNull(child, "child");
     Objects.requireNonNull(rule, "rule");
     collapseConstraints.put(child, rule);
+    applyCollapseVisibility();
     revalidate();
   }
 
@@ -674,6 +762,31 @@ public class ElwhaCard extends ElwhaSurface {
   @Override
   protected void paintComponent(final Graphics g) {
     super.paintComponent(g);
-    // TODO(#90 / #87 / #86): shadow + state-layer overlay + focus ring + ripple paint stack.
+    // TODO(#90): shadow + state-layer overlay + focus ring + ripple paint stack.
+  }
+
+  /**
+   * Returns the card's preferred height, accounting for (a) the collapse animation tween
+   * interpolating between pre-collapse and post-collapse heights, and (b) the SCROLL expansion
+   * overflow cap.
+   *
+   * @return the card's preferred size
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public Dimension getPreferredSize() {
+    final Dimension d = super.getPreferredSize();
+    int height = d.height;
+    if (animationFraction < 1f) {
+      height =
+          Math.round(
+              animationStartHeight
+                  + (animationEndHeight - animationStartHeight) * animationFraction);
+    }
+    if (expansionOverflow == ExpansionOverflow.SCROLL && !collapsed) {
+      height = Math.min(height, SCROLL_MAX_EXPANDED_HEIGHT_PX);
+    }
+    return new Dimension(d.width, height);
   }
 }
