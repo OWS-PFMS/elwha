@@ -1,6 +1,7 @@
 package com.owspfm.elwha.card.list;
 
 import com.owspfm.elwha.card.ElwhaCard;
+import com.owspfm.elwha.card.v1.list.Cursors;
 import com.owspfm.elwha.list.ElwhaList;
 import com.owspfm.elwha.list.ElwhaListOrientation;
 import com.owspfm.elwha.theme.SpaceScale;
@@ -10,6 +11,7 @@ import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
@@ -317,6 +319,14 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
             }
             if (dragState.active) {
               updateDropSlot(listPt);
+              // Visual ghost: move the card to follow the cursor while preserving the grab
+              // offset (cursor stays at the same point inside the card it grabbed). M3-canonical
+              // direct-manipulation feel — siblings stay put; the drop indicator shows where
+              // the card will land on release.
+              final int offX = listPt.x - dragState.pressPoint.x;
+              final int offY = listPt.y - dragState.pressPoint.y;
+              dragState.card.setLocation(
+                  dragState.restingBounds.x + offX, dragState.restingBounds.y + offY);
             }
           }
 
@@ -335,6 +345,10 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
         };
     card.addMouseListener(handler);
     card.addMouseMotionListener(handler);
+    // Show the open-hand grab cursor on hover — signals "this card is draggable." Overrides
+    // any HAND_CURSOR ElwhaCard.setActionable installed during cell rendering. Cursors.grabbing()
+    // takes over while a drag is active (see activateDrag).
+    card.setCursor(Cursors.grab());
     installKeyboardReorder(card, item);
   }
 
@@ -345,19 +359,28 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
     private int fromIndex;
     private int dropSlot;
     private Point pressPoint;
+
+    /** Card's bounds at the moment the drag activated — used to compute the visual offset. */
+    private Rectangle restingBounds;
+
     private boolean active;
   }
 
   /**
-   * Promotes a pending drag to active: sets the chrome's dragged flag (chrome paints DRAGGED
-   * state-layer per spec §10.1 + elevation lift per §9), cancels the latent action / selection
-   * toggle so the upcoming release doesn't fire one, and switches the cursor.
+   * Promotes a pending drag to active: snapshots the resting card bounds (so the ghost can follow
+   * the cursor while preserving the grab offset), sets the chrome's dragged flag (chrome paints
+   * DRAGGED state-layer per spec §10.1 + elevation lift per §9), cancels the latent action /
+   * selection toggle so the upcoming release doesn't fire one, brings the card to the top of the
+   * Z-order so it paints above siblings, and switches the cursor to the bundled grabbing PNG.
    */
   private void activateDrag() {
     dragState.active = true;
+    dragState.restingBounds = dragState.card.getBounds();
     dragState.card.setDragged(true);
     dragState.card.cancelPendingClick();
-    setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+    setComponentZOrder(dragState.card, 0);
+    setCursor(Cursors.grabbing());
+    dragState.card.setCursor(Cursors.grabbing());
     repaint();
   }
 
@@ -435,17 +458,23 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
   }
 
   /**
-   * Commits the drag: clears chrome dragged state, restores the cursor, and (if the drop slot
-   * differs from the origin) calls {@code model.move(fromIndex, dropSlot)}. The model change fires
-   * a listener that rebuilds the list.
+   * Commits the drag: clears chrome dragged state, restores the cursor + the card's resting bounds
+   * (so a no-op drop doesn't leave the card floating mid-air), and (if the drop slot differs from
+   * the origin) calls {@code model.move(fromIndex, dropSlot)} — the model change fires a listener
+   * that rebuilds the list and places the card in its new slot.
    */
   private void finishDrag() {
     final ElwhaCard draggedCard = dragState.card;
+    final Rectangle resting = dragState.restingBounds;
     final int from = dragState.fromIndex;
     final int to = dragState.dropSlot;
     dragState = null;
     draggedCard.setDragged(false);
     setCursor(Cursor.getDefaultCursor());
+    draggedCard.setCursor(Cursor.getDefaultCursor());
+    if (resting != null) {
+      draggedCard.setBounds(resting);
+    }
     repaint();
     if (from != to && from >= 0 && to >= 0) {
       model.move(from, to);
