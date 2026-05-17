@@ -6,6 +6,10 @@ import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
+import java.awt.image.ConvolveOp;
+import java.awt.image.Kernel;
+import java.util.Arrays;
 
 /**
  * Library-internal helper that paints the round-rect token-resolved surface — fill, optional
@@ -100,9 +104,9 @@ public final class SurfacePainter {
 
   /**
    * Returns the inset reserve every elevated surface needs around its visible body so the
-   * multi-layer soft shadow doesn't get clipped by the {@link java.awt.Component} bounds. Top stays
-   * at 1 px because the M3 shadow shape sits below + sides of the surface; lateral grows at {@code
-   * e/2 + 1}; bottom grows at {@code e + 2}. {@code elevation <= 0} returns zero insets.
+   * convolution-blurred shadow doesn't get clipped by the {@link java.awt.Component} bounds.
+   * Lateral + top reserves equal the blur radius (the halo feathers symmetrically); bottom reserves
+   * blur + the key downward offset. {@code elevation <= 0} returns zero insets.
    *
    * @param elevation the M3 elevation level (0..{@code MAX_ELEVATION})
    * @return the inset reserve, never {@code null}
@@ -113,22 +117,34 @@ public final class SurfacePainter {
     if (elevation <= 0) {
       return new Insets(0, 0, 0, 0);
     }
-    int e = elevation;
-    // Bottom carries the dominant directional drop — needs room for both the key offset
-    // (≈ e + 1 px) and the ambient layers (≈ e * 1.6 px). Lateral stays small because
-    // paintShadow's spread is capped tight.
-    return new Insets(1, Math.max(1, e / 2 + 1), Math.max(3, e * 2), Math.max(1, e / 2 + 1));
+    final int blur = blurRadius(elevation);
+    final int offsetY = keyOffsetY(elevation);
+    // Lateral reserve = the blur halo. Vertical reserve = blur halo + key offset (downward).
+    // Top can stay at the blur halo since the convolution feathers symmetrically (we don't
+    // shift the source up, so the top blur is just the natural blur radius).
+    return new Insets(blur, blur, blur + offsetY, blur);
+  }
+
+  /** Blur radius in pixels per elevation level — tuned for a soft falloff that scales smoothly. */
+  private static int blurRadius(final int elevation) {
+    return Math.max(2, Math.min(12, 2 + elevation * 2));
+  }
+
+  /** Downward offset of the key shadow per elevation level — biases weight below the surface. */
+  private static int keyOffsetY(final int elevation) {
+    return Math.max(1, Math.min(6, elevation + 1));
   }
 
   /**
-   * Paints the M3-aligned drop shadow for an elevated surface. The shadow is a soft-blur stack of
-   * low-alpha {@link RoundRectangle2D} layers approximating a Gaussian drop without a {@link
-   * java.awt.image.ConvolveOp} pass, plus a slightly sharper key layer directly below the surface.
-   * Every layer's top sits 1 px below {@code y} so the surface's top silhouette stays crisp at any
-   * elevation.
+   * Paints the M3-aligned drop shadow for an elevated surface. Renders the body silhouette into an
+   * offscreen {@link BufferedImage} with margin for the blur halo, then runs a two-pass box blur
+   * via {@link ConvolveOp} for a smooth Gaussian-like falloff at the corners — no visible stepping
+   * from stacked round-rect layers. The source rect is shifted downward by the key offset so the
+   * visible weight lands below the surface (directional drop, "lifted from above").
    *
-   * <p>Geometry scales with {@code elevation}; at low elevation the layers still fan out to give a
-   * perceptible soft halo around the surface rather than collapsing to a hard 1 px line.
+   * <p>Geometry + alpha scale with {@code elevation}: low elevations produce a tight subtle halo;
+   * high elevations produce a substantial drop. Per-paint allocation of the offscreen image is
+   * acceptable for v0.2 — revisit with a size-keyed cache if hot-path profiling surfaces it.
    *
    * @param g the graphics context (not mutated; a copy is made for rendering-hint isolation)
    * @param x left of the visible surface body
@@ -141,51 +157,60 @@ public final class SurfacePainter {
    * @since v0.2.0
    */
   public static void paintShadow(Graphics2D g, int x, int y, int w, int h, int arc, int elevation) {
-    if (elevation <= 0) {
+    if (elevation <= 0 || w <= 0 || h <= 0) {
       return;
     }
-    Graphics2D g2 = (Graphics2D) g.create();
-    try {
-      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+    final int e = Math.max(1, elevation);
+    final int blur = blurRadius(e);
+    final int offsetY = keyOffsetY(e);
+    final int padX = blur + 1;
+    final int padY = blur + 1;
+    final int imgW = w + padX * 2;
+    final int imgH = h + padY * 2 + offsetY;
 
-      // M3 shadow shape: directional drop — minimal lateral spread (subtle ambient halo only),
-      // most of the visible weight goes below the surface via the vertical offset + key layer.
-      // Light source feels like "from above" rather than the cushion-y "halo all around" the
-      // earlier symmetric formula produced.
-      int e = Math.max(1, elevation);
-      int layers = 5;
-      // Lateral spread capped tight — at e=1 just ~1 px, never more than ~2 px even at e=5.
-      float maxSpread = Math.min(2f, 0.5f + e * 0.3f);
-      // Vertical offset of the deepest ambient layer; grows with elevation, dominates over
-      // spread so the shadow drops below rather than fans outward.
-      float maxOffsetY = Math.max(3f, e * 1.6f);
-      // Per-layer alpha — kept low so the stack accumulates into a soft falloff without darkening
-      // the lateral edges.
-      int perLayerAlpha = Math.min(14, 6 + e * 2);
-      for (int i = 1; i <= layers; i++) {
-        float t = (float) i / (float) layers;
-        float spread = maxSpread * t;
-        float offsetY = maxOffsetY * t;
-        g2.setColor(new Color(0, 0, 0, perLayerAlpha));
-        g2.fill(
-            new RoundRectangle2D.Float(
-                x - spread,
-                y + 1f + Math.max(0f, offsetY - spread),
-                w + 2f * spread,
-                h + offsetY,
-                arc + spread,
-                arc + spread));
-      }
-      // Key drop: sharper, directly below the surface — the dominant shadow signal. No lateral
-      // spread; alpha + offset both scale with elevation so a Level 1 surface still reads as
-      // clearly lifted and Level 5 has a substantial drop.
-      int keyOffset = Math.max(2, e + 1);
-      int keyAlpha = Math.min(70, 36 + e * 4);
-      g2.setColor(new Color(0, 0, 0, keyAlpha));
-      g2.fill(new RoundRectangle2D.Float(x, y + keyOffset, w, h, arc, arc));
+    // Render the body silhouette at full opacity into an ARGB image with margin padX/padY for
+    // the blur halo to spread into (plus offsetY worth of extra vertical room so the key
+    // downward drop has somewhere to feather without clipping at the image's bottom edge).
+    final BufferedImage shadow = new BufferedImage(imgW, imgH, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D sg = shadow.createGraphics();
+    try {
+      sg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      // Source alpha tuned so cumulative shadow AFTER blur reads as M3 "lifted from above" —
+      // strong enough to feel directional, low enough not to swamp the surface fill at low
+      // elevation. The blur disperses this alpha over the halo, so the per-pixel rendered alpha
+      // is well below this value.
+      final int sourceAlpha = Math.min(180, 60 + e * 12);
+      sg.setColor(new Color(0, 0, 0, sourceAlpha));
+      sg.fill(new RoundRectangle2D.Float(padX, padY + offsetY, w, h, arc, arc));
     } finally {
-      g2.dispose();
+      sg.dispose();
     }
+
+    // Two-pass box blur — approximates a Gaussian without the cost of a real Gaussian kernel.
+    // First pass at full blur, second at half — gives a smooth, directional falloff with no
+    // visible layer-stepping at the corners (which the previous stacked-RoundRect approach had).
+    BufferedImage blurred = boxBlur(shadow, blur);
+    blurred = boxBlur(blurred, Math.max(1, blur / 2));
+
+    g.drawImage(blurred, x - padX, y - padY, null);
+  }
+
+  /**
+   * Box-blur the source image with a square kernel of the given radius. {@code radius=1} gives a
+   * 3×3 kernel; radius=N gives (2N+1)×(2N+1). {@code EDGE_NO_OP} preserves edge pixels rather than
+   * darkening them with the kernel's zero-fill default — important so the shadow image's outer rim
+   * doesn't visibly darken at its bounds.
+   */
+  private static BufferedImage boxBlur(final BufferedImage src, final int radius) {
+    if (radius <= 0) {
+      return src;
+    }
+    final int size = radius * 2 + 1;
+    final float weight = 1f / (size * size);
+    final float[] data = new float[size * size];
+    Arrays.fill(data, weight);
+    final ConvolveOp op = new ConvolveOp(new Kernel(size, size, data), ConvolveOp.EDGE_NO_OP, null);
+    return op.filter(src, null);
   }
 
   private static Color resolveFill(ColorRole surfaceRole, StateLayer overlay) {
