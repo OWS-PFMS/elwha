@@ -161,6 +161,7 @@ public class ElwhaCard extends ElwhaSurface {
   private JPanel trailingActionsPanel;
   private ElwhaIconButton chevronButton;
 
+  private JPanel contentArea;
   private CollapsibleContainer collapsibleBody;
   private JPanel mediaHolder;
   private JLabel supportingTextLabel;
@@ -308,10 +309,19 @@ public class ElwhaCard extends ElwhaSurface {
     collapsibleBody.add(supportingTextLabel);
     collapsibleBody.add(actionsHolder);
 
+    // M3 Card padding model: media is full-bleed to the card edges; text content (header,
+    // summary, supporting text, actions) lives inside a padded content wrapper. When media is
+    // absent the content wrapper's top padding still gives the headline breathing room.
+    contentArea = new JPanel();
+    contentArea.setOpaque(false);
+    contentArea.setLayout(new BoxLayout(contentArea, BoxLayout.Y_AXIS));
+    contentArea.setAlignmentX(0f);
+    contentArea.add(headerRow);
+    contentArea.add(summaryHolder);
+    contentArea.add(collapsibleBody);
+
     add(mediaHolder);
-    add(headerRow);
-    add(summaryHolder);
-    add(collapsibleBody);
+    add(contentArea);
   }
 
   private static JPanel newStretchingRow(final BorderLayout layout) {
@@ -1181,12 +1191,18 @@ public class ElwhaCard extends ElwhaSurface {
 
   private void rebuildBorder() {
     final Insets shadow = shadowInsets();
+    // Card outer border carries only the drop-shadow inset. Content padding lives on the inner
+    // contentArea wrapper so media (mediaHolder) can full-bleed to the card's edges per M3.
     setBorder(
-        BorderFactory.createEmptyBorder(
-            paddingVertical.px() + shadow.top,
-            paddingHorizontal.px() + shadow.left,
-            paddingVertical.px() + shadow.bottom,
-            paddingHorizontal.px() + shadow.right));
+        BorderFactory.createEmptyBorder(shadow.top, shadow.left, shadow.bottom, shadow.right));
+    if (contentArea != null) {
+      contentArea.setBorder(
+          BorderFactory.createEmptyBorder(
+              paddingVertical.px(),
+              paddingHorizontal.px(),
+              paddingVertical.px(),
+              paddingHorizontal.px()));
+    }
   }
 
   private Insets shadowInsets() {
