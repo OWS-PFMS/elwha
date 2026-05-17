@@ -575,6 +575,144 @@ public final class MaterialIcons {
     return load("more_vert", size);
   }
 
+  /** Rotate 90° counter-clockwise glyph. */
+  public static FlatSVGIcon rotate90DegreesCcw() {
+    return rotate90DegreesCcw(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #rotate90DegreesCcw()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon rotate90DegreesCcw(final int size) {
+    return load("rotate_90_degrees_ccw", size);
+  }
+
+  /** Rotate 90° clockwise glyph — pairs with {@link #rotate90DegreesCcw()}. */
+  public static FlatSVGIcon rotate90DegreesCw() {
+    return rotate90DegreesCw(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #rotate90DegreesCw()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon rotate90DegreesCw(final int size) {
+    return load("rotate_90_degrees_cw", size);
+  }
+
+  /** Rotate-left glyph (curved arrow). */
+  public static FlatSVGIcon rotateLeft() {
+    return rotateLeft(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #rotateLeft()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon rotateLeft(final int size) {
+    return load("rotate_left", size);
+  }
+
+  /** Rotate-right glyph (curved arrow) — pairs with {@link #rotateLeft()}. */
+  public static FlatSVGIcon rotateRight() {
+    return rotateRight(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #rotateRight()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon rotateRight(final int size) {
+    return load("rotate_right", size);
+  }
+
+  /** Auto-renew glyph (two-arrow loop) — refresh / sync affordance. */
+  public static FlatSVGIcon autorenew() {
+    return autorenew(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #autorenew()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon autorenew(final int size) {
+    return load("autorenew", size);
+  }
+
+  /**
+   * Cached glyph (single-arrow loop) — alternate refresh styling, pairs with {@link #autorenew()}.
+   */
+  public static FlatSVGIcon cached() {
+    return cached(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #cached()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon cached(final int size) {
+    return load("cached", size);
+  }
+
+  /** Start / play glyph. */
+  public static FlatSVGIcon start() {
+    return start(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #start()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon start(final int size) {
+    return load("start", size);
+  }
+
+  /** Keyboard-tab glyph — tab-advance affordance, pairs with {@link #start()}. */
+  public static FlatSVGIcon keyboardTab() {
+    return keyboardTab(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #keyboardTab()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  public static FlatSVGIcon keyboardTab(final int size) {
+    return load("keyboard_tab", size);
+  }
+
   private static FlatSVGIcon load(final String name, final int size) {
     final FlatSVGIcon icon = new FlatSVGIcon(BASE + name + ".svg", size, size);
     icon.setColorFilter(THEME_FILTER);
