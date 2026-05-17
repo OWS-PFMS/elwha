@@ -302,10 +302,13 @@ public class ElwhaCard extends ElwhaSurface {
     collapsibleBody.setOpaque(false);
     collapsibleBody.setLayout(new BoxLayout(collapsibleBody, BoxLayout.Y_AXIS));
     collapsibleBody.setAlignmentX(0f);
-    collapsibleBody.add(mediaHolder);
+    // M3 Card anatomy order: image (media) at top, then headline / subhead, then supporting
+    // text, then actions. The expanding-card pattern keeps image + headline always visible and
+    // reveals supporting text + actions on expand (see M3 "Glass Souls" expanding example).
     collapsibleBody.add(supportingTextLabel);
     collapsibleBody.add(actionsHolder);
 
+    add(mediaHolder);
     add(headerRow);
     add(summaryHolder);
     add(collapsibleBody);
