@@ -1,5 +1,7 @@
 package com.owspfm.elwha.card;
 
+import com.owspfm.elwha.theme.StateLayer;
+import java.awt.AlphaComposite;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -120,6 +122,9 @@ public final class ElwhaCardThumbnail extends JComponent {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       g2.setRenderingHint(
           RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+      if (!ElwhaCardTitle.isEffectivelyEnabled(this)) {
+        g2.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContentOpacity()));
+      }
       final int w = getWidth();
       final int h = getHeight();
       if (shape == ThumbnailShape.CIRCULAR) {

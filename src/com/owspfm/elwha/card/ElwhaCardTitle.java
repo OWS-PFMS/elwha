@@ -1,9 +1,14 @@
 package com.owspfm.elwha.card;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.TypeRole;
+import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Container;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.util.Objects;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
@@ -99,5 +104,39 @@ public final class ElwhaCardTitle extends JLabel {
   @Override
   public Color getForeground() {
     return colorRole != null ? colorRole.resolve() : super.getForeground();
+  }
+
+  @Override
+  protected void paintComponent(final Graphics g) {
+    if (isEffectivelyEnabled(this)) {
+      super.paintComponent(g);
+      return;
+    }
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContentOpacity()));
+      super.paintComponent(g2);
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  /**
+   * Walks up the ancestor chain — returns false if {@code component} or any ancestor reports {@link
+   * java.awt.Component#isEnabled()} false. Enables the spec §11 "uniform 0.38 across the card"
+   * treatment when only the {@link ElwhaCard} chassis was disabled.
+   */
+  static boolean isEffectivelyEnabled(final java.awt.Component component) {
+    if (!component.isEnabled()) {
+      return false;
+    }
+    Container p = component.getParent();
+    while (p != null) {
+      if (!p.isEnabled()) {
+        return false;
+      }
+      p = p.getParent();
+    }
+    return true;
   }
 }

@@ -1,9 +1,13 @@
 package com.owspfm.elwha.card;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.TypeRole;
+import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.util.Objects;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
@@ -97,5 +101,20 @@ public final class ElwhaCardSupportingText extends JLabel {
   @Override
   public Color getForeground() {
     return colorRole != null ? colorRole.resolve() : super.getForeground();
+  }
+
+  @Override
+  protected void paintComponent(final Graphics g) {
+    if (ElwhaCardTitle.isEffectivelyEnabled(this)) {
+      super.paintComponent(g);
+      return;
+    }
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContentOpacity()));
+      super.paintComponent(g2);
+    } finally {
+      g2.dispose();
+    }
   }
 }

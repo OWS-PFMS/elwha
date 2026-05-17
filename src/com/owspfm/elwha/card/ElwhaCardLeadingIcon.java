@@ -2,7 +2,11 @@ package com.owspfm.elwha.card;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.StateLayer;
+import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.util.Objects;
 import javax.swing.Icon;
 import javax.swing.JLabel;
@@ -83,6 +87,21 @@ public final class ElwhaCardLeadingIcon extends JLabel {
     if (icon instanceof FlatSVGIcon svg) {
       svg.setColorFilter(
           new FlatSVGIcon.ColorFilter(orig -> colorRole != null ? colorRole.resolve() : orig));
+    }
+  }
+
+  @Override
+  protected void paintComponent(final Graphics g) {
+    if (ElwhaCardTitle.isEffectivelyEnabled(this)) {
+      super.paintComponent(g);
+      return;
+    }
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContentOpacity()));
+      super.paintComponent(g2);
+    } finally {
+      g2.dispose();
     }
   }
 }
