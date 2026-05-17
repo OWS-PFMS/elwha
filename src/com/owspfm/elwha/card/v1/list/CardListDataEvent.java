@@ -1,16 +1,16 @@
-package com.owspfm.elwha.chip.list;
+package com.owspfm.elwha.card.v1.list;
 
 import java.util.EventObject;
 
 /**
- * Fine-grained change event fired by a {@link ChipListModel}.
+ * Fine-grained change event fired by a {@link CardListModel}.
  *
- * <p>Mirrors {@link com.owspfm.elwha.card.v1.list.CardListDataEvent} but lives in the chip
- * namespace so the two component families stay independent. Both eventually share a common base via
- * the {@code elwha.list} package extracted in story #237 — see that package's {@code package-info}
- * for the cross-family contract.
+ * <p>Modeled on {@link javax.swing.event.ListDataEvent} but extends the type taxonomy with an
+ * explicit {@link Type#MOVED} event so the list can animate a reorder without losing item identity
+ * (a remove-then-add sequence visually destroys and re-creates the moved item, which breaks
+ * selection survival, focus, and slide animations).
  *
- * <p>Index semantics mirror the parent contract:
+ * <p>Index semantics:
  *
  * <ul>
  *   <li>{@link Type#ADDED} — items are now present at indices {@code [index0, index1]} (inclusive)
@@ -21,11 +21,11 @@ import java.util.EventObject;
  *
  * @author Charles Bryan
  * @version v0.2.0
- * @since v0.1.0
+ * @since v0.2.0
  */
-public class ChipListDataEvent extends EventObject {
+public class CardListDataEvent extends EventObject {
 
-  /** The kind of structural change a {@link ChipListDataEvent} represents. */
+  /** The kind of structural change a {@link CardListDataEvent} represents. */
   public enum Type {
     /** One or more contiguous items were inserted at {@code [index0, index1]}. */
     ADDED,
@@ -49,9 +49,9 @@ public class ChipListDataEvent extends EventObject {
    * @param index0 the first affected index (or source index for {@link Type#MOVED})
    * @param index1 the last affected index (or destination index for {@link Type#MOVED})
    * @version v0.2.0
-   * @since v0.1.0
+   * @since v0.2.0
    */
-  public ChipListDataEvent(
+  public CardListDataEvent(
       final Object source, final Type type, final int index0, final int index1) {
     super(source);
     this.type = type;
@@ -64,7 +64,7 @@ public class ChipListDataEvent extends EventObject {
    *
    * @return the change type
    * @version v0.2.0
-   * @since v0.1.0
+   * @since v0.2.0
    */
   public Type getType() {
     return type;
@@ -75,7 +75,7 @@ public class ChipListDataEvent extends EventObject {
    *
    * @return index0
    * @version v0.2.0
-   * @since v0.1.0
+   * @since v0.2.0
    */
   public int getIndex0() {
     return index0;
@@ -86,7 +86,7 @@ public class ChipListDataEvent extends EventObject {
    *
    * @return index1
    * @version v0.2.0
-   * @since v0.1.0
+   * @since v0.2.0
    */
   public int getIndex1() {
     return index1;
