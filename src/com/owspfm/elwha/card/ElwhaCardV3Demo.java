@@ -18,6 +18,7 @@ import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.List;
@@ -30,6 +31,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
@@ -72,7 +74,7 @@ public final class ElwhaCardV3Demo {
   private static JFrame buildFrame() {
     final JFrame frame = new JFrame("ElwhaCard V3 — demo");
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    final JPanel root = new JPanel();
+    final ScrollableViewportPanel root = new ScrollableViewportPanel();
     root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
     root.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
     root.setBackground(ColorRole.SURFACE.resolve());
@@ -189,9 +191,10 @@ public final class ElwhaCardV3Demo {
   private static JPanel mediaRow() {
     final JPanel g = grid(2);
 
-    // Image media at top
+    // Image media at top — cap the preferred height so the 16:9 ratio doesn't balloon at
+    // wide cell widths.
     final ElwhaCard a = ElwhaCard.elevatedCard();
-    a.add(ElwhaCardMedia.image(stripeImage(320, 180, new Color(0x42A5F5))));
+    a.add(ElwhaCardMedia.image(stripeImage(320, 180, new Color(0x42A5F5))).setPreferredHeight(140));
     a.add(Box.createVerticalStrut(8));
     a.add(new ElwhaCardHeader().setTitle("Image media").setSubtitle("Auto-clipped top corners"));
     a.add(new ElwhaCardSupportingText("16:9 aspect ratio by default."));
@@ -201,12 +204,14 @@ public final class ElwhaCardV3Demo {
     final ElwhaCard b = ElwhaCard.elevatedCard();
     b.add(
         ElwhaCardMedia.painter(
-            g2 -> {
-              final int w = 320;
-              final int h = 180;
-              g2.setPaint(new GradientPaint(0, 0, new Color(0x9C27B0), w, h, new Color(0xFFEB3B)));
-              g2.fillRect(0, 0, w, h);
-            }));
+                g2 -> {
+                  final int w = 320;
+                  final int h = 180;
+                  g2.setPaint(
+                      new GradientPaint(0, 0, new Color(0x9C27B0), w, h, new Color(0xFFEB3B)));
+                  g2.fillRect(0, 0, w, h);
+                })
+            .setPreferredHeight(140));
     b.add(Box.createVerticalStrut(8));
     b.add(new ElwhaCardHeader().setTitle("Painter media").setSubtitle("Procedural gradient"));
     g.add(b);
@@ -333,7 +338,6 @@ public final class ElwhaCardV3Demo {
     card.setTrailingColumn(trailing);
 
     g.add(card, BorderLayout.CENTER);
-    g.setPreferredSize(new Dimension(720, 150));
     return g;
   }
 
@@ -354,7 +358,6 @@ public final class ElwhaCardV3Demo {
                 + "Includes: 1× CAMP Speed Comp helmet, 2× Petzl Tikkina headlamp, "
                 + "1× Black Diamond Z-Pole.</html>"));
     g.add(card, BorderLayout.CENTER);
-    g.setPreferredSize(new Dimension(720, 200));
     return g;
   }
 
@@ -371,7 +374,7 @@ public final class ElwhaCardV3Demo {
       card.add(new ElwhaCardSupportingText("Line " + i + " — body exceeds the 320 dp cap."));
     }
     g.add(card, BorderLayout.CENTER);
-    g.setPreferredSize(new Dimension(560, 340));
+    g.setPreferredSize(new Dimension(0, 340));
     return g;
   }
 
@@ -399,7 +402,7 @@ public final class ElwhaCardV3Demo {
           return card;
         });
     g.add(list, BorderLayout.CENTER);
-    g.setPreferredSize(new Dimension(640, 460));
+    g.setPreferredSize(new Dimension(0, 460));
     return g;
   }
 
@@ -411,6 +414,40 @@ public final class ElwhaCardV3Demo {
     card.add(new ElwhaCardHeader().setTitle(title));
     card.add(new ElwhaCardSupportingText(body));
     return card;
+  }
+
+  /**
+   * Root panel that reports {@code tracksViewportWidth = true} so the scroll-pane sizes it to the
+   * viewport's actual width every layout pass — without this, BoxLayout(Y_AXIS) cascades children's
+   * preferred widths upward and the cards balloon past the frame edge.
+   */
+  private static final class ScrollableViewportPanel extends JPanel implements Scrollable {
+    @Override
+    public Dimension getPreferredScrollableViewportSize() {
+      return getPreferredSize();
+    }
+
+    @Override
+    public int getScrollableUnitIncrement(
+        final Rectangle visibleRect, final int orientation, final int direction) {
+      return 16;
+    }
+
+    @Override
+    public int getScrollableBlockIncrement(
+        final Rectangle visibleRect, final int orientation, final int direction) {
+      return 100;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+      return true;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportHeight() {
+      return false;
+    }
   }
 
   /** Generates a simple striped {@link Image} for thumbnails / media — avoids bundling assets. */
