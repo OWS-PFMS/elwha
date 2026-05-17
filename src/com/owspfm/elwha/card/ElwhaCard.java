@@ -292,7 +292,7 @@ public class ElwhaCard extends ElwhaSurface {
     headerRow.add(eastGroup, BorderLayout.EAST);
 
     summaryHolder = newSlotHolder();
-    mediaHolder = newSlotHolder();
+    mediaHolder = newMediaHolder();
     actionsHolder = newSlotHolder();
 
     supportingTextLabel = new JLabel();
@@ -347,6 +347,54 @@ public class ElwhaCard extends ElwhaSurface {
         };
     p.setOpaque(false);
     p.setBorder(BorderFactory.createEmptyBorder(INNER_GAP_PX, 0, 0, 0));
+    p.setAlignmentX(0f);
+    p.setVisible(false);
+    return p;
+  }
+
+  /**
+   * Media slot holder — no padding (media full-bleeds to card edges per M3) and a rounded-top clip
+   * that matches the card's shape so the image's top corners hug the card's rounded corner instead
+   * of poking past it.
+   *
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  private JPanel newMediaHolder() {
+    final JPanel p =
+        new JPanel(new BorderLayout()) {
+          @Override
+          public Dimension getMaximumSize() {
+            return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+          }
+
+          @Override
+          protected void paintChildren(final Graphics g) {
+            final Graphics2D g2 = (Graphics2D) g.create();
+            try {
+              g2.setRenderingHint(
+                  RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+              final int arc = getShape().px();
+              final int w = getWidth();
+              final int h = getHeight();
+              // Clip to a shape with rounded top corners (matching the card) and square bottom
+              // corners (text content continues below the media in M3's anatomy).
+              final java.awt.geom.Path2D.Float clip = new java.awt.geom.Path2D.Float();
+              clip.moveTo(0, arc);
+              clip.quadTo(0, 0, arc, 0);
+              clip.lineTo(w - arc, 0);
+              clip.quadTo(w, 0, w, arc);
+              clip.lineTo(w, h);
+              clip.lineTo(0, h);
+              clip.closePath();
+              g2.clip(clip);
+              super.paintChildren(g2);
+            } finally {
+              g2.dispose();
+            }
+          }
+        };
+    p.setOpaque(false);
     p.setAlignmentX(0f);
     p.setVisible(false);
     return p;
