@@ -114,7 +114,10 @@ public final class SurfacePainter {
       return new Insets(0, 0, 0, 0);
     }
     int e = elevation;
-    return new Insets(1, e / 2 + 1, e + 2, e / 2 + 1);
+    // Bottom carries the dominant directional drop — needs room for both the key offset
+    // (≈ e + 1 px) and the ambient layers (≈ e * 1.6 px). Lateral stays small because
+    // paintShadow's spread is capped tight.
+    return new Insets(1, Math.max(1, e / 2 + 1), Math.max(3, e * 2), Math.max(1, e / 2 + 1));
   }
 
   /**
@@ -145,16 +148,20 @@ public final class SurfacePainter {
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-      // M3 shadow shape: ambient soft halo + key drop directly below. Scaling tuned so
-      // elevation=1 still produces a visible (not hard-edged) shadow.
+      // M3 shadow shape: directional drop — minimal lateral spread (subtle ambient halo only),
+      // most of the visible weight goes below the surface via the vertical offset + key layer.
+      // Light source feels like "from above" rather than the cushion-y "halo all around" the
+      // earlier symmetric formula produced.
       int e = Math.max(1, elevation);
-      int layers = 6;
-      // Spread fans the shadow laterally — at e=1 we still want ~4 px halo, so the floor is 2.
-      float maxSpread = Math.max(2f, (float) e * 0.85f);
-      // Vertical offset of the deepest layer; grows with elevation.
-      float maxOffsetY = Math.max(2f, (float) e * 1.2f);
-      // Per-layer alpha — kept low so the stack accumulates into a soft falloff. Caps at ~22.
-      int perLayerAlpha = Math.min(22, 8 + e * 2);
+      int layers = 5;
+      // Lateral spread capped tight — at e=1 just ~1 px, never more than ~2 px even at e=5.
+      float maxSpread = Math.min(2f, 0.5f + e * 0.3f);
+      // Vertical offset of the deepest ambient layer; grows with elevation, dominates over
+      // spread so the shadow drops below rather than fans outward.
+      float maxOffsetY = Math.max(3f, e * 1.6f);
+      // Per-layer alpha — kept low so the stack accumulates into a soft falloff without darkening
+      // the lateral edges.
+      int perLayerAlpha = Math.min(14, 6 + e * 2);
       for (int i = 1; i <= layers; i++) {
         float t = (float) i / (float) layers;
         float spread = maxSpread * t;
@@ -169,12 +176,13 @@ public final class SurfacePainter {
                 arc + spread,
                 arc + spread));
       }
-      // Key drop: tighter, directly below the surface — drives the "lifted" perception and reads
-      // as a clear bottom-edge separator at every elevation.
-      int keyOffset = Math.max(1, e / 2);
-      int keyAlpha = Math.min(60, 26 + e * 4);
+      // Key drop: sharper, directly below the surface — the dominant shadow signal. No lateral
+      // spread; alpha + offset both scale with elevation so a Level 1 surface still reads as
+      // clearly lifted and Level 5 has a substantial drop.
+      int keyOffset = Math.max(2, e + 1);
+      int keyAlpha = Math.min(70, 36 + e * 4);
       g2.setColor(new Color(0, 0, 0, keyAlpha));
-      g2.fill(new RoundRectangle2D.Float(x, y + keyOffset + 1f, w, h, arc, arc));
+      g2.fill(new RoundRectangle2D.Float(x, y + keyOffset, w, h, arc, arc));
     } finally {
       g2.dispose();
     }
