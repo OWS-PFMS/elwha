@@ -1,9 +1,11 @@
 package com.owspfm.elwha.card;
 
 import com.owspfm.elwha.theme.SpaceScale;
-import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.LayoutManager;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -42,24 +44,123 @@ public final class ElwhaCardHeader extends JComponent {
   /** Creates an empty header. Add leading / title / subtitle / trailing via the fluent setters. */
   public ElwhaCardHeader() {
     final int gap = SpaceScale.SM.px();
-    setLayout(new BorderLayout(gap, 0));
     setOpaque(false);
+    setLayout(new BaselineRowLayout(gap));
 
-    leadingHolder = new JPanel(new BorderLayout());
+    leadingHolder = new JPanel();
+    leadingHolder.setLayout(new BoxLayout(leadingHolder, BoxLayout.X_AXIS));
     leadingHolder.setOpaque(false);
     leadingHolder.setVisible(false);
-    add(leadingHolder, BorderLayout.WEST);
+    add(leadingHolder);
 
     textStack = new JPanel();
     textStack.setOpaque(false);
     textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
-    add(textStack, BorderLayout.CENTER);
+    add(textStack);
 
     trailingRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, gap, 0));
     trailingRow.setOpaque(false);
     trailingRow.setVisible(false);
-    add(trailingRow, BorderLayout.EAST);
+    add(trailingRow);
   }
+
+  /**
+   * Custom 3-segment LayoutManager that aligns leading + trailing on the title's text baseline, per
+   * spec §5.1 — "Vertical alignment: title baseline shares row baseline with leading and trailing
+   * items." Leading column is left-anchored, trailing row is right-anchored, text stack flexes to
+   * take the remainder.
+   */
+  private final class BaselineRowLayout implements LayoutManager {
+    private final int gap;
+
+    BaselineRowLayout(final int gap) {
+      this.gap = gap;
+    }
+
+    @Override
+    public void addLayoutComponent(final String name, final Component comp) {
+      // no-op
+    }
+
+    @Override
+    public void removeLayoutComponent(final Component comp) {
+      // no-op
+    }
+
+    @Override
+    public Dimension preferredLayoutSize(final Container parent) {
+      final Dimension lp = leadingHolder.isVisible() ? leadingHolder.getPreferredSize() : ZERO;
+      final Dimension rp = trailingRow.isVisible() ? trailingRow.getPreferredSize() : ZERO;
+      final Dimension tp = textStack.getPreferredSize();
+      final int leadingW = lp.width + (leadingHolder.isVisible() ? gap : 0);
+      final int trailingW = rp.width + (trailingRow.isVisible() ? gap : 0);
+      final int width = leadingW + tp.width + trailingW;
+      final int height = baselineAlignedHeight(lp, tp, rp);
+      return new Dimension(width, height);
+    }
+
+    @Override
+    public Dimension minimumLayoutSize(final Container parent) {
+      return preferredLayoutSize(parent);
+    }
+
+    @Override
+    public void layoutContainer(final Container parent) {
+      final int width = parent.getWidth();
+      final Dimension lp = leadingHolder.isVisible() ? leadingHolder.getPreferredSize() : ZERO;
+      final Dimension rp = trailingRow.isVisible() ? trailingRow.getPreferredSize() : ZERO;
+      final int leadingW = lp.width + (leadingHolder.isVisible() ? gap : 0);
+      final int trailingW = rp.width + (trailingRow.isVisible() ? gap : 0);
+      final int textW = Math.max(0, width - leadingW - trailingW);
+      final Dimension tp = new Dimension(textW, textStack.getPreferredSize().height);
+      final int targetBaseline = resolveBaseline(textStack, tp);
+      final int leadingY = topForBaseline(leadingHolder, lp, targetBaseline);
+      final int textY = topForBaseline(textStack, tp, targetBaseline);
+      final int trailingY = topForBaseline(trailingRow, rp, targetBaseline);
+      if (leadingHolder.isVisible()) {
+        leadingHolder.setBounds(0, leadingY, lp.width, lp.height);
+      }
+      textStack.setBounds(leadingW, textY, textW, tp.height);
+      if (trailingRow.isVisible()) {
+        trailingRow.setBounds(width - rp.width, trailingY, rp.width, rp.height);
+      }
+    }
+
+    private int baselineAlignedHeight(final Dimension lp, final Dimension tp, final Dimension rp) {
+      final int target = resolveBaseline(textStack, tp);
+      int topMax = target;
+      int bottomMax = tp.height - target;
+      if (leadingHolder.isVisible()) {
+        final int b = resolveBaseline(leadingHolder, lp);
+        topMax = Math.max(topMax, b);
+        bottomMax = Math.max(bottomMax, lp.height - b);
+      }
+      if (trailingRow.isVisible()) {
+        final int b = resolveBaseline(trailingRow, rp);
+        topMax = Math.max(topMax, b);
+        bottomMax = Math.max(bottomMax, rp.height - b);
+      }
+      return topMax + bottomMax;
+    }
+
+    /**
+     * Returns the baseline of {@code component} at the given size, or a center fallback when the
+     * component does not have a baseline (e.g. icon-only buttons).
+     */
+    private int resolveBaseline(final JComponent component, final Dimension size) {
+      if (size.width <= 0 || size.height <= 0) {
+        return 0;
+      }
+      final int b = component.getBaseline(size.width, size.height);
+      return b >= 0 ? b : size.height / 2;
+    }
+
+    private int topForBaseline(final JComponent component, final Dimension size, final int target) {
+      return target - resolveBaseline(component, size);
+    }
+  }
+
+  private static final Dimension ZERO = new Dimension(0, 0);
 
   /**
    * Sets the leading slot — typically an {@link ElwhaCardLeadingIcon} or {@link
@@ -74,7 +175,7 @@ public final class ElwhaCardHeader extends JComponent {
   public ElwhaCardHeader setLeading(final JComponent leading) {
     Objects.requireNonNull(leading, "leading");
     leadingHolder.removeAll();
-    leadingHolder.add(leading, BorderLayout.CENTER);
+    leadingHolder.add(leading);
     leadingHolder.setVisible(true);
     revalidate();
     repaint();
