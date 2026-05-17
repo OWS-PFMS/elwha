@@ -298,6 +298,8 @@ public class ElwhaCard extends ElwhaSurface {
     supportingTextLabel = new JLabel();
     supportingTextLabel.setAlignmentX(0f);
     supportingTextLabel.setVisible(false);
+    // M3 supporting-text spacing: vertical gap between header text and supporting text.
+    supportingTextLabel.setBorder(BorderFactory.createEmptyBorder(INNER_GAP_PX, 0, 0, 0));
 
     collapsibleBody = new CollapsibleContainer();
     collapsibleBody.setOpaque(false);
@@ -378,12 +380,18 @@ public class ElwhaCard extends ElwhaSurface {
               final int w = getWidth();
               final int h = getHeight();
               // Clip to a shape with rounded top corners (matching the card) and square bottom
-              // corners (text content continues below the media in M3's anatomy).
+              // corners (text content continues below the media in M3's anatomy). Uses cubic
+              // Bezier with the standard k = 0.55228 * r control distance so the corner curve is
+              // visually indistinguishable from SurfacePainter's RoundRectangle2D corner —
+              // eliminates
+              // the sub-pixel mismatch a quadTo approximation would produce.
+              final float r = arc;
+              final float k = r * 0.5522847498f;
               final java.awt.geom.Path2D.Float clip = new java.awt.geom.Path2D.Float();
-              clip.moveTo(0, arc);
-              clip.quadTo(0, 0, arc, 0);
-              clip.lineTo(w - arc, 0);
-              clip.quadTo(w, 0, w, arc);
+              clip.moveTo(0, r);
+              clip.curveTo(0, r - k, r - k, 0, r, 0);
+              clip.lineTo(w - r, 0);
+              clip.curveTo(w - r + k, 0, w, r - k, w, r);
               clip.lineTo(w, h);
               clip.lineTo(0, h);
               clip.closePath();
@@ -1258,7 +1266,12 @@ public class ElwhaCard extends ElwhaSurface {
     if (e <= 0) {
       return new Insets(0, 0, 0, 0);
     }
-    return new Insets(e, e, e * 2, e);
+    // Reserve just enough gutter for the rendered shadow to fit inside the component:
+    // - 1px top: a thin ambient halo sliver above the card
+    // - lateral (e/2 + 1): ambient halo on the sides
+    // - bottom (e + 2): key + ambient drop offset
+    final int lateral = Math.max(1, e / 2 + 1);
+    return new Insets(1, lateral, e + 2, lateral);
   }
 
   private static final int CHEVRON_ICON_PX = 20;
@@ -1312,6 +1325,14 @@ public class ElwhaCard extends ElwhaSurface {
    * @version v0.1.0
    * @since v0.1.0
    */
+  /**
+   * Paints under the children: drop shadow (M3 key + ambient layers) and the rounded surface fill +
+   * border with hover / pressed state-layer overlay (delegated to {@link SurfacePainter}).
+   *
+   * @param g the graphics context
+   * @version v0.1.0
+   * @since v0.1.0
+   */
   @Override
   protected void paintComponent(final Graphics g) {
     final Graphics2D g2 = (Graphics2D) g.create();
@@ -1334,22 +1355,43 @@ public class ElwhaCard extends ElwhaSurface {
       } finally {
         inner.dispose();
       }
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  /**
+   * Paints over the children: disabled scrim, focus ring, and the M3 top-trailing checked-icon
+   * selection badge. Painting these on top of children ensures the selection badge sits above the
+   * media slot (which would otherwise hide it).
+   *
+   * @param g the graphics context
+   * @version v0.1.0
+   * @since v0.1.0
+   */
+  @Override
+  protected void paintChildren(final Graphics g) {
+    super.paintChildren(g);
+    if (!isEnabled() && interactionMode == CardInteractionMode.STATIC && !selected) {
+      // Nothing decorative needs to paint over disabled static cards.
+      return;
+    }
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      final Insets shadow = shadowInsets();
+      final int x = shadow.left;
+      final int y = shadow.top;
+      final int w = getWidth() - shadow.left - shadow.right;
+      final int h = getHeight() - shadow.top - shadow.bottom;
+      final int arc = getShape().px();
 
       if (!isEnabled()) {
-        final Graphics2D dim = (Graphics2D) g2.create();
-        try {
-          dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
-          dim.setColor(getBackground() == null ? Color.WHITE : getBackground());
-          dim.fillRoundRect(x, y, w, h, arc, arc);
-        } finally {
-          dim.dispose();
-        }
+        paintDisabledScrim(g2, x, y, w, h, arc);
       }
-
       if (isFocusOwner() && interactionMode != CardInteractionMode.STATIC && isEnabled()) {
         paintFocusRing(g2, x, y, w, h, arc);
       }
-
       if (selected) {
         paintCheckedBadge(g2, x, y, w);
       }
@@ -1371,28 +1413,75 @@ public class ElwhaCard extends ElwhaSurface {
     return null;
   }
 
+  /**
+   * Paints an M3-style elevation drop shadow as a two-layer composite: an ambient halo that extends
+   * slightly past the card on three sides (left, right, bottom) below the top edge, plus a key
+   * shadow offset straight down just below the card. Neither layer paints above the card's top edge
+   * — the top edge stays crisp.
+   *
+   * @version v0.1.0
+   * @since v0.1.0
+   */
   private void paintShadow(
       final Graphics2D g2, final int x, final int y, final int w, final int h, final int arc) {
     final int e = effectiveElevation();
     if (e <= 0) {
       return;
     }
-    final int layers = Math.max(2, e + 1);
-    for (int i = layers; i >= 1; i--) {
-      final int alpha = Math.max(8, 60 / i);
-      g2.setColor(new Color(0, 0, 0, alpha));
-      final int spread = i;
-      final int offsetY = Math.max(1, e + i / 2);
-      g2.fillRoundRect(
-          x - spread, y + offsetY, w + 2 * spread, h + spread, arc + spread, arc + spread);
+    final int clamped = Math.min(e, MAX_ELEVATION);
+
+    // Stack of progressively-larger soft-shadow layers, each at low alpha. Stacking many low-
+    // alpha layers approximates a Gaussian-blur drop shadow without the cost of a ConvolveOp
+    // pass. Top edge of every layer sits 1px below the card top so the card top silhouette
+    // stays crisp.
+    final int layers = 6;
+    final int maxOffsetY = clamped + 1;
+    final int maxSpread = Math.max(1, clamped / 2);
+    final int basePerLayerAlpha = Math.max(10, 24 - (16 - 2 * clamped));
+    // basePerLayerAlpha grows from ~10 (e=1) to ~24 (e=8) so high-elevation cards have a
+    // noticeably stronger total shadow.
+    for (int i = 1; i <= layers; i++) {
+      final float t = (float) i / layers;
+      final int offsetY = Math.round(maxOffsetY * t);
+      final int spread = Math.round(maxSpread * t);
+      g2.setColor(new Color(0, 0, 0, basePerLayerAlpha));
+      g2.fill(
+          new java.awt.geom.RoundRectangle2D.Float(
+              x - spread,
+              y + 1 + Math.max(0, offsetY - spread),
+              w + 2f * spread,
+              h + offsetY,
+              arc + spread,
+              arc + spread));
+    }
+
+    // Key: tight crisp drop directly below the card, no lateral spread. Drives the "lifted"
+    // perception and reads as a clear bottom edge separator at all elevations.
+    final int keyOffset = Math.max(1, clamped / 2);
+    final int keyAlpha = 30 + (int) Math.round(clamped * 3.0);
+    g2.setColor(new Color(0, 0, 0, Math.min(70, keyAlpha)));
+    g2.fill(new java.awt.geom.RoundRectangle2D.Float(x, y + keyOffset + 1, w, h, arc, arc));
+  }
+
+  private void paintDisabledScrim(
+      final Graphics2D g2, final int x, final int y, final int w, final int h, final int arc) {
+    final Graphics2D dim = (Graphics2D) g2.create();
+    try {
+      dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
+      final Color base = getSurfaceRole() != null ? getSurfaceRole().resolve() : Color.WHITE;
+      dim.setColor(base);
+      dim.fill(new java.awt.geom.RoundRectangle2D.Float(x, y, w, h, arc, arc));
+    } finally {
+      dim.dispose();
     }
   }
 
   private void paintFocusRing(
       final Graphics2D g2, final int x, final int y, final int w, final int h, final int arc) {
     final Color ring = ColorRole.PRIMARY.resolve();
-    g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 200));
-    g2.drawRoundRect(x - 1, y - 1, w + 1, h + 1, arc + 2, arc + 2);
+    g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 220));
+    g2.setStroke(new java.awt.BasicStroke(2f));
+    g2.draw(new java.awt.geom.RoundRectangle2D.Float(x + 1f, y + 1f, w - 2f, h - 2f, arc, arc));
   }
 
   private void paintCheckedBadge(final Graphics2D g2, final int x, final int y, final int w) {
