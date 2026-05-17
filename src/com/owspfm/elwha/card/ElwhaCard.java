@@ -960,6 +960,23 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Always reserves the {@link #MAX_ELEVATION} shadow inset regardless of the current resting
+   * elevation. This keeps the visible body size identical across variants (Elevated, Filled,
+   * Outlined) and across elevation transitions (hover lift, drag lift), so a mixed-variant grid of
+   * cards has consistent body widths and a hovered card doesn't suddenly shrink as its reserve
+   * grows. Matches Compose Material3 / MaterialCardView, where elevation is painted outside the
+   * measured body — Swing doesn't allow that, so the reserve is always-on instead.
+   *
+   * @return the chassis insets — always {@code SurfacePainter.shadowInsets(MAX_ELEVATION)}
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public Insets getInsets() {
+    return com.owspfm.elwha.theme.SurfacePainter.shadowInsets(MAX_ELEVATION);
+  }
+
+  /**
    * Paints under the children: Surface chassis (shadow + fill + border) via {@code super}, then the
    * card's state-layer overlay tinted to the variant's on-pair. Selection badge, focus ring,
    * disabled scrim, and ripple paint above children in {@link #paintChildren}.
