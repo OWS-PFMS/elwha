@@ -1,5 +1,6 @@
 package com.owspfm.elwha.card;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -17,6 +18,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.RoundRectangle2D;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,7 +84,7 @@ import javax.swing.UIManager;
  * moving the {@code com.owspfm.elwha.card} directory.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.2.0
  * @since v0.1.0
  */
 public class ElwhaCard extends JPanel {
@@ -1095,7 +1097,10 @@ public class ElwhaCard extends JPanel {
       return new Insets(0, 0, 0, 0);
     }
     int e = elevation;
-    return new Insets(e, e, e * 2, e);
+    // M3-aligned: top shrinks to 1px (the soft-layer stack never paints above the top edge so the
+    // top silhouette stays crisp). Lateral / bottom track elevation. Matches the
+    // multi-layer paintShadow geometry below.
+    return new Insets(1, e / 2 + 1, e + 2, e / 2 + 1);
   }
 
   private static String chevronGlyph(final boolean collapsed) {
@@ -1162,15 +1167,37 @@ public class ElwhaCard extends JPanel {
       return;
     }
     int e = elevation + (hovered && isEnabled() ? 1 : 0);
-    int layers = Math.max(2, e + 1);
-    for (int i = layers; i >= 1; i--) {
-      int alpha = Math.max(8, 60 / i);
-      g2.setColor(new Color(0, 0, 0, alpha));
-      int spread = i;
-      int offsetY = Math.max(1, e + i / 2);
-      g2.fillRoundRect(
-          x - spread, y + offsetY, w + 2 * spread, h + spread, arc + spread, arc + spread);
+    int clamped = Math.min(e, MAX_ELEVATION);
+
+    // Stack of progressively-larger soft-shadow layers, each at low alpha. Stacking many low-
+    // alpha RoundRectangle2D.Float layers approximates a Gaussian-blur drop shadow without
+    // the cost of a ConvolveOp pass. Every layer's top sits 1px below the card top so the
+    // card top silhouette stays crisp regardless of elevation.
+    int layers = 6;
+    int maxOffsetY = clamped + 1;
+    int maxSpread = Math.max(1, clamped / 2);
+    int basePerLayerAlpha = Math.max(10, 24 - (16 - 2 * clamped));
+    for (int i = 1; i <= layers; i++) {
+      float t = (float) i / layers;
+      int offsetY = Math.round(maxOffsetY * t);
+      int spread = Math.round(maxSpread * t);
+      g2.setColor(new Color(0, 0, 0, basePerLayerAlpha));
+      g2.fill(
+          new RoundRectangle2D.Float(
+              x - spread,
+              y + 1 + Math.max(0, offsetY - spread),
+              w + 2f * spread,
+              h + offsetY,
+              arc + spread,
+              arc + spread));
     }
+
+    // Key layer: tight crisp drop directly below the card, no lateral spread. Drives the
+    // "lifted" perception and reads as a clear bottom-edge separator at all elevations.
+    int keyOffset = Math.max(1, clamped / 2);
+    int keyAlpha = Math.min(70, 30 + (int) Math.round(clamped * 3.0));
+    g2.setColor(new Color(0, 0, 0, keyAlpha));
+    g2.fill(new RoundRectangle2D.Float(x, y + keyOffset + 1, w, h, arc, arc));
   }
 
   private void paintBackground(final Graphics2D g2, int x, int y, int w, int h, int arc) {
@@ -1214,8 +1241,11 @@ public class ElwhaCard extends JPanel {
     if (ring == null) {
       ring = accentColor();
     }
-    g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 160));
-    g2.drawRoundRect(x - 1, y - 1, w + 1, h + 1, arc + 2, arc + 2);
+    g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 220));
+    g2.setStroke(new BasicStroke(2f));
+    // Half-pixel inset on RoundRectangle2D.Float — the 2dp stroke is centred on the path so a
+    // 1px inset puts the stroke perfectly on the pixel grid (crisp AA, no 1px straddle).
+    g2.draw(new RoundRectangle2D.Float(x + 1f, y + 1f, w - 2f, h - 2f, arc, arc));
   }
 
   /**

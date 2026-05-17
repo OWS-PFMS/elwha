@@ -74,7 +74,7 @@ import javax.swing.Timer;
  * }</pre>
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.2.0
  * @since v0.1.0
  */
 public class ElwhaIconButton extends JComponent {
@@ -137,13 +137,18 @@ public class ElwhaIconButton extends JComponent {
    * Creates an icon button with the given resting icon.
    *
    * @param icon the resting icon (may be {@code null} for deferred install)
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaIconButton(final Icon icon) {
     setOpaque(false);
     setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     setFocusable(true);
+    // M3 / macOS HIG: icon buttons in toolbars / app bars / card trailing-actions slots receive
+    // focus via keyboard tab navigation but NOT via mouse click. Suppressing click-focus keeps
+    // the focus ring out of the resting visual after the user clicks the button. Consumers
+    // building a "primary button" pattern can opt back in with setRequestFocusEnabled(true).
+    setRequestFocusEnabled(false);
     setIcon(icon);
     initInteraction();
   }
