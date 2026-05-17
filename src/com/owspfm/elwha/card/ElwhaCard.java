@@ -39,7 +39,6 @@ import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
-import javax.swing.BoxLayout;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
@@ -174,7 +173,7 @@ public class ElwhaCard extends ElwhaSurface {
    */
   public ElwhaCard() {
     super();
-    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+    setLayout(new VerticalCardLayout());
     applyVariant(variant);
     installInteraction();
     installKeyboardActivation();
@@ -720,7 +719,7 @@ public class ElwhaCard extends ElwhaSurface {
     final CardOrientation old = this.orientation;
     this.orientation = newOrientation;
     if (newOrientation == CardOrientation.VERTICAL) {
-      setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+      setLayout(new VerticalCardLayout());
     } else {
       setLayout(new TwoColumnLayout());
       removeAll();
@@ -1216,6 +1215,120 @@ public class ElwhaCard extends ElwhaSurface {
       height = Math.min(height, SCROLL_MAX_EXPANDED_HEIGHT_PX);
     }
     return new Dimension(d.width, height);
+  }
+
+  /**
+   * VERTICAL LayoutManager. Stacks children top-to-bottom in {@code add()} order — same observable
+   * behavior as {@code BoxLayout(Y_AXIS)} per spec §3.3 — plus two card-specific rules:
+   *
+   * <ul>
+   *   <li><strong>Padding from token roles.</strong> Each non-edge-media child is inset by {@link
+   *       #paddingHorizontal} horizontally and the card's vertical padding between siblings (top
+   *       and bottom of the card itself).
+   *   <li><strong>Edge-bleed for {@link ElwhaCardMedia}.</strong> When media is the first child, it
+   *       gets full card width and no top inset; when it's the last child, no bottom inset. This is
+   *       the spec §5.2 contract that lets the media's cubic-Bezier corner clip align with the
+   *       chassis's rounded outer shape.
+   * </ul>
+   */
+  private final class VerticalCardLayout implements LayoutManager {
+    @Override
+    public void addLayoutComponent(final String name, final Component comp) {
+      // no-op
+    }
+
+    @Override
+    public void removeLayoutComponent(final Component comp) {
+      // no-op
+    }
+
+    @Override
+    public Dimension preferredLayoutSize(final Container parent) {
+      final int padH = paddingHorizontal.px();
+      final int padV = paddingVertical.px();
+      final int count = parent.getComponentCount();
+      int totalH = 0;
+      int maxW = 0;
+      boolean anyVisible = false;
+      Component firstVisible = null;
+      Component lastVisible = null;
+      for (int i = 0; i < count; i++) {
+        final Component c = parent.getComponent(i);
+        if (!c.isVisible()) {
+          continue;
+        }
+        if (firstVisible == null) {
+          firstVisible = c;
+        }
+        lastVisible = c;
+        anyVisible = true;
+      }
+      if (!anyVisible) {
+        return new Dimension(2 * padH, 2 * padV);
+      }
+      if (!(firstVisible instanceof ElwhaCardMedia)) {
+        totalH += padV;
+      }
+      for (int i = 0; i < count; i++) {
+        final Component c = parent.getComponent(i);
+        if (!c.isVisible()) {
+          continue;
+        }
+        final Dimension p = c.getPreferredSize();
+        final boolean edgeMedia = isEdgeMedia(c, firstVisible, lastVisible);
+        totalH += p.height;
+        maxW = Math.max(maxW, edgeMedia ? p.width : p.width + 2 * padH);
+      }
+      if (!(lastVisible instanceof ElwhaCardMedia)) {
+        totalH += padV;
+      }
+      return new Dimension(maxW, totalH);
+    }
+
+    @Override
+    public Dimension minimumLayoutSize(final Container parent) {
+      return preferredLayoutSize(parent);
+    }
+
+    @Override
+    public void layoutContainer(final Container parent) {
+      final int padH = paddingHorizontal.px();
+      final int padV = paddingVertical.px();
+      final int width = parent.getWidth();
+      final int count = parent.getComponentCount();
+      Component firstVisible = null;
+      Component lastVisible = null;
+      for (int i = 0; i < count; i++) {
+        final Component c = parent.getComponent(i);
+        if (!c.isVisible()) {
+          continue;
+        }
+        if (firstVisible == null) {
+          firstVisible = c;
+        }
+        lastVisible = c;
+      }
+      if (firstVisible == null) {
+        return;
+      }
+      int y = (firstVisible instanceof ElwhaCardMedia) ? 0 : padV;
+      for (int i = 0; i < count; i++) {
+        final Component c = parent.getComponent(i);
+        if (!c.isVisible()) {
+          continue;
+        }
+        final boolean edgeMedia = isEdgeMedia(c, firstVisible, lastVisible);
+        final int x = edgeMedia ? 0 : padH;
+        final int w = edgeMedia ? width : Math.max(0, width - 2 * padH);
+        final Dimension p = c.getPreferredSize();
+        c.setBounds(x, y, w, p.height);
+        y += p.height;
+      }
+    }
+
+    private boolean isEdgeMedia(final Component c, final Component first, final Component last) {
+      return c instanceof ElwhaCardMedia && (c == first || c == last);
+    }
   }
 
   /**
