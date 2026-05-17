@@ -56,7 +56,7 @@ Install the theme **before** building any UI, then build normally — raw Swing 
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
-import com.owspfm.elwha.card.ElwhaCard;
+import com.owspfm.elwha.card.v1.ElwhaCard;
 import com.owspfm.elwha.chip.ElwhaChip;
 import javax.swing.*;
 import java.awt.*;
@@ -152,7 +152,7 @@ Built on top of the token foundation; depend only on Swing + FlatLaf.
 The library ships five interactive playground apps:
 
 - **`com.owspfm.elwha.theme.playground.ThemePlayground`** — the central harness. Color-role swatches (all 49), the 12-role type scale, a raw-Swing components gallery, and top-level tabs for each of the token-native components (`Chip`, `Icon Button`, `Surface`). Live light / dark / system mode toggle. This is the place to verify a custom palette before wiring it into your app.
-- **`com.owspfm.elwha.card.playground.ElwhaCardPlayground`** — exercises every variant, mode, and configurable property of `ElwhaCard` and `ElwhaCardList`.
+- **`com.owspfm.elwha.card.v1.playground.ElwhaCardPlayground`** — exercises every variant, mode, and configurable property of `ElwhaCard` and `ElwhaCardList`.
 - **`com.owspfm.elwha.chip.ElwhaChipPlayground`** — exercises every variant and selection mode of `ElwhaChip` and `ElwhaChipList`.
 - **`com.owspfm.elwha.surface.playground.ElwhaSurfacePlayground`** — the 49 × 7 `ColorRole × ShapeScale` matrix for `ElwhaSurface` and a live combo-driven panel.
 - **`com.owspfm.elwha.iconbutton.playground.ElwhaIconButtonPlayground`** — variant gallery (4 × 6 states), toggle examples (icon-swap pairs across all variants), the 5 × 4 size × variant matrix, a `JToolBar` mockup, and a live combo-driven panel.
@@ -161,7 +161,7 @@ Run them from a checkout:
 
 ```bash
 mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.theme.playground.ThemePlayground"
-mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.playground.ElwhaCardPlayground"
+mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.v1.playground.ElwhaCardPlayground"
 mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.chip.ElwhaChipPlayground"
 mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.surface.playground.ElwhaSurfacePlayground"
 mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.iconbutton.playground.ElwhaIconButtonPlayground"

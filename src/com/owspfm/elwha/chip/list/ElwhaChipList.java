@@ -1,6 +1,6 @@
 package com.owspfm.elwha.chip.list;
 
-import com.owspfm.elwha.card.list.Cursors;
+import com.owspfm.elwha.card.v1.list.Cursors;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.icons.MaterialIcons;
@@ -73,7 +73,7 @@ import javax.swing.event.MouseInputAdapter;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.2.0
  * @since v0.1.0
  */
 public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T> {
@@ -87,7 +87,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * #MOVABLE} (true), and {@link #setPinPredicate(Predicate)} implicitly flips the mode to {@link
    * #PINNED}.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public enum MovementMode {
@@ -96,7 +96,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
      * inert. Default for a fresh list (matches the historical {@code setReorderable(false)}
      * behavior).
      *
-     * @version v0.1.0
+     * @version v0.2.0
      * @since v0.1.0
      */
     STATIC,
@@ -108,7 +108,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
      * into the context menu when the predicate, action, and no caller-installed menu are all
      * present.
      *
-     * @version v0.1.0
+     * @version v0.2.0
      * @since v0.1.0
      */
     PINNED,
@@ -119,7 +119,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
      * into the context menu when the predicate, action, and no caller-installed menu are all
      * present. Mutually exclusive with {@link #PINNED}.
      *
-     * @version v0.1.0
+     * @version v0.2.0
      * @since v0.1.0
      */
     ANCHORED
@@ -130,7 +130,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * own independent setting — many callers will want a clickable pin but a menu-only anchor (or
    * vice versa).
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public enum IconAffordance {
@@ -140,7 +140,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
      * Static glyph shown only when the item is pinned/anchored — not clickable. Default; matches
      * the historical "leading icon as state indicator" behavior.
      *
-     * @version v0.1.0
+     * @version v0.2.0
      * @since v0.1.0
      */
     INDICATOR,
@@ -149,7 +149,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
      * For anchor: persistent filled glyph on the anchored chip; hover-revealed outline glyph on
      * non-anchored chips; click sets/clears the anchor.
      *
-     * @version v0.1.0
+     * @version v0.2.0
      * @since v0.1.0
      */
     BUTTON
@@ -223,7 +223,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param model the backing model (required)
    * @param adapter the adapter that maps items to chips (required)
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaChipList(final ChipListModel<T> model, final ChipAdapter<T> adapter) {
@@ -265,7 +265,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Returns the backing model.
    *
    * @return the model
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ChipListModel<T> getModel() {
@@ -276,7 +276,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Returns the selection model. Always non-null even when selection is disabled.
    *
    * @return the selection model
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ChipSelectionModel<T> getSelectionModel() {
@@ -287,7 +287,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Returns the current orientation.
    *
    * @return the orientation (never null)
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -300,7 +300,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param orientation one of {@link ElwhaListOrientation}; null is ignored
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -319,7 +319,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param columns column count, clamped to {@code >= 1}
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -340,7 +340,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Returns the column count for grid mode.
    *
    * @return the column count
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -353,7 +353,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param gap pixels, clamped to {@code >= 0}
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -372,7 +372,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Returns the active item gap.
    *
    * @return the gap in pixels
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -385,7 +385,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param insets the insets; null treated as zero
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -402,7 +402,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param mode the selection mode; null is ignored
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaChipList<T> setSelectionMode(final ChipSelectionMode mode) {
@@ -424,7 +424,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * holds: if no item is currently selected and the visible list is non-empty, auto-select the
    * first visible item. No-op otherwise (including when mode isn't mandatory).
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private void ensureMandatorySelection() {
@@ -442,7 +442,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Returns the active selection mode.
    *
    * @return the selection mode (never null)
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ChipSelectionMode getSelectionMode() {
@@ -456,7 +456,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param mode the movement mode; null is ignored
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaChipList<T> setMovementMode(final MovementMode mode) {
@@ -483,7 +483,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Returns the active movement mode.
    *
    * @return the active mode (never null)
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public MovementMode getMovementMode() {
@@ -498,7 +498,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param reorderable whether reorder is enabled
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaChipList<T> setReorderable(final boolean reorderable) {
@@ -518,7 +518,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * MovementMode.STATIC}.
    *
    * @return reorder flag
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public boolean isReorderable() {
@@ -530,7 +530,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param filter the predicate; null clears filtering
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -546,7 +546,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param comparator the comparator; null clears sorting
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -572,7 +572,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param isPinned the predicate, or null to disable partitioning
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaChipList<T> setPinPredicate(final Predicate<T> isPinned) {
@@ -595,7 +595,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param action the action, or null
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaChipList<T> setPinAction(final BiConsumer<T, Boolean> action) {
@@ -610,7 +610,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param item the item
    * @return whether the item is currently pinned
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public boolean isPinned(final T item) {
@@ -624,7 +624,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * when no action is installed.
    *
    * @param item the item to toggle
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public void togglePin(final T item) {
@@ -639,7 +639,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * itself changing. Triggers a rebuild so the partition reflects current predicate state. Cheaper
    * than firing a synthetic model event.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public void pinStateChanged() {
@@ -654,7 +654,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * The returned list does not track subsequent updates.
    *
    * @return rendered items in render order (never null, may be empty)
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public List<T> getVisibleItems() {
@@ -670,7 +670,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param item the item to toggle
    * @return a fresh menu item; never null
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public JMenuItem createPinMenuItem(final T item) {
@@ -692,7 +692,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param isAnchored the predicate, or null
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaChipList<T> setAnchorPredicate(final Predicate<T> isAnchored) {
@@ -715,7 +715,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param action the action, or null
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaChipList<T> setAnchorAction(final Consumer<T> action) {
@@ -729,7 +729,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param item the item
    * @return whether the item is currently anchored
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public boolean isAnchored(final T item) {
@@ -743,7 +743,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * item is anchored or the list is not in {@link MovementMode#ANCHORED} mode.
    *
    * @return the anchored item, or null
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public T getAnchoredItem() {
@@ -763,7 +763,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * anchor. No-op outside {@link MovementMode#ANCHORED} mode or when no action is installed.
    *
    * @param item the item to anchor, or null to clear
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public void setAnchor(final T item) {
@@ -782,7 +782,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Signals that the anchor predicate's answers have changed without a model event firing. Triggers
    * a rebuild so the partition reflects current predicate state.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public void anchorStateChanged() {
@@ -798,7 +798,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param item the item to toggle
    * @return a fresh menu item; never null
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public JMenuItem createAnchorMenuItem(final T item) {
@@ -826,7 +826,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param affordance the affordance treatment; null is ignored
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaChipList<T> setPinAffordance(final IconAffordance affordance) {
@@ -842,7 +842,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Returns the current pin affordance treatment.
    *
    * @return the pin affordance (never null)
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public IconAffordance getPinAffordance() {
@@ -859,7 +859,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param affordance the affordance treatment; null is ignored
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaChipList<T> setAnchorAffordance(final IconAffordance affordance) {
@@ -875,7 +875,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Returns the current anchor affordance treatment.
    *
    * @return the anchor affordance (never null)
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public IconAffordance getAnchorAffordance() {
@@ -887,7 +887,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param component the placeholder; null restores the default
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -904,7 +904,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param loading whether to show the loading state
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -922,7 +922,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param component the loading component
    * @return this list
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
@@ -938,7 +938,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Registers a reorder listener. (Reorder events are not fired until #239 wires drag.)
    *
    * @param listener the listener; null is ignored
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public void addReorderListener(final ChipReorderListener<T> listener) {
@@ -951,7 +951,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Removes a previously registered reorder listener.
    *
    * @param listener the listener
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public void removeReorderListener(final ChipReorderListener<T> listener) {
@@ -964,7 +964,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    *
    * @param item the item
    * @return the chip, or null
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   public ElwhaChip getChipFor(final T item) {
@@ -1240,7 +1240,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * on pinned items (historical behavior). BUTTON renders a clickable affordance on every chip
    * (outline glyph on unpinned, filled on pinned). NONE skips both.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private void applyPinAffordance(final ElwhaChip chip, final T item) {
@@ -1277,7 +1277,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * — persistent filled glyph on the anchored chip, hover-revealed outline glyph on non-anchored
    * chips. NONE skips both.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private void applyAnchorAffordance(final ElwhaChip chip, final T item) {
@@ -1374,7 +1374,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * one carrying the authoritative final cursor position.
    *
    * @param event the release event
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private void refreshDropFromReleaseEvent(final MouseEvent event) {
@@ -1441,7 +1441,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * </ul>
    *
    * @return the anchor point used by {@code computeDropIndex}
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private Point computeDropAnchor() {
@@ -1468,7 +1468,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * recomputes targets, the slide accelerates, and the answer oscillates. Natural positions are
    * stable — the slot the cursor maps to depends only on the cursor.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private int computeDropIndex(final Point point) {
@@ -1535,7 +1535,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * chip, leaving slot stuck at 0 regardless of {@code anchor.x}. Drifts below the component are
    * already handled correctly by the existing below-row branch firing for every row.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private int dropIndexWrap(final Point point) {
@@ -1586,7 +1586,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * <p>{@code row} is clamped to the last occupied row so a far-past-the-last-row anchor doesn't
    * compute idx > nonDraggedCount and get pinned to the end.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private int dropIndexGrid(final Point point) {
@@ -1641,7 +1641,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * dragged chip and reinserting it at {@code drag.toIndex}. The animation timer then interpolates
    * each chip toward its target.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private void recomputeDragTargets() {
@@ -1842,7 +1842,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * land in [0..pinnedCountAfterRemoval]; unpinned items can only land in
    * [pinnedCountAfterRemoval..size]. With no pin predicate this is a no-op pass-through.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private int clampSlotToPartition(final int slotVis, final T draggedItem) {
@@ -1876,7 +1876,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * dragged item in the new visible order, and return that neighbor's post-removal model index.
    * When the slot is past the last item, returns the post-removal end-of-model index.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private int translateVisibleSlotToModelIndex(final int slotVis, final T draggedItem) {
@@ -1923,7 +1923,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * dragged chip at row 0 / col 0 even though the model is untouched. Successful drops sidestep
    * this because model.move → rebuildContent rebuilds the child list from scratch in visible order.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private void restoreContentOrder() {
@@ -1973,7 +1973,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * Convenience for selecting an item programmatically (no event mutation).
    *
    * @param item the item
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   protected void selectItem(final T item) {
@@ -2038,7 +2038,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * @param item the moved item
    * @param from source index in the model
    * @param to destination index in the model
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   protected void fireReorder(final T item, final int from, final int to) {
@@ -2116,7 +2116,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * a {@link javax.swing.JScrollPane} for the clip+scroll overflow strategy. An ellipsis-menu
    * overflow strategy is deferred to a future story.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private final class HorizontalLayout implements LayoutManager {
@@ -2178,7 +2178,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * when the container width is exhausted, and respects the configured {@code itemGap} for both row
    * and column spacing. Drag-reorder across row breaks lands in #239.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private final class WrapLayout implements LayoutManager {
@@ -2215,7 +2215,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
      * Single pass that both measures and (optionally) lays out. The {@code apply} flag separates
      * the two modes so the layout manager honors the standard contract without computing twice.
      *
-     * @version v0.1.0
+     * @version v0.2.0
      * @since v0.1.0
      */
     private Dimension layoutCore(
@@ -2249,9 +2249,9 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
 
   /**
    * N-column grid layout with uniform cell width and uniform cell height. Mirrors the geometry of
-   * {@link com.owspfm.elwha.card.list.ElwhaCardList}'s grid mode, but for chip-sized children.
+   * {@link com.owspfm.elwha.card.v1.list.ElwhaCardList}'s grid mode, but for chip-sized children.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private final class GridLayoutImpl implements LayoutManager {
@@ -2329,7 +2329,7 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
    * uniform cellW × cellH; drag mode preserves the stretch — including for the dragged chip — so
    * the user sees no size jump between idle and dragging.
    *
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   private void layoutDuringDrag(final Container parent) {
