@@ -4,10 +4,12 @@ import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
+import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyChangeListener;
@@ -17,7 +19,6 @@ import java.util.Map;
 import java.util.Objects;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
-import javax.swing.JPanel;
 import javax.swing.Timer;
 
 /**
@@ -106,6 +107,9 @@ public class ElwhaCard extends ElwhaSurface {
   private int animationEndHeight;
 
   private Timer collapseTimer;
+
+  private JComponent horizontalLeading;
+  private JComponent horizontalTrailing;
 
   private final Map<Component, CollapseRule> collapseConstraints = new IdentityHashMap<>();
   private final java.util.List<ActionListener> actionListeners = new java.util.ArrayList<>();
@@ -660,9 +664,14 @@ public class ElwhaCard extends ElwhaSurface {
     if (newOrientation == CardOrientation.VERTICAL) {
       setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     } else {
-      // Placeholder until the HORIZONTAL 2-column LayoutManager lands. Cards constructed with
-      // VERTICAL and never switched experience no behavior change.
-      setLayout(new JPanel().getLayout());
+      setLayout(new TwoColumnLayout());
+      removeAll();
+      if (horizontalLeading != null) {
+        super.add(horizontalLeading);
+      }
+      if (horizontalTrailing != null) {
+        super.add(horizontalTrailing);
+      }
     }
     firePropertyChange(PROPERTY_ORIENTATION, old, newOrientation);
     revalidate();
@@ -690,8 +699,18 @@ public class ElwhaCard extends ElwhaSurface {
    * @since v0.2.0
    */
   public ElwhaCard setLeadingColumn(final JComponent component) {
-    throw new UnsupportedOperationException(
-        "HORIZONTAL 2-column layout wires in the HORIZONTAL orientation story");
+    Objects.requireNonNull(component, "component");
+    if (orientation != CardOrientation.HORIZONTAL) {
+      throw new IllegalStateException("setLeadingColumn requires CardOrientation.HORIZONTAL");
+    }
+    if (horizontalLeading != null) {
+      super.remove(horizontalLeading);
+    }
+    this.horizontalLeading = component;
+    super.add(component);
+    revalidate();
+    repaint();
+    return this;
   }
 
   /**
@@ -704,8 +723,18 @@ public class ElwhaCard extends ElwhaSurface {
    * @since v0.2.0
    */
   public ElwhaCard setTrailingColumn(final JComponent component) {
-    throw new UnsupportedOperationException(
-        "HORIZONTAL 2-column layout wires in the HORIZONTAL orientation story");
+    Objects.requireNonNull(component, "component");
+    if (orientation != CardOrientation.HORIZONTAL) {
+      throw new IllegalStateException("setTrailingColumn requires CardOrientation.HORIZONTAL");
+    }
+    if (horizontalTrailing != null) {
+      super.remove(horizontalTrailing);
+    }
+    this.horizontalTrailing = component;
+    super.add(component);
+    revalidate();
+    repaint();
+    return this;
   }
 
   // ------------------------------------------------------------------ drag
@@ -774,6 +803,28 @@ public class ElwhaCard extends ElwhaSurface {
    * @version v0.2.0
    * @since v0.2.0
    */
+  /**
+   * Guards against {@code add()} in HORIZONTAL mode — horizontal cards must use {@link
+   * #setLeadingColumn} / {@link #setTrailingColumn}. The setters call {@code super.add(...)} to
+   * bypass this guard.
+   *
+   * @param comp the component
+   * @param constraints the constraints
+   * @param index the index
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  protected void addImpl(final Component comp, final Object constraints, final int index) {
+    if (orientation == CardOrientation.HORIZONTAL
+        && comp != horizontalLeading
+        && comp != horizontalTrailing) {
+      throw new IllegalStateException(
+          "HORIZONTAL ElwhaCard does not accept add() — use setLeadingColumn / setTrailingColumn");
+    }
+    super.addImpl(comp, constraints, index);
+  }
+
   @Override
   public Dimension getPreferredSize() {
     final Dimension d = super.getPreferredSize();
@@ -788,5 +839,56 @@ public class ElwhaCard extends ElwhaSurface {
       height = Math.min(height, SCROLL_MAX_EXPANDED_HEIGHT_PX);
     }
     return new Dimension(d.width, height);
+  }
+
+  /**
+   * Two-column LayoutManager for HORIZONTAL cards. Leading column takes its preferred width;
+   * trailing column takes the rest. Both span the card's full height (minus chassis insets). RTL
+   * support: {@link Container#getComponentOrientation()} flips leading/trailing visually.
+   */
+  private final class TwoColumnLayout implements LayoutManager {
+    @Override
+    public void addLayoutComponent(final String name, final Component comp) {
+      // no-op — we route through field slots.
+    }
+
+    @Override
+    public void removeLayoutComponent(final Component comp) {
+      // no-op — slot cleanup is the card's responsibility.
+    }
+
+    @Override
+    public Dimension preferredLayoutSize(final Container parent) {
+      final Insets ins = parent.getInsets();
+      final Dimension lead =
+          horizontalLeading != null ? horizontalLeading.getPreferredSize() : new Dimension(0, 0);
+      final Dimension trail =
+          horizontalTrailing != null ? horizontalTrailing.getPreferredSize() : new Dimension(0, 0);
+      return new Dimension(
+          ins.left + ins.right + lead.width + trail.width,
+          ins.top + ins.bottom + Math.max(lead.height, trail.height));
+    }
+
+    @Override
+    public Dimension minimumLayoutSize(final Container parent) {
+      return preferredLayoutSize(parent);
+    }
+
+    @Override
+    public void layoutContainer(final Container parent) {
+      final Insets ins = parent.getInsets();
+      final int totalW = parent.getWidth() - ins.left - ins.right;
+      final int totalH = parent.getHeight() - ins.top - ins.bottom;
+      final int leadW = horizontalLeading != null ? horizontalLeading.getPreferredSize().width : 0;
+      final boolean ltr = parent.getComponentOrientation().isLeftToRight();
+      if (horizontalLeading != null) {
+        final int x = ltr ? ins.left : ins.left + totalW - leadW;
+        horizontalLeading.setBounds(x, ins.top, leadW, totalH);
+      }
+      if (horizontalTrailing != null) {
+        final int x = ltr ? ins.left + leadW : ins.left;
+        horizontalTrailing.setBounds(x, ins.top, totalW - leadW, totalH);
+      }
+    }
   }
 }
