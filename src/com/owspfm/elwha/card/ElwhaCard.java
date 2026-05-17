@@ -99,13 +99,14 @@ public class ElwhaCard extends ElwhaSurface {
 
   /**
    * Maximum supported elevation level (0..5), corresponding to M3 ElevationTokens Level0..Level5.
+   * Aliases {@link ElwhaSurface#MAX_ELEVATION} — the underlying field + paint pipeline live on
+   * Surface (any elevatable primitive uses the same shadow stack).
    */
-  public static final int MAX_ELEVATION = 5;
+  public static final int MAX_ELEVATION = ElwhaSurface.MAX_ELEVATION;
 
   private CardVariant variant = CardVariant.ELEVATED;
   private CardOrientation orientation = CardOrientation.VERTICAL;
   private ExpansionOverflow expansionOverflow = ExpansionOverflow.GROW;
-  private int elevation = defaultElevationFor(CardVariant.ELEVATED);
   private SpaceScale paddingHorizontal = SpaceScale.LG;
   private SpaceScale paddingVertical = SpaceScale.LG;
 
@@ -260,7 +261,7 @@ public class ElwhaCard extends ElwhaSurface {
     setSurfaceRole(v.containerRole());
     setBorderRole(v.borderRole());
     setBorderWidth(v.borderRole() != null ? 1 : 0);
-    this.elevation = defaultElevationFor(v);
+    setElevation(defaultElevationFor(v));
   }
 
   /**
@@ -278,26 +279,19 @@ public class ElwhaCard extends ElwhaSurface {
   // ------------------------------------------------------------- elevation
 
   /**
-   * Overrides the variant-derived resting elevation. Clamped to {@code 0..MAX_ELEVATION}.
+   * Overrides the variant-derived resting elevation. Clamped to {@code 0..MAX_ELEVATION}. Covariant
+   * override of {@link ElwhaSurface#setElevation(int)} for the fluent return type; the elevation
+   * field + paint pipeline live on Surface.
    *
    * @param elevationLevel the new resting elevation level (0..{@link #MAX_ELEVATION})
    * @return {@code this} for fluent chaining
    * @version v0.2.0
    * @since v0.2.0
    */
+  @Override
   public ElwhaCard setElevation(final int elevationLevel) {
-    this.elevation = Math.max(0, Math.min(MAX_ELEVATION, elevationLevel));
-    repaint();
+    super.setElevation(elevationLevel);
     return this;
-  }
-
-  /**
-   * @return the resting elevation level (0..{@link #MAX_ELEVATION})
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public int getElevation() {
-    return elevation;
   }
 
   // --------------------------------------------------------------- padding
@@ -946,9 +940,29 @@ public class ElwhaCard extends ElwhaSurface {
   // -------------------------------------------------------------- painting
 
   /**
-   * Paints under the children: drop shadow (elevation-driven) then the Surface fill + border (via
-   * super), then a state-layer overlay tinted to the variant's on-pair. Selection badge, focus
-   * ring, disabled scrim, and ripple paint above children in {@link #paintChildren}.
+   * Card transient elevation lift per spec §9 — hover bumps every variant +1 level; dragged bumps
+   * every variant +3 levels. Resting elevation stays in the {@link ElwhaSurface#elevation} field;
+   * this hook only affects the painted shadow + body, not the reserved shadow insets.
+   *
+   * @return the elevation to paint right now
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  protected int currentElevationForPaint() {
+    int e = super.currentElevationForPaint();
+    if (dragged) {
+      e += 3;
+    } else if (hovered && isEnabled()) {
+      e += 1;
+    }
+    return Math.min(MAX_ELEVATION, e);
+  }
+
+  /**
+   * Paints under the children: Surface chassis (shadow + fill + border) via {@code super}, then the
+   * card's state-layer overlay tinted to the variant's on-pair. Selection badge, focus ring,
+   * disabled scrim, and ripple paint above children in {@link #paintChildren}.
    *
    * @param g the graphics context
    * @version v0.2.0
@@ -956,11 +970,10 @@ public class ElwhaCard extends ElwhaSurface {
    */
   @Override
   protected void paintComponent(final Graphics g) {
+    super.paintComponent(g);
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      paintShadow(g2);
-      super.paintComponent(g2);
       paintStateLayerOverlay(g2);
     } finally {
       g2.dispose();
@@ -1000,52 +1013,17 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
-   * Multi-layer soft drop shadow, scaling with elevation. Top edge stays crisp at any level.
-   * Variant-agnostic when {@link #isDragged()} — spec §9 lifts every variant 3 levels while dragged
-   * (Elevated 1→4, Filled 0→3, Outlined 0→3), so Filled / Outlined paint a shadow only during a
-   * drag.
+   * @return the visible card body rect ({@code [x, y, w, h]}) — inset from chassis bounds by the
+   *     shadow reserve in {@link #getInsets()}. Chrome overlays (state-layer, focus ring, ripple,
+   *     selection badge, disabled scrim) paint relative to these bounds, not the chassis bounds.
    */
-  private void paintShadow(final Graphics2D g2) {
-    if (variant != CardVariant.ELEVATED && !dragged) {
-      return;
-    }
-    if (elevation <= 0 && !dragged) {
-      return;
-    }
-    final int hoverBump = hovered && isEnabled() && !dragged ? 1 : 0;
-    final int dragBump = dragged ? 3 : 0;
-    final int e = elevation + hoverBump + dragBump;
-    final int clamped = Math.min(e, MAX_ELEVATION);
-    if (clamped <= 0) {
-      return;
-    }
-    final int arc = getShape().px();
-    final int x = 0;
-    final int y = 0;
-    final int w = getWidth();
-    final int h = getHeight();
-    final int layers = 6;
-    final int maxOffsetY = clamped + 1;
-    final int maxSpread = Math.max(1, clamped / 2);
-    final int basePerLayerAlpha = Math.max(10, 24 - (16 - 2 * clamped));
-    for (int i = 1; i <= layers; i++) {
-      final float t = (float) i / layers;
-      final int offsetY = Math.round(maxOffsetY * t);
-      final int spread = Math.round(maxSpread * t);
-      g2.setColor(new Color(0, 0, 0, basePerLayerAlpha));
-      g2.fill(
-          new RoundRectangle2D.Float(
-              x - spread,
-              y + 1 + Math.max(0, offsetY - spread),
-              w + 2f * spread,
-              h + offsetY,
-              arc + spread,
-              arc + spread));
-    }
-    final int keyOffset = Math.max(1, clamped / 2);
-    final int keyAlpha = Math.min(70, 30 + (int) Math.round(clamped * 3.0));
-    g2.setColor(new Color(0, 0, 0, keyAlpha));
-    g2.fill(new RoundRectangle2D.Float(x, y + keyOffset + 1f, w, h, arc, arc));
+  private java.awt.Rectangle bodyBounds() {
+    final Insets s = getInsets();
+    return new java.awt.Rectangle(
+        s.left,
+        s.top,
+        Math.max(0, getWidth() - s.left - s.right),
+        Math.max(0, getHeight() - s.top - s.bottom));
   }
 
   /**
@@ -1068,8 +1046,9 @@ public class ElwhaCard extends ElwhaSurface {
     final Color tint = ColorRole.ON_SURFACE.resolve();
     g2.setComposite(AlphaComposite.SrcOver.derive(layer.opacity()));
     g2.setColor(tint);
+    final java.awt.Rectangle b = bodyBounds();
     final int arc = getShape().px();
-    g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), arc, arc));
+    g2.fill(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
   }
 
   /** Disabled scrim — variant container fill at 0.38 over the surface. */
@@ -1077,8 +1056,9 @@ public class ElwhaCard extends ElwhaSurface {
     final Color base = variant.containerRole().resolve();
     g2.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
     g2.setColor(base);
+    final java.awt.Rectangle b = bodyBounds();
     final int arc = getShape().px();
-    g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), arc, arc));
+    g2.fill(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
   }
 
   /** M3 focus ring — SECONDARY for Elevated/Filled, ON_SURFACE for Outlined; 2dp inset stroke. */
@@ -1087,17 +1067,19 @@ public class ElwhaCard extends ElwhaSurface {
         (variant == CardVariant.OUTLINED ? ColorRole.ON_SURFACE : ColorRole.SECONDARY).resolve();
     g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 220));
     g2.setStroke(new BasicStroke(2f));
+    final java.awt.Rectangle b = bodyBounds();
     final int arc = getShape().px();
-    g2.draw(new RoundRectangle2D.Float(1f, 1f, getWidth() - 2f, getHeight() - 2f, arc, arc));
+    g2.draw(new RoundRectangle2D.Float(b.x + 1f, b.y + 1f, b.width - 2f, b.height - 2f, arc, arc));
   }
 
-  /** Expanding-circle ripple, clipped to the card's rounded shape. */
+  /** Expanding-circle ripple, clipped to the card's rounded body shape. */
   private void paintRipple(final Graphics2D g2) {
+    final java.awt.Rectangle b = bodyBounds();
     final int arc = getShape().px();
-    g2.setClip(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), arc, arc));
+    g2.setClip(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
     final float expand = Math.min(1f, rippleProgress * (RIPPLE_TOTAL_MS / 250f));
     final float fade = Math.max(0f, 1f - Math.max(0f, (rippleProgress - 0.375f) / 0.625f));
-    final int maxRadius = (int) Math.hypot(getWidth(), getHeight());
+    final int maxRadius = (int) Math.hypot(b.width, b.height);
     final int r = (int) (maxRadius * expand);
     final Color tint = ColorRole.ON_SURFACE.resolve();
     g2.setComposite(AlphaComposite.SrcOver.derive(0.10f * fade));
@@ -1107,10 +1089,11 @@ public class ElwhaCard extends ElwhaSurface {
 
   /** M3 top-trailing selected badge — PRIMARY circle + check glyph, no layout reservation. */
   private void paintSelectionBadge(final Graphics2D g2) {
+    final java.awt.Rectangle b = bodyBounds();
     final int pad = SpaceScale.SM.px();
     final int d = CHECKED_BADGE_DIAMETER;
-    final int x = getWidth() - d - pad;
-    final int y = pad;
+    final int x = b.x + b.width - d - pad;
+    final int y = b.y + pad;
     g2.setColor(ColorRole.PRIMARY.resolve());
     g2.fillOval(x, y, d, d);
     final FlatSVGIcon check = MaterialIcons.check(CHECKED_BADGE_ICON_PX);
@@ -1318,6 +1301,7 @@ public class ElwhaCard extends ElwhaSurface {
 
     @Override
     public Dimension preferredLayoutSize(final Container parent) {
+      final Insets ins = parent.getInsets();
       final int padH = paddingHorizontal.px();
       final int padV = paddingVertical.px();
       final int count = parent.getComponentCount();
@@ -1338,7 +1322,7 @@ public class ElwhaCard extends ElwhaSurface {
         anyVisible = true;
       }
       if (!anyVisible) {
-        return new Dimension(2 * padH, 2 * padV);
+        return new Dimension(ins.left + ins.right + 2 * padH, ins.top + ins.bottom + 2 * padV);
       }
       if (!(firstVisible instanceof ElwhaCardMedia)) {
         totalH += padV;
@@ -1356,7 +1340,7 @@ public class ElwhaCard extends ElwhaSurface {
       if (!(lastVisible instanceof ElwhaCardMedia)) {
         totalH += padV;
       }
-      return new Dimension(maxW, totalH);
+      return new Dimension(maxW + ins.left + ins.right, totalH + ins.top + ins.bottom);
     }
 
     @Override
@@ -1366,10 +1350,15 @@ public class ElwhaCard extends ElwhaSurface {
 
     @Override
     public void layoutContainer(final Container parent) {
+      final Insets ins = parent.getInsets();
       final int padH = paddingHorizontal.px();
       final int padV = paddingVertical.px();
-      final int width = parent.getWidth();
+      final int bodyX = ins.left;
+      final int bodyY = ins.top;
+      final int bodyW = Math.max(0, parent.getWidth() - ins.left - ins.right);
+      final int bodyH = Math.max(0, parent.getHeight() - ins.top - ins.bottom);
       final int count = parent.getComponentCount();
+
       Component firstVisible = null;
       Component lastVisible = null;
       for (int i = 0; i < count; i++) {
@@ -1385,17 +1374,40 @@ public class ElwhaCard extends ElwhaSurface {
       if (firstVisible == null) {
         return;
       }
-      int y = (firstVisible instanceof ElwhaCardMedia) ? 0 : padV;
+
+      // Push the last visible ElwhaCardActions to the bottom edge of the body when the body has
+      // slack (cell forced taller than content) — per M3, actions belong at the bottom of the
+      // card, not stranded mid-air.
+      final boolean anchorActionsToBottom = lastVisible instanceof ElwhaCardActions;
+      int naturalContentH = 0;
+      if (!(firstVisible instanceof ElwhaCardMedia)) {
+        naturalContentH += padV;
+      }
+      for (int i = 0; i < count; i++) {
+        final Component c = parent.getComponent(i);
+        if (!c.isVisible()) {
+          continue;
+        }
+        naturalContentH += c.getPreferredSize().height;
+      }
+      if (!(lastVisible instanceof ElwhaCardMedia)) {
+        naturalContentH += padV;
+      }
+      final int slack = Math.max(0, bodyH - naturalContentH);
+      final int actionsLift = anchorActionsToBottom ? slack : 0;
+
+      int y = bodyY + ((firstVisible instanceof ElwhaCardMedia) ? 0 : padV);
       for (int i = 0; i < count; i++) {
         final Component c = parent.getComponent(i);
         if (!c.isVisible()) {
           continue;
         }
         final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
-        final int x = bleed ? 0 : padH;
-        final int w = bleed ? width : Math.max(0, width - 2 * padH);
+        final int x = bleed ? bodyX : bodyX + padH;
+        final int w = bleed ? bodyW : Math.max(0, bodyW - 2 * padH);
         final Dimension p = c.getPreferredSize();
-        c.setBounds(x, y, w, p.height);
+        final int childY = (c == lastVisible) ? y + actionsLift : y;
+        c.setBounds(x, childY, w, p.height);
         y += p.height;
       }
     }

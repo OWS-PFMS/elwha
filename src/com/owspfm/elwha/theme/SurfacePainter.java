@@ -3,6 +3,7 @@ package com.owspfm.elwha.theme;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.geom.RoundRectangle2D;
 
@@ -21,7 +22,7 @@ import java.awt.geom.RoundRectangle2D;
  * {@link Color}s — so the painter respects the token binding rule by construction.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.2.0
  * @since v0.1.0
  */
 public final class SurfacePainter {
@@ -92,6 +93,88 @@ public final class SurfacePainter {
         g2.setStroke(new BasicStroke(borderWidthPx));
         g2.draw(new RoundRectangle2D.Float(inset, inset, strokeW, strokeH, strokeArc, strokeArc));
       }
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  /**
+   * Returns the inset reserve every elevated surface needs around its visible body so the
+   * multi-layer soft shadow doesn't get clipped by the {@link java.awt.Component} bounds. Top stays
+   * at 1 px because the M3 shadow shape sits below + sides of the surface; lateral grows at {@code
+   * e/2 + 1}; bottom grows at {@code e + 2}. {@code elevation <= 0} returns zero insets.
+   *
+   * @param elevation the M3 elevation level (0..{@code MAX_ELEVATION})
+   * @return the inset reserve, never {@code null}
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public static Insets shadowInsets(int elevation) {
+    if (elevation <= 0) {
+      return new Insets(0, 0, 0, 0);
+    }
+    int e = elevation;
+    return new Insets(1, e / 2 + 1, e + 2, e / 2 + 1);
+  }
+
+  /**
+   * Paints the M3-aligned drop shadow for an elevated surface. The shadow is a soft-blur stack of
+   * low-alpha {@link RoundRectangle2D} layers approximating a Gaussian drop without a {@link
+   * java.awt.image.ConvolveOp} pass, plus a slightly sharper key layer directly below the surface.
+   * Every layer's top sits 1 px below {@code y} so the surface's top silhouette stays crisp at any
+   * elevation.
+   *
+   * <p>Geometry scales with {@code elevation}; at low elevation the layers still fan out to give a
+   * perceptible soft halo around the surface rather than collapsing to a hard 1 px line.
+   *
+   * @param g the graphics context (not mutated; a copy is made for rendering-hint isolation)
+   * @param x left of the visible surface body
+   * @param y top of the visible surface body
+   * @param w width of the visible surface body
+   * @param h height of the visible surface body
+   * @param arc corner radius in pixels
+   * @param elevation the M3 elevation level (no-op if {@code <= 0})
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public static void paintShadow(Graphics2D g, int x, int y, int w, int h, int arc, int elevation) {
+    if (elevation <= 0) {
+      return;
+    }
+    Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+      // M3 shadow shape: ambient soft halo + key drop directly below. Scaling tuned so
+      // elevation=1 still produces a visible (not hard-edged) shadow.
+      int e = Math.max(1, elevation);
+      int layers = 6;
+      // Spread fans the shadow laterally — at e=1 we still want ~4 px halo, so the floor is 2.
+      float maxSpread = Math.max(2f, (float) e * 0.85f);
+      // Vertical offset of the deepest layer; grows with elevation.
+      float maxOffsetY = Math.max(2f, (float) e * 1.2f);
+      // Per-layer alpha — kept low so the stack accumulates into a soft falloff. Caps at ~22.
+      int perLayerAlpha = Math.min(22, 8 + e * 2);
+      for (int i = 1; i <= layers; i++) {
+        float t = (float) i / (float) layers;
+        float spread = maxSpread * t;
+        float offsetY = maxOffsetY * t;
+        g2.setColor(new Color(0, 0, 0, perLayerAlpha));
+        g2.fill(
+            new RoundRectangle2D.Float(
+                x - spread,
+                y + 1f + Math.max(0f, offsetY - spread),
+                w + 2f * spread,
+                h + offsetY,
+                arc + spread,
+                arc + spread));
+      }
+      // Key drop: tighter, directly below the surface — drives the "lifted" perception and reads
+      // as a clear bottom-edge separator at every elevation.
+      int keyOffset = Math.max(1, e / 2);
+      int keyAlpha = Math.min(60, 26 + e * 4);
+      g2.setColor(new Color(0, 0, 0, keyAlpha));
+      g2.fill(new RoundRectangle2D.Float(x, y + keyOffset + 1f, w, h, arc, arc));
     } finally {
       g2.dispose();
     }
