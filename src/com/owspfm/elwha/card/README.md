@@ -59,9 +59,14 @@ card.setActions(new JButton("Open"), new JButton("Dismiss"));
 
 ```java
 card.setLeadingIcon(MaterialIcons.info());
-card.setLeadingActions(pinButton, anchorButton);
-card.setTrailingActions(menuButton);
+card.setLeadingActions(
+    ElwhaIconButton.standardIconButton(MaterialIcons.pushPin()),
+    ElwhaIconButton.standardIconButton(MaterialIcons.anchor()));
+card.setTrailingActions(
+    ElwhaIconButton.standardIconButton(MaterialIcons.moreVert()));
 ```
+
+`setLeadingActions` / `setTrailingActions` are typed to `ElwhaIconButton...` per the M3 Top App Bar convention — header trailing/leading affordances are icon buttons, not arbitrary components. The bottom-row `setActions(Component...)` stays generic for M3 text buttons.
 
 Each extension is justified against a concrete OWS use case in [the spec doc](../../../../../docs/research/elwha-card-v2-spec.md) §4.
 
