@@ -1,24 +1,48 @@
 package com.owspfm.elwha.card;
 
+import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.ElwhaSurface;
+import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
+import com.owspfm.elwha.theme.StateLayer;
+import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.LayoutManager;
+import java.awt.Point;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.RoundRectangle2D;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
+import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
 import javax.swing.BoxLayout;
+import javax.swing.InputMap;
 import javax.swing.JComponent;
+import javax.swing.KeyStroke;
 import javax.swing.Timer;
 
 /**
@@ -111,6 +135,27 @@ public class ElwhaCard extends ElwhaSurface {
   private JComponent horizontalLeading;
   private JComponent horizontalTrailing;
 
+  /** Interaction state (set by the actionability mouse/key listeners). */
+  private boolean hovered;
+
+  private boolean pressed;
+
+  /** Ripple state (seeded at click point, animated 0..1 over RIPPLE_TOTAL_MS). */
+  private Point rippleOrigin;
+
+  private float rippleProgress = 1f;
+  private Timer rippleTimer;
+  private MouseAdapter mouseHandler;
+  private FocusAdapter focusHandler;
+
+  /** Ripple total duration in ms (250 ms expand + 150 ms fade tail per spec §10.3). */
+  private static final int RIPPLE_TOTAL_MS = 400;
+
+  /** Selection-badge geometry (px). */
+  private static final int CHECKED_BADGE_DIAMETER = 24;
+
+  private static final int CHECKED_BADGE_ICON_PX = 16;
+
   private final Map<Component, CollapseRule> collapseConstraints = new IdentityHashMap<>();
   private final java.util.List<ActionListener> actionListeners = new java.util.ArrayList<>();
   private final PropertyChangeSupport selectionChange = new PropertyChangeSupport(this);
@@ -125,6 +170,8 @@ public class ElwhaCard extends ElwhaSurface {
     super();
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     applyVariant(variant);
+    installInteraction();
+    installKeyboardActivation();
   }
 
   // ------------------------------------------------------------- factories
@@ -293,6 +340,11 @@ public class ElwhaCard extends ElwhaSurface {
     }
     final boolean old = this.actionable;
     this.actionable = newActionable;
+    setFocusable(newActionable);
+    setCursor(
+        newActionable && isEnabled()
+            ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            : Cursor.getDefaultCursor());
     firePropertyChange(PROPERTY_ACTIONABLE, old, newActionable);
     repaint();
     return this;
@@ -788,10 +840,312 @@ public class ElwhaCard extends ElwhaSurface {
    * @version v0.2.0
    * @since v0.2.0
    */
+  // -------------------------------------------------------------- painting
+
+  /**
+   * Paints under the children: drop shadow (elevation-driven) then the Surface fill + border (via
+   * super), then a state-layer overlay tinted to the variant's on-pair. Selection badge, focus
+   * ring, disabled scrim, and ripple paint above children in {@link #paintChildren}.
+   *
+   * @param g the graphics context
+   * @version v0.2.0
+   * @since v0.2.0
+   */
   @Override
   protected void paintComponent(final Graphics g) {
-    super.paintComponent(g);
-    // TODO(#90): shadow + state-layer overlay + focus ring + ripple paint stack.
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      paintShadow(g2);
+      super.paintComponent(g2);
+      paintStateLayerOverlay(g2);
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  /**
+   * Paints above the children: disabled scrim, focus ring, ripple, selection badge. Painting these
+   * on top of children ensures the selection badge sits above any media child that would otherwise
+   * hide it.
+   *
+   * @param g the graphics context
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  protected void paintChildren(final Graphics g) {
+    super.paintChildren(g);
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      if (!isEnabled()) {
+        paintDisabledScrim(g2);
+      }
+      if (actionable && rippleProgress < 1f && rippleOrigin != null) {
+        paintRipple(g2);
+      }
+      if (actionable && isFocusOwner() && isEnabled()) {
+        paintFocusRing(g2);
+      }
+      if (selected) {
+        paintSelectionBadge(g2);
+      }
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  /** Multi-layer soft drop shadow, scaling with elevation. Top edge stays crisp at any level. */
+  private void paintShadow(final Graphics2D g2) {
+    if (variant != CardVariant.ELEVATED || elevation <= 0) {
+      return;
+    }
+    final int e = elevation + (hovered && isEnabled() ? 1 : 0);
+    final int clamped = Math.min(e, MAX_ELEVATION);
+    final int arc = getShape().px();
+    final int x = 0;
+    final int y = 0;
+    final int w = getWidth();
+    final int h = getHeight();
+    final int layers = 6;
+    final int maxOffsetY = clamped + 1;
+    final int maxSpread = Math.max(1, clamped / 2);
+    final int basePerLayerAlpha = Math.max(10, 24 - (16 - 2 * clamped));
+    for (int i = 1; i <= layers; i++) {
+      final float t = (float) i / layers;
+      final int offsetY = Math.round(maxOffsetY * t);
+      final int spread = Math.round(maxSpread * t);
+      g2.setColor(new Color(0, 0, 0, basePerLayerAlpha));
+      g2.fill(
+          new RoundRectangle2D.Float(
+              x - spread,
+              y + 1 + Math.max(0, offsetY - spread),
+              w + 2f * spread,
+              h + offsetY,
+              arc + spread,
+              arc + spread));
+    }
+    final int keyOffset = Math.max(1, clamped / 2);
+    final int keyAlpha = Math.min(70, 30 + (int) Math.round(clamped * 3.0));
+    g2.setColor(new Color(0, 0, 0, keyAlpha));
+    g2.fill(new RoundRectangle2D.Float(x, y + keyOffset + 1f, w, h, arc, arc));
+  }
+
+  /**
+   * Hover / pressed / dragged state-layer overlay — on-surface tint at variant-agnostic opacity.
+   */
+  private void paintStateLayerOverlay(final Graphics2D g2) {
+    if (!isEnabled() || !actionable) {
+      return;
+    }
+    final StateLayer layer;
+    if (dragged) {
+      layer = StateLayer.DRAGGED;
+    } else if (pressed) {
+      layer = StateLayer.PRESSED;
+    } else if (hovered) {
+      layer = StateLayer.HOVER;
+    } else {
+      return;
+    }
+    final Color tint = ColorRole.ON_SURFACE.resolve();
+    g2.setComposite(AlphaComposite.SrcOver.derive(layer.opacity()));
+    g2.setColor(tint);
+    final int arc = getShape().px();
+    g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), arc, arc));
+  }
+
+  /** Disabled scrim — variant container fill at 0.38 over the surface. */
+  private void paintDisabledScrim(final Graphics2D g2) {
+    final Color base = variant.containerRole().resolve();
+    g2.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
+    g2.setColor(base);
+    final int arc = getShape().px();
+    g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), arc, arc));
+  }
+
+  /** M3 focus ring — SECONDARY for Elevated/Filled, ON_SURFACE for Outlined; 2dp inset stroke. */
+  private void paintFocusRing(final Graphics2D g2) {
+    final Color ring =
+        (variant == CardVariant.OUTLINED ? ColorRole.ON_SURFACE : ColorRole.SECONDARY).resolve();
+    g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 220));
+    g2.setStroke(new BasicStroke(2f));
+    final int arc = getShape().px();
+    g2.draw(new RoundRectangle2D.Float(1f, 1f, getWidth() - 2f, getHeight() - 2f, arc, arc));
+  }
+
+  /** Expanding-circle ripple, clipped to the card's rounded shape. */
+  private void paintRipple(final Graphics2D g2) {
+    final int arc = getShape().px();
+    g2.setClip(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), arc, arc));
+    final float expand = Math.min(1f, rippleProgress * (RIPPLE_TOTAL_MS / 250f));
+    final float fade = Math.max(0f, 1f - Math.max(0f, (rippleProgress - 0.375f) / 0.625f));
+    final int maxRadius = (int) Math.hypot(getWidth(), getHeight());
+    final int r = (int) (maxRadius * expand);
+    final Color tint = ColorRole.ON_SURFACE.resolve();
+    g2.setComposite(AlphaComposite.SrcOver.derive(0.10f * fade));
+    g2.setColor(tint);
+    g2.fill(new Ellipse2D.Float(rippleOrigin.x - r, rippleOrigin.y - r, r * 2f, r * 2f));
+  }
+
+  /** M3 top-trailing selected badge — PRIMARY circle + check glyph, no layout reservation. */
+  private void paintSelectionBadge(final Graphics2D g2) {
+    final int pad = SpaceScale.SM.px();
+    final int d = CHECKED_BADGE_DIAMETER;
+    final int x = getWidth() - d - pad;
+    final int y = pad;
+    g2.setColor(ColorRole.PRIMARY.resolve());
+    g2.fillOval(x, y, d, d);
+    final FlatSVGIcon check = MaterialIcons.check(CHECKED_BADGE_ICON_PX);
+    final Color glyph = ColorRole.PRIMARY.on().orElse(ColorRole.ON_PRIMARY).resolve();
+    check.setColorFilter(new FlatSVGIcon.ColorFilter(orig -> glyph));
+    final int off = (d - CHECKED_BADGE_ICON_PX) / 2;
+    check.paintIcon(this, g2, x + off, y + off);
+  }
+
+  // ------------------------------------------------------------ interaction
+
+  private void installInteraction() {
+    mouseHandler =
+        new MouseAdapter() {
+          @Override
+          public void mouseEntered(final MouseEvent e) {
+            hovered = true;
+            repaint();
+          }
+
+          @Override
+          public void mouseExited(final MouseEvent e) {
+            hovered = false;
+            pressed = false;
+            repaint();
+          }
+
+          @Override
+          public void mousePressed(final MouseEvent e) {
+            if (actionable && isEnabled()) {
+              pressed = true;
+              startRipple(e.getPoint());
+              if (isFocusable()) {
+                requestFocusInWindow();
+              }
+              repaint();
+            }
+          }
+
+          @Override
+          public void mouseReleased(final MouseEvent e) {
+            final boolean wasPressed = pressed;
+            pressed = false;
+            repaint();
+            if (wasPressed && isEnabled() && contains(e.getPoint())) {
+              handleActivation();
+            }
+          }
+        };
+    addMouseListener(mouseHandler);
+    focusHandler =
+        new FocusAdapter() {
+          @Override
+          public void focusGained(final FocusEvent e) {
+            repaint();
+          }
+
+          @Override
+          public void focusLost(final FocusEvent e) {
+            pressed = false;
+            repaint();
+          }
+        };
+    addFocusListener(focusHandler);
+  }
+
+  private void installKeyboardActivation() {
+    final InputMap im = getInputMap(WHEN_FOCUSED);
+    final ActionMap am = getActionMap();
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "elwhaCardActivate");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "elwhaCardActivate");
+    am.put(
+        "elwhaCardActivate",
+        new AbstractAction() {
+          @Override
+          public void actionPerformed(final ActionEvent e) {
+            if (actionable && isEnabled()) {
+              startRipple(new Point(getWidth() / 2, getHeight() / 2));
+              handleActivation();
+            }
+          }
+        });
+  }
+
+  private void handleActivation() {
+    if (selectable) {
+      setSelected(!selected);
+    }
+    if (actionable) {
+      fireActionPerformed(getAccessibleContext().getAccessibleName());
+    }
+  }
+
+  private void startRipple(final Point origin) {
+    rippleOrigin = origin;
+    rippleProgress = 0f;
+    if (rippleTimer != null && rippleTimer.isRunning()) {
+      rippleTimer.stop();
+    }
+    final long startNanos = System.nanoTime();
+    rippleTimer =
+        new Timer(
+            16,
+            e -> {
+              rippleProgress =
+                  Math.min(1f, (System.nanoTime() - startNanos) / (RIPPLE_TOTAL_MS * 1_000_000f));
+              repaint();
+              if (rippleProgress >= 1f) {
+                ((Timer) e.getSource()).stop();
+              }
+            });
+    rippleTimer.setRepeats(true);
+    rippleTimer.setInitialDelay(0);
+    rippleTimer.start();
+  }
+
+  @Override
+  public void setEnabled(final boolean enabled) {
+    super.setEnabled(enabled);
+    setCursor(
+        actionable && enabled
+            ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            : Cursor.getDefaultCursor());
+    repaint();
+  }
+
+  /**
+   * @return an AccessibleContext whose role reflects the actionability atomic gate — {@link
+   *     AccessibleRole#PUSH_BUTTON} when actionable, {@link AccessibleRole#PANEL} otherwise — and
+   *     whose name gains a {@code " (selected)"} suffix when {@link #isSelected()}
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext =
+          new AccessibleJComponent() {
+            @Override
+            public AccessibleRole getAccessibleRole() {
+              return actionable ? AccessibleRole.PUSH_BUTTON : AccessibleRole.PANEL;
+            }
+
+            @Override
+            public String getAccessibleName() {
+              final String base = super.getAccessibleName();
+              return selected && base != null ? base + " (selected)" : base;
+            }
+          };
+    }
+    return accessibleContext;
   }
 
   /**
