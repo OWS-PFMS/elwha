@@ -43,6 +43,7 @@ public final class ElwhaCardLeadingIcon extends JLabel {
    */
   public ElwhaCardLeadingIcon(final Icon icon) {
     super(icon);
+    setAlignmentX(LEFT_ALIGNMENT);
     applyColorFilter();
   }
 

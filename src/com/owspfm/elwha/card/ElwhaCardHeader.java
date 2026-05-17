@@ -113,7 +113,11 @@ public final class ElwhaCardHeader extends JComponent {
       final int trailingW = rp.width + (trailingRow.isVisible() ? gap : 0);
       final int textW = Math.max(0, width - leadingW - trailingW);
       final Dimension tp = new Dimension(textW, textStack.getPreferredSize().height);
-      final int targetBaseline = resolveBaseline(textStack, tp);
+      // Target Y for the shared baseline = max of every component's own baseline. Using only the
+      // textStack's baseline (the spec's "title baseline") as target would push taller siblings
+      // — icon buttons in particular, whose fallback baseline is height/2 — into negative Y,
+      // and Swing would clip the tops.
+      final int targetBaseline = rowBaseline(lp, tp, rp);
       final int leadingY = topForBaseline(leadingHolder, lp, targetBaseline);
       final int textY = topForBaseline(textStack, tp, targetBaseline);
       final int trailingY = topForBaseline(trailingRow, rp, targetBaseline);
@@ -126,21 +130,28 @@ public final class ElwhaCardHeader extends JComponent {
       }
     }
 
-    private int baselineAlignedHeight(final Dimension lp, final Dimension tp, final Dimension rp) {
-      final int target = resolveBaseline(textStack, tp);
-      int topMax = target;
-      int bottomMax = tp.height - target;
+    /** Shared baseline Y for the row = deepest top-above-baseline across all visible segments. */
+    private int rowBaseline(final Dimension lp, final Dimension tp, final Dimension rp) {
+      int max = resolveBaseline(textStack, tp);
       if (leadingHolder.isVisible()) {
-        final int b = resolveBaseline(leadingHolder, lp);
-        topMax = Math.max(topMax, b);
-        bottomMax = Math.max(bottomMax, lp.height - b);
+        max = Math.max(max, resolveBaseline(leadingHolder, lp));
       }
       if (trailingRow.isVisible()) {
-        final int b = resolveBaseline(trailingRow, rp);
-        topMax = Math.max(topMax, b);
-        bottomMax = Math.max(bottomMax, rp.height - b);
+        max = Math.max(max, resolveBaseline(trailingRow, rp));
       }
-      return topMax + bottomMax;
+      return max;
+    }
+
+    private int baselineAlignedHeight(final Dimension lp, final Dimension tp, final Dimension rp) {
+      final int target = rowBaseline(lp, tp, rp);
+      int bottomMax = tp.height - resolveBaseline(textStack, tp);
+      if (leadingHolder.isVisible()) {
+        bottomMax = Math.max(bottomMax, lp.height - resolveBaseline(leadingHolder, lp));
+      }
+      if (trailingRow.isVisible()) {
+        bottomMax = Math.max(bottomMax, rp.height - resolveBaseline(trailingRow, rp));
+      }
+      return target + bottomMax;
     }
 
     /**

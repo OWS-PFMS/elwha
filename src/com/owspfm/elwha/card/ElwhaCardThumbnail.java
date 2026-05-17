@@ -46,6 +46,7 @@ public final class ElwhaCardThumbnail extends JComponent {
     this.image = Objects.requireNonNull(image, "image");
     setFocusable(false);
     setOpaque(false);
+    setAlignmentX(LEFT_ALIGNMENT);
   }
 
   /**

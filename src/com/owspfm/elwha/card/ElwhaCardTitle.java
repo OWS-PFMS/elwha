@@ -6,6 +6,7 @@ import com.owspfm.elwha.theme.TypeRole;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Container;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -43,8 +44,30 @@ public final class ElwhaCardTitle extends JLabel {
    * @param text the title text (may be {@code null} or empty)
    */
   public ElwhaCardTitle(final String text) {
-    super(text == null ? "" : text);
+    super("");
     setHorizontalAlignment(SwingConstants.LEADING);
+    setAlignmentX(LEFT_ALIGNMENT);
+    setText(text);
+  }
+
+  /**
+   * Auto-wraps plain text in {@code <html>} so the label word-wraps at the parent width. HTML
+   * content the caller already provided is left as-is. See {@code
+   * docs/research/elwha-card-v3-spec.md} §4.1 — "word-wraps (does not ellipsize at narrow widths).
+   * HTML auto-wrapped via the same convention setSupportingText uses."
+   *
+   * @param text the new text (may be {@code null} or empty)
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public void setText(final String text) {
+    super.setText(WrappingLabels.htmlWrap(text));
+  }
+
+  @Override
+  public Dimension getPreferredSize() {
+    return WrappingLabels.preferredSizeForWidth(this, super.getPreferredSize());
   }
 
   /**

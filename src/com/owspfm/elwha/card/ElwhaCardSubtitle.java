@@ -5,6 +5,7 @@ import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -39,8 +40,20 @@ public final class ElwhaCardSubtitle extends JLabel {
    * @param text the subtitle text (may be {@code null} or empty)
    */
   public ElwhaCardSubtitle(final String text) {
-    super(text == null ? "" : text);
+    super("");
     setHorizontalAlignment(SwingConstants.LEADING);
+    setAlignmentX(LEFT_ALIGNMENT);
+    setText(text);
+  }
+
+  @Override
+  public void setText(final String text) {
+    super.setText(WrappingLabels.htmlWrap(text));
+  }
+
+  @Override
+  public Dimension getPreferredSize() {
+    return WrappingLabels.preferredSizeForWidth(this, super.getPreferredSize());
   }
 
   /**
