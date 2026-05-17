@@ -41,7 +41,10 @@ import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.Timer;
 
 /**
@@ -133,6 +136,11 @@ public class ElwhaCard extends ElwhaSurface {
 
   private JComponent horizontalLeading;
   private JComponent horizontalTrailing;
+
+  /** Internal body panel + scroll wrapper used when {@link ExpansionOverflow#SCROLL} is active. */
+  private JPanel scrollBody;
+
+  private JScrollPane scrollPane;
 
   /** Interaction state (set by the actionability mouse/key listeners). */
   private boolean hovered;
@@ -535,9 +543,10 @@ public class ElwhaCard extends ElwhaSurface {
 
   /** Returns the height of all currently-visible children plus the chassis insets. */
   private int computeContentHeight() {
+    final Container host = contentHost();
     int sum = 0;
-    for (int i = 0; i < getComponentCount(); i++) {
-      final Component child = getComponent(i);
+    for (int i = 0; i < host.getComponentCount(); i++) {
+      final Component child = host.getComponent(i);
       if (child.isVisible()) {
         sum += child.getPreferredSize().height;
       }
@@ -548,8 +557,9 @@ public class ElwhaCard extends ElwhaSurface {
 
   /** Sets each child's visibility according to the card's collapsed state and the child's rule. */
   private void applyCollapseVisibility() {
-    for (int i = 0; i < getComponentCount(); i++) {
-      final Component child = getComponent(i);
+    final Container host = contentHost();
+    for (int i = 0; i < host.getComponentCount(); i++) {
+      final Component child = host.getComponent(i);
       final CollapseRule rule = collapseConstraints.getOrDefault(child, CollapseRule.COLLAPSIBLE);
       final boolean visible = rule == CollapseRule.ALWAYS_VISIBLE || !collapsed;
       if (child.isVisible() != visible) {
@@ -685,9 +695,95 @@ public class ElwhaCard extends ElwhaSurface {
    * @since v0.2.0
    */
   public ElwhaCard setExpansionOverflow(final ExpansionOverflow strategy) {
-    this.expansionOverflow = Objects.requireNonNull(strategy, "strategy");
+    Objects.requireNonNull(strategy, "strategy");
+    if (this.expansionOverflow == strategy) {
+      return this;
+    }
+    this.expansionOverflow = strategy;
+    if (strategy == ExpansionOverflow.SCROLL) {
+      installScrollWrapper();
+    } else {
+      uninstallScrollWrapper();
+    }
     revalidate();
+    repaint();
     return this;
+  }
+
+  private void installScrollWrapper() {
+    if (scrollPane != null) {
+      return;
+    }
+    final java.util.List<Component> existing = new java.util.ArrayList<>();
+    for (int i = 0; i < getComponentCount(); i++) {
+      existing.add(getComponent(i));
+    }
+    super.removeAll();
+    scrollBody = new JPanel();
+    scrollBody.setOpaque(false);
+    scrollBody.setLayout(new VerticalCardLayout());
+    for (final Component c : existing) {
+      scrollBody.add(c);
+    }
+    scrollPane =
+        new JScrollPane(
+            scrollBody,
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+            ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+    scrollPane.setBorder(null);
+    scrollPane.setOpaque(false);
+    scrollPane.getViewport().setOpaque(false);
+    scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+    super.setLayout(new java.awt.BorderLayout());
+    super.addImpl(scrollPane, null, 0);
+  }
+
+  private void uninstallScrollWrapper() {
+    if (scrollPane == null) {
+      return;
+    }
+    final java.util.List<Component> inside = new java.util.ArrayList<>();
+    for (int i = 0; i < scrollBody.getComponentCount(); i++) {
+      inside.add(scrollBody.getComponent(i));
+    }
+    scrollBody.removeAll();
+    super.removeAll();
+    scrollPane = null;
+    scrollBody = null;
+    super.setLayout(new VerticalCardLayout());
+    for (final Component c : inside) {
+      super.addImpl(c, null, -1);
+    }
+  }
+
+  /**
+   * Returns the container that owns the card's content children. In {@link ExpansionOverflow#GROW}
+   * mode this is the card itself; in {@link ExpansionOverflow#SCROLL} mode this is the inner scroll
+   * body. Code that iterates children (visibility filtering, height computation, drag-reorder slot
+   * math) routes through this rather than {@code this}.
+   */
+  Container contentHost() {
+    return scrollBody != null ? scrollBody : this;
+  }
+
+  /**
+   * Routes {@code add()} calls into the inner scroll body when {@link ExpansionOverflow#SCROLL} is
+   * active, so consumer code can keep calling {@code card.add(...)} regardless of the overflow
+   * strategy.
+   */
+  @Override
+  protected void addImpl(final Component comp, final Object constraints, final int index) {
+    if (orientation == CardOrientation.HORIZONTAL
+        && comp != horizontalLeading
+        && comp != horizontalTrailing) {
+      throw new IllegalStateException(
+          "HORIZONTAL ElwhaCard does not accept add() — use setLeadingColumn / setTrailingColumn");
+    }
+    if (scrollBody != null && comp != scrollPane) {
+      scrollBody.add(comp, constraints, index);
+      return;
+    }
+    super.addImpl(comp, constraints, index);
   }
 
   /**
@@ -1179,28 +1275,6 @@ public class ElwhaCard extends ElwhaSurface {
    * @version v0.2.0
    * @since v0.2.0
    */
-  /**
-   * Guards against {@code add()} in HORIZONTAL mode — horizontal cards must use {@link
-   * #setLeadingColumn} / {@link #setTrailingColumn}. The setters call {@code super.add(...)} to
-   * bypass this guard.
-   *
-   * @param comp the component
-   * @param constraints the constraints
-   * @param index the index
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  @Override
-  protected void addImpl(final Component comp, final Object constraints, final int index) {
-    if (orientation == CardOrientation.HORIZONTAL
-        && comp != horizontalLeading
-        && comp != horizontalTrailing) {
-      throw new IllegalStateException(
-          "HORIZONTAL ElwhaCard does not accept add() — use setLeadingColumn / setTrailingColumn");
-    }
-    super.addImpl(comp, constraints, index);
-  }
-
   @Override
   public Dimension getPreferredSize() {
     final Dimension d = super.getPreferredSize();
