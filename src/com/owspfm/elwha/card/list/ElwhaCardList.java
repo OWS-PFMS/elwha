@@ -5,12 +5,14 @@ import com.owspfm.elwha.list.ElwhaList;
 import com.owspfm.elwha.list.ElwhaListOrientation;
 import com.owspfm.elwha.theme.SpaceScale;
 import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -32,6 +34,8 @@ import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.swing.event.MouseInputAdapter;
 
 /**
  * V3 ElwhaCardList — a vertical or grid list of {@link ElwhaCard} primitives backed by a {@link
@@ -39,21 +43,22 @@ import javax.swing.KeyStroke;
  * ElwhaList} cross-cutting contract (orientation, gap, padding, empty/loading, filter/sort) and
  * owns a {@link CardSelectionModel} for selection.
  *
- * <p><strong>M3-compliant drag-reorder a11y.</strong> Per the M3 doctrine cited in {@code
- * elwha-card-v3-spec.md} §16.4 ("any dragging or swiping interactions need a single-pointer
- * alternative, like selecting the same actions from a menu"), this list ships:
+ * <p><strong>Reorder.</strong> Three equivalent affordances:
  *
  * <ul>
- *   <li>Keyboard reorder: Cmd+↑ / Cmd+↓ move the focused card up / down; Delete or Cmd+Backspace
- *       removes the focused card.
- *   <li>Right-click context menu: Move up / Move down / Delete actions over the active row. Menu
- *       placement avoids overlapping the row.
+ *   <li>Mouse drag — press any card, drag past the threshold ({@link #DRAG_THRESHOLD_PX}), drop on
+ *       the target slot. The chrome's {@link ElwhaCard#setDragged(boolean)} flag drives the
+ *       elevation lift (spec §9) + DRAGGED state-layer overlay (spec §10.1). A 2 dp {@link
+ *       com.owspfm.elwha.theme.ColorRole#PRIMARY}-colored drop indicator paints in the target gap.
+ *       On release, {@link CardListModel#move(int, int)} commits the reorder.
+ *   <li>Keyboard — Cmd+↑ / Cmd+↓ move the focused card; Delete or Cmd+Backspace remove it.
+ *   <li>Right-click context menu — Move up / Move down / Delete, placed below the active row so it
+ *       doesn't overlap (per M3 doctrine).
  * </ul>
  *
- * <p><strong>Mouse drag-reorder is deferred.</strong> The mechanical V1 port is a separate
- * iteration; the M3 blocker for v0.2 is the single-pointer alternative above, which is shipped
- * here. Drag-handle cursor resources stay bundled at {@code card/v1/list/cursors/} for chip-side
- * reuse; the V3 list will pick them up when mouse drag lands.
+ * <p>The keyboard + context menu are the M3 single-pointer alternatives required by spec §16.4.
+ * Mouse drag relies on the V3 chrome's {@link ElwhaCard#cancelPendingClick()} call during drag
+ * activation to suppress the latent action / selection toggle on release.
  *
  * <p>Inter-card gap defaults to {@link SpaceScale#SM} (8 dp per M3 measurement spec frame).
  *
@@ -78,6 +83,11 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
   private JComponent loadingComponent;
   private final Map<T, ElwhaCard> cardByItem = new IdentityHashMap<>();
   private final List<T> renderedItems = new ArrayList<>();
+
+  /** Pixels the cursor must travel from press before a drag-reorder activates. */
+  private static final int DRAG_THRESHOLD_PX = 6;
+
+  private DragState dragState;
 
   /**
    * Creates a list with the given backing model.
@@ -275,19 +285,167 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
 
   private void installCardInteraction(final ElwhaCard card, final T item) {
     card.addSelectionChangeListener(e -> selectionModel.toggle(item));
-    card.addMouseListener(
-        new MouseAdapter() {
+    final MouseInputAdapter handler =
+        new MouseInputAdapter() {
           @Override
           public void mousePressed(final MouseEvent e) {
             maybeShowContextMenu(e, item, card);
+            if (e.getButton() == MouseEvent.BUTTON1) {
+              dragState = new DragState();
+              dragState.item = item;
+              dragState.card = card;
+              dragState.fromIndex = renderedItems.indexOf(item);
+              dragState.dropSlot = dragState.fromIndex;
+              dragState.pressPoint =
+                  SwingUtilities.convertPoint(card, e.getPoint(), ElwhaCardList.this);
+            }
+          }
+
+          @Override
+          public void mouseDragged(final MouseEvent e) {
+            if (dragState == null || dragState.item != item) {
+              return;
+            }
+            final Point listPt =
+                SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), ElwhaCardList.this);
+            if (!dragState.active) {
+              final int dx = listPt.x - dragState.pressPoint.x;
+              final int dy = listPt.y - dragState.pressPoint.y;
+              if (dx * dx + dy * dy >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX) {
+                activateDrag();
+              }
+            }
+            if (dragState.active) {
+              updateDropSlot(listPt);
+            }
           }
 
           @Override
           public void mouseReleased(final MouseEvent e) {
             maybeShowContextMenu(e, item, card);
+            if (dragState == null || dragState.item != item) {
+              return;
+            }
+            if (dragState.active) {
+              finishDrag();
+            } else {
+              dragState = null;
+            }
           }
-        });
+        };
+    card.addMouseListener(handler);
+    card.addMouseMotionListener(handler);
     installKeyboardReorder(card, item);
+  }
+
+  /** Per-list drag state — only one drag is in flight at a time. */
+  private final class DragState {
+    private T item;
+    private ElwhaCard card;
+    private int fromIndex;
+    private int dropSlot;
+    private Point pressPoint;
+    private boolean active;
+  }
+
+  /**
+   * Promotes a pending drag to active: sets the chrome's dragged flag (chrome paints DRAGGED
+   * state-layer per spec §10.1 + elevation lift per §9), cancels the latent action / selection
+   * toggle so the upcoming release doesn't fire one, and switches the cursor.
+   */
+  private void activateDrag() {
+    dragState.active = true;
+    dragState.card.setDragged(true);
+    dragState.card.cancelPendingClick();
+    setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+    repaint();
+  }
+
+  /**
+   * Updates the drop slot from the cursor's Y position. Slot semantics match {@code
+   * DefaultCardListModel.move(from, to)}: {@code to} is the destination index in the post-remove
+   * list, so it ranges 0..(renderedItems.size()-1) and indicates "insert dragged item at slot N
+   * after removing it from its original position."
+   */
+  private void updateDropSlot(final Point listPoint) {
+    int slot = 0;
+    for (int i = 0; i < renderedItems.size(); i++) {
+      if (i == dragState.fromIndex) {
+        continue;
+      }
+      final ElwhaCard c = cardByItem.get(renderedItems.get(i));
+      if (c == null) {
+        continue;
+      }
+      final int mid = c.getY() + c.getHeight() / 2;
+      if (listPoint.y > mid) {
+        slot++;
+      }
+    }
+    if (slot != dragState.dropSlot) {
+      dragState.dropSlot = slot;
+      repaint();
+    }
+  }
+
+  /**
+   * Commits the drag: clears chrome dragged state, restores the cursor, and (if the drop slot
+   * differs from the origin) calls {@code model.move(fromIndex, dropSlot)}. The model change fires
+   * a listener that rebuilds the list.
+   */
+  private void finishDrag() {
+    final ElwhaCard draggedCard = dragState.card;
+    final int from = dragState.fromIndex;
+    final int to = dragState.dropSlot;
+    dragState = null;
+    draggedCard.setDragged(false);
+    setCursor(Cursor.getDefaultCursor());
+    repaint();
+    if (from != to && from >= 0 && to >= 0) {
+      model.move(from, to);
+    }
+  }
+
+  /**
+   * Computes the Y where the drop indicator should paint for {@code slot}: in the gap above the
+   * card that would be at that slot, or below the last non-dragged card if slot is past the end.
+   */
+  private int dropIndicatorY(final int slot) {
+    final List<ElwhaCard> others = new ArrayList<>();
+    for (int i = 0; i < renderedItems.size(); i++) {
+      if (i == dragState.fromIndex) {
+        continue;
+      }
+      final ElwhaCard c = cardByItem.get(renderedItems.get(i));
+      if (c != null) {
+        others.add(c);
+      }
+    }
+    if (others.isEmpty()) {
+      return 0;
+    }
+    if (slot <= 0) {
+      return Math.max(0, others.get(0).getY() - itemGap / 2);
+    }
+    if (slot >= others.size()) {
+      final ElwhaCard last = others.get(others.size() - 1);
+      return last.getY() + last.getHeight() + itemGap / 2;
+    }
+    return Math.max(0, others.get(slot).getY() - itemGap / 2);
+  }
+
+  @Override
+  protected void paintChildren(final Graphics g) {
+    super.paintChildren(g);
+    if (dragState == null || !dragState.active) {
+      return;
+    }
+    if (orientation != ElwhaListOrientation.VERTICAL) {
+      return;
+    }
+    final int y = dropIndicatorY(dragState.dropSlot);
+    g.setColor(com.owspfm.elwha.theme.ColorRole.PRIMARY.resolve());
+    g.fillRect(0, y - 1, getWidth(), 2);
   }
 
   private void installKeyboardReorder(final ElwhaCard card, final T item) {

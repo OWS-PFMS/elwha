@@ -140,6 +140,12 @@ public class ElwhaCard extends ElwhaSurface {
 
   private boolean pressed;
 
+  /**
+   * Set by {@link #cancelPendingClick()} when a press converts into a drag — the next mouseReleased
+   * on this card suppresses the action / selection toggle it would have fired.
+   */
+  private boolean clickCanceled;
+
   /** Ripple state (seeded at click point, animated 0..1 over RIPPLE_TOTAL_MS). */
   private Point rippleOrigin;
 
@@ -825,7 +831,9 @@ public class ElwhaCard extends ElwhaSurface {
    * @since v0.2.0
    */
   public ElwhaCard cancelPendingClick() {
-    // No-op until the actionability story wires the press-tracking state machine.
+    clickCanceled = true;
+    pressed = false;
+    repaint();
     return this;
   }
 
@@ -896,13 +904,26 @@ public class ElwhaCard extends ElwhaSurface {
     }
   }
 
-  /** Multi-layer soft drop shadow, scaling with elevation. Top edge stays crisp at any level. */
+  /**
+   * Multi-layer soft drop shadow, scaling with elevation. Top edge stays crisp at any level.
+   * Variant-agnostic when {@link #isDragged()} — spec §9 lifts every variant 3 levels while dragged
+   * (Elevated 1→4, Filled 0→3, Outlined 0→3), so Filled / Outlined paint a shadow only during a
+   * drag.
+   */
   private void paintShadow(final Graphics2D g2) {
-    if (variant != CardVariant.ELEVATED || elevation <= 0) {
+    if (variant != CardVariant.ELEVATED && !dragged) {
       return;
     }
-    final int e = elevation + (hovered && isEnabled() ? 1 : 0);
+    if (elevation <= 0 && !dragged) {
+      return;
+    }
+    final int hoverBump = hovered && isEnabled() && !dragged ? 1 : 0;
+    final int dragBump = dragged ? 3 : 0;
+    final int e = elevation + hoverBump + dragBump;
     final int clamped = Math.min(e, MAX_ELEVATION);
+    if (clamped <= 0) {
+      return;
+    }
     final int arc = getShape().px();
     final int x = 0;
     final int y = 0;
@@ -1037,9 +1058,11 @@ public class ElwhaCard extends ElwhaSurface {
           @Override
           public void mouseReleased(final MouseEvent e) {
             final boolean wasPressed = pressed;
+            final boolean canceled = clickCanceled;
             pressed = false;
+            clickCanceled = false;
             repaint();
-            if (wasPressed && isEnabled() && contains(e.getPoint())) {
+            if (wasPressed && !canceled && isEnabled() && contains(e.getPoint())) {
               handleActivation();
             }
           }
