@@ -323,10 +323,25 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
               // offset (cursor stays at the same point inside the card it grabbed). M3-canonical
               // direct-manipulation feel — siblings stay put; the drop indicator shows where
               // the card will land on release.
+              //
+              // Clamp visually to inside the list bounds so the card's chassis (including
+              // shadow reserve) doesn't escape the list and leave repaint ghosts on whatever
+              // sibling sections are around the list. Drop-slot computation above uses the
+              // raw cursor and is unaffected by the clamp.
               final int offX = listPt.x - dragState.pressPoint.x;
               final int offY = listPt.y - dragState.pressPoint.y;
-              dragState.card.setLocation(
-                  dragState.restingBounds.x + offX, dragState.restingBounds.y + offY);
+              final int cw = dragState.card.getWidth();
+              final int ch = dragState.card.getHeight();
+              final int newX =
+                  Math.max(0, Math.min(getWidth() - cw, dragState.restingBounds.x + offX));
+              final int newY =
+                  Math.max(0, Math.min(getHeight() - ch, dragState.restingBounds.y + offY));
+              final Rectangle oldBounds = dragState.card.getBounds();
+              dragState.card.setLocation(newX, newY);
+              // Belt-and-suspenders: repaint the union of old + new bounds so any subpixel
+              // residue from the previous frame's shadow halo is cleared on every drag step.
+              final Rectangle newBounds = dragState.card.getBounds();
+              repaint(oldBounds.union(newBounds));
             }
           }
 
