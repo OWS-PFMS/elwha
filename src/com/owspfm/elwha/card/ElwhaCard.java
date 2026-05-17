@@ -41,7 +41,6 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
-import javax.swing.SwingConstants;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 
@@ -160,7 +159,7 @@ public class ElwhaCard extends ElwhaSurface {
   private JLabel headlineLabel;
   private JLabel subheadLabel;
   private JPanel trailingActionsPanel;
-  private JLabel chevronLabel;
+  private ElwhaIconButton chevronButton;
 
   private CollapsibleContainer collapsibleBody;
   private JPanel mediaHolder;
@@ -281,16 +280,14 @@ public class ElwhaCard extends ElwhaSurface {
     trailingActionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, INNER_GAP_PX / 2, 0));
     trailingActionsPanel.setOpaque(false);
     trailingActionsPanel.setVisible(false);
-    chevronLabel = new JLabel(chevronIcon(collapsed));
-    chevronLabel.setHorizontalAlignment(SwingConstants.CENTER);
-    chevronLabel.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
-    chevronLabel.setVisible(false);
-    chevronLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    chevronButton = ElwhaIconButton.standardIconButton(chevronIcon(collapsed));
+    chevronButton.setVisible(false);
+    chevronButton.addActionListener(e -> setCollapsed(!collapsed));
 
     final JPanel eastGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, INNER_GAP_PX / 2, 0));
     eastGroup.setOpaque(false);
     eastGroup.add(trailingActionsPanel);
-    eastGroup.add(chevronLabel);
+    eastGroup.add(chevronButton);
     headerRow.add(eastGroup, BorderLayout.EAST);
 
     summaryHolder = newSlotHolder();
@@ -401,7 +398,8 @@ public class ElwhaCard extends ElwhaSurface {
           }
         };
     addMouseListener(ma);
-    chevronLabel.addMouseListener(ma);
+    // chevronButton handles its own click via addActionListener -> setCollapsed; its mouse events
+    // are consumed by the icon button so the parent header handler doesn't fire twice.
 
     addFocusListener(
         new FocusAdapter() {
@@ -439,7 +437,7 @@ public class ElwhaCard extends ElwhaSurface {
 
   private boolean isInHeader(final MouseEvent e) {
     final Component src = e.getComponent();
-    if (src == headerRow || src == chevronLabel) {
+    if (src == headerRow) {
       return true;
     }
     if (src == this) {
@@ -887,7 +885,7 @@ public class ElwhaCard extends ElwhaSurface {
       return this;
     }
     this.collapsible = collapsible;
-    chevronLabel.setVisible(collapsible);
+    chevronButton.setVisible(collapsible);
     if (!collapsible && collapsed) {
       setCollapsed(false);
     }
@@ -920,7 +918,7 @@ public class ElwhaCard extends ElwhaSurface {
     }
     final boolean old = this.collapsed;
     this.collapsed = collapsed;
-    chevronLabel.setIcon(chevronIcon(collapsed));
+    chevronButton.setIcon(chevronIcon(collapsed));
     summaryHolder.setVisible(shouldShowSummary());
     if (animateCollapse) {
       animateTo(collapsed ? 0f : 1f);
