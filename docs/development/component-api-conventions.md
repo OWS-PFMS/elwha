@@ -48,6 +48,23 @@ Components with a single "primary content" concept get one convenience construct
 
 Both the setter and the getter are exposed on every component that has a paintable border (Surface, IconButton, Chip, future variant-bearing primitives). Asymmetric setter-without-getter is drift; fix it in the next pass.
 
+## 6. Leaf vs container — different API shapes are sanctioned
+
+Components split into two roles, and the role determines the API shape:
+
+| Role | Description | API shape | Examples |
+|---|---|---|---|
+| **Leaf widget** | IS the content. Small, fixed slot set (a label and at most 2 icons, an icon, etc.). | Single class, typed setters, per-variant static factories. | `ElwhaIconButton`, `ElwhaChip` |
+| **Container widget** | HOLDS variable content. M3 sanctions an open-ended composition vocabulary (anatomy + additive patterns). | Chrome-only root primitive + family of companion primitives carrying the slot vocabulary. Consumer composes via `add()`. | `ElwhaCard` (V3 onward) |
+
+**Rationale.** Leaf widgets have a known finite surface; typed setters fit cleanly and stay short. Containers have to express patterns M3 sanctions but doesn't fully enumerate (header trailing slot polymorphism across icon button / chip / overflow; multiple vertical layouts; two orientations; etc.). A typed setter API on the root accumulates bloat as new M3 patterns surface; a chrome + companion split absorbs them as additional companions without API churn on the root.
+
+**Precedent.** Compose Material3 ships both patterns in the same package — `AssistChip(label = {...}, leadingIcon = {...}, trailingIcon = {...})` is typed-slot (leaf); `Card { content }` is chrome-only with composition delegated to siblings like `ListItem` (container). The split is per-component-role, not lib-wide doctrine.
+
+**Apply when:** designing a new component. If the slot vocabulary is small + fixed, follow leaf shape. If the slot vocabulary is open-ended or M3 shows multiple sanctioned layouts for the same content, follow container shape. When in doubt, leaf — promote to container only if real expressivity gaps surface.
+
+**Package layout note.** Leaf vs container does NOT drive package structure. Both shapes live alongside each other in their respective `<componentname>/` packages; container companion primitives live flat in the same package as the chrome root with an `Elwha<Name>*` prefix carrying the family relationship. Match Joy UI / shadcn structure here; reach for sub-packages only when a single component family exceeds ~15 classes.
+
 ---
 
 ## Cross-reference
