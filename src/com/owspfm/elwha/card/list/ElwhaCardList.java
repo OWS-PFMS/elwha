@@ -362,12 +362,53 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
   }
 
   /**
-   * Updates the drop slot from the cursor's Y position. Slot semantics match {@code
+   * Updates the drop slot from the cursor position. Slot semantics match {@code
    * DefaultCardListModel.move(from, to)}: {@code to} is the destination index in the post-remove
    * list, so it ranges 0..(renderedItems.size()-1) and indicates "insert dragged item at slot N
-   * after removing it from its original position."
+   * after removing it from its original position." Each supported orientation has its own
+   * cursor-to-slot mapping:
+   *
+   * <ul>
+   *   <li>VERTICAL — cursor Y vs each non-dragged card's vertical center.
+   *   <li>HORIZONTAL — cursor X vs each non-dragged card's horizontal center.
+   *   <li>GRID / WRAP — distance to the closest non-dragged card center, then "before" or "after"
+   *       based on whether the cursor is on the leading or trailing side of the cell.
+   * </ul>
    */
   private void updateDropSlot(final Point listPoint) {
+    int slot = computeDropSlot(listPoint);
+    if (slot != dragState.dropSlot) {
+      dragState.dropSlot = slot;
+      repaint();
+    }
+  }
+
+  private int computeDropSlot(final Point listPoint) {
+    if (orientation == ElwhaListOrientation.VERTICAL
+        || orientation == ElwhaListOrientation.HORIZONTAL) {
+      final boolean horizontal = orientation == ElwhaListOrientation.HORIZONTAL;
+      int slot = 0;
+      for (int i = 0; i < renderedItems.size(); i++) {
+        if (i == dragState.fromIndex) {
+          continue;
+        }
+        final ElwhaCard c = cardByItem.get(renderedItems.get(i));
+        if (c == null) {
+          continue;
+        }
+        final int mid = horizontal ? c.getX() + c.getWidth() / 2 : c.getY() + c.getHeight() / 2;
+        final int cursor = horizontal ? listPoint.x : listPoint.y;
+        if (cursor > mid) {
+          slot++;
+        }
+      }
+      return slot;
+    }
+    // GRID / WRAP — pick the slot of the closest non-dragged card, then "after" if cursor sits
+    // on its trailing side along either axis (so a cursor in the bottom-right quadrant of a
+    // cell drops "after" that cell).
+    int closestSlot = 0;
+    int closestDist = Integer.MAX_VALUE;
     int slot = 0;
     for (int i = 0; i < renderedItems.size(); i++) {
       if (i == dragState.fromIndex) {
@@ -377,15 +418,20 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
       if (c == null) {
         continue;
       }
-      final int mid = c.getY() + c.getHeight() / 2;
-      if (listPoint.y > mid) {
-        slot++;
+      final int cx = c.getX() + c.getWidth() / 2;
+      final int cy = c.getY() + c.getHeight() / 2;
+      final int dx = listPoint.x - cx;
+      final int dy = listPoint.y - cy;
+      final int dist = dx * dx + dy * dy;
+      if (dist < closestDist) {
+        closestDist = dist;
+        final boolean after = listPoint.x > cx || listPoint.y > cy;
+        closestSlot = after ? slot + 1 : slot;
       }
+      slot++;
     }
-    if (slot != dragState.dropSlot) {
-      dragState.dropSlot = slot;
-      repaint();
-    }
+    final int maxSlot = Math.max(0, renderedItems.size() - 1);
+    return Math.max(0, Math.min(maxSlot, closestSlot));
   }
 
   /**
@@ -407,10 +453,11 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
   }
 
   /**
-   * Computes the Y where the drop indicator should paint for {@code slot}: in the gap above the
-   * card that would be at that slot, or below the last non-dragged card if slot is past the end.
+   * Returns the {@code [x, y, w, h]} bounds of the 2 dp drop-indicator rect for {@code slot},
+   * shaped per orientation: horizontal line in the gap for VERTICAL, vertical line in the gap for
+   * HORIZONTAL, vertical line on the leading edge of the target cell for GRID / WRAP.
    */
-  private int dropIndicatorY(final int slot) {
+  private int[] dropIndicatorBounds(final int slot) {
     final List<ElwhaCard> others = new ArrayList<>();
     for (int i = 0; i < renderedItems.size(); i++) {
       if (i == dragState.fromIndex) {
@@ -422,16 +469,41 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
       }
     }
     if (others.isEmpty()) {
-      return 0;
+      return new int[] {0, 0, 0, 0};
     }
-    if (slot <= 0) {
-      return Math.max(0, others.get(0).getY() - itemGap / 2);
+    switch (orientation) {
+      case VERTICAL -> {
+        if (slot <= 0) {
+          return new int[] {0, Math.max(0, others.get(0).getY() - itemGap / 2 - 1), getWidth(), 2};
+        }
+        if (slot >= others.size()) {
+          final ElwhaCard last = others.get(others.size() - 1);
+          return new int[] {0, last.getY() + last.getHeight() + itemGap / 2 - 1, getWidth(), 2};
+        }
+        return new int[] {0, others.get(slot).getY() - itemGap / 2 - 1, getWidth(), 2};
+      }
+      case HORIZONTAL -> {
+        if (slot <= 0) {
+          return new int[] {Math.max(0, others.get(0).getX() - itemGap / 2 - 1), 0, 2, getHeight()};
+        }
+        if (slot >= others.size()) {
+          final ElwhaCard last = others.get(others.size() - 1);
+          return new int[] {last.getX() + last.getWidth() + itemGap / 2 - 1, 0, 2, getHeight()};
+        }
+        return new int[] {others.get(slot).getX() - itemGap / 2 - 1, 0, 2, getHeight()};
+      }
+      default -> {
+        // GRID / WRAP — 2 dp vertical bar on the target cell's leading edge.
+        if (slot >= others.size()) {
+          final ElwhaCard last = others.get(others.size() - 1);
+          return new int[] {
+            last.getX() + last.getWidth() + itemGap / 2 - 1, last.getY(), 2, last.getHeight()
+          };
+        }
+        final ElwhaCard target = others.get(slot);
+        return new int[] {target.getX() - itemGap / 2 - 1, target.getY(), 2, target.getHeight()};
+      }
     }
-    if (slot >= others.size()) {
-      final ElwhaCard last = others.get(others.size() - 1);
-      return last.getY() + last.getHeight() + itemGap / 2;
-    }
-    return Math.max(0, others.get(slot).getY() - itemGap / 2);
   }
 
   @Override
@@ -440,12 +512,12 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
     if (dragState == null || !dragState.active) {
       return;
     }
-    if (orientation != ElwhaListOrientation.VERTICAL) {
+    final int[] r = dropIndicatorBounds(dragState.dropSlot);
+    if (r[2] <= 0 || r[3] <= 0) {
       return;
     }
-    final int y = dropIndicatorY(dragState.dropSlot);
     g.setColor(com.owspfm.elwha.theme.ColorRole.PRIMARY.resolve());
-    g.fillRect(0, y - 1, getWidth(), 2);
+    g.fillRect(r[0], r[1], r[2], r[3]);
   }
 
   private void installKeyboardReorder(final ElwhaCard card, final T item) {
