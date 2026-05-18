@@ -5,6 +5,10 @@ import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SurfacePainter;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.RenderingHints;
+import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
 import java.util.Objects;
 import javax.swing.JPanel;
 
@@ -47,15 +51,38 @@ import javax.swing.JPanel;
  * docs/research/elwha-surface-design.md}.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.2.0
  * @since v0.1.0
  */
 public class ElwhaSurface extends JPanel {
+
+  /**
+   * Maximum supported M3 elevation level, matching {@code ElevationTokens.Level5} (12 dp). Levels
+   * 0..5 are accepted; higher values clamp.
+   */
+  public static final int MAX_ELEVATION = 5;
 
   private ColorRole surfaceRole = ColorRole.SURFACE;
   private ShapeScale shape = ShapeScale.MD;
   private ColorRole borderRole;
   private int borderWidth = 1;
+
+  /**
+   * The M3 elevation level used to size the chassis shadow reserve and drive the painted shadow.
+   * Protected so subclasses with transient lift semantics (e.g. {@code ElwhaCard} during a drag)
+   * can momentarily override the painted elevation via try/finally around super.paintComponent.
+   */
+  protected int elevation;
+
+  // Cached shadow image — recomputed only when (bodyW, bodyH, arc, elevation) changes. Critical
+  // for drag performance: without the cache, paintComponent's ConvolveOp two-pass blur fires on
+  // every mouseDragged event (~60 Hz), which dominates the paint budget.
+  private BufferedImage cachedShadow;
+
+  private int cachedShadowBodyW = -1;
+  private int cachedShadowBodyH = -1;
+  private int cachedShadowArc = -1;
+  private int cachedShadowElevation = -1;
 
   /**
    * Creates a Surface with the default look — {@link ColorRole#SURFACE} fill, {@link ShapeScale#MD}
@@ -185,24 +212,144 @@ public class ElwhaSurface extends JPanel {
   }
 
   /**
-   * Paints the surface — delegates the round-rect fill + optional border stroke to {@link
-   * SurfacePainter} with no state-layer overlay. Child components are painted by the standard
-   * {@code JComponent.paintChildren} pass after this returns.
+   * Sets the M3 elevation level (0..{@link #MAX_ELEVATION}). Level 0 disables the shadow entirely;
+   * levels 1..5 paint the standard M3 soft-shadow stack via {@link SurfacePainter#paintShadow}. The
+   * chassis reserves space around the visible body to accommodate the shadow — see {@link
+   * #getInsets()} and {@link SurfacePainter#shadowInsets}.
+   *
+   * @param level the elevation level (clamped to {@code [0, MAX_ELEVATION]})
+   * @return {@code this} for fluent chaining
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public ElwhaSurface setElevation(final int level) {
+    final int clamped = Math.max(0, Math.min(MAX_ELEVATION, level));
+    if (clamped == this.elevation) {
+      return this;
+    }
+    this.elevation = clamped;
+    revalidate();
+    repaint();
+    return this;
+  }
+
+  /**
+   * @return the current elevation level (0..{@link #MAX_ELEVATION})
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public int getElevation() {
+    return elevation;
+  }
+
+  /**
+   * Hook for subclasses to lift the painted elevation transiently — e.g. a card adds a hover or
+   * dragged bump. Defaults to the resting {@link #elevation}; overrides should return values in
+   * {@code [0, MAX_ELEVATION]}. The chassis shadow reserve in {@link #getInsets()} sizes from the
+   * resting elevation, so transient lifts beyond the resting reserve may visually clip at the
+   * chassis edge.
+   *
+   * @return the elevation to paint right now
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  protected int currentElevationForPaint() {
+    return elevation;
+  }
+
+  /**
+   * @return the chassis insets, including the shadow reserve required by {@link #elevation}. Layout
+   *     managers reading this position children inside the visible card body, away from the
+   *     reserved shadow halo.
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public Insets getInsets() {
+    return SurfacePainter.shadowInsets(elevation);
+  }
+
+  /**
+   * Paints the surface — shadow into the reserved insets, then round-rect fill + optional border
+   * stroke (delegated to {@link SurfacePainter}) over the visible body.
    *
    * @param g the graphics context
-   * @version v0.1.0
+   * @version v0.2.0
    * @since v0.1.0
    */
   @Override
   protected void paintComponent(final Graphics g) {
-    SurfacePainter.paint(
-        (Graphics2D) g,
-        getWidth(),
-        getHeight(),
-        shape.px(),
-        surfaceRole,
-        null,
-        borderRole,
-        borderWidth);
+    final Insets s = getInsets();
+    final int bodyX = s.left;
+    final int bodyY = s.top;
+    final int bodyW = Math.max(0, getWidth() - s.left - s.right);
+    final int bodyH = Math.max(0, getHeight() - s.top - s.bottom);
+    final int arc = shape.px();
+    final int paintElevation = currentElevationForPaint();
+
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      if (paintElevation > 0 && bodyW > 0 && bodyH > 0) {
+        final BufferedImage shadow = shadowImageForCurrentState(bodyW, bodyH, arc, paintElevation);
+        final Insets shadowReserve = SurfacePainter.shadowInsets(paintElevation);
+        g2.drawImage(shadow, bodyX - shadowReserve.left, bodyY - shadowReserve.top, null);
+      }
+      final Graphics2D body = (Graphics2D) g2.create(bodyX, bodyY, bodyW, bodyH);
+      try {
+        SurfacePainter.paint(body, bodyW, bodyH, arc, surfaceRole, null, borderRole, borderWidth);
+      } finally {
+        body.dispose();
+      }
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  /**
+   * Returns the cached shadow image if the body dimensions / arc / elevation match the cached key;
+   * otherwise re-renders + caches. Drag-loop hot path — at 60 Hz the same key is requested every
+   * frame, so the cache hit is what keeps drag fluid.
+   */
+  private BufferedImage shadowImageForCurrentState(
+      final int bodyW, final int bodyH, final int arc, final int elevation) {
+    if (cachedShadow == null
+        || cachedShadowBodyW != bodyW
+        || cachedShadowBodyH != bodyH
+        || cachedShadowArc != arc
+        || cachedShadowElevation != elevation) {
+      cachedShadow = SurfacePainter.renderShadowImage(bodyW, bodyH, arc, elevation);
+      cachedShadowBodyW = bodyW;
+      cachedShadowBodyH = bodyH;
+      cachedShadowArc = arc;
+      cachedShadowElevation = elevation;
+    }
+    return cachedShadow;
+  }
+
+  /**
+   * Clips every child paint to the rounded body shape so content (media, etc.) that fills its cell
+   * to chassis bounds doesn't render past the chassis's curved outer corners.
+   *
+   * @param g the graphics context
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  protected void paintChildren(final Graphics g) {
+    final Insets s = getInsets();
+    final int bodyX = s.left;
+    final int bodyY = s.top;
+    final int bodyW = Math.max(0, getWidth() - s.left - s.right);
+    final int bodyH = Math.max(0, getHeight() - s.top - s.bottom);
+    final int arc = shape.px();
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      g2.clip(new RoundRectangle2D.Float(bodyX, bodyY, bodyW, bodyH, arc, arc));
+      super.paintChildren(g2);
+    } finally {
+      g2.dispose();
+    }
   }
 }

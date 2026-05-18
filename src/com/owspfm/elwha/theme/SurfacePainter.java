@@ -3,8 +3,13 @@ package com.owspfm.elwha.theme;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
+import java.awt.image.ConvolveOp;
+import java.awt.image.Kernel;
+import java.util.Arrays;
 
 /**
  * Library-internal helper that paints the round-rect token-resolved surface — fill, optional
@@ -21,7 +26,7 @@ import java.awt.geom.RoundRectangle2D;
  * {@link Color}s — so the painter respects the token binding rule by construction.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.2.0
  * @since v0.1.0
  */
 public final class SurfacePainter {
@@ -95,6 +100,141 @@ public final class SurfacePainter {
     } finally {
       g2.dispose();
     }
+  }
+
+  /**
+   * Returns the inset reserve every elevated surface needs around its visible body so the
+   * convolution-blurred shadow doesn't get clipped by the {@link java.awt.Component} bounds.
+   * Lateral + top reserves equal the blur radius (the halo feathers symmetrically); bottom reserves
+   * blur + the key downward offset. {@code elevation <= 0} returns zero insets.
+   *
+   * @param elevation the M3 elevation level (0..{@code MAX_ELEVATION})
+   * @return the inset reserve, never {@code null}
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public static Insets shadowInsets(int elevation) {
+    if (elevation <= 0) {
+      return new Insets(0, 0, 0, 0);
+    }
+    final int blur = blurRadius(elevation);
+    final int offsetY = keyOffsetY(elevation);
+    // Lateral reserve = the blur halo. Vertical reserve = blur halo + key offset (downward).
+    // Top can stay at the blur halo since the convolution feathers symmetrically (we don't
+    // shift the source up, so the top blur is just the natural blur radius).
+    return new Insets(blur, blur, blur + offsetY, blur);
+  }
+
+  /** Blur radius in pixels per elevation level — tuned for a soft falloff that scales smoothly. */
+  private static int blurRadius(final int elevation) {
+    return Math.max(2, Math.min(12, 2 + elevation * 2));
+  }
+
+  /** Downward offset of the key shadow per elevation level — biases weight below the surface. */
+  private static int keyOffsetY(final int elevation) {
+    return Math.max(1, Math.min(6, elevation + 1));
+  }
+
+  /**
+   * Paints the M3-aligned drop shadow for an elevated surface. Renders the body silhouette into an
+   * offscreen {@link BufferedImage} with margin for the blur halo, then runs a two-pass box blur
+   * via {@link ConvolveOp} for a smooth Gaussian-like falloff at the corners — no visible stepping
+   * from stacked round-rect layers. The source rect is shifted downward by the key offset so the
+   * visible weight lands below the surface (directional drop, "lifted from above").
+   *
+   * <p>Geometry + alpha scale with {@code elevation}: low elevations produce a tight subtle halo;
+   * high elevations produce a substantial drop. Per-paint allocation of the offscreen image is
+   * acceptable for v0.2 — revisit with a size-keyed cache if hot-path profiling surfaces it.
+   *
+   * @param g the graphics context (not mutated; a copy is made for rendering-hint isolation)
+   * @param x left of the visible surface body
+   * @param y top of the visible surface body
+   * @param w width of the visible surface body
+   * @param h height of the visible surface body
+   * @param arc corner radius in pixels
+   * @param elevation the M3 elevation level (no-op if {@code <= 0})
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public static void paintShadow(Graphics2D g, int x, int y, int w, int h, int arc, int elevation) {
+    if (elevation <= 0 || w <= 0 || h <= 0) {
+      return;
+    }
+    final BufferedImage shadow = renderShadowImage(w, h, arc, elevation);
+    final Insets insets = shadowInsets(elevation);
+    g.drawImage(shadow, x - insets.left, y - insets.top, null);
+  }
+
+  /**
+   * Renders the shadow image for a body of {@code w × h} px with corner radius {@code arc} at the
+   * given {@code elevation}. Returns the blurred image — callers place it via {@code
+   * g.drawImage(img, bodyX - shadowInsets(elevation).left, bodyY - shadowInsets(elevation).top,
+   * null)}.
+   *
+   * <p>Split out from {@link #paintShadow} so callers that paint at high frequency ({@code
+   * ElwhaSurface} during a drag) can cache the result and re-render only when the inputs change,
+   * instead of paying the {@link ConvolveOp} cost on every paint.
+   *
+   * @param w body width in pixels
+   * @param h body height in pixels
+   * @param arc corner radius in pixels
+   * @param elevation the M3 elevation level (must be {@code > 0})
+   * @return the blurred shadow image, sized to body + lateral blur halo + bottom blur halo + key
+   *     downward offset
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public static BufferedImage renderShadowImage(int w, int h, int arc, int elevation) {
+    final int e = Math.max(1, elevation);
+    final int blur = blurRadius(e);
+    final int offsetY = keyOffsetY(e);
+    final int padX = blur;
+    final int padY = blur;
+    final int imgW = w + padX * 2;
+    final int imgH = h + padY * 2 + offsetY;
+
+    // Render the body silhouette at full opacity into an ARGB image with margin padX/padY for
+    // the blur halo to spread into (plus offsetY worth of extra vertical room so the key
+    // downward drop has somewhere to feather without clipping at the image's bottom edge).
+    final BufferedImage shadow = new BufferedImage(imgW, imgH, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D sg = shadow.createGraphics();
+    try {
+      sg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      // Source alpha tuned so cumulative shadow AFTER blur reads as M3 "lifted from above" —
+      // strong enough to feel directional, low enough not to swamp the surface fill at low
+      // elevation. The blur disperses this alpha over the halo, so the per-pixel rendered alpha
+      // is well below this value.
+      final int sourceAlpha = Math.min(180, 60 + e * 12);
+      sg.setColor(new Color(0, 0, 0, sourceAlpha));
+      sg.fill(new RoundRectangle2D.Float(padX, padY + offsetY, w, h, arc, arc));
+    } finally {
+      sg.dispose();
+    }
+
+    // Two-pass box blur — approximates a Gaussian without the cost of a real Gaussian kernel.
+    // First pass at full blur, second at half — gives a smooth, directional falloff with no
+    // visible layer-stepping at the corners.
+    BufferedImage blurred = boxBlur(shadow, blur);
+    blurred = boxBlur(blurred, Math.max(1, blur / 2));
+    return blurred;
+  }
+
+  /**
+   * Box-blur the source image with a square kernel of the given radius. {@code radius=1} gives a
+   * 3×3 kernel; radius=N gives (2N+1)×(2N+1). {@code EDGE_NO_OP} preserves edge pixels rather than
+   * darkening them with the kernel's zero-fill default — important so the shadow image's outer rim
+   * doesn't visibly darken at its bounds.
+   */
+  private static BufferedImage boxBlur(final BufferedImage src, final int radius) {
+    if (radius <= 0) {
+      return src;
+    }
+    final int size = radius * 2 + 1;
+    final float weight = 1f / (size * size);
+    final float[] data = new float[size * size];
+    Arrays.fill(data, weight);
+    final ConvolveOp op = new ConvolveOp(new Kernel(size, size, data), ConvolveOp.EDGE_NO_OP, null);
+    return op.filter(src, null);
   }
 
   private static Color resolveFill(ColorRole surfaceRole, StateLayer overlay) {
