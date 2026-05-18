@@ -156,18 +156,46 @@ public final class ElwhaCardMedia extends JComponent {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       g2.setRenderingHint(
           RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-      final Shape clip = topCornerClip();
-      if (clip != null) {
-        g2.setClip(clip);
-      }
+      // Corner clipping is owned by ElwhaSurface.paintChildren — the chassis already intersects
+      // every child's paint with the body's rounded rect (top + bottom corners). The previous
+      // per-media cubic-Bezier setClip both duplicated that work AND overrode the inherited
+      // chassis clip (Graphics2D.setClip REPLACES), letting media pixels leak at the bottom when
+      // the bezier endpoints diverged from RoundRectangle2D's elliptical-arc internals. Rely on
+      // the chassis clip — single source of truth per spec §5.2 + #106.
       if (image != null) {
-        g2.drawImage(image, 0, 0, getWidth(), getHeight(), this);
+        drawImageCoverFit(g2);
       } else if (painter != null) {
         painter.accept(g2);
       }
     } finally {
       g2.dispose();
     }
+  }
+
+  /**
+   * CSS {@code object-fit: cover} semantics per spec §3.4 rule 3: scale the source image to fill
+   * the slot while preserving the source aspect ratio; crop the overflow at the slot edges.
+   * Narrower chassis → re-cropped from the same source rather than stretched.
+   */
+  private void drawImageCoverFit(final Graphics2D g2) {
+    final int slotW = getWidth();
+    final int slotH = getHeight();
+    if (slotW <= 0 || slotH <= 0) {
+      return;
+    }
+    final int iw = image.getWidth(this);
+    final int ih = image.getHeight(this);
+    if (iw <= 0 || ih <= 0) {
+      // Image not yet loaded — fall back to stretch (ImageObserver will repaint when ready).
+      g2.drawImage(image, 0, 0, slotW, slotH, this);
+      return;
+    }
+    final double scale = Math.max((double) slotW / iw, (double) slotH / ih);
+    final int drawW = (int) Math.round(iw * scale);
+    final int drawH = (int) Math.round(ih * scale);
+    final int dx = (slotW - drawW) / 2;
+    final int dy = (slotH - drawH) / 2;
+    g2.drawImage(image, dx, dy, drawW, drawH, this);
   }
 
   /**

@@ -71,6 +71,21 @@ public final class ElwhaCardTitle extends JLabel {
   }
 
   /**
+   * Reports unbounded X-axis so a parent {@code BoxLayout(Y_AXIS)} (or any width-respecting layout)
+   * stretches this atom to the available width — letting HTML wrap kick in at narrow chassis widths
+   * per spec §3.4 rule 2 / §22 guard-rail. Without this override, {@link JLabel} falls back to its
+   * preferred (natural single-line) width and refuses to shrink, so text would clip instead of wrap.
+   *
+   * @return a {@code Dimension} with unbounded width and preferred height
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public Dimension getMaximumSize() {
+    return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+  }
+
+  /**
    * Sets the type role. Triggers a revalidate so the new font's metrics propagate to parent layout.
    *
    * @param role the type role (must not be {@code null})

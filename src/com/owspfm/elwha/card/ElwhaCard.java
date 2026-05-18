@@ -1292,6 +1292,23 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Spec §3.4 rule 1: the chassis cooperates with parent-assigned width, never resists shrinking.
+   * Returns {@code Integer.MAX_VALUE} on both axes — explicitly documenting that {@code JPanel}'s
+   * unbounded default is the intended contract, not a happenstance. {@code BoxLayout}, {@code
+   * GridLayout}, and any other parent layout can stretch or compress the chassis freely. Consumers
+   * needing a hard minimum should call {@link #setMinimumSize(Dimension)} or wrap the card in a
+   * constrained container.
+   *
+   * @return a {@code Dimension} with unbounded width and height
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public Dimension getMaximumSize() {
+    return new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE);
+  }
+
+  /**
    * VERTICAL LayoutManager. Stacks children top-to-bottom in {@code add()} order — same observable
    * behavior as {@code BoxLayout(Y_AXIS)} per spec §3.3 — plus two card-specific rules:
    *
@@ -1321,12 +1338,14 @@ public class ElwhaCard extends ElwhaSurface {
       final Insets ins = parent.getInsets();
       final int padH = paddingHorizontal.px();
       final int padV = paddingVertical.px();
+      final int interGap = interElementGap();
       final int count = parent.getComponentCount();
       int totalH = 0;
       int maxW = 0;
       boolean anyVisible = false;
       Component firstVisible = null;
       Component lastVisible = null;
+      Component prevVisible = null;
       for (int i = 0; i < count; i++) {
         final Component c = parent.getComponent(i);
         if (!c.isVisible()) {
@@ -1349,10 +1368,14 @@ public class ElwhaCard extends ElwhaSurface {
         if (!c.isVisible()) {
           continue;
         }
+        if (prevVisible != null) {
+          totalH += interGap;
+        }
         final Dimension p = c.getPreferredSize();
         final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
         totalH += p.height;
         maxW = Math.max(maxW, bleed ? p.width : p.width + 2 * padH);
+        prevVisible = c;
       }
       if (!(lastVisible instanceof ElwhaCardMedia)) {
         totalH += padV;
@@ -1370,6 +1393,7 @@ public class ElwhaCard extends ElwhaSurface {
       final Insets ins = parent.getInsets();
       final int padH = paddingHorizontal.px();
       final int padV = paddingVertical.px();
+      final int interGap = interElementGap();
       final int bodyX = ins.left;
       final int bodyY = ins.top;
       final int bodyW = Math.max(0, parent.getWidth() - ins.left - ins.right);
@@ -1378,6 +1402,7 @@ public class ElwhaCard extends ElwhaSurface {
 
       Component firstVisible = null;
       Component lastVisible = null;
+      int visibleCount = 0;
       for (int i = 0; i < count; i++) {
         final Component c = parent.getComponent(i);
         if (!c.isVisible()) {
@@ -1387,6 +1412,7 @@ public class ElwhaCard extends ElwhaSurface {
           firstVisible = c;
         }
         lastVisible = c;
+        visibleCount++;
       }
       if (firstVisible == null) {
         return;
@@ -1399,6 +1425,9 @@ public class ElwhaCard extends ElwhaSurface {
       int naturalContentH = 0;
       if (!(firstVisible instanceof ElwhaCardMedia)) {
         naturalContentH += padV;
+      }
+      if (visibleCount > 1) {
+        naturalContentH += interGap * (visibleCount - 1);
       }
       for (int i = 0; i < count; i++) {
         final Component c = parent.getComponent(i);
@@ -1414,10 +1443,14 @@ public class ElwhaCard extends ElwhaSurface {
       final int actionsLift = anchorActionsToBottom ? slack : 0;
 
       int y = bodyY + ((firstVisible instanceof ElwhaCardMedia) ? 0 : padV);
+      boolean placedAny = false;
       for (int i = 0; i < count; i++) {
         final Component c = parent.getComponent(i);
         if (!c.isVisible()) {
           continue;
+        }
+        if (placedAny) {
+          y += interGap;
         }
         final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
         final int x = bleed ? bodyX : bodyX + padH;
@@ -1426,6 +1459,7 @@ public class ElwhaCard extends ElwhaSurface {
         final int childY = (c == lastVisible) ? y + actionsLift : y;
         c.setBounds(x, childY, w, p.height);
         y += p.height;
+        placedAny = true;
       }
     }
 
@@ -1449,9 +1483,29 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Vertical gap inserted between every adjacent pair of visible siblings inside the card body.
+   * Defaults to {@link SpaceScale#SM} (8 dp) per the M3 vertical-rhythm convention — gives header,
+   * supporting text, divider, and actions room to breathe instead of stacking flush. Applies to
+   * media bleeding to the chassis top/bottom too (so the next text sibling isn't crushed against
+   * the media edge).
+   */
+  private int interElementGap() {
+    return SpaceScale.SM.px();
+  }
+
+  /**
    * Two-column LayoutManager for HORIZONTAL cards. Leading column takes its preferred width;
-   * trailing column takes the rest. Both span the card's full height (minus chassis insets). RTL
-   * support: {@link Container#getComponentOrientation()} flips leading/trailing visually.
+   * trailing column takes the rest. Both span the card's full height (minus chassis insets).
+   *
+   * <p><strong>Padding contract.</strong> Per spec §3.4 / §15: media columns bleed to the chassis
+   * edges on every side they touch (left/top/bottom for leading-media, right/top/bottom for
+   * trailing-media); non-media columns are inset by {@link #paddingHorizontal} / {@link
+   * #paddingVertical} on every chassis-edge they touch and by {@link #paddingHorizontal} on the
+   * inter-column boundary. The result: a media+content card has media flush against the leading
+   * curve and content inset by chassis padding on its own sides; a content+content card has
+   * symmetric padding around both columns plus an inter-column gap.
+   *
+   * <p>RTL support: {@link Container#getComponentOrientation()} flips leading/trailing visually.
    */
   private final class TwoColumnLayout implements LayoutManager {
     @Override
@@ -1467,13 +1521,22 @@ public class ElwhaCard extends ElwhaSurface {
     @Override
     public Dimension preferredLayoutSize(final Container parent) {
       final Insets ins = parent.getInsets();
+      final int padH = paddingHorizontal.px();
+      final int padV = paddingVertical.px();
+      final boolean leadIsMedia = horizontalLeading instanceof ElwhaCardMedia;
+      final boolean trailIsMedia = horizontalTrailing instanceof ElwhaCardMedia;
       final Dimension lead =
           horizontalLeading != null ? horizontalLeading.getPreferredSize() : new Dimension(0, 0);
       final Dimension trail =
           horizontalTrailing != null ? horizontalTrailing.getPreferredSize() : new Dimension(0, 0);
-      return new Dimension(
-          ins.left + ins.right + lead.width + trail.width,
-          ins.top + ins.bottom + Math.max(lead.height, trail.height));
+      final int leadOuterW = lead.width + (leadIsMedia ? 0 : padH);
+      final int trailOuterW = trail.width + (trailIsMedia ? 0 : padH);
+      final int gap = (horizontalLeading != null && horizontalTrailing != null) ? padH : 0;
+      final int width = ins.left + ins.right + leadOuterW + gap + trailOuterW;
+      final int leadH = lead.height + (leadIsMedia ? 0 : 2 * padV);
+      final int trailH = trail.height + (trailIsMedia ? 0 : 2 * padV);
+      final int height = ins.top + ins.bottom + Math.max(leadH, trailH);
+      return new Dimension(width, height);
     }
 
     @Override
@@ -1484,17 +1547,52 @@ public class ElwhaCard extends ElwhaSurface {
     @Override
     public void layoutContainer(final Container parent) {
       final Insets ins = parent.getInsets();
-      final int totalW = parent.getWidth() - ins.left - ins.right;
-      final int totalH = parent.getHeight() - ins.top - ins.bottom;
-      final int leadW = horizontalLeading != null ? horizontalLeading.getPreferredSize().width : 0;
+      final int padH = paddingHorizontal.px();
+      final int padV = paddingVertical.px();
+      final int bodyX = ins.left;
+      final int bodyY = ins.top;
+      final int bodyW = Math.max(0, parent.getWidth() - ins.left - ins.right);
+      final int bodyH = Math.max(0, parent.getHeight() - ins.top - ins.bottom);
+      final boolean leadIsMedia = horizontalLeading instanceof ElwhaCardMedia;
+      final boolean trailIsMedia = horizontalTrailing instanceof ElwhaCardMedia;
       final boolean ltr = parent.getComponentOrientation().isLeftToRight();
+      final int leadNaturalW =
+          horizontalLeading != null ? horizontalLeading.getPreferredSize().width : 0;
+      final boolean hasBoth = horizontalLeading != null && horizontalTrailing != null;
+      final int interColumnGap = hasBoth ? padH : 0;
+
+      // Leading column: own outer = natural width + (padH if non-media); reserves space at the
+      // chassis-leading edge and one inter-column gap (when both columns present).
+      final int leadOuterW = leadNaturalW + (leadIsMedia ? 0 : padH);
       if (horizontalLeading != null) {
-        final int x = ltr ? ins.left : ins.left + totalW - leadW;
-        horizontalLeading.setBounds(x, ins.top, leadW, totalH);
+        final int leadInnerX =
+            ltr
+                ? bodyX + (leadIsMedia ? 0 : padH)
+                : bodyX + bodyW - leadOuterW + (leadIsMedia ? 0 : 0);
+        final int leadInnerY = bodyY + (leadIsMedia ? 0 : padV);
+        final int leadInnerH = bodyH - (leadIsMedia ? 0 : 2 * padV);
+        horizontalLeading.setBounds(leadInnerX, leadInnerY, leadNaturalW, leadInnerH);
       }
+
+      // Trailing column: fills the remaining width; inset by padH on the chassis-trailing edge
+      // and padH on the inter-column boundary (when present), padV top/bottom.
       if (horizontalTrailing != null) {
-        final int x = ltr ? ins.left + leadW : ins.left;
-        horizontalTrailing.setBounds(x, ins.top, totalW - leadW, totalH);
+        final int trailOuterW = bodyW - leadOuterW - interColumnGap;
+        final int trailInnerX;
+        final int trailInnerW;
+        if (ltr) {
+          final int outerStart = bodyX + leadOuterW + interColumnGap;
+          trailInnerX = outerStart;
+          trailInnerW = trailOuterW - (trailIsMedia ? 0 : padH);
+        } else {
+          // Mirror: trailing column outer block is on the left side of the body.
+          final int outerStart = bodyX;
+          trailInnerX = outerStart + (trailIsMedia ? 0 : padH);
+          trailInnerW = trailOuterW - (trailIsMedia ? 0 : padH);
+        }
+        final int trailInnerY = bodyY + (trailIsMedia ? 0 : padV);
+        final int trailInnerH = bodyH - (trailIsMedia ? 0 : 2 * padV);
+        horizontalTrailing.setBounds(trailInnerX, trailInnerY, Math.max(0, trailInnerW), trailInnerH);
       }
     }
   }
