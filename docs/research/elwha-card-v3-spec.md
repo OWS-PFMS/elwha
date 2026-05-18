@@ -275,6 +275,75 @@ public enum ExpansionOverflow { GROW, SCROLL }
 Switching orientation at runtime is supported but expensive (rebuilds
 the layout). Consumers should pick orientation at compose time.
 
+### 3.4 Width-constraint behavior
+
+Cards are responsive components. The chassis honors the width its
+parent's LayoutManager assigns and never forces itself wider —
+M3 doctrine, anchored to the spec page on visual presentation /
+spacing:
+
+> *"To adjust the presentation of content-focused components, begin with
+> spacing. Allow components like lists, cards, and images to optimize
+> space while filling the region of a screen that suits a device
+> breakpoint's ergonomic needs."*
+
+Prior art convergence (Compose Material 3 `Card`, MUI Joy UI `Card`,
+Material Components Web `mdc-card`, and the CSS / `object-fit: cover`
+foundation all agree on the same contract):
+
+1. **Chassis honors parent-assigned width.** `ElwhaCard.getPreferredSize()`
+   reports a sensible preferred width based on content, but the chassis
+   accepts any width the parent gives it — never overflows the
+   parent's allocation, never resists shrinking. `getMaximumSize()`
+   returns `Integer.MAX_VALUE` (`JPanel` default, preserved) so
+   `BoxLayout` / `GridLayout` / any parent layout can stretch *or
+   compress* the chassis freely.
+
+2. **Text reflows.** Layer 2 text atoms (`ElwhaCardTitle`,
+   `ElwhaCardSubtitle`, `ElwhaCardSupportingText`) HTML-auto-wrap and
+   compute their height for whatever width the chassis hands them.
+   Per §4.x defaults: text atoms do not ellipsize. Narrow chassis →
+   taller text block. To make `BoxLayout(Y_AXIS)` actually pass the
+   narrowed width down, each atom must report
+   `getMaximumSize() = (Integer.MAX_VALUE, preferredHeight)` so
+   BoxLayout stretches it horizontally — `JLabel`'s default
+   `getMaximumSize` (= preferred) would otherwise lock the atom at
+   its natural text width.
+
+3. **Media cover-fits.** `ElwhaCardMedia` follows CSS `object-fit:
+   cover` semantics: the chassis layout sizes the media component to
+   the chassis-content width × `(width / aspectRatio)` height; the
+   image then scales to fill the slot, preserving its source aspect
+   ratio. If the source aspect ratio differs from the slot's, the
+   image is cover-cropped at the slot edges. Narrow chassis →
+   proportionally narrower media at proportionally smaller height,
+   re-cropped from the same source.
+
+4. **No hard minimum width.** M3 cites no specific minimum and defers
+   to its window-size-class breakpoint system (Compact / Medium /
+   Expanded / Large / X-Large). Elwha follows: no minimum is
+   enforced. Cards remain legible down to whatever width still fits
+   chassis padding (`SpaceScale.LG` × 2 = 32dp) plus at least one
+   wrapped character of content. Below that the chassis still renders
+   but content is effectively unreadable — same behavior any `JPanel`
+   exhibits when over-constrained. Consumers wanting a hard minimum
+   set `setMinimumSize(...)` or wrap the card in a constrained
+   container.
+
+**Universal invariant: no child paints past the chassis bounds, ever.**
+Every reference library enforces this (Compose coerces, CSS clips by
+default, MUI / mdc-card rely on overflow rules). Elwha enforces it
+explicitly:
+
+- `ElwhaSurface.paintChildren` clips child paint to the body's
+  rounded shape — both for the M3 corner-clip aesthetic AND as a
+  hard overflow boundary.
+- The chassis's `LayoutManager` (`VerticalCardLayout` for VERTICAL,
+  the two-column LayoutManager for HORIZONTAL) sizes children to fit
+  within the chassis-content bounds; nothing should ever need
+  overflow clipping as a fallback. If a child's bounds exceed the
+  chassis, that's a layout bug, not a clipping fallback to lean on.
+
 ## 4. Layer 2 — Atoms
 
 Typed text / icon / thumbnail with M3-correct defaults baked in. All
@@ -1047,3 +1116,15 @@ Concrete things the V3 implementation must not do:
 - **Playground may stay broken during the build-out.** Phase 3 step 13
   / 14 is when the V3 playground lands; until then, the V3 package
   imports won't build a full demo. Document in PR bodies.
+- **Don't let any child paint past the chassis bounds.** Per §3.4, the
+  chassis clip in `paintChildren` is a hard overflow boundary, not a
+  cosmetic corner-clip. Children that don't fit clip at the chassis
+  edge; they never overflow into sibling components. Media that
+  doesn't fit cover-crops at its slot edge (CSS `object-fit: cover`
+  semantics).
+- **Atoms must report unbounded `getMaximumSize` X-axis.** Per §3.4
+  rule 2, text atoms must override `getMaximumSize()` to return
+  `(Integer.MAX_VALUE, preferredHeight)` so `BoxLayout(Y_AXIS)`
+  stretches them to chassis-content width — letting HTML wrap take
+  over at narrow widths. Don't rely on `JLabel`'s default
+  `getMaximumSize() == preferred`.
