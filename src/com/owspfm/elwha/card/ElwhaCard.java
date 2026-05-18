@@ -170,6 +170,23 @@ public class ElwhaCard extends ElwhaSurface {
 
   private static final int CHECKED_BADGE_ICON_PX = 16;
 
+  /**
+   * Per-paint flag set during {@link #paintComponent} when the ElwhaCard is locally owning the
+   * border treatment (disabled-outlined wash, focused-outlined replacement) so that {@link
+   * ElwhaSurface}'s super-paint skips its resting border stroke. The flag is read via the
+   * overridden {@link #getBorderRole()} — returning {@code null} from there suppresses the border
+   * inside {@link com.owspfm.elwha.theme.SurfacePainter#paint}.
+   */
+  private boolean suppressRestingBorder;
+
+  /**
+   * Per-paint flag toggled inside {@link #paintComponent} so {@link #getSurfaceRole()} returns the
+   * disabled-variant container role swap (Elevated → SURFACE, Filled → SURFACE_VARIANT) per spec
+   * §11 + PL-9. Without the swap, painting the variant's resting role at full opacity gives no
+   * visible disabled cue.
+   */
+  private boolean paintingDisabled;
+
   private final Map<Component, CollapseRule> collapseConstraints = new IdentityHashMap<>();
   private final java.util.List<ActionListener> actionListeners = new java.util.ArrayList<>();
   private final PropertyChangeSupport selectionChange = new PropertyChangeSupport(this);
@@ -979,7 +996,13 @@ public class ElwhaCard extends ElwhaSurface {
   /**
    * Paints under the children: Surface chassis (shadow + fill + border) via {@code super}, then the
    * card's state-layer overlay tinted to the variant's on-pair. Selection badge, focus ring,
-   * disabled scrim, and ripple paint above children in {@link #paintChildren}.
+   * disabled outlined border, and ripple paint above children in {@link #paintChildren}.
+   *
+   * <p>Sets two per-paint flags ({@link #paintingDisabled}, {@link #suppressRestingBorder}) so the
+   * chassis super-paint sees the disabled container-role swap (PL-9) and skips the resting border
+   * when ElwhaCard is locally painting it (focused-outlined PL-8, disabled-outlined PL-10). The
+   * flags are reset before this method returns so a subsequent paint with different state-pair
+   * uses the resting defaults.
    *
    * @param g the graphics context
    * @version v0.2.0
@@ -987,7 +1010,17 @@ public class ElwhaCard extends ElwhaSurface {
    */
   @Override
   protected void paintComponent(final Graphics g) {
-    super.paintComponent(g);
+    final boolean disabled = !isEnabled();
+    final boolean focused = actionable && isFocusOwner() && isEnabled();
+    paintingDisabled = disabled;
+    suppressRestingBorder =
+        variant == CardVariant.OUTLINED && (focused || disabled);
+    try {
+      super.paintComponent(g);
+    } finally {
+      paintingDisabled = false;
+      suppressRestingBorder = false;
+    }
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -998,9 +1031,52 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
-   * Paints above the children: disabled scrim, focus ring, ripple, selection badge. Painting these
-   * on top of children ensures the selection badge sits above any media child that would otherwise
-   * hide it.
+   * Overrides the chassis surface role during disabled paint to apply the M3 variant swap per spec
+   * §11 + PL-9 — Elevated → SURFACE, Filled → SURFACE_VARIANT, Outlined unchanged. The swap is
+   * scoped to {@link #paintComponent} via {@link #paintingDisabled}; at all other times the
+   * resting role from {@link ElwhaSurface#getSurfaceRole()} is returned.
+   *
+   * @return the surface role to fill the chassis with
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public ColorRole getSurfaceRole() {
+    if (paintingDisabled) {
+      if (variant == CardVariant.ELEVATED) {
+        return ColorRole.SURFACE;
+      }
+      if (variant == CardVariant.FILLED) {
+        return ColorRole.SURFACE_VARIANT;
+      }
+    }
+    return super.getSurfaceRole();
+  }
+
+  /**
+   * Overrides the chassis border role so the super-paint can be told to skip its resting border
+   * stroke. Returns {@code null} (no border) when {@link #suppressRestingBorder} is set — used by
+   * {@link #paintComponent} so a focused-outlined or disabled-outlined card can paint its own
+   * border treatment in {@link #paintChildren} without double-stacking the resting outline.
+   *
+   * @return the border role to stroke with, or {@code null} to suppress
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public ColorRole getBorderRole() {
+    return suppressRestingBorder ? null : super.getBorderRole();
+  }
+
+  /**
+   * Paints above the children: focus ring, disabled outlined border replacement, ripple, selection
+   * badge. Painting these on top of children ensures the selection badge sits above any media
+   * child that would otherwise hide it.
+   *
+   * <p>Per PL-8 (focused-outlined) and PL-10 (disabled-outlined), the border for Outlined cards in
+   * those states is painted here at the chassis body edge — the resting OUTLINE_VARIANT stroke is
+   * suppressed by {@link #suppressRestingBorder} during super.paintComponent, so there's no
+   * double-stacking.
    *
    * @param g the graphics context
    * @version v0.2.0
@@ -1012,11 +1088,11 @@ public class ElwhaCard extends ElwhaSurface {
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      if (!isEnabled()) {
-        paintDisabledScrim(g2);
-      }
       if (actionable && rippleProgress < 1f && rippleOrigin != null) {
         paintRipple(g2);
+      }
+      if (variant == CardVariant.OUTLINED && !isEnabled()) {
+        paintDisabledOutlinedBorder(g2);
       }
       if (actionable && isFocusOwner() && isEnabled()) {
         paintFocusRing(g2);
@@ -1068,25 +1144,52 @@ public class ElwhaCard extends ElwhaSurface {
     g2.fill(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
   }
 
-  /** Disabled scrim — variant container fill at 0.38 over the surface. */
-  private void paintDisabledScrim(final Graphics2D g2) {
-    final Color base = variant.containerRole().resolve();
+  /**
+   * Disabled-outlined border replacement per PL-10: paint the OUTLINE role (the stronger of
+   * OUTLINE / OUTLINE_VARIANT per M3) at 12 % opacity at the chassis edge. The resting
+   * OUTLINE_VARIANT border is suppressed by {@link #suppressRestingBorder} so there's no
+   * double-stacking.
+   */
+  private void paintDisabledOutlinedBorder(final Graphics2D g2) {
+    final Color stroke = ColorRole.OUTLINE.resolve();
     g2.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
-    g2.setColor(base);
+    g2.setColor(stroke);
+    g2.setStroke(new BasicStroke(1f));
     final java.awt.Rectangle b = bodyBounds();
     final int arc = getShape().px();
-    g2.fill(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
+    // Center the stroke on the body edge (inset by 0.5 px) so the outer edge tracks the chassis
+    // corner exactly, matching the geometry SurfacePainter uses for the resting border.
+    g2.draw(
+        new RoundRectangle2D.Float(
+            b.x + 0.5f, b.y + 0.5f, b.width - 1f, b.height - 1f, arc, arc));
   }
 
-  /** M3 focus ring — SECONDARY for Elevated/Filled, ON_SURFACE for Outlined; 2dp inset stroke. */
+  /**
+   * M3 focus ring. For Elevated / Filled: SECONDARY ring, 2 dp inset (per spec §10.2). For
+   * Outlined per PL-8: ON_SURFACE 2 dp stroke painted at the chassis body edge to REPLACE the
+   * resting OUTLINE_VARIANT border (which is suppressed during paintComponent), not double-paint
+   * inside it. Without the replacement, a focused Outlined card would show two concentric strokes
+   * — the 1 dp resting outline plus a 2 dp ring inside it.
+   */
   private void paintFocusRing(final Graphics2D g2) {
-    final Color ring =
-        (variant == CardVariant.OUTLINED ? ColorRole.ON_SURFACE : ColorRole.SECONDARY).resolve();
-    g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 220));
-    g2.setStroke(new BasicStroke(2f));
     final java.awt.Rectangle b = bodyBounds();
     final int arc = getShape().px();
-    g2.draw(new RoundRectangle2D.Float(b.x + 1f, b.y + 1f, b.width - 2f, b.height - 2f, arc, arc));
+    if (variant == CardVariant.OUTLINED) {
+      g2.setColor(ColorRole.ON_SURFACE.resolve());
+      g2.setStroke(new BasicStroke(2f));
+      // Inset by 1 px so a 2 dp stroke is fully inside the body bounds and visually covers where
+      // the resting 1 px outline would have been.
+      g2.draw(
+          new RoundRectangle2D.Float(
+              b.x + 1f, b.y + 1f, b.width - 2f, b.height - 2f, arc, arc));
+    } else {
+      final Color ring = ColorRole.SECONDARY.resolve();
+      g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 220));
+      g2.setStroke(new BasicStroke(2f));
+      g2.draw(
+          new RoundRectangle2D.Float(
+              b.x + 1f, b.y + 1f, b.width - 2f, b.height - 2f, arc, arc));
+    }
   }
 
   /** Expanding-circle ripple, clipped to the card's rounded body shape. */
