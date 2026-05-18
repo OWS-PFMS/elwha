@@ -7,6 +7,8 @@ import java.awt.Image;
 import java.awt.RenderingHints;
 import java.util.Objects;
 import java.util.function.Consumer;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
 import javax.swing.JComponent;
 
 /**
@@ -37,6 +39,8 @@ public final class ElwhaCardMedia extends JComponent {
   private final Consumer<Graphics2D> painter;
   private double aspectRatio = DEFAULT_ASPECT_RATIO;
   private int preferredHeightDp = -1;
+  private boolean decorative;
+  private String altText;
 
   private ElwhaCardMedia(final Image image, final Consumer<Graphics2D> painter) {
     this.image = image;
@@ -126,6 +130,104 @@ public final class ElwhaCardMedia extends JComponent {
    */
   public int getPreferredHeight() {
     return preferredHeightDp;
+  }
+
+  // ----------------------------------------------------------- accessibility
+
+  /**
+   * Declares whether this media slot is purely decorative (hidden from assistive technology) or
+   * informative (carries semantic content that screen readers should describe via {@link
+   * #setAltText(String)}). Defaults to {@code false} (informative).
+   *
+   * <p>Per M3 accessibility doctrine (m3-card-spec-organized.md §5.5.3): decorative media is
+   * skipped in the accessibility traversal entirely so a screen reader doesn't announce noisy
+   * "image" placeholders between meaningful card content. Informative media carries an alt-text
+   * description that AT verbalizes.
+   *
+   * @param newDecorative {@code true} to hide from AT, {@code false} to expose as an icon
+   * @return {@code this} for fluent chaining
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public ElwhaCardMedia setDecorative(final boolean newDecorative) {
+    this.decorative = newDecorative;
+    // Force the AccessibleContext to re-resolve role / name on next AT query.
+    accessibleContext = null;
+    return this;
+  }
+
+  /**
+   * @return whether the media is marked decorative (hidden from AT)
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public boolean isDecorative() {
+    return decorative;
+  }
+
+  /**
+   * Sets the alt-text description for informative media. AT verbalizes this via the {@link
+   * AccessibleContext}'s accessible description. Ignored when {@link #isDecorative()} is {@code
+   * true}. Pass {@code null} to clear.
+   *
+   * @param newAltText the alt-text description, or {@code null} to clear
+   * @return {@code this} for fluent chaining
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public ElwhaCardMedia setAltText(final String newAltText) {
+    this.altText = newAltText;
+    accessibleContext = null;
+    return this;
+  }
+
+  /**
+   * @return the alt-text description, or {@code null} if none
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public String getAltText() {
+    return altText;
+  }
+
+  /**
+   * Exposes the media's role and alt-text to assistive technology per spec §5.2 / §5.5.3 + #109.
+   * Decorative media reports {@link AccessibleRole#LABEL} with no name / description (and AT
+   * implementations skip null-name nodes); informative media reports {@link AccessibleRole#ICON}
+   * with the alt-text as its accessible description so screen readers verbalize it.
+   *
+   * @return the accessible context
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext =
+          new AccessibleJComponent() {
+            @Override
+            public AccessibleRole getAccessibleRole() {
+              return decorative ? AccessibleRole.LABEL : AccessibleRole.ICON;
+            }
+
+            @Override
+            public String getAccessibleName() {
+              if (decorative) {
+                return null;
+              }
+              return altText != null ? altText : super.getAccessibleName();
+            }
+
+            @Override
+            public String getAccessibleDescription() {
+              if (decorative) {
+                return null;
+              }
+              return altText != null ? altText : super.getAccessibleDescription();
+            }
+          };
+    }
+    return accessibleContext;
   }
 
   @Override

@@ -504,6 +504,13 @@ public final class ElwhaCardMedia extends JComponent {
 
   public ElwhaCardMedia setPreferredHeight(int dp);     // overrides aspect-ratio sizing
   public int getPreferredHeight();
+
+  // Accessibility (#109): informative vs decorative
+  public ElwhaCardMedia setDecorative(boolean decorative); // default false (informative)
+  public boolean isDecorative();
+
+  public ElwhaCardMedia setAltText(String altText);     // null clears; default null
+  public String getAltText();
 }
 ```
 
@@ -511,11 +518,27 @@ public final class ElwhaCardMedia extends JComponent {
 `add(...)` overload exposed; no event listener overloads beyond
 `JComponent` base. Media is decorative content, never interactive.
 
-**Corner clipping:** when placed at the top of a card (first child in
-VERTICAL orientation) or as the leading column in HORIZONTAL
-orientation, ElwhaCardMedia clips its paint to the card's outer
-rounded shape automatically — uses cubic Bezier circle approximation
-matching `SurfacePainter`'s elliptical arc.
+**Accessibility (#109).** M3 distinguishes informative media (the photo
+of an article's hero, a chart, a screenshot — carries meaning, screen
+reader verbalizes alt-text) from decorative media (a generic
+hero-strip pattern, a faint divider thumbnail — purely visual, AT
+should skip it). Per [`m3-card-spec-organized.md` §5.5.3](m3-card-spec-organized.md#553-decorative-image-rule):
+
+- `setDecorative(false)` (default) + `setAltText("...")` → `AccessibleRole.ICON`
+  with the alt-text exposed as the accessible description. Screen
+  readers announce it during traversal.
+- `setDecorative(true)` → `AccessibleRole.LABEL` with null name /
+  description so AT skips the node entirely. Use for pure decoration.
+
+The setters re-initialize the `AccessibleContext` so a toggle mid-
+session takes effect on the next AT query.
+
+**Corner clipping:** owned by the chassis, not the media. Per #106 and
+spec §3.4, `ElwhaSurface.paintChildren` intersects every child's paint
+with `SurfacePainter.bodyShape(w, h, arc)` — a single source of truth
+for the chassis outer curve. Media painted at any chassis edge rounds
+naturally to match the chassis corners; `ElwhaCardMedia` itself does
+no local clipping.
 
 ### 5.3 `ElwhaCardActions`
 
