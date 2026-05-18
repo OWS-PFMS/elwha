@@ -103,6 +103,26 @@ public final class SurfacePainter {
   }
 
   /**
+   * Returns the rounded-rect body shape every surface and surface-aware child must use as their
+   * paint boundary — single source of truth for the chassis outer curve, so corner geometry doesn't
+   * drift between e.g. {@code ElwhaSurface.paintChildren}'s clip and a child component's own
+   * corner-aware paint. Java2D's {@link RoundRectangle2D.Float} internally uses cubic-Bezier circle
+   * approximation (k ≈ 0.5523) for its arcs; routing every consumer through this helper ensures
+   * pixel-perfect alignment without each call site re-deriving the math.
+   *
+   * @param width body width in pixels
+   * @param height body height in pixels
+   * @param arc corner radius in pixels (clamped internally to {@code min(width, height)})
+   * @return the rounded-rect shape covering the body
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public static RoundRectangle2D.Float bodyShape(final int width, final int height, final int arc) {
+    final int clampedArc = Math.max(0, Math.min(arc, Math.min(width, height)));
+    return new RoundRectangle2D.Float(0f, 0f, width, height, clampedArc, clampedArc);
+  }
+
+  /**
    * Returns the inset reserve every elevated surface needs around its visible body so the
    * convolution-blurred shadow doesn't get clipped by the {@link java.awt.Component} bounds.
    * Lateral + top reserves equal the blur radius (the halo feathers symmetrically); bottom reserves

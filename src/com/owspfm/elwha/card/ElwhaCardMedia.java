@@ -1,14 +1,10 @@
 package com.owspfm.elwha.card;
 
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
-import java.awt.Shape;
-import java.awt.geom.Path2D;
-import java.awt.geom.RoundRectangle2D;
 import java.util.Objects;
 import java.util.function.Consumer;
 import javax.swing.JComponent;
@@ -21,11 +17,11 @@ import javax.swing.JComponent;
  * <p>Defaults to a 16:9 aspect ratio; {@link #setPreferredHeight(int)} overrides the aspect-ratio
  * sizing with an explicit height.
  *
- * <p><strong>Corner clipping.</strong> When the media's parent is an {@link ElwhaCard} and the
- * media is the first child in {@code VERTICAL} orientation (or the leading column in {@code
- * HORIZONTAL}), the media auto-clips its paint to the card's outer rounded shape using a
- * cubic-Bezier circle approximation matching {@code SurfacePainter}'s elliptical arc — so the
- * media's top corners meet the card's top corners pixel-perfectly.
+ * <p><strong>Corner clipping.</strong> Owned by the chassis: {@code ElwhaSurface.paintChildren}
+ * intersects every child's paint with the body's rounded rect via {@code SurfacePainter.bodyShape},
+ * so media painted at the chassis edges naturally rounds to match the chassis corners. {@code
+ * ElwhaCardMedia} itself does no local clipping — single source of truth for the corner curve
+ * eliminates the cubic-Bezier vs elliptical-arc drift that the per-media clip introduced.
  *
  * <p>See {@code docs/research/elwha-card-v3-spec.md} §5.2.
  *
@@ -36,8 +32,6 @@ import javax.swing.JComponent;
 public final class ElwhaCardMedia extends JComponent {
 
   private static final double DEFAULT_ASPECT_RATIO = 16.0 / 9.0;
-  // Cubic Bezier control distance for a circle approximation: k = (4/3) * tan(pi/8).
-  private static final double BEZIER_K = 0.5522847498;
 
   private final Image image;
   private final Consumer<Graphics2D> painter;
@@ -198,45 +192,4 @@ public final class ElwhaCardMedia extends JComponent {
     g2.drawImage(image, dx, dy, drawW, drawH, this);
   }
 
-  /**
-   * If this media is the first child of an {@link ElwhaCard} in {@code VERTICAL} orientation,
-   * return a Shape clipping the paint to the card's outer top corners. Otherwise return {@code
-   * null} (no clipping — paint the full bounds).
-   */
-  private Shape topCornerClip() {
-    final Container parent = getParent();
-    if (!(parent instanceof ElwhaCard card)) {
-      return null;
-    }
-    if (card.getOrientation() != CardOrientation.VERTICAL) {
-      return null;
-    }
-    if (parent.getComponentCount() == 0 || parent.getComponent(0) != this) {
-      return null;
-    }
-    final int arc = card.getShape().px();
-    return cubicBezierTopRoundedClip(getWidth(), getHeight(), arc);
-  }
-
-  /**
-   * Builds a top-rounded clip shape (top-left + top-right corners rounded to {@code arc} via
-   * cubic-Bezier; bottom corners square). Matches {@code SurfacePainter}'s elliptical arc so the
-   * media's top edges align pixel-perfectly with the card's chassis.
-   */
-  private static Shape cubicBezierTopRoundedClip(final int w, final int h, final int arc) {
-    if (arc <= 0) {
-      return new RoundRectangle2D.Float(0, 0, w, h, 0, 0);
-    }
-    final double k = arc * BEZIER_K;
-    final Path2D.Double path = new Path2D.Double();
-    path.moveTo(arc, 0);
-    path.lineTo(w - arc, 0);
-    path.curveTo(w - arc + k, 0, w, arc - k, w, arc);
-    path.lineTo(w, h);
-    path.lineTo(0, h);
-    path.lineTo(0, arc);
-    path.curveTo(0, arc - k, arc - k, 0, arc, 0);
-    path.closePath();
-    return path;
-  }
 }

@@ -346,7 +346,12 @@ public class ElwhaSurface extends JPanel {
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      g2.clip(new RoundRectangle2D.Float(bodyX, bodyY, bodyW, bodyH, arc, arc));
+      // Use SurfacePainter.bodyShape via a translated rect so corner geometry is identical to
+      // every other surface-aware paint (chassis stroke, media slot, etc.) — per #106.
+      final RoundRectangle2D.Float local = SurfacePainter.bodyShape(bodyW, bodyH, arc);
+      g2.clip(
+          new RoundRectangle2D.Float(
+              bodyX, bodyY, local.width, local.height, local.arcwidth, local.archeight));
       super.paintChildren(g2);
     } finally {
       g2.dispose();
