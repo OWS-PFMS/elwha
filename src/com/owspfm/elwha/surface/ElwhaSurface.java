@@ -76,13 +76,24 @@ public class ElwhaSurface extends JPanel {
 
   // Cached shadow image — recomputed only when (bodyW, bodyH, arc, elevation) changes. Critical
   // for drag performance: without the cache, paintComponent's ConvolveOp two-pass blur fires on
-  // every mouseDragged event (~60 Hz), which dominates the paint budget.
+  // every mouseDragged event (~60 Hz), which dominates the paint budget. Also reused for collapse-
+  // tween perf (#110) via setSuspendShadowRecompute — during a tween, the cached image is stretched
+  // to current bounds instead of paying the blur cost per frame.
   private BufferedImage cachedShadow;
 
   private int cachedShadowBodyW = -1;
   private int cachedShadowBodyH = -1;
   private int cachedShadowArc = -1;
   private int cachedShadowElevation = -1;
+
+  /**
+   * When {@code true}, {@link #paintComponent} reuses {@link #cachedShadow} (stretching it to fit
+   * current body dimensions) instead of re-rendering the two-pass {@link ConvolveOp} blur.
+   * Subclasses with a transient height tween (e.g. {@link com.owspfm.elwha.card.ElwhaCard}'s
+   * collapse animation) flip this on during the tween and off at rest, eliminating ~16 ms of blur
+   * cost per animation frame.
+   */
+  private boolean suspendShadowRecompute;
 
   /**
    * Creates a Surface with the default look — {@link ColorRole#SURFACE} fill, {@link ShapeScale#MD}
@@ -291,18 +302,59 @@ public class ElwhaSurface extends JPanel {
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       if (paintElevation > 0 && bodyW > 0 && bodyH > 0) {
-        final BufferedImage shadow = shadowImageForCurrentState(bodyW, bodyH, arc, paintElevation);
         final Insets shadowReserve = SurfacePainter.shadowInsets(paintElevation);
-        g2.drawImage(shadow, bodyX - shadowReserve.left, bodyY - shadowReserve.top, null);
+        if (suspendShadowRecompute && cachedShadow != null) {
+          // Reuse the pre-tween cached shadow at the current body dimensions, stretching to fit.
+          // Slight corner-shape drift for the duration of the 250 ms tween is far cheaper than
+          // re-running the two-pass ConvolveOp on every animation frame. Resting paint resumes
+          // the exact-fit cache once the tween clears the flag.
+          final int dx = bodyX - shadowReserve.left;
+          final int dy = bodyY - shadowReserve.top;
+          final int dw = bodyW + shadowReserve.left + shadowReserve.right;
+          final int dh = bodyH + shadowReserve.top + shadowReserve.bottom;
+          g2.drawImage(cachedShadow, dx, dy, dw, dh, null);
+        } else {
+          final BufferedImage shadow =
+              shadowImageForCurrentState(bodyW, bodyH, arc, paintElevation);
+          g2.drawImage(shadow, bodyX - shadowReserve.left, bodyY - shadowReserve.top, null);
+        }
       }
       final Graphics2D body = (Graphics2D) g2.create(bodyX, bodyY, bodyW, bodyH);
       try {
-        SurfacePainter.paint(body, bodyW, bodyH, arc, surfaceRole, null, borderRole, borderWidth);
+        SurfacePainter.paint(body, bodyW, bodyH, arc, getSurfaceRole(), null, getBorderRole(),
+            getBorderWidth());
       } finally {
         body.dispose();
       }
     } finally {
       g2.dispose();
+    }
+  }
+
+  /**
+   * Toggles the per-frame shadow re-render. Subclasses with a transient size tween call this with
+   * {@code true} at tween start and {@code false} at tween end — during the tween, {@link
+   * #paintComponent} reuses {@link #cachedShadow} stretched to current bounds instead of paying
+   * the {@link ConvolveOp} cost per frame. The cache is invalidated when the flag flips back to
+   * {@code false}, forcing the next paint to compute the exact-fit shadow for the new resting
+   * size.
+   *
+   * @param suspend whether to suspend shadow recomputation
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  protected void setSuspendShadowRecompute(final boolean suspend) {
+    if (this.suspendShadowRecompute == suspend) {
+      return;
+    }
+    this.suspendShadowRecompute = suspend;
+    if (!suspend) {
+      // Force a fresh exact-fit render at the new resting size.
+      cachedShadowBodyW = -1;
+      cachedShadowBodyH = -1;
+      cachedShadowArc = -1;
+      cachedShadowElevation = -1;
+      repaint();
     }
   }
 
