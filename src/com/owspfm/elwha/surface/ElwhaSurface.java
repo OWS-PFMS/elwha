@@ -321,8 +321,8 @@ public class ElwhaSurface extends JPanel {
       }
       final Graphics2D body = (Graphics2D) g2.create(bodyX, bodyY, bodyW, bodyH);
       try {
-        SurfacePainter.paint(body, bodyW, bodyH, arc, getSurfaceRole(), null, getBorderRole(),
-            getBorderWidth());
+        SurfacePainter.paint(
+            body, bodyW, bodyH, arc, getSurfaceRole(), null, getBorderRole(), getBorderWidth());
       } finally {
         body.dispose();
       }
@@ -334,10 +334,9 @@ public class ElwhaSurface extends JPanel {
   /**
    * Toggles the per-frame shadow re-render. Subclasses with a transient size tween call this with
    * {@code true} at tween start and {@code false} at tween end — during the tween, {@link
-   * #paintComponent} reuses {@link #cachedShadow} stretched to current bounds instead of paying
-   * the {@link ConvolveOp} cost per frame. The cache is invalidated when the flag flips back to
-   * {@code false}, forcing the next paint to compute the exact-fit shadow for the new resting
-   * size.
+   * #paintComponent} reuses {@link #cachedShadow} stretched to current bounds instead of paying the
+   * {@link ConvolveOp} cost per frame. The cache is invalidated when the flag flips back to {@code
+   * false}, forcing the next paint to compute the exact-fit shadow for the new resting size.
    *
    * @param suspend whether to suspend shadow recomputation
    * @version v0.2.0

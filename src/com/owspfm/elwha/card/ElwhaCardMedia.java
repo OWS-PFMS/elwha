@@ -293,5 +293,4 @@ public final class ElwhaCardMedia extends JComponent {
     final int dy = (slotH - drawH) / 2;
     g2.drawImage(image, dx, dy, drawW, drawH, this);
   }
-
 }

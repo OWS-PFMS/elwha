@@ -1008,8 +1008,8 @@ public class ElwhaCard extends ElwhaSurface {
    * <p>Sets two per-paint flags ({@link #paintingDisabled}, {@link #suppressRestingBorder}) so the
    * chassis super-paint sees the disabled container-role swap (PL-9) and skips the resting border
    * when ElwhaCard is locally painting it (focused-outlined PL-8, disabled-outlined PL-10). The
-   * flags are reset before this method returns so a subsequent paint with different state-pair
-   * uses the resting defaults.
+   * flags are reset before this method returns so a subsequent paint with different state-pair uses
+   * the resting defaults.
    *
    * @param g the graphics context
    * @version v0.2.0
@@ -1020,8 +1020,7 @@ public class ElwhaCard extends ElwhaSurface {
     final boolean disabled = !isEnabled();
     final boolean focused = actionable && isFocusOwner() && isEnabled();
     paintingDisabled = disabled;
-    suppressRestingBorder =
-        variant == CardVariant.OUTLINED && (focused || disabled);
+    suppressRestingBorder = variant == CardVariant.OUTLINED && (focused || disabled);
     try {
       super.paintComponent(g);
     } finally {
@@ -1040,8 +1039,8 @@ public class ElwhaCard extends ElwhaSurface {
   /**
    * Overrides the chassis surface role during disabled paint to apply the M3 variant swap per spec
    * §11 + PL-9 — Elevated → SURFACE, Filled → SURFACE_VARIANT, Outlined unchanged. The swap is
-   * scoped to {@link #paintComponent} via {@link #paintingDisabled}; at all other times the
-   * resting role from {@link ElwhaSurface#getSurfaceRole()} is returned.
+   * scoped to {@link #paintComponent} via {@link #paintingDisabled}; at all other times the resting
+   * role from {@link ElwhaSurface#getSurfaceRole()} is returned.
    *
    * @return the surface role to fill the chassis with
    * @version v0.2.0
@@ -1077,8 +1076,8 @@ public class ElwhaCard extends ElwhaSurface {
 
   /**
    * Paints above the children: focus ring, disabled outlined border replacement, ripple, selection
-   * badge. Painting these on top of children ensures the selection badge sits above any media
-   * child that would otherwise hide it.
+   * badge. Painting these on top of children ensures the selection badge sits above any media child
+   * that would otherwise hide it.
    *
    * <p>Per PL-8 (focused-outlined) and PL-10 (disabled-outlined), the border for Outlined cards in
    * those states is painted here at the chassis body edge — the resting OUTLINE_VARIANT stroke is
@@ -1152,10 +1151,9 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
-   * Disabled-outlined border replacement per PL-10: paint the OUTLINE role (the stronger of
-   * OUTLINE / OUTLINE_VARIANT per M3) at 12 % opacity at the chassis edge. The resting
-   * OUTLINE_VARIANT border is suppressed by {@link #suppressRestingBorder} so there's no
-   * double-stacking.
+   * Disabled-outlined border replacement per PL-10: paint the OUTLINE role (the stronger of OUTLINE
+   * / OUTLINE_VARIANT per M3) at 12 % opacity at the chassis edge. The resting OUTLINE_VARIANT
+   * border is suppressed by {@link #suppressRestingBorder} so there's no double-stacking.
    */
   private void paintDisabledOutlinedBorder(final Graphics2D g2) {
     final Color stroke = ColorRole.OUTLINE.resolve();
@@ -1167,16 +1165,15 @@ public class ElwhaCard extends ElwhaSurface {
     // Center the stroke on the body edge (inset by 0.5 px) so the outer edge tracks the chassis
     // corner exactly, matching the geometry SurfacePainter uses for the resting border.
     g2.draw(
-        new RoundRectangle2D.Float(
-            b.x + 0.5f, b.y + 0.5f, b.width - 1f, b.height - 1f, arc, arc));
+        new RoundRectangle2D.Float(b.x + 0.5f, b.y + 0.5f, b.width - 1f, b.height - 1f, arc, arc));
   }
 
   /**
-   * M3 focus ring. For Elevated / Filled: SECONDARY ring, 2 dp inset (per spec §10.2). For
-   * Outlined per PL-8: ON_SURFACE 2 dp stroke painted at the chassis body edge to REPLACE the
-   * resting OUTLINE_VARIANT border (which is suppressed during paintComponent), not double-paint
-   * inside it. Without the replacement, a focused Outlined card would show two concentric strokes
-   * — the 1 dp resting outline plus a 2 dp ring inside it.
+   * M3 focus ring. For Elevated / Filled: SECONDARY ring, 2 dp inset (per spec §10.2). For Outlined
+   * per PL-8: ON_SURFACE 2 dp stroke painted at the chassis body edge to REPLACE the resting
+   * OUTLINE_VARIANT border (which is suppressed during paintComponent), not double-paint inside it.
+   * Without the replacement, a focused Outlined card would show two concentric strokes — the 1 dp
+   * resting outline plus a 2 dp ring inside it.
    */
   private void paintFocusRing(final Graphics2D g2) {
     final java.awt.Rectangle b = bodyBounds();
@@ -1187,15 +1184,13 @@ public class ElwhaCard extends ElwhaSurface {
       // Inset by 1 px so a 2 dp stroke is fully inside the body bounds and visually covers where
       // the resting 1 px outline would have been.
       g2.draw(
-          new RoundRectangle2D.Float(
-              b.x + 1f, b.y + 1f, b.width - 2f, b.height - 2f, arc, arc));
+          new RoundRectangle2D.Float(b.x + 1f, b.y + 1f, b.width - 2f, b.height - 2f, arc, arc));
     } else {
       final Color ring = ColorRole.SECONDARY.resolve();
       g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 220));
       g2.setStroke(new BasicStroke(2f));
       g2.draw(
-          new RoundRectangle2D.Float(
-              b.x + 1f, b.y + 1f, b.width - 2f, b.height - 2f, arc, arc));
+          new RoundRectangle2D.Float(b.x + 1f, b.y + 1f, b.width - 2f, b.height - 2f, arc, arc));
     }
   }
 
@@ -1702,7 +1697,8 @@ public class ElwhaCard extends ElwhaSurface {
         }
         final int trailInnerY = bodyY + (trailIsMedia ? 0 : padV);
         final int trailInnerH = bodyH - (trailIsMedia ? 0 : 2 * padV);
-        horizontalTrailing.setBounds(trailInnerX, trailInnerY, Math.max(0, trailInnerW), trailInnerH);
+        horizontalTrailing.setBounds(
+            trailInnerX, trailInnerY, Math.max(0, trailInnerW), trailInnerH);
       }
     }
   }
