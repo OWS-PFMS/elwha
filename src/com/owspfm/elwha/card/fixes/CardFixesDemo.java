@@ -225,9 +225,18 @@ public final class CardFixesDemo {
       right.setBackground(new Color(0xE0, 0xE0, 0xE0));
       right.add(new JLabel("Right pane — cards must not paint here."));
 
+      // JSplitPane refuses to drag the divider past either pane's getMinimumSize, and the JPanel
+      // default minimum = preferred. The cards' natural-single-line widths (per #20 fix) drive
+      // left.preferred to ~1500 px, which would silently block the divider from compressing the
+      // cards pane below 1500 — defeating the demo's whole point (showing chassis width-
+      // honoring under live drag). Pin both pane minimums to 0 so the divider drags freely.
+      left.setMinimumSize(new Dimension(0, 0));
+      right.setMinimumSize(new Dimension(0, 0));
+
       final JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left, right);
       split.setDividerLocation(420);
       split.setOneTouchExpandable(true);
+      split.setContinuousLayout(true);
 
       final JPanel reflowRow = new JPanel(new GridLayout(1, 2, 16, 0));
       reflowRow.setBorder(BorderFactory.createEmptyBorder(16, 0, 0, 0));
