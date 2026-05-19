@@ -582,12 +582,6 @@ public class ElwhaCard extends ElwhaSurface {
     if (collapseTimer != null && collapseTimer.isRunning()) {
       collapseTimer.stop();
     }
-    // Freeze shadow recompute for the duration of the tween (#110). Without this, the height
-    // change on every animation frame invalidates the (bodyW, bodyH, arc, elevation) shadow cache
-    // key, triggering a fresh two-pass ConvolveOp blur every 16 ms — the dominant cost of the
-    // collapse lag. The pre-tween cached shadow is reused stretched-to-fit during the tween, and
-    // setSuspendShadowRecompute(false) below forces an exact-fit recompute at rest.
-    setSuspendShadowRecompute(true);
     final int frameMs = 16;
     final long startNanos = System.nanoTime();
     collapseTimer =
@@ -605,7 +599,6 @@ public class ElwhaCard extends ElwhaSurface {
               if (t >= 1f) {
                 animationFraction = 1f;
                 ((Timer) e.getSource()).stop();
-                setSuspendShadowRecompute(false);
                 if (getParent() != null) {
                   getParent().revalidate();
                 }
@@ -886,13 +879,13 @@ public class ElwhaCard extends ElwhaSurface {
    * grows. Matches Compose Material3 / MaterialCardView, where elevation is painted outside the
    * measured body — Swing doesn't allow that, so the reserve is always-on instead.
    *
-   * @return the chassis insets — always {@code SurfacePainter.shadowInsets(MAX_ELEVATION)}
+   * @return the chassis insets — always {@code ShadowPainter.shadowInsets(MAX_ELEVATION)}
    * @version v0.2.0
    * @since v0.2.0
    */
   @Override
   public Insets getInsets() {
-    return com.owspfm.elwha.theme.SurfacePainter.shadowInsets(MAX_ELEVATION);
+    return com.owspfm.elwha.theme.ShadowPainter.shadowInsets(MAX_ELEVATION);
   }
 
   /**
