@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- **`ElwhaCardMedia.painter` signature widened to `MediaPainter`** ([#21](https://github.com/OWS-PFMS/elwha/issues/21)) — **breaking, pre-1.0, no shims.** Was `ElwhaCardMedia.painter(Consumer<Graphics2D>)`; now `ElwhaCardMedia.painter(MediaPainter)` where `MediaPainter` is a new `@FunctionalInterface` with `void paint(Graphics2D g, int width, int height)`. Consumers receive the actual slot dimensions at paint time so they can scale / clip to the assigned area without closing over the component reference or reading `Graphics2D.getClipBounds`. Migration: change `g -> ...` to `(g, w, h) -> ...` and use `w` / `h` instead of hardcoded dimensions. Spec §5.2 amended.
 - **`ElwhaCardDivider()` no-arg default flipped from `FULL` → `INSET`** (#18) — **breaking, pre-1.0, no shims.** Per M3 §1.7 contextual rule (now documented in spec §5.4), `FULL` pairs with a body-bottom expand text-link to mark the boundary between always-visible content and a collapsible hidden section; `INSET` is the within-body separator (metadata, footer rows, body → actions). `INSET` is the more common pattern, so the no-arg constructor now defaults to it. Consumers wanting the collapse-pair separator pass `new ElwhaCardDivider(DividerStyle.FULL)` explicitly.
 
 ### Removed

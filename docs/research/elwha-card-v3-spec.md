@@ -498,7 +498,7 @@ public final class ElwhaCardMedia extends JComponent {
 
   // Factories
   public static ElwhaCardMedia image(Image image);
-  public static ElwhaCardMedia painter(Consumer<Graphics2D> paint);
+  public static ElwhaCardMedia painter(MediaPainter paint);
 
   // Sizing
   public ElwhaCardMedia setAspectRatio(double ratio);   // default 16:9
@@ -514,7 +514,23 @@ public final class ElwhaCardMedia extends JComponent {
   public ElwhaCardMedia setAltText(String altText);     // null clears; default null
   public String getAltText();
 }
+
+@FunctionalInterface
+public interface MediaPainter {
+  void paint(Graphics2D g, int width, int height);
+}
 ```
+
+**Painter API (#21).** The `painter(MediaPainter)` factory receives a
+typed callback that gets the slot width + height at paint time —
+consumers don't need to close over the component reference or read
+`Graphics2D.getClipBounds` (which can be mutated by the chassis's own
+clip operations) to know the slot dimensions. The chassis sets
+antialiasing + bilinear interpolation hints before invoking the
+painter, and the rounded-body clip from `ElwhaSurface.paintChildren`
+applies inherited — painters needn't special-case corner clipping.
+Replaces the v0.2-development `Consumer<Graphics2D>` callback which
+gave consumers no slot-size context.
 
 **Inert by construction:** `setFocusable(false)` baked in; no public
 `add(...)` overload exposed; no event listener overloads beyond

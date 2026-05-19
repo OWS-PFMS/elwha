@@ -202,9 +202,7 @@ public final class ElwhaCardV3Demo {
     final ElwhaCard b = ElwhaCard.elevatedCard();
     b.add(
         ElwhaCardMedia.painter(
-                g2 -> {
-                  final int w = 320;
-                  final int h = 180;
+                (g2, w, h) -> {
                   g2.setPaint(
                       new GradientPaint(0, 0, new Color(0x9C27B0), w, h, new Color(0xFFEB3B)));
                   g2.fillRect(0, 0, w, h);

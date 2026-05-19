@@ -6,7 +6,6 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
 import java.util.Objects;
-import java.util.function.Consumer;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
 import javax.swing.JComponent;
@@ -43,13 +42,13 @@ public final class ElwhaCardMedia extends JComponent {
   private static final int DEFAULT_INTRINSIC_WIDTH = 320;
 
   private final Image image;
-  private final Consumer<Graphics2D> painter;
+  private final MediaPainter painter;
   private double aspectRatio = DEFAULT_ASPECT_RATIO;
   private int preferredHeightDp = -1;
   private boolean decorative;
   private String altText;
 
-  private ElwhaCardMedia(final Image image, final Consumer<Graphics2D> painter) {
+  private ElwhaCardMedia(final Image image, final MediaPainter painter) {
     this.image = image;
     this.painter = painter;
     setFocusable(false);
@@ -72,9 +71,12 @@ public final class ElwhaCardMedia extends JComponent {
   }
 
   /**
-   * Factory: a media slot delegating paint to a {@link Consumer} of {@link Graphics2D} — for
-   * procedurally-rendered media (charts, gradients, generative art). The painter is called inside
-   * the corner-clip if the media is at the card's top.
+   * Factory: a media slot delegating paint to a {@link MediaPainter} — for procedurally-rendered
+   * media (charts, gradients, generative art). The painter receives the actual slot width and
+   * height at paint time, so it can scale / clip to the assigned area without closing over the
+   * component reference. The chassis's rounded-body clip (inherited via {@link
+   * com.owspfm.elwha.surface.ElwhaSurface#paintChildren}) still applies — painters needn't
+   * special-case the chassis corners.
    *
    * @param paint the paint callback (must not be {@code null})
    * @return a new media slot
@@ -82,7 +84,7 @@ public final class ElwhaCardMedia extends JComponent {
    * @version v0.2.0
    * @since v0.2.0
    */
-  public static ElwhaCardMedia painter(final Consumer<Graphics2D> paint) {
+  public static ElwhaCardMedia painter(final MediaPainter paint) {
     Objects.requireNonNull(paint, "paint");
     return new ElwhaCardMedia(null, paint);
   }
@@ -322,7 +324,7 @@ public final class ElwhaCardMedia extends JComponent {
       if (image != null) {
         drawImageCoverFit(g2);
       } else if (painter != null) {
-        painter.accept(g2);
+        painter.paint(g2, getWidth(), getHeight());
       }
     } finally {
       g2.dispose();

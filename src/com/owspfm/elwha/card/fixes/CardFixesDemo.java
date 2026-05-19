@@ -301,7 +301,8 @@ public final class CardFixesDemo {
     }
 
     private JComponent cornerCard(final ElwhaCard card, final String label) {
-      final ElwhaCardMedia media = ElwhaCardMedia.painter(g -> paintCheckerboard(g, 260, 160, 20));
+      final ElwhaCardMedia media =
+          ElwhaCardMedia.painter((g, w, h) -> paintCheckerboard(g, w, h, 20));
       media.setPreferredHeight(160);
       card.add(media);
       final ElwhaCardSupportingText body =
@@ -436,7 +437,7 @@ public final class CardFixesDemo {
 
     DecorativeMediaTab() {
       super(new BorderLayout());
-      media = ElwhaCardMedia.painter(g -> paintGradientStrip(g, 480, 200));
+      media = ElwhaCardMedia.painter((g, w, h) -> paintGradientStrip(g, w, h));
       media.setPreferredHeight(200);
       media.setAltText("A purple-to-blue gradient strip (default informative media).");
 
