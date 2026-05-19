@@ -1,6 +1,5 @@
 package com.owspfm.elwha.card.fixes;
 
-import com.owspfm.elwha.card.CollapseRule;
 import com.owspfm.elwha.card.ElwhaCard;
 import com.owspfm.elwha.card.ElwhaCardActions;
 import com.owspfm.elwha.card.ElwhaCardChevron;
@@ -563,11 +562,8 @@ public final class CardFixesDemo {
       header.setSubtitle("Click chevron →");
       header.addTrailing(new ElwhaCardChevron(card));
       card.add(header);
-      // Header holds the chevron — pin it ALWAYS_VISIBLE so the chevron survives the collapse
-      // (otherwise card.setCollapsed(true) hides the header and the user has no way to expand
-      // back). Logged as #23; pending design call on whether the chassis should auto-anchor
-      // chevron-bearing children.
-      card.setCollapseConstraint(header, CollapseRule.ALWAYS_VISIBLE);
+      // Header auto-anchored ALWAYS_VISIBLE by the chevron's addNotify (#23). Consumers can
+      // override here with setCollapseConstraint if they want different behavior.
       final ElwhaCardSupportingText body =
           new ElwhaCardSupportingText(
               "Collapsible body content — multiple lines so the tween has noticeable amplitude. "

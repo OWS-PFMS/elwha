@@ -667,6 +667,14 @@ public final class ElwhaCardChevron extends ElwhaIconButton {
   header text without dominating the row.
 - Inherits all `ElwhaIconButton` chrome (state layer, focus, ripple,
   a11y).
+- **Auto-anchors its host container as `ALWAYS_VISIBLE` (#23).** On
+  `addNotify`, walks up the ancestor chain to find the direct child
+  of `card` it lives inside (typically the `ElwhaCardHeader`) and
+  calls `card.setCollapseConstraint(host, CollapseRule.ALWAYS_VISIBLE)`.
+  Without this, a consumer who forgets to pin the chevron's host
+  silently strands the collapsed card with no UI affordance to expand.
+  Consumers who want different behavior override the constraint
+  after adding the chevron.
 
 ### 6.2 `ElwhaCardExpandLink`
 
@@ -688,6 +696,12 @@ public final class ElwhaCardExpandLink extends JComponent {
 swaps text between `expandText` (collapsed) and `collapseText`
 (expanded). Click toggles `card.setCollapsed(...)`. Tab-focusable;
 Enter / Space activates.
+
+**Auto-anchors itself as `ALWAYS_VISIBLE` (#23).** Same self-anchor
+mechanism as `ElwhaCardChevron` — on `addNotify`, walks up to find
+the direct child of `card` it lives inside (typically the link
+itself, since M3 places it directly in the body) and pins it
+`ALWAYS_VISIBLE`. Survives collapse so the user can re-expand.
 
 ## 7. Layer 5 — `ElwhaAdaptiveCard` (deferred)
 

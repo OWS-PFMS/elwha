@@ -233,25 +233,28 @@ public final class ElwhaCardV3Demo {
   private static JPanel collapseRow() {
     final JPanel g = grid(2);
 
-    // Chevron in header trailing
+    // Chevron in header trailing — chevron auto-anchors the header ALWAYS_VISIBLE on addNotify
+    // (#23) so consumers don't need to remember the rule. setCollapseConstraint() is still
+    // available for consumers who want different behavior.
     final ElwhaCard a = ElwhaCard.elevatedCard().setCollapsible(true);
     final ElwhaCardHeader headerA =
         new ElwhaCardHeader().setTitle("With chevron").setSubtitle("Click chevron to toggle");
     headerA.addTrailing(new ElwhaCardChevron(a));
     a.add(headerA);
-    a.setCollapseConstraint(headerA, CollapseRule.ALWAYS_VISIBLE);
     a.add(Box.createVerticalStrut(8));
     final ElwhaCardSupportingText bodyA =
         new ElwhaCardSupportingText(
-            "Body hides when collapsed. Header stays visible because it's ALWAYS_VISIBLE.");
+            "Body hides when collapsed. Header stays visible (auto-anchored by chevron).");
     a.add(bodyA);
     g.add(a);
 
-    // ExpandLink at body bottom
+    // ExpandLink at body bottom — also auto-anchors itself ALWAYS_VISIBLE on addNotify (#23).
     final ElwhaCard b = ElwhaCard.elevatedCard().setCollapsible(true);
     final ElwhaCardHeader headerB =
         new ElwhaCardHeader().setTitle("With expand link").setSubtitle("Text affordance");
     b.add(headerB);
+    // Header here has no chevron, so we explicitly pin it ALWAYS_VISIBLE — only the expand link
+    // below auto-anchors itself.
     b.setCollapseConstraint(headerB, CollapseRule.ALWAYS_VISIBLE);
     b.add(Box.createVerticalStrut(8));
     b.add(new ElwhaCardSupportingText("Details hidden when collapsed."));
@@ -260,7 +263,6 @@ public final class ElwhaCardV3Demo {
     b.add(new ElwhaCardDivider(DividerStyle.FULL));
     final ElwhaCardExpandLink link = new ElwhaCardExpandLink(b, "Show details", "Hide details");
     b.add(link);
-    b.setCollapseConstraint(link, CollapseRule.ALWAYS_VISIBLE);
     g.add(b);
 
     return g;
