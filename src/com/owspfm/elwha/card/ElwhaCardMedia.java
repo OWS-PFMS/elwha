@@ -35,6 +35,13 @@ public final class ElwhaCardMedia extends JComponent {
 
   private static final double DEFAULT_ASPECT_RATIO = 16.0 / 9.0;
 
+  /**
+   * Intrinsic preferred-width fallback for painter-backed media or image-backed media whose source
+   * hasn't loaded yet. Chosen as a sensible default; the chassis layout assigns whatever cell-width
+   * is actually available at paint time per spec §3.4 rule 3.
+   */
+  private static final int DEFAULT_INTRINSIC_WIDTH = 320;
+
   private final Image image;
   private final Consumer<Graphics2D> painter;
   private double aspectRatio = DEFAULT_ASPECT_RATIO;
@@ -230,18 +237,72 @@ public final class ElwhaCardMedia extends JComponent {
     return accessibleContext;
   }
 
+  /**
+   * Returns the media's INTRINSIC preferred size — never the current laid-out width. Reading {@link
+   * #getWidth()} here would create a positive-feedback layout loop in any container that respects
+   * child preferred width (e.g., a plain {@link javax.swing.JScrollPane} viewport without {@link
+   * javax.swing.Scrollable}-tracking): each layout pass would grow {@code getWidth()} → grow {@code
+   * preferred} → grow the parent → grow {@code getWidth()} again, unbounded.
+   *
+   * <p>Cover-fit slot sizing per spec §3.4 rule 3 is the chassis layout's responsibility, not this
+   * getter's. {@link ElwhaCard}'s {@code VerticalCardLayout} calls {@link #heightForSlotWidth(int)}
+   * during {@code layoutContainer} to compute the media slot height from the actually-assigned cell
+   * width — so the loop never happens and §3.4 still holds.
+   *
+   * <p>Intrinsic dimensions:
+   *
+   * <ul>
+   *   <li>Image-backed: source image dimensions ({@link java.awt.Image#getWidth} / {@link
+   *       java.awt.Image#getHeight}). Falls back to 320 px wide / aspect-ratio-derived height when
+   *       the image hasn't loaded yet.
+   *   <li>Painter-backed: 320 px wide / aspect-ratio-derived height. {@link #setPreferredHeight}
+   *       overrides the derived height.
+   * </ul>
+   *
+   * @return the intrinsic preferred size, never dependent on the current laid-out width
+   * @version v0.2.0
+   * @since v0.2.0
+   */
   @Override
   public Dimension getPreferredSize() {
-    final int width = getWidth() > 0 ? getWidth() : 0;
+    final int intrinsicW;
+    if (image != null) {
+      final int iw = image.getWidth(this);
+      intrinsicW = iw > 0 ? iw : DEFAULT_INTRINSIC_WIDTH;
+    } else {
+      intrinsicW = DEFAULT_INTRINSIC_WIDTH;
+    }
     final int h;
     if (preferredHeightDp > 0) {
       h = preferredHeightDp;
-    } else if (width > 0) {
-      h = (int) Math.round(width / aspectRatio);
     } else {
-      h = 160;
+      h = (int) Math.round(intrinsicW / aspectRatio);
     }
-    return new Dimension(width > 0 ? width : 320, h);
+    return new Dimension(intrinsicW, h);
+  }
+
+  /**
+   * Computes the media's height for a given slot width per spec §3.4 rule 3 (CSS {@code object-fit:
+   * cover} semantics). Called by {@code ElwhaCard.VerticalCardLayout.layoutContainer} so the
+   * chassis assigns each media child the right (cellW × cellW/aspectRatio) bounds even though
+   * preferred-size queries don't carry width context.
+   *
+   * <p>Resolution order: explicit {@link #setPreferredHeight} wins; otherwise {@code slotWidth /
+   * aspectRatio}; otherwise (no slot width yet) {@link #getPreferredSize()}.height.
+   *
+   * @param slotWidth the chassis-assigned cell width in pixels (0 means "no width yet")
+   * @return the height in pixels the chassis should reserve for this media at the given width
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  int heightForSlotWidth(final int slotWidth) {
+    if (preferredHeightDp > 0) {
+      return preferredHeightDp;
+    }
+    if (slotWidth > 0) {
+      return (int) Math.round(slotWidth / aspectRatio);
+    }
+    return getPreferredSize().height;
   }
 
   @Override

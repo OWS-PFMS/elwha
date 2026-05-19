@@ -1434,7 +1434,9 @@ public class ElwhaCard extends ElwhaSurface {
         if (!c.isVisible()) {
           continue;
         }
-        naturalContentH += c.getPreferredSize().height;
+        final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
+        final int cellW = bleed ? bodyW : Math.max(0, bodyW - 2 * padH);
+        naturalContentH += heightForChild(c, cellW);
       }
       if (!(lastVisible instanceof ElwhaCardMedia)) {
         naturalContentH += padV;
@@ -1455,12 +1457,25 @@ public class ElwhaCard extends ElwhaSurface {
         final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
         final int x = bleed ? bodyX : bodyX + padH;
         final int w = bleed ? bodyW : Math.max(0, bodyW - 2 * padH);
-        final Dimension p = c.getPreferredSize();
+        final int h = heightForChild(c, w);
         final int childY = (c == lastVisible) ? y + actionsLift : y;
-        c.setBounds(x, childY, w, p.height);
-        y += p.height;
+        c.setBounds(x, childY, w, h);
+        y += h;
         placedAny = true;
       }
+    }
+
+    /**
+     * Height a child should occupy given its assigned slot width. {@link ElwhaCardMedia} honors
+     * spec §3.4 rule 3 (cover-fit slot sizing) — its height tracks the actual cell width via {@link
+     * ElwhaCardMedia#heightForSlotWidth(int)} rather than its preferred-size hint, which is
+     * intrinsic and width-independent. All other children use their preferred height.
+     */
+    private int heightForChild(final Component c, final int slotWidth) {
+      if (c instanceof ElwhaCardMedia media) {
+        return media.heightForSlotWidth(slotWidth);
+      }
+      return c.getPreferredSize().height;
     }
 
     /**
