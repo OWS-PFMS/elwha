@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Removed
+
+- **`ElwhaCard` HORIZONTAL orientation deferred to v0.3.0** ([#112](https://github.com/OWS-PFMS/elwha/issues/112)) — the Phase-2 HORIZONTAL surface (`CardOrientation` enum, `ElwhaCard.setOrientation` / `getOrientation` / `PROPERTY_ORIENTATION`, `setLeadingColumn` / `setTrailingColumn`, private `TwoColumnLayout`, and the `addImpl` HORIZONTAL throw) is withdrawn before v0.2.0 ship. The shipped API created an asymmetric composition contract: VERTICAL used `card.add(...)` with the chassis owning layout, while HORIZONTAL forced `setLeadingColumn(JComponent)` / `setTrailingColumn(JComponent)` and threw on `add()` — same content needed two different construction paths, and the typed Layer-3 primitives (`ElwhaCardHeader`, `ElwhaCardActions`, `ElwhaCardDivider`) lost their auto-positioning behavior inside the trailing column. v0.3.0 re-enters HORIZONTAL under a unified `add(...)` API with typed partitioning (`ElwhaCardMedia` → leading column; everything else → trailing column running the same `VerticalCardLayout` rules) — see [spec §15.3](docs/research/elwha-card-v3-spec.md) for the design intent. Story [#89](https://github.com/OWS-PFMS/elwha/issues/89) (Phase-2 HORIZONTAL story) closed as superseded.
+
 ### Added
 
 - **`MaterialIcons` expand/overflow glyphs** ([#81](https://github.com/OWS-PFMS/elwha/issues/81)) — three Material Symbols Rounded / 400 / fill 0 / 20px SVGs (`expand_more`, `expand_less`, `more_vert`) under `src/main/resources/com/owspfm/icons/material/` plus the matching `MaterialIcons.expandMore()` / `expandLess()` / `moreVert()` accessors (each with a sized overload). Salvaged from the abandoned V2 PR stack ahead of the V3 build (epic [#80](https://github.com/OWS-PFMS/elwha/issues/80)) — these glyphs are load-bearing for V3's chevron and overflow-trigger affordances.

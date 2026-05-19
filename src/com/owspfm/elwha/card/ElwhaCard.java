@@ -40,7 +40,6 @@ import javax.accessibility.AccessibleRole;
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
-import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
@@ -70,10 +69,14 @@ import javax.swing.Timer;
  * {@code OUTLINE_VARIANT} border at 1dp.
  *
  * <p><strong>Defaults.</strong> {@link ShapeScale#MD} (12 dp corner radius — inherited from
- * Surface), padding {@link SpaceScale#LG} (16 dp) on both axes, orientation {@link
- * CardOrientation#VERTICAL}, expansion overflow {@link ExpansionOverflow#GROW}. The four M3
- * measurement defaults — 12dp shape, 16dp padding, 8dp inter-card (consumer-controlled on the
- * list), start-aligned text — are baked in.
+ * Surface), padding {@link SpaceScale#LG} (16 dp) on both axes, expansion overflow {@link
+ * ExpansionOverflow#GROW}. The four M3 measurement defaults — 12dp shape, 16dp padding, 8dp
+ * inter-card (consumer-controlled on the list), start-aligned text — are baked in.
+ *
+ * <p><strong>Orientation.</strong> v0.2.0 ships VERTICAL only; HORIZONTAL is deferred to v0.3.0 per
+ * spec §15.3 (#112). The v0.3 HORIZONTAL design will reuse {@code add(...)} with typed partitioning
+ * ({@link ElwhaCardMedia} → leading column, everything else → trailing column under the same
+ * VerticalCardLayout rules) — no separate setLeadingColumn / setTrailingColumn API.
  *
  * <p><strong>Actionability is atomic.</strong> {@link #setActionable(boolean)} flips the entire
  * quadrad — cursor + hover state-layer + ripple + tab stop + AccessibleRole — together; consumers
@@ -94,9 +97,6 @@ public class ElwhaCard extends ElwhaSurface {
   /** Property name fired when actionability toggles. */
   public static final String PROPERTY_ACTIONABLE = "actionable";
 
-  /** Property name fired when orientation changes. */
-  public static final String PROPERTY_ORIENTATION = "orientation";
-
   /**
    * Maximum supported elevation level (0..5), corresponding to M3 ElevationTokens Level0..Level5.
    * Aliases {@link ElwhaSurface#MAX_ELEVATION} — the underlying field + paint pipeline live on
@@ -105,7 +105,6 @@ public class ElwhaCard extends ElwhaSurface {
   public static final int MAX_ELEVATION = ElwhaSurface.MAX_ELEVATION;
 
   private CardVariant variant = CardVariant.ELEVATED;
-  private CardOrientation orientation = CardOrientation.VERTICAL;
   private ExpansionOverflow expansionOverflow = ExpansionOverflow.GROW;
   private SpaceScale paddingHorizontal = SpaceScale.LG;
   private SpaceScale paddingVertical = SpaceScale.LG;
@@ -134,9 +133,6 @@ public class ElwhaCard extends ElwhaSurface {
   private int animationEndHeight;
 
   private Timer collapseTimer;
-
-  private JComponent horizontalLeading;
-  private JComponent horizontalTrailing;
 
   /** Internal body panel + scroll wrapper used when {@link ExpansionOverflow#SCROLL} is active. */
   private JPanel scrollBody;
@@ -791,12 +787,6 @@ public class ElwhaCard extends ElwhaSurface {
    */
   @Override
   protected void addImpl(final Component comp, final Object constraints, final int index) {
-    if (orientation == CardOrientation.HORIZONTAL
-        && comp != horizontalLeading
-        && comp != horizontalTrailing) {
-      throw new IllegalStateException(
-          "HORIZONTAL ElwhaCard does not accept add() — use setLeadingColumn / setTrailingColumn");
-    }
     if (scrollBody != null && comp != scrollPane) {
       scrollBody.add(comp, constraints, index);
       return;
@@ -811,101 +801,6 @@ public class ElwhaCard extends ElwhaSurface {
    */
   public ExpansionOverflow getExpansionOverflow() {
     return expansionOverflow;
-  }
-
-  // ----------------------------------------------------------- orientation
-
-  /**
-   * Sets the orientation. VERTICAL uses {@code BoxLayout(Y_AXIS)} where {@code add()} order is the
-   * stack order. HORIZONTAL uses a custom 2-column layout filled via {@link #setLeadingColumn} /
-   * {@link #setTrailingColumn}; the 2-column wiring lands with the HORIZONTAL orientation story.
-   *
-   * @param newOrientation the orientation (must not be {@code null})
-   * @return {@code this} for fluent chaining
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public ElwhaCard setOrientation(final CardOrientation newOrientation) {
-    Objects.requireNonNull(newOrientation, "orientation");
-    if (this.orientation == newOrientation) {
-      return this;
-    }
-    final CardOrientation old = this.orientation;
-    this.orientation = newOrientation;
-    if (newOrientation == CardOrientation.VERTICAL) {
-      setLayout(new VerticalCardLayout());
-    } else {
-      setLayout(new TwoColumnLayout());
-      removeAll();
-      if (horizontalLeading != null) {
-        super.add(horizontalLeading);
-      }
-      if (horizontalTrailing != null) {
-        super.add(horizontalTrailing);
-      }
-    }
-    firePropertyChange(PROPERTY_ORIENTATION, old, newOrientation);
-    revalidate();
-    repaint();
-    return this;
-  }
-
-  /**
-   * @return the current orientation
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public CardOrientation getOrientation() {
-    return orientation;
-  }
-
-  /**
-   * Sets the leading column for a HORIZONTAL card. {@code add()} is not used in HORIZONTAL mode —
-   * leading + trailing columns are the only way to populate a horizontal card.
-   *
-   * @param component the leading column content
-   * @return {@code this} for fluent chaining
-   * @throws UnsupportedOperationException until the HORIZONTAL layout wiring story lands
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public ElwhaCard setLeadingColumn(final JComponent component) {
-    Objects.requireNonNull(component, "component");
-    if (orientation != CardOrientation.HORIZONTAL) {
-      throw new IllegalStateException("setLeadingColumn requires CardOrientation.HORIZONTAL");
-    }
-    if (horizontalLeading != null) {
-      super.remove(horizontalLeading);
-    }
-    this.horizontalLeading = component;
-    super.add(component);
-    revalidate();
-    repaint();
-    return this;
-  }
-
-  /**
-   * Sets the trailing column for a HORIZONTAL card. See {@link #setLeadingColumn(JComponent)}.
-   *
-   * @param component the trailing column content
-   * @return {@code this} for fluent chaining
-   * @throws UnsupportedOperationException until the HORIZONTAL layout wiring story lands
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public ElwhaCard setTrailingColumn(final JComponent component) {
-    Objects.requireNonNull(component, "component");
-    if (orientation != CardOrientation.HORIZONTAL) {
-      throw new IllegalStateException("setTrailingColumn requires CardOrientation.HORIZONTAL");
-    }
-    if (horizontalTrailing != null) {
-      super.remove(horizontalTrailing);
-    }
-    this.horizontalTrailing = component;
-    super.add(component);
-    revalidate();
-    repaint();
-    return this;
   }
 
   // ------------------------------------------------------------------ drag
@@ -1596,110 +1491,5 @@ public class ElwhaCard extends ElwhaSurface {
    */
   private int interElementGap() {
     return SpaceScale.SM.px();
-  }
-
-  /**
-   * Two-column LayoutManager for HORIZONTAL cards. Leading column takes its preferred width;
-   * trailing column takes the rest. Both span the card's full height (minus chassis insets).
-   *
-   * <p><strong>Padding contract.</strong> Per spec §3.4 / §15: media columns bleed to the chassis
-   * edges on every side they touch (left/top/bottom for leading-media, right/top/bottom for
-   * trailing-media); non-media columns are inset by {@link #paddingHorizontal} / {@link
-   * #paddingVertical} on every chassis-edge they touch and by {@link #paddingHorizontal} on the
-   * inter-column boundary. The result: a media+content card has media flush against the leading
-   * curve and content inset by chassis padding on its own sides; a content+content card has
-   * symmetric padding around both columns plus an inter-column gap.
-   *
-   * <p>RTL support: {@link Container#getComponentOrientation()} flips leading/trailing visually.
-   */
-  private final class TwoColumnLayout implements LayoutManager {
-    @Override
-    public void addLayoutComponent(final String name, final Component comp) {
-      // no-op — we route through field slots.
-    }
-
-    @Override
-    public void removeLayoutComponent(final Component comp) {
-      // no-op — slot cleanup is the card's responsibility.
-    }
-
-    @Override
-    public Dimension preferredLayoutSize(final Container parent) {
-      final Insets ins = parent.getInsets();
-      final int padH = paddingHorizontal.px();
-      final int padV = paddingVertical.px();
-      final boolean leadIsMedia = horizontalLeading instanceof ElwhaCardMedia;
-      final boolean trailIsMedia = horizontalTrailing instanceof ElwhaCardMedia;
-      final Dimension lead =
-          horizontalLeading != null ? horizontalLeading.getPreferredSize() : new Dimension(0, 0);
-      final Dimension trail =
-          horizontalTrailing != null ? horizontalTrailing.getPreferredSize() : new Dimension(0, 0);
-      final int leadOuterW = lead.width + (leadIsMedia ? 0 : padH);
-      final int trailOuterW = trail.width + (trailIsMedia ? 0 : padH);
-      final int gap = (horizontalLeading != null && horizontalTrailing != null) ? padH : 0;
-      final int width = ins.left + ins.right + leadOuterW + gap + trailOuterW;
-      final int leadH = lead.height + (leadIsMedia ? 0 : 2 * padV);
-      final int trailH = trail.height + (trailIsMedia ? 0 : 2 * padV);
-      final int height = ins.top + ins.bottom + Math.max(leadH, trailH);
-      return new Dimension(width, height);
-    }
-
-    @Override
-    public Dimension minimumLayoutSize(final Container parent) {
-      return preferredLayoutSize(parent);
-    }
-
-    @Override
-    public void layoutContainer(final Container parent) {
-      final Insets ins = parent.getInsets();
-      final int padH = paddingHorizontal.px();
-      final int padV = paddingVertical.px();
-      final int bodyX = ins.left;
-      final int bodyY = ins.top;
-      final int bodyW = Math.max(0, parent.getWidth() - ins.left - ins.right);
-      final int bodyH = Math.max(0, parent.getHeight() - ins.top - ins.bottom);
-      final boolean leadIsMedia = horizontalLeading instanceof ElwhaCardMedia;
-      final boolean trailIsMedia = horizontalTrailing instanceof ElwhaCardMedia;
-      final boolean ltr = parent.getComponentOrientation().isLeftToRight();
-      final int leadNaturalW =
-          horizontalLeading != null ? horizontalLeading.getPreferredSize().width : 0;
-      final boolean hasBoth = horizontalLeading != null && horizontalTrailing != null;
-      final int interColumnGap = hasBoth ? padH : 0;
-
-      // Leading column: own outer = natural width + (padH if non-media); reserves space at the
-      // chassis-leading edge and one inter-column gap (when both columns present).
-      final int leadOuterW = leadNaturalW + (leadIsMedia ? 0 : padH);
-      if (horizontalLeading != null) {
-        final int leadInnerX =
-            ltr
-                ? bodyX + (leadIsMedia ? 0 : padH)
-                : bodyX + bodyW - leadOuterW + (leadIsMedia ? 0 : 0);
-        final int leadInnerY = bodyY + (leadIsMedia ? 0 : padV);
-        final int leadInnerH = bodyH - (leadIsMedia ? 0 : 2 * padV);
-        horizontalLeading.setBounds(leadInnerX, leadInnerY, leadNaturalW, leadInnerH);
-      }
-
-      // Trailing column: fills the remaining width; inset by padH on the chassis-trailing edge
-      // and padH on the inter-column boundary (when present), padV top/bottom.
-      if (horizontalTrailing != null) {
-        final int trailOuterW = bodyW - leadOuterW - interColumnGap;
-        final int trailInnerX;
-        final int trailInnerW;
-        if (ltr) {
-          final int outerStart = bodyX + leadOuterW + interColumnGap;
-          trailInnerX = outerStart;
-          trailInnerW = trailOuterW - (trailIsMedia ? 0 : padH);
-        } else {
-          // Mirror: trailing column outer block is on the left side of the body.
-          final int outerStart = bodyX;
-          trailInnerX = outerStart + (trailIsMedia ? 0 : padH);
-          trailInnerW = trailOuterW - (trailIsMedia ? 0 : padH);
-        }
-        final int trailInnerY = bodyY + (trailIsMedia ? 0 : padV);
-        final int trailInnerH = bodyH - (trailIsMedia ? 0 : 2 * padV);
-        horizontalTrailing.setBounds(
-            trailInnerX, trailInnerY, Math.max(0, trailInnerW), trailInnerH);
-      }
-    }
   }
 }

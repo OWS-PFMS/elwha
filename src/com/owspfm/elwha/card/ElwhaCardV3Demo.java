@@ -32,7 +32,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.Scrollable;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 /**
@@ -84,7 +83,6 @@ public final class ElwhaCardV3Demo {
     root.add(section("Collapse — chevron and expand link", collapseRow()));
     root.add(section("Interactivity — actionable / selectable / both", interactivityRow()));
     root.add(section("Disabled state", disabledRow()));
-    root.add(section("HORIZONTAL orientation", horizontalRow()));
     root.add(section("Two-tier conversation card (Gmail pattern, spec §4.3)", twoTierRow()));
     root.add(section("ExpansionOverflow.SCROLL (320 dp cap)", scrollOverflowRow()));
     root.add(
@@ -307,37 +305,6 @@ public final class ElwhaCardV3Demo {
       card.setEnabled(false);
       g.add(card);
     }
-    return g;
-  }
-
-  private static JPanel horizontalRow() {
-    final JPanel g = new JPanel(new BorderLayout());
-    g.setOpaque(false);
-    final ElwhaCard card = ElwhaCard.elevatedCard();
-    card.setOrientation(CardOrientation.HORIZONTAL);
-
-    final JPanel leading = new JPanel(new BorderLayout());
-    leading.setOpaque(false);
-    leading.setPreferredSize(new Dimension(160, 110));
-    leading.add(
-        new JLabel(
-            new javax.swing.ImageIcon(stripeImage(160, 110, new Color(0x26A69A))),
-            SwingConstants.CENTER),
-        BorderLayout.CENTER);
-    card.setLeadingColumn(leading);
-
-    final JPanel trailing = new JPanel();
-    trailing.setOpaque(false);
-    trailing.setLayout(new BoxLayout(trailing, BoxLayout.Y_AXIS));
-    trailing.add(new ElwhaCardHeader().setTitle("Horizontal card").setSubtitle("Two columns"));
-    trailing.add(
-        new ElwhaCardSupportingText("Leading column is the image; trailing is this stack."));
-    trailing.add(Box.createVerticalGlue());
-    final ElwhaCardActions actions = new ElwhaCardActions().addTrailing(new JButton("Open"));
-    trailing.add(actions);
-    card.setTrailingColumn(trailing);
-
-    g.add(card, BorderLayout.CENTER);
     return g;
   }
 

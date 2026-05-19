@@ -1,6 +1,5 @@
 package com.owspfm.elwha.card.fixes;
 
-import com.owspfm.elwha.card.CardOrientation;
 import com.owspfm.elwha.card.ElwhaCard;
 import com.owspfm.elwha.card.ElwhaCardActions;
 import com.owspfm.elwha.card.ElwhaCardChevron;
@@ -51,7 +50,7 @@ import javax.swing.WindowConstants;
  *
  * <ul>
  *   <li>#105 — §3.4 width-constraint contract (chassis honors parent width, atoms reflow, inter-
- *       element gaps, HORIZONTAL alignment, media cover-fit).
+ *       element gaps, media cover-fit).
  *   <li>#106 — media corner-clip aligned to chassis via shared body shape.
  *   <li>#107 — M3 paint compliance (focused-outlined replaces resting outline; disabled-outlined
  *       uses OUTLINE at 0.12; disabled container role swap per variant).
@@ -132,8 +131,7 @@ public final class CardFixesDemo {
   /**
    * Story #105 — width-constraint contract. A split pane with a draggable divider; the left side
    * holds cards that should honor whatever width the divider allocates without paint overflow.
-   * Below: side-by-side narrow + wide cards demonstrating text reflow at narrow widths. Bottom: a
-   * HORIZONTAL card showing the trailing-column padding fix.
+   * Below: side-by-side narrow + wide cards demonstrating text reflow at narrow widths.
    */
   private static final class WidthReflowTab extends JPanel {
     WidthReflowTab() {
@@ -144,7 +142,7 @@ public final class CardFixesDemo {
               "Drag the split-pane divider <b>narrower</b> — the cards on the left must not paint "
                   + "past the divider into the gray right pane. Text wraps; inter-element gaps "
                   + "stay 8 dp; chassis padding stays 16 dp; the chassis never refuses to "
-                  + "compress. The horizontal card at the bottom shows trailing-column padding.",
+                  + "compress.",
               body),
           BorderLayout.CENTER);
     }
@@ -187,20 +185,11 @@ public final class CardFixesDemo {
       reflowRow.add(reflowSample("Narrow (220 px)", 220));
       reflowRow.add(reflowSample("Wide (480 px)", 480));
 
-      final JPanel horizontalRow = new JPanel(new BorderLayout());
-      horizontalRow.setBorder(
-          BorderFactory.createCompoundBorder(
-              BorderFactory.createEmptyBorder(16, 0, 0, 0),
-              BorderFactory.createTitledBorder(
-                  "HORIZONTAL card — trailing-column padding (#105)")));
-      horizontalRow.add(buildHorizontalCard(), BorderLayout.CENTER);
-
       final JPanel container = new JPanel();
       container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
       split.setPreferredSize(new Dimension(0, 380));
       container.add(split);
       container.add(reflowRow);
-      container.add(horizontalRow);
       return container;
     }
 
@@ -223,44 +212,6 @@ public final class CardFixesDemo {
       return "Wide-card layout uses one or two text lines for the title and a multi-line "
           + "supporting block. At narrow widths the HTML view wraps to whatever width the cell "
           + "gives. Both samples render identical content; only the cell width differs.";
-    }
-
-    private JComponent buildHorizontalCard() {
-      final ElwhaCard card = ElwhaCard.elevatedCard();
-      card.setOrientation(CardOrientation.HORIZONTAL);
-      final ElwhaCardMedia media = ElwhaCardMedia.painter(g -> paintGradientStrip(g, 220, 180));
-      media.setPreferredHeight(180);
-      media.setAltText("Promotional gradient");
-      card.setLeadingColumn(media);
-
-      final JPanel trail = new JPanel();
-      trail.setOpaque(false);
-      trail.setLayout(new BoxLayout(trail, BoxLayout.Y_AXIS));
-      final ElwhaCardTitle title = new ElwhaCardTitle("Leading media + trailing content");
-      title.setAlignmentX(Component.LEFT_ALIGNMENT);
-      final ElwhaCardSupportingText body =
-          new ElwhaCardSupportingText(
-              "The trailing column is now inset by padH on its chassis edge AND on the column "
-                  + "boundary, padV top/bottom. The leading media bleeds to the chassis curve on "
-                  + "its three exposed edges.");
-      body.setAlignmentX(Component.LEFT_ALIGNMENT);
-      final ElwhaCardActions actions = new ElwhaCardActions();
-      actions.setAlignmentX(Component.LEFT_ALIGNMENT);
-      actions.addTrailing(new JButton("Action"));
-      trail.add(title);
-      trail.add(Box.createVerticalStrut(4));
-      trail.add(body);
-      trail.add(Box.createVerticalStrut(8));
-      trail.add(actions);
-      card.setTrailingColumn(trail);
-
-      final JPanel wrap = new JPanel(new BorderLayout());
-      wrap.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-      final JPanel sizer = new JPanel(new BorderLayout());
-      sizer.setPreferredSize(new Dimension(720, 220));
-      sizer.add(card, BorderLayout.CENTER);
-      wrap.add(sizer);
-      return wrap;
     }
   }
 
