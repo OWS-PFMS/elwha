@@ -80,29 +80,27 @@ public final class ShadowPainter {
       return;
     }
     final int elevation = Math.min(MAX_ELEVATION, elevationLevel);
-    final int blur = blurRadius(elevation);
-    final int offsetY = keyOffsetY(elevation);
+    final Insets insets = shadowInsets(elevation);
     final int arc = Math.max(0, Math.min(cornerRadiusPx, Math.min(width, height) / 2));
 
     // 9-slice requires a non-empty center slice; small bodies fall back to a direct render at exact
     // size. This path is uncached — small interactive primitives are unlikely to hit it on the hot
     // path, and re-rendering at the rare exact size avoids polluting the shared cache.
-    final int sliceSide = arc + blur;
+    final int sliceSide = arc + Math.max(insets.left, insets.top);
     if (width < 2 * sliceSide || height < 2 * sliceSide) {
       final BufferedImage exact = renderShadowAtBodySize(width, height, arc, elevation);
-      g.drawImage(exact, -blur, -blur, null);
+      g.drawImage(exact, -insets.left, -insets.top, null);
       return;
     }
 
     final BufferedImage canon = canonicalImage(arc, elevation);
-    nineSlice(g, canon, width, height, arc, blur, offsetY);
+    nineSlice(g, canon, width, height, arc, insets);
   }
 
   /**
    * Returns the inset reserve every elevated body needs around its visible bounds so the
    * convolution-blurred shadow doesn't clip against the host {@link java.awt.Component} bounds.
-   * Mirrors {@code SurfacePainter.shadowInsets} verbatim so the two helpers can be swapped in any
-   * call site without re-tuning the host's {@code getInsets()} output.
+   * Sized to the larger of the key and ambient shadow extents on each side.
    *
    * @param elevationLevel the M3 elevation level (0..{@link #MAX_ELEVATION})
    * @return the inset reserve, never {@code null}; zero on {@code elevationLevel <= 0}
@@ -114,9 +112,11 @@ public final class ShadowPainter {
       return new Insets(0, 0, 0, 0);
     }
     final int e = Math.min(MAX_ELEVATION, elevationLevel);
-    final int blur = blurRadius(e);
-    final int offsetY = keyOffsetY(e);
-    return new Insets(blur, blur, blur + offsetY, blur);
+    final int padX = Math.max(keyBlurRadius(e), ambientBlurRadius(e));
+    final int padTop = padX;
+    final int padBottom =
+        Math.max(keyBlurRadius(e) + keyOffsetY(e), ambientBlurRadius(e) + ambientOffsetY(e));
+    return new Insets(padTop, padX, padBottom, padX);
   }
 
   /**
@@ -160,30 +160,29 @@ public final class ShadowPainter {
   }
 
   private static void nineSlice(
-      Graphics2D g, BufferedImage canon, int width, int height, int arc, int blur, int offsetY) {
+      Graphics2D g, BufferedImage canon, int width, int height, int arc, Insets insets) {
     final int canonW = canon.getWidth();
     final int canonH = canon.getHeight();
-    final int sliceTopHoriz = arc + blur;
-    final int sliceBottomHoriz = arc + blur;
-    final int sliceLeftVert = arc + blur;
-    final int sliceRightVert = arc + blur + offsetY;
+    final int sliceX = arc + insets.left;
+    final int sliceTop = arc + insets.top;
+    final int sliceBottom = arc + insets.bottom;
 
     // Source coordinates (in the canonical image)
-    final int srcXMid0 = sliceTopHoriz;
-    final int srcXMid1 = canonW - sliceBottomHoriz;
-    final int srcYMid0 = sliceLeftVert;
-    final int srcYMid1 = canonH - sliceRightVert;
+    final int srcXMid0 = sliceX;
+    final int srcXMid1 = canonW - sliceX;
+    final int srcYMid0 = sliceTop;
+    final int srcYMid1 = canonH - sliceBottom;
 
-    // Destination coordinates (in body-relative units; the shadow halo extends out by blur on top
-    // / left / right and by blur+offsetY on the bottom, mirroring shadowInsets()).
-    final int dstX0 = -blur;
+    // Destination coordinates (in body-relative units; the shadow halo extends out by the per-side
+    // inset reserve returned by shadowInsets()).
+    final int dstX0 = -insets.left;
     final int dstX1 = arc;
     final int dstX2 = width - arc;
-    final int dstX3 = width + blur;
-    final int dstY0 = -blur;
+    final int dstX3 = width + insets.right;
+    final int dstY0 = -insets.top;
     final int dstY1 = arc;
     final int dstY2 = height - arc;
-    final int dstY3 = height + blur + offsetY;
+    final int dstY3 = height + insets.bottom;
 
     // 4 corners (no stretch)
     drawSlice(g, canon, dstX0, dstY0, dstX1, dstY1, 0, 0, srcXMid0, srcYMid0);
@@ -217,27 +216,84 @@ public final class ShadowPainter {
   }
 
   /**
-   * Renders the shadow image for the given body dimensions — the un-cached path. Used both for the
-   * canonical-sized cache fill and for the small-body fallback in {@link #paint}.
+   * Renders the M3-style key+ambient shadow stack for the given body dimensions at the given
+   * elevation. Two passes are composited onto a single image:
+   *
+   * <ul>
+   *   <li><strong>Ambient pass</strong> — wide soft halo, no Y offset, lower opacity. Provides the
+   *       wider environmental glow that wraps the body silhouette evenly.
+   *   <li><strong>Key pass</strong> — narrow sharp band, downward Y offset, higher opacity.
+   *       Provides the defined edge below the body that reads as a directional drop from a single
+   *       light source above.
+   * </ul>
+   *
+   * <p>This is the per-canonical-cache-fill path and the small-body fallback path. Per-level blur /
+   * offset / alpha values are tuned to approximate M3's CSS box-shadow tokens (key opacity 0.30,
+   * ambient opacity 0.15) while compensating for box-blur's lower per-pixel density vs a true
+   * Gaussian.
    */
   static BufferedImage renderShadowAtBodySize(int w, int h, int arc, int elevation) {
     final int e = Math.max(1, elevation);
-    final int blur = blurRadius(e);
-    final int offsetY = keyOffsetY(e);
-    final int imgW = w + blur * 2;
-    final int imgH = h + blur * 2 + offsetY;
+    final Insets reserve = shadowInsets(e);
+    final int imgW = w + reserve.left + reserve.right;
+    final int imgH = h + reserve.top + reserve.bottom;
 
-    final BufferedImage shadow = new BufferedImage(imgW, imgH, BufferedImage.TYPE_INT_ARGB);
-    final Graphics2D sg = shadow.createGraphics();
+    final BufferedImage ambient =
+        renderSingleShadowPass(
+            imgW,
+            imgH,
+            reserve.left,
+            reserve.top,
+            w,
+            h,
+            arc,
+            ambientBlurRadius(e),
+            ambientOffsetY(e),
+            ambientSourceAlpha(e));
+    final BufferedImage key =
+        renderSingleShadowPass(
+            imgW,
+            imgH,
+            reserve.left,
+            reserve.top,
+            w,
+            h,
+            arc,
+            keyBlurRadius(e),
+            keyOffsetY(e),
+            keySourceAlpha(e));
+
+    final Graphics2D cg = ambient.createGraphics();
     try {
-      sg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      final int sourceAlpha = Math.min(180, 60 + e * 12);
-      sg.setColor(new Color(0, 0, 0, sourceAlpha));
-      sg.fill(new RoundRectangle2D.Float(blur, blur + offsetY, w, h, arc, arc));
+      cg.drawImage(key, 0, 0, null);
     } finally {
-      sg.dispose();
+      cg.dispose();
     }
-    BufferedImage blurred = boxBlur(shadow, blur);
+    return ambient;
+  }
+
+  private static BufferedImage renderSingleShadowPass(
+      int imgW,
+      int imgH,
+      int bodyOriginX,
+      int bodyOriginY,
+      int bodyW,
+      int bodyH,
+      int arc,
+      int blur,
+      int offsetY,
+      int sourceAlpha) {
+    final BufferedImage img = new BufferedImage(imgW, imgH, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D g = img.createGraphics();
+    try {
+      g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      g.setColor(new Color(0, 0, 0, sourceAlpha));
+      g.fill(
+          new RoundRectangle2D.Float(bodyOriginX, bodyOriginY + offsetY, bodyW, bodyH, arc, arc));
+    } finally {
+      g.dispose();
+    }
+    BufferedImage blurred = boxBlur(img, blur);
     blurred = boxBlur(blurred, Math.max(1, blur / 2));
     return blurred;
   }
@@ -254,12 +310,30 @@ public final class ShadowPainter {
     return op.filter(src, null);
   }
 
-  private static int blurRadius(int elevation) {
-    return Math.max(2, Math.min(12, 2 + elevation * 2));
+  // Key shadow — sharp, narrow, directional drop. Approximates M3's first box-shadow value.
+  private static int keyBlurRadius(int elevation) {
+    return Math.max(1, Math.min(5, elevation));
   }
 
   private static int keyOffsetY(int elevation) {
-    return Math.max(1, Math.min(6, elevation + 1));
+    return Math.max(1, Math.min(5, (elevation + 1) / 2));
+  }
+
+  private static int keySourceAlpha(int elevation) {
+    return Math.min(180, 110 + elevation * 12);
+  }
+
+  // Ambient shadow — wide, soft, no offset. Approximates M3's second box-shadow value (penumbra).
+  private static int ambientBlurRadius(int elevation) {
+    return Math.max(4, Math.min(16, 3 + elevation * 2));
+  }
+
+  private static int ambientOffsetY(int elevation) {
+    return Math.max(0, Math.min(4, elevation / 2));
+  }
+
+  private static int ambientSourceAlpha(int elevation) {
+    return Math.min(110, 60 + elevation * 8);
   }
 
   private static final class CacheKey {
