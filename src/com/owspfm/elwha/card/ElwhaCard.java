@@ -1466,14 +1466,25 @@ public class ElwhaCard extends ElwhaSurface {
     }
 
     /**
-     * Height a child should occupy given its assigned slot width. {@link ElwhaCardMedia} honors
-     * spec §3.4 rule 3 (cover-fit slot sizing) — its height tracks the actual cell width via {@link
-     * ElwhaCardMedia#heightForSlotWidth(int)} rather than its preferred-size hint, which is
-     * intrinsic and width-independent. All other children use their preferred height.
+     * Height a child should occupy given its assigned slot width.
+     *
+     * <ul>
+     *   <li>{@link ElwhaCardMedia} honors spec §3.4 rule 3 (cover-fit slot sizing) — height tracks
+     *       the actual cell width via {@link ElwhaCardMedia#heightForSlotWidth(int)} rather than
+     *       the intrinsic preferred-size hint.
+     *   <li>{@link ElwhaCardActions} reports its wrapped-row height via {@link
+     *       ElwhaCardActions#heightForSlotWidth(int)} (#17) so the chassis reserves vertical space
+     *       for whatever rows the wrap layout produces at this width — preferred-size queries carry
+     *       no width context and would otherwise always report single-row height.
+     *   <li>Everything else uses its preferred height.
+     * </ul>
      */
     private int heightForChild(final Component c, final int slotWidth) {
       if (c instanceof ElwhaCardMedia media) {
         return media.heightForSlotWidth(slotWidth);
+      }
+      if (c instanceof ElwhaCardActions actions) {
+        return actions.heightForSlotWidth(slotWidth);
       }
       return c.getPreferredSize().height;
     }

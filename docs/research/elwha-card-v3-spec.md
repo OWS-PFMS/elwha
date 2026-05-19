@@ -584,6 +584,29 @@ Either segment may be empty. A card with only one segment of actions
 should pick the right axis per M3 doctrine: lone promo action goes
 leading; paired actions or overflow-bearing rows go trailing.
 
+**Wrap behavior at narrow widths (#17).** When the single-row layout
+(`leadingW + interGap + trailingW`) fits the available cell width,
+actions render on one row as above. When it doesn't, the layout
+wraps:
+
+- The leading segment wraps onto its own row(s) at the top,
+  left-aligned per row.
+- The trailing segment wraps onto its own row(s) below, right-aligned
+  per row.
+- Within a segment, items pack greedily — as many fit per row as
+  possible; a new row starts when the next item would overflow.
+- Inter-row vertical gap: `SpaceScale.SM` (8dp).
+- At cell widths below a single button width, each row still places
+  one item but the button visually clips at the cell edge (per §3.4
+  no-min-width contract).
+
+The chassis calls `ElwhaCardActions.heightForSlotWidth(int)` from
+`VerticalCardLayout.layoutContainer` to reserve enough vertical space
+for the actual number of wrapped rows — preferred-size queries don't
+carry width context, so the height-for-width hook is the workaround.
+Same pattern `ElwhaCardMedia.heightForSlotWidth(int)` uses for
+cover-fit slot sizing (§3.4 rule 3).
+
 ### 5.4 `ElwhaCardDivider`
 
 ```java
