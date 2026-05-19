@@ -56,7 +56,7 @@ import javax.swing.WindowConstants;
  *       uses OUTLINE at 0.12; disabled container role swap per variant).
  *   <li>#108 — token defaults verification (ShapeScale.MD=12, SpaceScale.LG=16, list gap=8).
  *   <li>#109 — ElwhaCardMedia decorative / alt-text accessibility API.
- *   <li>#110 — collapse-tween shadow recompute suspension.
+ *   <li>#110 — collapse-tween shadow perf (root-caused by #122's size-decoupled shadow cache).
  * </ul>
  *
  * <p>Deliberately written from scratch for the card-fixes verification — not derived from the V3
@@ -521,7 +521,7 @@ public final class CardFixesDemo {
   /**
    * Story #110 — collapse animation perf. Three side-by-side cards with collapse chevrons; clicking
    * any chevron triggers the 250 ms tween. The label below averages frame intervals across the
-   * tween so the smoothness gain from suspending shadow recompute is measurable.
+   * tween so the smoothness gain from the size-decoupled shadow cache (#122) is measurable.
    */
   private static final class AnimationPerfTab extends JPanel {
     private final JLabel frameStats =
@@ -543,12 +543,14 @@ public final class CardFixesDemo {
 
       add(
           tabFrame(
-              "Three collapsible cards arranged in a row. Click any chevron to trigger the 250 ms "
-                  + "collapse / expand tween. Before #110, the shadow's two-pass ConvolveOp blur "
-                  + "fired on every animation frame (and cascaded to the sibling cards in the same "
-                  + "GridLayout row when their heights changed too). Now the shadow cache is "
-                  + "suspended for the tween's duration and recomputed once at rest — animation "
-                  + "should feel smooth, frame stats stay tight.",
+              "Three collapsible cards arranged in a row. Click any chevron to trigger the 250 ms"
+                  + " collapse / expand tween. Before #122, the per-instance shadow cache was keyed"
+                  + " on body size, so the per-frame height change invalidated it and the two-pass"
+                  + " ConvolveOp blur re-fired every frame (and cascaded to the sibling cards in"
+                  + " the same GridLayout row when their heights changed too). Now ShadowPainter's"
+                  + " cache is keyed on (arc, elevation) only — the height tween no longer"
+                  + " invalidates it, so each frame costs just a 9-slice draw. Animation should"
+                  + " feel smooth, frame stats stay tight.",
               stack),
           BorderLayout.CENTER);
     }
@@ -567,8 +569,8 @@ public final class CardFixesDemo {
       final ElwhaCardSupportingText body =
           new ElwhaCardSupportingText(
               "Collapsible body content — multiple lines so the tween has noticeable amplitude. "
-                  + "The shadow used to recompute on every frame; now it stays cached for the "
-                  + "duration of the 250 ms tween, stretched to fit the live bounds.");
+                  + "The shadow used to recompute on every frame; now ShadowPainter's "
+                  + "(arc, elevation)-keyed cache survives the height tween untouched.");
       card.add(body);
       card.add(new ElwhaCardDivider());
       final ElwhaCardActions actions = new ElwhaCardActions();
