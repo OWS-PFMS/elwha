@@ -164,10 +164,24 @@ public final class ShadowPainterDemo {
           g2.translate(bodyX, bodyY);
           ShadowPainter.paint(g2, BODY_W, BODY_H, arc, elevation);
           SurfacePainter.paint(
-              g2, BODY_W, BODY_H, arc, ColorRole.SURFACE_CONTAINER, null, null, 0f);
+              g2, BODY_W, BODY_H, arc, surfaceRoleForElevation(elevation), null, null, 0f);
         } finally {
           g2.dispose();
         }
+      }
+
+      private static ColorRole surfaceRoleForElevation(int elevation) {
+        // M3 elevation tint map — in dark mode the elevation signal reads primarily through
+        // surface tint (each level steps one container role up the brightness scale), with the
+        // shadow as a supporting layer. In light mode the tint stepping is subtle but the shadow
+        // carries the contrast against the bright backdrop.
+        return switch (elevation) {
+          case 1 -> ColorRole.SURFACE_CONTAINER_LOW;
+          case 2 -> ColorRole.SURFACE_CONTAINER;
+          case 3 -> ColorRole.SURFACE_CONTAINER_HIGH;
+          case 4 -> ColorRole.SURFACE_CONTAINER_HIGHEST;
+          default -> ColorRole.SURFACE_CONTAINER_HIGHEST;
+        };
       }
     }
   }
