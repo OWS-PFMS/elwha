@@ -24,9 +24,6 @@ import javax.swing.WindowConstants;
  * ThemePlayground}'s {@code Button} tab so the validation surface stays in lockstep across both
  * entry points.
  *
- * <p>This is the Story 6 (#119) consolidation entry point for epic #103 — it supersedes the
- * per-story scratch demos.
- *
  * <p>Run:
  *
  * <pre>

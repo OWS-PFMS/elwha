@@ -39,9 +39,6 @@ import javax.swing.UIManager;
  * SurfacePlaygroundPanels} — same factored-builder pattern, same reasons (the repo has no JUnit
  * infra; components are validated visually and both playground entry points must not drift).
  *
- * <p>This is the Story 6 consolidation surface for epic #103 — it supersedes the per-story scratch
- * demos ({@code ElwhaButtonVariantsDemo} / {@code ElwhaButtonSizesDemo} / {@code ButtonGroupDemo}).
- *
  * @author Charles Bryan
  * @version v0.2.0
  * @since v0.2.0
