@@ -12,7 +12,6 @@ import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
-import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import javax.swing.BorderFactory;
@@ -26,10 +25,12 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 /**
- * Visual smoke-test for {@link ShadowPainter}. Renders 5 elevation levels side-by-side at the
- * canonical card geometry (matches {@code docs/research/shadow-spike-images/level-{1..5}-light.png}
- * to the eye) plus a microbench panel that exercises the cache-vs-cold paint timing claim from
- * issue #115 (cached 9-slice paint ≥10× faster than ConvolveOp recompute).
+ * Visual smoke-test for {@link ShadowPainter}. Renders 5 elevation levels side-by-side at a
+ * button-like pill geometry (180×56) — wider-than-tall so the FULL arc setting produces a proper
+ * capsule, not a degenerate circle. Body fill paints {@link ColorRole#SURFACE_CONTAINER} on a
+ * {@link ColorRole#SURFACE} backdrop, so the elevation contrast (M3 tint model) reads in both light
+ * and dark modes. The microbench panel exercises the cache-vs-cold paint timing claim from issue
+ * #115 (cached 9-slice paint ≥10× faster than ConvolveOp recompute).
  *
  * <p>Launch: {@code mvn compile exec:java
  * -Dexec.mainClass="com.owspfm.elwha.theme.playground.ShadowPainterDemo"}.
@@ -96,8 +97,11 @@ public final class ShadowPainterDemo {
   }
 
   /**
-   * 5-cell row showing levels 1..5 at canonical card geometry (280×160, arc 12 by default — same as
-   * the spike reference images).
+   * 5-cell row showing levels 1..5. Body geometry is a button-like pill (180×56) so the FULL arc
+   * setting produces a proper capsule shape — matches the geometry consumers (ElwhaButton) will
+   * use. Body fill is {@link ColorRole#SURFACE_CONTAINER} on a {@link ColorRole#SURFACE}-painted
+   * backdrop so the elevation contrast reads in both light and dark modes (the M3 elevation tint
+   * model — elevated surfaces step up one container role from the surrounding plane).
    */
   private static final class ElevationGallery extends JPanel {
 
@@ -105,10 +109,17 @@ public final class ShadowPainterDemo {
 
     ElevationGallery() {
       super(new GridLayout(1, 5, 24, 0));
-      setBorder(BorderFactory.createEmptyBorder(48, 24, 48, 24));
+      setBorder(BorderFactory.createEmptyBorder(40, 24, 40, 24));
+      setOpaque(true);
       for (int level = 1; level <= 5; level++) {
         add(new ShadowCell(level));
       }
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+      g.setColor(ColorRole.SURFACE.resolve());
+      g.fillRect(0, 0, getWidth(), getHeight());
     }
 
     void setArc(int arc) {
@@ -122,13 +133,16 @@ public final class ShadowPainterDemo {
 
     private final class ShadowCell extends JPanel {
 
+      private static final int BODY_W = 180;
+      private static final int BODY_H = 56;
+
       private final int elevation;
       private int arc = ElevationGallery.this.arc;
 
       ShadowCell(int elevation) {
         this.elevation = elevation;
         setOpaque(false);
-        setPreferredSize(new Dimension(160, 200));
+        setPreferredSize(new Dimension(BODY_W + 40, BODY_H + 80));
         setLayout(new BorderLayout());
         final JLabel label = new JLabel("level " + elevation, SwingConstants.CENTER);
         label.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
@@ -145,14 +159,12 @@ public final class ShadowPainterDemo {
         final Graphics2D g2 = (Graphics2D) g.create();
         try {
           g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-          final int bodyW = 120;
-          final int bodyH = 120;
-          final Insets reserve = ShadowPainter.shadowInsets(elevation);
-          final int bodyX = (getWidth() - bodyW) / 2;
-          final int bodyY = (getHeight() - bodyH - 24) / 2 - reserve.top / 2;
+          final int bodyX = (getWidth() - BODY_W) / 2;
+          final int bodyY = (getHeight() - BODY_H - 24) / 2;
           g2.translate(bodyX, bodyY);
-          ShadowPainter.paint(g2, bodyW, bodyH, arc, elevation);
-          SurfacePainter.paint(g2, bodyW, bodyH, arc, ColorRole.SURFACE, null, null, 0f);
+          ShadowPainter.paint(g2, BODY_W, BODY_H, arc, elevation);
+          SurfacePainter.paint(
+              g2, BODY_W, BODY_H, arc, ColorRole.SURFACE_CONTAINER, null, null, 0f);
         } finally {
           g2.dispose();
         }
