@@ -98,9 +98,16 @@ public final class ShadowPainter {
   }
 
   /**
-   * Returns the inset reserve every elevated body needs around its visible bounds so the
-   * convolution-blurred shadow doesn't clip against the host {@link java.awt.Component} bounds.
-   * Sized to the larger of the key and ambient shadow extents on each side.
+   * Returns the inset reserve every elevated body needs around its visible bounds so the two-pass
+   * box-blurred shadow halo doesn't clip against the host {@link java.awt.Component} bounds. Sized
+   * to the union of the key and ambient shadow extents per side; the bottom inset is enlarged by
+   * each pass's downward Y offset so the directional drop has room.
+   *
+   * <p>The effective blur extent of two stacked box blurs of radii {@code r1, r2} is {@code r1 +
+   * r2} pixels — the halo's outermost contributing source pixels lie at this distance from the
+   * silhouette edge. Earlier versions of this method underestimated the extent (used {@code r1}
+   * only) and the halo silently truncated at the image rect, producing a rectangular halo even
+   * around a round-rect body.
    *
    * @param elevationLevel the M3 elevation level (0..{@link #MAX_ELEVATION})
    * @return the inset reserve, never {@code null}; zero on {@code elevationLevel <= 0}
@@ -112,11 +119,14 @@ public final class ShadowPainter {
       return new Insets(0, 0, 0, 0);
     }
     final int e = Math.min(MAX_ELEVATION, elevationLevel);
-    final int padX = Math.max(keyBlurRadius(e), ambientBlurRadius(e));
-    final int padTop = padX;
-    final int padBottom =
-        Math.max(keyBlurRadius(e) + keyOffsetY(e), ambientBlurRadius(e) + ambientOffsetY(e));
-    return new Insets(padTop, padX, padBottom, padX);
+    final int keyExtent = totalBlurSpread(keyBlurRadius(e));
+    final int ambExtent = totalBlurSpread(ambientBlurRadius(e));
+    final int padX = Math.max(keyExtent, ambExtent);
+    // Each pass's halo extends 'extent' above its offset body. If the body is offset down, the
+    // halo above the dest body only needs (extent - offset) of padding. Take the worst case.
+    final int padTop = Math.max(keyExtent - keyOffsetY(e), ambExtent - ambientOffsetY(e));
+    final int padBottom = Math.max(keyExtent + keyOffsetY(e), ambExtent + ambientOffsetY(e));
+    return new Insets(Math.max(0, padTop), padX, padBottom, padX);
   }
 
   /**
@@ -310,30 +320,51 @@ public final class ShadowPainter {
     return op.filter(src, null);
   }
 
-  // Key shadow — sharp, narrow, directional drop. Approximates M3's first box-shadow value.
+  // Key shadow — sharp, narrow, small downward offset. Per M3 elevation-token values
+  // (the first box-shadow row in https://m3.material.io/styles/elevation/tokens).
+  private static final int[] KEY_BLUR = {2, 2, 3, 3, 4};
+  private static final int[] KEY_OFFSET_Y = {1, 1, 1, 2, 4};
+
+  // Ambient shadow — wider, softer, larger downward offset. Per M3 elevation-token values
+  // (the second box-shadow row). The larger offsetY is what gives the directional drop: at the
+  // body's bottom the halo extends further out; at the body's top the offset down pulls most of
+  // the halo inside the body's projection, so above-body shadow is much smaller than below.
+  private static final int[] AMBIENT_BLUR = {3, 6, 8, 10, 12};
+  private static final int[] AMBIENT_OFFSET_Y = {1, 2, 4, 6, 8};
+
+  // Source alphas compensate for box-blur's lower per-pixel density vs CSS Gaussian. M3 spec
+  // calls for opacity 0.30 (= 77) key / 0.15 (= 38) ambient; box blur disperses ~50% more so we
+  // hold source alpha higher to land at a similar perceived intensity.
+  private static final int KEY_SOURCE_ALPHA = 160;
+  private static final int AMBIENT_SOURCE_ALPHA = 90;
+
   private static int keyBlurRadius(int elevation) {
-    return Math.max(1, Math.min(5, elevation));
+    return KEY_BLUR[Math.min(MAX_ELEVATION, elevation) - 1];
   }
 
   private static int keyOffsetY(int elevation) {
-    return Math.max(1, Math.min(5, (elevation + 1) / 2));
+    return KEY_OFFSET_Y[Math.min(MAX_ELEVATION, elevation) - 1];
   }
 
   private static int keySourceAlpha(int elevation) {
-    return Math.min(180, 110 + elevation * 12);
+    return KEY_SOURCE_ALPHA;
   }
 
-  // Ambient shadow — wide, soft, no offset. Approximates M3's second box-shadow value (penumbra).
   private static int ambientBlurRadius(int elevation) {
-    return Math.max(4, Math.min(16, 3 + elevation * 2));
+    return AMBIENT_BLUR[Math.min(MAX_ELEVATION, elevation) - 1];
   }
 
   private static int ambientOffsetY(int elevation) {
-    return Math.max(0, Math.min(4, elevation / 2));
+    return AMBIENT_OFFSET_Y[Math.min(MAX_ELEVATION, elevation) - 1];
   }
 
   private static int ambientSourceAlpha(int elevation) {
-    return Math.min(110, 60 + elevation * 8);
+    return AMBIENT_SOURCE_ALPHA;
+  }
+
+  /** Effective blur spread for a two-pass box blur at the given outer radius. */
+  private static int totalBlurSpread(int radius) {
+    return radius + Math.max(1, radius / 2);
   }
 
   private static final class CacheKey {
