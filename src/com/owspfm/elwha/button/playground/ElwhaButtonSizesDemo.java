@@ -11,14 +11,10 @@ import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.RenderingHints;
 import java.util.Locale;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -177,7 +173,8 @@ public final class ElwhaButtonSizesDemo {
     row.setOpaque(false);
     for (ButtonSize size : ALL_SIZES) {
       final ElwhaButton b =
-          new ElwhaButton("Delete", MaterialIcons.delete(size.iconSizePx())).setButtonSize(size);
+          new ElwhaButton("Common button", MaterialIcons.delete(size.iconSizePx()))
+              .setButtonSize(size);
       row.add(b);
     }
     section.add(row);
@@ -186,7 +183,9 @@ public final class ElwhaButtonSizesDemo {
 
   private JPanel buildA11yOverlay() {
     final JPanel section =
-        section("48 dp touch target inflation — red dashed = minimumSize, body = preferredSize");
+        section(
+            "48 dp touch target inflation — pink area = full click hit zone, body = visible chrome"
+                + " (click anywhere in the pink to fire — counter updates live)");
     final JPanel grid = new JPanel(new GridBagLayout());
     grid.setOpaque(false);
     final GridBagConstraints gbc = new GridBagConstraints();
@@ -197,10 +196,12 @@ public final class ElwhaButtonSizesDemo {
     gbc.gridx = 0;
     grid.add(header(""), gbc);
     gbc.gridx = 1;
-    grid.add(header("Visible body (preferredSize)"), gbc);
+    grid.add(header("Visible body"), gbc);
     gbc.gridx = 2;
-    grid.add(header("Layout target (minimumSize)"), gbc);
+    grid.add(header("Click zone (component bounds)"), gbc);
     gbc.gridx = 3;
+    grid.add(header("Click counter"), gbc);
+    gbc.gridx = 4;
     grid.add(header("Inflated?"), gbc);
 
     int row = 1;
@@ -209,13 +210,24 @@ public final class ElwhaButtonSizesDemo {
       gbc.gridx = 0;
       grid.add(header(size.name()), gbc);
 
-      final ElwhaButton b = new ElwhaButton("OK").setButtonSize(size);
+      final ElwhaButton b = new ElwhaButton("Common button").setButtonSize(size);
+      final JLabel counter = new JLabel("0");
+      counter.setFont(TypeRole.LABEL_SMALL.resolve());
+      counter.setForeground(ColorRole.ON_SURFACE.resolve());
+      final int[] clicks = {0};
+      b.addActionListener(
+          e -> {
+            clicks[0]++;
+            counter.setText(String.valueOf(clicks[0]));
+          });
 
       gbc.gridx = 1;
-      grid.add(captionedPx(b.getPreferredSize().height), gbc);
+      grid.add(captionedPx(size.containerHeightPx()), gbc);
       gbc.gridx = 2;
-      grid.add(targetOverlay(b), gbc);
+      grid.add(new ClickZonePanel(b), gbc);
       gbc.gridx = 3;
+      grid.add(counter, gbc);
+      gbc.gridx = 4;
       grid.add(captionedInflation(size), gbc);
     }
 
@@ -227,8 +239,7 @@ public final class ElwhaButtonSizesDemo {
 
   private ElwhaButton makeBtn(
       final ButtonSize size, final ButtonShape shape, final boolean elevated) {
-    final String label = elevated ? "Cancel" : "Submit";
-    final ElwhaButton b = new ElwhaButton(label).setButtonSize(size).setShape(shape);
+    final ElwhaButton b = new ElwhaButton("Common button").setButtonSize(size).setShape(shape);
     if (elevated) {
       b.setVariant(com.owspfm.elwha.button.ButtonVariant.ELEVATED);
     }
@@ -266,13 +277,6 @@ public final class ElwhaButtonSizesDemo {
     return l;
   }
 
-  private JPanel targetOverlay(final ElwhaButton button) {
-    final Dimension min = button.getMinimumSize();
-    final Dimension pref = button.getPreferredSize();
-    final TargetVisualPanel panel = new TargetVisualPanel(button, min, pref);
-    return panel;
-  }
-
   // ------------------------------------------------------------- ui glue
 
   private JPanel section(final String title) {
@@ -298,14 +302,16 @@ public final class ElwhaButtonSizesDemo {
   // ----------------------------------------------------------- a11y check
 
   private static String verifyMinimumSizeInflation() {
-    final ElwhaButton xs = new ElwhaButton("XS").setButtonSize(ButtonSize.XS);
-    final ElwhaButton s = new ElwhaButton("S").setButtonSize(ButtonSize.S);
-    final ElwhaButton m = new ElwhaButton("M").setButtonSize(ButtonSize.M);
-    final boolean xsOk = xs.getMinimumSize().height == 48 && xs.getPreferredSize().height == 32;
-    final boolean smOk = s.getMinimumSize().height == 48 && s.getPreferredSize().height == 40;
-    final boolean mdOk = m.getMinimumSize().height == 56 && m.getPreferredSize().height == 56;
+    final ElwhaButton xs = new ElwhaButton("Common button").setButtonSize(ButtonSize.XS);
+    final ElwhaButton s = new ElwhaButton("Common button").setButtonSize(ButtonSize.S);
+    final ElwhaButton m = new ElwhaButton("Common button").setButtonSize(ButtonSize.M);
+    // After the click-area fix: preferred==min on cross axis, both ≥ 48 for XS/S.
+    final boolean xsOk = xs.getPreferredSize().height == 48 && xs.getMinimumSize().height == 48;
+    final boolean smOk = s.getPreferredSize().height == 48 && s.getMinimumSize().height == 48;
+    final boolean mdOk = m.getPreferredSize().height == 56 && m.getMinimumSize().height == 56;
     if (xsOk && smOk && mdOk) {
-      return "OK — XS preferred=32 / min=48, S preferred=40 / min=48, M preferred=56 / min=56.";
+      return "OK — XS/S inflate cross-axis to 48 (click area), visible body stays 32/40 centered."
+          + " M reports 56 (no inflation needed).";
     }
     return String.format(
         Locale.ROOT,
@@ -322,49 +328,20 @@ public final class ElwhaButtonSizesDemo {
   }
 
   /**
-   * Renders a button inside a debug rectangle showing the {@code minimumSize} cross-axis target.
-   * The button paints at its preferred dimensions, centered inside the target rect; the dashed red
-   * border on the panel visualizes the inflated touch area.
+   * Wraps an {@link ElwhaButton} in a translucent pink background sized to the button's component
+   * bounds (which now equal the inflated touch target on the cross axis). Visualizes the click hit
+   * area: the pink region around the visible body is the a11y inflation padding, and clicks
+   * anywhere in that region register on the button.
    */
-  private static final class TargetVisualPanel extends JPanel {
+  private static final class ClickZonePanel extends JPanel {
 
-    private final Dimension target;
-
-    TargetVisualPanel(final ElwhaButton button, final Dimension target, final Dimension preferred) {
-      setOpaque(false);
+    ClickZonePanel(final ElwhaButton button) {
+      setOpaque(true);
+      setBackground(new Color(0xFF, 0xC0, 0xCB));
       setLayout(new GridBagLayout());
       final GridBagConstraints gbc = new GridBagConstraints();
       gbc.anchor = GridBagConstraints.CENTER;
       add(button, gbc);
-      this.target = target;
-      // Add a few px around the target rect so the dashed border doesn't paint right on the edge.
-      final int padding = 4;
-      setPreferredSize(new Dimension(target.width + padding * 2, target.height + padding * 2));
-    }
-
-    @Override
-    protected void paintComponent(final Graphics g) {
-      super.paintComponent(g);
-      final Graphics2D g2 = (Graphics2D) g.create();
-      try {
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        final int w = target.width;
-        final int h = target.height;
-        final int x = (getWidth() - w) / 2;
-        final int y = (getHeight() - h) / 2;
-        g2.setColor(new Color(0xCC, 0x40, 0x40));
-        g2.setStroke(
-            new java.awt.BasicStroke(
-                1.5f,
-                java.awt.BasicStroke.CAP_BUTT,
-                java.awt.BasicStroke.JOIN_MITER,
-                10f,
-                new float[] {4f, 4f},
-                0f));
-        g2.drawRect(x, y, w, h);
-      } finally {
-        g2.dispose();
-      }
     }
   }
 }

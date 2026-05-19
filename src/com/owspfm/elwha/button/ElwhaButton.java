@@ -6,7 +6,6 @@ import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.SurfacePainter;
-import com.owspfm.elwha.theme.TypeRole;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Cursor;
@@ -48,10 +47,11 @@ import javax.swing.Timer;
  * selection color model from {@code docs/research/elwha-button-design.md} §7.
  *
  * <p><strong>Size axis.</strong> The {@link ButtonSize} enum covers the five M3 Expressive tiers
- * (XS / S / M / L / XL) with per-tier container height, padding, icon size, and square-corner
- * radius from design doc Appendix A. {@link #setButtonSize(ButtonSize)} switches tiers; {@link
- * ButtonSize#minimumTargetPx()} inflates XS / S to the 48 dp WCAG touch target on the cross axis
- * (preferred size stays at the spec-mandated 32 / 40).
+ * (XS / S / M / L / XL) with per-tier container height, padding, icon size, square-corner radius,
+ * and label type role from design doc Appendix A. {@link #setButtonSize(ButtonSize)} switches
+ * tiers; XS / S have their component cross-axis inflated to the 48 dp WCAG touch target so click
+ * dispatch covers the full target, while the visible chrome stays at the spec-mandated 32 / 40
+ * centered inside the inflated bounds.
  *
  * <p><strong>Paint pipeline.</strong> {@link ShadowPainter} ({@link ButtonVariant#ELEVATED} +
  * enabled only) → {@link SurfacePainter} (round-rect fill + state-layer overlay + border) → {@link
@@ -719,7 +719,7 @@ public class ElwhaButton extends JComponent {
     if (text == null || text.isEmpty()) {
       return 0;
     }
-    final FontMetrics fm = getFontMetrics(TypeRole.LABEL_LARGE.resolve());
+    final FontMetrics fm = getFontMetrics(buttonSize.typeRole().resolve());
     return fm.stringWidth(text);
   }
 
@@ -754,7 +754,7 @@ public class ElwhaButton extends JComponent {
             if (!isEnabled() || e.getButton() != MouseEvent.BUTTON1) {
               return;
             }
-            if (!containsBodyPoint(e.getPoint())) {
+            if (!containsClickPoint(e.getPoint())) {
               return;
             }
             pressed = true;
@@ -771,7 +771,7 @@ public class ElwhaButton extends JComponent {
               return;
             }
             pressed = false;
-            if (containsBodyPoint(e.getPoint())) {
+            if (containsClickPoint(e.getPoint())) {
               activate(e.getModifiersEx());
             }
             repaint();
@@ -802,11 +802,10 @@ public class ElwhaButton extends JComponent {
             if (!isEnabled()) {
               return;
             }
-            // Center-of-body ripple for keyboard activation.
-            final Insets s = shadowReserve();
-            final int bodyW = Math.max(1, getWidth() - s.left - s.right);
-            final int bodyH = Math.max(1, getHeight() - s.top - s.bottom);
-            startRipple(new Point(bodyW / 2, bodyH / 2));
+            // Center-of-body ripple for keyboard activation — body-local coords, not
+            // component-local, so the ripple seeds inside the visible chrome even when the
+            // component is inflated for a11y target.
+            startRipple(new Point(bodyWidthPx() / 2, buttonSize.containerHeightPx() / 2));
             activate(0);
           }
         };
@@ -825,18 +824,49 @@ public class ElwhaButton extends JComponent {
     }
   }
 
-  private boolean containsBodyPoint(final Point componentPoint) {
+  /**
+   * Returns the body origin in component-local coordinates — the top-left of the visible round-rect
+   * body. The body is centered inside the {@code component - shadowReserve} rect on each axis, so
+   * when the a11y target inflation grows the cross axis beyond the body's natural height the body
+   * sits visually centered with the inflated padding split above and below.
+   */
+  private Point bodyOrigin() {
     final Insets s = shadowReserve();
-    final int bodyW = getWidth() - s.left - s.right;
-    final int bodyH = getHeight() - s.top - s.bottom;
-    final int x = componentPoint.x - s.left;
-    final int y = componentPoint.y - s.top;
-    return x >= 0 && y >= 0 && x < bodyW && y < bodyH;
+    final int insetW = getWidth() - s.left - s.right;
+    final int insetH = getHeight() - s.top - s.bottom;
+    final int bodyW = bodyWidthPx();
+    final int bodyH = buttonSize.containerHeightPx();
+    return new Point(
+        s.left + Math.max(0, (insetW - bodyW) / 2), s.top + Math.max(0, (insetH - bodyH) / 2));
   }
 
-  private Point toBodyPoint(final Point componentPoint) {
+  /**
+   * Tests whether a component-local point lies inside the click hit area. The hit area is the full
+   * component bounds (excluding the shadow reserve) — including the a11y target inflation padding
+   * around the visible body, so clicks in that padding still register and dispatch a press / ripple
+   * on the body. WCAG 2.5.5 — 48 dp minimum touch target on XS / S.
+   */
+  private boolean containsClickPoint(final Point componentPoint) {
     final Insets s = shadowReserve();
-    return new Point(componentPoint.x - s.left, componentPoint.y - s.top);
+    final int hitW = getWidth() - s.left - s.right;
+    final int hitH = getHeight() - s.top - s.bottom;
+    final int x = componentPoint.x - s.left;
+    final int y = componentPoint.y - s.top;
+    return x >= 0 && y >= 0 && x < hitW && y < hitH;
+  }
+
+  /**
+   * Converts a component-local click point to body-local coordinates clamped inside the visible
+   * body — used as the ripple origin so a click on the a11y inflation padding still seeds the
+   * ripple inside the visible chrome.
+   */
+  private Point toBodyPoint(final Point componentPoint) {
+    final Point origin = bodyOrigin();
+    final int bodyW = bodyWidthPx();
+    final int bodyH = buttonSize.containerHeightPx();
+    final int x = componentPoint.x - origin.x;
+    final int y = componentPoint.y - origin.y;
+    return new Point(Math.max(0, Math.min(bodyW - 1, x)), Math.max(0, Math.min(bodyH - 1, y)));
   }
 
   private void ensureHoverPolling() {
@@ -872,7 +902,7 @@ public class ElwhaButton extends JComponent {
     final Point screenPt = info.getLocation();
     final Point local = new Point(screenPt);
     SwingUtilities.convertPointFromScreen(local, this);
-    if (!containsBodyPoint(local)) {
+    if (!containsClickPoint(local)) {
       hovered = false;
       pressed = false;
       stopHoverPolling();
@@ -893,7 +923,7 @@ public class ElwhaButton extends JComponent {
     }
     final Point local = new Point(screenPt);
     SwingUtilities.convertPointFromScreen(local, this);
-    return containsBodyPoint(local);
+    return containsClickPoint(local);
   }
 
   // ----------------------------------------------------------- ripple
@@ -934,9 +964,9 @@ public class ElwhaButton extends JComponent {
 
   @Override
   protected void paintComponent(final Graphics g) {
-    final Insets s = shadowReserve();
-    final int bodyW = Math.max(1, getWidth() - s.left - s.right);
-    final int bodyH = Math.max(1, getHeight() - s.top - s.bottom);
+    final int bodyW = Math.max(1, bodyWidthPx());
+    final int bodyH = Math.max(1, buttonSize.containerHeightPx());
+    final Point bodyOrigin = bodyOrigin();
     final int arc = cornerRadiusPx();
     final boolean focused = isFocusOwner() && isEnabled();
 
@@ -947,7 +977,7 @@ public class ElwhaButton extends JComponent {
 
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
-      g2.translate(s.left, s.top);
+      g2.translate(bodyOrigin.x, bodyOrigin.y);
 
       if (variant == ButtonVariant.ELEVATED && isEnabled()) {
         ShadowPainter.paint(g2, bodyW, bodyH, arc, elevationLevel());
@@ -988,7 +1018,7 @@ public class ElwhaButton extends JComponent {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       g2.setRenderingHint(
           RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-      g2.setFont(TypeRole.LABEL_LARGE.resolve());
+      g2.setFont(buttonSize.typeRole().resolve());
 
       final FontMetrics fm = g2.getFontMetrics();
       final int labelW = (text == null || text.isEmpty()) ? 0 : fm.stringWidth(text);
@@ -1050,18 +1080,20 @@ public class ElwhaButton extends JComponent {
   @Override
   public Dimension getPreferredSize() {
     final Insets s = shadowReserve();
-    return new Dimension(
-        bodyWidthPx() + s.left + s.right, buttonSize.containerHeightPx() + s.top + s.bottom);
+    final int rawW = bodyWidthPx() + s.left + s.right;
+    final int rawH = buttonSize.containerHeightPx() + s.top + s.bottom;
+    // §9 a11y target inflation — XS (32 dp) and S (40 dp) sit below the 48 dp WCAG touch target.
+    // The component grows on the cross axis (height) to the target so the click hit area covers
+    // the target; the visible body is centered inside via the bodyOriginY offset in
+    // paintComponent. Width is not inflated — text buttons are always wide enough that the
+    // cross-axis target carries the a11y guarantee.
+    final int targetMin = buttonSize.minimumTargetPx();
+    return new Dimension(rawW, Math.max(rawH, targetMin));
   }
 
   @Override
   public Dimension getMinimumSize() {
-    final Dimension pref = getPreferredSize();
-    // §9 a11y target inflation — XS (32 dp) and S (40 dp) sit below the 48 dp WCAG target.
-    // Layout managers that honor minimumSize give the button the inflated cross-axis target while
-    // the visible body stays at the spec-mandated 32 / 40. Larger sizes already exceed 48.
-    final int targetMin = buttonSize.minimumTargetPx();
-    return new Dimension(Math.max(pref.width, targetMin), Math.max(pref.height, targetMin));
+    return getPreferredSize();
   }
 
   @Override
