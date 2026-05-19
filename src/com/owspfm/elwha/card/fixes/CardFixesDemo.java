@@ -234,11 +234,17 @@ public final class CardFixesDemo {
       reflowRow.add(reflowSample("Narrow (220 px)", 220));
       reflowRow.add(reflowSample("Wide (480 px)", 480));
 
-      final JPanel container = new JPanel();
-      container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
-      split.setPreferredSize(new Dimension(0, 380));
-      container.add(split);
-      container.add(reflowRow);
+      // BorderLayout instead of BoxLayout(Y_AXIS): the split pane goes in CENTER and gets all
+      // remaining vertical space (its natural preferred height = sum of stacked card heights),
+      // the reflow row at SOUTH takes its preferred height. The previous BoxLayout setup
+      // required forcing split.setPreferredSize(0, 380) — which clipped the cards (they sum to
+      // ~512 px tall, exceeding 380) AND interacted badly with the divider drag (the fixed
+      // preferred bounds kept the divider from repositioning past certain points). Removing the
+      // fixed preferred and using BorderLayout fixes both #15 (vertical clipping) and #16
+      // (drag handle non-responsive).
+      final JPanel container = new JPanel(new BorderLayout());
+      container.add(split, BorderLayout.CENTER);
+      container.add(reflowRow, BorderLayout.SOUTH);
       return container;
     }
 
