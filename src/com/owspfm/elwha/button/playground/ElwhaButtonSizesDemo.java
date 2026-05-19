@@ -177,7 +177,7 @@ public final class ElwhaButtonSizesDemo {
     row.setOpaque(false);
     for (ButtonSize size : ALL_SIZES) {
       final ElwhaButton b =
-          new ElwhaButton(size.name(), MaterialIcons.delete(size.iconSizePx())).setButtonSize(size);
+          new ElwhaButton("Delete", MaterialIcons.delete(size.iconSizePx())).setButtonSize(size);
       row.add(b);
     }
     section.add(row);
@@ -209,7 +209,7 @@ public final class ElwhaButtonSizesDemo {
       gbc.gridx = 0;
       grid.add(header(size.name()), gbc);
 
-      final ElwhaButton b = new ElwhaButton(size.name()).setButtonSize(size);
+      final ElwhaButton b = new ElwhaButton("OK").setButtonSize(size);
 
       gbc.gridx = 1;
       grid.add(captionedPx(b.getPreferredSize().height), gbc);
@@ -227,7 +227,8 @@ public final class ElwhaButtonSizesDemo {
 
   private ElwhaButton makeBtn(
       final ButtonSize size, final ButtonShape shape, final boolean elevated) {
-    final ElwhaButton b = new ElwhaButton(size.name()).setButtonSize(size).setShape(shape);
+    final String label = elevated ? "Cancel" : "Submit";
+    final ElwhaButton b = new ElwhaButton(label).setButtonSize(size).setShape(shape);
     if (elevated) {
       b.setVariant(com.owspfm.elwha.button.ButtonVariant.ELEVATED);
     }
