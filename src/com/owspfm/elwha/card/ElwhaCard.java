@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.StateLayer;
@@ -28,7 +29,6 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -582,12 +582,6 @@ public class ElwhaCard extends ElwhaSurface {
     if (collapseTimer != null && collapseTimer.isRunning()) {
       collapseTimer.stop();
     }
-    // Freeze shadow recompute for the duration of the tween (#110). Without this, the height
-    // change on every animation frame invalidates the (bodyW, bodyH, arc, elevation) shadow cache
-    // key, triggering a fresh two-pass ConvolveOp blur every 16 ms — the dominant cost of the
-    // collapse lag. The pre-tween cached shadow is reused stretched-to-fit during the tween, and
-    // setSuspendShadowRecompute(false) below forces an exact-fit recompute at rest.
-    setSuspendShadowRecompute(true);
     final int frameMs = 16;
     final long startNanos = System.nanoTime();
     collapseTimer =
@@ -605,7 +599,6 @@ public class ElwhaCard extends ElwhaSurface {
               if (t >= 1f) {
                 animationFraction = 1f;
                 ((Timer) e.getSource()).stop();
-                setSuspendShadowRecompute(false);
                 if (getParent() != null) {
                   getParent().revalidate();
                 }
@@ -886,13 +879,13 @@ public class ElwhaCard extends ElwhaSurface {
    * grows. Matches Compose Material3 / MaterialCardView, where elevation is painted outside the
    * measured body — Swing doesn't allow that, so the reserve is always-on instead.
    *
-   * @return the chassis insets — always {@code SurfacePainter.shadowInsets(MAX_ELEVATION)}
+   * @return the chassis insets — always {@code ShadowPainter.shadowInsets(MAX_ELEVATION)}
    * @version v0.2.0
    * @since v0.2.0
    */
   @Override
   public Insets getInsets() {
-    return com.owspfm.elwha.theme.SurfacePainter.shadowInsets(MAX_ELEVATION);
+    return com.owspfm.elwha.theme.ShadowPainter.shadowInsets(MAX_ELEVATION);
   }
 
   /**
@@ -1092,16 +1085,22 @@ public class ElwhaCard extends ElwhaSurface {
   /** Expanding-circle ripple, clipped to the card's rounded body shape. */
   private void paintRipple(final Graphics2D g2) {
     final java.awt.Rectangle b = bodyBounds();
-    final int arc = getShape().px();
-    g2.setClip(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
-    final float expand = Math.min(1f, rippleProgress * (RIPPLE_TOTAL_MS / 250f));
-    final float fade = Math.max(0f, 1f - Math.max(0f, (rippleProgress - 0.375f) / 0.625f));
-    final int maxRadius = (int) Math.hypot(b.width, b.height);
-    final int r = (int) (maxRadius * expand);
-    final Color tint = ColorRole.ON_SURFACE.resolve();
-    g2.setComposite(AlphaComposite.SrcOver.derive(0.10f * fade));
-    g2.setColor(tint);
-    g2.fill(new Ellipse2D.Float(rippleOrigin.x - r, rippleOrigin.y - r, r * 2f, r * 2f));
+    final Graphics2D rg = (Graphics2D) g2.create();
+    try {
+      // RipplePainter works in body-local coordinates; translate to the body origin and convert
+      // the component-space click point to match.
+      rg.translate(b.x, b.y);
+      RipplePainter.paint(
+          rg,
+          b.width,
+          b.height,
+          new Point(rippleOrigin.x - b.x, rippleOrigin.y - b.y),
+          rippleProgress,
+          getShape().px(),
+          ColorRole.ON_SURFACE.resolve());
+    } finally {
+      rg.dispose();
+    }
   }
 
   /** M3 top-trailing selected badge — PRIMARY circle + check glyph, no layout reservation. */

@@ -198,26 +198,27 @@ public final class ShadowPainterDemo {
     final int h = 160;
     final int reps = 200;
 
-    ShadowPainter.clearCache();
-
-    // Cold path — direct ConvolveOp render at body size (mirrors the old ElwhaSurface cache pattern
-    // that invalidated on every (bodyW, bodyH) change).
-    final long coldStart = System.nanoTime();
-    for (int i = 0; i < reps; i++) {
-      SurfacePainter.renderShadowImage(w + i, h + i, arc, elevation);
-    }
-    final long coldNanos = System.nanoTime() - coldStart;
-
-    // Warm path — 9-slice paint of the cached canonical image into a throwaway buffer.
-    final BufferedImage target = new BufferedImage(w + 40, h + 40, BufferedImage.TYPE_INT_ARGB);
+    final BufferedImage target = new BufferedImage(w + 60, h + 60, BufferedImage.TYPE_INT_ARGB);
     final Graphics2D tg = target.createGraphics();
     try {
-      // Prime the cache with one paint
-      tg.translate(20, 20);
+      tg.translate(30, 30);
+
+      // Cold path — clear cache each iteration so every paint pays the full canonical render +
+      // 9-slice cost. Mirrors the cost of a cache miss at the (arc, elevation) granularity.
+      final long coldStart = System.nanoTime();
+      for (int i = 0; i < reps; i++) {
+        ShadowPainter.clearCache();
+        ShadowPainter.paint(tg, w + (i % 50), h + (i % 50), arc, elevation);
+      }
+      final long coldNanos = System.nanoTime() - coldStart;
+
+      // Warm path — prime the cache once, then paint repeatedly at varying body sizes. Every
+      // iteration hits the cache (key is (arc, elevation) only) and the cost reduces to the
+      // 9-slice draw — the resize-independent hot path the redesigned cache enables.
+      ShadowPainter.clearCache();
       ShadowPainter.paint(tg, w, h, arc, elevation);
       final long warmStart = System.nanoTime();
       for (int i = 0; i < reps; i++) {
-        // Use a slightly varying body size each iteration to demonstrate cache reuse across sizes.
         ShadowPainter.paint(tg, w + (i % 50), h + (i % 50), arc, elevation);
       }
       final long warmNanos = System.nanoTime() - warmStart;
@@ -227,8 +228,8 @@ public final class ShadowPainterDemo {
       final double speedup = coldMs / Math.max(warmMs, 0.001);
       return String.format(
           "Microbench (arc=%d, elev=%d, %d×%d, %d reps):%n"
-              + "  Cold (ConvolveOp per call):  %8.2f ms total  →  %6.3f ms/call%n"
-              + "  Warm (9-slice cached draw):  %8.2f ms total  →  %6.3f ms/call%n"
+              + "  Cold (cache miss → canon render + 9-slice):  %8.2f ms total  →  %6.3f ms/call%n"
+              + "  Warm (cache hit → 9-slice only):             %8.2f ms total  →  %6.3f ms/call%n"
               + "  Speedup: %.1f×%n"
               + "  Cache size: %d entries",
           arc,
