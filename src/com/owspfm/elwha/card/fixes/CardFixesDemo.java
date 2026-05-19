@@ -98,15 +98,63 @@ public final class CardFixesDemo {
 
   // ============================================================== shared helpers
 
-  /** Wraps a tab body in a scroll pane with a description header. */
+  /**
+   * Wraps a tab body in a scroll pane with a description header. The body is nested inside a {@link
+   * ViewportTrackingPanel} so the scroll pane locks content WIDTH to the viewport — without this,
+   * long text or wide content drives row preferred-width past the viewport and horizontal scroll
+   * appears (cards then stretch to natural preferred width instead of fitting the visible frame).
+   * Vertical content can still scroll; only width is tracked.
+   */
   private static JComponent tabFrame(final String description, final JComponent body) {
     final JPanel panel = new JPanel(new BorderLayout());
     panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
     final JLabel desc = new JLabel("<html>" + description + "</html>");
     desc.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
     panel.add(desc, BorderLayout.NORTH);
-    panel.add(new JScrollPane(body), BorderLayout.CENTER);
+    final ViewportTrackingPanel viewportWrap = new ViewportTrackingPanel(new BorderLayout());
+    viewportWrap.add(body, BorderLayout.CENTER);
+    panel.add(new JScrollPane(viewportWrap), BorderLayout.CENTER);
     return panel;
+  }
+
+  /**
+   * A {@link JPanel} that tells the enclosing {@link JScrollPane} its content WIDTH should track
+   * the viewport (so cards laid out by the body's {@code GridLayout} / {@code BoxLayout} get
+   * cell-width = viewport / cols, not their natural preferred width). Height-tracking stays off so
+   * vertical scroll appears when the body genuinely runs taller than the viewport.
+   */
+  private static final class ViewportTrackingPanel extends JPanel
+      implements javax.swing.Scrollable {
+    ViewportTrackingPanel(final java.awt.LayoutManager layout) {
+      super(layout);
+    }
+
+    @Override
+    public Dimension getPreferredScrollableViewportSize() {
+      return getPreferredSize();
+    }
+
+    @Override
+    public int getScrollableUnitIncrement(
+        final java.awt.Rectangle visibleRect, final int orientation, final int direction) {
+      return 16;
+    }
+
+    @Override
+    public int getScrollableBlockIncrement(
+        final java.awt.Rectangle visibleRect, final int orientation, final int direction) {
+      return Math.max(16, visibleRect.height - 32);
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+      return true;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportHeight() {
+      return false;
+    }
   }
 
   /** Builds a fully-loaded card showcasing every primitive — used by several tabs. */
