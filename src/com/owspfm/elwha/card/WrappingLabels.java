@@ -2,6 +2,7 @@ package com.owspfm.elwha.card;
 
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.FontMetrics;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.text.View;
@@ -62,14 +63,68 @@ final class WrappingLabels {
     if (view == null) {
       return fallback;
     }
+
+    // Preferred WIDTH must be stable across layout passes — independent of whatever width the
+    // parent has assigned this iteration. Otherwise a feedback loop forms:
+    //
+    //   returned-width depends on available-from-parent → parent.preferredSize grows →
+    //   parent's parent grows → available grows → returned-width grows → ...
+    //
+    // The loop's per-pass delta is 2 * padH whenever the atom's parent is an ElwhaCard whose
+    // VerticalCardLayout adds its own padH around children: WrappingLabels.availableWidth walks
+    // past the chassis-internal padH boundary (Container.getInsets() is shadow reserve only),
+    // so it over-reports by 2*padH, the chassis re-adds 2*padH around the reported width when
+    // computing its own preferred, and the round-trip grows by exactly 2*padH each pass.
+    // Confirmed empirically: MediaLoopProbe shows +32 px per layout pass on a card with
+    // SpaceScale.LG (16 dp) horizontal padding.
+    //
+    // Fix: report the NATURAL single-line width — an intrinsic property of the text + font that
+    // does not depend on the layout cycle. We measure it directly via FontMetrics on the raw
+    // (HTML-stripped) text rather than asking the BasicHTML view: the view's getPreferredSpan(X)
+    // and getMaximumSpan(X) both echo the most-recently-setSize'd width for an HTML JLabel at
+    // wide sizes — verified empirically via MediaLoopProbe before applying this fix — so they
+    // can't be used as a layout-cycle-independent natural-width source.
+    //
+    // FontMetrics on the plain text is an approximation (styled spans like <b> render slightly
+    // wider than measured), but preferred-size is a layout hint, not a paint constraint — the
+    // approximation is fine. Parents constrain via setBounds; the HTML view wraps at the
+    // assigned width at paint time regardless of what preferred-size reported.
+    final int naturalW = naturalSingleLineWidth(label);
+
+    // HEIGHT tracks the actual available width — wrapping at a narrower width produces taller
+    // content. This is safe because height does NOT feed into the parent's width preference;
+    // there's no analogous Y-axis loop.
     final int available = availableWidth(label);
+    final int prefH;
     if (available <= 0) {
-      return fallback;
+      prefH = (int) Math.ceil(view.getPreferredSpan(View.Y_AXIS));
+    } else {
+      view.setSize(available, 0);
+      prefH = (int) Math.ceil(view.getPreferredSpan(View.Y_AXIS));
     }
-    view.setSize(available, 0);
-    final int wrappedW = (int) Math.ceil(view.getPreferredSpan(View.X_AXIS));
-    final int wrappedH = (int) Math.ceil(view.getPreferredSpan(View.Y_AXIS));
-    return new Dimension(Math.min(available, Math.max(wrappedW, 1)), Math.max(wrappedH, 1));
+
+    return new Dimension(Math.max(naturalW, 1), Math.max(prefH, 1));
+  }
+
+  /**
+   * Measures the natural single-line width of {@code label.getText()} using the label's current
+   * font. HTML tags are stripped (a rough measurement — bold / styled runs render slightly wider
+   * than the plain-text measurement, but that's an acceptable approximation for a preferred-size
+   * hint). Returns 0 for null or empty text.
+   */
+  private static int naturalSingleLineWidth(final JLabel label) {
+    final String text = label.getText();
+    if (text == null || text.isEmpty()) {
+      return 0;
+    }
+    final String plain;
+    if (text.toLowerCase().startsWith("<html>")) {
+      plain = text.replaceAll("<[^>]+>", "");
+    } else {
+      plain = text;
+    }
+    final FontMetrics fm = label.getFontMetrics(label.getFont());
+    return fm.stringWidth(plain);
   }
 
   /** Walks the parent chain to find a usable width to wrap at. */

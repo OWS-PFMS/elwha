@@ -7,6 +7,20 @@ M3-canonical "chrome + composition" pattern (per
 **Status:** sketch — not a spec. Captured from an iterative discussion
 so we don't lose the model. Open questions in §8.
 
+> **2026-05-19 addendum — HORIZONTAL orientation deferred to v0.3.0
+> (#112).** This sketch was written assuming a single milestone shipped
+> VERTICAL + HORIZONTAL together with an asymmetric API
+> (`setLeadingColumn` / `setTrailingColumn` for HORIZONTAL,
+> `card.add(...)` for VERTICAL). On review the asymmetry was judged a
+> bad consumer contract: orientation should be a re-layout, not a
+> re-construction. v0.2.0 ships VERTICAL only. v0.3.0 re-enters
+> HORIZONTAL under a unified `card.add(...)` API with **typed
+> partitioning** — `ElwhaCardMedia` → leading column, everything else
+> → trailing column running `VerticalCardLayout` rules. See spec §15.3
+> for the v0.3 design intent. Sections below that discuss the
+> withdrawn HORIZONTAL API are kept as historical context for the v0.3
+> follow-up; ignore them for v0.2.0 implementation.
+
 ## 1. Why V3 — the reframe
 
 M3 defines a card as **six canonical anatomy elements** (Container,
@@ -90,22 +104,15 @@ public class ElwhaCard extends ElwhaSurface {
     public void setCollapseConstraint(Component child, CollapseRule rule);
     public void addExpansionChangeListener(PropertyChangeListener);
 
-    // Orientation (compose-time choice)
-    public ElwhaCard setOrientation(CardOrientation);     // VERTICAL (default) | HORIZONTAL
-
     // Drag (CardList integration)
     public ElwhaCard setDragged(boolean);
 
-    // Default LayoutManager:
-    //   VERTICAL   → BoxLayout(Y_AXIS); add()-order = stacking order
-    //   HORIZONTAL → custom 2-column LayoutManager driven by explicit setters:
-    //                setLeadingColumn(JComponent) + setTrailingColumn(JComponent)
-    //                (RTL-aware terminology — no first-child heuristic)
-    public ElwhaCard setLeadingColumn(JComponent component);     // HORIZONTAL only
-    public ElwhaCard setTrailingColumn(JComponent component);    // HORIZONTAL only
+    // Default LayoutManager: VerticalCardLayout — add()-order = stacking order,
+    // with M3-aware tweaks (media bleeds at edges, actions anchor to bottom,
+    // FULL dividers bleed horizontally). v0.2.0 ships VERTICAL only;
+    // HORIZONTAL deferred to v0.3.0 per #112 — see spec §15.3.
 }
 
-public enum CardOrientation { VERTICAL, HORIZONTAL }
 public enum CollapseRule { ALWAYS_VISIBLE, COLLAPSIBLE }
 ```
 

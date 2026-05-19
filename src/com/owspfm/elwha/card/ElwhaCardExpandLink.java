@@ -25,6 +25,13 @@ import javax.swing.KeyStroke;
  * <p>M3 placement: card body bottom, after a full-width divider. Colored {@link ColorRole#PRIMARY}
  * by default and rendered underlined to read as a link.
  *
+ * <p><strong>Auto-anchors itself as ALWAYS_VISIBLE.</strong> When the link is added to the
+ * component tree, it walks up to find its direct-child-of-card ancestor and calls {@code
+ * card.setCollapseConstraint(host, CollapseRule.ALWAYS_VISIBLE)} so the link survives a {@code
+ * card.setCollapsed(true)} — otherwise the link disappears with the rest of the body and the user
+ * has no way to re-expand the card. Same self-anchor rule as {@link ElwhaCardChevron}; consumers
+ * can override after construction by re-setting the constraint to COLLAPSIBLE.
+ *
  * <p>See {@code docs/research/elwha-card-v3-spec.md} §6.2.
  *
  * @author Charles Bryan
@@ -166,5 +173,32 @@ public final class ElwhaCardExpandLink extends JLabel {
           };
     }
     return accessibleContext;
+  }
+
+  /**
+   * Self-anchors the link's host container as {@link CollapseRule#ALWAYS_VISIBLE} on the driven
+   * card the first time the link is added to the component tree underneath that card. See class
+   * Javadoc for rationale (the #23 footgun applies to ExpandLink for the same reason as
+   * ElwhaCardChevron). Defensive: silently does nothing if the link is added outside the card's
+   * subtree.
+   *
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public void addNotify() {
+    super.addNotify();
+    // Walk up to find the direct child of `card` that contains us — anchor THAT child as
+    // ALWAYS_VISIBLE. ExpandLink is typically added directly to the card (M3 placement: body
+    // bottom, after divider), so cursor starts at `this` and the loop usually exits immediately
+    // anchoring this. Same defensive fallthrough as ElwhaCardChevron — if the link is added
+    // outside the card's subtree, no anchor.
+    java.awt.Component cursor = this;
+    while (cursor != null && cursor.getParent() != card) {
+      cursor = cursor.getParent();
+    }
+    if (cursor != null) {
+      card.setCollapseConstraint(cursor, CollapseRule.ALWAYS_VISIBLE);
+    }
   }
 }

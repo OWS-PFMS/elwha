@@ -32,7 +32,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.Scrollable;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 /**
@@ -84,7 +83,6 @@ public final class ElwhaCardV3Demo {
     root.add(section("Collapse — chevron and expand link", collapseRow()));
     root.add(section("Interactivity — actionable / selectable / both", interactivityRow()));
     root.add(section("Disabled state", disabledRow()));
-    root.add(section("HORIZONTAL orientation", horizontalRow()));
     root.add(section("Two-tier conversation card (Gmail pattern, spec §4.3)", twoTierRow()));
     root.add(section("ExpansionOverflow.SCROLL (320 dp cap)", scrollOverflowRow()));
     root.add(
@@ -204,9 +202,7 @@ public final class ElwhaCardV3Demo {
     final ElwhaCard b = ElwhaCard.elevatedCard();
     b.add(
         ElwhaCardMedia.painter(
-                g2 -> {
-                  final int w = 320;
-                  final int h = 180;
+                (g2, w, h) -> {
                   g2.setPaint(
                       new GradientPaint(0, 0, new Color(0x9C27B0), w, h, new Color(0xFFEB3B)));
                   g2.fillRect(0, 0, w, h);
@@ -221,7 +217,8 @@ public final class ElwhaCardV3Demo {
     c.add(new ElwhaCardHeader().setTitle("With actions").setSubtitle("Leading + trailing"));
     c.add(new ElwhaCardSupportingText("Divider below separates body from actions."));
     c.add(Box.createVerticalStrut(8));
-    c.add(new ElwhaCardDivider(DividerStyle.FULL));
+    // INSET per M3 §1.7 — body → actions is a within-body separator, not a collapse-pair.
+    c.add(new ElwhaCardDivider(DividerStyle.INSET));
     c.add(Box.createVerticalStrut(8));
     c.add(
         new ElwhaCardActions()
@@ -236,33 +233,36 @@ public final class ElwhaCardV3Demo {
   private static JPanel collapseRow() {
     final JPanel g = grid(2);
 
-    // Chevron in header trailing
+    // Chevron in header trailing — chevron auto-anchors the header ALWAYS_VISIBLE on addNotify
+    // (#23) so consumers don't need to remember the rule. setCollapseConstraint() is still
+    // available for consumers who want different behavior.
     final ElwhaCard a = ElwhaCard.elevatedCard().setCollapsible(true);
     final ElwhaCardHeader headerA =
         new ElwhaCardHeader().setTitle("With chevron").setSubtitle("Click chevron to toggle");
     headerA.addTrailing(new ElwhaCardChevron(a));
     a.add(headerA);
-    a.setCollapseConstraint(headerA, CollapseRule.ALWAYS_VISIBLE);
     a.add(Box.createVerticalStrut(8));
     final ElwhaCardSupportingText bodyA =
         new ElwhaCardSupportingText(
-            "Body hides when collapsed. Header stays visible because it's ALWAYS_VISIBLE.");
+            "Body hides when collapsed. Header stays visible (auto-anchored by chevron).");
     a.add(bodyA);
     g.add(a);
 
-    // ExpandLink at body bottom
+    // ExpandLink at body bottom — also auto-anchors itself ALWAYS_VISIBLE on addNotify (#23).
     final ElwhaCard b = ElwhaCard.elevatedCard().setCollapsible(true);
     final ElwhaCardHeader headerB =
         new ElwhaCardHeader().setTitle("With expand link").setSubtitle("Text affordance");
     b.add(headerB);
+    // Header here has no chevron, so we explicitly pin it ALWAYS_VISIBLE — only the expand link
+    // below auto-anchors itself.
     b.setCollapseConstraint(headerB, CollapseRule.ALWAYS_VISIBLE);
     b.add(Box.createVerticalStrut(8));
     b.add(new ElwhaCardSupportingText("Details hidden when collapsed."));
     b.add(Box.createVerticalStrut(8));
+    // FULL per M3 §1.7 — pairs with the ExpandLink below to mark the body/hidden boundary.
     b.add(new ElwhaCardDivider(DividerStyle.FULL));
     final ElwhaCardExpandLink link = new ElwhaCardExpandLink(b, "Show details", "Hide details");
     b.add(link);
-    b.setCollapseConstraint(link, CollapseRule.ALWAYS_VISIBLE);
     g.add(b);
 
     return g;
@@ -307,37 +307,6 @@ public final class ElwhaCardV3Demo {
       card.setEnabled(false);
       g.add(card);
     }
-    return g;
-  }
-
-  private static JPanel horizontalRow() {
-    final JPanel g = new JPanel(new BorderLayout());
-    g.setOpaque(false);
-    final ElwhaCard card = ElwhaCard.elevatedCard();
-    card.setOrientation(CardOrientation.HORIZONTAL);
-
-    final JPanel leading = new JPanel(new BorderLayout());
-    leading.setOpaque(false);
-    leading.setPreferredSize(new Dimension(160, 110));
-    leading.add(
-        new JLabel(
-            new javax.swing.ImageIcon(stripeImage(160, 110, new Color(0x26A69A))),
-            SwingConstants.CENTER),
-        BorderLayout.CENTER);
-    card.setLeadingColumn(leading);
-
-    final JPanel trailing = new JPanel();
-    trailing.setOpaque(false);
-    trailing.setLayout(new BoxLayout(trailing, BoxLayout.Y_AXIS));
-    trailing.add(new ElwhaCardHeader().setTitle("Horizontal card").setSubtitle("Two columns"));
-    trailing.add(
-        new ElwhaCardSupportingText("Leading column is the image; trailing is this stack."));
-    trailing.add(Box.createVerticalGlue());
-    final ElwhaCardActions actions = new ElwhaCardActions().addTrailing(new JButton("Open"));
-    trailing.add(actions);
-    card.setTrailingColumn(trailing);
-
-    g.add(card, BorderLayout.CENTER);
     return g;
   }
 
