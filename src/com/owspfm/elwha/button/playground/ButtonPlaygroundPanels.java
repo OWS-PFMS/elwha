@@ -253,25 +253,30 @@ public final class ButtonPlaygroundPanels {
     buttons.setAlignmentX(Component.LEFT_ALIGNMENT);
 
     final ButtonGroup group = new ButtonGroup().setMandatory(mandatory);
+    ElwhaButton firstButton = null;
     for (final String label : labels) {
       final ElwhaButton button =
           new ElwhaButton(label)
               .setVariant(variant)
               .setInteractionMode(ButtonInteractionMode.SELECTABLE);
       group.add(button);
+      if (firstButton == null) {
+        firstButton = button;
+      }
       buttons.add(button);
       buttons.add(Box.createHorizontalStrut(CELL_GAP));
     }
-    final JLabel status = rowLabel("selected: (none)");
-    if (mandatory && group.size() > 0) {
-      group.setSelected(group.getSelected()); // no-op; seed below instead
-    }
 
+    final JLabel status = rowLabel("selected: (none)");
     group.addSelectionChangeListener(
         evt -> {
           final ElwhaButton nv = (ElwhaButton) evt.getNewValue();
           status.setText("selected: " + (nv == null ? "(none)" : nv.getText()));
         });
+    // Mandatory groups must start with a selection — seed the first button.
+    if (mandatory && firstButton != null) {
+      group.setSelected(firstButton);
+    }
 
     buttons.add(status);
     row.add(buttons);
