@@ -572,7 +572,7 @@ leading; paired actions or overflow-bearing rows go trailing.
 
 ```java
 public final class ElwhaCardDivider extends JComponent {
-  public ElwhaCardDivider();                          // default FULL
+  public ElwhaCardDivider();                          // default INSET
   public ElwhaCardDivider(DividerStyle style);
   public DividerStyle getStyle();
 }
@@ -583,6 +583,28 @@ public enum DividerStyle { FULL, INSET }
 `FULL` spans card edge-to-edge (ignores parent content padding).
 `INSET` respects content padding. Both paint `ColorRole.OUTLINE_VARIANT`
 at 1dp.
+
+**M3 contextual rule (per
+[`m3-card-spec-organized.md`](m3-card-spec-organized.md) §1.7).** The
+two styles are not interchangeable — each pairs with a different M3
+content pattern:
+
+- **`INSET`** — separates related blocks within the card body
+  (metadata, comments footer, body → actions separator). The more
+  common case in M3 reference frames, and the no-arg constructor
+  default.
+- **`FULL`** — pairs with a body-bottom expand text-link
+  ({@link ElwhaCardExpandLink}) to mark the boundary between
+  always-visible content and a collapsible hidden section. Pattern:
+  `card.add(body); card.add(new ElwhaCardDivider(DividerStyle.FULL));
+  card.add(new ElwhaCardExpandLink(card, "Show", "Hide"));`
+
+The lib does NOT enforce this rule in code — a `FULL` divider
+between supporting text and actions compiles fine. The rule is
+documented here for consumers to follow; auto-detecting the
+correct style by sibling type was rejected as heuristic-laden
+(per the same reasoning as §22's stance on positional heuristics
+for HORIZONTAL leading-column detection).
 
 ## 6. Layer 4 — Disclosure affordances
 

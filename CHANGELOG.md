@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **`ElwhaCardDivider()` no-arg default flipped from `FULL` → `INSET`** (#18) — **breaking, pre-1.0, no shims.** Per M3 §1.7 contextual rule (now documented in spec §5.4), `FULL` pairs with a body-bottom expand text-link to mark the boundary between always-visible content and a collapsible hidden section; `INSET` is the within-body separator (metadata, footer rows, body → actions). `INSET` is the more common pattern, so the no-arg constructor now defaults to it. Consumers wanting the collapse-pair separator pass `new ElwhaCardDivider(DividerStyle.FULL)` explicitly.
+
 ### Removed
 
 - **`ElwhaCard` HORIZONTAL orientation deferred to v0.3.0** ([#112](https://github.com/OWS-PFMS/elwha/issues/112)) — the Phase-2 HORIZONTAL surface (`CardOrientation` enum, `ElwhaCard.setOrientation` / `getOrientation` / `PROPERTY_ORIENTATION`, `setLeadingColumn` / `setTrailingColumn`, private `TwoColumnLayout`, and the `addImpl` HORIZONTAL throw) is withdrawn before v0.2.0 ship. The shipped API created an asymmetric composition contract: VERTICAL used `card.add(...)` with the chassis owning layout, while HORIZONTAL forced `setLeadingColumn(JComponent)` / `setTrailingColumn(JComponent)` and threw on `add()` — same content needed two different construction paths, and the typed Layer-3 primitives (`ElwhaCardHeader`, `ElwhaCardActions`, `ElwhaCardDivider`) lost their auto-positioning behavior inside the trailing column. v0.3.0 re-enters HORIZONTAL under a unified `add(...)` API with typed partitioning (`ElwhaCardMedia` → leading column; everything else → trailing column running the same `VerticalCardLayout` rules) — see [spec §15.3](docs/research/elwha-card-v3-spec.md) for the design intent. Story [#89](https://github.com/OWS-PFMS/elwha/issues/89) (Phase-2 HORIZONTAL story) closed as superseded.

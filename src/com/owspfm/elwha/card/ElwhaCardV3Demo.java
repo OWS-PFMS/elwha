@@ -219,7 +219,8 @@ public final class ElwhaCardV3Demo {
     c.add(new ElwhaCardHeader().setTitle("With actions").setSubtitle("Leading + trailing"));
     c.add(new ElwhaCardSupportingText("Divider below separates body from actions."));
     c.add(Box.createVerticalStrut(8));
-    c.add(new ElwhaCardDivider(DividerStyle.FULL));
+    // INSET per M3 §1.7 — body → actions is a within-body separator, not a collapse-pair.
+    c.add(new ElwhaCardDivider(DividerStyle.INSET));
     c.add(Box.createVerticalStrut(8));
     c.add(
         new ElwhaCardActions()
@@ -257,6 +258,7 @@ public final class ElwhaCardV3Demo {
     b.add(Box.createVerticalStrut(8));
     b.add(new ElwhaCardSupportingText("Details hidden when collapsed."));
     b.add(Box.createVerticalStrut(8));
+    // FULL per M3 §1.7 — pairs with the ExpandLink below to mark the body/hidden boundary.
     b.add(new ElwhaCardDivider(DividerStyle.FULL));
     final ElwhaCardExpandLink link = new ElwhaCardExpandLink(b, "Show details", "Hide details");
     b.add(link);
