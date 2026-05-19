@@ -47,9 +47,11 @@ import javax.swing.Timer;
  * axis, two shape options ({@link ButtonShape#ROUND} / {@link ButtonShape#SQUARE}), and the hybrid
  * selection color model from {@code docs/research/elwha-button-design.md} §7.
  *
- * <p><strong>Story 3 hardcodes Small dimensions</strong> (40 dp container height, 16 dp horizontal
- * padding, 8 dp icon→label gap, 20 dp icon size, 12 dp square corner). Story 4 (#117) generalizes
- * the {@code ButtonSize} axis.
+ * <p><strong>Size axis.</strong> The {@link ButtonSize} enum covers the five M3 Expressive tiers
+ * (XS / S / M / L / XL) with per-tier container height, padding, icon size, and square-corner
+ * radius from design doc Appendix A. {@link #setButtonSize(ButtonSize)} switches tiers; {@link
+ * ButtonSize#minimumTargetPx()} inflates XS / S to the 48 dp WCAG touch target on the cross axis
+ * (preferred size stays at the spec-mandated 32 / 40).
  *
  * <p><strong>Paint pipeline.</strong> {@link ShadowPainter} ({@link ButtonVariant#ELEVATED} +
  * enabled only) → {@link SurfacePainter} (round-rect fill + state-layer overlay + border) → {@link
@@ -91,24 +93,6 @@ public class ElwhaButton extends JComponent {
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
 
-  /** Story 3 hardcodes Small height per design doc Appendix A. */
-  private static final int SMALL_HEIGHT_PX = 40;
-
-  /** Story 3 hardcodes Small horizontal padding per design doc Appendix A. */
-  private static final int SMALL_HORIZ_PADDING_PX = 16;
-
-  /** Story 3 hardcodes Small icon→label gap per design doc Appendix A. */
-  private static final int SMALL_ICON_GAP_PX = 8;
-
-  /** Story 3 hardcodes Small icon size per design doc Appendix A. */
-  private static final int SMALL_ICON_PX = 20;
-
-  /** Story 3 hardcodes Small square corner arcWidth per design doc Appendix B. */
-  private static final int SMALL_SQUARE_ARC = 12;
-
-  /** A11y target inflation minimum per design doc §9 (WCAG 2.5.5). */
-  private static final int A11Y_TARGET_MIN_PX = 48;
-
   private static final int DEFAULT_BORDER_WIDTH = 1;
   private static final float FOCUSED_BORDER_WIDTH = 2f;
   private static final int RIPPLE_TOTAL_MS = 400;
@@ -122,6 +106,7 @@ public class ElwhaButton extends JComponent {
   private ButtonVariant variant = ButtonVariant.FILLED;
   private ButtonInteractionMode interactionMode = ButtonInteractionMode.CLICKABLE;
   private ButtonShape shape = ButtonShape.ROUND;
+  private ButtonSize buttonSize = ButtonSize.S;
   private ColorRole surfaceRoleOverride;
   private int borderWidth = DEFAULT_BORDER_WIDTH;
   private String text = "";
@@ -451,6 +436,37 @@ public class ElwhaButton extends JComponent {
   }
 
   /**
+   * Sets the M3 size tier and triggers a relayout + repaint. The shape is not touched — picking a
+   * size leaves the corner treatment alone (a {@link ButtonShape#ROUND} button stays a capsule at
+   * every size).
+   *
+   * @param size the new size; ignored if {@code null}
+   * @return {@code this} for fluent chaining
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public ElwhaButton setButtonSize(final ButtonSize size) {
+    if (size == null || size == this.buttonSize) {
+      return this;
+    }
+    this.buttonSize = size;
+    revalidate();
+    repaint();
+    return this;
+  }
+
+  /**
+   * Returns the active size tier.
+   *
+   * @return the active size (never {@code null})
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  public ButtonSize getButtonSize() {
+    return buttonSize;
+  }
+
+  /**
    * Sets the resting border-stroke width in pixels. Focus bumps the effective stroke width to
    * {@code 2}; the value set here is only the resting width.
    *
@@ -675,7 +691,7 @@ public class ElwhaButton extends JComponent {
   // ----------------------------------------------------------- geometry
 
   private int cornerRadiusPx() {
-    return shape == ButtonShape.ROUND ? Integer.MAX_VALUE : SMALL_SQUARE_ARC;
+    return shape == ButtonShape.ROUND ? Integer.MAX_VALUE : buttonSize.squareCornerPx();
   }
 
   private int elevationLevel() {
@@ -690,13 +706,13 @@ public class ElwhaButton extends JComponent {
   private int bodyWidthPx() {
     final int labelW = labelWidthPx();
     if (icon != null) {
-      return SMALL_HORIZ_PADDING_PX
-          + SMALL_ICON_PX
-          + SMALL_ICON_GAP_PX
+      return buttonSize.paddingWithIconLeadingPx()
+          + buttonSize.iconSizePx()
+          + buttonSize.paddingWithIconGapPx()
           + labelW
-          + SMALL_HORIZ_PADDING_PX;
+          + buttonSize.paddingWithIconTrailingPx();
     }
-    return SMALL_HORIZ_PADDING_PX + labelW + SMALL_HORIZ_PADDING_PX;
+    return buttonSize.paddingNoIconPx() + labelW + buttonSize.paddingNoIconPx();
   }
 
   private int labelWidthPx() {
@@ -976,15 +992,16 @@ public class ElwhaButton extends JComponent {
 
       final FontMetrics fm = g2.getFontMetrics();
       final int labelW = (text == null || text.isEmpty()) ? 0 : fm.stringWidth(text);
-      final int contentW =
-          (icon != null ? SMALL_ICON_PX + (labelW > 0 ? SMALL_ICON_GAP_PX : 0) : 0) + labelW;
+      final int iconSlot = buttonSize.iconSizePx();
+      final int iconGap = buttonSize.paddingWithIconGapPx();
+      final int contentW = (icon != null ? iconSlot + (labelW > 0 ? iconGap : 0) : 0) + labelW;
       int x = (bodyW - contentW) / 2;
       final int y = bodyH / 2;
 
       if (icon != null) {
-        final int iconY = y - SMALL_ICON_PX / 2;
+        final int iconY = y - iconSlot / 2;
         icon.paintIcon(this, g2, x, iconY);
-        x += SMALL_ICON_PX + (labelW > 0 ? SMALL_ICON_GAP_PX : 0);
+        x += iconSlot + (labelW > 0 ? iconGap : 0);
       }
       if (labelW > 0) {
         final int baseline = y + (fm.getAscent() - fm.getDescent()) / 2;
@@ -1033,17 +1050,18 @@ public class ElwhaButton extends JComponent {
   @Override
   public Dimension getPreferredSize() {
     final Insets s = shadowReserve();
-    return new Dimension(bodyWidthPx() + s.left + s.right, SMALL_HEIGHT_PX + s.top + s.bottom);
+    return new Dimension(
+        bodyWidthPx() + s.left + s.right, buttonSize.containerHeightPx() + s.top + s.bottom);
   }
 
   @Override
   public Dimension getMinimumSize() {
     final Dimension pref = getPreferredSize();
-    // §9 a11y target inflation — Small is 40 dp, below the 48 dp minimum. Layout managers that
-    // honor minimumSize will give the button the inflated cross-axis target; the visible body
-    // remains at 40.
-    return new Dimension(
-        Math.max(pref.width, A11Y_TARGET_MIN_PX), Math.max(pref.height, A11Y_TARGET_MIN_PX));
+    // §9 a11y target inflation — XS (32 dp) and S (40 dp) sit below the 48 dp WCAG target.
+    // Layout managers that honor minimumSize give the button the inflated cross-axis target while
+    // the visible body stays at the spec-mandated 32 / 40. Larger sizes already exceed 48.
+    final int targetMin = buttonSize.minimumTargetPx();
+    return new Dimension(Math.max(pref.width, targetMin), Math.max(pref.height, targetMin));
   }
 
   @Override
