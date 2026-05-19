@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.StateLayer;
@@ -28,7 +29,6 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -1085,16 +1085,22 @@ public class ElwhaCard extends ElwhaSurface {
   /** Expanding-circle ripple, clipped to the card's rounded body shape. */
   private void paintRipple(final Graphics2D g2) {
     final java.awt.Rectangle b = bodyBounds();
-    final int arc = getShape().px();
-    g2.setClip(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
-    final float expand = Math.min(1f, rippleProgress * (RIPPLE_TOTAL_MS / 250f));
-    final float fade = Math.max(0f, 1f - Math.max(0f, (rippleProgress - 0.375f) / 0.625f));
-    final int maxRadius = (int) Math.hypot(b.width, b.height);
-    final int r = (int) (maxRadius * expand);
-    final Color tint = ColorRole.ON_SURFACE.resolve();
-    g2.setComposite(AlphaComposite.SrcOver.derive(0.10f * fade));
-    g2.setColor(tint);
-    g2.fill(new Ellipse2D.Float(rippleOrigin.x - r, rippleOrigin.y - r, r * 2f, r * 2f));
+    final Graphics2D rg = (Graphics2D) g2.create();
+    try {
+      // RipplePainter works in body-local coordinates; translate to the body origin and convert
+      // the component-space click point to match.
+      rg.translate(b.x, b.y);
+      RipplePainter.paint(
+          rg,
+          b.width,
+          b.height,
+          new Point(rippleOrigin.x - b.x, rippleOrigin.y - b.y),
+          rippleProgress,
+          getShape().px(),
+          ColorRole.ON_SURFACE.resolve());
+    } finally {
+      rg.dispose();
+    }
   }
 
   /** M3 top-trailing selected badge — PRIMARY circle + check glyph, no layout reservation. */
