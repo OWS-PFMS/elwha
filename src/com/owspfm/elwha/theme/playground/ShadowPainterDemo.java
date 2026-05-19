@@ -118,7 +118,12 @@ public final class ShadowPainterDemo {
 
     @Override
     protected void paintComponent(Graphics g) {
-      g.setColor(ColorRole.SURFACE.resolve());
+      // In dark mode the spec'd SURFACE is near-black and black shadows disappear into it (which
+      // is correct M3 behavior — dark elevation reads through surface tint, not shadow). The demo
+      // intentionally overrides with a mid-gray backdrop in dark mode so the shadow is visible for
+      // smoketest verification, even though that's not how a real M3 dark UI would look.
+      final boolean dark = ElwhaTheme.current().mode().resolved() == Mode.DARK;
+      g.setColor(dark ? new java.awt.Color(80, 80, 86) : ColorRole.SURFACE.resolve());
       g.fillRect(0, 0, getWidth(), getHeight());
     }
 
