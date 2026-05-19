@@ -81,12 +81,18 @@ public final class ShadowPainter {
     }
     final int elevation = Math.min(MAX_ELEVATION, elevationLevel);
     final Insets insets = shadowInsets(elevation);
-    final int arc = Math.max(0, Math.min(cornerRadiusPx, Math.min(width, height) / 2));
+    // arc here is arcWidth in RoundRectangle2D's sense — the FULL diameter of the corner ellipse,
+    // i.e. 2 × corner radius. Convention matches SurfacePainter / ElwhaCard.paintRipple /
+    // ShapeScale
+    // so the shadow silhouette matches the body silhouette exactly. A FULL pill (arc clamped to
+    // min(w,h)) is corner-radius = min(w,h)/2 = pill capsule.
+    final int arc = Math.max(0, Math.min(cornerRadiusPx, Math.min(width, height)));
+    final int cornerRadius = arc / 2;
 
     // 9-slice requires a non-empty center slice; small bodies fall back to a direct render at exact
     // size. This path is uncached — small interactive primitives are unlikely to hit it on the hot
     // path, and re-rendering at the rare exact size avoids polluting the shared cache.
-    final int sliceSide = arc + Math.max(insets.left, insets.top);
+    final int sliceSide = cornerRadius + Math.max(insets.left, insets.top);
     if (width < 2 * sliceSide || height < 2 * sliceSide) {
       final BufferedImage exact = renderShadowAtBodySize(width, height, arc, elevation);
       g.drawImage(exact, -insets.left, -insets.top, null);
@@ -94,7 +100,7 @@ public final class ShadowPainter {
     }
 
     final BufferedImage canon = canonicalImage(arc, elevation);
-    nineSlice(g, canon, width, height, arc, insets);
+    nineSlice(g, canon, width, height, cornerRadius, insets);
   }
 
   /**
@@ -163,19 +169,21 @@ public final class ShadowPainter {
     if (img != null) {
       return img;
     }
-    final int canonicalBody = Math.max(2 * arc + CANONICAL_STRAIGHT_EDGE, 16);
+    // Canonical body must be at least arc + STRAIGHT — two half-corners (each arc/2 wide) plus a
+    // small straight middle for 9-slice to stretch across.
+    final int canonicalBody = Math.max(arc + CANONICAL_STRAIGHT_EDGE, 16);
     img = renderShadowAtBodySize(canonicalBody, canonicalBody, arc, elevation);
     CACHE.put(key, new SoftReference<>(img));
     return img;
   }
 
   private static void nineSlice(
-      Graphics2D g, BufferedImage canon, int width, int height, int arc, Insets insets) {
+      Graphics2D g, BufferedImage canon, int width, int height, int cornerRadius, Insets insets) {
     final int canonW = canon.getWidth();
     final int canonH = canon.getHeight();
-    final int sliceX = arc + insets.left;
-    final int sliceTop = arc + insets.top;
-    final int sliceBottom = arc + insets.bottom;
+    final int sliceX = cornerRadius + insets.left;
+    final int sliceTop = cornerRadius + insets.top;
+    final int sliceBottom = cornerRadius + insets.bottom;
 
     // Source coordinates (in the canonical image)
     final int srcXMid0 = sliceX;
@@ -186,12 +194,12 @@ public final class ShadowPainter {
     // Destination coordinates (in body-relative units; the shadow halo extends out by the per-side
     // inset reserve returned by shadowInsets()).
     final int dstX0 = -insets.left;
-    final int dstX1 = arc;
-    final int dstX2 = width - arc;
+    final int dstX1 = cornerRadius;
+    final int dstX2 = width - cornerRadius;
     final int dstX3 = width + insets.right;
     final int dstY0 = -insets.top;
-    final int dstY1 = arc;
-    final int dstY2 = height - arc;
+    final int dstY1 = cornerRadius;
+    final int dstY2 = height - cornerRadius;
     final int dstY3 = height + insets.bottom;
 
     // 4 corners (no stretch)
