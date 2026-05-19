@@ -1340,6 +1340,14 @@ public class ElwhaCard extends ElwhaSurface {
       final int padV = paddingVertical.px();
       final int interGap = interElementGap();
       final int count = parent.getComponentCount();
+      // Slot-width estimate for the heightForChild calls. Once the chassis has been laid out
+      // even once, parent.getWidth() is positive and reflects the actual width children will
+      // get — we use it so width-sensitive children (ElwhaCardActions wrap rows, ElwhaCardMedia
+      // cover-fit slot height) report the right preferred height for the chassis to reserve.
+      // Without this, the preferred-height computation would use single-row / intrinsic heights
+      // and the chassis would be sized too short to contain wrapped action rows. Settles after
+      // one re-layout cycle.
+      final int parentBodyW = Math.max(0, parent.getWidth() - ins.left - ins.right);
       int totalH = 0;
       int maxW = 0;
       boolean anyVisible = false;
@@ -1373,7 +1381,8 @@ public class ElwhaCard extends ElwhaSurface {
         }
         final Dimension p = c.getPreferredSize();
         final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
-        totalH += p.height;
+        final int cellW = bleed ? parentBodyW : Math.max(0, parentBodyW - 2 * padH);
+        totalH += heightForChild(c, cellW);
         maxW = Math.max(maxW, bleed ? p.width : p.width + 2 * padH);
         prevVisible = c;
       }
