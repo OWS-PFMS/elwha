@@ -1,5 +1,6 @@
 package com.owspfm.elwha.card.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.card.CardVariant;
 import com.owspfm.elwha.card.CollapseRule;
 import com.owspfm.elwha.card.DividerStyle;
@@ -25,7 +26,6 @@ import java.awt.image.BufferedImage;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -76,6 +76,14 @@ public final class GalleryPanel extends JPanel {
 
     content.add(section("Full slot configuration", row(fullSlotCard())));
     content.add(section("Minimal config (defaults only)", row(minimalCard())));
+
+    content.add(
+        section(
+            "Card ↔ Button pairings (M3 spec §3.3)",
+            row(
+                pairingCard(CardVariant.ELEVATED),
+                pairingCard(CardVariant.FILLED),
+                pairingCard(CardVariant.OUTLINED))));
 
     content.add(
         section("Two-tier conversation card (Gmail pattern, spec §4.3)", row(twoTierCard())));
@@ -179,10 +187,53 @@ public final class GalleryPanel extends JPanel {
     card.add(Box.createVerticalStrut(8));
     card.add(
         new ElwhaCardActions()
-            .addLeading(new JButton("Share"))
-            .addTrailing(new JButton("Cancel"))
-            .addTrailing(new JButton("Save")));
+            .addLeading(ElwhaButton.textButton("Share"))
+            .addTrailing(ElwhaButton.outlinedButton("Cancel"))
+            .addTrailing(ElwhaButton.filledButton("Save")));
     return card;
+  }
+
+  /**
+   * A card whose action row demonstrates the M3 spec §3.3 Card ↔ Button pairing: each card variant
+   * pairs with a specific secondary + primary action-button variant.
+   */
+  private static ElwhaCard pairingCard(final CardVariant v) {
+    final String name = v.name().charAt(0) + v.name().substring(1).toLowerCase();
+    final String pairing =
+        switch (v) {
+          case ELEVATED -> "Outlined + Filled";
+          case FILLED -> "Text + Outlined";
+          case OUTLINED -> "Text + Filled-tonal";
+        };
+    final ElwhaCard card = new ElwhaCard().setVariant(v);
+    card.add(
+        new ElwhaCardHeader().setTitle(name + " card").setSubtitle("CTA pairing — " + pairing));
+    card.add(
+        new ElwhaCardSupportingText(
+            "Per M3 spec §3.3 the "
+                + name.toLowerCase()
+                + " card variant pairs with the "
+                + pairing.toLowerCase()
+                + " action-button pair."));
+    card.add(new ElwhaCardDivider());
+    card.add(
+        new ElwhaCardActions().addTrailing(pairingSecondary(v)).addTrailing(pairingPrimary(v)));
+    return card;
+  }
+
+  private static ElwhaButton pairingSecondary(final CardVariant v) {
+    return switch (v) {
+      case ELEVATED -> ElwhaButton.outlinedButton("Cancel");
+      case FILLED, OUTLINED -> ElwhaButton.textButton("Cancel");
+    };
+  }
+
+  private static ElwhaButton pairingPrimary(final CardVariant v) {
+    return switch (v) {
+      case ELEVATED -> ElwhaButton.filledButton("Confirm");
+      case FILLED -> ElwhaButton.outlinedButton("Confirm");
+      case OUTLINED -> ElwhaButton.filledTonalButton("Confirm");
+    };
   }
 
   private static ElwhaCard minimalCard() {

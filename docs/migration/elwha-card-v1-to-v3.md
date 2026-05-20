@@ -172,6 +172,26 @@ card.add(new ElwhaCardHeader()
     .setSubtitle("Your order has shipped"));
 ```
 
+### Action-button pairing
+
+Card action rows take their buttons via `ElwhaCardActions.addLeading` / `addTrailing`. `ElwhaCardActions` accepts any `JComponent`, so a raw `JButton` still works — but `ElwhaButton` is the token-native, M3-correct choice (and the only path to the Filled-tonal variant). M3 spec §3.3 pairs each card variant with a specific secondary + primary button variant; match the card to its pairing so the action row reads at the right emphasis:
+
+| Card variant | Secondary CTA | Primary CTA |
+|---|---|---|
+| Elevated | `ElwhaButton.outlinedButton(...)` | `ElwhaButton.filledButton(...)` |
+| Filled | `ElwhaButton.textButton(...)` | `ElwhaButton.outlinedButton(...)` |
+| Outlined | `ElwhaButton.textButton(...)` | `ElwhaButton.filledTonalButton(...)` |
+
+```java
+ElwhaCard card = ElwhaCard.elevatedCard();
+card.add(new ElwhaCardHeader().setTitle("Title"));
+card.add(new ElwhaCardSupportingText("Body text."));
+card.add(new ElwhaCardDivider());
+card.add(new ElwhaCardActions()
+    .addTrailing(ElwhaButton.outlinedButton("Cancel"))   // secondary — left of primary
+    .addTrailing(ElwhaButton.filledButton("Confirm")));   // primary — rightmost
+```
+
 ---
 
 ## 6. What's gone with no replacement (and why)
