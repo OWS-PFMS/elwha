@@ -95,8 +95,13 @@ For Button, Chip, Icon Button, Card, Surface. Contract:
 
 - **Every option the component class exposes** has an interactive control (combo for enums,
   checkbox for booleans, spinner for ints, etc.).
-- A **live instance** on a clean stage reflects the controls immediately.
-- An **equivalent-Java code view** shows the construction code, refreshed on every change.
+- A **live instance** reflects the controls immediately, centered on a **configurable surface
+  stage** (see §5) — the component is always shown against an `ElwhaSurface`, not the bare panel.
+- A **`Component | Surface` switcher** flips the controls column between the component's own
+  controls and the surface's controls. The switcher is an `ElwhaChipList` in `SINGLE_MANDATORY`
+  mode — the Showcase dogfooding the library's own segmented-control semantics.
+- An **equivalent-Java code view** shows the construction code, refreshed on every change, and
+  tracks the active switcher segment (component code vs. surface code).
 - Same regions, same arrangement, every component.
 
 ### 4.2 Container Workbench (multi-instance containers)
@@ -117,10 +122,15 @@ vertical `BoxLayout` of a cramped `GridBagLayout` control run, a bare floating s
 
 The Showcase's Component Workbench is a deliberate **three-region** layout:
 
-- **Stage** — the live component centered on a generously padded surface panel. The stage
-  backdrop may render the active surface role so contrast is shown honestly.
-- **Controls** — grouped into labelled sections (not one flat `GridBag` run), scrollable, with
-  consistent control widths and alignment.
+- **Stage** — the live component centered on a **configurable `ElwhaSurface`**. The surface is
+  not decorative backdrop: it is a first-class, configurable part of the workbench. Its role,
+  shape, border, size, and visibility are all driven from the controls column's `Surface`
+  segment, so contrast and elevation are shown honestly and the component can be evaluated on
+  any surface — or, with the surface hidden, on the bare stage background. This is the canonical
+  `ComponentWorkbench` contract; every component inherits it.
+- **Controls** — a `Component | Surface` switcher over a card-swapped controls column. Each
+  segment's controls are grouped into labelled sections (not one flat `GridBag` run),
+  scrollable, with consistent control widths and alignment.
 - **Code view** — monospace, a proper header, and a Copy button. Card's `SnippetPanel` already
   does this; it is generalized into the shared code-view widget (§7).
 
