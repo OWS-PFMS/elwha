@@ -6,11 +6,22 @@ import com.owspfm.elwha.button.ButtonSize;
 import com.owspfm.elwha.button.ButtonVariant;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.button.playground.ButtonPlaygroundPanels;
+import com.owspfm.elwha.card.CardVariant;
+import com.owspfm.elwha.card.CollapseRule;
+import com.owspfm.elwha.card.ElwhaCard;
+import com.owspfm.elwha.card.ElwhaCardActions;
+import com.owspfm.elwha.card.ElwhaCardChevron;
+import com.owspfm.elwha.card.ElwhaCardDivider;
+import com.owspfm.elwha.card.ElwhaCardExpandLink;
+import com.owspfm.elwha.card.ElwhaCardHeader;
+import com.owspfm.elwha.card.ElwhaCardLeadingIcon;
+import com.owspfm.elwha.card.ElwhaCardMedia;
+import com.owspfm.elwha.card.ElwhaCardSupportingText;
+import com.owspfm.elwha.card.ElwhaCardThumbnail;
+import com.owspfm.elwha.card.ExpansionOverflow;
+import com.owspfm.elwha.card.ThumbnailShape;
 import com.owspfm.elwha.card.playground.CursorReferencePanel;
-import com.owspfm.elwha.card.playground.ElwhaCardListShowcase;
 import com.owspfm.elwha.card.playground.GalleryPanel;
-import com.owspfm.elwha.card.playground.LiveConfigPanel;
-import com.owspfm.elwha.card.playground.SnippetPanel;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
@@ -33,10 +44,16 @@ import com.owspfm.elwha.theme.Theme;
 import com.owspfm.elwha.theme.playground.FoundationsPanels;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
@@ -95,6 +112,11 @@ import javax.swing.tree.TreeSelectionModel;
  * @since v0.3.0
  */
 public final class ElwhaShowcase {
+
+  // A fixed media-slot height for the Card Workbench: pinning the height keeps ElwhaCard's
+  // preferred size stable (an unpinned painter slot is width-derived and only settles after a
+  // re-layout cycle the surface-stage sizing would otherwise freeze too early).
+  private static final int CARD_MEDIA_HEIGHT = 180;
 
   private final List<Runnable> tokenRefreshers = new ArrayList<>();
   private final JPanel content = new JPanel(new CardLayout());
@@ -256,7 +278,7 @@ public final class ElwhaShowcase {
 
     final DefaultMutableTreeNode containers = new DefaultMutableTreeNode("Containers");
     addLeaf(containers, "Chip List", new ChipListContainer().component());
-    addLeaf(containers, "Card List", new ElwhaCardListShowcase());
+    addLeaf(containers, "Card List", new CardListContainer().component());
     addLeaf(containers, "Button Group", buildButtonGroupContainer());
     addLeaf(containers, "Icon Button Group", buildIconButtonGroupContainer());
     root.add(containers);
@@ -989,17 +1011,306 @@ public final class ElwhaShowcase {
   }
 
   private static JComponent buildCardWorkbench() {
-    final LiveConfigPanel live = new LiveConfigPanel();
-    final SnippetPanel snippet = new SnippetPanel();
-    snippet.update(live.snapshot());
-    live.addConfigChangeListener(snippet::update);
-    snippet.setPreferredSize(new Dimension(620, 220));
+    final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JPanel wrap = new JPanel(new BorderLayout());
-    wrap.add(live, BorderLayout.CENTER);
-    wrap.add(snippet, BorderLayout.SOUTH);
-    return wrap;
+    final JComboBox<CardVariant> variantBox = new JComboBox<>(CardVariant.values());
+    final JSpinner elevationBox =
+        new JSpinner(new SpinnerNumberModel(1, 0, ElwhaCard.MAX_ELEVATION, 1));
+    final JComboBox<SpaceScale> padHBox = new JComboBox<>(SpaceScale.values());
+    padHBox.setSelectedItem(SpaceScale.LG);
+    final JComboBox<SpaceScale> padVBox = new JComboBox<>(SpaceScale.values());
+    padVBox.setSelectedItem(SpaceScale.MD);
+    final JComboBox<CardMediaSlot> mediaBox = new JComboBox<>(CardMediaSlot.values());
+    final JCheckBox headerBox = new JCheckBox("Header (title + subtitle)", true);
+    final JComboBox<CardHeaderLeading> headerLeadingBox =
+        new JComboBox<>(CardHeaderLeading.values());
+    final JCheckBox bodyBox = new JCheckBox("Supporting text", true);
+    final JCheckBox dividerBox = new JCheckBox("Divider");
+    final JCheckBox actionsBox = new JCheckBox("Actions row");
+    final JCheckBox actionableBox = new JCheckBox("Actionable");
+    final JCheckBox selectableBox = new JCheckBox("Selectable");
+    final JCheckBox selectedBox = new JCheckBox("Selected");
+    final JCheckBox collapsibleBox = new JCheckBox("Collapsible");
+    final JCheckBox collapsedBox = new JCheckBox("Collapsed");
+    final JCheckBox animateBox = new JCheckBox("Animate collapse", true);
+    final JComboBox<ExpansionOverflow> overflowBox = new JComboBox<>(ExpansionOverflow.values());
+    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Card");
+    controls.addControl("Variant", variantBox);
+    controls.addControl("Elevation", elevationBox);
+    controls.addControl("Padding — horizontal", padHBox);
+    controls.addControl("Padding — vertical", padVBox);
+    controls.addSection("Slots");
+    controls.addControl("Media", mediaBox);
+    controls.addControl("", headerBox);
+    controls.addControl("Header leading", headerLeadingBox);
+    controls.addControl("", bodyBox);
+    controls.addControl("", dividerBox);
+    controls.addControl("", actionsBox);
+    controls.addSection("Interaction");
+    controls.addControl("", actionableBox);
+    controls.addControl("", selectableBox);
+    controls.addControl("", selectedBox);
+    controls.addControl("", collapsibleBox);
+    controls.addControl("", collapsedBox);
+    controls.addControl("", animateBox);
+    controls.addControl("Expansion overflow", overflowBox);
+    controls.addSection("State");
+    controls.addControl("", enabledBox);
+
+    final Runnable apply =
+        () -> {
+          headerLeadingBox.setEnabled(headerBox.isSelected());
+          selectedBox.setEnabled(selectableBox.isSelected());
+          collapsedBox.setEnabled(collapsibleBox.isSelected());
+          animateBox.setEnabled(collapsibleBox.isSelected());
+          final CardConfig cfg =
+              new CardConfig(
+                  (CardVariant) variantBox.getSelectedItem(),
+                  (Integer) elevationBox.getValue(),
+                  (SpaceScale) padHBox.getSelectedItem(),
+                  (SpaceScale) padVBox.getSelectedItem(),
+                  (CardMediaSlot) mediaBox.getSelectedItem(),
+                  headerBox.isSelected(),
+                  (CardHeaderLeading) headerLeadingBox.getSelectedItem(),
+                  bodyBox.isSelected(),
+                  dividerBox.isSelected(),
+                  actionsBox.isSelected(),
+                  actionableBox.isSelected(),
+                  selectableBox.isSelected(),
+                  selectedBox.isSelected(),
+                  collapsibleBox.isSelected(),
+                  collapsedBox.isSelected(),
+                  animateBox.isSelected(),
+                  (ExpansionOverflow) overflowBox.getSelectedItem(),
+                  enabledBox.isSelected());
+          workbench.setStage(buildCard(cfg));
+          workbench.setCode(renderCardCode(cfg));
+        };
+    variantBox.addActionListener(event -> apply.run());
+    elevationBox.addChangeListener(event -> apply.run());
+    padHBox.addActionListener(event -> apply.run());
+    padVBox.addActionListener(event -> apply.run());
+    mediaBox.addActionListener(event -> apply.run());
+    headerBox.addActionListener(event -> apply.run());
+    headerLeadingBox.addActionListener(event -> apply.run());
+    bodyBox.addActionListener(event -> apply.run());
+    dividerBox.addActionListener(event -> apply.run());
+    actionsBox.addActionListener(event -> apply.run());
+    actionableBox.addActionListener(event -> apply.run());
+    selectableBox.addActionListener(event -> apply.run());
+    selectedBox.addActionListener(event -> apply.run());
+    collapsibleBox.addActionListener(event -> apply.run());
+    collapsedBox.addActionListener(event -> apply.run());
+    animateBox.addActionListener(event -> apply.run());
+    overflowBox.addActionListener(event -> apply.run());
+    enabledBox.addActionListener(event -> apply.run());
+    apply.run();
+    return workbench;
   }
+
+  private static ElwhaCard buildCard(final CardConfig cfg) {
+    final ElwhaCard card =
+        switch (cfg.variant()) {
+          case FILLED -> ElwhaCard.filledCard();
+          case OUTLINED -> ElwhaCard.outlinedCard();
+          default -> ElwhaCard.elevatedCard();
+        };
+    card.setElevation(cfg.elevation());
+    card.setPadding(cfg.padH(), cfg.padV());
+
+    if (cfg.media() == CardMediaSlot.IMAGE) {
+      card.add(ElwhaCardMedia.image(demoImage()).setPreferredHeight(CARD_MEDIA_HEIGHT));
+    } else if (cfg.media() == CardMediaSlot.RENDERED) {
+      card.add(
+          ElwhaCardMedia.painter(ElwhaShowcase::paintDemoMedia)
+              .setPreferredHeight(CARD_MEDIA_HEIGHT));
+    }
+
+    ElwhaCardHeader header = null;
+    if (cfg.header()) {
+      header = new ElwhaCardHeader().setTitle("Card title").setSubtitle("Supporting subtitle");
+      if (cfg.headerLeading() == CardHeaderLeading.ICON) {
+        header.setLeading(new ElwhaCardLeadingIcon(MaterialIcons.star(24)));
+      } else if (cfg.headerLeading() == CardHeaderLeading.AVATAR) {
+        header.setLeading(new ElwhaCardThumbnail(demoImage()).setShape(ThumbnailShape.CIRCULAR));
+      }
+      card.add(header);
+    }
+    if (cfg.body()) {
+      card.add(
+          new ElwhaCardSupportingText(
+              "Supporting text carries the card's detail and wraps to the card width."));
+    }
+    if (cfg.divider()) {
+      card.add(new ElwhaCardDivider());
+    }
+    if (cfg.actions()) {
+      card.add(
+          new ElwhaCardActions()
+              .addTrailing(ElwhaButton.textButton("Dismiss"))
+              .addTrailing(ElwhaButton.filledButton("Confirm")));
+    }
+
+    card.setActionable(cfg.actionable());
+    card.setSelectable(cfg.selectable());
+    card.setExpansionOverflow(cfg.overflow());
+    card.setAnimateCollapse(cfg.animate());
+    if (cfg.collapsible()) {
+      card.setCollapsible(true);
+      if (header != null) {
+        header.addTrailing(new ElwhaCardChevron(card));
+        card.setCollapseConstraint(header, CollapseRule.ALWAYS_VISIBLE);
+      } else {
+        card.add(new ElwhaCardExpandLink(card, "Show more", "Show less"));
+      }
+      card.setCollapsed(cfg.collapsed());
+    }
+    if (cfg.selectable()) {
+      card.setSelected(cfg.selected());
+    }
+    card.setEnabled(cfg.enabled());
+    return card;
+  }
+
+  private static String renderCardCode(final CardConfig cfg) {
+    final String factory =
+        switch (cfg.variant()) {
+          case FILLED -> "filledCard";
+          case OUTLINED -> "outlinedCard";
+          default -> "elevatedCard";
+        };
+    final StringBuilder code = new StringBuilder(640);
+    code.append("ElwhaCard card = ElwhaCard.").append(factory).append("();\n");
+    code.append("card.setElevation(").append(cfg.elevation()).append(");\n");
+    code.append("card.setPadding(SpaceScale.")
+        .append(cfg.padH())
+        .append(", SpaceScale.")
+        .append(cfg.padV())
+        .append(");\n");
+    if (cfg.media() == CardMediaSlot.IMAGE) {
+      code.append("card.add(ElwhaCardMedia.image(image).setPreferredHeight(")
+          .append(CARD_MEDIA_HEIGHT)
+          .append("));\n");
+    } else if (cfg.media() == CardMediaSlot.RENDERED) {
+      code.append("card.add(ElwhaCardMedia.painter((g, w, h) -> g.fillRect(0, 0, w, h))\n");
+      code.append("    .setPreferredHeight(").append(CARD_MEDIA_HEIGHT).append("));\n");
+    }
+    if (cfg.header()) {
+      code.append("ElwhaCardHeader header = new ElwhaCardHeader()\n");
+      code.append("    .setTitle(\"Card title\")\n");
+      code.append("    .setSubtitle(\"Supporting subtitle\");\n");
+      if (cfg.headerLeading() == CardHeaderLeading.ICON) {
+        code.append("header.setLeading(new ElwhaCardLeadingIcon(MaterialIcons.star(24)));\n");
+      } else if (cfg.headerLeading() == CardHeaderLeading.AVATAR) {
+        code.append(
+            "header.setLeading("
+                + "new ElwhaCardThumbnail(image).setShape(ThumbnailShape.CIRCULAR));\n");
+      }
+      code.append("card.add(header);\n");
+    }
+    if (cfg.body()) {
+      code.append("card.add(new ElwhaCardSupportingText(\"Supporting text…\"));\n");
+    }
+    if (cfg.divider()) {
+      code.append("card.add(new ElwhaCardDivider());\n");
+    }
+    if (cfg.actions()) {
+      code.append("card.add(new ElwhaCardActions()\n");
+      code.append("    .addTrailing(ElwhaButton.textButton(\"Dismiss\"))\n");
+      code.append("    .addTrailing(ElwhaButton.filledButton(\"Confirm\")));\n");
+    }
+    if (cfg.actionable()) {
+      code.append("card.setActionable(true);\n");
+    }
+    if (cfg.selectable()) {
+      code.append("card.setSelectable(true);\n");
+    }
+    if (cfg.overflow() != ExpansionOverflow.GROW) {
+      code.append("card.setExpansionOverflow(ExpansionOverflow.")
+          .append(cfg.overflow())
+          .append(");\n");
+    }
+    if (cfg.collapsible()) {
+      code.append("card.setCollapsible(true);\n");
+      if (cfg.header()) {
+        code.append("header.addTrailing(new ElwhaCardChevron(card));\n");
+      } else {
+        code.append("card.add(new ElwhaCardExpandLink(card, \"Show more\", \"Show less\"));\n");
+      }
+      if (!cfg.animate()) {
+        code.append("card.setAnimateCollapse(false);\n");
+      }
+      if (cfg.collapsed()) {
+        code.append("card.setCollapsed(true);\n");
+      }
+    }
+    if (cfg.selectable() && cfg.selected()) {
+      code.append("card.setSelected(true);\n");
+    }
+    if (!cfg.enabled()) {
+      code.append("card.setEnabled(false);\n");
+    }
+    if (code.length() > 0 && code.charAt(code.length() - 1) == '\n') {
+      code.setLength(code.length() - 1);
+    }
+    return code.toString();
+  }
+
+  // A demo raster for the Card Workbench's image-media and avatar-thumbnail slots — the library
+  // ships no sample imagery, so the workbench paints its own.
+  private static Image demoImage() {
+    final BufferedImage image = new BufferedImage(480, 270, BufferedImage.TYPE_INT_RGB);
+    final Graphics2D g = image.createGraphics();
+    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+    g.setPaint(new GradientPaint(0, 0, new Color(0x33568C), 480, 270, new Color(0x8C5A8C)));
+    g.fillRect(0, 0, 480, 270);
+    g.dispose();
+    return image;
+  }
+
+  private static void paintDemoMedia(final Graphics2D g, final int width, final int height) {
+    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+    g.setPaint(new GradientPaint(0, 0, new Color(0x2E7D6B), width, height, new Color(0x7FB8A8)));
+    g.fillRect(0, 0, width, height);
+  }
+
+  /** The Card Workbench's media-slot option. */
+  private enum CardMediaSlot {
+    NONE,
+    IMAGE,
+    RENDERED
+  }
+
+  /** The Card Workbench's header leading-slot option. */
+  private enum CardHeaderLeading {
+    NONE,
+    ICON,
+    AVATAR
+  }
+
+  /** The full Card Workbench configuration — read from the controls, consumed by builder + code. */
+  private record CardConfig(
+      CardVariant variant,
+      int elevation,
+      SpaceScale padH,
+      SpaceScale padV,
+      CardMediaSlot media,
+      boolean header,
+      CardHeaderLeading headerLeading,
+      boolean body,
+      boolean divider,
+      boolean actions,
+      boolean actionable,
+      boolean selectable,
+      boolean selected,
+      boolean collapsible,
+      boolean collapsed,
+      boolean animate,
+      ExpansionOverflow overflow,
+      boolean enabled) {}
 
   // --- helpers ---
 
