@@ -12,6 +12,7 @@ import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
+import com.owspfm.elwha.theme.Theme;
 import com.owspfm.elwha.theme.playground.FoundationsPanels;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -24,9 +25,12 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
@@ -126,6 +130,10 @@ public final class ElwhaShowcase {
       bar.add(button);
     }
 
+    bar.add(Box.createHorizontalStrut(16));
+    bar.add(new JLabel("Palette:"));
+    bar.add(buildPalettePicker());
+
     statusLabel = new JLabel();
     bar.add(Box.createHorizontalStrut(16));
     bar.add(statusLabel);
@@ -133,8 +141,58 @@ public final class ElwhaShowcase {
     return bar;
   }
 
+  // The picker is populated from MaterialPalettes.bundled() — directory-derived, so a new palette
+  // JSON dropped into the resources palettes/ directory appears here with no code change.
+  private JComponent buildPalettePicker() {
+    final List<Theme> themes = MaterialPalettes.bundled();
+    final JComboBox<Theme> picker = new JComboBox<>(themes.toArray(new Theme[0]));
+    picker.setRenderer(
+        new DefaultListCellRenderer() {
+          @Override
+          public Component getListCellRendererComponent(
+              final JList<?> list,
+              final Object value,
+              final int index,
+              final boolean isSelected,
+              final boolean cellHasFocus) {
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            if (value instanceof Theme theme) {
+              setText(theme.name());
+            }
+            return this;
+          }
+        });
+
+    // Select the entry matching the installed theme before wiring the listener, so seeding the
+    // initial selection does not fire a redundant re-install.
+    final String installed = ElwhaTheme.current().theme().name();
+    for (final Theme theme : themes) {
+      if (theme.name().equals(installed)) {
+        picker.setSelectedItem(theme);
+        break;
+      }
+    }
+    picker.addActionListener(
+        event -> {
+          if (picker.getSelectedItem() instanceof Theme theme) {
+            switchTheme(theme);
+          }
+        });
+    return picker;
+  }
+
   private void switchMode(final Mode mode) {
     ElwhaTheme.install(ElwhaTheme.current().withMode(mode));
+    // install() dispatches the component-tree repaint; refresh explicitly-set token state too.
+    SwingUtilities.invokeLater(
+        () -> {
+          tokenRefreshers.forEach(Runnable::run);
+          updateStatus();
+        });
+  }
+
+  private void switchTheme(final Theme theme) {
+    ElwhaTheme.install(ElwhaTheme.current().withTheme(theme));
     // install() dispatches the component-tree repaint; refresh explicitly-set token state too.
     SwingUtilities.invokeLater(
         () -> {
