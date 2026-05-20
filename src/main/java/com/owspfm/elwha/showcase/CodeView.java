@@ -45,7 +45,7 @@ public final class CodeView extends JPanel {
    */
   public CodeView(final String title) {
     super(new BorderLayout());
-    setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+    setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
 
     final JLabel heading = new JLabel(title);
     heading.putClientProperty("FlatLaf.styleClass", "h4");
