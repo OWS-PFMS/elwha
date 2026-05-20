@@ -17,10 +17,12 @@ import com.owspfm.elwha.icons.MaterialIcons;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import javax.swing.BorderFactory;
@@ -30,6 +32,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.Scrollable;
 
 /**
  * Read-only static gallery of V3 {@link ElwhaCard} configurations. Each section pairs a heading
@@ -48,7 +51,7 @@ public final class GalleryPanel extends JPanel {
   /** Builds the gallery scroller. */
   public GalleryPanel() {
     super(new BorderLayout());
-    final JPanel content = new JPanel();
+    final ViewportWidthPanel content = new ViewportWidthPanel();
     content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
     content.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
@@ -101,6 +104,40 @@ public final class GalleryPanel extends JPanel {
     scroll.setBorder(null);
     scroll.getVerticalScrollBar().setUnitIncrement(16);
     add(scroll, BorderLayout.CENTER);
+  }
+
+  /**
+   * Gallery content panel that locks its width to the enclosing {@link JScrollPane} viewport.
+   * Without this the {@code GridLayout} rows expand to the cards' natural preferred width — and an
+   * {@link ElwhaCard} cooperates with whatever width its parent assigns (spec §3.4), so
+   * unconstrained it reports a very wide preferred size. Tracking the viewport width forces the
+   * rows to reflow the cards into the visible area; only vertical scrolling remains.
+   */
+  private static final class ViewportWidthPanel extends JPanel implements Scrollable {
+    @Override
+    public Dimension getPreferredScrollableViewportSize() {
+      return getPreferredSize();
+    }
+
+    @Override
+    public int getScrollableUnitIncrement(final Rectangle r, final int orient, final int dir) {
+      return 16;
+    }
+
+    @Override
+    public int getScrollableBlockIncrement(final Rectangle r, final int orient, final int dir) {
+      return Math.max(16, r.height - 32);
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+      return true;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportHeight() {
+      return false;
+    }
   }
 
   private static JComponent section(final String title, final JComponent body) {
