@@ -94,7 +94,7 @@ Most recent first (run `git log --oneline main..HEAD` for the live list):
 mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.ElwhaCardV3Demo"
 ```
 
-The demo (`src/com/owspfm/elwha/card/ElwhaCardV3Demo.java`) is a scrollable single-window
+The demo (`src/main/java/com/owspfm/elwha/card/ElwhaCardV3Demo.java`) is a scrollable single-window
 smoke test with ten sections: Variants, Header anatomy, Media + Actions + Divider, Collapse,
 Interactivity, Disabled, HORIZONTAL, Two-tier conversation, ExpansionOverflow.SCROLL, and
 ElwhaCardList. **Not the standalone playground** (that's Phase 3 / #92).

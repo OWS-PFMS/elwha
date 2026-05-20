@@ -72,7 +72,6 @@
   </distributionManagement>
 
   <build>
-    <sourceDirectory>src</sourceDirectory>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -115,7 +114,7 @@
         <configuration>
           <java>
             <includes>
-              <include>src/com/owspfm/**/*.java</include>
+              <include>src/main/java/com/owspfm/**/*.java</include>
             </includes>
             <googleJavaFormat>
               <style>GOOGLE</style>
@@ -145,7 +144,7 @@
         <configuration>
           <configLocation>${project.basedir}/config/checkstyle/checkstyle.xml</configLocation>
           <sourceDirectories>
-            <sourceDirectory>${project.basedir}/src</sourceDirectory>
+            <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
           </sourceDirectories>
           <includeTestSourceDirectory>false</includeTestSourceDirectory>
           <consoleOutput>true</consoleOutput>

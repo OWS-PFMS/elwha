@@ -246,7 +246,7 @@ public class PillSelectionModel {
 ### CI failing: "MISSING @version"
 
 ```
-✗ MISSING @version: src/com/owspfm/elwha/badge/ElwhaBadge.java
+✗ MISSING @version: src/main/java/com/owspfm/elwha/badge/ElwhaBadge.java
 ```
 
 **Solution**: add a class-level JavaDoc block with `@version` and `@since` matching your PR milestone.
@@ -254,7 +254,7 @@ public class PillSelectionModel {
 ### CI failing: "WRONG @version (v0.1.0 != v0.2.0)"
 
 ```
-✗ WRONG @version (v0.1.0 != v0.2.0): src/com/owspfm/elwha/card/ElwhaCard.java
+✗ WRONG @version (v0.1.0 != v0.2.0): src/main/java/com/owspfm/elwha/card/ElwhaCard.java
 ```
 
 **Solution**: bump `@version` to the PR's milestone. If the file truly should not have been modified, revert your changes to it.

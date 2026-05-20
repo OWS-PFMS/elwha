@@ -186,24 +186,50 @@ def changed_java_files(base_ref: str) -> Tuple[List[Path], List[Path]]:
     """Return ``(modified_files, added_files)`` under src/ or test/, *.java only.
 
     Uses ``base_ref...HEAD`` (triple-dot) so we diff against the merge-base —
-    matching PR diff semantics. Renames/copies are reported as added
-    (decision 1b in the plan); deletions are excluded.
+    matching PR diff semantics. Classification is rename-aware, parsed from
+    ``git diff --name-status``:
+
+      * ``A`` / ``C``            -> added
+      * ``M``                    -> modified
+      * ``R100`` (pure rename)   -> excluded — content is byte-identical, so
+        the file's ``@version`` / ``@since`` are unchanged and still valid
+      * ``R<100`` (rename+edit)  -> modified (the new path carries real edits)
+      * ``D``                    -> excluded
+
+    Excluding pure renames keeps a filesystem move (e.g. the #60 src/main/java
+    migration) from spuriously demanding ``@version`` / ``@since`` bumps on
+    files whose content never changed.
     """
     diff_range = f"{base_ref}...HEAD"
-    modified_raw = _git(
-        "diff", "--name-only", "--diff-filter=M", diff_range,
-        "--", "src/", "test/",
-    )
-    added_raw = _git(
-        "diff", "--name-only", "--diff-filter=ARC", diff_range,
+    raw = _git(
+        "diff", "--name-status", "--find-renames", diff_range,
         "--", "src/", "test/",
     )
 
-    def _parse(raw: str) -> List[Path]:
-        return [Path(line) for line in raw.splitlines()
-                if line and line.endswith(".java")]
+    modified: List[Path] = []
+    added: List[Path] = []
+    for line in raw.splitlines():
+        if not line:
+            continue
+        parts = line.split("\t")
+        status = parts[0]
+        code = status[0]
+        if code == "R":
+            similarity = int(status[1:]) if status[1:].isdigit() else 0
+            new_path = parts[2]
+            if similarity < 100 and new_path.endswith(".java"):
+                modified.append(Path(new_path))
+        elif code in ("A", "C"):
+            path = parts[-1]
+            if path.endswith(".java"):
+                added.append(Path(path))
+        elif code == "M":
+            path = parts[1]
+            if path.endswith(".java"):
+                modified.append(Path(path))
+        # D (deletion) -> excluded
 
-    return _parse(modified_raw), _parse(added_raw)
+    return modified, added
 
 
 def since_on_base(file_path: Path, base_ref: str) -> Optional[str]:
