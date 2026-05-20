@@ -11,7 +11,7 @@ import java.util.Set;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.3.0
  * @since v0.1.0
  */
 public class DefaultChipSelectionModel<T> implements ChipSelectionModel<T> {
@@ -36,9 +36,9 @@ public class DefaultChipSelectionModel<T> implements ChipSelectionModel<T> {
 
   @Override
   public void setSelected(final List<T> selected) {
-    selected.clear();
+    this.selected.clear();
     if (selected != null) {
-      selected.addAll(selected);
+      this.selected.addAll(selected);
     }
     fire();
   }

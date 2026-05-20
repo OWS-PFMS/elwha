@@ -14,13 +14,11 @@ import com.owspfm.elwha.card.playground.SnippetPanel;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
-import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
-import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.Theme;
 import com.owspfm.elwha.theme.playground.FoundationsPanels;
 import java.awt.BorderLayout;
@@ -512,81 +510,15 @@ public final class ElwhaShowcase {
     return tabs;
   }
 
-  // Story-4 proof-of-fit: the Surface Workbench mounted on the shared ComponentWorkbench scaffold.
+  // The Surface Workbench's Component segment configures the demonstrated ElwhaSurface; the
+  // scaffold then sits it on its own configurable stage surface — surface-on-surface.
   private static JComponent buildSurfaceWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
-    final ElwhaSurface surface = new ElwhaSurface();
-    surface.setPreferredSize(new Dimension(260, 170));
-    workbench.setStage(surface);
-
-    final JComboBox<ColorRole> roleBox = new JComboBox<>(ColorRole.values());
-    roleBox.setSelectedItem(surface.getSurfaceRole());
-    final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
-    shapeBox.setSelectedItem(surface.getShape());
-    final JComboBox<SurfaceBorderRole> borderBox = new JComboBox<>(SurfaceBorderRole.values());
-    final JSpinner widthSpinner =
-        new JSpinner(new SpinnerNumberModel(surface.getBorderWidth(), 0, 2, 1));
-
-    final WorkbenchControls controls = workbench.controls();
-    controls.addSection("Surface");
-    controls.addControl("Surface role", roleBox);
-    controls.addControl("Shape", shapeBox);
-    controls.addSection("Border");
-    controls.addControl("Border role", borderBox);
-    controls.addControl("Border width", widthSpinner);
-
-    final Runnable apply =
-        () -> {
-          final ColorRole role = (ColorRole) roleBox.getSelectedItem();
-          final ShapeScale shape = (ShapeScale) shapeBox.getSelectedItem();
-          final SurfaceBorderRole border = (SurfaceBorderRole) borderBox.getSelectedItem();
-          final int width = (Integer) widthSpinner.getValue();
-          surface.setSurfaceRole(role);
-          surface.setShape(shape);
-          surface.setBorderRole(border == null ? null : border.role);
-          surface.setBorderWidth(width);
-          workbench.setCode(renderSurfaceCode(role, shape, border, width));
-        };
-    roleBox.addActionListener(event -> apply.run());
-    shapeBox.addActionListener(event -> apply.run());
-    borderBox.addActionListener(event -> apply.run());
-    widthSpinner.addChangeListener(event -> apply.run());
-    apply.run();
+    final SurfaceControlPanel demo = new SurfaceControlPanel(workbench.controls(), false);
+    workbench.setStage(demo.surface());
+    demo.addChangeListener(() -> workbench.setCode(demo.code()));
+    workbench.setCode(demo.code());
     return workbench;
-  }
-
-  private static String renderSurfaceCode(
-      final ColorRole role,
-      final ShapeScale shape,
-      final SurfaceBorderRole border,
-      final int width) {
-    final StringBuilder code = new StringBuilder(160);
-    code.append("new ElwhaSurface()\n");
-    code.append("    .setSurfaceRole(ColorRole.").append(role).append(")\n");
-    code.append("    .setShape(ShapeScale.").append(shape).append(")");
-    if (border != null && border.role != null) {
-      code.append("\n    .setBorderRole(ColorRole.").append(border.role).append(")");
-      code.append("\n    .setBorderWidth(").append(width).append(")");
-    }
-    code.append(";");
-    return code.toString();
-  }
-
-  /** Wraps a nullable border {@link ColorRole} as a combo-box entry — {@code NONE} maps to null. */
-  private enum SurfaceBorderRole {
-    NONE(null),
-    OUTLINE(ColorRole.OUTLINE),
-    OUTLINE_VARIANT(ColorRole.OUTLINE_VARIANT),
-    PRIMARY(ColorRole.PRIMARY),
-    SECONDARY(ColorRole.SECONDARY),
-    TERTIARY(ColorRole.TERTIARY),
-    ERROR(ColorRole.ERROR);
-
-    private final ColorRole role;
-
-    SurfaceBorderRole(final ColorRole role) {
-      this.role = role;
-    }
   }
 
   private static JComponent buildCardComponent() {
