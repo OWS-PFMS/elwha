@@ -27,7 +27,7 @@ import javax.swing.UIManager;
  */
 public final class ComponentWorkbench extends JPanel {
 
-  private static final int CONTROLS_WIDTH = 370;
+  private static final int CONTROLS_WIDTH = 480;
   private static final int CODE_HEIGHT = 200;
 
   private final JPanel stageHost;
