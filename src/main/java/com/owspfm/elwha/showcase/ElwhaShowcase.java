@@ -962,7 +962,10 @@ public final class ElwhaShowcase {
   private static JComponent buildSurfaceComponent() {
     final JTabbedPane tabs = new JTabbedPane();
     tabs.addTab("Workbench", buildSurfaceWorkbench());
-    tabs.addTab("Gallery", scroll(SurfacePlaygroundPanels.buildMatrixPanel()));
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            gallerySection("ColorRole × ShapeScale", SurfacePlaygroundPanels.buildMatrixPanel())));
     return tabs;
   }
 

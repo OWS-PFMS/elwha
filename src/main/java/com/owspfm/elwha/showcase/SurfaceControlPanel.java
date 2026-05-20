@@ -20,7 +20,7 @@ import javax.swing.SpinnerNumberModel;
  * <ul>
  *   <li><strong>Stage mode</strong> ({@code stage = true}) — every {@link ComponentWorkbench}
  *       builds one to configure the surface its live component sits on. Adds a Size picker and a
- *       Show-surface toggle on top of the four {@code ElwhaSurface} axes.
+ *       Show-surface toggle on top of the {@code ElwhaSurface} axes.
  *   <li><strong>Component mode</strong> ({@code stage = false}) — the Surface Workbench's own
  *       <em>Component</em> segment uses one to configure the {@code ElwhaSurface} being
  *       demonstrated, which then sits on a stage-mode surface (surface-on-surface).
@@ -44,6 +44,8 @@ public final class SurfaceControlPanel {
   private final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
   private final JComboBox<BorderOption> borderBox = new JComboBox<>(BorderOption.values());
   private final JSpinner widthSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 2, 1));
+  private final JSpinner elevationSpinner =
+      new JSpinner(new SpinnerNumberModel(0, 0, ElwhaSurface.MAX_ELEVATION, 1));
   private final JComboBox<StageSize> sizeBox = new JComboBox<>(StageSize.values());
   private final JCheckBox visibleBox = new JCheckBox("Show surface", true);
 
@@ -53,7 +55,7 @@ public final class SurfaceControlPanel {
    *
    * @param into the controls column to populate
    * @param stage {@code true} to add the stage-only Size + visibility controls and default the fill
-   *     to a container role; {@code false} for a bare four-axis surface configurator
+   *     to a container role; {@code false} for a bare surface configurator
    * @version v0.3.0
    * @since v0.3.0
    */
@@ -66,6 +68,7 @@ public final class SurfaceControlPanel {
     into.addSection("Surface");
     into.addControl("Surface role", roleBox);
     into.addControl("Shape", shapeBox);
+    into.addControl("Elevation", elevationSpinner);
     into.addSection("Border");
     into.addControl("Border role", borderBox);
     into.addControl("Border width", widthSpinner);
@@ -79,6 +82,7 @@ public final class SurfaceControlPanel {
     shapeBox.addActionListener(event -> fireChanged());
     borderBox.addActionListener(event -> fireChanged());
     widthSpinner.addChangeListener(event -> fireChanged());
+    elevationSpinner.addChangeListener(event -> fireChanged());
     sizeBox.addActionListener(event -> fireChanged());
     visibleBox.addActionListener(event -> fireChanged());
 
@@ -135,6 +139,10 @@ public final class SurfaceControlPanel {
     code.append(stage ? "ElwhaSurface stage = new ElwhaSurface()\n" : "new ElwhaSurface()\n");
     code.append("    .setSurfaceRole(ColorRole.").append(roleBox.getSelectedItem()).append(")\n");
     code.append("    .setShape(ShapeScale.").append(shapeBox.getSelectedItem()).append(")");
+    final int elevation = (Integer) elevationSpinner.getValue();
+    if (elevation > 0) {
+      code.append("\n    .setElevation(").append(elevation).append(")");
+    }
     final BorderOption border = (BorderOption) borderBox.getSelectedItem();
     if (border != null && border.role != null) {
       code.append("\n    .setBorderRole(ColorRole.").append(border.role).append(")");
@@ -161,6 +169,7 @@ public final class SurfaceControlPanel {
   private void applyToSurface() {
     surface.setSurfaceRole((ColorRole) roleBox.getSelectedItem());
     surface.setShape((ShapeScale) shapeBox.getSelectedItem());
+    surface.setElevation((Integer) elevationSpinner.getValue());
     final BorderOption border = (BorderOption) borderBox.getSelectedItem();
     surface.setBorderRole(border == null ? null : border.role);
     surface.setBorderWidth((Integer) widthSpinner.getValue());
