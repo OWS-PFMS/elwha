@@ -1,6 +1,11 @@
 package com.owspfm.elwha.theme.playground;
 
 import com.owspfm.elwha.button.playground.ButtonPlaygroundPanels;
+import com.owspfm.elwha.card.playground.CursorReferencePanel;
+import com.owspfm.elwha.card.playground.ElwhaCardListShowcase;
+import com.owspfm.elwha.card.playground.GalleryPanel;
+import com.owspfm.elwha.card.playground.LiveConfigPanel;
+import com.owspfm.elwha.card.playground.SnippetPanel;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
@@ -122,6 +127,7 @@ public final class ThemePlayground {
     tabs.addTab("Icon Button", buildIconButtonTab());
     tabs.addTab("Button", buildButtonTab());
     tabs.addTab("Surface", buildSurfaceTab());
+    tabs.addTab("Card", buildCardTab());
     root.add(tabs, java.awt.BorderLayout.CENTER);
 
     frame.setContentPane(root);
@@ -279,6 +285,30 @@ public final class ThemePlayground {
     inner.addTab("Matrix", new JScrollPane(SurfacePlaygroundPanels.buildMatrixPanel()));
     inner.addTab("Live", SurfacePlaygroundPanels.buildLivePanel());
     return inner;
+  }
+
+  // --- Card tab — composes the same panels as the standalone V3 ElwhaCardPlayground (#92) so the
+  // two stay in lockstep. ---
+
+  private JComponent buildCardTab() {
+    JTabbedPane inner = new JTabbedPane();
+    inner.addTab("Gallery", new GalleryPanel());
+    inner.addTab("Live", buildCardLivePanel());
+    inner.addTab("ElwhaCardList", new ElwhaCardListShowcase());
+    inner.addTab("Cursors", new CursorReferencePanel());
+    return inner;
+  }
+
+  private JComponent buildCardLivePanel() {
+    LiveConfigPanel live = new LiveConfigPanel();
+    SnippetPanel snippet = new SnippetPanel();
+    snippet.update(live.snapshot());
+    live.addConfigChangeListener(snippet::update);
+    JPanel wrap = new JPanel(new java.awt.BorderLayout());
+    wrap.add(live, java.awt.BorderLayout.CENTER);
+    wrap.add(snippet, java.awt.BorderLayout.SOUTH);
+    snippet.setPreferredSize(new Dimension(620, 220));
+    return wrap;
   }
 
   private JComponent buildRawSwingRow() {
