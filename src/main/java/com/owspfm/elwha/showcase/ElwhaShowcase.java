@@ -517,7 +517,9 @@ public final class ElwhaShowcase {
     final JComboBox<SpaceScale> padVBox = new JComboBox<>(SpaceScale.values());
     padVBox.setSelectedItem(SpaceScale.XS);
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
-    final JCheckBox leadingIconBox = new JCheckBox("Leading icon");
+    final JComboBox<LeadingSlot> leadingSlotBox = new JComboBox<>(LeadingSlot.values());
+    final JCheckBox affordanceActiveBox = new JCheckBox("Affordance active");
+    affordanceActiveBox.setEnabled(false);
     final JCheckBox trailingIconBox = new JCheckBox("Trailing icon");
     final JCheckBox selectedBox = new JCheckBox("Selected");
     final JCheckBox enabledBox = new JCheckBox("Enabled", true);
@@ -533,7 +535,8 @@ public final class ElwhaShowcase {
     controls.addControl("Padding — horizontal", padHBox);
     controls.addControl("Padding — vertical", padVBox);
     controls.addControl("Border width", borderWidth);
-    controls.addControl("", leadingIconBox);
+    controls.addControl("Leading slot", leadingSlotBox);
+    controls.addControl("", affordanceActiveBox);
     controls.addControl("", trailingIconBox);
     controls.addSection("State");
     controls.addControl("", selectedBox);
@@ -549,7 +552,9 @@ public final class ElwhaShowcase {
           final SpaceScale padH = (SpaceScale) padHBox.getSelectedItem();
           final SpaceScale padV = (SpaceScale) padVBox.getSelectedItem();
           final int width = (Integer) borderWidth.getValue();
-          final boolean leading = leadingIconBox.isSelected();
+          final LeadingSlot leadingSlot = (LeadingSlot) leadingSlotBox.getSelectedItem();
+          affordanceActiveBox.setEnabled(leadingSlot == LeadingSlot.AFFORDANCE);
+          final boolean affordanceActive = affordanceActiveBox.isSelected();
           final boolean trailing = trailingIconBox.isSelected();
           // GHOST does not render a selected state (issue #50) — reflect that in the control.
           final boolean ghost = variant == ChipVariant.GHOST;
@@ -568,8 +573,17 @@ public final class ElwhaShowcase {
           if (surface.role != null) {
             chip.setSurfaceRole(surface.role);
           }
-          if (leading) {
+          if (leadingSlot == LeadingSlot.ICON) {
             chip.setLeadingIcon(MaterialIcons.star(14));
+          } else if (leadingSlot == LeadingSlot.AFFORDANCE) {
+            final MaterialIcons.IconPair star = MaterialIcons.pair("star", 14);
+            chip.setLeadingAffordance(
+                star.resting(),
+                star.filled(),
+                affordanceActive,
+                false,
+                "Toggle",
+                affordanceActiveBox::doClick);
           }
           if (trailing) {
             chip.setTrailingIcon(MaterialIcons.delete(14), "Remove", () -> {});
@@ -579,8 +593,19 @@ public final class ElwhaShowcase {
           workbench.setStage(chip);
           workbench.setCode(
               renderChipCode(
-                  text, variant, mode, surface, shape, padH, padV, width, leading, trailing,
-                  selected, enabled));
+                  text,
+                  variant,
+                  mode,
+                  surface,
+                  shape,
+                  padH,
+                  padV,
+                  width,
+                  leadingSlot,
+                  affordanceActive,
+                  trailing,
+                  selected,
+                  enabled));
         };
 
     textField.getDocument().addDocumentListener(new SimpleDocumentListener(apply));
@@ -591,7 +616,8 @@ public final class ElwhaShowcase {
     padHBox.addActionListener(event -> apply.run());
     padVBox.addActionListener(event -> apply.run());
     borderWidth.addChangeListener(event -> apply.run());
-    leadingIconBox.addActionListener(event -> apply.run());
+    leadingSlotBox.addActionListener(event -> apply.run());
+    affordanceActiveBox.addActionListener(event -> apply.run());
     trailingIconBox.addActionListener(event -> apply.run());
     selectedBox.addActionListener(event -> apply.run());
     enabledBox.addActionListener(event -> apply.run());
@@ -608,7 +634,8 @@ public final class ElwhaShowcase {
       final SpaceScale padH,
       final SpaceScale padV,
       final int width,
-      final boolean leading,
+      final LeadingSlot leadingSlot,
+      final boolean affordanceActive,
       final boolean trailing,
       final boolean selected,
       final boolean enabled) {
@@ -629,8 +656,14 @@ public final class ElwhaShowcase {
       code.append("\n    .setSurfaceRole(ColorRole.").append(surface.role).append(")");
     }
     code.append(";");
-    if (leading) {
+    if (leadingSlot == LeadingSlot.ICON) {
       code.append("\nchip.setLeadingIcon(MaterialIcons.star(14));");
+    } else if (leadingSlot == LeadingSlot.AFFORDANCE) {
+      code.append("\nMaterialIcons.IconPair star = MaterialIcons.pair(\"star\", 14);");
+      code.append("\nchip.setLeadingAffordance(\n")
+          .append("    star.resting(), star.filled(), ")
+          .append(affordanceActive)
+          .append(", false, \"Toggle\", onClick);");
     }
     if (trailing) {
       code.append("\nchip.setTrailingIcon(MaterialIcons.delete(14), \"Remove\", () -> {});");
@@ -663,6 +696,13 @@ public final class ElwhaShowcase {
     ChipSurfaceRole(final ColorRole role) {
       this.role = role;
     }
+  }
+
+  /** The Chip Workbench's leading-slot option — empty, a static icon, or a clickable affordance. */
+  private enum LeadingSlot {
+    NONE,
+    ICON,
+    AFFORDANCE
   }
 
   /** A {@link DocumentListener} that runs one callback on any text-field change. */
