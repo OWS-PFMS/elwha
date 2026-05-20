@@ -49,11 +49,13 @@ close).
    `ElwhaCardActions`, `ElwhaCardDivider`); Layer 4 disclosure
    affordances (`ElwhaCardChevron`, `ElwhaCardExpandLink`); Layer 5
    adaptive wrapper (`ElwhaAdaptiveCard`, deferred post-1.0).
-4. **Default LayoutManager:** `BoxLayout(Y_AXIS)` in VERTICAL
-   orientation — `add()` order = stacking order. HORIZONTAL
-   orientation uses a custom 2-column LayoutManager driven by
-   explicit `setLeadingColumn` / `setTrailingColumn` setters
-   (RTL-aware naming).
+4. **Default LayoutManager:** custom `VerticalCardLayout` —
+   `add()` order = stacking order, with M3-aware tweaks (media bleeds
+   to chassis edges at first/last position, `ElwhaCardActions` as last
+   child anchors to chassis bottom when there's slack, `ElwhaCardDivider`
+   bleeds horizontally for `DividerStyle.FULL`). **HORIZONTAL orientation
+   is deferred to v0.3.0** per spec §15.3 + #112; v0.2.0 ships
+   VERTICAL only.
 5. **Actionability is atomic.** `setActionable(boolean)` gates four
    signals together: cursor (hand), hover state-layer paint, ripple,
    tab stop + AccessibleRole. Not separable.
@@ -157,7 +159,6 @@ public class ElwhaCard extends ElwhaSurface {
   public static final String PROPERTY_SELECTED = "selected";
   public static final String PROPERTY_COLLAPSED = "collapsed";
   public static final String PROPERTY_ACTIONABLE = "actionable";
-  public static final String PROPERTY_ORIENTATION = "orientation";
 
   // ---- Construction --------------------------------------------------------
 
@@ -229,14 +230,12 @@ public class ElwhaCard extends ElwhaSurface {
   //   SCROLL = internal scroll, sibling cards stay put (M3 desktop pattern).
 
   // ---- Orientation (see §15) -----------------------------------------------
-
-  public ElwhaCard setOrientation(CardOrientation orientation);
-  public CardOrientation getOrientation();
-  // Default: VERTICAL → BoxLayout(Y_AXIS). add() order = stacking order.
-  // HORIZONTAL → custom 2-column LayoutManager. Use setLeadingColumn /
-  //   setTrailingColumn instead of add().
-  public ElwhaCard setLeadingColumn(JComponent component);   // HORIZONTAL only
-  public ElwhaCard setTrailingColumn(JComponent component);  // HORIZONTAL only
+  // v0.2.0 ships VERTICAL only — chassis layout is VerticalCardLayout, add()
+  //   order is stack order. HORIZONTAL is deferred to v0.3.0 per §15.3 / #112.
+  //   The v0.3 design will reuse add(...) with typed partitioning
+  //   (ElwhaCardMedia → leading column, everything else → trailing column
+  //   under the same VerticalCardLayout rules) — no setLeadingColumn /
+  //   setTrailingColumn API. CardOrientation enum is intentionally absent.
 
   // ---- Drag (carried forward from V1; used by ElwhaCardList<T>) -----------
 
@@ -246,7 +245,6 @@ public class ElwhaCard extends ElwhaSurface {
 }
 
 public enum CardVariant { ELEVATED, FILLED, OUTLINED }
-public enum CardOrientation { VERTICAL, HORIZONTAL }
 public enum CollapseRule { ALWAYS_VISIBLE, COLLAPSIBLE }
 public enum ExpansionOverflow { GROW, SCROLL }
 ```
@@ -269,11 +267,14 @@ public enum ExpansionOverflow { GROW, SCROLL }
 
 | Orientation | LayoutManager | Composition |
 |---|---|---|
-| `VERTICAL` (default) | `BoxLayout(Y_AXIS)` | `card.add(child)` — `add()` order = stack order |
-| `HORIZONTAL` | Custom 2-column LayoutManager | `card.setLeadingColumn(c1).setTrailingColumn(c2)` — explicit, RTL-aware. `add()` not used. |
+| `VERTICAL` (default; only mode shipped in v0.2.0) | `VerticalCardLayout` | `card.add(child)` — `add()` order = stack order |
 
-Switching orientation at runtime is supported but expensive (rebuilds
-the layout). Consumers should pick orientation at compose time.
+**HORIZONTAL deferred to v0.3.0** per spec §15.3 + #112. The v0.3
+design will reuse `card.add(...)` with **typed partitioning**
+(`ElwhaCardMedia` → leading column; everything else → trailing column
+under the same `VerticalCardLayout` rules), so orientation becomes a
+re-layout, not a re-construction. No `setLeadingColumn` /
+`setTrailingColumn` setters in the future API.
 
 ### 3.4 Width-constraint behavior
 
@@ -317,7 +318,9 @@ foundation all agree on the same contract):
    ratio. If the source aspect ratio differs from the slot's, the
    image is cover-cropped at the slot edges. Narrow chassis →
    proportionally narrower media at proportionally smaller height,
-   re-cropped from the same source.
+   re-cropped from the same source. The rule applies in any
+   orientation when HORIZONTAL ships in v0.3.0; v0.2.0 exercises it
+   in VERTICAL only.
 
 4. **No hard minimum width.** M3 cites no specific minimum and defers
    to its window-size-class breakpoint system (Compact / Medium /
@@ -338,11 +341,10 @@ explicitly:
 - `ElwhaSurface.paintChildren` clips child paint to the body's
   rounded shape — both for the M3 corner-clip aesthetic AND as a
   hard overflow boundary.
-- The chassis's `LayoutManager` (`VerticalCardLayout` for VERTICAL,
-  the two-column LayoutManager for HORIZONTAL) sizes children to fit
-  within the chassis-content bounds; nothing should ever need
-  overflow clipping as a fallback. If a child's bounds exceed the
-  chassis, that's a layout bug, not a clipping fallback to lean on.
+- The chassis's `VerticalCardLayout` sizes children to fit within the
+  chassis-content bounds; nothing should ever need overflow clipping
+  as a fallback. If a child's bounds exceed the chassis, that's a
+  layout bug, not a clipping fallback to lean on.
 
 ## 4. Layer 2 — Atoms
 
@@ -496,7 +498,7 @@ public final class ElwhaCardMedia extends JComponent {
 
   // Factories
   public static ElwhaCardMedia image(Image image);
-  public static ElwhaCardMedia painter(Consumer<Graphics2D> paint);
+  public static ElwhaCardMedia painter(MediaPainter paint);
 
   // Sizing
   public ElwhaCardMedia setAspectRatio(double ratio);   // default 16:9
@@ -504,18 +506,57 @@ public final class ElwhaCardMedia extends JComponent {
 
   public ElwhaCardMedia setPreferredHeight(int dp);     // overrides aspect-ratio sizing
   public int getPreferredHeight();
+
+  // Accessibility (#109): informative vs decorative
+  public ElwhaCardMedia setDecorative(boolean decorative); // default false (informative)
+  public boolean isDecorative();
+
+  public ElwhaCardMedia setAltText(String altText);     // null clears; default null
+  public String getAltText();
+}
+
+@FunctionalInterface
+public interface MediaPainter {
+  void paint(Graphics2D g, int width, int height);
 }
 ```
+
+**Painter API (#21).** The `painter(MediaPainter)` factory receives a
+typed callback that gets the slot width + height at paint time —
+consumers don't need to close over the component reference or read
+`Graphics2D.getClipBounds` (which can be mutated by the chassis's own
+clip operations) to know the slot dimensions. The chassis sets
+antialiasing + bilinear interpolation hints before invoking the
+painter, and the rounded-body clip from `ElwhaSurface.paintChildren`
+applies inherited — painters needn't special-case corner clipping.
+Replaces the v0.2-development `Consumer<Graphics2D>` callback which
+gave consumers no slot-size context.
 
 **Inert by construction:** `setFocusable(false)` baked in; no public
 `add(...)` overload exposed; no event listener overloads beyond
 `JComponent` base. Media is decorative content, never interactive.
 
-**Corner clipping:** when placed at the top of a card (first child in
-VERTICAL orientation) or as the leading column in HORIZONTAL
-orientation, ElwhaCardMedia clips its paint to the card's outer
-rounded shape automatically — uses cubic Bezier circle approximation
-matching `SurfacePainter`'s elliptical arc.
+**Accessibility (#109).** M3 distinguishes informative media (the photo
+of an article's hero, a chart, a screenshot — carries meaning, screen
+reader verbalizes alt-text) from decorative media (a generic
+hero-strip pattern, a faint divider thumbnail — purely visual, AT
+should skip it). Per [`m3-card-spec-organized.md` §5.5.3](m3-card-spec-organized.md#553-decorative-image-rule):
+
+- `setDecorative(false)` (default) + `setAltText("...")` → `AccessibleRole.ICON`
+  with the alt-text exposed as the accessible description. Screen
+  readers announce it during traversal.
+- `setDecorative(true)` → `AccessibleRole.LABEL` with null name /
+  description so AT skips the node entirely. Use for pure decoration.
+
+The setters re-initialize the `AccessibleContext` so a toggle mid-
+session takes effect on the next AT query.
+
+**Corner clipping:** owned by the chassis, not the media. Per #106 and
+spec §3.4, `ElwhaSurface.paintChildren` intersects every child's paint
+with `SurfacePainter.bodyShape(w, h, arc)` — a single source of truth
+for the chassis outer curve. Media painted at any chassis edge rounds
+naturally to match the chassis corners; `ElwhaCardMedia` itself does
+no local clipping.
 
 ### 5.3 `ElwhaCardActions`
 
@@ -543,11 +584,34 @@ Either segment may be empty. A card with only one segment of actions
 should pick the right axis per M3 doctrine: lone promo action goes
 leading; paired actions or overflow-bearing rows go trailing.
 
+**Wrap behavior at narrow widths (#17).** When the single-row layout
+(`leadingW + interGap + trailingW`) fits the available cell width,
+actions render on one row as above. When it doesn't, the layout
+wraps:
+
+- The leading segment wraps onto its own row(s) at the top,
+  left-aligned per row.
+- The trailing segment wraps onto its own row(s) below, right-aligned
+  per row.
+- Within a segment, items pack greedily — as many fit per row as
+  possible; a new row starts when the next item would overflow.
+- Inter-row vertical gap: `SpaceScale.SM` (8dp).
+- At cell widths below a single button width, each row still places
+  one item but the button visually clips at the cell edge (per §3.4
+  no-min-width contract).
+
+The chassis calls `ElwhaCardActions.heightForSlotWidth(int)` from
+`VerticalCardLayout.layoutContainer` to reserve enough vertical space
+for the actual number of wrapped rows — preferred-size queries don't
+carry width context, so the height-for-width hook is the workaround.
+Same pattern `ElwhaCardMedia.heightForSlotWidth(int)` uses for
+cover-fit slot sizing (§3.4 rule 3).
+
 ### 5.4 `ElwhaCardDivider`
 
 ```java
 public final class ElwhaCardDivider extends JComponent {
-  public ElwhaCardDivider();                          // default FULL
+  public ElwhaCardDivider();                          // default INSET
   public ElwhaCardDivider(DividerStyle style);
   public DividerStyle getStyle();
 }
@@ -558,6 +622,28 @@ public enum DividerStyle { FULL, INSET }
 `FULL` spans card edge-to-edge (ignores parent content padding).
 `INSET` respects content padding. Both paint `ColorRole.OUTLINE_VARIANT`
 at 1dp.
+
+**M3 contextual rule (per
+[`m3-card-spec-organized.md`](m3-card-spec-organized.md) §1.7).** The
+two styles are not interchangeable — each pairs with a different M3
+content pattern:
+
+- **`INSET`** — separates related blocks within the card body
+  (metadata, comments footer, body → actions separator). The more
+  common case in M3 reference frames, and the no-arg constructor
+  default.
+- **`FULL`** — pairs with a body-bottom expand text-link
+  ({@link ElwhaCardExpandLink}) to mark the boundary between
+  always-visible content and a collapsible hidden section. Pattern:
+  `card.add(body); card.add(new ElwhaCardDivider(DividerStyle.FULL));
+  card.add(new ElwhaCardExpandLink(card, "Show", "Hide"));`
+
+The lib does NOT enforce this rule in code — a `FULL` divider
+between supporting text and actions compiles fine. The rule is
+documented here for consumers to follow; auto-detecting the
+correct style by sibling type was rejected as heuristic-laden
+(per the same reasoning as §22's stance on positional heuristics
+for HORIZONTAL leading-column detection).
 
 ## 6. Layer 4 — Disclosure affordances
 
@@ -581,6 +667,14 @@ public final class ElwhaCardChevron extends ElwhaIconButton {
   header text without dominating the row.
 - Inherits all `ElwhaIconButton` chrome (state layer, focus, ripple,
   a11y).
+- **Auto-anchors its host container as `ALWAYS_VISIBLE` (#23).** On
+  `addNotify`, walks up the ancestor chain to find the direct child
+  of `card` it lives inside (typically the `ElwhaCardHeader`) and
+  calls `card.setCollapseConstraint(host, CollapseRule.ALWAYS_VISIBLE)`.
+  Without this, a consumer who forgets to pin the chevron's host
+  silently strands the collapsed card with no UI affordance to expand.
+  Consumers who want different behavior override the constraint
+  after adding the chevron.
 
 ### 6.2 `ElwhaCardExpandLink`
 
@@ -602,6 +696,12 @@ public final class ElwhaCardExpandLink extends JComponent {
 swaps text between `expandText` (collapsed) and `collapseText`
 (expanded). Click toggles `card.setCollapsed(...)`. Tab-focusable;
 Enter / Space activates.
+
+**Auto-anchors itself as `ALWAYS_VISIBLE` (#23).** Same self-anchor
+mechanism as `ElwhaCardChevron` — on `addNotify`, walks up to find
+the direct child of `card` it lives inside (typically the link
+itself, since M3 places it directly in the body) and pins it
+`ALWAYS_VISIBLE`. Survives collapse so the user can re-expand.
 
 ## 7. Layer 5 — `ElwhaAdaptiveCard` (deferred)
 
@@ -865,15 +965,12 @@ M3 doctrine.
 
 ## 15. Orientation model
 
-### 15.1 Two compose-time choices
+### 15.1 v0.2.0 — VERTICAL only
 
-```java
-card.setOrientation(VERTICAL);    // default — BoxLayout(Y_AXIS); add() stacks
-card.setOrientation(HORIZONTAL);  // custom 2-col LayoutManager; setLeadingColumn/setTrailingColumn
-```
-
-Orientation is a **compose-time** choice, not a runtime adaptation.
-Runtime adaptation lives in `ElwhaAdaptiveCard` (§7, deferred).
+v0.2.0 ships VERTICAL as the sole orientation; HORIZONTAL is deferred
+to v0.3.0 per #112. There is no `setOrientation` method, no
+`CardOrientation` enum, and no `setLeadingColumn` / `setTrailingColumn`
+setters on `ElwhaCard` in v0.2.0.
 
 ### 15.2 VERTICAL — `add()` order = layout order
 
@@ -891,30 +988,65 @@ them:
 - Header → Body → Media → Actions (Display small)
 - Header → Media → Body → Actions
 
-### 15.3 HORIZONTAL — explicit columns
+### 15.3 HORIZONTAL — deferred to v0.3.0
+
+**Deferred.** The Phase-2 shipped API (`setOrientation(HORIZONTAL)` +
+`setLeadingColumn(JComponent)` + `setTrailingColumn(JComponent)`)
+was withdrawn before v0.2.0 ship because it created an asymmetric
+composition contract: VERTICAL uses `card.add(...)` with the chassis
+owning layout, while HORIZONTAL forced the consumer to compose the
+trailing column's internal layout themselves — and `add()` threw in
+HORIZONTAL mode. The typed Layer-3 primitives (`ElwhaCardHeader`,
+`ElwhaCardActions`, `ElwhaCardDivider`) lost their auto-positioning
+behavior inside the trailing column because the chassis handed off
+layout at the column boundary.
+
+**v0.3.0 design intent — unified-`add()` typed partitioning.**
+HORIZONTAL re-enters under a single composition contract: same
+`card.add(child)` calls in both orientations; chassis partitions
+children by type at layout time.
 
 ```java
-card.setOrientation(HORIZONTAL);
-card.setLeadingColumn(media);             // left col (full card height)
-card.setTrailingColumn(rightColumnBox);   // right col (header / body / actions stacked)
+// v0.3.0 — identical add() calls in either orientation
+card.add(media);
+card.add(header);
+card.add(body);
+card.add(actions);
+
+card.setOrientation(VERTICAL);    // VerticalCardLayout: media at top, etc.
+card.setOrientation(HORIZONTAL);  // ElwhaCardMedia → leading column;
+                                  // everything else → trailing column,
+                                  // VerticalCardLayout rules applied
+                                  // inside the trailing column.
 ```
 
-Leading/trailing terminology (not left/right) for RTL support.
-Consumers compose the right column themselves (typically a
-`Box(Y_AXIS)` containing `ElwhaCardHeader` + body + `ElwhaCardActions`).
+Partitioning rule (typed, not positional — sidesteps §22's anti-
+heuristic stance):
 
-`add()` in HORIZONTAL mode throws `IllegalStateException` —
-horizontal cards must use the explicit column setters.
+| Child type | VERTICAL position | HORIZONTAL position (v0.3.0) |
+|---|---|---|
+| `ElwhaCardMedia` | stacks in `add()` order; bleeds at edges if first/last | leading column, bleeds to chassis edges |
+| Everything else (`ElwhaCardHeader`, atoms, `ElwhaCardDivider`, `ElwhaCardActions`, custom `JComponent`) | stacks in `add()` order | trailing column, stacked in `add()` order under `VerticalCardLayout` rules |
 
-### 15.4 Action alignment in horizontal cards
+Open design questions for v0.3.0 (file under the new epic when it lands):
 
-Per M3 doctrine (organized doc §2.3): action alignment is
-pattern-dependent, not orientation-dependent. Both bottom-leading and
-bottom-trailing are sanctioned. Horizontal cards typically anchor the
-action bottom-trailing of the right column.
+- Multiple `ElwhaCardMedia` children in HORIZONTAL — first is leading,
+  subsequent are trailing-stack? Or throw?
+- No media in HORIZONTAL — trailing column takes the whole card
+  (graceful degrade to VERTICAL-look) or throw?
+- Non-media leading columns (e.g. a thick metadata panel) — drop
+  entirely (consumers wrap in `ElwhaCardMedia.painter(...)`) or
+  provide an escape-hatch setter?
 
-V3 does not enforce a default — consumers compose `ElwhaCardActions`
-with `addLeading(...)` or `addTrailing(...)` to pick.
+### 15.4 Action alignment — deferred with HORIZONTAL
+
+Action-alignment doctrine in horizontal cards (M3 organized doc §2.3:
+both bottom-leading and bottom-trailing are sanctioned; horizontal
+cards typically anchor bottom-trailing of the right column) re-enters
+the spec when HORIZONTAL ships in v0.3.0. Under the unified-`add()`
+design, the chassis's `VerticalCardLayout` running inside the trailing
+column naturally applies the `anchorActionsToBottom` rule already
+proven in VERTICAL.
 
 ## 16. Accessibility
 
@@ -1100,9 +1232,14 @@ Concrete things the V3 implementation must not do:
 - **Don't implement a surface-tint layer.** Per organized doc §3.6 +
   Compose tokens confirmation, surface-tint is not applied to cards
   in M3.
-- **Don't bake first-child-is-left-column heuristic into
-  HORIZONTAL.** Per §15.3, use explicit `setLeadingColumn` /
-  `setTrailingColumn`. `add()` in HORIZONTAL mode throws.
+- **For the v0.3.0 HORIZONTAL rebuild (#112 follow-up): partition by
+  type, not by position.** The earlier "don't bake
+  first-child-is-left-column heuristic" guard-rail is retired. The
+  unified-`add()` design uses `instanceof ElwhaCardMedia` to identify
+  the leading column — role-in-type, not role-by-index. Positional
+  heuristics ("first child is leading", "second child is trailing")
+  remain banned: they reorder under RTL, break on child rearrangement,
+  and don't survive `setOrientation()` flips.
 - **Don't enforce the "no actions on actionable surface" doctrine in
   code.** Per §12 it's documentation, not type system. Both Compose
   and MCV take the same stance.

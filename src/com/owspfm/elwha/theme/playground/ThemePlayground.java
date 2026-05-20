@@ -1,5 +1,11 @@
 package com.owspfm.elwha.theme.playground;
 
+import com.owspfm.elwha.button.playground.ButtonPlaygroundPanels;
+import com.owspfm.elwha.card.playground.CursorReferencePanel;
+import com.owspfm.elwha.card.playground.ElwhaCardListShowcase;
+import com.owspfm.elwha.card.playground.GalleryPanel;
+import com.owspfm.elwha.card.playground.LiveConfigPanel;
+import com.owspfm.elwha.card.playground.SnippetPanel;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
@@ -66,6 +72,10 @@ import javax.swing.tree.DefaultMutableTreeNode;
  *       com.owspfm.elwha.iconbutton.ElwhaIconButton}, reused from {@link
  *       IconButtonPlaygroundPanels} so the standalone {@code ElwhaIconButtonPlayground} and this
  *       tab stay in lockstep.
+ *   <li><strong>Button</strong> — the variant gallery, sizes, toggle-examples, and live-control
+ *       panels for {@link com.owspfm.elwha.button.ElwhaButton}, reused from {@link
+ *       ButtonPlaygroundPanels} so the standalone {@code ElwhaButtonPlayground} and this tab stay
+ *       in lockstep.
  *   <li><strong>Surface</strong> — the {@code ColorRole × ShapeScale} matrix and live-control panel
  *       for {@link com.owspfm.elwha.surface.ElwhaSurface}, reused from {@link
  *       SurfacePlaygroundPanels} so the standalone {@code ElwhaSurfacePlayground} and this tab stay
@@ -78,7 +88,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
  * -Dexec.mainClass="com.owspfm.elwha.theme.playground.ThemePlayground"}
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.2.0
  * @since v0.1.0
  */
 public final class ThemePlayground {
@@ -115,7 +125,9 @@ public final class ThemePlayground {
     tabs.addTab("Swing Comps", new JScrollPane(buildSwingCompsTab()));
     tabs.addTab("Chip", buildChipTab());
     tabs.addTab("Icon Button", buildIconButtonTab());
+    tabs.addTab("Button", buildButtonTab());
     tabs.addTab("Surface", buildSurfaceTab());
+    tabs.addTab("Card", buildCardTab());
     root.add(tabs, java.awt.BorderLayout.CENTER);
 
     frame.setContentPane(root);
@@ -258,6 +270,13 @@ public final class ThemePlayground {
     return inner;
   }
 
+  // --- Button tab — reuses ButtonPlaygroundPanels so this and the standalone playground stay
+  // synced. ---
+
+  private JComponent buildButtonTab() {
+    return ButtonPlaygroundPanels.buildCombinedTabbedPane();
+  }
+
   // --- Surface tab — reuses SurfacePlaygroundPanels so this and the standalone playground stay
   // synced. ---
 
@@ -266,6 +285,30 @@ public final class ThemePlayground {
     inner.addTab("Matrix", new JScrollPane(SurfacePlaygroundPanels.buildMatrixPanel()));
     inner.addTab("Live", SurfacePlaygroundPanels.buildLivePanel());
     return inner;
+  }
+
+  // --- Card tab — composes the same panels as the standalone V3 ElwhaCardPlayground (#92) so the
+  // two stay in lockstep. ---
+
+  private JComponent buildCardTab() {
+    JTabbedPane inner = new JTabbedPane();
+    inner.addTab("Gallery", new GalleryPanel());
+    inner.addTab("Live", buildCardLivePanel());
+    inner.addTab("ElwhaCardList", new ElwhaCardListShowcase());
+    inner.addTab("Cursors", new CursorReferencePanel());
+    return inner;
+  }
+
+  private JComponent buildCardLivePanel() {
+    LiveConfigPanel live = new LiveConfigPanel();
+    SnippetPanel snippet = new SnippetPanel();
+    snippet.update(live.snapshot());
+    live.addConfigChangeListener(snippet::update);
+    JPanel wrap = new JPanel(new java.awt.BorderLayout());
+    wrap.add(live, java.awt.BorderLayout.CENTER);
+    wrap.add(snippet, java.awt.BorderLayout.SOUTH);
+    snippet.setPreferredSize(new Dimension(620, 220));
+    return wrap;
   }
 
   private JComponent buildRawSwingRow() {

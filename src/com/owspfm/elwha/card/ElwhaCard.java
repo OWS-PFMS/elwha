@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.StateLayer;
@@ -28,7 +29,6 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -40,7 +40,6 @@ import javax.accessibility.AccessibleRole;
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
-import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
@@ -70,10 +69,14 @@ import javax.swing.Timer;
  * {@code OUTLINE_VARIANT} border at 1dp.
  *
  * <p><strong>Defaults.</strong> {@link ShapeScale#MD} (12 dp corner radius — inherited from
- * Surface), padding {@link SpaceScale#LG} (16 dp) on both axes, orientation {@link
- * CardOrientation#VERTICAL}, expansion overflow {@link ExpansionOverflow#GROW}. The four M3
- * measurement defaults — 12dp shape, 16dp padding, 8dp inter-card (consumer-controlled on the
- * list), start-aligned text — are baked in.
+ * Surface), padding {@link SpaceScale#LG} (16 dp) on both axes, expansion overflow {@link
+ * ExpansionOverflow#GROW}. The four M3 measurement defaults — 12dp shape, 16dp padding, 8dp
+ * inter-card (consumer-controlled on the list), start-aligned text — are baked in.
+ *
+ * <p><strong>Orientation.</strong> v0.2.0 ships VERTICAL only; HORIZONTAL is deferred to v0.3.0 per
+ * spec §15.3 (#112). The v0.3 HORIZONTAL design will reuse {@code add(...)} with typed partitioning
+ * ({@link ElwhaCardMedia} → leading column, everything else → trailing column under the same
+ * VerticalCardLayout rules) — no separate setLeadingColumn / setTrailingColumn API.
  *
  * <p><strong>Actionability is atomic.</strong> {@link #setActionable(boolean)} flips the entire
  * quadrad — cursor + hover state-layer + ripple + tab stop + AccessibleRole — together; consumers
@@ -94,9 +97,6 @@ public class ElwhaCard extends ElwhaSurface {
   /** Property name fired when actionability toggles. */
   public static final String PROPERTY_ACTIONABLE = "actionable";
 
-  /** Property name fired when orientation changes. */
-  public static final String PROPERTY_ORIENTATION = "orientation";
-
   /**
    * Maximum supported elevation level (0..5), corresponding to M3 ElevationTokens Level0..Level5.
    * Aliases {@link ElwhaSurface#MAX_ELEVATION} — the underlying field + paint pipeline live on
@@ -105,7 +105,6 @@ public class ElwhaCard extends ElwhaSurface {
   public static final int MAX_ELEVATION = ElwhaSurface.MAX_ELEVATION;
 
   private CardVariant variant = CardVariant.ELEVATED;
-  private CardOrientation orientation = CardOrientation.VERTICAL;
   private ExpansionOverflow expansionOverflow = ExpansionOverflow.GROW;
   private SpaceScale paddingHorizontal = SpaceScale.LG;
   private SpaceScale paddingVertical = SpaceScale.LG;
@@ -134,9 +133,6 @@ public class ElwhaCard extends ElwhaSurface {
   private int animationEndHeight;
 
   private Timer collapseTimer;
-
-  private JComponent horizontalLeading;
-  private JComponent horizontalTrailing;
 
   /** Internal body panel + scroll wrapper used when {@link ExpansionOverflow#SCROLL} is active. */
   private JPanel scrollBody;
@@ -169,6 +165,23 @@ public class ElwhaCard extends ElwhaSurface {
   private static final int CHECKED_BADGE_DIAMETER = 24;
 
   private static final int CHECKED_BADGE_ICON_PX = 16;
+
+  /**
+   * Per-paint flag set during {@link #paintComponent} when the ElwhaCard is locally owning the
+   * border treatment (disabled-outlined wash, focused-outlined replacement) so that {@link
+   * ElwhaSurface}'s super-paint skips its resting border stroke. The flag is read via the
+   * overridden {@link #getBorderRole()} — returning {@code null} from there suppresses the border
+   * inside {@link com.owspfm.elwha.theme.SurfacePainter#paint}.
+   */
+  private boolean suppressRestingBorder;
+
+  /**
+   * Per-paint flag toggled inside {@link #paintComponent} so {@link #getSurfaceRole()} returns the
+   * disabled-variant container role swap (Elevated → SURFACE, Filled → SURFACE_VARIANT) per spec
+   * §11 + PL-9. Without the swap, painting the variant's resting role at full opacity gives no
+   * visible disabled cue.
+   */
+  private boolean paintingDisabled;
 
   private final Map<Component, CollapseRule> collapseConstraints = new IdentityHashMap<>();
   private final java.util.List<ActionListener> actionListeners = new java.util.ArrayList<>();
@@ -767,12 +780,6 @@ public class ElwhaCard extends ElwhaSurface {
    */
   @Override
   protected void addImpl(final Component comp, final Object constraints, final int index) {
-    if (orientation == CardOrientation.HORIZONTAL
-        && comp != horizontalLeading
-        && comp != horizontalTrailing) {
-      throw new IllegalStateException(
-          "HORIZONTAL ElwhaCard does not accept add() — use setLeadingColumn / setTrailingColumn");
-    }
     if (scrollBody != null && comp != scrollPane) {
       scrollBody.add(comp, constraints, index);
       return;
@@ -787,101 +794,6 @@ public class ElwhaCard extends ElwhaSurface {
    */
   public ExpansionOverflow getExpansionOverflow() {
     return expansionOverflow;
-  }
-
-  // ----------------------------------------------------------- orientation
-
-  /**
-   * Sets the orientation. VERTICAL uses {@code BoxLayout(Y_AXIS)} where {@code add()} order is the
-   * stack order. HORIZONTAL uses a custom 2-column layout filled via {@link #setLeadingColumn} /
-   * {@link #setTrailingColumn}; the 2-column wiring lands with the HORIZONTAL orientation story.
-   *
-   * @param newOrientation the orientation (must not be {@code null})
-   * @return {@code this} for fluent chaining
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public ElwhaCard setOrientation(final CardOrientation newOrientation) {
-    Objects.requireNonNull(newOrientation, "orientation");
-    if (this.orientation == newOrientation) {
-      return this;
-    }
-    final CardOrientation old = this.orientation;
-    this.orientation = newOrientation;
-    if (newOrientation == CardOrientation.VERTICAL) {
-      setLayout(new VerticalCardLayout());
-    } else {
-      setLayout(new TwoColumnLayout());
-      removeAll();
-      if (horizontalLeading != null) {
-        super.add(horizontalLeading);
-      }
-      if (horizontalTrailing != null) {
-        super.add(horizontalTrailing);
-      }
-    }
-    firePropertyChange(PROPERTY_ORIENTATION, old, newOrientation);
-    revalidate();
-    repaint();
-    return this;
-  }
-
-  /**
-   * @return the current orientation
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public CardOrientation getOrientation() {
-    return orientation;
-  }
-
-  /**
-   * Sets the leading column for a HORIZONTAL card. {@code add()} is not used in HORIZONTAL mode —
-   * leading + trailing columns are the only way to populate a horizontal card.
-   *
-   * @param component the leading column content
-   * @return {@code this} for fluent chaining
-   * @throws UnsupportedOperationException until the HORIZONTAL layout wiring story lands
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public ElwhaCard setLeadingColumn(final JComponent component) {
-    Objects.requireNonNull(component, "component");
-    if (orientation != CardOrientation.HORIZONTAL) {
-      throw new IllegalStateException("setLeadingColumn requires CardOrientation.HORIZONTAL");
-    }
-    if (horizontalLeading != null) {
-      super.remove(horizontalLeading);
-    }
-    this.horizontalLeading = component;
-    super.add(component);
-    revalidate();
-    repaint();
-    return this;
-  }
-
-  /**
-   * Sets the trailing column for a HORIZONTAL card. See {@link #setLeadingColumn(JComponent)}.
-   *
-   * @param component the trailing column content
-   * @return {@code this} for fluent chaining
-   * @throws UnsupportedOperationException until the HORIZONTAL layout wiring story lands
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public ElwhaCard setTrailingColumn(final JComponent component) {
-    Objects.requireNonNull(component, "component");
-    if (orientation != CardOrientation.HORIZONTAL) {
-      throw new IllegalStateException("setTrailingColumn requires CardOrientation.HORIZONTAL");
-    }
-    if (horizontalTrailing != null) {
-      super.remove(horizontalTrailing);
-    }
-    this.horizontalTrailing = component;
-    super.add(component);
-    revalidate();
-    repaint();
-    return this;
   }
 
   // ------------------------------------------------------------------ drag
@@ -967,19 +879,25 @@ public class ElwhaCard extends ElwhaSurface {
    * grows. Matches Compose Material3 / MaterialCardView, where elevation is painted outside the
    * measured body — Swing doesn't allow that, so the reserve is always-on instead.
    *
-   * @return the chassis insets — always {@code SurfacePainter.shadowInsets(MAX_ELEVATION)}
+   * @return the chassis insets — always {@code ShadowPainter.shadowInsets(MAX_ELEVATION)}
    * @version v0.2.0
    * @since v0.2.0
    */
   @Override
   public Insets getInsets() {
-    return com.owspfm.elwha.theme.SurfacePainter.shadowInsets(MAX_ELEVATION);
+    return com.owspfm.elwha.theme.ShadowPainter.shadowInsets(MAX_ELEVATION);
   }
 
   /**
    * Paints under the children: Surface chassis (shadow + fill + border) via {@code super}, then the
    * card's state-layer overlay tinted to the variant's on-pair. Selection badge, focus ring,
-   * disabled scrim, and ripple paint above children in {@link #paintChildren}.
+   * disabled outlined border, and ripple paint above children in {@link #paintChildren}.
+   *
+   * <p>Sets two per-paint flags ({@link #paintingDisabled}, {@link #suppressRestingBorder}) so the
+   * chassis super-paint sees the disabled container-role swap (PL-9) and skips the resting border
+   * when ElwhaCard is locally painting it (focused-outlined PL-8, disabled-outlined PL-10). The
+   * flags are reset before this method returns so a subsequent paint with different state-pair uses
+   * the resting defaults.
    *
    * @param g the graphics context
    * @version v0.2.0
@@ -987,7 +905,16 @@ public class ElwhaCard extends ElwhaSurface {
    */
   @Override
   protected void paintComponent(final Graphics g) {
-    super.paintComponent(g);
+    final boolean disabled = !isEnabled();
+    final boolean focused = actionable && isFocusOwner() && isEnabled();
+    paintingDisabled = disabled;
+    suppressRestingBorder = variant == CardVariant.OUTLINED && (focused || disabled);
+    try {
+      super.paintComponent(g);
+    } finally {
+      paintingDisabled = false;
+      suppressRestingBorder = false;
+    }
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -998,9 +925,52 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
-   * Paints above the children: disabled scrim, focus ring, ripple, selection badge. Painting these
-   * on top of children ensures the selection badge sits above any media child that would otherwise
-   * hide it.
+   * Overrides the chassis surface role during disabled paint to apply the M3 variant swap per spec
+   * §11 + PL-9 — Elevated → SURFACE, Filled → SURFACE_VARIANT, Outlined unchanged. The swap is
+   * scoped to {@link #paintComponent} via {@link #paintingDisabled}; at all other times the resting
+   * role from {@link ElwhaSurface#getSurfaceRole()} is returned.
+   *
+   * @return the surface role to fill the chassis with
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public ColorRole getSurfaceRole() {
+    if (paintingDisabled) {
+      if (variant == CardVariant.ELEVATED) {
+        return ColorRole.SURFACE;
+      }
+      if (variant == CardVariant.FILLED) {
+        return ColorRole.SURFACE_VARIANT;
+      }
+    }
+    return super.getSurfaceRole();
+  }
+
+  /**
+   * Overrides the chassis border role so the super-paint can be told to skip its resting border
+   * stroke. Returns {@code null} (no border) when {@link #suppressRestingBorder} is set — used by
+   * {@link #paintComponent} so a focused-outlined or disabled-outlined card can paint its own
+   * border treatment in {@link #paintChildren} without double-stacking the resting outline.
+   *
+   * @return the border role to stroke with, or {@code null} to suppress
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public ColorRole getBorderRole() {
+    return suppressRestingBorder ? null : super.getBorderRole();
+  }
+
+  /**
+   * Paints above the children: focus ring, disabled outlined border replacement, ripple, selection
+   * badge. Painting these on top of children ensures the selection badge sits above any media child
+   * that would otherwise hide it.
+   *
+   * <p>Per PL-8 (focused-outlined) and PL-10 (disabled-outlined), the border for Outlined cards in
+   * those states is painted here at the chassis body edge — the resting OUTLINE_VARIANT stroke is
+   * suppressed by {@link #suppressRestingBorder} during super.paintComponent, so there's no
+   * double-stacking.
    *
    * @param g the graphics context
    * @version v0.2.0
@@ -1012,11 +982,11 @@ public class ElwhaCard extends ElwhaSurface {
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      if (!isEnabled()) {
-        paintDisabledScrim(g2);
-      }
       if (actionable && rippleProgress < 1f && rippleOrigin != null) {
         paintRipple(g2);
+      }
+      if (variant == CardVariant.OUTLINED && !isEnabled()) {
+        paintDisabledOutlinedBorder(g2);
       }
       if (actionable && isFocusOwner() && isEnabled()) {
         paintFocusRing(g2);
@@ -1068,40 +1038,69 @@ public class ElwhaCard extends ElwhaSurface {
     g2.fill(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
   }
 
-  /** Disabled scrim — variant container fill at 0.38 over the surface. */
-  private void paintDisabledScrim(final Graphics2D g2) {
-    final Color base = variant.containerRole().resolve();
+  /**
+   * Disabled-outlined border replacement per PL-10: paint the OUTLINE role (the stronger of OUTLINE
+   * / OUTLINE_VARIANT per M3) at 12 % opacity at the chassis edge. The resting OUTLINE_VARIANT
+   * border is suppressed by {@link #suppressRestingBorder} so there's no double-stacking.
+   */
+  private void paintDisabledOutlinedBorder(final Graphics2D g2) {
+    final Color stroke = ColorRole.OUTLINE.resolve();
     g2.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
-    g2.setColor(base);
+    g2.setColor(stroke);
+    g2.setStroke(new BasicStroke(1f));
     final java.awt.Rectangle b = bodyBounds();
     final int arc = getShape().px();
-    g2.fill(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
+    // Center the stroke on the body edge (inset by 0.5 px) so the outer edge tracks the chassis
+    // corner exactly, matching the geometry SurfacePainter uses for the resting border.
+    g2.draw(
+        new RoundRectangle2D.Float(b.x + 0.5f, b.y + 0.5f, b.width - 1f, b.height - 1f, arc, arc));
   }
 
-  /** M3 focus ring — SECONDARY for Elevated/Filled, ON_SURFACE for Outlined; 2dp inset stroke. */
+  /**
+   * M3 focus ring. For Elevated / Filled: SECONDARY ring, 2 dp inset (per spec §10.2). For Outlined
+   * per PL-8: ON_SURFACE 2 dp stroke painted at the chassis body edge to REPLACE the resting
+   * OUTLINE_VARIANT border (which is suppressed during paintComponent), not double-paint inside it.
+   * Without the replacement, a focused Outlined card would show two concentric strokes — the 1 dp
+   * resting outline plus a 2 dp ring inside it.
+   */
   private void paintFocusRing(final Graphics2D g2) {
-    final Color ring =
-        (variant == CardVariant.OUTLINED ? ColorRole.ON_SURFACE : ColorRole.SECONDARY).resolve();
-    g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 220));
-    g2.setStroke(new BasicStroke(2f));
     final java.awt.Rectangle b = bodyBounds();
     final int arc = getShape().px();
-    g2.draw(new RoundRectangle2D.Float(b.x + 1f, b.y + 1f, b.width - 2f, b.height - 2f, arc, arc));
+    if (variant == CardVariant.OUTLINED) {
+      g2.setColor(ColorRole.ON_SURFACE.resolve());
+      g2.setStroke(new BasicStroke(2f));
+      // Inset by 1 px so a 2 dp stroke is fully inside the body bounds and visually covers where
+      // the resting 1 px outline would have been.
+      g2.draw(
+          new RoundRectangle2D.Float(b.x + 1f, b.y + 1f, b.width - 2f, b.height - 2f, arc, arc));
+    } else {
+      final Color ring = ColorRole.SECONDARY.resolve();
+      g2.setColor(new Color(ring.getRed(), ring.getGreen(), ring.getBlue(), 220));
+      g2.setStroke(new BasicStroke(2f));
+      g2.draw(
+          new RoundRectangle2D.Float(b.x + 1f, b.y + 1f, b.width - 2f, b.height - 2f, arc, arc));
+    }
   }
 
   /** Expanding-circle ripple, clipped to the card's rounded body shape. */
   private void paintRipple(final Graphics2D g2) {
     final java.awt.Rectangle b = bodyBounds();
-    final int arc = getShape().px();
-    g2.setClip(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
-    final float expand = Math.min(1f, rippleProgress * (RIPPLE_TOTAL_MS / 250f));
-    final float fade = Math.max(0f, 1f - Math.max(0f, (rippleProgress - 0.375f) / 0.625f));
-    final int maxRadius = (int) Math.hypot(b.width, b.height);
-    final int r = (int) (maxRadius * expand);
-    final Color tint = ColorRole.ON_SURFACE.resolve();
-    g2.setComposite(AlphaComposite.SrcOver.derive(0.10f * fade));
-    g2.setColor(tint);
-    g2.fill(new Ellipse2D.Float(rippleOrigin.x - r, rippleOrigin.y - r, r * 2f, r * 2f));
+    final Graphics2D rg = (Graphics2D) g2.create();
+    try {
+      // RipplePainter works in body-local coordinates; translate to the body origin and convert
+      // the component-space click point to match.
+      rg.translate(b.x, b.y);
+      RipplePainter.paint(
+          rg,
+          b.width,
+          b.height,
+          new Point(rippleOrigin.x - b.x, rippleOrigin.y - b.y),
+          rippleProgress,
+          getShape().px(),
+          ColorRole.ON_SURFACE.resolve());
+    } finally {
+      rg.dispose();
+    }
   }
 
   /** M3 top-trailing selected badge — PRIMARY circle + check glyph, no layout reservation. */
@@ -1292,6 +1291,23 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Spec §3.4 rule 1: the chassis cooperates with parent-assigned width, never resists shrinking.
+   * Returns {@code Integer.MAX_VALUE} on both axes — explicitly documenting that {@code JPanel}'s
+   * unbounded default is the intended contract, not a happenstance. {@code BoxLayout}, {@code
+   * GridLayout}, and any other parent layout can stretch or compress the chassis freely. Consumers
+   * needing a hard minimum should call {@link #setMinimumSize(Dimension)} or wrap the card in a
+   * constrained container.
+   *
+   * @return a {@code Dimension} with unbounded width and height
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public Dimension getMaximumSize() {
+    return new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE);
+  }
+
+  /**
    * VERTICAL LayoutManager. Stacks children top-to-bottom in {@code add()} order — same observable
    * behavior as {@code BoxLayout(Y_AXIS)} per spec §3.3 — plus two card-specific rules:
    *
@@ -1321,12 +1337,22 @@ public class ElwhaCard extends ElwhaSurface {
       final Insets ins = parent.getInsets();
       final int padH = paddingHorizontal.px();
       final int padV = paddingVertical.px();
+      final int interGap = interElementGap();
       final int count = parent.getComponentCount();
+      // Slot-width estimate for the heightForChild calls. Once the chassis has been laid out
+      // even once, parent.getWidth() is positive and reflects the actual width children will
+      // get — we use it so width-sensitive children (ElwhaCardActions wrap rows, ElwhaCardMedia
+      // cover-fit slot height) report the right preferred height for the chassis to reserve.
+      // Without this, the preferred-height computation would use single-row / intrinsic heights
+      // and the chassis would be sized too short to contain wrapped action rows. Settles after
+      // one re-layout cycle.
+      final int parentBodyW = Math.max(0, parent.getWidth() - ins.left - ins.right);
       int totalH = 0;
       int maxW = 0;
       boolean anyVisible = false;
       Component firstVisible = null;
       Component lastVisible = null;
+      Component prevVisible = null;
       for (int i = 0; i < count; i++) {
         final Component c = parent.getComponent(i);
         if (!c.isVisible()) {
@@ -1349,10 +1375,15 @@ public class ElwhaCard extends ElwhaSurface {
         if (!c.isVisible()) {
           continue;
         }
+        if (prevVisible != null) {
+          totalH += interGap;
+        }
         final Dimension p = c.getPreferredSize();
         final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
-        totalH += p.height;
+        final int cellW = bleed ? parentBodyW : Math.max(0, parentBodyW - 2 * padH);
+        totalH += heightForChild(c, cellW);
         maxW = Math.max(maxW, bleed ? p.width : p.width + 2 * padH);
+        prevVisible = c;
       }
       if (!(lastVisible instanceof ElwhaCardMedia)) {
         totalH += padV;
@@ -1370,6 +1401,7 @@ public class ElwhaCard extends ElwhaSurface {
       final Insets ins = parent.getInsets();
       final int padH = paddingHorizontal.px();
       final int padV = paddingVertical.px();
+      final int interGap = interElementGap();
       final int bodyX = ins.left;
       final int bodyY = ins.top;
       final int bodyW = Math.max(0, parent.getWidth() - ins.left - ins.right);
@@ -1378,6 +1410,7 @@ public class ElwhaCard extends ElwhaSurface {
 
       Component firstVisible = null;
       Component lastVisible = null;
+      int visibleCount = 0;
       for (int i = 0; i < count; i++) {
         final Component c = parent.getComponent(i);
         if (!c.isVisible()) {
@@ -1387,6 +1420,7 @@ public class ElwhaCard extends ElwhaSurface {
           firstVisible = c;
         }
         lastVisible = c;
+        visibleCount++;
       }
       if (firstVisible == null) {
         return;
@@ -1400,12 +1434,17 @@ public class ElwhaCard extends ElwhaSurface {
       if (!(firstVisible instanceof ElwhaCardMedia)) {
         naturalContentH += padV;
       }
+      if (visibleCount > 1) {
+        naturalContentH += interGap * (visibleCount - 1);
+      }
       for (int i = 0; i < count; i++) {
         final Component c = parent.getComponent(i);
         if (!c.isVisible()) {
           continue;
         }
-        naturalContentH += c.getPreferredSize().height;
+        final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
+        final int cellW = bleed ? bodyW : Math.max(0, bodyW - 2 * padH);
+        naturalContentH += heightForChild(c, cellW);
       }
       if (!(lastVisible instanceof ElwhaCardMedia)) {
         naturalContentH += padV;
@@ -1414,19 +1453,48 @@ public class ElwhaCard extends ElwhaSurface {
       final int actionsLift = anchorActionsToBottom ? slack : 0;
 
       int y = bodyY + ((firstVisible instanceof ElwhaCardMedia) ? 0 : padV);
+      boolean placedAny = false;
       for (int i = 0; i < count; i++) {
         final Component c = parent.getComponent(i);
         if (!c.isVisible()) {
           continue;
         }
+        if (placedAny) {
+          y += interGap;
+        }
         final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
         final int x = bleed ? bodyX : bodyX + padH;
         final int w = bleed ? bodyW : Math.max(0, bodyW - 2 * padH);
-        final Dimension p = c.getPreferredSize();
+        final int h = heightForChild(c, w);
         final int childY = (c == lastVisible) ? y + actionsLift : y;
-        c.setBounds(x, childY, w, p.height);
-        y += p.height;
+        c.setBounds(x, childY, w, h);
+        y += h;
+        placedAny = true;
       }
+    }
+
+    /**
+     * Height a child should occupy given its assigned slot width.
+     *
+     * <ul>
+     *   <li>{@link ElwhaCardMedia} honors spec §3.4 rule 3 (cover-fit slot sizing) — height tracks
+     *       the actual cell width via {@link ElwhaCardMedia#heightForSlotWidth(int)} rather than
+     *       the intrinsic preferred-size hint.
+     *   <li>{@link ElwhaCardActions} reports its wrapped-row height via {@link
+     *       ElwhaCardActions#heightForSlotWidth(int)} (#17) so the chassis reserves vertical space
+     *       for whatever rows the wrap layout produces at this width — preferred-size queries carry
+     *       no width context and would otherwise always report single-row height.
+     *   <li>Everything else uses its preferred height.
+     * </ul>
+     */
+    private int heightForChild(final Component c, final int slotWidth) {
+      if (c instanceof ElwhaCardMedia media) {
+        return media.heightForSlotWidth(slotWidth);
+      }
+      if (c instanceof ElwhaCardActions actions) {
+        return actions.heightForSlotWidth(slotWidth);
+      }
+      return c.getPreferredSize().height;
     }
 
     /**
@@ -1449,53 +1517,13 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
-   * Two-column LayoutManager for HORIZONTAL cards. Leading column takes its preferred width;
-   * trailing column takes the rest. Both span the card's full height (minus chassis insets). RTL
-   * support: {@link Container#getComponentOrientation()} flips leading/trailing visually.
+   * Vertical gap inserted between every adjacent pair of visible siblings inside the card body.
+   * Defaults to {@link SpaceScale#SM} (8 dp) per the M3 vertical-rhythm convention — gives header,
+   * supporting text, divider, and actions room to breathe instead of stacking flush. Applies to
+   * media bleeding to the chassis top/bottom too (so the next text sibling isn't crushed against
+   * the media edge).
    */
-  private final class TwoColumnLayout implements LayoutManager {
-    @Override
-    public void addLayoutComponent(final String name, final Component comp) {
-      // no-op — we route through field slots.
-    }
-
-    @Override
-    public void removeLayoutComponent(final Component comp) {
-      // no-op — slot cleanup is the card's responsibility.
-    }
-
-    @Override
-    public Dimension preferredLayoutSize(final Container parent) {
-      final Insets ins = parent.getInsets();
-      final Dimension lead =
-          horizontalLeading != null ? horizontalLeading.getPreferredSize() : new Dimension(0, 0);
-      final Dimension trail =
-          horizontalTrailing != null ? horizontalTrailing.getPreferredSize() : new Dimension(0, 0);
-      return new Dimension(
-          ins.left + ins.right + lead.width + trail.width,
-          ins.top + ins.bottom + Math.max(lead.height, trail.height));
-    }
-
-    @Override
-    public Dimension minimumLayoutSize(final Container parent) {
-      return preferredLayoutSize(parent);
-    }
-
-    @Override
-    public void layoutContainer(final Container parent) {
-      final Insets ins = parent.getInsets();
-      final int totalW = parent.getWidth() - ins.left - ins.right;
-      final int totalH = parent.getHeight() - ins.top - ins.bottom;
-      final int leadW = horizontalLeading != null ? horizontalLeading.getPreferredSize().width : 0;
-      final boolean ltr = parent.getComponentOrientation().isLeftToRight();
-      if (horizontalLeading != null) {
-        final int x = ltr ? ins.left : ins.left + totalW - leadW;
-        horizontalLeading.setBounds(x, ins.top, leadW, totalH);
-      }
-      if (horizontalTrailing != null) {
-        final int x = ltr ? ins.left + leadW : ins.left;
-        horizontalTrailing.setBounds(x, ins.top, totalW - leadW, totalH);
-      }
-    }
+  private int interElementGap() {
+    return SpaceScale.SM.px();
   }
 }

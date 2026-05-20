@@ -22,9 +22,15 @@ public final class ElwhaCardDivider extends JComponent {
   private static final int DIVIDER_HEIGHT_PX = 1;
   private final DividerStyle style;
 
-  /** Creates a divider with the default {@link DividerStyle#FULL} treatment. */
+  /**
+   * Creates a divider with the {@link DividerStyle#INSET} default — the more common M3 pattern
+   * (separating related blocks inside the body, e.g. body → actions). Per spec §5.4 + M3 §1.7, use
+   * {@code new ElwhaCardDivider(DividerStyle.FULL)} explicitly when pairing with an {@link
+   * ElwhaCardExpandLink} below to mark the boundary between always-visible content and a
+   * collapsible hidden section.
+   */
   public ElwhaCardDivider() {
-    this(DividerStyle.FULL);
+    this(DividerStyle.INSET);
   }
 
   /**

@@ -58,6 +58,21 @@ public final class ElwhaCardSupportingText extends JLabel {
   }
 
   /**
+   * Reports unbounded X-axis so a parent {@code BoxLayout(Y_AXIS)} (or any width-respecting layout)
+   * stretches this atom to the available width — letting HTML wrap kick in at narrow chassis widths
+   * per spec §3.4 rule 2 / §22 guard-rail. Critical for the §3.4 contract: without this, supporting
+   * text would clip rather than reflow when the chassis is constrained by its parent.
+   *
+   * @return a {@code Dimension} with unbounded width and preferred height
+   * @version v0.2.0
+   * @since v0.2.0
+   */
+  @Override
+  public Dimension getMaximumSize() {
+    return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+  }
+
+  /**
    * Sets the type role.
    *
    * @param role the type role (must not be {@code null})
