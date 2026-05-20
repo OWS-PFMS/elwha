@@ -42,7 +42,7 @@ import javax.swing.UIManager;
  * interaction surface stay in lockstep across both entry points.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.3.0
  * @since v0.1.0
  */
 public final class ChipPlaygroundPanels {
@@ -57,10 +57,33 @@ public final class ChipPlaygroundPanels {
    * pane.
    *
    * @return the gallery panel
-   * @version v0.1.0
+   * @version v0.3.0
    * @since v0.1.0
    */
   public static JPanel buildVariantGallery() {
+    final JPanel controls = buildTokenControlBar();
+    final JPanel matrix = buildVariantGalleryMatrix();
+    controls.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    matrix.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+
+    final JPanel wrap = new JPanel();
+    wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
+    wrap.add(controls);
+    wrap.add(matrix);
+    return wrap;
+  }
+
+  /**
+   * Builds just the variant-gallery matrix — the {@link ChipVariant} × {@link ChipInteractionMode}
+   * × state grid, the factory-preset row, and the trailing-icon sampler — without the live token
+   * control bar. The Elwha Showcase uses this directly: its Chip Workbench is the live-config
+   * surface, so the gallery tab carries the reference matrix alone.
+   *
+   * @return the gallery matrix panel
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static JPanel buildVariantGalleryMatrix() {
     final JPanel matrix = new JPanel(new GridBagLayout());
     matrix.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
@@ -128,16 +151,7 @@ public final class ChipPlaygroundPanels {
       chip.setTrailingIcon(icons[c], name, () -> {});
       matrix.add(chip, gbc);
     }
-
-    final JPanel controls = buildTokenControlBar();
-    controls.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    matrix.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-
-    final JPanel wrap = new JPanel();
-    wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
-    wrap.add(controls);
-    wrap.add(matrix);
-    return wrap;
+    return matrix;
   }
 
   /**
