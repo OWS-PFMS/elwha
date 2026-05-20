@@ -25,6 +25,9 @@ import com.owspfm.elwha.card.playground.GalleryPanel;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
+import com.owspfm.elwha.chip.list.ChipSelectionMode;
+import com.owspfm.elwha.chip.list.DefaultChipListModel;
+import com.owspfm.elwha.chip.list.ElwhaChipList;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonGroup;
@@ -33,6 +36,7 @@ import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.list.ElwhaListOrientation;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -60,6 +64,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -120,7 +125,14 @@ public final class ElwhaShowcase {
 
   private final List<Runnable> tokenRefreshers = new ArrayList<>();
   private final JPanel content = new JPanel(new CardLayout());
+  private final List<Theme> primaryThemes = MaterialPalettes.primary();
+  private final List<Theme> secondaryThemes = MaterialPalettes.secondary();
   private JLabel statusLabel;
+  private JComboBox<Theme> palettePicker;
+  private Theme primarySelection;
+  private Theme secondarySelection;
+  private boolean secondaryTier;
+  private boolean pickerAdjusting;
 
   private ElwhaShowcase() {}
 
@@ -176,6 +188,10 @@ public final class ElwhaShowcase {
     }
 
     bar.add(Box.createHorizontalStrut(16));
+    bar.add(new JLabel("Tier:"));
+    bar.add(buildTierSwitcher());
+
+    bar.add(Box.createHorizontalStrut(16));
     bar.add(new JLabel("Palette:"));
     bar.add(buildPalettePicker());
 
@@ -186,12 +202,31 @@ public final class ElwhaShowcase {
     return bar;
   }
 
-  // The picker is populated from MaterialPalettes.bundled() — directory-derived, so a new palette
-  // JSON dropped into the resources palettes/ directory appears here with no code change.
+  // The Primary | Secondary tier switcher — an ElwhaChipList tab strip, dogfooding the library's
+  // own SINGLE_MANDATORY (segmented-control) selection semantics.
+  private JComponent buildTierSwitcher() {
+    final DefaultChipListModel<String> model =
+        new DefaultChipListModel<>(List.of("Primary", "Secondary"));
+    final ElwhaChipList<String> switcher =
+        new ElwhaChipList<>(model, (item, index) -> new ElwhaChip(item))
+            .setOrientation(ElwhaListOrientation.HORIZONTAL)
+            .setSelectionMode(ChipSelectionMode.SINGLE_MANDATORY);
+    switcher
+        .getSelectionModel()
+        .addSelectionListener(
+            event ->
+                switchTier(
+                    !event.getSelected().isEmpty()
+                        && "Secondary".equals(event.getSelected().get(0))));
+    return switcher;
+  }
+
+  // The picker shows one tier at a time; each tier is directory-derived and spectrally ordered by
+  // MaterialPalettes. A new Elwha-format palette JSON dropped into the tier's resource subdirectory
+  // appears here with no code change.
   private JComponent buildPalettePicker() {
-    final List<Theme> themes = MaterialPalettes.bundled();
-    final JComboBox<Theme> picker = new JComboBox<>(themes.toArray(new Theme[0]));
-    picker.setRenderer(
+    palettePicker = new JComboBox<>();
+    palettePicker.setRenderer(
         new DefaultListCellRenderer() {
           @Override
           public Component getListCellRendererComponent(
@@ -208,22 +243,51 @@ public final class ElwhaShowcase {
           }
         });
 
-    // Select the entry matching the installed theme before wiring the listener, so seeding the
-    // initial selection does not fire a redundant re-install.
-    final String installed = ElwhaTheme.current().theme().name();
-    for (final Theme theme : themes) {
-      if (theme.name().equals(installed)) {
-        picker.setSelectedItem(theme);
-        break;
-      }
-    }
-    picker.addActionListener(
+    // The app installs MaterialPalettes.baseline() at startup — a primary-tier theme.
+    primarySelection = matchOrFirst(primaryThemes, ElwhaTheme.current().theme().name());
+    secondarySelection = secondaryThemes.get(0);
+    populatePicker(primaryThemes, primarySelection);
+
+    palettePicker.addActionListener(
         event -> {
-          if (picker.getSelectedItem() instanceof Theme theme) {
+          if (!pickerAdjusting && palettePicker.getSelectedItem() instanceof Theme theme) {
+            if (secondaryTier) {
+              secondarySelection = theme;
+            } else {
+              primarySelection = theme;
+            }
             switchTheme(theme);
           }
         });
-    return picker;
+    return palettePicker;
+  }
+
+  // Repopulates the picker with one tier's themes without firing a redundant re-install — the
+  // model swap and selection seed run under the pickerAdjusting guard.
+  private void populatePicker(final List<Theme> themes, final Theme selection) {
+    pickerAdjusting = true;
+    palettePicker.setModel(new DefaultComboBoxModel<>(themes.toArray(new Theme[0])));
+    palettePicker.setSelectedItem(selection);
+    pickerAdjusting = false;
+  }
+
+  private void switchTier(final boolean secondary) {
+    if (secondary == secondaryTier) {
+      return;
+    }
+    secondaryTier = secondary;
+    final Theme selection = secondary ? secondarySelection : primarySelection;
+    populatePicker(secondary ? secondaryThemes : primaryThemes, selection);
+    switchTheme(selection);
+  }
+
+  private static Theme matchOrFirst(final List<Theme> themes, final String name) {
+    for (final Theme theme : themes) {
+      if (theme.name().equals(name)) {
+        return theme;
+      }
+    }
+    return themes.get(0);
   }
 
   private void switchMode(final Mode mode) {
