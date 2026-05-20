@@ -1,5 +1,10 @@
 package com.owspfm.elwha.showcase;
 
+import com.owspfm.elwha.button.ButtonInteractionMode;
+import com.owspfm.elwha.button.ButtonShape;
+import com.owspfm.elwha.button.ButtonSize;
+import com.owspfm.elwha.button.ButtonVariant;
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.button.playground.ButtonPlaygroundPanels;
 import com.owspfm.elwha.card.playground.CursorReferencePanel;
 import com.owspfm.elwha.card.playground.ElwhaCardListShowcase;
@@ -8,6 +13,7 @@ import com.owspfm.elwha.card.playground.LiveConfigPanel;
 import com.owspfm.elwha.card.playground.SnippetPanel;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
+import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
 import com.owspfm.elwha.theme.ColorRole;
@@ -22,6 +28,7 @@ import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
@@ -29,6 +36,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListCellRenderer;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -238,7 +246,7 @@ public final class ElwhaShowcase {
     final DefaultMutableTreeNode containers = new DefaultMutableTreeNode("Containers");
     addLeaf(containers, "Chip List", ChipPlaygroundPanels.buildLiveListPanel());
     addLeaf(containers, "Card List", new ElwhaCardListShowcase());
-    addLeaf(containers, "Button Group", scroll(ButtonPlaygroundPanels.buildTogglesPanel()));
+    addLeaf(containers, "Button Group", buildButtonGroupContainer());
     addLeaf(
         containers,
         "Icon Button Group",
@@ -278,14 +286,204 @@ public final class ElwhaShowcase {
 
   private static JComponent buildButtonComponent() {
     final JTabbedPane tabs = new JTabbedPane();
-    tabs.addTab("Workbench", scroll(ButtonPlaygroundPanels.buildLivePanel()));
+    tabs.addTab("Workbench", buildButtonWorkbench());
     tabs.addTab(
         "Gallery",
         scroll(
             stack(
-                ButtonPlaygroundPanels.buildVariantGalleryPanel(),
-                ButtonPlaygroundPanels.buildSizesPanel())));
+                gallerySection(
+                    "Variants & states", ButtonPlaygroundPanels.buildVariantGalleryPanel()),
+                gallerySection("Sizes", ButtonPlaygroundPanels.buildSizesPanel()))));
     return tabs;
+  }
+
+  private static JComponent buildButtonWorkbench() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+
+    final JComboBox<ButtonVariant> variantBox = new JComboBox<>(ButtonVariant.values());
+    variantBox.setSelectedItem(ButtonVariant.FILLED);
+    final JComboBox<ButtonInteractionMode> modeBox =
+        new JComboBox<>(ButtonInteractionMode.values());
+    final JComboBox<ButtonSize> sizeBox = new JComboBox<>(ButtonSize.values());
+    sizeBox.setSelectedItem(ButtonSize.S);
+    final JComboBox<ButtonShape> shapeBox = new JComboBox<>(ButtonShape.values());
+    final JComboBox<ButtonSurfaceRole> surfaceBox = new JComboBox<>(ButtonSurfaceRole.values());
+    final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
+    final JCheckBox iconBox = new JCheckBox("Leading icon");
+    final JCheckBox selectedBox = new JCheckBox("Selected");
+    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Button");
+    controls.addControl("Variant", variantBox);
+    controls.addControl("Interaction mode", modeBox);
+    controls.addControl("Size", sizeBox);
+    controls.addControl("Shape", shapeBox);
+    controls.addSection("Appearance");
+    controls.addControl("Surface role override", surfaceBox);
+    controls.addControl("Border width", borderWidth);
+    controls.addControl("", iconBox);
+    controls.addSection("State");
+    controls.addControl("", selectedBox);
+    controls.addControl("", enabledBox);
+
+    final Runnable apply =
+        () -> {
+          final ButtonVariant variant = (ButtonVariant) variantBox.getSelectedItem();
+          ButtonInteractionMode mode = (ButtonInteractionMode) modeBox.getSelectedItem();
+          // SELECTABLE + TEXT is illegal — guard the pairing so the demo never throws.
+          if (mode == ButtonInteractionMode.SELECTABLE && variant == ButtonVariant.TEXT) {
+            mode = ButtonInteractionMode.CLICKABLE;
+            modeBox.setSelectedItem(ButtonInteractionMode.CLICKABLE);
+          }
+          final ButtonSize size = (ButtonSize) sizeBox.getSelectedItem();
+          final ButtonShape shape = (ButtonShape) shapeBox.getSelectedItem();
+          final ButtonSurfaceRole surface = (ButtonSurfaceRole) surfaceBox.getSelectedItem();
+          final int width = (Integer) borderWidth.getValue();
+          final boolean icon = iconBox.isSelected();
+          final boolean selected = selectedBox.isSelected();
+          final boolean enabled = enabledBox.isSelected();
+
+          final ElwhaButton button =
+              icon
+                  ? new ElwhaButton("Common button", MaterialIcons.delete(size.iconSizePx()))
+                  : new ElwhaButton("Common button");
+          button.setVariant(variant).setButtonSize(size).setShape(shape).setBorderWidth(width);
+          if (mode == ButtonInteractionMode.SELECTABLE) {
+            button.setInteractionMode(ButtonInteractionMode.SELECTABLE);
+            button.setSelected(selected);
+          }
+          if (surface.role != null) {
+            button.setSurfaceRole(surface.role);
+          }
+          button.setEnabled(enabled);
+          workbench.setStage(button);
+          workbench.setCode(
+              renderButtonCode(
+                  variant, mode, size, shape, surface, width, icon, selected, enabled));
+        };
+    variantBox.addActionListener(event -> apply.run());
+    modeBox.addActionListener(event -> apply.run());
+    sizeBox.addActionListener(event -> apply.run());
+    shapeBox.addActionListener(event -> apply.run());
+    surfaceBox.addActionListener(event -> apply.run());
+    borderWidth.addChangeListener(event -> apply.run());
+    iconBox.addActionListener(event -> apply.run());
+    selectedBox.addActionListener(event -> apply.run());
+    enabledBox.addActionListener(event -> apply.run());
+    apply.run();
+    return workbench;
+  }
+
+  private static String renderButtonCode(
+      final ButtonVariant variant,
+      final ButtonInteractionMode mode,
+      final ButtonSize size,
+      final ButtonShape shape,
+      final ButtonSurfaceRole surface,
+      final int width,
+      final boolean icon,
+      final boolean selected,
+      final boolean enabled) {
+    final StringBuilder code = new StringBuilder(256);
+    if (icon) {
+      code.append("new ElwhaButton(\"Common button\",\n");
+      code.append("    MaterialIcons.delete(").append(size.iconSizePx()).append("))\n");
+    } else {
+      code.append("new ElwhaButton(\"Common button\")\n");
+    }
+    code.append("    .setVariant(ButtonVariant.").append(variant).append(")\n");
+    code.append("    .setButtonSize(ButtonSize.").append(size).append(")\n");
+    code.append("    .setShape(ButtonShape.").append(shape).append(")");
+    if (width != 1) {
+      code.append("\n    .setBorderWidth(").append(width).append(")");
+    }
+    if (surface.role != null) {
+      code.append("\n    .setSurfaceRole(ColorRole.").append(surface.role).append(")");
+    }
+    if (mode == ButtonInteractionMode.SELECTABLE) {
+      code.append("\n    .setInteractionMode(ButtonInteractionMode.SELECTABLE)");
+      code.append("\n    .setSelected(").append(selected).append(")");
+    }
+    code.append(";");
+    if (!enabled) {
+      code.append("\n// button.setEnabled(false);");
+    }
+    return code.toString();
+  }
+
+  /**
+   * Wraps a nullable surface-role override as a combo-box entry — {@code VARIANT_DEFAULT} → null.
+   */
+  private enum ButtonSurfaceRole {
+    VARIANT_DEFAULT(null),
+    PRIMARY(ColorRole.PRIMARY),
+    PRIMARY_CONTAINER(ColorRole.PRIMARY_CONTAINER),
+    SECONDARY_CONTAINER(ColorRole.SECONDARY_CONTAINER),
+    TERTIARY_CONTAINER(ColorRole.TERTIARY_CONTAINER),
+    SURFACE_CONTAINER_HIGHEST(ColorRole.SURFACE_CONTAINER_HIGHEST),
+    ERROR_CONTAINER(ColorRole.ERROR_CONTAINER);
+
+    private final ColorRole role;
+
+    ButtonSurfaceRole(final ColorRole role) {
+      this.role = role;
+    }
+  }
+
+  // Story-5: the Button group demo on the shared ContainerWorkbench scaffold.
+  private static JComponent buildButtonGroupContainer() {
+    final ContainerWorkbench workbench = new ContainerWorkbench();
+
+    final JComboBox<ButtonVariant> variantBox =
+        new JComboBox<>(
+            new ButtonVariant[] {
+              ButtonVariant.ELEVATED,
+              ButtonVariant.FILLED,
+              ButtonVariant.FILLED_TONAL,
+              ButtonVariant.OUTLINED
+            });
+    variantBox.setSelectedItem(ButtonVariant.FILLED);
+    final JCheckBox mandatoryBox = new JCheckBox("Mandatory", true);
+
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Button group");
+    controls.addControl("Variant", variantBox);
+    controls.addControl("", mandatoryBox);
+
+    final Runnable rebuild =
+        () -> {
+          final ButtonVariant variant = (ButtonVariant) variantBox.getSelectedItem();
+          final boolean mandatory = mandatoryBox.isSelected();
+          final JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+          final com.owspfm.elwha.button.ButtonGroup group =
+              new com.owspfm.elwha.button.ButtonGroup().setMandatory(mandatory);
+          ElwhaButton first = null;
+          for (final String label : new String[] {"List", "Grid", "Compact"}) {
+            final ElwhaButton item =
+                new ElwhaButton(label)
+                    .setVariant(variant)
+                    .setInteractionMode(ButtonInteractionMode.SELECTABLE);
+            group.add(item);
+            if (first == null) {
+              first = item;
+            }
+            row.add(item);
+          }
+          if (mandatory && first != null) {
+            group.setSelected(first);
+          }
+          group.addSelectionChangeListener(
+              evt -> {
+                final ElwhaButton picked = (ElwhaButton) evt.getNewValue();
+                workbench.logEvent("selected: " + (picked == null ? "(none)" : picked.getText()));
+              });
+          workbench.setContainer(row);
+        };
+    variantBox.addActionListener(event -> rebuild.run());
+    mandatoryBox.addActionListener(event -> rebuild.run());
+    rebuild.run();
+    return workbench;
   }
 
   // Chip has no single-instance Workbench yet — that is net-new work for Story 6 of epic #130.
@@ -422,6 +620,19 @@ public final class ElwhaShowcase {
       column.add(part);
     }
     return column;
+  }
+
+  // Wraps a gallery matrix with a bold section heading so a multi-matrix Gallery tab reads as
+  // distinct sections rather than two floating grids.
+  private static JComponent gallerySection(final String title, final JComponent body) {
+    final JPanel section = new JPanel(new BorderLayout());
+    section.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    final JLabel heading = new JLabel(title);
+    heading.setFont(heading.getFont().deriveFont(Font.BOLD));
+    heading.setBorder(BorderFactory.createEmptyBorder(16, 20, 0, 20));
+    section.add(heading, BorderLayout.NORTH);
+    section.add(body, BorderLayout.CENTER);
+    return section;
   }
 
   private static JScrollPane scroll(final Component view) {
