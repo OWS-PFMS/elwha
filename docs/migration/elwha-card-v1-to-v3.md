@@ -51,7 +51,6 @@ The conversion is **not a drop-in rename**. V1's accumulated escape-hatches (raw
 
 | V3 method | Purpose |
 |---|---|
-| `setOrientation(CardOrientation)` + `setLeadingColumn` / `setTrailingColumn` | Two-column horizontal layout (spec §15). |
 | `setExpansionOverflow(ExpansionOverflow.GROW \| SCROLL)` | Body overflow strategy when expanded (`SCROLL` installs an internal `JScrollPane`). |
 | `setCollapseConstraint(child, CollapseRule)` | Per-child collapse visibility (`ALWAYS_VISIBLE` / `COLLAPSIBLE`). |
 | Layer 4 disclosure widgets — `ElwhaCardChevron`, `ElwhaCardExpandLink` | First-class collapse affordances bound to a card. |
@@ -122,7 +121,7 @@ If you depended on V1's fine-grained event types (insert vs remove vs reorder), 
 | `com.owspfm.elwha.card.v1.list.CardListDataListener` / `CardSelectionListener` / `CardReorderListener` | All replaced by the simpler model-level `Consumer<...>` change listeners. |
 
 New in V3:
-- `com.owspfm.elwha.card.{CardOrientation, CollapseRule, ExpansionOverflow, DividerStyle, ThumbnailShape}`
+- `com.owspfm.elwha.card.{CollapseRule, ExpansionOverflow, DividerStyle, ThumbnailShape}`
 - `com.owspfm.elwha.card.{ElwhaCardHeader, ElwhaCardMedia, ElwhaCardActions, ElwhaCardDivider, ElwhaCardChevron, ElwhaCardExpandLink, ElwhaCardTitle, ElwhaCardSubtitle, ElwhaCardSupportingText, ElwhaCardLeadingIcon, ElwhaCardThumbnail}`
 
 ---

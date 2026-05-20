@@ -1,6 +1,5 @@
 package com.owspfm.elwha.card.playground;
 
-import com.owspfm.elwha.card.CardOrientation;
 import com.owspfm.elwha.card.CardVariant;
 import com.owspfm.elwha.card.CollapseRule;
 import com.owspfm.elwha.card.ElwhaCard;
@@ -45,7 +44,6 @@ public final class LiveConfigPanel extends JPanel {
   private final ElwhaCardSupportingText focusBody;
 
   private CardVariant variant = CardVariant.ELEVATED;
-  private CardOrientation orientation = CardOrientation.VERTICAL;
   private ExpansionOverflow overflow = ExpansionOverflow.GROW;
   private boolean actionable;
   private boolean selectable;
@@ -97,15 +95,6 @@ public final class LiveConfigPanel extends JPanel {
           applyAll();
         });
     addLabeledRow(panel, gbc, "Variant", variantBox);
-
-    final JComboBox<CardOrientation> orientationBox = new JComboBox<>(CardOrientation.values());
-    orientationBox.setSelectedItem(orientation);
-    orientationBox.addActionListener(
-        e -> {
-          orientation = (CardOrientation) orientationBox.getSelectedItem();
-          applyAll();
-        });
-    addLabeledRow(panel, gbc, "Orientation", orientationBox);
 
     final JComboBox<ExpansionOverflow> overflowBox = new JComboBox<>(ExpansionOverflow.values());
     overflowBox.setSelectedItem(overflow);
@@ -200,7 +189,6 @@ public final class LiveConfigPanel extends JPanel {
 
   private void applyAll() {
     focusCard.setVariant(variant);
-    focusCard.setOrientation(orientation);
     focusCard.setExpansionOverflow(overflow);
     focusCard.setActionable(actionable);
     focusCard.setSelectable(selectable);
@@ -245,7 +233,7 @@ public final class LiveConfigPanel extends JPanel {
    */
   public Snapshot snapshot() {
     return new Snapshot(
-        variant, orientation, overflow, actionable, selectable, collapsible, collapsed, disabled);
+        variant, overflow, actionable, selectable, collapsible, collapsed, disabled);
   }
 
   private void notifyListeners() {
@@ -259,7 +247,6 @@ public final class LiveConfigPanel extends JPanel {
    * Immutable snapshot of the focus card's configuration.
    *
    * @param variant active variant
-   * @param orientation active orientation
    * @param overflow active expansion overflow strategy
    * @param actionable whether the card is actionable
    * @param selectable whether the card is selectable
@@ -271,7 +258,6 @@ public final class LiveConfigPanel extends JPanel {
    */
   public record Snapshot(
       CardVariant variant,
-      CardOrientation orientation,
       ExpansionOverflow overflow,
       boolean actionable,
       boolean selectable,

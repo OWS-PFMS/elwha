@@ -1,6 +1,5 @@
 package com.owspfm.elwha.card.playground;
 
-import com.owspfm.elwha.card.CardOrientation;
 import com.owspfm.elwha.card.CardVariant;
 import com.owspfm.elwha.card.CollapseRule;
 import com.owspfm.elwha.card.DividerStyle;
@@ -17,7 +16,6 @@ import com.owspfm.elwha.icons.MaterialIcons;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
@@ -32,12 +30,11 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.SwingConstants;
 
 /**
  * Read-only static gallery of V3 {@link ElwhaCard} configurations. Each section pairs a heading
  * with a row of cards demonstrating one axis of the API: variants, actionability, collapse,
- * orientation, disabled state, and real-world patterns (two-tier conversation, OWS loop).
+ * disabled state, and real-world patterns (two-tier conversation, OWS loop).
  *
  * <p>This is the "what does it look like" half of the playground; the {@link LiveConfigPanel}
  * handles the "what does it look like under <em>my</em> settings" half.
@@ -83,8 +80,6 @@ public final class GalleryPanel extends JPanel {
     content.add(
         section("Two-tier conversation card (Gmail pattern, spec §4.3)", row(twoTierCard())));
     content.add(section("OWS Loop card (real-world pattern)", row(OwsLoopExample.build())));
-
-    content.add(section("Horizontal orientation", row(horizontalCard())));
 
     content.add(
         section(
@@ -210,32 +205,6 @@ public final class GalleryPanel extends JPanel {
             "<html>Hi Charles, your order #4831 is on its way and should arrive Friday.<br><br>"
                 + "Includes: 1× CAMP Speed Comp helmet, 2× Petzl Tikkina headlamp, "
                 + "1× Black Diamond Z-Pole.</html>"));
-    return card;
-  }
-
-  private static JComponent horizontalCard() {
-    final ElwhaCard card = ElwhaCard.elevatedCard();
-    card.setOrientation(CardOrientation.HORIZONTAL);
-
-    final JPanel leading = new JPanel(new BorderLayout());
-    leading.setOpaque(false);
-    leading.setPreferredSize(new Dimension(160, 110));
-    leading.add(
-        new JLabel(
-            new javax.swing.ImageIcon(stripeImage(160, 110, new Color(0x26A69A))),
-            SwingConstants.CENTER),
-        BorderLayout.CENTER);
-    card.setLeadingColumn(leading);
-
-    final JPanel trailing = new JPanel();
-    trailing.setOpaque(false);
-    trailing.setLayout(new BoxLayout(trailing, BoxLayout.Y_AXIS));
-    trailing.add(new ElwhaCardHeader().setTitle("Horizontal card").setSubtitle("Two columns"));
-    trailing.add(
-        new ElwhaCardSupportingText("Leading column is the image; trailing is this stack."));
-    trailing.add(Box.createVerticalGlue());
-    trailing.add(new ElwhaCardActions().addTrailing(new JButton("Open")));
-    card.setTrailingColumn(trailing);
     return card;
   }
 

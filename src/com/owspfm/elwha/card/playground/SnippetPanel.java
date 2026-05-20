@@ -74,11 +74,6 @@ public final class SnippetPanel extends JPanel {
           case OUTLINED -> "ElwhaCard.outlinedCard()";
         };
     sb.append("ElwhaCard card = ").append(factory);
-    if (s.orientation() != com.owspfm.elwha.card.CardOrientation.VERTICAL) {
-      sb.append("\n    .setOrientation(CardOrientation.")
-          .append(s.orientation().name())
-          .append(")");
-    }
     if (s.overflow() != com.owspfm.elwha.card.ExpansionOverflow.GROW) {
       sb.append("\n    .setExpansionOverflow(ExpansionOverflow.")
           .append(s.overflow().name())
