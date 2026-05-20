@@ -113,6 +113,18 @@ public final class SurfaceControlPanel {
   }
 
   /**
+   * Returns the size chosen on the stage Size control — the floor a {@link ComponentWorkbench}
+   * sizes its stage surface to before growing it to fit a larger component.
+   *
+   * @return the chosen stage size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public Dimension chosenStageSize() {
+    return ((StageSize) sizeBox.getSelectedItem()).size();
+  }
+
+  /**
    * Registers a listener invoked after every control change, once the change has been applied to
    * the surface.
    *
@@ -173,8 +185,11 @@ public final class SurfaceControlPanel {
     final BorderOption border = (BorderOption) borderBox.getSelectedItem();
     surface.setBorderRole(border == null ? null : border.role);
     surface.setBorderWidth((Integer) widthSpinner.getValue());
-    surface.setPreferredSize(
-        stage ? ((StageSize) sizeBox.getSelectedItem()).size() : StageSize.SMALL.size());
+    // In stage mode the hosting ComponentWorkbench owns the surface's preferred size (it grows the
+    // chosen size to fit a larger component); only the standalone demoed surface sizes itself here.
+    if (!stage) {
+      surface.setPreferredSize(StageSize.SMALL.size());
+    }
   }
 
   /** Wraps a nullable border {@link ColorRole} as a combo-box entry — {@code NONE} maps to null. */

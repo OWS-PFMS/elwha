@@ -10,6 +10,7 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
@@ -49,6 +50,8 @@ public final class ComponentWorkbench extends JPanel {
 
   private static final int CONTROLS_WIDTH = 480;
   private static final int CODE_HEIGHT = 200;
+  // Breathing room kept between the live component and the stage surface's rounded edge.
+  private static final int STAGE_FIT_MARGIN = 48;
 
   private final JPanel stageHost;
   private final ElwhaSurface stageSurface;
@@ -211,11 +214,27 @@ public final class ComponentWorkbench extends JPanel {
       if (liveComponent != null) {
         stageSurface.add(liveComponent);
       }
+      sizeStageSurface();
       stageHost.add(stageSurface);
     } else if (liveComponent != null) {
       stageHost.add(liveComponent);
     }
     stageHost.revalidate();
     stageHost.repaint();
+  }
+
+  // The chosen Size is a floor: the stage surface grows past it to fit a component larger than it,
+  // so a big component (a full Card) is never clipped by the surface's rounded body.
+  private void sizeStageSurface() {
+    final Dimension chosen = surfacePanel.chosenStageSize();
+    int width = chosen.width;
+    int height = chosen.height;
+    if (liveComponent != null) {
+      final Dimension need = liveComponent.getPreferredSize();
+      final Insets insets = stageSurface.getInsets();
+      width = Math.max(width, need.width + insets.left + insets.right + STAGE_FIT_MARGIN);
+      height = Math.max(height, need.height + insets.top + insets.bottom + STAGE_FIT_MARGIN);
+    }
+    stageSurface.setPreferredSize(new Dimension(width, height));
   }
 }
