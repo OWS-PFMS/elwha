@@ -1,5 +1,6 @@
 package com.owspfm.elwha.card.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.card.CardVariant;
 import com.owspfm.elwha.card.CollapseRule;
 import com.owspfm.elwha.card.DividerStyle;
@@ -16,20 +17,22 @@ import com.owspfm.elwha.icons.MaterialIcons;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.Scrollable;
 
 /**
  * Read-only static gallery of V3 {@link ElwhaCard} configurations. Each section pairs a heading
@@ -48,7 +51,7 @@ public final class GalleryPanel extends JPanel {
   /** Builds the gallery scroller. */
   public GalleryPanel() {
     super(new BorderLayout());
-    final JPanel content = new JPanel();
+    final ViewportWidthPanel content = new ViewportWidthPanel();
     content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
     content.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
@@ -78,6 +81,14 @@ public final class GalleryPanel extends JPanel {
     content.add(section("Minimal config (defaults only)", row(minimalCard())));
 
     content.add(
+        section(
+            "Card ↔ Button pairings (M3 spec §3.3)",
+            row(
+                pairingCard(CardVariant.ELEVATED),
+                pairingCard(CardVariant.FILLED),
+                pairingCard(CardVariant.OUTLINED))));
+
+    content.add(
         section("Two-tier conversation card (Gmail pattern, spec §4.3)", row(twoTierCard())));
     content.add(section("OWS Loop card (real-world pattern)", row(OwsLoopExample.build())));
 
@@ -93,6 +104,40 @@ public final class GalleryPanel extends JPanel {
     scroll.setBorder(null);
     scroll.getVerticalScrollBar().setUnitIncrement(16);
     add(scroll, BorderLayout.CENTER);
+  }
+
+  /**
+   * Gallery content panel that locks its width to the enclosing {@link JScrollPane} viewport.
+   * Without this the {@code GridLayout} rows expand to the cards' natural preferred width — and an
+   * {@link ElwhaCard} cooperates with whatever width its parent assigns (spec §3.4), so
+   * unconstrained it reports a very wide preferred size. Tracking the viewport width forces the
+   * rows to reflow the cards into the visible area; only vertical scrolling remains.
+   */
+  private static final class ViewportWidthPanel extends JPanel implements Scrollable {
+    @Override
+    public Dimension getPreferredScrollableViewportSize() {
+      return getPreferredSize();
+    }
+
+    @Override
+    public int getScrollableUnitIncrement(final Rectangle r, final int orient, final int dir) {
+      return 16;
+    }
+
+    @Override
+    public int getScrollableBlockIncrement(final Rectangle r, final int orient, final int dir) {
+      return Math.max(16, r.height - 32);
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+      return true;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportHeight() {
+      return false;
+    }
   }
 
   private static JComponent section(final String title, final JComponent body) {
@@ -179,10 +224,53 @@ public final class GalleryPanel extends JPanel {
     card.add(Box.createVerticalStrut(8));
     card.add(
         new ElwhaCardActions()
-            .addLeading(new JButton("Share"))
-            .addTrailing(new JButton("Cancel"))
-            .addTrailing(new JButton("Save")));
+            .addLeading(ElwhaButton.textButton("Share"))
+            .addTrailing(ElwhaButton.outlinedButton("Cancel"))
+            .addTrailing(ElwhaButton.filledButton("Save")));
     return card;
+  }
+
+  /**
+   * A card whose action row demonstrates the M3 spec §3.3 Card ↔ Button pairing: each card variant
+   * pairs with a specific secondary + primary action-button variant.
+   */
+  private static ElwhaCard pairingCard(final CardVariant v) {
+    final String name = v.name().charAt(0) + v.name().substring(1).toLowerCase();
+    final String pairing =
+        switch (v) {
+          case ELEVATED -> "Outlined + Filled";
+          case FILLED -> "Text + Outlined";
+          case OUTLINED -> "Text + Filled-tonal";
+        };
+    final ElwhaCard card = new ElwhaCard().setVariant(v);
+    card.add(
+        new ElwhaCardHeader().setTitle(name + " card").setSubtitle("CTA pairing — " + pairing));
+    card.add(
+        new ElwhaCardSupportingText(
+            "Per M3 spec §3.3 the "
+                + name.toLowerCase()
+                + " card variant pairs with the "
+                + pairing.toLowerCase()
+                + " action-button pair."));
+    card.add(new ElwhaCardDivider());
+    card.add(
+        new ElwhaCardActions().addTrailing(pairingSecondary(v)).addTrailing(pairingPrimary(v)));
+    return card;
+  }
+
+  private static ElwhaButton pairingSecondary(final CardVariant v) {
+    return switch (v) {
+      case ELEVATED -> ElwhaButton.outlinedButton("Cancel");
+      case FILLED, OUTLINED -> ElwhaButton.textButton("Cancel");
+    };
+  }
+
+  private static ElwhaButton pairingPrimary(final CardVariant v) {
+    return switch (v) {
+      case ELEVATED -> ElwhaButton.filledButton("Confirm");
+      case FILLED -> ElwhaButton.outlinedButton("Confirm");
+      case OUTLINED -> ElwhaButton.filledTonalButton("Confirm");
+    };
   }
 
   private static ElwhaCard minimalCard() {

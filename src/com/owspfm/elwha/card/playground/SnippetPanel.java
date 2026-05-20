@@ -1,10 +1,10 @@
 package com.owspfm.elwha.card.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import java.awt.BorderLayout;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -37,7 +37,7 @@ public final class SnippetPanel extends JPanel {
     area.putClientProperty("FlatLaf.styleClass", "monospaced");
     area.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
-    final JButton copy = new JButton("Copy");
+    final ElwhaButton copy = ElwhaButton.outlinedButton("Copy");
     copy.addActionListener(
         e ->
             Toolkit.getDefaultToolkit()

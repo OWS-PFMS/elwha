@@ -1,5 +1,6 @@
 package com.owspfm.elwha.card.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.card.ElwhaCard;
 import com.owspfm.elwha.card.ElwhaCardHeader;
 import com.owspfm.elwha.card.ElwhaCardSupportingText;
@@ -16,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -157,8 +157,8 @@ public final class ElwhaCardListShowcase extends JPanel {
     return c;
   }
 
-  private static JButton button(final String label, final Runnable action) {
-    final JButton b = new JButton(label);
+  private static ElwhaButton button(final String label, final Runnable action) {
+    final ElwhaButton b = ElwhaButton.outlinedButton(label);
     b.addActionListener(e -> action.run());
     return b;
   }
