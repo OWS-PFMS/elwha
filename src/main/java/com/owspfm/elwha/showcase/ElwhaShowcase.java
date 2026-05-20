@@ -15,6 +15,11 @@ import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
+import com.owspfm.elwha.iconbutton.ElwhaIconButton;
+import com.owspfm.elwha.iconbutton.IconButtonGroup;
+import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
+import com.owspfm.elwha.iconbutton.IconButtonSize;
+import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
@@ -253,10 +258,7 @@ public final class ElwhaShowcase {
     addLeaf(containers, "Chip List", new ChipListContainer().component());
     addLeaf(containers, "Card List", new ElwhaCardListShowcase());
     addLeaf(containers, "Button Group", buildButtonGroupContainer());
-    addLeaf(
-        containers,
-        "Icon Button Group",
-        scroll(IconButtonPlaygroundPanels.buildToggleExamplesPanel()));
+    addLeaf(containers, "Icon Button Group", buildIconButtonGroupContainer());
     root.add(containers);
 
     final JTree tree = new JTree(root);
@@ -731,14 +733,230 @@ public final class ElwhaShowcase {
 
   private static JComponent buildIconButtonComponent() {
     final JTabbedPane tabs = new JTabbedPane();
-    tabs.addTab("Workbench", scroll(IconButtonPlaygroundPanels.buildLivePanel()));
+    tabs.addTab("Workbench", buildIconButtonWorkbench());
     tabs.addTab(
         "Gallery",
         scroll(
             stack(
-                IconButtonPlaygroundPanels.buildVariantGalleryPanel(),
-                IconButtonPlaygroundPanels.buildSizesPanel())));
+                gallerySection(
+                    "Variants & states", IconButtonPlaygroundPanels.buildVariantGalleryPanel()),
+                gallerySection("Sizes", IconButtonPlaygroundPanels.buildSizesPanel()))));
     return tabs;
+  }
+
+  private static JComponent buildIconButtonWorkbench() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+
+    final JComboBox<IconChoice> iconBox = new JComboBox<>(IconChoice.values());
+    iconBox.setSelectedItem(IconChoice.FAVORITE);
+    final JComboBox<IconButtonVariant> variantBox = new JComboBox<>(IconButtonVariant.values());
+    variantBox.setSelectedItem(IconButtonVariant.FILLED_TONAL);
+    final JComboBox<IconButtonInteractionMode> modeBox =
+        new JComboBox<>(IconButtonInteractionMode.values());
+    modeBox.setSelectedItem(IconButtonInteractionMode.SELECTABLE);
+    final JComboBox<IconButtonSize> sizeBox = new JComboBox<>(IconButtonSize.values());
+    sizeBox.setSelectedItem(IconButtonSize.M);
+    final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
+    shapeBox.setSelectedItem(ShapeScale.FULL);
+    final JComboBox<IconButtonSurfaceRole> surfaceBox =
+        new JComboBox<>(IconButtonSurfaceRole.values());
+    final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
+    final JCheckBox selectedBox = new JCheckBox("Selected");
+    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Icon Button");
+    controls.addControl("Icon", iconBox);
+    controls.addControl("Variant", variantBox);
+    controls.addControl("Interaction mode", modeBox);
+    controls.addControl("Size", sizeBox);
+    controls.addControl("Shape", shapeBox);
+    controls.addSection("Appearance");
+    controls.addControl("Surface role override", surfaceBox);
+    controls.addControl("Border width", borderWidth);
+    controls.addSection("State");
+    controls.addControl("", selectedBox);
+    controls.addControl("", enabledBox);
+
+    final Runnable apply =
+        () -> {
+          final IconChoice icon = (IconChoice) iconBox.getSelectedItem();
+          final IconButtonVariant variant = (IconButtonVariant) variantBox.getSelectedItem();
+          final IconButtonInteractionMode mode =
+              (IconButtonInteractionMode) modeBox.getSelectedItem();
+          final IconButtonSize size = (IconButtonSize) sizeBox.getSelectedItem();
+          final ShapeScale shape = (ShapeScale) shapeBox.getSelectedItem();
+          final IconButtonSurfaceRole surface =
+              (IconButtonSurfaceRole) surfaceBox.getSelectedItem();
+          final int width = (Integer) borderWidth.getValue();
+          final boolean selectable = mode == IconButtonInteractionMode.SELECTABLE;
+          selectedBox.setEnabled(selectable);
+          final boolean selected = selectedBox.isSelected();
+          final boolean enabled = enabledBox.isSelected();
+
+          final MaterialIcons.IconPair pair = icon.pair(size.iconPx());
+          final ElwhaIconButton button = new ElwhaIconButton(pair.resting());
+          button
+              .setVariant(variant)
+              .setInteractionMode(mode)
+              .setButtonSize(size)
+              .setShape(shape)
+              .setBorderWidth(width);
+          if (surface.role != null) {
+            button.setSurfaceRole(surface.role);
+          }
+          if (selectable) {
+            button.setIcons(pair.resting(), pair.filled());
+            button.setSelected(selected);
+          }
+          button.setEnabled(enabled);
+          workbench.setStage(button);
+          workbench.setCode(
+              renderIconButtonCode(
+                  icon, variant, mode, size, shape, surface, width, selected, enabled));
+        };
+    iconBox.addActionListener(event -> apply.run());
+    variantBox.addActionListener(event -> apply.run());
+    modeBox.addActionListener(event -> apply.run());
+    sizeBox.addActionListener(event -> apply.run());
+    shapeBox.addActionListener(event -> apply.run());
+    surfaceBox.addActionListener(event -> apply.run());
+    borderWidth.addChangeListener(event -> apply.run());
+    selectedBox.addActionListener(event -> apply.run());
+    enabledBox.addActionListener(event -> apply.run());
+    apply.run();
+    return workbench;
+  }
+
+  private static String renderIconButtonCode(
+      final IconChoice icon,
+      final IconButtonVariant variant,
+      final IconButtonInteractionMode mode,
+      final IconButtonSize size,
+      final ShapeScale shape,
+      final IconButtonSurfaceRole surface,
+      final int width,
+      final boolean selected,
+      final boolean enabled) {
+    final StringBuilder code = new StringBuilder(320);
+    code.append("MaterialIcons.IconPair icon = MaterialIcons.pair(\"")
+        .append(icon.baseName)
+        .append("\", ")
+        .append(size.iconPx())
+        .append(");\n");
+    code.append("ElwhaIconButton button = new ElwhaIconButton(icon.resting());\n");
+    code.append("button.setVariant(IconButtonVariant.").append(variant).append(")\n");
+    code.append("    .setInteractionMode(IconButtonInteractionMode.").append(mode).append(")\n");
+    code.append("    .setButtonSize(IconButtonSize.").append(size).append(")\n");
+    code.append("    .setShape(ShapeScale.").append(shape).append(")");
+    if (width != 1) {
+      code.append("\n    .setBorderWidth(").append(width).append(")");
+    }
+    if (surface.role != null) {
+      code.append("\n    .setSurfaceRole(ColorRole.").append(surface.role).append(")");
+    }
+    code.append(";");
+    if (mode == IconButtonInteractionMode.SELECTABLE) {
+      code.append("\nbutton.setIcons(icon.resting(), icon.filled());");
+      code.append("\nbutton.setSelected(").append(selected).append(");");
+    }
+    if (!enabled) {
+      code.append("\nbutton.setEnabled(false);");
+    }
+    return code.toString();
+  }
+
+  /**
+   * Wraps a nullable surface-role override as a combo-box entry — {@code VARIANT_DEFAULT} → null.
+   */
+  private enum IconButtonSurfaceRole {
+    VARIANT_DEFAULT(null),
+    PRIMARY(ColorRole.PRIMARY),
+    PRIMARY_CONTAINER(ColorRole.PRIMARY_CONTAINER),
+    SECONDARY_CONTAINER(ColorRole.SECONDARY_CONTAINER),
+    TERTIARY_CONTAINER(ColorRole.TERTIARY_CONTAINER),
+    SURFACE(ColorRole.SURFACE),
+    SURFACE_CONTAINER_HIGHEST(ColorRole.SURFACE_CONTAINER_HIGHEST),
+    ERROR_CONTAINER(ColorRole.ERROR_CONTAINER);
+
+    private final ColorRole role;
+
+    IconButtonSurfaceRole(final ColorRole role) {
+      this.role = role;
+    }
+  }
+
+  /** Bundled outline / fill icon pairs offered by the Icon Button Workbench's icon picker. */
+  private enum IconChoice {
+    FAVORITE("favorite"),
+    STAR("star"),
+    PUSH_PIN("push_pin"),
+    ANCHOR("anchor"),
+    VISIBILITY("visibility"),
+    INFO("info"),
+    HELP("help"),
+    DELETE("delete"),
+    EDIT("edit");
+
+    private final String baseName;
+
+    IconChoice(final String baseName) {
+      this.baseName = baseName;
+    }
+
+    MaterialIcons.IconPair pair(final int size) {
+      return MaterialIcons.pair(baseName, size);
+    }
+  }
+
+  // The Icon Button group demo on the shared ContainerWorkbench scaffold.
+  private static JComponent buildIconButtonGroupContainer() {
+    final ContainerWorkbench workbench = new ContainerWorkbench();
+
+    final JComboBox<IconButtonVariant> variantBox = new JComboBox<>(IconButtonVariant.values());
+    variantBox.setSelectedItem(IconButtonVariant.FILLED_TONAL);
+    final JCheckBox mandatoryBox = new JCheckBox("Mandatory", true);
+
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Icon Button group");
+    controls.addControl("Variant", variantBox);
+    controls.addControl("", mandatoryBox);
+
+    final Runnable rebuild =
+        () -> {
+          final IconButtonVariant variant = (IconButtonVariant) variantBox.getSelectedItem();
+          final boolean mandatory = mandatoryBox.isSelected();
+          final JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+          final IconButtonGroup group = new IconButtonGroup(mandatory);
+          for (final String[] entry :
+              new String[][] {
+                {"favorite", "Favorite"},
+                {"star", "Star"},
+                {"info", "Info"},
+                {"help", "Help"}
+              }) {
+            final MaterialIcons.IconPair pair = MaterialIcons.pair(entry[0], 24);
+            final ElwhaIconButton button =
+                new ElwhaIconButton(pair.resting())
+                    .setVariant(variant)
+                    .setInteractionMode(IconButtonInteractionMode.SELECTABLE);
+            button.setIcons(pair.resting(), pair.filled());
+            final String label = entry[1];
+            button.addSelectionChangeListener(
+                event -> {
+                  if (Boolean.TRUE.equals(event.getNewValue())) {
+                    workbench.logEvent("selected: " + label);
+                  }
+                });
+            group.add(button);
+            row.add(button);
+          }
+          workbench.setContainer(row);
+        };
+    variantBox.addActionListener(event -> rebuild.run());
+    mandatoryBox.addActionListener(event -> rebuild.run());
+    rebuild.run();
+    return workbench;
   }
 
   private static JComponent buildSurfaceComponent() {
