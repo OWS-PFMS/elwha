@@ -11,6 +11,9 @@ import com.owspfm.elwha.card.playground.ElwhaCardListShowcase;
 import com.owspfm.elwha.card.playground.GalleryPanel;
 import com.owspfm.elwha.card.playground.LiveConfigPanel;
 import com.owspfm.elwha.card.playground.SnippetPanel;
+import com.owspfm.elwha.chip.ChipInteractionMode;
+import com.owspfm.elwha.chip.ChipVariant;
+import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
@@ -19,6 +22,8 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
+import com.owspfm.elwha.theme.ShapeScale;
+import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.Theme;
 import com.owspfm.elwha.theme.playground.FoundationsPanels;
 import java.awt.BorderLayout;
@@ -44,11 +49,14 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.JTree;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreeSelectionModel;
@@ -242,7 +250,7 @@ public final class ElwhaShowcase {
     root.add(components);
 
     final DefaultMutableTreeNode containers = new DefaultMutableTreeNode("Containers");
-    addLeaf(containers, "Chip List", ChipPlaygroundPanels.buildLiveListPanel());
+    addLeaf(containers, "Chip List", new ChipListContainer().component());
     addLeaf(containers, "Card List", new ElwhaCardListShowcase());
     addLeaf(containers, "Button Group", buildButtonGroupContainer());
     addLeaf(
@@ -484,11 +492,201 @@ public final class ElwhaShowcase {
     return workbench;
   }
 
-  // Chip has no single-instance Workbench yet — that is net-new work for Story 6 of epic #130.
   private static JComponent buildChipComponent() {
     final JTabbedPane tabs = new JTabbedPane();
-    tabs.addTab("Gallery", scroll(ChipPlaygroundPanels.buildVariantGallery()));
+    tabs.addTab("Workbench", buildChipWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            gallerySection(
+                "Variants, modes & states", ChipPlaygroundPanels.buildVariantGalleryMatrix())));
     return tabs;
+  }
+
+  private static JComponent buildChipWorkbench() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+
+    final JTextField textField = new JTextField("Chip", 14);
+    final JComboBox<ChipVariant> variantBox = new JComboBox<>(ChipVariant.values());
+    final JComboBox<ChipInteractionMode> modeBox = new JComboBox<>(ChipInteractionMode.values());
+    modeBox.setSelectedItem(ChipInteractionMode.SELECTABLE);
+    final JComboBox<ChipSurfaceRole> surfaceBox = new JComboBox<>(ChipSurfaceRole.values());
+    final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
+    final JComboBox<SpaceScale> padHBox = new JComboBox<>(SpaceScale.values());
+    padHBox.setSelectedItem(SpaceScale.MD);
+    final JComboBox<SpaceScale> padVBox = new JComboBox<>(SpaceScale.values());
+    padVBox.setSelectedItem(SpaceScale.XS);
+    final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
+    final JCheckBox leadingIconBox = new JCheckBox("Leading icon");
+    final JCheckBox trailingIconBox = new JCheckBox("Trailing icon");
+    final JCheckBox selectedBox = new JCheckBox("Selected");
+    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Chip");
+    controls.addControl("Text", textField);
+    controls.addControl("Variant", variantBox);
+    controls.addControl("Interaction mode", modeBox);
+    controls.addSection("Appearance");
+    controls.addControl("Surface role override", surfaceBox);
+    controls.addControl("Shape", shapeBox);
+    controls.addControl("Padding — horizontal", padHBox);
+    controls.addControl("Padding — vertical", padVBox);
+    controls.addControl("Border width", borderWidth);
+    controls.addControl("", leadingIconBox);
+    controls.addControl("", trailingIconBox);
+    controls.addSection("State");
+    controls.addControl("", selectedBox);
+    controls.addControl("", enabledBox);
+
+    final Runnable apply =
+        () -> {
+          final String text = textField.getText();
+          final ChipVariant variant = (ChipVariant) variantBox.getSelectedItem();
+          final ChipInteractionMode mode = (ChipInteractionMode) modeBox.getSelectedItem();
+          final ChipSurfaceRole surface = (ChipSurfaceRole) surfaceBox.getSelectedItem();
+          final ShapeScale shape = (ShapeScale) shapeBox.getSelectedItem();
+          final SpaceScale padH = (SpaceScale) padHBox.getSelectedItem();
+          final SpaceScale padV = (SpaceScale) padVBox.getSelectedItem();
+          final int width = (Integer) borderWidth.getValue();
+          final boolean leading = leadingIconBox.isSelected();
+          final boolean trailing = trailingIconBox.isSelected();
+          // GHOST does not render a selected state (issue #50) — reflect that in the control.
+          final boolean ghost = variant == ChipVariant.GHOST;
+          selectedBox.setEnabled(!ghost);
+          selectedBox.setToolTipText(
+              ghost ? "GHOST does not render a selected state (issue #50)." : null);
+          final boolean selected = selectedBox.isSelected();
+          final boolean enabled = enabledBox.isSelected();
+
+          final ElwhaChip chip = new ElwhaChip(text);
+          chip.setVariant(variant)
+              .setInteractionMode(mode)
+              .setShape(shape)
+              .setPadding(padH, padV)
+              .setBorderWidth(width);
+          if (surface.role != null) {
+            chip.setSurfaceRole(surface.role);
+          }
+          if (leading) {
+            chip.setLeadingIcon(MaterialIcons.star(14));
+          }
+          if (trailing) {
+            chip.setTrailingIcon(MaterialIcons.delete(14), "Remove", () -> {});
+          }
+          chip.setSelected(selected);
+          chip.setEnabled(enabled);
+          workbench.setStage(chip);
+          workbench.setCode(
+              renderChipCode(
+                  text, variant, mode, surface, shape, padH, padV, width, leading, trailing,
+                  selected, enabled));
+        };
+
+    textField.getDocument().addDocumentListener(new SimpleDocumentListener(apply));
+    variantBox.addActionListener(event -> apply.run());
+    modeBox.addActionListener(event -> apply.run());
+    surfaceBox.addActionListener(event -> apply.run());
+    shapeBox.addActionListener(event -> apply.run());
+    padHBox.addActionListener(event -> apply.run());
+    padVBox.addActionListener(event -> apply.run());
+    borderWidth.addChangeListener(event -> apply.run());
+    leadingIconBox.addActionListener(event -> apply.run());
+    trailingIconBox.addActionListener(event -> apply.run());
+    selectedBox.addActionListener(event -> apply.run());
+    enabledBox.addActionListener(event -> apply.run());
+    apply.run();
+    return workbench;
+  }
+
+  private static String renderChipCode(
+      final String text,
+      final ChipVariant variant,
+      final ChipInteractionMode mode,
+      final ChipSurfaceRole surface,
+      final ShapeScale shape,
+      final SpaceScale padH,
+      final SpaceScale padV,
+      final int width,
+      final boolean leading,
+      final boolean trailing,
+      final boolean selected,
+      final boolean enabled) {
+    final StringBuilder code = new StringBuilder(320);
+    code.append("ElwhaChip chip = new ElwhaChip(\"").append(text).append("\");\n");
+    code.append("chip.setVariant(ChipVariant.").append(variant).append(")\n");
+    code.append("    .setInteractionMode(ChipInteractionMode.").append(mode).append(")\n");
+    code.append("    .setShape(ShapeScale.").append(shape).append(")\n");
+    code.append("    .setPadding(SpaceScale.")
+        .append(padH)
+        .append(", SpaceScale.")
+        .append(padV)
+        .append(")");
+    if (width != 1) {
+      code.append("\n    .setBorderWidth(").append(width).append(")");
+    }
+    if (surface.role != null) {
+      code.append("\n    .setSurfaceRole(ColorRole.").append(surface.role).append(")");
+    }
+    code.append(";");
+    if (leading) {
+      code.append("\nchip.setLeadingIcon(MaterialIcons.star(14));");
+    }
+    if (trailing) {
+      code.append("\nchip.setTrailingIcon(MaterialIcons.delete(14), \"Remove\", () -> {});");
+    }
+    if (selected) {
+      code.append("\nchip.setSelected(true);");
+    }
+    if (!enabled) {
+      code.append("\nchip.setEnabled(false);");
+    }
+    return code.toString();
+  }
+
+  /**
+   * Wraps a nullable surface-role override as a combo-box entry — {@code VARIANT_DEFAULT} → null.
+   */
+  private enum ChipSurfaceRole {
+    VARIANT_DEFAULT(null),
+    PRIMARY(ColorRole.PRIMARY),
+    PRIMARY_CONTAINER(ColorRole.PRIMARY_CONTAINER),
+    SECONDARY(ColorRole.SECONDARY),
+    SECONDARY_CONTAINER(ColorRole.SECONDARY_CONTAINER),
+    TERTIARY(ColorRole.TERTIARY),
+    TERTIARY_CONTAINER(ColorRole.TERTIARY_CONTAINER),
+    SURFACE_VARIANT(ColorRole.SURFACE_VARIANT),
+    ERROR_CONTAINER(ColorRole.ERROR_CONTAINER);
+
+    private final ColorRole role;
+
+    ChipSurfaceRole(final ColorRole role) {
+      this.role = role;
+    }
+  }
+
+  /** A {@link DocumentListener} that runs one callback on any text-field change. */
+  private static final class SimpleDocumentListener implements DocumentListener {
+    private final Runnable onChange;
+
+    SimpleDocumentListener(final Runnable onChange) {
+      this.onChange = onChange;
+    }
+
+    @Override
+    public void insertUpdate(final DocumentEvent event) {
+      onChange.run();
+    }
+
+    @Override
+    public void removeUpdate(final DocumentEvent event) {
+      onChange.run();
+    }
+
+    @Override
+    public void changedUpdate(final DocumentEvent event) {
+      onChange.run();
+    }
   }
 
   private static JComponent buildIconButtonComponent() {
