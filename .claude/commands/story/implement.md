@@ -358,7 +358,7 @@ Moving to Phase {i+1}...
    ```
    ❌ ERROR: File should exist but not found
 
-   Expected: src/com/owspfm/ui/SomeClass.java
+   Expected: src/main/java/com/owspfm/ui/SomeClass.java
 
    This may indicate:
    - Wrong branch checked out

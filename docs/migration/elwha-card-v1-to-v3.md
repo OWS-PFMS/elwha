@@ -214,4 +214,4 @@ If a V1 capability you depend on isn't covered here, open an issue against [OWS-
 
 - V3 spec: [`docs/research/elwha-card-v3-spec.md`](../research/elwha-card-v3-spec.md)
 - V3 playground (visual reference for every pattern in this doc): `mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.playground.ElwhaCardPlayground"`
-- V1 source (read-only reference; ships in 0.2.0, deleted in 1.0.0): `src/com/owspfm/elwha/card/v1/`
+- V1 source (read-only reference; ships in 0.2.0, deleted in 1.0.0): `src/main/java/com/owspfm/elwha/card/v1/`

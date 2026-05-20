@@ -20,11 +20,11 @@ mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.playground.ElwhaCa
 
 **No tests yet.** The lib has zero JUnit tests today — components are validated visually via the two playground apps above. There's no test infrastructure to lean on; if you change behavior, exercise the playground.
 
-## Source layout (non-standard)
+## Source layout
 
-`pom.xml` sets `<sourceDirectory>src</sourceDirectory>`, so Java sources currently live at `src/com/owspfm/...` rather than the Maven-standard `src/main/java/com/owspfm/...` (resources already follow the default at `src/main/resources/`). This non-standard layout was originally kept to preserve `git blame` parity with the OWS-tool source the lib was extracted from. **That stance is now reversed:** [#60](https://github.com/OWS-PFMS/elwha/issues/60) tracks the migration to the standard `src/main/java` layout — the parity benefit is outweighed by the porting lift back onto OWS-Local-Search-GUI, which is already absorbing a rename-driven hit. Until #60 lands, `src/` is the current layout; don't migrate it piecemeal — it's one atomic move under that story.
+Java sources follow the standard Maven layout: code under `src/main/java/com/owspfm/...`, bundled resources under `src/main/resources/com/owspfm/...`. `pom.xml` uses Maven's default `<sourceDirectory>` — no override. (The tree was migrated from a flat `src/` layout in [#60](https://github.com/OWS-PFMS/elwha/issues/60); `git log --follow` traverses the move, so blame is preserved.)
 
-Component packages under `src/com/owspfm/elwha/`:
+Component packages under `src/main/java/com/owspfm/elwha/`:
 
 | Package | What it is |
 |---|---|
