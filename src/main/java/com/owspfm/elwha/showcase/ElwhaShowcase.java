@@ -8,10 +8,13 @@ import com.owspfm.elwha.card.playground.LiveConfigPanel;
 import com.owspfm.elwha.card.playground.SnippetPanel;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
+import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
+import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
+import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.Theme;
 import com.owspfm.elwha.theme.playground.FoundationsPanels;
 import java.awt.BorderLayout;
@@ -33,9 +36,11 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
 import javax.swing.JToggleButton;
 import javax.swing.JTree;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -58,11 +63,10 @@ import javax.swing.tree.TreeSelectionModel;
  *       Button / Icon Button group demos.
  * </ul>
  *
- * <p>Every panel is composed from the existing factored playground builders ({@code
- * ButtonPlaygroundPanels} and friends) so the Showcase and the standalone playgrounds never drift.
- * This is the Story-2 <em>shell</em> of epic #130: it reorganises what exists into the new
- * information architecture without refining the panels themselves. The locked design is {@code
- * docs/research/elwha-showcase-design.md}.
+ * <p>Most panels are composed from the existing factored playground builders ({@code
+ * ButtonPlaygroundPanels} and friends) so the Showcase and the standalone playgrounds never drift;
+ * component Workbenches are progressively migrated onto the shared {@link ComponentWorkbench}
+ * scaffold. The locked design is {@code docs/research/elwha-showcase-design.md}.
  *
  * <p>Run with: {@code mvn compile exec:java
  * -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"}
@@ -305,9 +309,86 @@ public final class ElwhaShowcase {
 
   private static JComponent buildSurfaceComponent() {
     final JTabbedPane tabs = new JTabbedPane();
-    tabs.addTab("Workbench", scroll(SurfacePlaygroundPanels.buildLivePanel()));
+    tabs.addTab("Workbench", buildSurfaceWorkbench());
     tabs.addTab("Gallery", scroll(SurfacePlaygroundPanels.buildMatrixPanel()));
     return tabs;
+  }
+
+  // Story-4 proof-of-fit: the Surface Workbench mounted on the shared ComponentWorkbench scaffold.
+  private static JComponent buildSurfaceWorkbench() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+    final ElwhaSurface surface = new ElwhaSurface();
+    surface.setPreferredSize(new Dimension(260, 170));
+    workbench.setStage(surface);
+
+    final JComboBox<ColorRole> roleBox = new JComboBox<>(ColorRole.values());
+    roleBox.setSelectedItem(surface.getSurfaceRole());
+    final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
+    shapeBox.setSelectedItem(surface.getShape());
+    final JComboBox<SurfaceBorderRole> borderBox = new JComboBox<>(SurfaceBorderRole.values());
+    final JSpinner widthSpinner =
+        new JSpinner(new SpinnerNumberModel(surface.getBorderWidth(), 0, 2, 1));
+
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Surface");
+    controls.addControl("Surface role", roleBox);
+    controls.addControl("Shape", shapeBox);
+    controls.addSection("Border");
+    controls.addControl("Border role", borderBox);
+    controls.addControl("Border width", widthSpinner);
+
+    final Runnable apply =
+        () -> {
+          final ColorRole role = (ColorRole) roleBox.getSelectedItem();
+          final ShapeScale shape = (ShapeScale) shapeBox.getSelectedItem();
+          final SurfaceBorderRole border = (SurfaceBorderRole) borderBox.getSelectedItem();
+          final int width = (Integer) widthSpinner.getValue();
+          surface.setSurfaceRole(role);
+          surface.setShape(shape);
+          surface.setBorderRole(border == null ? null : border.role);
+          surface.setBorderWidth(width);
+          workbench.setCode(renderSurfaceCode(role, shape, border, width));
+        };
+    roleBox.addActionListener(event -> apply.run());
+    shapeBox.addActionListener(event -> apply.run());
+    borderBox.addActionListener(event -> apply.run());
+    widthSpinner.addChangeListener(event -> apply.run());
+    apply.run();
+    return workbench;
+  }
+
+  private static String renderSurfaceCode(
+      final ColorRole role,
+      final ShapeScale shape,
+      final SurfaceBorderRole border,
+      final int width) {
+    final StringBuilder code = new StringBuilder(160);
+    code.append("new ElwhaSurface()\n");
+    code.append("    .setSurfaceRole(ColorRole.").append(role).append(")\n");
+    code.append("    .setShape(ShapeScale.").append(shape).append(")");
+    if (border != null && border.role != null) {
+      code.append("\n    .setBorderRole(ColorRole.").append(border.role).append(")");
+      code.append("\n    .setBorderWidth(").append(width).append(")");
+    }
+    code.append(";");
+    return code.toString();
+  }
+
+  /** Wraps a nullable border {@link ColorRole} as a combo-box entry — {@code NONE} maps to null. */
+  private enum SurfaceBorderRole {
+    NONE(null),
+    OUTLINE(ColorRole.OUTLINE),
+    OUTLINE_VARIANT(ColorRole.OUTLINE_VARIANT),
+    PRIMARY(ColorRole.PRIMARY),
+    SECONDARY(ColorRole.SECONDARY),
+    TERTIARY(ColorRole.TERTIARY),
+    ERROR(ColorRole.ERROR);
+
+    private final ColorRole role;
+
+    SurfaceBorderRole(final ColorRole role) {
+      this.role = role;
+    }
   }
 
   private static JComponent buildCardComponent() {
