@@ -60,8 +60,12 @@ public final class ComponentWorkbench extends JPanel {
 
     codeView = new CodeView();
     codeView.setPreferredSize(new Dimension(0, CODE_HEIGHT));
+    // Compound — keep CodeView's own content padding, add the top divider on the outside.
     codeView.setBorder(
-        BorderFactory.createMatteBorder(1, 0, 0, 0, UIManager.getColor("Component.borderColor")));
+        BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(
+                1, 0, 0, 0, UIManager.getColor("Component.borderColor")),
+            codeView.getBorder()));
 
     final JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, stageHost, controlsScroll);
     split.setResizeWeight(1.0);
