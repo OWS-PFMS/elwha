@@ -664,7 +664,10 @@ public final class ElwhaShowcase {
                 leadingAffordanceActiveBox::doClick);
           }
           if (trailingSlot == SlotOption.ICON) {
-            chip.setTrailingIcon(MaterialIcons.delete(14), "Remove", () -> {});
+            chip.setTrailingIcon(
+                MaterialIcons.delete(14),
+                "Remove",
+                () -> trailingSlotBox.setSelectedItem(SlotOption.NONE));
           } else if (trailingSlot == SlotOption.AFFORDANCE) {
             final MaterialIcons.IconPair favorite = MaterialIcons.pair("favorite", 14);
             chip.setTrailingAffordance(
@@ -756,7 +759,7 @@ public final class ElwhaShowcase {
           .append(", false, \"Toggle\", onClick);");
     }
     if (trailingSlot == SlotOption.ICON) {
-      code.append("\nchip.setTrailingIcon(MaterialIcons.delete(14), \"Remove\", () -> {});");
+      code.append("\nchip.setTrailingIcon(MaterialIcons.delete(14), \"Remove\", onRemove);");
     } else if (trailingSlot == SlotOption.AFFORDANCE) {
       code.append("\nMaterialIcons.IconPair favorite = MaterialIcons.pair(\"favorite\", 14);");
       code.append("\nchip.setTrailingAffordance(\n")
