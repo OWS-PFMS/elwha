@@ -206,6 +206,17 @@ post-epic question, not precommitted here.
   intentionally bundles demo themes. The relevant `CLAUDE.md` line is to be updated when the
   theme story lands.
 
+**Amendment — Primary / Secondary tiers ([#153](https://github.com/OWS-PFMS/elwha/issues/153)).**
+The "6 bundled palettes" framing above is superseded. The bundled set is now two
+directory-derived tiers: a **primary** tier (the curated baseline + ROYGBIV set, under
+`theme/palettes/primary/`) and an additive **secondary** tier of 10 M3 Theme Builder palettes
+(`theme/palettes/secondary/`) — the colors not already in the primary tier, so the two tiers are
+disjoint. The header carries a `Primary | Secondary` tier switcher (a
+`JToggleButton` group, matching the header's mode toggle); the picker shows one tier at a time, ordered
+spectrally by primary-role hue with neutral-family palettes (grey / brown) last. `MaterialPalettes`
+exposes `primary()` / `secondary()` in place of the former flat `bundled()`. Each tier stays
+directory-derived — a palette JSON dropped into a tier's subdirectory surfaces with no code change.
+
 ## 9. Epic #130 story breakdown
 
 To be filed as sub-issues of #130, milestone `v0.3.0`. Order is a recommendation; finalize at
