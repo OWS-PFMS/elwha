@@ -19,6 +19,10 @@ OUTPUT_DIR defaults to ``src/main/resources/com/owspfm/elwha/theme/palettes/seco
 
 Each ``material-theme-<color>.json`` in INPUT_DIR becomes ``<color>.json`` in
 OUTPUT_DIR (e.g. ``material-theme-deep-orange.json`` -> ``deep-orange.json``).
+
+A color already curated in the primary tier -- a ``<color>.json`` present in the
+sibling ``primary/`` directory -- is skipped, so the primary and secondary tiers
+stay disjoint.
 """
 import json
 import sys
@@ -57,13 +61,23 @@ def main() -> None:
     in_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_IN
     out_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_OUT
     out_dir.mkdir(parents=True, exist_ok=True)
+    # The two tiers stay disjoint: a color already curated in the primary tier is
+    # not duplicated into the secondary tier.
+    primary_slugs = {p.stem for p in (out_dir.parent / "primary").glob("*.json")}
     exports = sorted(in_dir.glob(f"{PREFIX}*.json"))
     if not exports:
         sys.exit(f"No {PREFIX}*.json files found in {in_dir}")
-    print(f"Converting {len(exports)} palette(s) -> {out_dir}")
+    print(f"Converting MTB exports -> {out_dir}")
+    converted = skipped = 0
     for raw_path in exports:
+        slug = raw_path.stem[len(PREFIX):]
+        if slug in primary_slugs:
+            print(f"  skip {raw_path.name} ({slug} is in the primary tier)")
+            skipped += 1
+            continue
         convert(raw_path, out_dir)
-    print("Done.")
+        converted += 1
+    print(f"Done — {converted} converted, {skipped} skipped (primary-tier colors).")
 
 
 if __name__ == "__main__":

@@ -128,8 +128,9 @@ public final class MaterialPalettes {
    * Returns the broader <strong>secondary</strong> exploration tier — discovered from {@code
    * theme/palettes/secondary/} and returned in spectral order.
    *
-   * <p>Additive to {@link #primary()}: the two tiers are independent, may share color names, and
-   * are never browsed simultaneously. Directory-derived and cached like the primary tier.
+   * <p>Additive to {@link #primary()}: the two tiers are disjoint — the secondary tier carries only
+   * colors the primary tier does not — and are never browsed simultaneously. Directory-derived and
+   * cached like the primary tier.
    *
    * @return the secondary-tier themes in spectral order; never empty in a correctly packaged build
    * @throws IllegalArgumentException if a bundled palette resource is malformed
