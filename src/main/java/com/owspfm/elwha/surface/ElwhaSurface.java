@@ -4,11 +4,16 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SurfacePainter;
+import java.awt.AlphaComposite;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Area;
+import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
 import java.util.Objects;
 import javax.swing.JPanel;
 
@@ -51,7 +56,7 @@ import javax.swing.JPanel;
  * docs/research/elwha-surface-design.md}.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.3.0
  * @since v0.1.0
  */
 public class ElwhaSurface extends JPanel {
@@ -302,33 +307,80 @@ public class ElwhaSurface extends JPanel {
   }
 
   /**
-   * Clips every child paint to the rounded body shape so content (media, etc.) that fills its cell
-   * to chassis bounds doesn't render past the chassis's curved outer corners.
+   * Renders the children through a soft (antialiased) rounded-corner clip so content that fills its
+   * cell to the chassis bounds — an opaque {@code ElwhaCardMedia} cover especially — conforms to
+   * the chassis's curved outer corners with a smooth edge.
+   *
+   * <p>Java2D never antialiases a {@link Graphics2D#clip(java.awt.Shape) clip} boundary, so a plain
+   * round-rect clip leaves an opaque edge-to-edge child with jagged, stair-stepped corners against
+   * the smooth chassis fill (#157). Instead the children are drawn into an offscreen buffer and
+   * composited back through an antialiased rounded-rect alpha mask ({@link AlphaComposite#DstIn});
+   * the mask carries the AA so every child's corner curve matches the chassis exactly. The buffer
+   * is sized to the {@code Graphics}' device resolution so children stay crisp on a HiDPI display.
    *
    * @param g the graphics context
-   * @version v0.2.0
+   * @version v0.3.0
    * @since v0.2.0
    */
   @Override
   protected void paintChildren(final Graphics g) {
+    if (getComponentCount() == 0) {
+      return;
+    }
     final Insets s = getInsets();
     final int bodyX = s.left;
     final int bodyY = s.top;
     final int bodyW = Math.max(0, getWidth() - s.left - s.right);
     final int bodyH = Math.max(0, getHeight() - s.top - s.bottom);
+    if (bodyW <= 0 || bodyH <= 0) {
+      return;
+    }
     final int arc = shape.px();
-    final Graphics2D g2 = (Graphics2D) g.create();
+
+    // Device-resolution offscreen buffer: the current Graphics transform carries the HiDPI scale,
+    // so painting at 1x then upscaling would blur the children (text especially).
+    final Graphics2D g2 = (Graphics2D) g;
+    final AffineTransform tx = g2.getTransform();
+    final double scaleX = tx.getScaleX() > 0 ? tx.getScaleX() : 1.0;
+    final double scaleY = tx.getScaleY() > 0 ? tx.getScaleY() : 1.0;
+    final int deviceW = Math.max(1, (int) Math.ceil(bodyW * scaleX));
+    final int deviceH = Math.max(1, (int) Math.ceil(bodyH * scaleY));
+
+    final BufferedImage buffer = new BufferedImage(deviceW, deviceH, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D bg = buffer.createGraphics();
     try {
-      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      // Use SurfacePainter.bodyShape via a translated rect so corner geometry is identical to
-      // every other surface-aware paint (chassis stroke, media slot, etc.) — per #106.
-      final RoundRectangle2D.Float local = SurfacePainter.bodyShape(bodyW, bodyH, arc);
-      g2.clip(
-          new RoundRectangle2D.Float(
-              bodyX, bodyY, local.width, local.height, local.arcwidth, local.archeight));
-      super.paintChildren(g2);
+      bg.scale(scaleX, scaleY);
+      bg.translate(-bodyX, -bodyY);
+      super.paintChildren(bg);
+      // Erase the four corner-overflow regions — the chassis rectangle minus its rounded body — so
+      // an opaque edge-to-edge child is cut to the chassis curve. Clear-compositing an antialiased
+      // fill soft-erases; a plain Graphics2D.clip would hard-erase and stair-step the corner
+      // (#157). bodyShape is the single source of the curve geometry (chassis fill / stroke use it
+      // too) so the cut aligns exactly — per #106.
+      final RoundRectangle2D.Float body = SurfacePainter.bodyShape(bodyW, bodyH, arc);
+      final Area overflow = new Area(new Rectangle2D.Float(bodyX, bodyY, bodyW, bodyH));
+      overflow.subtract(
+          new Area(
+              new RoundRectangle2D.Float(
+                  bodyX, bodyY, body.width, body.height, body.arcwidth, body.archeight)));
+      bg.setComposite(AlphaComposite.Clear);
+      bg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      bg.fill(overflow);
     } finally {
-      g2.dispose();
+      bg.dispose();
+    }
+
+    // Blit the device-resolution buffer back 1:1 onto the device pixel grid: translate to the body
+    // origin, then undo the device scale so one buffer pixel maps to one device pixel.
+    final Graphics2D blit = (Graphics2D) g.create();
+    try {
+      blit.translate(bodyX, bodyY);
+      blit.scale(1.0 / scaleX, 1.0 / scaleY);
+      blit.setRenderingHint(
+          RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+      blit.drawImage(buffer, 0, 0, null);
+    } finally {
+      blit.dispose();
     }
   }
 }

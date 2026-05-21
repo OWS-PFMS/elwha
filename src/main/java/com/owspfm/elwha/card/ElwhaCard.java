@@ -83,7 +83,7 @@ import javax.swing.Timer;
  * cannot configure those independently. See spec §12.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.3.0
  * @since v0.2.0
  */
 public class ElwhaCard extends ElwhaSurface {
@@ -167,11 +167,14 @@ public class ElwhaCard extends ElwhaSurface {
   private static final int CHECKED_BADGE_ICON_PX = 16;
 
   /**
-   * Per-paint flag set during {@link #paintComponent} when the ElwhaCard is locally owning the
-   * border treatment (disabled-outlined wash, focused-outlined replacement) so that {@link
-   * ElwhaSurface}'s super-paint skips its resting border stroke. The flag is read via the
-   * overridden {@link #getBorderRole()} — returning {@code null} from there suppresses the border
-   * inside {@link com.owspfm.elwha.theme.SurfacePainter#paint}.
+   * Per-paint flag set during {@link #paintComponent} for every {@link CardVariant#OUTLINED} card
+   * so {@link ElwhaSurface}'s super-paint skips its resting border stroke and {@link
+   * #paintChildren} repaints the outline above the children instead. Painting the border last keeps
+   * it from being occluded by an edge-bleed {@link ElwhaCardMedia} slot, whose opaque cover fills
+   * the card to the chassis edge and would otherwise hide the top and upper-side outline (#157); it
+   * also gives the focused-outlined (PL-8) and disabled-outlined (PL-10) treatments a clean base.
+   * The flag is read via the overridden {@link #getBorderRole()} — returning {@code null} from
+   * there suppresses the border inside {@link com.owspfm.elwha.theme.SurfacePainter#paint}.
    */
   private boolean suppressRestingBorder;
 
@@ -889,26 +892,27 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
-   * Paints under the children: Surface chassis (shadow + fill + border) via {@code super}, then the
-   * card's state-layer overlay tinted to the variant's on-pair. Selection badge, focus ring,
-   * disabled outlined border, and ripple paint above children in {@link #paintChildren}.
+   * Paints under the children: Surface chassis (shadow + fill) via {@code super}, then the card's
+   * state-layer overlay tinted to the variant's on-pair. The OUTLINED border, selection badge,
+   * focus ring, and ripple paint above children in {@link #paintChildren}.
    *
    * <p>Sets two per-paint flags ({@link #paintingDisabled}, {@link #suppressRestingBorder}) so the
    * chassis super-paint sees the disabled container-role swap (PL-9) and skips the resting border
-   * when ElwhaCard is locally painting it (focused-outlined PL-8, disabled-outlined PL-10). The
-   * flags are reset before this method returns so a subsequent paint with different state-pair uses
-   * the resting defaults.
+   * for every OUTLINED card — the outline is repainted above the children so an edge-bleed media
+   * slot cannot occlude it (#157), covering the resting, focused-outlined (PL-8), and
+   * disabled-outlined (PL-10) treatments alike. The flags are reset before this method returns so a
+   * subsequent paint with different state uses the resting defaults.
    *
    * @param g the graphics context
-   * @version v0.2.0
+   * @version v0.3.0
    * @since v0.2.0
    */
   @Override
   protected void paintComponent(final Graphics g) {
-    final boolean disabled = !isEnabled();
-    final boolean focused = actionable && isFocusOwner() && isEnabled();
-    paintingDisabled = disabled;
-    suppressRestingBorder = variant == CardVariant.OUTLINED && (focused || disabled);
+    paintingDisabled = !isEnabled();
+    // Every OUTLINED card suppresses the chassis resting border here and repaints it above the
+    // children in paintChildren — see suppressRestingBorder and paintRestingOutlinedBorder (#157).
+    suppressRestingBorder = variant == CardVariant.OUTLINED;
     try {
       super.paintComponent(g);
     } finally {
@@ -963,17 +967,20 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
-   * Paints above the children: focus ring, disabled outlined border replacement, ripple, selection
-   * badge. Painting these on top of children ensures the selection badge sits above any media child
-   * that would otherwise hide it.
+   * Paints above the children: the OUTLINED border, ripple, focus ring, and selection badge.
+   * Painting these on top of children ensures the selection badge sits above any media child that
+   * would otherwise hide it, and — per #157 — that an OUTLINED card's outline is never occluded by
+   * an edge-bleed {@link ElwhaCardMedia} slot.
    *
-   * <p>Per PL-8 (focused-outlined) and PL-10 (disabled-outlined), the border for Outlined cards in
-   * those states is painted here at the chassis body edge — the resting OUTLINE_VARIANT stroke is
-   * suppressed by {@link #suppressRestingBorder} during super.paintComponent, so there's no
-   * double-stacking.
+   * <p>The border for every Outlined card is painted here at the chassis body edge: the resting
+   * OUTLINE_VARIANT stroke ({@link #paintRestingOutlinedBorder}), the PL-8 focused replacement
+   * (folded into {@link #paintFocusRing}), or the PL-10 disabled wash ({@link
+   * #paintDisabledOutlinedBorder}). The resting stroke {@link ElwhaSurface} would paint under the
+   * children is suppressed by {@link #suppressRestingBorder} during super.paintComponent, so
+   * there's no double-stacking.
    *
    * @param g the graphics context
-   * @version v0.2.0
+   * @version v0.3.0
    * @since v0.2.0
    */
   @Override
@@ -984,6 +991,9 @@ public class ElwhaCard extends ElwhaSurface {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       if (actionable && rippleProgress < 1f && rippleOrigin != null) {
         paintRipple(g2);
+      }
+      if (variant == CardVariant.OUTLINED && isEnabled() && !(actionable && isFocusOwner())) {
+        paintRestingOutlinedBorder(g2);
       }
       if (variant == CardVariant.OUTLINED && !isEnabled()) {
         paintDisabledOutlinedBorder(g2);
@@ -1036,6 +1046,32 @@ public class ElwhaCard extends ElwhaSurface {
     final java.awt.Rectangle b = bodyBounds();
     final int arc = getShape().px();
     g2.fill(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
+  }
+
+  /**
+   * Resting OUTLINED border per #157 — painted above the children so an edge-bleed {@link
+   * ElwhaCardMedia} slot (full body width, opaque cover, anchored to the chassis edge) cannot
+   * occlude the outline along the card's top and upper-side edges. The resting OUTLINE_VARIANT
+   * stroke {@link ElwhaSurface} would paint under the children is suppressed by {@link
+   * #suppressRestingBorder}; this repaints it with the exact geometry {@link
+   * com.owspfm.elwha.theme.SurfacePainter#paint} uses for the resting border, so the result is
+   * pixel-identical — only the z-order changes.
+   */
+  private void paintRestingOutlinedBorder(final Graphics2D g2) {
+    final ColorRole role = super.getBorderRole();
+    final int strokeW = getBorderWidth();
+    if (role == null || strokeW <= 0) {
+      return;
+    }
+    final java.awt.Rectangle b = bodyBounds();
+    final float inset = strokeW / 2f;
+    final int arc = Math.max(0, Math.min(getShape().px(), Math.min(b.width, b.height)));
+    final float strokeArc = Math.max(0f, arc - strokeW);
+    g2.setColor(role.resolve());
+    g2.setStroke(new BasicStroke(strokeW));
+    g2.draw(
+        new RoundRectangle2D.Float(
+            b.x + inset, b.y + inset, b.width - strokeW, b.height - strokeW, strokeArc, strokeArc));
   }
 
   /**
@@ -1339,20 +1375,9 @@ public class ElwhaCard extends ElwhaSurface {
       final int padV = paddingVertical.px();
       final int interGap = interElementGap();
       final int count = parent.getComponentCount();
-      // Slot-width estimate for the heightForChild calls. Once the chassis has been laid out
-      // even once, parent.getWidth() is positive and reflects the actual width children will
-      // get — we use it so width-sensitive children (ElwhaCardActions wrap rows, ElwhaCardMedia
-      // cover-fit slot height) report the right preferred height for the chassis to reserve.
-      // Without this, the preferred-height computation would use single-row / intrinsic heights
-      // and the chassis would be sized too short to contain wrapped action rows. Settles after
-      // one re-layout cycle.
-      final int parentBodyW = Math.max(0, parent.getWidth() - ins.left - ins.right);
-      int totalH = 0;
-      int maxW = 0;
-      boolean anyVisible = false;
+
       Component firstVisible = null;
       Component lastVisible = null;
-      Component prevVisible = null;
       for (int i = 0; i < count; i++) {
         final Component c = parent.getComponent(i);
         if (!c.isVisible()) {
@@ -1362,14 +1387,38 @@ public class ElwhaCard extends ElwhaSurface {
           firstVisible = c;
         }
         lastVisible = c;
-        anyVisible = true;
       }
-      if (!anyVisible) {
+      if (firstVisible == null) {
         return new Dimension(ins.left + ins.right + 2 * padH, ins.top + ins.bottom + 2 * padV);
       }
+
+      // The card's natural body width: the widest child's preferred width, padded for the
+      // non-edge-bleed children. Computed before the height pass on purpose — cover-fit
+      // ElwhaCardMedia and wrap-row ElwhaCardActions have a width-dependent height, and before
+      // the chassis has ever been laid out the only honest width to offer them is the width we
+      // are about to return as the card's preferred width. Feeding it back in makes the returned
+      // (width, height) pair self-consistent: a parent that honors the card's preferred width
+      // gets exactly this height with no re-layout settling cycle (#157).
+      int bodyW = 0;
+      for (int i = 0; i < count; i++) {
+        final Component c = parent.getComponent(i);
+        if (!c.isVisible()) {
+          continue;
+        }
+        final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
+        final int w = c.getPreferredSize().width;
+        bodyW = Math.max(bodyW, bleed ? w : w + 2 * padH);
+      }
+      // Once the chassis has been laid out, its real body width supersedes the estimate so
+      // width-sensitive children measure against the width they will actually receive.
+      final int laidOutBodyW = parent.getWidth() - ins.left - ins.right;
+      final int effectiveBodyW = laidOutBodyW > 0 ? laidOutBodyW : bodyW;
+
+      int totalH = 0;
       if (!(firstVisible instanceof ElwhaCardMedia)) {
         totalH += padV;
       }
+      Component prevVisible = null;
       for (int i = 0; i < count; i++) {
         final Component c = parent.getComponent(i);
         if (!c.isVisible()) {
@@ -1378,17 +1427,15 @@ public class ElwhaCard extends ElwhaSurface {
         if (prevVisible != null) {
           totalH += interGap;
         }
-        final Dimension p = c.getPreferredSize();
         final boolean bleed = isEdgeBleed(c, firstVisible, lastVisible);
-        final int cellW = bleed ? parentBodyW : Math.max(0, parentBodyW - 2 * padH);
+        final int cellW = bleed ? effectiveBodyW : Math.max(0, effectiveBodyW - 2 * padH);
         totalH += heightForChild(c, cellW);
-        maxW = Math.max(maxW, bleed ? p.width : p.width + 2 * padH);
         prevVisible = c;
       }
       if (!(lastVisible instanceof ElwhaCardMedia)) {
         totalH += padV;
       }
-      return new Dimension(maxW + ins.left + ins.right, totalH + ins.top + ins.bottom);
+      return new Dimension(bodyW + ins.left + ins.right, totalH + ins.top + ins.bottom);
     }
 
     @Override

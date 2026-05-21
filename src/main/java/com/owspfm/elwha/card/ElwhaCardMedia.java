@@ -27,7 +27,7 @@ import javax.swing.JComponent;
  * <p>See {@code docs/research/elwha-card-v3-spec.md} §5.2.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.3.0
  * @since v0.2.0
  */
 public final class ElwhaCardMedia extends JComponent {
@@ -261,8 +261,16 @@ public final class ElwhaCardMedia extends JComponent {
    *       overrides the derived height.
    * </ul>
    *
+   * <p><strong>Provisional for cover-fit media.</strong> When the height is aspect-ratio-derived
+   * (no explicit {@link #setPreferredHeight}), this size is genuinely provisional — the laid-out
+   * height is a function of the slot width and this getter carries no width context, so it reports
+   * the height for the intrinsic width above. The owning {@link ElwhaCard} does not read this
+   * height: its {@code VerticalCardLayout} measures the slot via {@link #heightForSlotWidth(int)}
+   * against the card's own width and reports a self-consistent card preferred size (#157). Pin the
+   * height with {@link #setPreferredHeight(int)} for a width-independent media size.
+   *
    * @return the intrinsic preferred size, never dependent on the current laid-out width
-   * @version v0.2.0
+   * @version v0.3.0
    * @since v0.2.0
    */
   @Override
