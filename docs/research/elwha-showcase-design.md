@@ -211,8 +211,8 @@ The "6 bundled palettes" framing above is superseded. The bundled set is now two
 directory-derived tiers: a **primary** tier (the curated baseline + ROYGBIV set, under
 `theme/palettes/primary/`) and an additive **secondary** tier of 10 M3 Theme Builder palettes
 (`theme/palettes/secondary/`) — the colors not already in the primary tier, so the two tiers are
-disjoint. The header carries a `Primary | Secondary` tier switcher (an
-`ElwhaChipList` in `SINGLE_MANDATORY` mode); the picker shows one tier at a time, ordered
+disjoint. The header carries a `Primary | Secondary` tier switcher (a
+`JToggleButton` group, matching the header's mode toggle); the picker shows one tier at a time, ordered
 spectrally by primary-role hue with neutral-family palettes (grey / brown) last. `MaterialPalettes`
 exposes `primary()` / `secondary()` in place of the former flat `bundled()`. Each tier stays
 directory-derived — a palette JSON dropped into a tier's subdirectory surfaces with no code change.

@@ -25,9 +25,6 @@ import com.owspfm.elwha.card.playground.GalleryPanel;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
-import com.owspfm.elwha.chip.list.ChipSelectionMode;
-import com.owspfm.elwha.chip.list.DefaultChipListModel;
-import com.owspfm.elwha.chip.list.ElwhaChipList;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonGroup;
@@ -36,7 +33,6 @@ import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
-import com.owspfm.elwha.list.ElwhaListOrientation;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -189,7 +185,15 @@ public final class ElwhaShowcase {
 
     bar.add(Box.createHorizontalStrut(16));
     bar.add(new JLabel("Tier:"));
-    bar.add(buildTierSwitcher());
+    final ButtonGroup tierGroup = new ButtonGroup();
+    final JToggleButton primaryTierButton = new JToggleButton("PRIMARY", true);
+    final JToggleButton secondaryTierButton = new JToggleButton("SECONDARY");
+    primaryTierButton.addActionListener(event -> switchTier(false));
+    secondaryTierButton.addActionListener(event -> switchTier(true));
+    tierGroup.add(primaryTierButton);
+    tierGroup.add(secondaryTierButton);
+    bar.add(primaryTierButton);
+    bar.add(secondaryTierButton);
 
     bar.add(Box.createHorizontalStrut(16));
     bar.add(new JLabel("Palette:"));
@@ -200,25 +204,6 @@ public final class ElwhaShowcase {
     bar.add(statusLabel);
     updateStatus();
     return bar;
-  }
-
-  // The Primary | Secondary tier switcher — an ElwhaChipList tab strip, dogfooding the library's
-  // own SINGLE_MANDATORY (segmented-control) selection semantics.
-  private JComponent buildTierSwitcher() {
-    final DefaultChipListModel<String> model =
-        new DefaultChipListModel<>(List.of("Primary", "Secondary"));
-    final ElwhaChipList<String> switcher =
-        new ElwhaChipList<>(model, (item, index) -> new ElwhaChip(item))
-            .setOrientation(ElwhaListOrientation.HORIZONTAL)
-            .setSelectionMode(ChipSelectionMode.SINGLE_MANDATORY);
-    switcher
-        .getSelectionModel()
-        .addSelectionListener(
-            event ->
-                switchTier(
-                    !event.getSelected().isEmpty()
-                        && "Secondary".equals(event.getSelected().get(0))));
-    return switcher;
   }
 
   // The picker shows one tier at a time; each tier is directory-derived and spectrally ordered by
