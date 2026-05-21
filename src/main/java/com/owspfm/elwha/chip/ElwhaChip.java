@@ -2,6 +2,7 @@ package com.owspfm.elwha.chip;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.StateLayer;
@@ -16,6 +17,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.RenderingHints;
@@ -64,7 +66,9 @@ import javax.swing.Timer;
  *
  * <p><strong>State layers are uniform.</strong> Hover / pressed / selected feedback is composited
  * via the {@link StateLayer} model at uniform opacities — 8% hover, 10% pressed, 12% selected —
- * tinted by the surface's {@code on}-role.
+ * tinted by the surface's {@code on}-role. A {@link ChipInteractionMode#CLICKABLE} / {@link
+ * ChipInteractionMode#SELECTABLE} chip additionally paints an M3 expanding-circle press ripple on
+ * activation, via the shared {@link RipplePainter}.
  *
  * <p><strong>M3 chip-type sugar.</strong> The four canonical Material 3 chip patterns ship as
  * factory presets over the orthogonal axes — see {@link #assistChip(String)}, {@link
@@ -91,6 +95,8 @@ public class ElwhaChip extends JPanel {
   private static final int DEFAULT_INNER_GAP = 6;
   private static final int DEFAULT_BORDER_WIDTH = 1;
   private static final float FOCUSED_BORDER_WIDTH = 2f;
+  private static final int RIPPLE_TOTAL_MS = 400;
+  private static final int RIPPLE_TICK_MS = 16;
 
   /**
    * Minimum hit-target side for the leading and trailing inline buttons. Keeps a 14px glyph
@@ -112,6 +118,13 @@ public class ElwhaChip extends JPanel {
   private boolean pressed;
   private boolean selected;
 
+  // Ripple state -----------------------------------------------------------
+  // The chip owns the press-ripple animation timer; RipplePainter is stateless and consumes the
+  // caller-driven progress. rippleProgress >= 1f means no ripple is in flight.
+  private Point rippleOrigin;
+  private float rippleProgress = 1f;
+  private Timer rippleTimer;
+
   /**
    * Backup poll timer for hover-clear: Swing's {@code mouseExited} fires unreliably on macOS, and
    * even when it fires, boundary-precision can leave the live cursor "just inside" the chip for
@@ -132,7 +145,9 @@ public class ElwhaChip extends JPanel {
   private final JLabel leadingIconLabel;
   private final JLabel textLabel;
   private final TrailingIconButton trailingButton;
+  private final JLabel trailingIconLabel;
   private final JPanel leadingCluster;
+  private final JPanel trailingCluster;
   private final JPanel contentRow;
 
   // Leading-affordance state -----------------------------------------------
@@ -170,7 +185,7 @@ public class ElwhaChip extends JPanel {
    * Creates a chip with the given text.
    *
    * @param text the chip label
-   * @version v0.1.0
+   * @version v0.3.0
    * @since v0.1.0
    */
   public ElwhaChip(final String text) {
@@ -189,6 +204,12 @@ public class ElwhaChip extends JPanel {
     trailingButton = new TrailingIconButton();
     trailingButton.setVisible(false);
 
+    trailingIconLabel = new JLabel();
+    trailingIconLabel.setVisible(false);
+    // Left gap so a display-only indicator doesn't crowd the text — the trailing button gets the
+    // same breathing room for free from its BUTTON_MIN_HIT_TARGET-floored square.
+    trailingIconLabel.setBorder(BorderFactory.createEmptyBorder(0, DEFAULT_INNER_GAP, 0, 0));
+
     leadingCluster =
         new JPanel(new BaselineCenteringFlowLayout(DEFAULT_INNER_GAP, BUTTON_MIN_HIT_TARGET));
     leadingCluster.setOpaque(false);
@@ -196,10 +217,17 @@ public class ElwhaChip extends JPanel {
     leadingCluster.add(leadingIconLabel);
     leadingCluster.add(textLabel);
 
+    // The trailing slot holds exactly one of {button, indicator}, visibility-swapped. GridBagLayout
+    // with zero weights centers the visible child on both axes inside the content row's height.
+    trailingCluster = new JPanel(new GridBagLayout());
+    trailingCluster.setOpaque(false);
+    trailingCluster.add(trailingButton);
+    trailingCluster.add(trailingIconLabel);
+
     contentRow = new JPanel(new BorderLayout(0, 0));
     contentRow.setOpaque(false);
     contentRow.add(leadingCluster, BorderLayout.WEST);
-    contentRow.add(trailingButton, BorderLayout.EAST);
+    contentRow.add(trailingCluster, BorderLayout.EAST);
     add(contentRow, BorderLayout.CENTER);
 
     rebuildBorder();
@@ -489,8 +517,9 @@ public class ElwhaChip extends JPanel {
   /**
    * Installs an {@link Action}-bound trailing icon button — a single-state clickable affordance.
    * The button has its own hover and press states; its click does <em>not</em> bubble up to the
-   * chip's own action listeners. Clears any two-state affordance previously installed via {@link
-   * #setTrailingAffordance} — the two share the trailing slot, so the last call wins.
+   * chip's own action listeners. Clears any display-only indicator ({@link #setTrailingIndicator})
+   * or two-state affordance ({@link #setTrailingAffordance}) previously in the slot — the trailing
+   * slot holds one thing, so the last call wins.
    *
    * @param action the action backing the trailing button; null clears
    * @return this chip
@@ -502,6 +531,7 @@ public class ElwhaChip extends JPanel {
       applyIconColorFilter(icon);
     }
     clearTrailingAffordanceState();
+    clearTrailingIndicator();
     trailingButton.setAction(action);
     trailingButton.setVisible(action != null);
     revalidate();
@@ -625,9 +655,10 @@ public class ElwhaChip extends JPanel {
   /**
    * Installs (or clears) a clickable trailing-slot affordance with two visual states — the trailing
    * counterpart to {@link #setLeadingAffordance}, honoring the same {@code active} / {@code
-   * hoverRevealIdle} / tooltip / {@code onClick} semantics. Clears any single-state action
-   * previously installed via {@link #setTrailingAction} / {@link #setTrailingIcon} — the two share
-   * the trailing slot, so the last call wins.
+   * hoverRevealIdle} / tooltip / {@code onClick} semantics. Clears any display-only indicator
+   * ({@link #setTrailingIndicator}) or single-state action ({@link #setTrailingAction} / {@link
+   * #setTrailingIcon}) previously in the slot — the trailing slot holds one thing, so the last call
+   * wins.
    *
    * @param idleIcon icon when the affordance is in the idle / off state
    * @param activeIcon icon when the affordance is active / on (falls back to idle when null)
@@ -650,6 +681,7 @@ public class ElwhaChip extends JPanel {
     trailingAffordanceActiveIcon = activeIcon;
     trailingAffordanceActiveState = active;
     trailingAffordanceHoverRevealIdle = hoverRevealIdle;
+    clearTrailingIndicator();
     if (idleIcon == null && activeIcon == null) {
       trailingButton.setVisible(false);
       trailingButton.setAffordance(null, null);
@@ -690,6 +722,44 @@ public class ElwhaChip extends JPanel {
     trailingAffordanceActiveIcon = null;
     trailingAffordanceActiveState = false;
     trailingAffordanceHoverRevealIdle = false;
+  }
+
+  /**
+   * Installs (or clears) a display-only trailing <strong>indicator</strong> icon — a glyph painted
+   * in the trailing slot that is <em>not</em> an independently-interactive button. The indicator
+   * has no hover / press tint and no hit target of its own; a click anywhere on the chip, including
+   * over the indicator, is carried by the chip's own {@link ChipInteractionMode#CLICKABLE} / {@link
+   * ChipInteractionMode#SELECTABLE} activation.
+   *
+   * <p>This is the Material 3 filter-chip trailing pattern — a trailing dropdown caret or status
+   * glyph that signals the chip opens a menu or toggles a filter, where the whole chip body owns
+   * the action. It is the trailing-slot counterpart to the display-only {@link #setLeadingIcon}.
+   *
+   * <p>Clears any single-state action ({@link #setTrailingAction} / {@link #setTrailingIcon}) or
+   * two-state affordance ({@link #setTrailingAffordance}) previously in the slot — the trailing
+   * slot holds one thing, so the last call wins. The icon is tinted with the chip's resolved
+   * foreground, re-pairing across variants, surface-role overrides, palettes, and theme switches.
+   *
+   * @param icon the indicator glyph; null clears the trailing slot
+   * @return this chip
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaChip setTrailingIndicator(final Icon icon) {
+    clearTrailingAffordanceState();
+    trailingButton.setAction(null);
+    trailingButton.setVisible(false);
+    applyIconColorFilter(icon);
+    trailingIconLabel.setIcon(icon);
+    trailingIconLabel.setVisible(icon != null);
+    revalidate();
+    repaint();
+    return this;
+  }
+
+  private void clearTrailingIndicator() {
+    trailingIconLabel.setIcon(null);
+    trailingIconLabel.setVisible(false);
   }
 
   // --------------------------------------------------------------- selected
@@ -862,10 +932,11 @@ public class ElwhaChip extends JPanel {
   // ------------------------------------------------------------ listeners
 
   /**
-   * Installs a mouse listener on both the chip body and the inner content row.
+   * Installs a mouse listener on the chip body and the inner content / leading / trailing clusters,
+   * so a host container sees the listener fire anywhere on the chip except over an inline button.
    *
    * @param listener the listener to install
-   * @version v0.1.0
+   * @version v0.3.0
    * @since v0.1.0
    */
   public void addChipMouseListener(final java.awt.event.MouseListener listener) {
@@ -875,6 +946,7 @@ public class ElwhaChip extends JPanel {
     addMouseListener(listener);
     contentRow.addMouseListener(listener);
     leadingCluster.addMouseListener(listener);
+    trailingCluster.addMouseListener(listener);
   }
 
   /**
@@ -882,7 +954,7 @@ public class ElwhaChip extends JPanel {
    * java.awt.event.MouseMotionListener}.
    *
    * @param listener the listener to install
-   * @version v0.1.0
+   * @version v0.3.0
    * @since v0.1.0
    */
   public void addChipMouseMotionListener(final java.awt.event.MouseMotionListener listener) {
@@ -892,6 +964,7 @@ public class ElwhaChip extends JPanel {
     addMouseMotionListener(listener);
     contentRow.addMouseMotionListener(listener);
     leadingCluster.addMouseMotionListener(listener);
+    trailingCluster.addMouseMotionListener(listener);
   }
 
   /**
@@ -1000,6 +1073,7 @@ public class ElwhaChip extends JPanel {
                 || interactionMode == ChipInteractionMode.SELECTABLE) {
               pressed = true;
               requestFocusInWindow();
+              startRipple(toChipPoint(e));
               repaint();
             }
           }
@@ -1028,6 +1102,7 @@ public class ElwhaChip extends JPanel {
     addMouseListener(ma);
     contentRow.addMouseListener(ma);
     leadingCluster.addMouseListener(ma);
+    trailingCluster.addMouseListener(ma);
     leadingButton.addMouseListener(ma);
     trailingButton.addMouseListener(ma);
 
@@ -1051,9 +1126,11 @@ public class ElwhaChip extends JPanel {
         new AbstractAction() {
           @Override
           public void actionPerformed(final ActionEvent e) {
-            if (!isEnabled()) {
+            if (!isEnabled() || interactionMode == ChipInteractionMode.STATIC) {
               return;
             }
+            // Keyboard activation seeds the ripple at the chip's center, matching ElwhaButton.
+            startRipple(new Point(getWidth() / 2, getHeight() / 2));
             activate(0);
           }
         };
@@ -1163,9 +1240,52 @@ public class ElwhaChip extends JPanel {
     }
   }
 
+  // ----------------------------------------------------------- ripple
+
+  /**
+   * Converts a {@link MouseEvent} from any of the chip's listened-to subcomponents into a
+   * chip-local point clamped inside the chip bounds — the press-ripple origin.
+   */
+  private Point toChipPoint(final MouseEvent event) {
+    final Point p = SwingUtilities.convertPoint(event.getComponent(), event.getPoint(), this);
+    final int x = Math.max(0, Math.min(Math.max(0, getWidth() - 1), p.x));
+    final int y = Math.max(0, Math.min(Math.max(0, getHeight() - 1), p.y));
+    return new Point(x, y);
+  }
+
+  /**
+   * Seeds an expanding-circle press ripple at {@code origin} and starts the animation timer that
+   * drives {@code rippleProgress} 0 → 1 over {@link #RIPPLE_TOTAL_MS}. Mirrors {@code ElwhaButton}.
+   */
+  private void startRipple(final Point origin) {
+    rippleOrigin = origin;
+    rippleProgress = 0f;
+    if (rippleTimer != null && rippleTimer.isRunning()) {
+      rippleTimer.stop();
+    }
+    final long startNanos = System.nanoTime();
+    rippleTimer =
+        new Timer(
+            RIPPLE_TICK_MS,
+            e -> {
+              rippleProgress =
+                  Math.min(1f, (System.nanoTime() - startNanos) / (RIPPLE_TOTAL_MS * 1_000_000f));
+              repaint();
+              if (rippleProgress >= 1f) {
+                rippleTimer.stop();
+              }
+            });
+    rippleTimer.setRepeats(true);
+    rippleTimer.start();
+    repaint();
+  }
+
   @Override
   public void removeNotify() {
     stopHoverPolling();
+    if (rippleTimer != null) {
+      rippleTimer.stop();
+    }
     super.removeNotify();
   }
 
@@ -1225,6 +1345,13 @@ public class ElwhaChip extends JPanel {
     }
 
     SurfacePainter.paint((Graphics2D) g, w, h, arc, surfaceRole, overlay, borderRole, borderStroke);
+
+    // Press ripple — painted over the surface fill, under the content row's text + icons (which
+    // paint in paintChildren), clipped by RipplePainter to the same round-rect outline.
+    if (rippleProgress < 1f && rippleOrigin != null) {
+      RipplePainter.paint(
+          (Graphics2D) g, w, h, rippleOrigin, rippleProgress, arc, resolveForegroundColor());
+    }
   }
 
   private StateLayer activeOverlay(final boolean interactive) {
