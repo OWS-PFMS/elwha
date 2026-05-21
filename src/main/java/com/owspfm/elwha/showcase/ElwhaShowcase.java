@@ -590,10 +590,10 @@ public final class ElwhaShowcase {
     final JComboBox<SpaceScale> padVBox = new JComboBox<>(SpaceScale.values());
     padVBox.setSelectedItem(SpaceScale.XS);
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
-    final JComboBox<SlotOption> leadingSlotBox = new JComboBox<>(SlotOption.values());
+    final JComboBox<LeadingSlot> leadingSlotBox = new JComboBox<>(LeadingSlot.values());
     final JCheckBox leadingAffordanceActiveBox = new JCheckBox("Affordance active");
     leadingAffordanceActiveBox.setEnabled(false);
-    final JComboBox<SlotOption> trailingSlotBox = new JComboBox<>(SlotOption.values());
+    final JComboBox<TrailingSlot> trailingSlotBox = new JComboBox<>(TrailingSlot.values());
     final JCheckBox trailingAffordanceActiveBox = new JCheckBox("Affordance active");
     trailingAffordanceActiveBox.setEnabled(false);
     final JCheckBox selectedBox = new JCheckBox("Selected");
@@ -628,11 +628,11 @@ public final class ElwhaShowcase {
           final SpaceScale padH = (SpaceScale) padHBox.getSelectedItem();
           final SpaceScale padV = (SpaceScale) padVBox.getSelectedItem();
           final int width = (Integer) borderWidth.getValue();
-          final SlotOption leadingSlot = (SlotOption) leadingSlotBox.getSelectedItem();
-          leadingAffordanceActiveBox.setEnabled(leadingSlot == SlotOption.AFFORDANCE);
+          final LeadingSlot leadingSlot = (LeadingSlot) leadingSlotBox.getSelectedItem();
+          leadingAffordanceActiveBox.setEnabled(leadingSlot == LeadingSlot.AFFORDANCE);
           final boolean leadingAffordanceActive = leadingAffordanceActiveBox.isSelected();
-          final SlotOption trailingSlot = (SlotOption) trailingSlotBox.getSelectedItem();
-          trailingAffordanceActiveBox.setEnabled(trailingSlot == SlotOption.AFFORDANCE);
+          final TrailingSlot trailingSlot = (TrailingSlot) trailingSlotBox.getSelectedItem();
+          trailingAffordanceActiveBox.setEnabled(trailingSlot == TrailingSlot.AFFORDANCE);
           final boolean trailingAffordanceActive = trailingAffordanceActiveBox.isSelected();
           // GHOST does not render a selected state (issue #50) — reflect that in the control.
           final boolean ghost = variant == ChipVariant.GHOST;
@@ -651,9 +651,9 @@ public final class ElwhaShowcase {
           if (surface.role != null) {
             chip.setSurfaceRole(surface.role);
           }
-          if (leadingSlot == SlotOption.ICON) {
+          if (leadingSlot == LeadingSlot.ICON) {
             chip.setLeadingIcon(MaterialIcons.star(14));
-          } else if (leadingSlot == SlotOption.AFFORDANCE) {
+          } else if (leadingSlot == LeadingSlot.AFFORDANCE) {
             final MaterialIcons.IconPair star = MaterialIcons.pair("star", 14);
             chip.setLeadingAffordance(
                 star.resting(),
@@ -663,12 +663,11 @@ public final class ElwhaShowcase {
                 "Toggle",
                 leadingAffordanceActiveBox::doClick);
           }
-          if (trailingSlot == SlotOption.ICON) {
-            chip.setTrailingIcon(
-                MaterialIcons.delete(14),
-                "Remove",
-                () -> trailingSlotBox.setSelectedItem(SlotOption.NONE));
-          } else if (trailingSlot == SlotOption.AFFORDANCE) {
+          if (trailingSlot == TrailingSlot.BUTTON) {
+            // No-op handler — the single-instance Workbench stage has nothing to remove; a real
+            // consumer supplies onRemove. The "Button" label keeps the click affordance honest.
+            chip.setTrailingIcon(MaterialIcons.delete(14), "Remove", () -> {});
+          } else if (trailingSlot == TrailingSlot.AFFORDANCE) {
             final MaterialIcons.IconPair favorite = MaterialIcons.pair("favorite", 14);
             chip.setTrailingAffordance(
                 favorite.resting(),
@@ -726,9 +725,9 @@ public final class ElwhaShowcase {
       final SpaceScale padH,
       final SpaceScale padV,
       final int width,
-      final SlotOption leadingSlot,
+      final LeadingSlot leadingSlot,
       final boolean leadingAffordanceActive,
-      final SlotOption trailingSlot,
+      final TrailingSlot trailingSlot,
       final boolean trailingAffordanceActive,
       final boolean selected,
       final boolean enabled) {
@@ -749,18 +748,18 @@ public final class ElwhaShowcase {
       code.append("\n    .setSurfaceRole(ColorRole.").append(surface.role).append(")");
     }
     code.append(";");
-    if (leadingSlot == SlotOption.ICON) {
+    if (leadingSlot == LeadingSlot.ICON) {
       code.append("\nchip.setLeadingIcon(MaterialIcons.star(14));");
-    } else if (leadingSlot == SlotOption.AFFORDANCE) {
+    } else if (leadingSlot == LeadingSlot.AFFORDANCE) {
       code.append("\nMaterialIcons.IconPair star = MaterialIcons.pair(\"star\", 14);");
       code.append("\nchip.setLeadingAffordance(\n")
           .append("    star.resting(), star.filled(), ")
           .append(leadingAffordanceActive)
           .append(", false, \"Toggle\", onClick);");
     }
-    if (trailingSlot == SlotOption.ICON) {
+    if (trailingSlot == TrailingSlot.BUTTON) {
       code.append("\nchip.setTrailingIcon(MaterialIcons.delete(14), \"Remove\", onRemove);");
-    } else if (trailingSlot == SlotOption.AFFORDANCE) {
+    } else if (trailingSlot == TrailingSlot.AFFORDANCE) {
       code.append("\nMaterialIcons.IconPair favorite = MaterialIcons.pair(\"favorite\", 14);");
       code.append("\nchip.setTrailingAffordance(\n")
           .append("    favorite.resting(), favorite.filled(), ")
@@ -797,10 +796,21 @@ public final class ElwhaShowcase {
     }
   }
 
-  /** A Chip Workbench slot option — empty, a static icon, or a clickable two-state affordance. */
-  private enum SlotOption {
+  /** The Chip Workbench's leading-slot option — empty, a static icon, or a two-state affordance. */
+  private enum LeadingSlot {
     NONE,
     ICON,
+    AFFORDANCE
+  }
+
+  /**
+   * The Chip Workbench's trailing-slot option — empty, a single-state action button (the M3
+   * input-chip remove pattern), or a two-state affordance. The display-only indicator-icon mode
+   * (the M3 filter-chip pattern) is tracked separately as #164; it joins this enum when it lands.
+   */
+  private enum TrailingSlot {
+    NONE,
+    BUTTON,
     AFFORDANCE
   }
 
