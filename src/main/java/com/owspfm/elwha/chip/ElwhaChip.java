@@ -2,6 +2,7 @@ package com.owspfm.elwha.chip;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.StateLayer;
@@ -65,7 +66,9 @@ import javax.swing.Timer;
  *
  * <p><strong>State layers are uniform.</strong> Hover / pressed / selected feedback is composited
  * via the {@link StateLayer} model at uniform opacities — 8% hover, 10% pressed, 12% selected —
- * tinted by the surface's {@code on}-role.
+ * tinted by the surface's {@code on}-role. A {@link ChipInteractionMode#CLICKABLE} / {@link
+ * ChipInteractionMode#SELECTABLE} chip additionally paints an M3 expanding-circle press ripple on
+ * activation, via the shared {@link RipplePainter}.
  *
  * <p><strong>M3 chip-type sugar.</strong> The four canonical Material 3 chip patterns ship as
  * factory presets over the orthogonal axes — see {@link #assistChip(String)}, {@link
@@ -92,6 +95,8 @@ public class ElwhaChip extends JPanel {
   private static final int DEFAULT_INNER_GAP = 6;
   private static final int DEFAULT_BORDER_WIDTH = 1;
   private static final float FOCUSED_BORDER_WIDTH = 2f;
+  private static final int RIPPLE_TOTAL_MS = 400;
+  private static final int RIPPLE_TICK_MS = 16;
 
   /**
    * Minimum hit-target side for the leading and trailing inline buttons. Keeps a 14px glyph
@@ -112,6 +117,13 @@ public class ElwhaChip extends JPanel {
   private boolean hovered;
   private boolean pressed;
   private boolean selected;
+
+  // Ripple state -----------------------------------------------------------
+  // The chip owns the press-ripple animation timer; RipplePainter is stateless and consumes the
+  // caller-driven progress. rippleProgress >= 1f means no ripple is in flight.
+  private Point rippleOrigin;
+  private float rippleProgress = 1f;
+  private Timer rippleTimer;
 
   /**
    * Backup poll timer for hover-clear: Swing's {@code mouseExited} fires unreliably on macOS, and
@@ -1061,6 +1073,7 @@ public class ElwhaChip extends JPanel {
                 || interactionMode == ChipInteractionMode.SELECTABLE) {
               pressed = true;
               requestFocusInWindow();
+              startRipple(toChipPoint(e));
               repaint();
             }
           }
@@ -1113,9 +1126,11 @@ public class ElwhaChip extends JPanel {
         new AbstractAction() {
           @Override
           public void actionPerformed(final ActionEvent e) {
-            if (!isEnabled()) {
+            if (!isEnabled() || interactionMode == ChipInteractionMode.STATIC) {
               return;
             }
+            // Keyboard activation seeds the ripple at the chip's center, matching ElwhaButton.
+            startRipple(new Point(getWidth() / 2, getHeight() / 2));
             activate(0);
           }
         };
@@ -1225,9 +1240,52 @@ public class ElwhaChip extends JPanel {
     }
   }
 
+  // ----------------------------------------------------------- ripple
+
+  /**
+   * Converts a {@link MouseEvent} from any of the chip's listened-to subcomponents into a
+   * chip-local point clamped inside the chip bounds — the press-ripple origin.
+   */
+  private Point toChipPoint(final MouseEvent event) {
+    final Point p = SwingUtilities.convertPoint(event.getComponent(), event.getPoint(), this);
+    final int x = Math.max(0, Math.min(Math.max(0, getWidth() - 1), p.x));
+    final int y = Math.max(0, Math.min(Math.max(0, getHeight() - 1), p.y));
+    return new Point(x, y);
+  }
+
+  /**
+   * Seeds an expanding-circle press ripple at {@code origin} and starts the animation timer that
+   * drives {@code rippleProgress} 0 → 1 over {@link #RIPPLE_TOTAL_MS}. Mirrors {@code ElwhaButton}.
+   */
+  private void startRipple(final Point origin) {
+    rippleOrigin = origin;
+    rippleProgress = 0f;
+    if (rippleTimer != null && rippleTimer.isRunning()) {
+      rippleTimer.stop();
+    }
+    final long startNanos = System.nanoTime();
+    rippleTimer =
+        new Timer(
+            RIPPLE_TICK_MS,
+            e -> {
+              rippleProgress =
+                  Math.min(1f, (System.nanoTime() - startNanos) / (RIPPLE_TOTAL_MS * 1_000_000f));
+              repaint();
+              if (rippleProgress >= 1f) {
+                rippleTimer.stop();
+              }
+            });
+    rippleTimer.setRepeats(true);
+    rippleTimer.start();
+    repaint();
+  }
+
   @Override
   public void removeNotify() {
     stopHoverPolling();
+    if (rippleTimer != null) {
+      rippleTimer.stop();
+    }
     super.removeNotify();
   }
 
@@ -1287,6 +1345,13 @@ public class ElwhaChip extends JPanel {
     }
 
     SurfacePainter.paint((Graphics2D) g, w, h, arc, surfaceRole, overlay, borderRole, borderStroke);
+
+    // Press ripple — painted over the surface fill, under the content row's text + icons (which
+    // paint in paintChildren), clipped by RipplePainter to the same round-rect outline.
+    if (rippleProgress < 1f && rippleOrigin != null) {
+      RipplePainter.paint(
+          (Graphics2D) g, w, h, rippleOrigin, rippleProgress, arc, resolveForegroundColor());
+    }
   }
 
   private StateLayer activeOverlay(final boolean interactive) {
