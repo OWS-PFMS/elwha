@@ -658,7 +658,11 @@ public final class ElwhaShowcase {
                 "Toggle",
                 leadingAffordanceActiveBox::doClick);
           }
-          if (trailingSlot == TrailingSlot.BUTTON) {
+          if (trailingSlot == TrailingSlot.ICON) {
+            // Display-only indicator — the M3 filter-chip dropdown caret; the chip body owns the
+            // click, the caret has no hit target of its own.
+            chip.setTrailingIndicator(MaterialIcons.expandMore(14));
+          } else if (trailingSlot == TrailingSlot.BUTTON) {
             // No-op handler — the single-instance Workbench stage has nothing to remove; a real
             // consumer supplies onRemove. The "Button" label keeps the click affordance honest.
             chip.setTrailingIcon(MaterialIcons.delete(14), "Remove", () -> {});
@@ -752,7 +756,9 @@ public final class ElwhaShowcase {
           .append(leadingAffordanceActive)
           .append(", false, \"Toggle\", onClick);");
     }
-    if (trailingSlot == TrailingSlot.BUTTON) {
+    if (trailingSlot == TrailingSlot.ICON) {
+      code.append("\nchip.setTrailingIndicator(MaterialIcons.expandMore(14));");
+    } else if (trailingSlot == TrailingSlot.BUTTON) {
       code.append("\nchip.setTrailingIcon(MaterialIcons.delete(14), \"Remove\", onRemove);");
     } else if (trailingSlot == TrailingSlot.AFFORDANCE) {
       code.append("\nMaterialIcons.IconPair favorite = MaterialIcons.pair(\"favorite\", 14);");
@@ -799,12 +805,13 @@ public final class ElwhaShowcase {
   }
 
   /**
-   * The Chip Workbench's trailing-slot option — empty, a single-state action button (the M3
-   * input-chip remove pattern), or a two-state affordance. The display-only indicator-icon mode
-   * (the M3 filter-chip pattern) is tracked separately as #164; it joins this enum when it lands.
+   * The Chip Workbench's trailing-slot option — empty, a display-only indicator icon (the M3
+   * filter-chip dropdown-caret pattern), a single-state action button (the M3 input-chip remove
+   * pattern), or a two-state affordance.
    */
   private enum TrailingSlot {
     NONE,
+    ICON,
     BUTTON,
     AFFORDANCE
   }

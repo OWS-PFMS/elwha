@@ -80,14 +80,15 @@ chip.setContextMenuCallback(evt -> popup.show(evt.getComponent(), evt.getX(), ev
 ### Trailing slot
 
 ```java
-chip.setTrailingAction(action);                              // single-state, Action-bound (SMALL_ICON or NAME)
-chip.setTrailingIcon(closeIcon, "Remove", () -> remove(it)); // single-state convenience: icon + tooltip + click
+chip.setTrailingIndicator(MaterialIcons.expandMore(14));     // display-only indicator — no hit target
+chip.setTrailingAction(action);                              // single-state button, Action-bound (SMALL_ICON or NAME)
+chip.setTrailingIcon(closeIcon, "Remove", () -> remove(it)); // single-state button convenience: icon + tooltip + click
 chip.setTrailingAffordance(                                  // two-state — mirrors setLeadingAffordance
     heart.resting(), heart.filled(),                         //   idle / active icon pair
     favorited, false, "Favorite", () -> toggleFavorite(it)); //   active, hoverRevealIdle, tooltip, onClick
 ```
 
-The trailing button has its own hover / press states and **does not bubble** clicks to the chip's own action listeners. `setTrailingAffordance` is the trailing-slot mirror of `setLeadingAffordance` — a clickable, two-state, optionally hover-revealed affordance. The two-state affordance and the single-state action setters share the trailing slot; the last call wins.
+The trailing slot holds one of four things — **none**, a display-only **indicator**, a single-state **button**, or a two-state **affordance** — and the last setter call wins. `setTrailingIndicator` paints a glyph with no hover / press tint and no hit target of its own (the M3 filter-chip dropdown-caret pattern); a click anywhere on the chip, including over the indicator, is carried by the chip's own activation — it is the trailing-slot counterpart to the display-only `setLeadingIcon`. The single-state button (`setTrailingAction` / `setTrailingIcon`) and the two-state `setTrailingAffordance` are independently interactive — they have their own hover / press states and **do not bubble** clicks to the chip's own action listeners. `setTrailingAffordance` is the trailing-slot mirror of `setLeadingAffordance` — a clickable, two-state, optionally hover-revealed affordance.
 
 ---
 

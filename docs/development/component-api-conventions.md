@@ -73,6 +73,17 @@ When a leaf widget exposes a clickable, two-state affordance on one slot, the op
 
 **Apply when:** a leaf widget gains a two-state affordance on any slot. Add the mirror on the opposite slot in the same change — or, if the slot is single-state by deliberate design, record that decision (and why) here.
 
+**Trailing-slot vocabulary (`ElwhaChip`).** The trailing slot resolves to one of four mutually-exclusive modes — last-call-wins, one setter per mode:
+
+| Mode | Setter | Interactive? |
+|---|---|---|
+| None | — | — |
+| Indicator | `setTrailingIndicator(Icon)` | No — display-only glyph; the chip body owns the click |
+| Button | `setTrailingAction(Action)` / `setTrailingIcon(Icon, String, Runnable)` | Yes — single-state, own hover / press states |
+| Affordance | `setTrailingAffordance(...)` | Yes — two-state, own hover / press states |
+
+The display-only mode is named `setTrailingIndicator`, **not** `setTrailingIcon` — `setTrailingIcon` already denotes the single-state button, and its three-arg `(Icon, tooltip, onClick)` signature makes that interactivity explicit. The leading slot has no single-state button, so its display-only setter keeps the plain name `setLeadingIcon`. The resulting `setLeadingIcon` vs `setTrailingIndicator` naming asymmetry is deliberate: the trailing slot carries one extra mode and needs three distinct nouns (*indicator* / *button* / *affordance*) where the leading slot needs two. Decision recorded under [#164](https://github.com/OWS-PFMS/elwha/issues/164).
+
 ---
 
 ## Cross-reference
