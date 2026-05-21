@@ -33,7 +33,7 @@ list.addReorderListener(evt ->
 
 ## ElwhaChip — the primitive
 
-A single-row capsule containing optional leading icon, text, and optional Action-bound trailing icon-button. **Token-native** — every visual property resolves from the Elwha tokens at paint time.
+A single-row capsule containing optional leading icon, text, and an optional trailing icon-button — single-state (`Action`-bound) or a two-state clickable affordance. **Token-native** — every visual property resolves from the Elwha tokens at paint time.
 
 ### Variants (treatment-only)
 
@@ -77,14 +77,17 @@ chip.setContextMenuCallback(evt -> popup.show(evt.getComponent(), evt.getX(), ev
 
 `VK_CONTEXT_MENU` and `Shift+F10` keyboard accelerators invoke the same callback as right-click.
 
-### Trailing icon-button
+### Trailing slot
 
 ```java
-chip.setTrailingAction(action);                              // Action-bound (uses SMALL_ICON or NAME)
-chip.setTrailingIcon(closeIcon, "Remove", () -> remove(it)); // convenience for icon + tooltip + click
+chip.setTrailingAction(action);                              // single-state, Action-bound (SMALL_ICON or NAME)
+chip.setTrailingIcon(closeIcon, "Remove", () -> remove(it)); // single-state convenience: icon + tooltip + click
+chip.setTrailingAffordance(                                  // two-state — mirrors setLeadingAffordance
+    heart.resting(), heart.filled(),                         //   idle / active icon pair
+    favorited, false, "Favorite", () -> toggleFavorite(it)); //   active, hoverRevealIdle, tooltip, onClick
 ```
 
-The trailing button has its own hover / press states and **does not bubble** clicks to the chip's own action listeners.
+The trailing button has its own hover / press states and **does not bubble** clicks to the chip's own action listeners. `setTrailingAffordance` is the trailing-slot mirror of `setLeadingAffordance` — a clickable, two-state, optionally hover-revealed affordance. The two-state affordance and the single-state action setters share the trailing slot; the last call wins.
 
 ---
 

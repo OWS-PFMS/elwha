@@ -60,6 +60,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -115,7 +116,14 @@ public final class ElwhaShowcase {
 
   private final List<Runnable> tokenRefreshers = new ArrayList<>();
   private final JPanel content = new JPanel(new CardLayout());
+  private final List<Theme> primaryThemes = MaterialPalettes.primary();
+  private final List<Theme> secondaryThemes = MaterialPalettes.secondary();
   private JLabel statusLabel;
+  private JComboBox<Theme> palettePicker;
+  private Theme primarySelection;
+  private Theme secondarySelection;
+  private boolean secondaryTier;
+  private boolean pickerAdjusting;
 
   private ElwhaShowcase() {}
 
@@ -171,6 +179,18 @@ public final class ElwhaShowcase {
     }
 
     bar.add(Box.createHorizontalStrut(16));
+    bar.add(new JLabel("Tier:"));
+    final ButtonGroup tierGroup = new ButtonGroup();
+    final JToggleButton primaryTierButton = new JToggleButton("PRIMARY", true);
+    final JToggleButton secondaryTierButton = new JToggleButton("SECONDARY");
+    primaryTierButton.addActionListener(event -> switchTier(false));
+    secondaryTierButton.addActionListener(event -> switchTier(true));
+    tierGroup.add(primaryTierButton);
+    tierGroup.add(secondaryTierButton);
+    bar.add(primaryTierButton);
+    bar.add(secondaryTierButton);
+
+    bar.add(Box.createHorizontalStrut(16));
     bar.add(new JLabel("Palette:"));
     bar.add(buildPalettePicker());
 
@@ -181,12 +201,12 @@ public final class ElwhaShowcase {
     return bar;
   }
 
-  // The picker is populated from MaterialPalettes.bundled() — directory-derived, so a new palette
-  // JSON dropped into the resources palettes/ directory appears here with no code change.
+  // The picker shows one tier at a time; each tier is directory-derived and spectrally ordered by
+  // MaterialPalettes. A new Elwha-format palette JSON dropped into the tier's resource subdirectory
+  // appears here with no code change.
   private JComponent buildPalettePicker() {
-    final List<Theme> themes = MaterialPalettes.bundled();
-    final JComboBox<Theme> picker = new JComboBox<>(themes.toArray(new Theme[0]));
-    picker.setRenderer(
+    palettePicker = new JComboBox<>();
+    palettePicker.setRenderer(
         new DefaultListCellRenderer() {
           @Override
           public Component getListCellRendererComponent(
@@ -203,22 +223,51 @@ public final class ElwhaShowcase {
           }
         });
 
-    // Select the entry matching the installed theme before wiring the listener, so seeding the
-    // initial selection does not fire a redundant re-install.
-    final String installed = ElwhaTheme.current().theme().name();
-    for (final Theme theme : themes) {
-      if (theme.name().equals(installed)) {
-        picker.setSelectedItem(theme);
-        break;
-      }
-    }
-    picker.addActionListener(
+    // The app installs MaterialPalettes.baseline() at startup — a primary-tier theme.
+    primarySelection = matchOrFirst(primaryThemes, ElwhaTheme.current().theme().name());
+    secondarySelection = secondaryThemes.get(0);
+    populatePicker(primaryThemes, primarySelection);
+
+    palettePicker.addActionListener(
         event -> {
-          if (picker.getSelectedItem() instanceof Theme theme) {
+          if (!pickerAdjusting && palettePicker.getSelectedItem() instanceof Theme theme) {
+            if (secondaryTier) {
+              secondarySelection = theme;
+            } else {
+              primarySelection = theme;
+            }
             switchTheme(theme);
           }
         });
-    return picker;
+    return palettePicker;
+  }
+
+  // Repopulates the picker with one tier's themes without firing a redundant re-install — the
+  // model swap and selection seed run under the pickerAdjusting guard.
+  private void populatePicker(final List<Theme> themes, final Theme selection) {
+    pickerAdjusting = true;
+    palettePicker.setModel(new DefaultComboBoxModel<>(themes.toArray(new Theme[0])));
+    palettePicker.setSelectedItem(selection);
+    pickerAdjusting = false;
+  }
+
+  private void switchTier(final boolean secondary) {
+    if (secondary == secondaryTier) {
+      return;
+    }
+    secondaryTier = secondary;
+    final Theme selection = secondary ? secondarySelection : primarySelection;
+    populatePicker(secondary ? secondaryThemes : primaryThemes, selection);
+    switchTheme(selection);
+  }
+
+  private static Theme matchOrFirst(final List<Theme> themes, final String name) {
+    for (final Theme theme : themes) {
+      if (theme.name().equals(name)) {
+        return theme;
+      }
+    }
+    return themes.get(0);
   }
 
   private void switchMode(final Mode mode) {
@@ -537,9 +586,11 @@ public final class ElwhaShowcase {
     padVBox.setSelectedItem(SpaceScale.XS);
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
     final JComboBox<LeadingSlot> leadingSlotBox = new JComboBox<>(LeadingSlot.values());
-    final JCheckBox affordanceActiveBox = new JCheckBox("Affordance active");
-    affordanceActiveBox.setEnabled(false);
-    final JCheckBox trailingIconBox = new JCheckBox("Trailing icon");
+    final JCheckBox leadingAffordanceActiveBox = new JCheckBox("Affordance active");
+    leadingAffordanceActiveBox.setEnabled(false);
+    final JComboBox<TrailingSlot> trailingSlotBox = new JComboBox<>(TrailingSlot.values());
+    final JCheckBox trailingAffordanceActiveBox = new JCheckBox("Affordance active");
+    trailingAffordanceActiveBox.setEnabled(false);
     final JCheckBox selectedBox = new JCheckBox("Selected");
     final JCheckBox enabledBox = new JCheckBox("Enabled", true);
 
@@ -555,8 +606,9 @@ public final class ElwhaShowcase {
     controls.addControl("Padding — vertical", padVBox);
     controls.addControl("Border width", borderWidth);
     controls.addControl("Leading slot", leadingSlotBox);
-    controls.addControl("", affordanceActiveBox);
-    controls.addControl("", trailingIconBox);
+    controls.addControl("", leadingAffordanceActiveBox);
+    controls.addControl("Trailing slot", trailingSlotBox);
+    controls.addControl("", trailingAffordanceActiveBox);
     controls.addSection("State");
     controls.addControl("", selectedBox);
     controls.addControl("", enabledBox);
@@ -572,9 +624,11 @@ public final class ElwhaShowcase {
           final SpaceScale padV = (SpaceScale) padVBox.getSelectedItem();
           final int width = (Integer) borderWidth.getValue();
           final LeadingSlot leadingSlot = (LeadingSlot) leadingSlotBox.getSelectedItem();
-          affordanceActiveBox.setEnabled(leadingSlot == LeadingSlot.AFFORDANCE);
-          final boolean affordanceActive = affordanceActiveBox.isSelected();
-          final boolean trailing = trailingIconBox.isSelected();
+          leadingAffordanceActiveBox.setEnabled(leadingSlot == LeadingSlot.AFFORDANCE);
+          final boolean leadingAffordanceActive = leadingAffordanceActiveBox.isSelected();
+          final TrailingSlot trailingSlot = (TrailingSlot) trailingSlotBox.getSelectedItem();
+          trailingAffordanceActiveBox.setEnabled(trailingSlot == TrailingSlot.AFFORDANCE);
+          final boolean trailingAffordanceActive = trailingAffordanceActiveBox.isSelected();
           // GHOST does not render a selected state (issue #50) — reflect that in the control.
           final boolean ghost = variant == ChipVariant.GHOST;
           selectedBox.setEnabled(!ghost);
@@ -599,13 +653,24 @@ public final class ElwhaShowcase {
             chip.setLeadingAffordance(
                 star.resting(),
                 star.filled(),
-                affordanceActive,
+                leadingAffordanceActive,
                 false,
                 "Toggle",
-                affordanceActiveBox::doClick);
+                leadingAffordanceActiveBox::doClick);
           }
-          if (trailing) {
+          if (trailingSlot == TrailingSlot.BUTTON) {
+            // No-op handler — the single-instance Workbench stage has nothing to remove; a real
+            // consumer supplies onRemove. The "Button" label keeps the click affordance honest.
             chip.setTrailingIcon(MaterialIcons.delete(14), "Remove", () -> {});
+          } else if (trailingSlot == TrailingSlot.AFFORDANCE) {
+            final MaterialIcons.IconPair favorite = MaterialIcons.pair("favorite", 14);
+            chip.setTrailingAffordance(
+                favorite.resting(),
+                favorite.filled(),
+                trailingAffordanceActive,
+                false,
+                "Toggle",
+                trailingAffordanceActiveBox::doClick);
           }
           chip.setSelected(selected);
           chip.setEnabled(enabled);
@@ -621,8 +686,9 @@ public final class ElwhaShowcase {
                   padV,
                   width,
                   leadingSlot,
-                  affordanceActive,
-                  trailing,
+                  leadingAffordanceActive,
+                  trailingSlot,
+                  trailingAffordanceActive,
                   selected,
                   enabled));
         };
@@ -636,8 +702,9 @@ public final class ElwhaShowcase {
     padVBox.addActionListener(event -> apply.run());
     borderWidth.addChangeListener(event -> apply.run());
     leadingSlotBox.addActionListener(event -> apply.run());
-    affordanceActiveBox.addActionListener(event -> apply.run());
-    trailingIconBox.addActionListener(event -> apply.run());
+    leadingAffordanceActiveBox.addActionListener(event -> apply.run());
+    trailingSlotBox.addActionListener(event -> apply.run());
+    trailingAffordanceActiveBox.addActionListener(event -> apply.run());
     selectedBox.addActionListener(event -> apply.run());
     enabledBox.addActionListener(event -> apply.run());
     apply.run();
@@ -654,8 +721,9 @@ public final class ElwhaShowcase {
       final SpaceScale padV,
       final int width,
       final LeadingSlot leadingSlot,
-      final boolean affordanceActive,
-      final boolean trailing,
+      final boolean leadingAffordanceActive,
+      final TrailingSlot trailingSlot,
+      final boolean trailingAffordanceActive,
       final boolean selected,
       final boolean enabled) {
     final StringBuilder code = new StringBuilder(320);
@@ -681,11 +749,17 @@ public final class ElwhaShowcase {
       code.append("\nMaterialIcons.IconPair star = MaterialIcons.pair(\"star\", 14);");
       code.append("\nchip.setLeadingAffordance(\n")
           .append("    star.resting(), star.filled(), ")
-          .append(affordanceActive)
+          .append(leadingAffordanceActive)
           .append(", false, \"Toggle\", onClick);");
     }
-    if (trailing) {
-      code.append("\nchip.setTrailingIcon(MaterialIcons.delete(14), \"Remove\", () -> {});");
+    if (trailingSlot == TrailingSlot.BUTTON) {
+      code.append("\nchip.setTrailingIcon(MaterialIcons.delete(14), \"Remove\", onRemove);");
+    } else if (trailingSlot == TrailingSlot.AFFORDANCE) {
+      code.append("\nMaterialIcons.IconPair favorite = MaterialIcons.pair(\"favorite\", 14);");
+      code.append("\nchip.setTrailingAffordance(\n")
+          .append("    favorite.resting(), favorite.filled(), ")
+          .append(trailingAffordanceActive)
+          .append(", false, \"Toggle\", onClick);");
     }
     if (selected) {
       code.append("\nchip.setSelected(true);");
@@ -717,10 +791,21 @@ public final class ElwhaShowcase {
     }
   }
 
-  /** The Chip Workbench's leading-slot option — empty, a static icon, or a clickable affordance. */
+  /** The Chip Workbench's leading-slot option — empty, a static icon, or a two-state affordance. */
   private enum LeadingSlot {
     NONE,
     ICON,
+    AFFORDANCE
+  }
+
+  /**
+   * The Chip Workbench's trailing-slot option — empty, a single-state action button (the M3
+   * input-chip remove pattern), or a two-state affordance. The display-only indicator-icon mode
+   * (the M3 filter-chip pattern) is tracked separately as #164; it joins this enum when it lands.
+   */
+  private enum TrailingSlot {
+    NONE,
+    BUTTON,
     AFFORDANCE
   }
 

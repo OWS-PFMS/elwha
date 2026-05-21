@@ -80,7 +80,7 @@ import javax.swing.Timer;
  * }</pre>
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.3.0
  * @since v0.1.0
  */
 public class ElwhaChip extends JPanel {
@@ -140,6 +140,12 @@ public class ElwhaChip extends JPanel {
   private Icon leadingAffordanceActiveIcon;
   private boolean leadingAffordanceActiveState;
   private boolean leadingAffordanceHoverRevealIdle;
+
+  // Trailing-affordance state ----------------------------------------------
+  private Icon trailingAffordanceIdleIcon;
+  private Icon trailingAffordanceActiveIcon;
+  private boolean trailingAffordanceActiveState;
+  private boolean trailingAffordanceHoverRevealIdle;
 
   // Icon recoloring --------------------------------------------------------
   // Chip-local color filter for FlatSVGIcons in the leading / trailing slots. The filter's
@@ -481,18 +487,21 @@ public class ElwhaChip extends JPanel {
   }
 
   /**
-   * Installs an {@link Action}-bound trailing icon button. The button has its own hover and press
-   * states; its click does <em>not</em> bubble up to the chip's own action listeners.
+   * Installs an {@link Action}-bound trailing icon button — a single-state clickable affordance.
+   * The button has its own hover and press states; its click does <em>not</em> bubble up to the
+   * chip's own action listeners. Clears any two-state affordance previously installed via {@link
+   * #setTrailingAffordance} — the two share the trailing slot, so the last call wins.
    *
    * @param action the action backing the trailing button; null clears
    * @return this chip
-   * @version v0.1.0
+   * @version v0.3.0
    * @since v0.1.0
    */
   public ElwhaChip setTrailingAction(final Action action) {
     if (action != null && action.getValue(Action.SMALL_ICON) instanceof Icon icon) {
       applyIconColorFilter(icon);
     }
+    clearTrailingAffordanceState();
     trailingButton.setAction(action);
     trailingButton.setVisible(action != null);
     revalidate();
@@ -611,6 +620,76 @@ public class ElwhaChip extends JPanel {
       action.putValue(Action.SHORT_DESCRIPTION, tooltip);
     }
     return setTrailingAction(action);
+  }
+
+  /**
+   * Installs (or clears) a clickable trailing-slot affordance with two visual states — the trailing
+   * counterpart to {@link #setLeadingAffordance}, honoring the same {@code active} / {@code
+   * hoverRevealIdle} / tooltip / {@code onClick} semantics. Clears any single-state action
+   * previously installed via {@link #setTrailingAction} / {@link #setTrailingIcon} — the two share
+   * the trailing slot, so the last call wins.
+   *
+   * @param idleIcon icon when the affordance is in the idle / off state
+   * @param activeIcon icon when the affordance is active / on (falls back to idle when null)
+   * @param active whether the affordance is currently active
+   * @param hoverRevealIdle when true and not active, hide the idle icon until chip hover
+   * @param tooltip tooltip text; null suppresses
+   * @param onClick click handler; null disables clicks but the slot still reserves its area
+   * @return this chip
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaChip setTrailingAffordance(
+      final Icon idleIcon,
+      final Icon activeIcon,
+      final boolean active,
+      final boolean hoverRevealIdle,
+      final String tooltip,
+      final Runnable onClick) {
+    trailingAffordanceIdleIcon = idleIcon;
+    trailingAffordanceActiveIcon = activeIcon;
+    trailingAffordanceActiveState = active;
+    trailingAffordanceHoverRevealIdle = hoverRevealIdle;
+    if (idleIcon == null && activeIcon == null) {
+      trailingButton.setVisible(false);
+      trailingButton.setAffordance(null, null);
+      revalidate();
+      repaint();
+      return this;
+    }
+    applyIconColorFilter(idleIcon);
+    applyIconColorFilter(activeIcon);
+    trailingButton.setVisible(true);
+    trailingButton.setAffordance(onClick, tooltip);
+    refreshTrailingAffordanceIcon();
+    revalidate();
+    repaint();
+    return this;
+  }
+
+  private void refreshTrailingAffordanceIcon() {
+    if (trailingAffordanceIdleIcon == null && trailingAffordanceActiveIcon == null) {
+      return;
+    }
+    final Icon next;
+    if (trailingAffordanceActiveState) {
+      next =
+          trailingAffordanceActiveIcon != null
+              ? trailingAffordanceActiveIcon
+              : trailingAffordanceIdleIcon;
+    } else if (trailingAffordanceHoverRevealIdle) {
+      next = hovered ? trailingAffordanceIdleIcon : null;
+    } else {
+      next = trailingAffordanceIdleIcon;
+    }
+    trailingButton.setRenderedIcon(next);
+  }
+
+  private void clearTrailingAffordanceState() {
+    trailingAffordanceIdleIcon = null;
+    trailingAffordanceActiveIcon = null;
+    trailingAffordanceActiveState = false;
+    trailingAffordanceHoverRevealIdle = false;
   }
 
   // --------------------------------------------------------------- selected
@@ -886,6 +965,7 @@ public class ElwhaChip extends JPanel {
             if (interactionMode != ChipInteractionMode.STATIC && isEnabled()) {
               hovered = true;
               refreshLeadingAffordanceIcon();
+              refreshTrailingAffordanceIcon();
               repaint();
               ensureHoverPolling();
             }
@@ -899,6 +979,7 @@ public class ElwhaChip extends JPanel {
             hovered = false;
             pressed = false;
             refreshLeadingAffordanceIcon();
+            refreshTrailingAffordanceIcon();
             stopHoverPolling();
             repaint();
           }
@@ -1061,6 +1142,7 @@ public class ElwhaChip extends JPanel {
       hovered = false;
       pressed = false;
       refreshLeadingAffordanceIcon();
+      refreshTrailingAffordanceIcon();
       stopHoverPolling();
       return;
     }
@@ -1075,6 +1157,7 @@ public class ElwhaChip extends JPanel {
       hovered = false;
       pressed = false;
       refreshLeadingAffordanceIcon();
+      refreshTrailingAffordanceIcon();
       stopHoverPolling();
       repaint();
     }
@@ -1496,16 +1579,20 @@ public class ElwhaChip extends JPanel {
   // ---------------------------------------------------------- trailing btn
 
   /**
-   * A minimal {@link JLabel}-based button used for the trailing slot. Renders the {@link Action}'s
-   * {@code SMALL_ICON} (or its {@code NAME} as fallback text) and forwards click to the action
-   * without bubbling to the host chip.
+   * A minimal {@link JLabel}-based button used for the trailing slot, in either of two modes:
+   * <em>action mode</em> ({@link #setAction}) renders an {@link Action}'s {@code SMALL_ICON} (or
+   * its {@code NAME} as fallback text) and fires the action on click; <em>affordance mode</em>
+   * ({@link #setAffordance}) renders a caller-driven two-state icon and runs a plain {@code
+   * Runnable}. The two modes are mutually exclusive — installing one clears the other. Either way
+   * the click does not bubble to the host chip.
    *
-   * @version v0.1.0
+   * @version v0.3.0
    * @since v0.1.0
    */
   private static final class TrailingIconButton extends JLabel {
 
     private Action action;
+    private Runnable onClick;
     private boolean hovered;
     private boolean pressed;
 
@@ -1550,13 +1637,17 @@ public class ElwhaChip extends JPanel {
               }
               pressed = false;
               repaint();
-              if (action != null && action.isEnabled() && containsLocal(e.getPoint())) {
-                action.actionPerformed(
-                    new ActionEvent(
-                        TrailingIconButton.this,
-                        ActionEvent.ACTION_PERFORMED,
-                        "trailing",
-                        e.getModifiersEx()));
+              if (containsLocal(e.getPoint())) {
+                if (action != null && action.isEnabled()) {
+                  action.actionPerformed(
+                      new ActionEvent(
+                          TrailingIconButton.this,
+                          ActionEvent.ACTION_PERFORMED,
+                          "trailing",
+                          e.getModifiersEx()));
+                } else if (onClick != null) {
+                  onClick.run();
+                }
               }
               e.consume();
             }
@@ -1569,6 +1660,7 @@ public class ElwhaChip extends JPanel {
 
     void setAction(final Action action) {
       this.action = action;
+      this.onClick = null;
       if (action == null) {
         setIcon(null);
         setText("");
@@ -1588,9 +1680,25 @@ public class ElwhaChip extends JPanel {
       setToolTipText(desc == null ? null : desc.toString());
     }
 
+    /**
+     * Switches the button into affordance mode — a caller-driven two-state icon (set via {@link
+     * #setRenderedIcon}) backed by a plain {@code Runnable}. Clears any installed {@link Action}.
+     */
+    void setAffordance(final Runnable onClick, final String tooltip) {
+      this.action = null;
+      this.onClick = onClick;
+      setText("");
+      setToolTipText(tooltip);
+    }
+
+    void setRenderedIcon(final Icon icon) {
+      setIcon(icon);
+      repaint();
+    }
+
     @Override
     protected void paintComponent(final Graphics g) {
-      if ((hovered || pressed) && isEnabled()) {
+      if ((hovered || pressed) && isEnabled() && getIcon() != null) {
         final Graphics2D g2 = (Graphics2D) g.create();
         try {
           g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);

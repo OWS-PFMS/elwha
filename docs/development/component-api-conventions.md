@@ -65,6 +65,14 @@ Components split into two roles, and the role determines the API shape:
 
 **Package layout note.** Leaf vs container does NOT drive package structure. Both shapes live alongside each other in their respective `<componentname>/` packages; container companion primitives live flat in the same package as the chrome root with an `Elwha<Name>*` prefix carrying the family relationship. Match Joy UI / shadcn structure here; reach for sub-packages only when a single component family exceeds ~15 classes.
 
+## 7. Symmetric slot affordances — leading and trailing offer the same interaction vocabulary
+
+When a leaf widget exposes a clickable, two-state affordance on one slot, the opposite slot exposes a symmetric one. `ElwhaChip` pairs `setLeadingAffordance(...)` and `setTrailingAffordance(...)` — identical six-arg signature (`idleIcon`, `activeIcon`, `active`, `hoverRevealIdle`, `tooltip`, `onClick`) and identical idle / active / hover-reveal semantics. A slot's single-state action setters (`setTrailingAction` / `setTrailingIcon`) remain as the lighter-weight option; the two-state affordance and the single-state action share the slot, last-call-wins.
+
+**Rationale.** A consumer who has learned a slot's affordance API should not have to learn a different shape for the opposite slot. M3 conventionally uses the trailing slot for a single-action remove / dismiss, so a single-state setter there is the *common* case — but common is not *only*, and an asymmetric API forces a host container (the way `ElwhaChipList`'s pin / anchor buttons are built on the leading affordance) to special-case which slot it targets. Symmetry keeps the interaction vocabulary one thing to learn. The asymmetry that prompted this rule was caught in [#152](https://github.com/OWS-PFMS/elwha/issues/152).
+
+**Apply when:** a leaf widget gains a two-state affordance on any slot. Add the mirror on the opposite slot in the same change — or, if the slot is single-state by deliberate design, record that decision (and why) here.
+
 ---
 
 ## Cross-reference
