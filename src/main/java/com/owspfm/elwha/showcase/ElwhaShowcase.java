@@ -113,11 +113,6 @@ import javax.swing.tree.TreeSelectionModel;
  */
 public final class ElwhaShowcase {
 
-  // A fixed media-slot height for the Card Workbench: pinning the height keeps ElwhaCard's
-  // preferred size stable (an unpinned painter slot is width-derived and only settles after a
-  // re-layout cycle the surface-stage sizing would otherwise freeze too early).
-  private static final int CARD_MEDIA_HEIGHT = 180;
-
   private final List<Runnable> tokenRefreshers = new ArrayList<>();
   private final JPanel content = new JPanel(new CardLayout());
   private JLabel statusLabel;
@@ -1122,11 +1117,9 @@ public final class ElwhaShowcase {
     card.setPadding(cfg.padH(), cfg.padV());
 
     if (cfg.media() == CardMediaSlot.IMAGE) {
-      card.add(ElwhaCardMedia.image(demoImage()).setPreferredHeight(CARD_MEDIA_HEIGHT));
+      card.add(ElwhaCardMedia.image(demoImage()));
     } else if (cfg.media() == CardMediaSlot.RENDERED) {
-      card.add(
-          ElwhaCardMedia.painter(ElwhaShowcase::paintDemoMedia)
-              .setPreferredHeight(CARD_MEDIA_HEIGHT));
+      card.add(ElwhaCardMedia.painter(ElwhaShowcase::paintDemoMedia));
     }
 
     ElwhaCardHeader header = null;
@@ -1191,12 +1184,9 @@ public final class ElwhaShowcase {
         .append(cfg.padV())
         .append(");\n");
     if (cfg.media() == CardMediaSlot.IMAGE) {
-      code.append("card.add(ElwhaCardMedia.image(image).setPreferredHeight(")
-          .append(CARD_MEDIA_HEIGHT)
-          .append("));\n");
+      code.append("card.add(ElwhaCardMedia.image(image));\n");
     } else if (cfg.media() == CardMediaSlot.RENDERED) {
-      code.append("card.add(ElwhaCardMedia.painter((g, w, h) -> g.fillRect(0, 0, w, h))\n");
-      code.append("    .setPreferredHeight(").append(CARD_MEDIA_HEIGHT).append("));\n");
+      code.append("card.add(ElwhaCardMedia.painter((g, w, h) -> g.fillRect(0, 0, w, h)));\n");
     }
     if (cfg.header()) {
       code.append("ElwhaCardHeader header = new ElwhaCardHeader()\n");
