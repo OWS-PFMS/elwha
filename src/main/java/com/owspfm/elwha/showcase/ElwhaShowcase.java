@@ -1215,6 +1215,8 @@ public final class ElwhaShowcase {
     final JComboBox<ButtonSize> sizeBox = new JComboBox<>(ButtonSize.values());
     sizeBox.setSelectedItem(ButtonSize.S);
     final JComboBox<ButtonShape> shapeBox = new JComboBox<>(ButtonShape.values());
+    // Default variant is CONNECTED, whose M3-canonical resting shape is SQUARE.
+    shapeBox.setSelectedItem(ButtonShape.SQUARE);
     final JComboBox<ResizeMode> resizeBox = new JComboBox<>(ResizeMode.values());
     final JComboBox<ButtonGroupColorStyle> colorBox =
         new JComboBox<>(ButtonGroupColorStyle.values());
@@ -1282,7 +1284,15 @@ public final class ElwhaShowcase {
                   variant, selection, size, shape, resize, color, content, count, maxWidth,
                   enabled));
         };
-    variantBox.addActionListener(event -> apply.run());
+    variantBox.addActionListener(
+        event -> {
+          // Switching variant resets the shape control to that variant's canonical resting shape.
+          shapeBox.setSelectedItem(
+              variantBox.getSelectedItem() == ButtonGroupVariant.CONNECTED
+                  ? ButtonShape.SQUARE
+                  : ButtonShape.ROUND);
+          apply.run();
+        });
     selectionBox.addActionListener(event -> apply.run());
     sizeBox.addActionListener(event -> apply.run());
     shapeBox.addActionListener(event -> apply.run());
