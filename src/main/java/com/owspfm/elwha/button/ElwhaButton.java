@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.Objects;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
+import javax.accessibility.AccessibleState;
+import javax.accessibility.AccessibleStateSet;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.ActionMap;
@@ -1221,6 +1223,15 @@ public class ElwhaButton extends JComponent {
         return name;
       }
       return "Button";
+    }
+
+    @Override
+    public AccessibleStateSet getAccessibleStateSet() {
+      final AccessibleStateSet states = super.getAccessibleStateSet();
+      if (interactionMode == ButtonInteractionMode.SELECTABLE && selected) {
+        states.add(AccessibleState.SELECTED);
+      }
+      return states;
     }
   }
 }
