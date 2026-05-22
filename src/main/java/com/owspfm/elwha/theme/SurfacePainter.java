@@ -4,6 +4,8 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.Shape;
+import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 
 /**
@@ -21,7 +23,7 @@ import java.awt.geom.RoundRectangle2D;
  * {@link Color}s — so the painter respects the token binding rule by construction.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.3.0
  * @since v0.1.0
  */
 public final class SurfacePainter {
@@ -115,6 +117,129 @@ public final class SurfacePainter {
   public static RoundRectangle2D.Float bodyShape(final int width, final int height, final int arc) {
     final int clampedArc = Math.max(0, Math.min(arc, Math.min(width, height)));
     return new RoundRectangle2D.Float(0f, 0f, width, height, clampedArc, clampedArc);
+  }
+
+  /**
+   * Per-corner counterpart to {@link #paint(Graphics2D, int, int, int, ColorRole, StateLayer,
+   * ColorRole, float)} — paints the surface fill and optional border with four independent corner
+   * radii instead of one uniform arc. The connected {@code ElwhaButtonGroup} variant uses this so a
+   * segment's outward corners take the group shape while its butted inner corners stay nearly
+   * square.
+   *
+   * <p>Compositing and stroke-inset rules are identical to the uniform overload; the only
+   * difference is the body outline, which is the per-corner path from {@link #bodyShape(int, int,
+   * CornerRadii)}.
+   *
+   * @param g the graphics context (not mutated; a copy is made for rendering-hint isolation)
+   * @param width the surface width in pixels
+   * @param height the surface height in pixels
+   * @param radii the four corner radii (each clamped to half the shorter body axis internally)
+   * @param surfaceRole the resting surface role; {@code null} for transparent resting fill
+   * @param overlay the state layer to composite over the surface, or {@code null} for none
+   * @param borderRole the border stroke role; {@code null} suppresses the border
+   * @param borderWidthPx the border stroke width in pixels; {@code <= 0} suppresses the border
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static void paint(
+      Graphics2D g,
+      int width,
+      int height,
+      CornerRadii radii,
+      ColorRole surfaceRole,
+      StateLayer overlay,
+      ColorRole borderRole,
+      float borderWidthPx) {
+    Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+
+      Color fill = resolveFill(surfaceRole, overlay);
+      if (fill != null) {
+        g2.setColor(fill);
+        g2.fill(roundedRectPath(0f, 0f, width, height, radii));
+      }
+
+      if (borderRole != null && borderWidthPx > 0f) {
+        // Inset the stroke path by half its width — same rule as the uniform overload — and shrink
+        // each corner radius by the same half-width so the stroke's outer edge tracks the fill's
+        // corner.
+        float inset = borderWidthPx / 2f;
+        float strokeW = Math.max(0f, width - borderWidthPx);
+        float strokeH = Math.max(0f, height - borderWidthPx);
+        CornerRadii strokeRadii =
+            CornerRadii.of(
+                Math.round(radii.topLeftPx() - inset),
+                Math.round(radii.topRightPx() - inset),
+                Math.round(radii.bottomRightPx() - inset),
+                Math.round(radii.bottomLeftPx() - inset));
+        g2.setColor(borderRole.resolve());
+        g2.setStroke(new BasicStroke(borderWidthPx));
+        g2.draw(roundedRectPath(inset, inset, strokeW, strokeH, strokeRadii));
+      }
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  /**
+   * Per-corner counterpart to {@link #bodyShape(int, int, int)} — the rounded-rect outline with
+   * four independent corner radii. Each radius is clamped to half the shorter body axis, so an
+   * over-large radius (a requested pill end-cap) degrades cleanly.
+   *
+   * @param width body width in pixels
+   * @param height body height in pixels
+   * @param radii the four corner radii
+   * @return the rounded-rect shape covering the body
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static Shape bodyShape(final int width, final int height, final CornerRadii radii) {
+    return roundedRectPath(0f, 0f, width, height, radii);
+  }
+
+  // Cubic-Bezier circle approximation constant — the control-point offset factor for a quarter
+  // circle, k = (4/3)·(√2 − 1). Matches the arc geometry RoundRectangle2D uses internally, so a
+  // uniform-radii path renders consistently with the int-arc overloads.
+  private static final float CORNER_K = 0.5522847498f;
+
+  private static Path2D.Float roundedRectPath(
+      final float x, final float y, final float w, final float h, final CornerRadii radii) {
+    final float maxR = Math.min(w, h) / 2f;
+    final float tl = Math.min(radii.topLeftPx(), maxR);
+    final float tr = Math.min(radii.topRightPx(), maxR);
+    final float br = Math.min(radii.bottomRightPx(), maxR);
+    final float bl = Math.min(radii.bottomLeftPx(), maxR);
+    final Path2D.Float path = new Path2D.Float();
+    path.moveTo(x + tl, y);
+    path.lineTo(x + w - tr, y);
+    if (tr > 0f) {
+      path.curveTo(x + w - tr + tr * CORNER_K, y, x + w, y + tr - tr * CORNER_K, x + w, y + tr);
+    } else {
+      path.lineTo(x + w, y);
+    }
+    path.lineTo(x + w, y + h - br);
+    if (br > 0f) {
+      path.curveTo(
+          x + w, y + h - br + br * CORNER_K, x + w - br + br * CORNER_K, y + h, x + w - br, y + h);
+    } else {
+      path.lineTo(x + w, y + h);
+    }
+    path.lineTo(x + bl, y + h);
+    if (bl > 0f) {
+      path.curveTo(x + bl - bl * CORNER_K, y + h, x, y + h - bl + bl * CORNER_K, x, y + h - bl);
+    } else {
+      path.lineTo(x, y + h);
+    }
+    path.lineTo(x, y + tl);
+    if (tl > 0f) {
+      path.curveTo(x, y + tl - tl * CORNER_K, x + tl - tl * CORNER_K, y, x + tl, y);
+    } else {
+      path.lineTo(x, y);
+    }
+    path.closePath();
+    return path;
   }
 
   private static Color resolveFill(ColorRole surfaceRole, StateLayer overlay) {

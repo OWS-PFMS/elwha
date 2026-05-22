@@ -2,6 +2,7 @@ package com.owspfm.elwha.button;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.StateLayer;
@@ -26,6 +27,7 @@ import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
 import javax.swing.AbstractAction;
@@ -84,8 +86,14 @@ import javax.swing.Timer;
  * pin.addSelectionChangeListener(evt -> System.out.println("pinned: " + pin.isSelected()));
  * }</pre>
  *
+ * <p><strong>Connected-segment mode.</strong> {@link #setCornerRadii(CornerRadii)} installs a
+ * per-corner radius override and switches the button into connected-segment rendering: the body is
+ * painted to the full component width rather than hugging its content, so a connected {@code
+ * ElwhaButtonGroup} can size segments to fill and butt them edge-to-edge. Clearing the override
+ * ({@code setCornerRadii(null)}) returns the button to ordinary content-hugging rendering.
+ *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.3.0
  * @since v0.2.0
  */
 public class ElwhaButton extends JComponent {
@@ -108,6 +116,7 @@ public class ElwhaButton extends JComponent {
   private ButtonShape shape = ButtonShape.ROUND;
   private ButtonSize buttonSize = ButtonSize.S;
   private ColorRole surfaceRoleOverride;
+  private CornerRadii cornerRadii;
   private int borderWidth = DEFAULT_BORDER_WIDTH;
   private String text = "";
   private Icon icon;
@@ -436,6 +445,46 @@ public class ElwhaButton extends JComponent {
   }
 
   /**
+   * Installs a per-corner radius override and switches the button into connected-segment rendering,
+   * or clears it. This is the {@code ElwhaButtonGroup} connected-variant hook (design doc §16): a
+   * butted segment renders its outward corners at the group shape and its inner corners nearly
+   * square, which a single uniform {@link ButtonShape} cannot express.
+   *
+   * <p>While an override is installed the button is in <em>connected-segment mode</em> — it paints
+   * its body to the full component width instead of hugging its content, and the override radii
+   * replace the {@link #setShape(ButtonShape) shape}-derived corner radius for the surface, border,
+   * and ripple clip. {@link #getPreferredSize()} still reports the content-hugging width, so the
+   * owning group remains free to size segments larger via layout. Pass {@code null} to clear the
+   * override and return to ordinary rendering.
+   *
+   * @param radii the four corner radii, or {@code null} to clear the override
+   * @return {@code this} for fluent chaining
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaButton setCornerRadii(final CornerRadii radii) {
+    if (Objects.equals(this.cornerRadii, radii)) {
+      return this;
+    }
+    this.cornerRadii = radii;
+    revalidate();
+    repaint();
+    return this;
+  }
+
+  /**
+   * Returns the per-corner radius override, or {@code null} when the button uses its {@link
+   * #getShape() shape}-derived uniform corner radius.
+   *
+   * @return the per-corner radius override, or {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public CornerRadii getCornerRadii() {
+    return cornerRadii;
+  }
+
+  /**
    * Sets the M3 size tier and triggers a relayout + repaint. The shape is not touched — picking a
    * size leaves the corner treatment alone (a {@link ButtonShape#ROUND} button stays a capsule at
    * every size).
@@ -715,6 +764,17 @@ public class ElwhaButton extends JComponent {
     return buttonSize.paddingNoIconPx() + labelW + buttonSize.paddingNoIconPx();
   }
 
+  // The width the body is painted at: the content-hugging width normally, or the full component
+  // width (minus shadow reserve) in connected-segment mode — so a connected ElwhaButtonGroup can
+  // stretch a segment to fill its share of the row and have the surface fill it.
+  private int effectiveBodyWidth() {
+    if (cornerRadii != null) {
+      final Insets s = shadowReserve();
+      return Math.max(1, getWidth() - s.left - s.right);
+    }
+    return bodyWidthPx();
+  }
+
   private int labelWidthPx() {
     if (text == null || text.isEmpty()) {
       return 0;
@@ -805,7 +865,7 @@ public class ElwhaButton extends JComponent {
             // Center-of-body ripple for keyboard activation — body-local coords, not
             // component-local, so the ripple seeds inside the visible chrome even when the
             // component is inflated for a11y target.
-            startRipple(new Point(bodyWidthPx() / 2, buttonSize.containerHeightPx() / 2));
+            startRipple(new Point(effectiveBodyWidth() / 2, buttonSize.containerHeightPx() / 2));
             activate(0);
           }
         };
@@ -834,7 +894,7 @@ public class ElwhaButton extends JComponent {
     final Insets s = shadowReserve();
     final int insetW = getWidth() - s.left - s.right;
     final int insetH = getHeight() - s.top - s.bottom;
-    final int bodyW = bodyWidthPx();
+    final int bodyW = effectiveBodyWidth();
     final int bodyH = buttonSize.containerHeightPx();
     return new Point(
         s.left + Math.max(0, (insetW - bodyW) / 2), s.top + Math.max(0, (insetH - bodyH) / 2));
@@ -862,7 +922,7 @@ public class ElwhaButton extends JComponent {
    */
   private Point toBodyPoint(final Point componentPoint) {
     final Point origin = bodyOrigin();
-    final int bodyW = bodyWidthPx();
+    final int bodyW = effectiveBodyWidth();
     final int bodyH = buttonSize.containerHeightPx();
     final int x = componentPoint.x - origin.x;
     final int y = componentPoint.y - origin.y;
@@ -964,7 +1024,7 @@ public class ElwhaButton extends JComponent {
 
   @Override
   protected void paintComponent(final Graphics g) {
-    final int bodyW = Math.max(1, bodyWidthPx());
+    final int bodyW = Math.max(1, effectiveBodyWidth());
     final int bodyH = Math.max(1, buttonSize.containerHeightPx());
     final Point bodyOrigin = bodyOrigin();
     final int arc = cornerRadiusPx();
@@ -987,7 +1047,7 @@ public class ElwhaButton extends JComponent {
         final Graphics2D dim = (Graphics2D) g2.create();
         try {
           dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
-          SurfacePainter.paint(dim, bodyW, bodyH, arc, surfaceRole, null, borderRole, borderStroke);
+          paintSurface(dim, bodyW, bodyH, arc, surfaceRole, null, borderRole, borderStroke);
         } finally {
           dim.dispose();
         }
@@ -995,16 +1055,42 @@ public class ElwhaButton extends JComponent {
         return;
       }
 
-      SurfacePainter.paint(g2, bodyW, bodyH, arc, surfaceRole, overlay, borderRole, borderStroke);
-
-      if (rippleProgress < 1f && rippleOrigin != null) {
-        RipplePainter.paint(
-            g2, bodyW, bodyH, rippleOrigin, rippleProgress, arc, resolveForegroundColor());
-      }
-
+      paintSurface(g2, bodyW, bodyH, arc, surfaceRole, overlay, borderRole, borderStroke);
+      paintRippleLayer(g2, bodyW, bodyH, arc);
       paintContent(g2, bodyW, bodyH, 1f);
     } finally {
       g2.dispose();
+    }
+  }
+
+  // Routes the surface paint through the per-corner SurfacePainter overload in connected-segment
+  // mode, or the uniform int-arc overload otherwise. The int-arc path is byte-identical to the
+  // pre-connected-mode rendering, so an ordinary button is unaffected.
+  private void paintSurface(
+      final Graphics2D g,
+      final int w,
+      final int h,
+      final int arc,
+      final ColorRole surfaceRole,
+      final StateLayer overlay,
+      final ColorRole borderRole,
+      final float borderStroke) {
+    if (cornerRadii != null) {
+      SurfacePainter.paint(g, w, h, cornerRadii, surfaceRole, overlay, borderRole, borderStroke);
+    } else {
+      SurfacePainter.paint(g, w, h, arc, surfaceRole, overlay, borderRole, borderStroke);
+    }
+  }
+
+  private void paintRippleLayer(final Graphics2D g, final int w, final int h, final int arc) {
+    if (rippleProgress >= 1f || rippleOrigin == null) {
+      return;
+    }
+    if (cornerRadii != null) {
+      RipplePainter.paint(
+          g, w, h, rippleOrigin, rippleProgress, cornerRadii, resolveForegroundColor());
+    } else {
+      RipplePainter.paint(g, w, h, rippleOrigin, rippleProgress, arc, resolveForegroundColor());
     }
   }
 
