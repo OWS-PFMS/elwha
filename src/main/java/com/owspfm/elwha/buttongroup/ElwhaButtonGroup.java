@@ -17,6 +17,7 @@ import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javax.swing.Icon;
 import javax.swing.JComponent;
 
 /**
@@ -53,9 +54,7 @@ import javax.swing.JComponent;
  * ElwhaButtonGroup viewMode = ElwhaButtonGroup.connected()
  *     .setSelectionMode(SelectionMode.REQUIRED)
  *     .setButtonSize(ButtonSize.S)
- *     .add(new ElwhaButton("List"))
- *     .add(new ElwhaButton("Grid"))
- *     .add(new ElwhaButton("Compact"));
+ *     .add("List", "Grid", "Compact");
  * viewMode.addSelectionListener(group ->
  *     System.out.println("selected: " + group.getSelectedIndex()));
  * }</pre>
@@ -183,6 +182,54 @@ public final class ElwhaButtonGroup extends JComponent {
     button.setRequestFocusEnabled(true);
     addSegment(new IconButtonSegment(button));
     return this;
+  }
+
+  /**
+   * Adds one text-button segment per label — the convenience for the common case where the caller
+   * supplies only segment text and lets the group own size, shape, and selection. Each label
+   * becomes a {@link ButtonVariant#FILLED_TONAL} {@link ElwhaButton}; a {@link
+   * ButtonGroupVariant#CONNECTED} group then stamps its own colour style over each, and a {@link
+   * ButtonGroupVariant#STANDARD} group keeps the tonal default — use {@link #add(ElwhaButton)} for
+   * a standard group whose segments mix colour styles. Each built button is coerced and re-sized
+   * exactly as {@link #add(ElwhaButton)}.
+   *
+   * @param labels the segment labels, added in order
+   * @return {@code this} for fluent chaining
+   * @throws NullPointerException if {@code labels} or any element is {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaButtonGroup add(final String... labels) {
+    if (labels == null) {
+      throw new NullPointerException("labels");
+    }
+    for (final String label : labels) {
+      if (label == null) {
+        throw new NullPointerException("label");
+      }
+      add(ElwhaButton.filledTonalButton(label));
+    }
+    return this;
+  }
+
+  /**
+   * Adds a single text-button segment carrying a label and a leading icon — the {@link
+   * #add(String...)} convenience extended with an icon. The button is a {@link
+   * ButtonVariant#FILLED_TONAL} {@link ElwhaButton}; a {@link ButtonGroupVariant#CONNECTED} group
+   * then stamps its own colour style over it.
+   *
+   * @param label the segment label
+   * @param icon the leading icon; may be {@code null}
+   * @return {@code this} for fluent chaining
+   * @throws NullPointerException if {@code label} is {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaButtonGroup add(final String label, final Icon icon) {
+    if (label == null) {
+      throw new NullPointerException("label");
+    }
+    return add(new ElwhaButton(label, icon).setVariant(ButtonVariant.FILLED_TONAL));
   }
 
   private void addSegment(final Segment segment) {
