@@ -724,8 +724,8 @@ public final class ElwhaButtonGroup extends JComponent {
 
   // The per-corner radii for a connected segment. A SELECTED segment pops as a uniform inverted
   // shape, whatever its position — a pill in a square group, a small square in a round group. An
-  // UNSELECTED segment takes the segmented-bar treatment: group-end (outer) corners follow the
-  // resting shape, butted (inner) corners stay small.
+  // UNSELECTED segment takes the segmented-bar treatment: the group's outer end-caps are always
+  // fully rounded (pill), butted inner corners stay small.
   private CornerRadii connectedRadii(
       final int index, final int count, final int rowHeight, final boolean selected) {
     final int inner = connectedCornerRadiusPx(buttonSize);
@@ -733,15 +733,14 @@ public final class ElwhaButtonGroup extends JComponent {
     if (selected) {
       return CornerRadii.uniform(invert(shape) == ButtonShape.ROUND ? pill : inner);
     }
-    final int outer = shape == ButtonShape.ROUND ? pill : inner;
     if (count == 1) {
-      return CornerRadii.uniform(outer);
+      return CornerRadii.uniform(pill);
     }
     if (index == 0) {
-      return CornerRadii.of(outer, inner, inner, outer);
+      return CornerRadii.of(pill, inner, inner, pill);
     }
     if (index == count - 1) {
-      return CornerRadii.of(inner, outer, outer, inner);
+      return CornerRadii.of(inner, pill, pill, inner);
     }
     return CornerRadii.uniform(inner);
   }
