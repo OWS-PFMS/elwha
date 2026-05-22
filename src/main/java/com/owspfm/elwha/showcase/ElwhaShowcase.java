@@ -1214,9 +1214,6 @@ public final class ElwhaShowcase {
     final JComboBox<SelectionMode> selectionBox = new JComboBox<>(SelectionMode.values());
     final JComboBox<ButtonSize> sizeBox = new JComboBox<>(ButtonSize.values());
     sizeBox.setSelectedItem(ButtonSize.S);
-    final JComboBox<ButtonShape> shapeBox = new JComboBox<>(ButtonShape.values());
-    // Default variant is CONNECTED, whose M3-canonical resting shape is SQUARE.
-    shapeBox.setSelectedItem(ButtonShape.SQUARE);
     final JComboBox<ResizeMode> resizeBox = new JComboBox<>(ResizeMode.values());
     final JComboBox<ButtonGroupColorStyle> colorBox =
         new JComboBox<>(ButtonGroupColorStyle.values());
@@ -1231,7 +1228,6 @@ public final class ElwhaShowcase {
     controls.addControl("Variant", variantBox);
     controls.addControl("Selection mode", selectionBox);
     controls.addControl("Size", sizeBox);
-    controls.addControl("Default shape", shapeBox);
     controls.addControl("Resize mode", resizeBox);
     controls.addControl("Connected max width", maxWidthSpinner);
     controls.addSection("Segments");
@@ -1246,7 +1242,6 @@ public final class ElwhaShowcase {
           final ButtonGroupVariant variant = (ButtonGroupVariant) variantBox.getSelectedItem();
           final SelectionMode selection = (SelectionMode) selectionBox.getSelectedItem();
           final ButtonSize size = (ButtonSize) sizeBox.getSelectedItem();
-          final ButtonShape shape = (ButtonShape) shapeBox.getSelectedItem();
           final ResizeMode resize = (ResizeMode) resizeBox.getSelectedItem();
           final ButtonGroupColorStyle color = (ButtonGroupColorStyle) colorBox.getSelectedItem();
           final SegmentContent content = (SegmentContent) contentBox.getSelectedItem();
@@ -1264,7 +1259,6 @@ public final class ElwhaShowcase {
               new ElwhaButtonGroup(variant)
                   .setSelectionMode(selection)
                   .setButtonSize(size)
-                  .setShape(shape)
                   .setResizeMode(resize)
                   .setColorStyle(color)
                   .setMaxWidth(maxWidth);
@@ -1281,21 +1275,11 @@ public final class ElwhaShowcase {
           workbench.setStage(stageForGroup(group, variant, resize, maxWidth));
           workbench.setCode(
               renderButtonGroupCode(
-                  variant, selection, size, shape, resize, color, content, count, maxWidth,
-                  enabled));
+                  variant, selection, size, resize, color, content, count, maxWidth, enabled));
         };
-    variantBox.addActionListener(
-        event -> {
-          // Switching variant resets the shape control to that variant's canonical resting shape.
-          shapeBox.setSelectedItem(
-              variantBox.getSelectedItem() == ButtonGroupVariant.CONNECTED
-                  ? ButtonShape.SQUARE
-                  : ButtonShape.ROUND);
-          apply.run();
-        });
+    variantBox.addActionListener(event -> apply.run());
     selectionBox.addActionListener(event -> apply.run());
     sizeBox.addActionListener(event -> apply.run());
-    shapeBox.addActionListener(event -> apply.run());
     resizeBox.addActionListener(event -> apply.run());
     colorBox.addActionListener(event -> apply.run());
     contentBox.addActionListener(event -> apply.run());
@@ -1364,7 +1348,6 @@ public final class ElwhaShowcase {
       final ButtonGroupVariant variant,
       final SelectionMode selection,
       final ButtonSize size,
-      final ButtonShape shape,
       final ResizeMode resize,
       final ButtonGroupColorStyle color,
       final SegmentContent content,
@@ -1379,8 +1362,6 @@ public final class ElwhaShowcase {
         .append(selection)
         .append(")\n    .setButtonSize(ButtonSize.")
         .append(size)
-        .append(")\n    .setShape(ButtonShape.")
-        .append(shape)
         .append(")");
     if (connected) {
       code.append("\n    .setResizeMode(ResizeMode.").append(resize).append(")");

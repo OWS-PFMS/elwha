@@ -36,12 +36,12 @@ import javax.swing.JComponent;
  * the mode and emits one unified {@link SelectionListener} event. A {@code REQUIRED} group seeds
  * its first segment selected so the "exactly one" invariant holds from the start.
  *
- * <p><strong>Selected-segment shape.</strong> In a {@link ButtonGroupVariant#CONNECTED} group the
- * selected segment pops to a uniform inverted shape — a square-resting group's selected segment
- * renders as a round pill — which is the core visual selection signal. A {@link
- * ButtonGroupVariant#STANDARD} group does <em>not</em> change segment shape on selection; every
- * segment keeps the group resting shape and selection is signalled by colour. The transient press
- * width / shape morph is a separate polish epic and is not rendered statically here.
+ * <p><strong>Selected-segment shape.</strong> The selected / unselected segment shape is fixed per
+ * variant — there is no shape configuration. A {@link ButtonGroupVariant#STANDARD} group's selected
+ * segment renders square while its unselected segments stay round; a {@link
+ * ButtonGroupVariant#CONNECTED} group's selected segment pops to a uniform round pill out of its
+ * pill-ended bar. The transient press width / shape morph is a separate polish epic and is not
+ * rendered statically here.
  *
  * <p><strong>Naming.</strong> Not to be confused with {@link com.owspfm.elwha.button.ButtonGroup} /
  * {@link com.owspfm.elwha.iconbutton.IconButtonGroup}, which are pure selection-mutex helpers with
@@ -76,8 +76,6 @@ public final class ElwhaButtonGroup extends JComponent {
   private ButtonGroupVariant variant = ButtonGroupVariant.STANDARD;
   private SelectionMode selectionMode = SelectionMode.SINGLE;
   private ButtonSize buttonSize = ButtonSize.S;
-  private ButtonShape shape;
-  private boolean shapeExplicitlySet;
   private ResizeMode resizeMode = ResizeMode.FLEXIBLE;
   private ButtonGroupColorStyle colorStyle = ButtonGroupColorStyle.TONAL;
   private int maxWidthPx;
@@ -108,17 +106,10 @@ public final class ElwhaButtonGroup extends JComponent {
    */
   public ElwhaButtonGroup(final ButtonGroupVariant variant) {
     this.variant = variant != null ? variant : ButtonGroupVariant.STANDARD;
-    this.shape = defaultShapeFor(this.variant);
     setOpaque(false);
     // §13 — the container is not focusable and carries no accessible name; each segment is its own
     // tab stop, which Swing's default focus traversal already provides.
     setFocusable(false);
-  }
-
-  // The M3-canonical resting shape for a variant — standard groups rest round (selected pops
-  // square), connected groups rest square (selected pops round / pill).
-  private static ButtonShape defaultShapeFor(final ButtonGroupVariant variant) {
-    return variant == ButtonGroupVariant.CONNECTED ? ButtonShape.SQUARE : ButtonShape.ROUND;
   }
 
   // ---------------------------------------------------------- factory presets
@@ -271,10 +262,6 @@ public final class ElwhaButtonGroup extends JComponent {
       return this;
     }
     this.variant = variant;
-    // Track the variant's canonical resting shape unless the caller has pinned one explicitly.
-    if (!shapeExplicitlySet) {
-      this.shape = defaultShapeFor(variant);
-    }
     refreshSegments();
     return this;
   }
@@ -363,47 +350,6 @@ public final class ElwhaButtonGroup extends JComponent {
    */
   public ButtonSize getButtonSize() {
     return buttonSize;
-  }
-
-  /**
-   * Sets the group-wide resting shape of every segment. In a {@link ButtonGroupVariant#CONNECTED}
-   * group the selected segment pops to the inverted shape; a {@link ButtonGroupVariant#STANDARD}
-   * group keeps every segment at this shape regardless of selection.
-   *
-   * <p>Until this is called the shape follows the variant's M3-canonical default — {@link
-   * ButtonShape#ROUND} for {@link ButtonGroupVariant#STANDARD}, {@link ButtonShape#SQUARE} for
-   * {@link ButtonGroupVariant#CONNECTED} (so a connected group's selected segment pops to a round
-   * pill). Once set explicitly, the shape is pinned and no longer tracks {@link
-   * #setVariant(ButtonGroupVariant)}.
-   *
-   * @param shape the new resting shape; ignored if {@code null}
-   * @return {@code this} for fluent chaining
-   * @version v0.3.0
-   * @since v0.3.0
-   */
-  public ElwhaButtonGroup setShape(final ButtonShape shape) {
-    if (shape == null) {
-      return this;
-    }
-    this.shapeExplicitlySet = true;
-    if (shape == this.shape) {
-      return this;
-    }
-    this.shape = shape;
-    refreshSegments();
-    return this;
-  }
-
-  /**
-   * Returns the group-wide resting shape — either the explicitly set value or the active variant's
-   * canonical default.
-   *
-   * @return the active resting shape (never {@code null})
-   * @version v0.3.0
-   * @since v0.3.0
-   */
-  public ButtonShape getShape() {
-    return shape;
   }
 
   /**
@@ -713,27 +659,25 @@ public final class ElwhaButtonGroup extends JComponent {
       if (variant == ButtonGroupVariant.CONNECTED) {
         segment.applyCornerRadii(connectedRadii(i, count, rowHeight, segment.isSelected()));
       } else {
-        // Standard segments do not change shape on selection — every segment keeps the group
-        // resting shape; selection is signalled by colour. (The transient press width/shape morph
-        // is the deferred animation epic and is not rendered statically here.)
+        // Standard: the selected segment renders square, unselected segments round (M3 §10). The
+        // transient press width/shape morph is the deferred animation epic, not rendered here.
         segment.applyCornerRadii(null);
-        segment.applyShape(shape);
+        segment.applyShape(segment.isSelected() ? ButtonShape.SQUARE : ButtonShape.ROUND);
       }
     }
     revalidate();
     repaint();
   }
 
-  // The per-corner radii for a connected segment. A SELECTED segment pops as a uniform inverted
-  // shape, whatever its position — a pill in a square group, a small square in a round group. An
-  // UNSELECTED segment takes the segmented-bar treatment: the group's outer end-caps are always
-  // fully rounded (pill), butted inner corners stay small.
+  // The per-corner radii for a connected segment. A SELECTED segment pops as a uniform pill,
+  // whatever its position. An UNSELECTED segment takes the segmented-bar treatment: the group's
+  // outer end-caps are always fully rounded (pill), butted inner corners stay small.
   private CornerRadii connectedRadii(
       final int index, final int count, final int rowHeight, final boolean selected) {
     final int inner = connectedCornerRadiusPx(buttonSize);
     final int pill = rowHeight / 2;
     if (selected) {
-      return CornerRadii.uniform(invert(shape) == ButtonShape.ROUND ? pill : inner);
+      return CornerRadii.uniform(pill);
     }
     if (count == 1) {
       return CornerRadii.uniform(pill);
@@ -745,10 +689,6 @@ public final class ElwhaButtonGroup extends JComponent {
       return CornerRadii.of(inner, pill, pill, inner);
     }
     return CornerRadii.uniform(inner);
-  }
-
-  private static ButtonShape invert(final ButtonShape original) {
-    return original == ButtonShape.ROUND ? ButtonShape.SQUARE : ButtonShape.ROUND;
   }
 
   private int rowHeightPx() {
