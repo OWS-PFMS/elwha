@@ -821,6 +821,76 @@ public final class MaterialIcons {
     return load("brightness_auto_fill", size);
   }
 
+  /** Artist-palette glyph (outline) — a colour / theme affordance. */
+  public static FlatSVGIcon palette() {
+    return palette(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #palette()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon palette(final int size) {
+    return load("palette", size);
+  }
+
+  /**
+   * Artist-palette glyph (filled / solid) — pairs with {@link #palette()} as the "active" state.
+   */
+  public static FlatSVGIcon paletteFilled() {
+    return paletteFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #paletteFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon paletteFilled(final int size) {
+    return load("palette_fill", size);
+  }
+
+  /** Eyedropper / colorize glyph (outline) — a colour-pick affordance. */
+  public static FlatSVGIcon colorize() {
+    return colorize(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #colorize()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon colorize(final int size) {
+    return load("colorize", size);
+  }
+
+  /** Eyedropper / colorize glyph (filled / solid) — pairs with {@link #colorize()} as "active". */
+  public static FlatSVGIcon colorizeFilled() {
+    return colorizeFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #colorizeFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon colorizeFilled(final int size) {
+    return load("colorize_fill", size);
+  }
+
   private static FlatSVGIcon load(final String name, final int size) {
     final FlatSVGIcon icon = new FlatSVGIcon(BASE + name + ".svg", size, size);
     icon.setColorFilter(THEME_FILTER);
@@ -835,9 +905,10 @@ public final class MaterialIcons {
    *
    * <p>Currently bundled outline/fill pairs: {@code push_pin}, {@code anchor}, {@code favorite},
    * {@code star}, {@code info}, {@code help}, {@code delete}, {@code edit}, {@code visibility},
-   * {@code light_mode}, {@code dark_mode}, {@code brightness_auto}. Calling {@code pair} on a name
-   * that lacks a bundled {@code _fill} variant throws when the missing SVG is first painted, not on
-   * construction — see {@link FlatSVGIcon}'s lazy-load semantics.
+   * {@code light_mode}, {@code dark_mode}, {@code brightness_auto}, {@code palette}, {@code
+   * colorize}. Calling {@code pair} on a name that lacks a bundled {@code _fill} variant throws
+   * when the missing SVG is first painted, not on construction — see {@link FlatSVGIcon}'s
+   * lazy-load semantics.
    *
    * <p><strong>Why a helper, not an auto-detect inside {@link
    * com.owspfm.elwha.iconbutton.ElwhaIconButton}.</strong> The button stays icon-library-agnostic

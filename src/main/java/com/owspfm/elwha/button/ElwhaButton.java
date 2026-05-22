@@ -122,6 +122,7 @@ public class ElwhaButton extends JComponent {
   private int borderWidth = DEFAULT_BORDER_WIDTH;
   private String text = "";
   private Icon icon;
+  private Icon selectedIcon;
 
   // State ------------------------------------------------------------------
   private boolean hovered;
@@ -357,31 +358,81 @@ public class ElwhaButton extends JComponent {
   }
 
   /**
-   * Sets the leading icon. Pass {@code null} to clear.
+   * Sets the leading icon. The selected-state icon is cleared — call {@link #setIcons(Icon, Icon)}
+   * to install a resting / selected pair.
    *
-   * @param icon the leading icon, or {@code null}
+   * @param icon the leading icon, or {@code null} to clear
    * @return {@code this} for fluent chaining
    * @version v0.2.0
    * @since v0.2.0
    */
   public ElwhaButton setIcon(final Icon icon) {
-    if (icon instanceof FlatSVGIcon svg) {
-      svg.setColorFilter(iconFilter);
-    }
-    this.icon = icon;
+    return setIcons(icon, null);
+  }
+
+  /**
+   * Installs the resting / selected leading-icon pair — the M3 toggle-icon swap, mirroring {@link
+   * com.owspfm.elwha.iconbutton.ElwhaIconButton#setIcons(Icon, Icon)}. The selected icon is
+   * rendered when {@link #isSelected()} is true; if {@code selected} is {@code null}, the resting
+   * icon is rendered in both states.
+   *
+   * <p><strong>Press preview.</strong> The selected icon also flashes during a live press,
+   * regardless of interaction mode — tactile feedback for a {@link ButtonInteractionMode#CLICKABLE}
+   * button, a toggle preview for a {@link ButtonInteractionMode#SELECTABLE} one. Pass {@code null}
+   * for {@code selected} to opt out (the resting icon then renders in every state).
+   *
+   * @param resting the icon rendered when not selected and not being pressed; {@code null} clears
+   *     the leading icon entirely
+   * @param selected the icon rendered when selected or pressed, or {@code null} to reuse {@code
+   *     resting}
+   * @return {@code this} for fluent chaining
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaButton setIcons(final Icon resting, final Icon selected) {
+    applyIconFilter(resting);
+    applyIconFilter(selected);
+    this.icon = resting;
+    this.selectedIcon = selected;
     revalidate();
     repaint();
     return this;
   }
 
   /**
-   * Returns the leading icon, or {@code null}.
+   * Returns the resting leading icon, or {@code null}.
    *
-   * @return the leading icon
+   * @return the resting leading icon
    * @version v0.2.0
    * @since v0.2.0
    */
   public Icon getIcon() {
+    return icon;
+  }
+
+  /**
+   * Returns the selected-state leading icon, or {@code null} if only a resting icon was installed.
+   *
+   * @return the selected leading icon, or {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public Icon getSelectedIcon() {
+    return selectedIcon;
+  }
+
+  private void applyIconFilter(final Icon candidate) {
+    if (candidate instanceof FlatSVGIcon svg) {
+      svg.setColorFilter(iconFilter);
+    }
+  }
+
+  // The leading icon for the current state — the selected icon when the button is selected or
+  // being pressed (and a selected icon was installed), the resting icon otherwise.
+  private Icon currentIcon() {
+    if (selectedIcon != null && (selected || pressed)) {
+      return selectedIcon;
+    }
     return icon;
   }
 
@@ -1112,13 +1163,15 @@ public class ElwhaButton extends JComponent {
       final int labelW = (text == null || text.isEmpty()) ? 0 : fm.stringWidth(text);
       final int iconSlot = buttonSize.iconSizePx();
       final int iconGap = buttonSize.paddingWithIconGapPx();
-      final int contentW = (icon != null ? iconSlot + (labelW > 0 ? iconGap : 0) : 0) + labelW;
+      final Icon paintedIcon = currentIcon();
+      final int contentW =
+          (paintedIcon != null ? iconSlot + (labelW > 0 ? iconGap : 0) : 0) + labelW;
       int x = (bodyW - contentW) / 2;
       final int y = bodyH / 2;
 
-      if (icon != null) {
+      if (paintedIcon != null) {
         final int iconY = y - iconSlot / 2;
-        icon.paintIcon(this, g2, x, iconY);
+        paintedIcon.paintIcon(this, g2, x, iconY);
         x += iconSlot + (labelW > 0 ? iconGap : 0);
       }
       if (labelW > 0) {
