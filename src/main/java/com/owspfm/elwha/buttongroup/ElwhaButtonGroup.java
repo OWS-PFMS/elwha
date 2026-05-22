@@ -36,10 +36,12 @@ import javax.swing.JComponent;
  * the mode and emits one unified {@link SelectionListener} event. A {@code REQUIRED} group seeds
  * its first segment selected so the "exactly one" invariant holds from the start.
  *
- * <p><strong>Selected-shape inversion.</strong> A selected segment renders the <em>opposite</em>
- * shape of the group default — a round group's selected segment paints square, a square group's
- * paints round. This static inversion is the core visual selection signal; the animated press /
- * select morph is a separate polish epic and is not built here.
+ * <p><strong>Selected-segment shape.</strong> In a {@link ButtonGroupVariant#CONNECTED} group the
+ * selected segment pops to a uniform inverted shape — a square-resting group's selected segment
+ * renders as a round pill — which is the core visual selection signal. A {@link
+ * ButtonGroupVariant#STANDARD} group does <em>not</em> change segment shape on selection; every
+ * segment keeps the group resting shape and selection is signalled by colour. The transient press
+ * width / shape morph is a separate polish epic and is not rendered statically here.
  *
  * <p><strong>Naming.</strong> Not to be confused with {@link com.owspfm.elwha.button.ButtonGroup} /
  * {@link com.owspfm.elwha.iconbutton.IconButtonGroup}, which are pure selection-mutex helpers with
@@ -364,13 +366,14 @@ public final class ElwhaButtonGroup extends JComponent {
   }
 
   /**
-   * Sets the group-wide resting shape of every segment; a selected segment renders the inverted
-   * shape, which is the M3 selection signal.
+   * Sets the group-wide resting shape of every segment. In a {@link ButtonGroupVariant#CONNECTED}
+   * group the selected segment pops to the inverted shape; a {@link ButtonGroupVariant#STANDARD}
+   * group keeps every segment at this shape regardless of selection.
    *
    * <p>Until this is called the shape follows the variant's M3-canonical default — {@link
-   * ButtonShape#ROUND} for {@link ButtonGroupVariant#STANDARD} (a selected button pops square),
-   * {@link ButtonShape#SQUARE} for {@link ButtonGroupVariant#CONNECTED} (a selected segment pops
-   * round). Once set explicitly, the shape is pinned and no longer tracks {@link
+   * ButtonShape#ROUND} for {@link ButtonGroupVariant#STANDARD}, {@link ButtonShape#SQUARE} for
+   * {@link ButtonGroupVariant#CONNECTED} (so a connected group's selected segment pops to a round
+   * pill). Once set explicitly, the shape is pinned and no longer tracks {@link
    * #setVariant(ButtonGroupVariant)}.
    *
    * @param shape the new resting shape; ignored if {@code null}
@@ -710,16 +713,15 @@ public final class ElwhaButtonGroup extends JComponent {
       if (variant == ButtonGroupVariant.CONNECTED) {
         segment.applyCornerRadii(connectedRadii(i, count, rowHeight, segment.isSelected()));
       } else {
+        // Standard segments do not change shape on selection — every segment keeps the group
+        // resting shape; selection is signalled by colour. (The transient press width/shape morph
+        // is the deferred animation epic and is not rendered statically here.)
         segment.applyCornerRadii(null);
-        segment.applyShape(effectiveStandardShape(segment.isSelected()));
+        segment.applyShape(shape);
       }
     }
     revalidate();
     repaint();
-  }
-
-  private ButtonShape effectiveStandardShape(final boolean selected) {
-    return selected ? invert(shape) : shape;
   }
 
   // The per-corner radii for a connected segment. A SELECTED segment pops as a uniform inverted
