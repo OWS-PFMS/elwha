@@ -29,7 +29,7 @@ import javax.swing.UIManager;
  * components.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.3.0
  * @since v0.1.0
  */
 public final class MaterialIcons {
@@ -713,6 +713,114 @@ public final class MaterialIcons {
     return load("keyboard_tab", size);
   }
 
+  /** Light-mode glyph (outline) — a sun; the "light theme" affordance. */
+  public static FlatSVGIcon lightMode() {
+    return lightMode(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #lightMode()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon lightMode(final int size) {
+    return load("light_mode", size);
+  }
+
+  /** Light-mode glyph (filled / solid) — pairs with {@link #lightMode()} as the "active" state. */
+  public static FlatSVGIcon lightModeFilled() {
+    return lightModeFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #lightModeFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon lightModeFilled(final int size) {
+    return load("light_mode_fill", size);
+  }
+
+  /** Dark-mode glyph (outline) — a crescent moon; the "dark theme" affordance. */
+  public static FlatSVGIcon darkMode() {
+    return darkMode(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #darkMode()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon darkMode(final int size) {
+    return load("dark_mode", size);
+  }
+
+  /** Dark-mode glyph (filled / solid) — pairs with {@link #darkMode()} as the "active" state. */
+  public static FlatSVGIcon darkModeFilled() {
+    return darkModeFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #darkModeFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon darkModeFilled(final int size) {
+    return load("dark_mode_fill", size);
+  }
+
+  /**
+   * Brightness-auto glyph (outline) — an "A" inside a sun; the "follow the system theme"
+   * affordance.
+   */
+  public static FlatSVGIcon brightnessAuto() {
+    return brightnessAuto(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #brightnessAuto()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon brightnessAuto(final int size) {
+    return load("brightness_auto", size);
+  }
+
+  /**
+   * Brightness-auto glyph (filled / solid) — pairs with {@link #brightnessAuto()} as the "active"
+   * state.
+   */
+  public static FlatSVGIcon brightnessAutoFilled() {
+    return brightnessAutoFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #brightnessAutoFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon brightnessAutoFilled(final int size) {
+    return load("brightness_auto_fill", size);
+  }
+
   private static FlatSVGIcon load(final String name, final int size) {
     final FlatSVGIcon icon = new FlatSVGIcon(BASE + name + ".svg", size, size);
     icon.setColorFilter(THEME_FILTER);
@@ -726,10 +834,10 @@ public final class MaterialIcons {
    * {@code push_pin_fill.svg}). Both icons render at {@link #DEFAULT_SIZE}.
    *
    * <p>Currently bundled outline/fill pairs: {@code push_pin}, {@code anchor}, {@code favorite},
-   * {@code star}, {@code info}, {@code help}, {@code delete}, {@code edit}, {@code visibility}.
-   * Calling {@code pair} on a name that lacks a bundled {@code _fill} variant throws when the
-   * missing SVG is first painted, not on construction — see {@link FlatSVGIcon}'s lazy-load
-   * semantics.
+   * {@code star}, {@code info}, {@code help}, {@code delete}, {@code edit}, {@code visibility},
+   * {@code light_mode}, {@code dark_mode}, {@code brightness_auto}. Calling {@code pair} on a name
+   * that lacks a bundled {@code _fill} variant throws when the missing SVG is first painted, not on
+   * construction — see {@link FlatSVGIcon}'s lazy-load semantics.
    *
    * <p><strong>Why a helper, not an auto-detect inside {@link
    * com.owspfm.elwha.iconbutton.ElwhaIconButton}.</strong> The button stays icon-library-agnostic
