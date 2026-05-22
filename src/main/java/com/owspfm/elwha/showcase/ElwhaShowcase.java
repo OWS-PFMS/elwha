@@ -40,6 +40,7 @@ import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
@@ -173,7 +174,7 @@ public final class ElwhaShowcase {
   private JComponent buildHeaderBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
 
-    bar.add(new JLabel("Mode:"));
+    // No "Mode:" label — the sun / moon / auto icons are self-evident.
     bar.add(buildModeToggle());
 
     bar.add(Box.createHorizontalStrut(16));
@@ -226,16 +227,24 @@ public final class ElwhaShowcase {
     return toggle;
   }
 
-  // The primary / secondary palette-tier toggle — likewise an ElwhaButtonGroup connected group.
+  // The primary / secondary palette-tier toggle — an ElwhaButtonGroup connected group of text +
+  // icon buttons; the leading icon swaps outline → filled on selection via ElwhaButton.setIcons.
   private JComponent buildTierToggle() {
+    final int iconPx = ButtonSize.XS.iconSizePx();
+    final ElwhaButton primary =
+        new ElwhaButton("Primary")
+            .setIcons(MaterialIcons.palette(iconPx), MaterialIcons.paletteFilled(iconPx));
+    final ElwhaButton secondary =
+        new ElwhaButton("Secondary")
+            .setIcons(MaterialIcons.colorize(iconPx), MaterialIcons.colorizeFilled(iconPx));
     final ElwhaButtonGroup toggle =
         ElwhaButtonGroup.connected()
             .setSelectionMode(SelectionMode.REQUIRED)
             .setButtonSize(ButtonSize.XS)
             .setResizeMode(ResizeMode.FIXED)
             .setColorStyle(ButtonGroupColorStyle.TONAL)
-            .add(new ElwhaButton("Primary"))
-            .add(new ElwhaButton("Secondary"));
+            .add(primary)
+            .add(secondary);
     toggle.setSelectedIndex(secondaryTier ? 1 : 0);
     toggle.addSelectionListener(group -> switchTier(group.getSelectedIndex() == 1));
     return toggle;
@@ -425,6 +434,11 @@ public final class ElwhaShowcase {
     final JComboBox<ButtonSurfaceRole> surfaceBox = new JComboBox<>(ButtonSurfaceRole.values());
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
     final JCheckBox iconBox = new JCheckBox("Leading icon");
+    final JCheckBox cornerRadiiBox = new JCheckBox("Per-corner radii override");
+    final JSpinner topLeftSpinner = new JSpinner(new SpinnerNumberModel(12, 0, 60, 2));
+    final JSpinner topRightSpinner = new JSpinner(new SpinnerNumberModel(12, 0, 60, 2));
+    final JSpinner bottomRightSpinner = new JSpinner(new SpinnerNumberModel(12, 0, 60, 2));
+    final JSpinner bottomLeftSpinner = new JSpinner(new SpinnerNumberModel(12, 0, 60, 2));
     final JCheckBox selectedBox = new JCheckBox("Selected");
     final JCheckBox enabledBox = new JCheckBox("Enabled", true);
 
@@ -438,6 +452,12 @@ public final class ElwhaShowcase {
     controls.addControl("Surface role override", surfaceBox);
     controls.addControl("Border width", borderWidth);
     controls.addControl("", iconBox);
+    controls.addSection("Corner radii");
+    controls.addControl("", cornerRadiiBox);
+    controls.addControl("Top-left", topLeftSpinner);
+    controls.addControl("Top-right", topRightSpinner);
+    controls.addControl("Bottom-right", bottomRightSpinner);
+    controls.addControl("Bottom-left", bottomLeftSpinner);
     controls.addSection("State");
     controls.addControl("", selectedBox);
     controls.addControl("", enabledBox);
@@ -459,11 +479,30 @@ public final class ElwhaShowcase {
           final boolean selected = selectedBox.isSelected();
           final boolean enabled = enabledBox.isSelected();
 
-          final ElwhaButton button =
-              icon
-                  ? new ElwhaButton("Common button", MaterialIcons.delete(size.iconSizePx()))
-                  : new ElwhaButton("Common button");
+          // The per-corner override replaces the Shape-derived corner radius — disable the Shape
+          // control while it is active so the override reads as the single corner-geometry source.
+          final boolean perCorner = cornerRadiiBox.isSelected();
+          shapeBox.setEnabled(!perCorner);
+          topLeftSpinner.setEnabled(perCorner);
+          topRightSpinner.setEnabled(perCorner);
+          bottomRightSpinner.setEnabled(perCorner);
+          bottomLeftSpinner.setEnabled(perCorner);
+          final CornerRadii cornerRadii =
+              perCorner
+                  ? CornerRadii.of(
+                      (Integer) topLeftSpinner.getValue(),
+                      (Integer) topRightSpinner.getValue(),
+                      (Integer) bottomRightSpinner.getValue(),
+                      (Integer) bottomLeftSpinner.getValue())
+                  : null;
+
+          final ElwhaButton button = new ElwhaButton("Common button");
           button.setVariant(variant).setButtonSize(size).setShape(shape).setBorderWidth(width);
+          if (icon) {
+            button.setIcons(
+                MaterialIcons.delete(size.iconSizePx()),
+                MaterialIcons.deleteFilled(size.iconSizePx()));
+          }
           if (mode == ButtonInteractionMode.SELECTABLE) {
             button.setInteractionMode(ButtonInteractionMode.SELECTABLE);
             button.setSelected(selected);
@@ -471,11 +510,21 @@ public final class ElwhaShowcase {
           if (surface.role != null) {
             button.setSurfaceRole(surface.role);
           }
+          button.setCornerRadii(cornerRadii);
           button.setEnabled(enabled);
           workbench.setStage(button);
           workbench.setCode(
               renderButtonCode(
-                  variant, mode, size, shape, surface, width, icon, selected, enabled));
+                  variant,
+                  mode,
+                  size,
+                  shape,
+                  surface,
+                  width,
+                  icon,
+                  selected,
+                  enabled,
+                  cornerRadii));
         };
     variantBox.addActionListener(event -> apply.run());
     modeBox.addActionListener(event -> apply.run());
@@ -484,6 +533,11 @@ public final class ElwhaShowcase {
     surfaceBox.addActionListener(event -> apply.run());
     borderWidth.addChangeListener(event -> apply.run());
     iconBox.addActionListener(event -> apply.run());
+    cornerRadiiBox.addActionListener(event -> apply.run());
+    topLeftSpinner.addChangeListener(event -> apply.run());
+    topRightSpinner.addChangeListener(event -> apply.run());
+    bottomRightSpinner.addChangeListener(event -> apply.run());
+    bottomLeftSpinner.addChangeListener(event -> apply.run());
     selectedBox.addActionListener(event -> apply.run());
     enabledBox.addActionListener(event -> apply.run());
     apply.run();
@@ -499,17 +553,16 @@ public final class ElwhaShowcase {
       final int width,
       final boolean icon,
       final boolean selected,
-      final boolean enabled) {
-    final StringBuilder code = new StringBuilder(256);
-    if (icon) {
-      code.append("new ElwhaButton(\"Common button\",\n");
-      code.append("    MaterialIcons.delete(").append(size.iconSizePx()).append("))\n");
-    } else {
-      code.append("new ElwhaButton(\"Common button\")\n");
+      final boolean enabled,
+      final CornerRadii cornerRadii) {
+    final StringBuilder code = new StringBuilder(320);
+    code.append("ElwhaButton button = new ElwhaButton(\"Common button\");\n");
+    code.append("button.setVariant(ButtonVariant.").append(variant).append(")\n");
+    code.append("    .setButtonSize(ButtonSize.").append(size).append(")");
+    // The Shape-derived corner radius is moot while a per-corner override is installed.
+    if (cornerRadii == null) {
+      code.append("\n    .setShape(ButtonShape.").append(shape).append(")");
     }
-    code.append("    .setVariant(ButtonVariant.").append(variant).append(")\n");
-    code.append("    .setButtonSize(ButtonSize.").append(size).append(")\n");
-    code.append("    .setShape(ButtonShape.").append(shape).append(")");
     if (width != 1) {
       code.append("\n    .setBorderWidth(").append(width).append(")");
     }
@@ -521,8 +574,22 @@ public final class ElwhaShowcase {
       code.append("\n    .setSelected(").append(selected).append(")");
     }
     code.append(";");
+    if (icon) {
+      code.append("\nbutton.setIcons(MaterialIcons.delete(), MaterialIcons.deleteFilled());");
+    }
+    if (cornerRadii != null) {
+      code.append("\nbutton.setCornerRadii(CornerRadii.of(")
+          .append(cornerRadii.topLeftPx())
+          .append(", ")
+          .append(cornerRadii.topRightPx())
+          .append(", ")
+          .append(cornerRadii.bottomRightPx())
+          .append(", ")
+          .append(cornerRadii.bottomLeftPx())
+          .append("));");
+    }
     if (!enabled) {
-      code.append("\n// button.setEnabled(false);");
+      code.append("\nbutton.setEnabled(false);");
     }
     return code.toString();
   }
@@ -1247,11 +1314,11 @@ public final class ElwhaShowcase {
           group.add(new ElwhaButton(SEGMENT_LABELS[index]));
         }
       }
-      case TEXT_AND_ICONS ->
-          group.add(
-              new ElwhaButton(
-                  SEGMENT_LABELS[index],
-                  MaterialIcons.get(SEGMENT_ICONS[index], size.iconSizePx())));
+      case TEXT_AND_ICONS -> {
+        final MaterialIcons.IconPair pair =
+            MaterialIcons.pair(SEGMENT_ICONS[index], size.iconSizePx());
+        group.add(new ElwhaButton(SEGMENT_LABELS[index]).setIcons(pair.resting(), pair.filled()));
+      }
     }
   }
 
@@ -1319,9 +1386,11 @@ public final class ElwhaShowcase {
       if (content == SegmentContent.TEXT_AND_ICONS) {
         code.append("\ngroup.add(new ElwhaButton(\"")
             .append(SEGMENT_LABELS[i])
-            .append("\", MaterialIcons.")
+            .append("\")\n    .setIcons(MaterialIcons.")
             .append(SEGMENT_ICONS[i])
-            .append("()));");
+            .append("(), MaterialIcons.")
+            .append(SEGMENT_ICONS[i])
+            .append("Filled()));");
       } else if (icon) {
         code.append("\ngroup.add(new ElwhaIconButton(MaterialIcons.")
             .append(SEGMENT_ICONS[i])
