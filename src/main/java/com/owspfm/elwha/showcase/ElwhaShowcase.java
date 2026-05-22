@@ -6,6 +6,11 @@ import com.owspfm.elwha.button.ButtonSize;
 import com.owspfm.elwha.button.ButtonVariant;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.button.playground.ButtonPlaygroundPanels;
+import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
+import com.owspfm.elwha.buttongroup.ButtonGroupVariant;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.buttongroup.ResizeMode;
+import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.card.CardVariant;
 import com.owspfm.elwha.card.CollapseRule;
 import com.owspfm.elwha.card.ElwhaCard;
@@ -59,7 +64,6 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.JCheckBox;
@@ -73,7 +77,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
-import javax.swing.JToggleButton;
 import javax.swing.JTree;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
@@ -94,8 +97,9 @@ import javax.swing.tree.TreeSelectionModel;
  * <ul>
  *   <li><strong>Foundations</strong> — the design tokens: color roles, type scale, and the
  *       raw-Swing gallery (see {@link FoundationsPanels}).
- *   <li><strong>Components</strong> — Button, Chip, Icon Button, Card, and Surface, each a single
- *       inner tabbed pane of {@code Workbench} (interactive) and {@code Gallery} (matrix) views.
+ *   <li><strong>Components</strong> — Button, Chip, Icon Button, Button Group, Card, and Surface,
+ *       each a single inner tabbed pane of {@code Workbench} (interactive) and {@code Gallery}
+ *       (matrix) views.
  *   <li><strong>Containers</strong> — the multi-instance surfaces: Chip List, Card List, and the
  *       Button / Icon Button group demos.
  * </ul>
@@ -165,30 +169,13 @@ public final class ElwhaShowcase {
 
   private JComponent buildHeaderBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
-    bar.add(new JLabel("Mode:"));
 
-    final ButtonGroup group = new ButtonGroup();
-    for (final Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK, Mode.SYSTEM}) {
-      final JToggleButton button = new JToggleButton(mode.name());
-      button.addActionListener(event -> switchMode(mode));
-      if (ElwhaTheme.current().mode() == mode) {
-        button.setSelected(true);
-      }
-      group.add(button);
-      bar.add(button);
-    }
+    bar.add(new JLabel("Mode:"));
+    bar.add(buildModeToggle());
 
     bar.add(Box.createHorizontalStrut(16));
     bar.add(new JLabel("Tier:"));
-    final ButtonGroup tierGroup = new ButtonGroup();
-    final JToggleButton primaryTierButton = new JToggleButton("PRIMARY", true);
-    final JToggleButton secondaryTierButton = new JToggleButton("SECONDARY");
-    primaryTierButton.addActionListener(event -> switchTier(false));
-    secondaryTierButton.addActionListener(event -> switchTier(true));
-    tierGroup.add(primaryTierButton);
-    tierGroup.add(secondaryTierButton);
-    bar.add(primaryTierButton);
-    bar.add(secondaryTierButton);
+    bar.add(buildTierToggle());
 
     bar.add(Box.createHorizontalStrut(16));
     bar.add(new JLabel("Palette:"));
@@ -199,6 +186,50 @@ public final class ElwhaShowcase {
     bar.add(statusLabel);
     updateStatus();
     return bar;
+  }
+
+  // The light / dark / system mode toggle — an ElwhaButtonGroup connected group in REQUIRED mode.
+  // The Showcase dogfooding the library's own M3 segmented-control component is the operator-named
+  // OWS use case behind epic #170; the standalone ElwhaButtonGroup Workbench is under Components.
+  private JComponent buildModeToggle() {
+    final Mode[] modes = {Mode.LIGHT, Mode.DARK, Mode.SYSTEM};
+    final ElwhaButtonGroup toggle =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL);
+    for (final Mode mode : modes) {
+      toggle.add(new ElwhaButton(titleCase(mode.name())));
+    }
+    final Mode current = ElwhaTheme.current().mode();
+    for (int i = 0; i < modes.length; i++) {
+      if (modes[i] == current) {
+        toggle.setSelectedIndex(i);
+      }
+    }
+    // Listener attached after seeding so the initial selection does not re-install the theme.
+    toggle.addSelectionListener(group -> switchMode(modes[group.getSelectedIndex()]));
+    return toggle;
+  }
+
+  // The primary / secondary palette-tier toggle — likewise an ElwhaButtonGroup connected group.
+  private JComponent buildTierToggle() {
+    final ElwhaButtonGroup toggle =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL)
+            .add(new ElwhaButton("Primary"))
+            .add(new ElwhaButton("Secondary"));
+    toggle.setSelectedIndex(secondaryTier ? 1 : 0);
+    toggle.addSelectionListener(group -> switchTier(group.getSelectedIndex() == 1));
+    return toggle;
+  }
+
+  private static String titleCase(final String value) {
+    return value.charAt(0) + value.substring(1).toLowerCase(java.util.Locale.ROOT);
   }
 
   // The picker shows one tier at a time; each tier is directory-derived and spectrally ordered by
@@ -316,6 +347,7 @@ public final class ElwhaShowcase {
     addLeaf(components, "Button", buildButtonComponent());
     addLeaf(components, "Chip", buildChipComponent());
     addLeaf(components, "Icon Button", buildIconButtonComponent());
+    addLeaf(components, "Button Group", buildButtonGroupComponent());
     addLeaf(components, "Card", buildCardComponent());
     addLeaf(components, "Surface", buildSurfaceComponent());
     root.add(components);
@@ -323,8 +355,8 @@ public final class ElwhaShowcase {
     final DefaultMutableTreeNode containers = new DefaultMutableTreeNode("Containers");
     addLeaf(containers, "Chip List", new ChipListContainer().component());
     addLeaf(containers, "Card List", new CardListContainer().component());
-    addLeaf(containers, "Button Group", buildButtonGroupContainer());
-    addLeaf(containers, "Icon Button Group", buildIconButtonGroupContainer());
+    addLeaf(containers, "Button Group (mutex)", buildButtonGroupContainer());
+    addLeaf(containers, "Icon Button Group (mutex)", buildIconButtonGroupContainer());
     root.add(containers);
 
     final JTree tree = new JTree(root);
@@ -1066,6 +1098,301 @@ public final class ElwhaShowcase {
     mandatoryBox.addActionListener(event -> rebuild.run());
     rebuild.run();
     return workbench;
+  }
+
+  // --- Button Group component: ElwhaButtonGroup Workbench + Gallery ---
+
+  /** Segment labels offered by the Button Group Workbench, in order. */
+  private static final String[] SEGMENT_LABELS = {"Day", "Week", "Month", "Year", "All"};
+
+  /** Material icon base names for the Button Group Workbench's icon segments, in order. */
+  private static final String[] SEGMENT_ICONS = {"favorite", "star", "info", "help", "visibility"};
+
+  /** The Button Group Workbench's segment-content option. */
+  private enum SegmentContent {
+    LABELS,
+    ICONS,
+    MIXED
+  }
+
+  private static JComponent buildButtonGroupComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", buildButtonGroupWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("Standard variant", buildStandardGallerySection()),
+                gallerySection("Connected — colour styles", buildColorStyleGallerySection()),
+                gallerySection("Connected — size axis", buildSizeGallerySection()),
+                gallerySection("Connected — selection modes", buildSelectionGallerySection()))));
+    return tabs;
+  }
+
+  private static JComponent buildButtonGroupWorkbench() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+
+    final JComboBox<ButtonGroupVariant> variantBox = new JComboBox<>(ButtonGroupVariant.values());
+    variantBox.setSelectedItem(ButtonGroupVariant.CONNECTED);
+    final JComboBox<SelectionMode> selectionBox = new JComboBox<>(SelectionMode.values());
+    final JComboBox<ButtonSize> sizeBox = new JComboBox<>(ButtonSize.values());
+    sizeBox.setSelectedItem(ButtonSize.S);
+    final JComboBox<ButtonShape> shapeBox = new JComboBox<>(ButtonShape.values());
+    final JComboBox<ResizeMode> resizeBox = new JComboBox<>(ResizeMode.values());
+    final JComboBox<ButtonGroupColorStyle> colorBox =
+        new JComboBox<>(ButtonGroupColorStyle.values());
+    colorBox.setSelectedItem(ButtonGroupColorStyle.TONAL);
+    final JComboBox<SegmentContent> contentBox = new JComboBox<>(SegmentContent.values());
+    final JSpinner countSpinner = new JSpinner(new SpinnerNumberModel(3, 2, 5, 1));
+    final JSpinner maxWidthSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 600, 20));
+    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Button group");
+    controls.addControl("Variant", variantBox);
+    controls.addControl("Selection mode", selectionBox);
+    controls.addControl("Size", sizeBox);
+    controls.addControl("Default shape", shapeBox);
+    controls.addControl("Resize mode", resizeBox);
+    controls.addControl("Connected max width", maxWidthSpinner);
+    controls.addSection("Segments");
+    controls.addControl("Content", contentBox);
+    controls.addControl("Count", countSpinner);
+    controls.addControl("Connected colour style", colorBox);
+    controls.addSection("State");
+    controls.addControl("", enabledBox);
+
+    final Runnable apply =
+        () -> {
+          final ButtonGroupVariant variant = (ButtonGroupVariant) variantBox.getSelectedItem();
+          final SelectionMode selection = (SelectionMode) selectionBox.getSelectedItem();
+          final ButtonSize size = (ButtonSize) sizeBox.getSelectedItem();
+          final ButtonShape shape = (ButtonShape) shapeBox.getSelectedItem();
+          final ResizeMode resize = (ResizeMode) resizeBox.getSelectedItem();
+          final ButtonGroupColorStyle color = (ButtonGroupColorStyle) colorBox.getSelectedItem();
+          final SegmentContent content = (SegmentContent) contentBox.getSelectedItem();
+          final int count = (Integer) countSpinner.getValue();
+          final int maxWidth = (Integer) maxWidthSpinner.getValue();
+          final boolean enabled = enabledBox.isSelected();
+
+          // The colour style, resize mode, and max-width clamp only act on the connected variant.
+          final boolean connected = variant == ButtonGroupVariant.CONNECTED;
+          colorBox.setEnabled(connected);
+          resizeBox.setEnabled(connected);
+          maxWidthSpinner.setEnabled(connected);
+
+          final ElwhaButtonGroup group =
+              new ElwhaButtonGroup(variant)
+                  .setSelectionMode(selection)
+                  .setButtonSize(size)
+                  .setShape(shape)
+                  .setResizeMode(resize)
+                  .setColorStyle(color)
+                  .setMaxWidth(maxWidth);
+          for (int i = 0; i < count; i++) {
+            addGroupSegment(group, i, content, size);
+          }
+          // Seed a selection so the selected-shape inversion is visible at rest (a REQUIRED group
+          // has already seeded itself).
+          if (selection != SelectionMode.REQUIRED && group.getSelectedIndex() < 0) {
+            group.setSelectedIndex(0);
+          }
+          group.setEnabled(enabled);
+
+          workbench.setStage(stageForGroup(group, variant, resize, maxWidth));
+          workbench.setCode(
+              renderButtonGroupCode(
+                  variant, selection, size, shape, resize, color, content, count, maxWidth,
+                  enabled));
+        };
+    variantBox.addActionListener(event -> apply.run());
+    selectionBox.addActionListener(event -> apply.run());
+    sizeBox.addActionListener(event -> apply.run());
+    shapeBox.addActionListener(event -> apply.run());
+    resizeBox.addActionListener(event -> apply.run());
+    colorBox.addActionListener(event -> apply.run());
+    contentBox.addActionListener(event -> apply.run());
+    countSpinner.addChangeListener(event -> apply.run());
+    maxWidthSpinner.addChangeListener(event -> apply.run());
+    enabledBox.addActionListener(event -> apply.run());
+    apply.run();
+    return workbench;
+  }
+
+  // Adds segment i to the group as a label button, an icon button, or — in MIXED mode — alternating
+  // between the two. Icon segments carry an accessible name, since the glyph alone cannot.
+  private static void addGroupSegment(
+      final ElwhaButtonGroup group,
+      final int index,
+      final SegmentContent content,
+      final ButtonSize size) {
+    final boolean icon =
+        content == SegmentContent.ICONS || (content == SegmentContent.MIXED && index % 2 == 1);
+    if (icon) {
+      final int iconPx = IconButtonSize.values()[size.ordinal()].iconPx();
+      final MaterialIcons.IconPair pair = MaterialIcons.pair(SEGMENT_ICONS[index], iconPx);
+      final ElwhaIconButton button = new ElwhaIconButton(pair.resting());
+      button.setIcons(pair.resting(), pair.filled());
+      button.setName(SEGMENT_ICONS[index]);
+      group.add(button);
+    } else {
+      group.add(new ElwhaButton(SEGMENT_LABELS[index]));
+    }
+  }
+
+  // A connected FLEXIBLE group only shows its fill behavior when its parent gives it width — on the
+  // centered workbench stage it would otherwise hug. Wrap it so it stretches; every other
+  // combination hugs and mounts directly.
+  private static JComponent stageForGroup(
+      final ElwhaButtonGroup group,
+      final ButtonGroupVariant variant,
+      final ResizeMode resize,
+      final int maxWidth) {
+    if (variant != ButtonGroupVariant.CONNECTED || resize != ResizeMode.FLEXIBLE) {
+      return group;
+    }
+    final JPanel wrapper = new JPanel(new BorderLayout());
+    wrapper.setOpaque(false);
+    wrapper.add(group, BorderLayout.CENTER);
+    wrapper.setPreferredSize(
+        new Dimension(maxWidth > 0 ? maxWidth : 480, group.getPreferredSize().height));
+    return wrapper;
+  }
+
+  private static String renderButtonGroupCode(
+      final ButtonGroupVariant variant,
+      final SelectionMode selection,
+      final ButtonSize size,
+      final ButtonShape shape,
+      final ResizeMode resize,
+      final ButtonGroupColorStyle color,
+      final SegmentContent content,
+      final int count,
+      final int maxWidth,
+      final boolean enabled) {
+    final boolean connected = variant == ButtonGroupVariant.CONNECTED;
+    final StringBuilder code = new StringBuilder(384);
+    code.append("ElwhaButtonGroup group = ElwhaButtonGroup.")
+        .append(connected ? "connected()" : "standard()")
+        .append("\n    .setSelectionMode(SelectionMode.")
+        .append(selection)
+        .append(")\n    .setButtonSize(ButtonSize.")
+        .append(size)
+        .append(")\n    .setShape(ButtonShape.")
+        .append(shape)
+        .append(")");
+    if (connected) {
+      code.append("\n    .setResizeMode(ResizeMode.").append(resize).append(")");
+      code.append("\n    .setColorStyle(ButtonGroupColorStyle.").append(color).append(")");
+      if (maxWidth > 0) {
+        code.append("\n    .setMaxWidth(").append(maxWidth).append(")");
+      }
+    }
+    code.append(";");
+    for (int i = 0; i < count; i++) {
+      final boolean icon =
+          content == SegmentContent.ICONS || (content == SegmentContent.MIXED && i % 2 == 1);
+      if (icon) {
+        code.append("\ngroup.add(new ElwhaIconButton(MaterialIcons.")
+            .append(SEGMENT_ICONS[i])
+            .append("()));");
+      } else {
+        code.append("\ngroup.add(new ElwhaButton(\"").append(SEGMENT_LABELS[i]).append("\"));");
+      }
+    }
+    if (selection != SelectionMode.REQUIRED) {
+      code.append("\ngroup.setSelectedIndex(0);");
+    }
+    if (!enabled) {
+      code.append("\ngroup.setEnabled(false);");
+    }
+    return code.toString();
+  }
+
+  // --- Button Group gallery sections ---
+
+  private static JComponent buildStandardGallerySection() {
+    return flowRow(
+        captioned(
+            "SINGLE select",
+            sampleGroup(ButtonGroupVariant.STANDARD, SelectionMode.SINGLE, ButtonSize.S, 3, 1)));
+  }
+
+  private static JComponent buildColorStyleGallerySection() {
+    final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 24, 12));
+    for (final ButtonGroupColorStyle style : ButtonGroupColorStyle.values()) {
+      final ElwhaButtonGroup group =
+          new ElwhaButtonGroup(ButtonGroupVariant.CONNECTED)
+              .setSelectionMode(SelectionMode.SINGLE)
+              .setButtonSize(ButtonSize.S)
+              .setColorStyle(style);
+      for (int i = 0; i < 3; i++) {
+        group.add(new ElwhaButton(SEGMENT_LABELS[i]));
+      }
+      group.setSelectedIndex(1);
+      row.add(captioned(style.name(), group));
+    }
+    return row;
+  }
+
+  private static JComponent buildSizeGallerySection() {
+    final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 24, 12));
+    for (final ButtonSize size : new ButtonSize[] {ButtonSize.XS, ButtonSize.S, ButtonSize.M}) {
+      row.add(
+          captioned(
+              size.name(),
+              sampleGroup(ButtonGroupVariant.CONNECTED, SelectionMode.SINGLE, size, 3, 0)));
+    }
+    return row;
+  }
+
+  private static JComponent buildSelectionGallerySection() {
+    final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 24, 12));
+    for (final SelectionMode mode : SelectionMode.values()) {
+      row.add(
+          captioned(
+              mode.name(), sampleGroup(ButtonGroupVariant.CONNECTED, mode, ButtonSize.S, 3, 1)));
+    }
+    return row;
+  }
+
+  // Builds a live sample group of label segments with one segment seeded selected.
+  private static ElwhaButtonGroup sampleGroup(
+      final ButtonGroupVariant variant,
+      final SelectionMode mode,
+      final ButtonSize size,
+      final int count,
+      final int seededIndex) {
+    final ElwhaButtonGroup group =
+        new ElwhaButtonGroup(variant).setSelectionMode(mode).setButtonSize(size);
+    for (int i = 0; i < count; i++) {
+      group.add(new ElwhaButton(SEGMENT_LABELS[i]));
+    }
+    if (mode != SelectionMode.REQUIRED) {
+      group.setSelectedIndex(seededIndex);
+    }
+    return group;
+  }
+
+  private static JComponent flowRow(final JComponent... items) {
+    final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 24, 12));
+    for (final JComponent item : items) {
+      row.add(item);
+    }
+    return row;
+  }
+
+  // Stacks a small centered caption beneath a sample component.
+  private static JComponent captioned(final String caption, final JComponent body) {
+    final JPanel panel = new JPanel();
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    body.setAlignmentX(Component.CENTER_ALIGNMENT);
+    final JLabel label = new JLabel(caption);
+    label.setAlignmentX(Component.CENTER_ALIGNMENT);
+    label.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+    panel.add(body);
+    panel.add(label);
+    return panel;
   }
 
   private static JComponent buildSurfaceComponent() {

@@ -837,6 +837,22 @@ public final class ElwhaButtonGroup extends JComponent {
     return getPreferredSize();
   }
 
+  /**
+   * Enables or disables the group, cascading the state to every segment so a disabled group reads
+   * as a disabled control end-to-end.
+   *
+   * @param enabled whether the group and its segments are enabled
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  @Override
+  public void setEnabled(final boolean enabled) {
+    super.setEnabled(enabled);
+    for (final Segment segment : segments) {
+      segment.component().setEnabled(enabled);
+    }
+  }
+
   // ----------------------------------------------------------- listener type
 
   /**
