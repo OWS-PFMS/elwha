@@ -163,6 +163,9 @@ public final class ElwhaShowcase {
     frame.setSize(1320, 860);
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
+    // Park initial focus on the nav tree, not the header button group — otherwise a focused mode
+    // segment and the selected mode segment read as two selections at once.
+    SwingUtilities.invokeLater(nav::requestFocusInWindow);
   }
 
   // --- header bar ---
@@ -193,14 +196,24 @@ public final class ElwhaShowcase {
   // OWS use case behind epic #170; the standalone ElwhaButtonGroup Workbench is under Components.
   private JComponent buildModeToggle() {
     final Mode[] modes = {Mode.LIGHT, Mode.DARK, Mode.SYSTEM};
+    final String[] iconNames = {"light_mode", "dark_mode", "brightness_auto"};
+    final String[] labels = {"Light", "Dark", "System"};
     final ElwhaButtonGroup toggle =
         ElwhaButtonGroup.connected()
             .setSelectionMode(SelectionMode.REQUIRED)
-            .setButtonSize(ButtonSize.XS)
+            .setButtonSize(ButtonSize.S)
             .setResizeMode(ResizeMode.FIXED)
             .setColorStyle(ButtonGroupColorStyle.TONAL);
-    for (final Mode mode : modes) {
-      toggle.add(new ElwhaButton(titleCase(mode.name())));
+    for (int i = 0; i < modes.length; i++) {
+      final MaterialIcons.IconPair pair =
+          MaterialIcons.pair(iconNames[i], IconButtonSize.S.iconPx());
+      final ElwhaIconButton segment = new ElwhaIconButton(pair.resting());
+      // Outline at rest, filled when selected — the M3 toggle-icon swap.
+      segment.setIcons(pair.resting(), pair.filled());
+      // Icon-only segments carry their label as tooltip + accessible name.
+      segment.setToolTipText(labels[i]);
+      segment.setName(labels[i]);
+      toggle.add(segment);
     }
     final Mode current = ElwhaTheme.current().mode();
     for (int i = 0; i < modes.length; i++) {
@@ -226,10 +239,6 @@ public final class ElwhaShowcase {
     toggle.setSelectedIndex(secondaryTier ? 1 : 0);
     toggle.addSelectionListener(group -> switchTier(group.getSelectedIndex() == 1));
     return toggle;
-  }
-
-  private static String titleCase(final String value) {
-    return value.charAt(0) + value.substring(1).toLowerCase(java.util.Locale.ROOT);
   }
 
   // The picker shows one tier at a time; each tier is directory-derived and spectrally ordered by
@@ -1112,7 +1121,8 @@ public final class ElwhaShowcase {
   private enum SegmentContent {
     LABELS,
     ICONS,
-    MIXED
+    MIXED,
+    TEXT_AND_ICONS
   }
 
   private static JComponent buildButtonGroupComponent() {
@@ -1219,25 +1229,39 @@ public final class ElwhaShowcase {
     return workbench;
   }
 
-  // Adds segment i to the group as a label button, an icon button, or — in MIXED mode — alternating
-  // between the two. Icon segments carry an accessible name, since the glyph alone cannot.
+  // Adds segment i to the group: a label button, an icon button, a label-and-icon button, or — in
+  // MIXED mode — alternating label / icon. Icon segments carry an accessible name, since the glyph
+  // alone cannot.
   private static void addGroupSegment(
       final ElwhaButtonGroup group,
       final int index,
       final SegmentContent content,
       final ButtonSize size) {
-    final boolean icon =
-        content == SegmentContent.ICONS || (content == SegmentContent.MIXED && index % 2 == 1);
-    if (icon) {
-      final int iconPx = IconButtonSize.values()[size.ordinal()].iconPx();
-      final MaterialIcons.IconPair pair = MaterialIcons.pair(SEGMENT_ICONS[index], iconPx);
-      final ElwhaIconButton button = new ElwhaIconButton(pair.resting());
-      button.setIcons(pair.resting(), pair.filled());
-      button.setName(SEGMENT_ICONS[index]);
-      group.add(button);
-    } else {
-      group.add(new ElwhaButton(SEGMENT_LABELS[index]));
+    switch (content) {
+      case LABELS -> group.add(new ElwhaButton(SEGMENT_LABELS[index]));
+      case ICONS -> group.add(buildIconSegment(index, size));
+      case MIXED -> {
+        if (index % 2 == 1) {
+          group.add(buildIconSegment(index, size));
+        } else {
+          group.add(new ElwhaButton(SEGMENT_LABELS[index]));
+        }
+      }
+      case TEXT_AND_ICONS ->
+          group.add(
+              new ElwhaButton(
+                  SEGMENT_LABELS[index],
+                  MaterialIcons.get(SEGMENT_ICONS[index], size.iconSizePx())));
     }
+  }
+
+  private static ElwhaIconButton buildIconSegment(final int index, final ButtonSize size) {
+    final int iconPx = IconButtonSize.values()[size.ordinal()].iconPx();
+    final MaterialIcons.IconPair pair = MaterialIcons.pair(SEGMENT_ICONS[index], iconPx);
+    final ElwhaIconButton button = new ElwhaIconButton(pair.resting());
+    button.setIcons(pair.resting(), pair.filled());
+    button.setName(SEGMENT_ICONS[index]);
+    return button;
   }
 
   // A connected FLEXIBLE group only shows its fill behavior when its parent gives it width — on the
@@ -1292,7 +1316,13 @@ public final class ElwhaShowcase {
     for (int i = 0; i < count; i++) {
       final boolean icon =
           content == SegmentContent.ICONS || (content == SegmentContent.MIXED && i % 2 == 1);
-      if (icon) {
+      if (content == SegmentContent.TEXT_AND_ICONS) {
+        code.append("\ngroup.add(new ElwhaButton(\"")
+            .append(SEGMENT_LABELS[i])
+            .append("\", MaterialIcons.")
+            .append(SEGMENT_ICONS[i])
+            .append("()));");
+      } else if (icon) {
         code.append("\ngroup.add(new ElwhaIconButton(MaterialIcons.")
             .append(SEGMENT_ICONS[i])
             .append("()));");

@@ -1,17 +1,17 @@
 package com.owspfm.elwha.showcase;
 
-import com.owspfm.elwha.chip.ElwhaChip;
-import com.owspfm.elwha.chip.list.ChipSelectionMode;
-import com.owspfm.elwha.chip.list.DefaultChipListModel;
-import com.owspfm.elwha.chip.list.ElwhaChipList;
-import com.owspfm.elwha.list.ElwhaListOrientation;
+import com.owspfm.elwha.button.ButtonSize;
+import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.buttongroup.ResizeMode;
+import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -31,11 +31,11 @@ import javax.swing.UIManager;
  *
  * <p><strong>The surface stage.</strong> The live component never floats on the bare panel — it
  * sits centered on an {@link ElwhaSurface} so role / elevation / contrast read honestly. That
- * surface is itself configurable: the controls column carries a {@code Component | Surface} chip
- * switcher (an {@link ElwhaChipList} in {@link ChipSelectionMode#SINGLE_MANDATORY} mode) that flips
- * between the component's own controls and the surface's controls, with the code view tracking the
- * active segment. The surface can be sized or hidden entirely — hidden, the component falls back to
- * the bare stage background.
+ * surface is itself configurable: the controls column carries a {@code Component | Surface}
+ * switcher (an {@link ElwhaButtonGroup} connected group in {@link SelectionMode#REQUIRED} mode)
+ * that flips between the component's own controls and the surface's controls, with the code view
+ * tracking the active segment. The surface can be sized or hidden entirely — hidden, the component
+ * falls back to the bare stage background.
  *
  * <p>A workbench builder calls {@link #setStage(JComponent)} once, populates {@link #controls()}
  * with the component's option controls, and pushes equivalent-Java text through {@link
@@ -164,22 +164,19 @@ public final class ComponentWorkbench extends JPanel {
     }
   }
 
-  // The Component | Surface switcher — an ElwhaChipList tab strip, dogfooding the library's own
-  // SINGLE_MANDATORY (segmented-control) selection semantics.
+  // The Component | Surface switcher — an ElwhaButtonGroup connected REQUIRED group, dogfooding the
+  // library's own M3 segmented-control component. REQUIRED auto-seeds the first ("Component")
+  // segment, matching the controls column's default card.
   private JComponent buildSwitcher() {
-    final DefaultChipListModel<String> model =
-        new DefaultChipListModel<>(List.of("Component", "Surface"));
-    final ElwhaChipList<String> switcher =
-        new ElwhaChipList<>(model, (item, index) -> new ElwhaChip(item))
-            .setOrientation(ElwhaListOrientation.HORIZONTAL)
-            .setSelectionMode(ChipSelectionMode.SINGLE_MANDATORY);
-    switcher
-        .getSelectionModel()
-        .addSelectionListener(
-            event ->
-                showSegment(
-                    !event.getSelected().isEmpty()
-                        && "Surface".equals(event.getSelected().get(0))));
+    final ElwhaButtonGroup switcher =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL)
+            .add(new ElwhaButton("Component"))
+            .add(new ElwhaButton("Surface"));
+    switcher.addSelectionListener(group -> showSegment(group.getSelectedIndex() == 1));
 
     final JPanel bar = new JPanel(new BorderLayout());
     bar.setBorder(
@@ -187,7 +184,7 @@ public final class ComponentWorkbench extends JPanel {
             BorderFactory.createMatteBorder(
                 0, 0, 1, 0, UIManager.getColor("Component.borderColor")),
             BorderFactory.createEmptyBorder(8, 8, 8, 8)));
-    bar.add(switcher, BorderLayout.CENTER);
+    bar.add(switcher, BorderLayout.WEST);
     return bar;
   }
 
