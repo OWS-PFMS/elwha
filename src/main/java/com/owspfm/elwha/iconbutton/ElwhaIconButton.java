@@ -2,6 +2,7 @@ package com.owspfm.elwha.iconbutton;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.SurfacePainter;
@@ -74,7 +75,7 @@ import javax.swing.Timer;
  * }</pre>
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.3.0
  * @since v0.1.0
  */
 public class ElwhaIconButton extends JComponent {
@@ -86,6 +87,8 @@ public class ElwhaIconButton extends JComponent {
   private static final int DEFAULT_BORDER_WIDTH = 1;
   private static final float FOCUSED_BORDER_WIDTH = 2f;
   private static final int HOVER_POLL_INTERVAL_MS = 100;
+  private static final int RIPPLE_TOTAL_MS = 400;
+  private static final int RIPPLE_TICK_MS = 16;
 
   // Configuration ----------------------------------------------------------
   private IconButtonVariant variant = IconButtonVariant.STANDARD;
@@ -103,6 +106,11 @@ public class ElwhaIconButton extends JComponent {
   private boolean selected;
   private Icon restingIcon;
   private Icon selectedIcon;
+
+  // Ripple state -----------------------------------------------------------
+  private Point rippleOrigin;
+  private float rippleProgress = 1f;
+  private Timer rippleTimer;
 
   /**
    * Backup poll timer for hover-clear. Swing's {@code mouseExited} fires unreliably on macOS for
@@ -705,6 +713,7 @@ public class ElwhaIconButton extends JComponent {
             if (isRequestFocusEnabled()) {
               requestFocusInWindow();
             }
+            startRipple(e.getPoint());
             repaint();
           }
 
@@ -747,6 +756,7 @@ public class ElwhaIconButton extends JComponent {
             if (!isEnabled()) {
               return;
             }
+            startRipple(new Point(getWidth() / 2, getHeight() / 2));
             activate(0);
           }
         };
@@ -826,9 +836,37 @@ public class ElwhaIconButton extends JComponent {
     return containsPoint(local);
   }
 
+  // ----------------------------------------------------------------- ripple
+
+  private void startRipple(final Point origin) {
+    rippleOrigin = origin;
+    rippleProgress = 0f;
+    if (rippleTimer != null && rippleTimer.isRunning()) {
+      rippleTimer.stop();
+    }
+    final long startNanos = System.nanoTime();
+    rippleTimer =
+        new Timer(
+            RIPPLE_TICK_MS,
+            e -> {
+              rippleProgress =
+                  Math.min(1f, (System.nanoTime() - startNanos) / (RIPPLE_TOTAL_MS * 1_000_000f));
+              repaint();
+              if (rippleProgress >= 1f) {
+                rippleTimer.stop();
+              }
+            });
+    rippleTimer.setRepeats(true);
+    rippleTimer.start();
+    repaint();
+  }
+
   @Override
   public void removeNotify() {
     stopHoverPolling();
+    if (rippleTimer != null) {
+      rippleTimer.stop();
+    }
     super.removeNotify();
   }
 
@@ -861,6 +899,10 @@ public class ElwhaIconButton extends JComponent {
     }
 
     SurfacePainter.paint((Graphics2D) g, w, h, arc, surfaceRole, overlay, borderRole, borderStroke);
+    if (rippleProgress < 1f && rippleOrigin != null) {
+      RipplePainter.paint(
+          (Graphics2D) g, w, h, rippleOrigin, rippleProgress, arc, resolveForegroundColor());
+    }
     paintIcon(g, 1f);
   }
 
