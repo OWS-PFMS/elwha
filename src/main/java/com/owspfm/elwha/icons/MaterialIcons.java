@@ -891,6 +891,74 @@ public final class MaterialIcons {
     return load("colorize_fill", size);
   }
 
+  /** Widgets / four-square cluster glyph (outline) — the M3 "components / building blocks" mark. */
+  public static FlatSVGIcon widgets() {
+    return widgets(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #widgets()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon widgets(final int size) {
+    return load("widgets", size);
+  }
+
+  /** Widgets glyph (filled / solid) — pairs with {@link #widgets()} as the "active" state. */
+  public static FlatSVGIcon widgetsFilled() {
+    return widgetsFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #widgetsFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon widgetsFilled(final int size) {
+    return load("widgets_fill", size);
+  }
+
+  /** Layers / stacked-surfaces glyph (outline) — the M3 "layered surface" mark. */
+  public static FlatSVGIcon layers() {
+    return layers(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #layers()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon layers(final int size) {
+    return load("layers", size);
+  }
+
+  /** Layers glyph (filled / solid) — pairs with {@link #layers()} as the "active" state. */
+  public static FlatSVGIcon layersFilled() {
+    return layersFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #layersFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon layersFilled(final int size) {
+    return load("layers_fill", size);
+  }
+
   private static FlatSVGIcon load(final String name, final int size) {
     final FlatSVGIcon icon = new FlatSVGIcon(BASE + name + ".svg", size, size);
     icon.setColorFilter(THEME_FILTER);
@@ -906,9 +974,9 @@ public final class MaterialIcons {
    * <p>Currently bundled outline/fill pairs: {@code push_pin}, {@code anchor}, {@code favorite},
    * {@code star}, {@code info}, {@code help}, {@code delete}, {@code edit}, {@code visibility},
    * {@code light_mode}, {@code dark_mode}, {@code brightness_auto}, {@code palette}, {@code
-   * colorize}. Calling {@code pair} on a name that lacks a bundled {@code _fill} variant throws
-   * when the missing SVG is first painted, not on construction — see {@link FlatSVGIcon}'s
-   * lazy-load semantics.
+   * colorize}, {@code widgets}, {@code layers}. Calling {@code pair} on a name that lacks a bundled
+   * {@code _fill} variant throws when the missing SVG is first painted, not on construction — see
+   * {@link FlatSVGIcon}'s lazy-load semantics.
    *
    * <p><strong>Why a helper, not an auto-detect inside {@link
    * com.owspfm.elwha.iconbutton.ElwhaIconButton}.</strong> The button stays icon-library-agnostic

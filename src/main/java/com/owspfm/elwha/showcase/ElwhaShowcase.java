@@ -1327,7 +1327,9 @@ public final class ElwhaShowcase {
 
   // A connected FLEXIBLE group only shows its fill behavior when its parent gives it width — on the
   // centered workbench stage it would otherwise hug. Wrap it so it stretches; every other
-  // combination hugs and mounts directly.
+  // combination hugs and mounts directly. The wrapper width is the larger of the demo target and
+  // the group's own preferred width — at L / XL sizes the per-segment content floor can exceed the
+  // 480 px demo target, and a wrapper sized to the demo target would clip the segments.
   private static JComponent stageForGroup(
       final ElwhaButtonGroup group,
       final ButtonGroupVariant variant,
@@ -1339,8 +1341,10 @@ public final class ElwhaShowcase {
     final JPanel wrapper = new JPanel(new BorderLayout());
     wrapper.setOpaque(false);
     wrapper.add(group, BorderLayout.CENTER);
+    final Dimension groupPref = group.getPreferredSize();
+    final int demoTarget = maxWidth > 0 ? maxWidth : 480;
     wrapper.setPreferredSize(
-        new Dimension(maxWidth > 0 ? maxWidth : 480, group.getPreferredSize().height));
+        new Dimension(Math.max(demoTarget, groupPref.width), groupPref.height));
     return wrapper;
   }
 

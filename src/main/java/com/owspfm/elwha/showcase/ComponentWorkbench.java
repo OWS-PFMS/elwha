@@ -6,6 +6,7 @@ import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
 import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
 import com.owspfm.elwha.buttongroup.ResizeMode;
 import com.owspfm.elwha.buttongroup.SelectionMode;
+import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -50,8 +51,12 @@ public final class ComponentWorkbench extends JPanel {
 
   private static final int CONTROLS_WIDTH = 480;
   private static final int CODE_HEIGHT = 200;
-  // Breathing room kept between the live component and the stage surface's rounded edge.
-  private static final int STAGE_FIT_MARGIN = 48;
+  // Breathing room (combined; ~half per side) kept between the live component and the stage
+  // surface's rounded edge. Sized so the floor is comfortable for the library's tallest live
+  // components — a connected ElwhaButtonGroup at XL is 136 px tall, and 128 px combined breathing
+  // room (~64 each side) keeps the surface visibly larger than the buttons rather than hugging
+  // them flush at chosen MEDIUM (220 px).
+  private static final int STAGE_FIT_MARGIN = 128;
 
   private final JPanel stageHost;
   private final ElwhaSurface stageSurface;
@@ -168,14 +173,19 @@ public final class ComponentWorkbench extends JPanel {
   // library's own M3 segmented-control component. REQUIRED auto-seeds the first ("Component")
   // segment, matching the controls column's default card.
   private JComponent buildSwitcher() {
+    final int iconPx = ButtonSize.XS.iconSizePx();
     final ElwhaButtonGroup switcher =
         ElwhaButtonGroup.connected()
             .setSelectionMode(SelectionMode.REQUIRED)
             .setButtonSize(ButtonSize.XS)
             .setResizeMode(ResizeMode.FIXED)
-            .setColorStyle(ButtonGroupColorStyle.TONAL)
-            .add(new ElwhaButton("Component"))
-            .add(new ElwhaButton("Surface"));
+            .setColorStyle(ButtonGroupColorStyle.OUTLINED)
+            .add(
+                new ElwhaButton("Component")
+                    .setIcons(MaterialIcons.widgets(iconPx), MaterialIcons.widgetsFilled(iconPx)))
+            .add(
+                new ElwhaButton("Surface")
+                    .setIcons(MaterialIcons.layers(iconPx), MaterialIcons.layersFilled(iconPx)));
     switcher.addSelectionListener(group -> showSegment(group.getSelectedIndex() == 1));
 
     final JPanel bar = new JPanel(new BorderLayout());
