@@ -26,7 +26,7 @@ import java.awt.geom.RoundRectangle2D;
  * duration when the host's clock drives progress from 0 to 1 over 400 ms.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.3.0
  * @since v0.2.0
  */
 public final class RipplePainter {
@@ -79,6 +79,52 @@ public final class RipplePainter {
       // progress 0.625 (= 250ms/400ms), fade tail starts at progress 0.375 (= 150ms/400ms) and
       // runs through 1.0. Overlap from 0.375..0.625 is intentional: the ripple fades while it's
       // still expanding to soften the peak.
+      final float expand = Math.min(1f, progress * (400f / 250f));
+      final float fade = Math.max(0f, 1f - Math.max(0f, (progress - 0.375f) / 0.625f));
+      final int maxRadius = (int) Math.hypot(width, height);
+      final int r = (int) (maxRadius * expand);
+      g2.setComposite(AlphaComposite.SrcOver.derive(PEAK_OPACITY * fade));
+      g2.setColor(tint);
+      g2.fill(new Ellipse2D.Float(origin.x - r, origin.y - r, r * 2f, r * 2f));
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  /**
+   * Per-corner counterpart to {@link #paint(Graphics2D, int, int, Point, float, int, Color)} — the
+   * ripple clips to a four-radius rounded-rect outline instead of one uniform corner radius. A
+   * connected {@code ElwhaButtonGroup} segment uses this so the press ripple stays inside the
+   * segment's asymmetric corner treatment.
+   *
+   * @param g the graphics context (not mutated; a defensive copy is taken for clip + compositing
+   *     isolation)
+   * @param width the host body width in pixels
+   * @param height the host body height in pixels
+   * @param origin the click-point in the {@code (0,0)..(width,height)} space; {@code null}
+   *     suppresses paint
+   * @param progress the ripple animation phase in {@code [0, 1]}; values {@code >= 1f} suppress
+   *     paint
+   * @param radii the host's four corner radii; the ripple clips to this outline
+   * @param tint the ripple fill color, painted at {@link #PEAK_OPACITY} scaled by the fade tail
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static void paint(
+      Graphics2D g,
+      int width,
+      int height,
+      Point origin,
+      float progress,
+      CornerRadii radii,
+      Color tint) {
+    if (origin == null || progress >= 1f || width <= 0 || height <= 0 || tint == null) {
+      return;
+    }
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      g2.clip(SurfacePainter.bodyShape(width, height, radii));
       final float expand = Math.min(1f, progress * (400f / 250f));
       final float fade = Math.max(0f, 1f - Math.max(0f, (progress - 0.375f) / 0.625f));
       final int maxRadius = (int) Math.hypot(width, height);

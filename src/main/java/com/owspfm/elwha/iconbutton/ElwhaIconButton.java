@@ -2,6 +2,7 @@ package com.owspfm.elwha.iconbutton;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.StateLayer;
@@ -23,8 +24,11 @@ import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
+import javax.accessibility.AccessibleState;
+import javax.accessibility.AccessibleStateSet;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.ActionMap;
@@ -95,6 +99,7 @@ public class ElwhaIconButton extends JComponent {
   private IconButtonInteractionMode interactionMode = IconButtonInteractionMode.CLICKABLE;
   private ColorRole surfaceRoleOverride;
   private ShapeScale shape = ShapeScale.FULL;
+  private CornerRadii cornerRadii;
   private IconButtonSize buttonSize = DEFAULT_SIZE;
   private int containerSize = DEFAULT_SIZE.containerPx();
   private int iconSize = DEFAULT_SIZE.iconPx();
@@ -414,6 +419,40 @@ public class ElwhaIconButton extends JComponent {
    */
   public ShapeScale getShape() {
     return shape;
+  }
+
+  /**
+   * Installs a per-corner radius override, or clears it. This is the connected-variant {@code
+   * ElwhaButtonGroup} hook (design doc §16): a butted segment renders its outward corners at the
+   * group shape and its inner corners nearly square, which a single uniform {@link ShapeScale}
+   * cannot express. While an override is installed, it replaces the {@link #setShape(ShapeScale)
+   * shape}-derived corner radius for the surface, border, and ripple clip. Pass {@code null} to
+   * clear it.
+   *
+   * @param radii the four corner radii, or {@code null} to clear the override
+   * @return {@code this} for fluent chaining
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaIconButton setCornerRadii(final CornerRadii radii) {
+    if (Objects.equals(this.cornerRadii, radii)) {
+      return this;
+    }
+    this.cornerRadii = radii;
+    repaint();
+    return this;
+  }
+
+  /**
+   * Returns the per-corner radius override, or {@code null} when the button uses its {@link
+   * #getShape() shape}-derived uniform corner radius.
+   *
+   * @return the per-corner radius override, or {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public CornerRadii getCornerRadii() {
+    return cornerRadii;
   }
 
   /**
@@ -890,7 +929,7 @@ public class ElwhaIconButton extends JComponent {
       final Graphics2D dim = (Graphics2D) g.create();
       try {
         dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
-        SurfacePainter.paint(dim, w, h, arc, surfaceRole, null, borderRole, borderStroke);
+        paintSurface(dim, w, h, arc, surfaceRole, null, borderRole, borderStroke);
       } finally {
         dim.dispose();
       }
@@ -898,12 +937,39 @@ public class ElwhaIconButton extends JComponent {
       return;
     }
 
-    SurfacePainter.paint((Graphics2D) g, w, h, arc, surfaceRole, overlay, borderRole, borderStroke);
-    if (rippleProgress < 1f && rippleOrigin != null) {
-      RipplePainter.paint(
-          (Graphics2D) g, w, h, rippleOrigin, rippleProgress, arc, resolveForegroundColor());
-    }
+    paintSurface((Graphics2D) g, w, h, arc, surfaceRole, overlay, borderRole, borderStroke);
+    paintRippleLayer((Graphics2D) g, w, h, arc);
     paintIcon(g, 1f);
+  }
+
+  // Routes the surface paint through the per-corner SurfacePainter overload when a connected-group
+  // corner override is installed, or the uniform int-arc overload otherwise.
+  private void paintSurface(
+      final Graphics2D g,
+      final int w,
+      final int h,
+      final int arc,
+      final ColorRole surfaceRole,
+      final StateLayer overlay,
+      final ColorRole borderRole,
+      final float borderStroke) {
+    if (cornerRadii != null) {
+      SurfacePainter.paint(g, w, h, cornerRadii, surfaceRole, overlay, borderRole, borderStroke);
+    } else {
+      SurfacePainter.paint(g, w, h, arc, surfaceRole, overlay, borderRole, borderStroke);
+    }
+  }
+
+  private void paintRippleLayer(final Graphics2D g, final int w, final int h, final int arc) {
+    if (rippleProgress >= 1f || rippleOrigin == null) {
+      return;
+    }
+    if (cornerRadii != null) {
+      RipplePainter.paint(
+          g, w, h, rippleOrigin, rippleProgress, cornerRadii, resolveForegroundColor());
+    } else {
+      RipplePainter.paint(g, w, h, rippleOrigin, rippleProgress, arc, resolveForegroundColor());
+    }
   }
 
   private void paintIcon(final Graphics g, final float contentAlpha) {
@@ -1035,6 +1101,15 @@ public class ElwhaIconButton extends JComponent {
         return name;
       }
       return "Icon button";
+    }
+
+    @Override
+    public AccessibleStateSet getAccessibleStateSet() {
+      final AccessibleStateSet states = super.getAccessibleStateSet();
+      if (interactionMode == IconButtonInteractionMode.SELECTABLE && selected) {
+        states.add(AccessibleState.SELECTED);
+      }
+      return states;
     }
   }
 }
