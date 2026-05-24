@@ -1,5 +1,6 @@
 package com.owspfm.elwha.theme;
 
+import java.awt.Toolkit;
 import java.lang.ref.WeakReference;
 import javax.swing.JComponent;
 import javax.swing.Timer;
@@ -40,6 +41,24 @@ public final class MorphAnimator {
   private static final int TICK_INTERVAL_MS = 16;
 
   private static volatile boolean reducedMotion;
+
+  // #176 Phase 2 — auto-detect macOS reduced-motion at class-load. Linux + Windows are deferred
+  // to Phase 5 per design doc §9; consumers can flip the global toggle via
+  // setReducedMotion(boolean) regardless of platform. Wrapped in try/catch because a headless
+  // JVM (CI snapshot harness, build server) has no Toolkit and would otherwise NPE on class
+  // load — every Elwha component lives inside a Swing app at runtime, so this only matters for
+  // build-time class loading.
+  static {
+    try {
+      final Object macReduce =
+          Toolkit.getDefaultToolkit().getDesktopProperty("apple.awt.reduceMotion");
+      if (Boolean.TRUE.equals(macReduce)) {
+        reducedMotion = true;
+      }
+    } catch (final RuntimeException ignored) {
+      // Headless or otherwise unavailable — leave reducedMotion at its default (false).
+    }
+  }
 
   private final WeakReference<JComponent> hostRef;
   private final Timer timer;
@@ -103,6 +122,20 @@ public final class MorphAnimator {
    */
   public float progress() {
     return progress;
+  }
+
+  /**
+   * Returns the destination value the animator is animating toward — {@code 1.0} after the most
+   * recent {@link #start()} call, {@code 0.0} after the most recent {@link #reverse()} or {@link
+   * #stop()} call. Useful to pick a per-direction {@link Easing} (e.g. M3 press uses {@code
+   * emphasized.decelerate} going in and {@code emphasized.accelerate} going out).
+   *
+   * @return the current target value
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public float target() {
+    return target;
   }
 
   /**
@@ -173,6 +206,26 @@ public final class MorphAnimator {
   public void immediateFinish() {
     timer.stop();
     progress = target;
+    repaintHost();
+  }
+
+  /**
+   * Stops the animation and snaps {@link #progress()} to the given value — useful for setting an
+   * initial state at construction or first {@code addNotify}, and for the §15.7 disabled-button
+   * path where a programmatic {@code setSelected(...)} should land at the new state without
+   * animating. The value is clamped to {@code [0, 1]}; both {@link #progress()} and {@link
+   * #target()} are set so a subsequent {@link #start()} or {@link #reverse()} animates from the new
+   * resting point.
+   *
+   * @param value the value to snap to; clamped to {@code [0, 1]}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void snapTo(final float value) {
+    final float clamped = Math.max(0f, Math.min(1f, value));
+    timer.stop();
+    progress = clamped;
+    target = clamped;
     repaintHost();
   }
 

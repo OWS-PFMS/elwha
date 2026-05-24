@@ -3,8 +3,11 @@ package com.owspfm.elwha.button;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShadowPainter;
+import com.owspfm.elwha.theme.ShapeMorphPainter;
 import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.SurfacePainter;
 import java.awt.AlphaComposite;
@@ -108,6 +111,14 @@ public class ElwhaButton extends JComponent {
   private static final int RIPPLE_TOTAL_MS = 400;
   private static final int RIPPLE_TICK_MS = 16;
   private static final int HOVER_POLL_INTERVAL_MS = 100;
+  // #176 Phase 2 — press morph deltas. PRESS_RADIUS_DELTA_PX shrinks each corner during a full
+  // press (eased press progress = 1); the body reads as "less round" without changing shape.
+  // PRESS_WIDTH_DELTA_RATIO shrinks the painted body width (paint-layer only; layout untouched),
+  // floored at PRESS_WIDTH_DELTA_FLOOR_PX so the smallest XS buttons still show the ripple per
+  // design doc §15.4.
+  private static final int PRESS_RADIUS_DELTA_PX = 4;
+  private static final float PRESS_WIDTH_DELTA_RATIO = 0.06f;
+  private static final int PRESS_WIDTH_DELTA_FLOOR_PX = 1;
   private static final String TEXT_TOGGLE_ERROR =
       "M3 prohibits toggle on the TEXT variant — choose FILLED_TONAL for a low-emphasis toggle, or"
           + " FILLED for high emphasis.";
@@ -133,6 +144,14 @@ public class ElwhaButton extends JComponent {
   private Point rippleOrigin;
   private float rippleProgress = 1f;
   private Timer rippleTimer;
+
+  // Morph state ------------------------------------------------------------
+  // Press shape + width morph (#176 Phase 2) — both animate together on press / release. Width
+  // morph is a paint-layer offset; layout is not re-run. The widthBorrowFactor is driven by a
+  // hosting standard ElwhaButtonGroup in Phase 3 (per design doc §6); standalone buttons leave it
+  // at 0.
+  private final MorphAnimator pressMorph = new MorphAnimator(this, MorphAnimator.SHORT3_MS);
+  private final MorphAnimator selectMorph = new MorphAnimator(this, MorphAnimator.MEDIUM2_MS);
 
   // Backup poll timer for hover-clear — same workaround ElwhaChip / ElwhaIconButton use.
   private Timer hoverPollTimer;
@@ -612,6 +631,15 @@ public class ElwhaButton extends JComponent {
     }
     final boolean old = this.selected;
     this.selected = selected;
+    // #176 Phase 2 — animate the round ↔ square shape flip. A disabled button is visually frozen
+    // (§15.7); snap the morph to the new state without scheduling ticks.
+    if (!isEnabled()) {
+      selectMorph.snapTo(selected ? 1f : 0f);
+    } else if (selected) {
+      selectMorph.start();
+    } else {
+      selectMorph.reverse();
+    }
     repaint();
     firePropertyChange(PROPERTY_SELECTED, old, selected);
     return this;
@@ -857,6 +885,9 @@ public class ElwhaButton extends JComponent {
               return;
             }
             hovered = false;
+            if (pressed) {
+              pressMorph.reverse();
+            }
             pressed = false;
             stopHoverPolling();
             repaint();
@@ -873,6 +904,7 @@ public class ElwhaButton extends JComponent {
             pressed = true;
             requestFocusInWindow();
             startRipple(toBodyPoint(e.getPoint()));
+            pressMorph.start();
             repaint();
           }
 
@@ -880,10 +912,12 @@ public class ElwhaButton extends JComponent {
           public void mouseReleased(final MouseEvent e) {
             if (!pressed || !isEnabled()) {
               pressed = false;
+              pressMorph.reverse();
               repaint();
               return;
             }
             pressed = false;
+            pressMorph.reverse();
             if (containsClickPoint(e.getPoint())) {
               activate(e.getModifiersEx());
             }
@@ -901,6 +935,9 @@ public class ElwhaButton extends JComponent {
 
           @Override
           public void focusLost(final FocusEvent e) {
+            if (pressed) {
+              pressMorph.reverse();
+            }
             pressed = false;
             repaint();
           }
@@ -1070,81 +1107,161 @@ public class ElwhaButton extends JComponent {
     if (rippleTimer != null) {
       rippleTimer.stop();
     }
+    pressMorph.stop();
+    selectMorph.stop();
     super.removeNotify();
+  }
+
+  // #176 Phase 2 — snap selectMorph to the current selected state on first addNotify so a button
+  // constructed in the selected state (e.g. new ElwhaButton(...).setSelected(true) before display)
+  // paints at the selected shape on its first frame rather than animating into it.
+  @Override
+  public void addNotify() {
+    super.addNotify();
+    selectMorph.snapTo(selected ? 1f : 0f);
+    pressMorph.snapTo(0f);
   }
 
   // ----------------------------------------------------------- paint
 
   @Override
   protected void paintComponent(final Graphics g) {
-    final int bodyW = Math.max(1, effectiveBodyWidth());
+    final int naturalBodyW = Math.max(1, effectiveBodyWidth());
     final int bodyH = Math.max(1, buttonSize.containerHeightPx());
     final Point bodyOrigin = bodyOrigin();
     final int arc = cornerRadiusPx();
     final boolean focused = isFocusOwner() && isEnabled();
 
+    // #176 Phase 2 — press width morph. Paint-layer only; layout (and getPreferredSize) report
+    // the natural width. The body is re-centered inside the natural footprint so the morph reads
+    // as the button "pulling in" on press rather than shifting.
+    final float easedPress = easedPressProgress();
+    final int pressWidthDeltaPx = pressWidthDeltaPx(naturalBodyW);
+    final int paintedBodyW = Math.max(1, naturalBodyW - Math.round(easedPress * pressWidthDeltaPx));
+    final int bodyXShift = (naturalBodyW - paintedBodyW) / 2;
+
     final ColorRole surfaceRole = effectiveSurfaceRole();
     final StateLayer overlay = activeOverlay();
     final ColorRole borderRole = effectiveBorderRole(focused);
     final float borderStroke = effectiveBorderWidth(focused);
+    final CornerRadii morphedRadii = morphedRadii(paintedBodyW, bodyH, arc, easedPress);
 
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
-      g2.translate(bodyOrigin.x, bodyOrigin.y);
+      g2.translate(bodyOrigin.x + bodyXShift, bodyOrigin.y);
 
       if (variant == ButtonVariant.ELEVATED && isEnabled()) {
-        ShadowPainter.paint(g2, bodyW, bodyH, arc, elevationLevel());
+        // The shadow follows the press width / radius too — its shape tracks the surface body.
+        ShadowPainter.paint(g2, paintedBodyW, bodyH, morphedRadii.largestPx(), elevationLevel());
       }
 
       if (!isEnabled()) {
         final Graphics2D dim = (Graphics2D) g2.create();
         try {
           dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
-          paintSurface(dim, bodyW, bodyH, arc, surfaceRole, null, borderRole, borderStroke);
+          paintSurface(
+              dim, paintedBodyW, bodyH, morphedRadii, surfaceRole, null, borderRole, borderStroke);
         } finally {
           dim.dispose();
         }
-        paintContent(g2, bodyW, bodyH, StateLayer.disabledContentOpacity());
+        paintContent(g2, paintedBodyW, bodyH, StateLayer.disabledContentOpacity());
         return;
       }
 
-      paintSurface(g2, bodyW, bodyH, arc, surfaceRole, overlay, borderRole, borderStroke);
-      paintRippleLayer(g2, bodyW, bodyH, arc);
-      paintContent(g2, bodyW, bodyH, 1f);
+      paintSurface(
+          g2, paintedBodyW, bodyH, morphedRadii, surfaceRole, overlay, borderRole, borderStroke);
+      paintRippleLayer(g2, paintedBodyW, bodyH, morphedRadii);
+      paintContent(g2, paintedBodyW, bodyH, 1f);
     } finally {
       g2.dispose();
     }
   }
 
-  // Routes the surface paint through the per-corner SurfacePainter overload in connected-segment
-  // mode, or the uniform int-arc overload otherwise. The int-arc path is byte-identical to the
-  // pre-connected-mode rendering, so an ordinary button is unaffected.
+  // Routes the surface paint through the per-corner SurfacePainter overload. The morph helper
+  // gives us per-corner radii in every path now (the int-arc uniform path is gone here — the
+  // CornerRadii overload's per-corner clamp produces a byte-identical render for a uniform
+  // radius, so an ordinary button is unaffected).
   private void paintSurface(
       final Graphics2D g,
       final int w,
       final int h,
-      final int arc,
+      final CornerRadii radii,
       final ColorRole surfaceRole,
       final StateLayer overlay,
       final ColorRole borderRole,
       final float borderStroke) {
-    if (cornerRadii != null) {
-      SurfacePainter.paint(g, w, h, cornerRadii, surfaceRole, overlay, borderRole, borderStroke);
-    } else {
-      SurfacePainter.paint(g, w, h, arc, surfaceRole, overlay, borderRole, borderStroke);
-    }
+    SurfacePainter.paint(g, w, h, radii, surfaceRole, overlay, borderRole, borderStroke);
   }
 
-  private void paintRippleLayer(final Graphics2D g, final int w, final int h, final int arc) {
+  private void paintRippleLayer(
+      final Graphics2D g, final int w, final int h, final CornerRadii radii) {
     if (rippleProgress >= 1f || rippleOrigin == null) {
       return;
     }
-    if (cornerRadii != null) {
-      RipplePainter.paint(
-          g, w, h, rippleOrigin, rippleProgress, cornerRadii, resolveForegroundColor());
-    } else {
-      RipplePainter.paint(g, w, h, rippleOrigin, rippleProgress, arc, resolveForegroundColor());
+    RipplePainter.paint(g, w, h, rippleOrigin, rippleProgress, radii, resolveForegroundColor());
+  }
+
+  // #176 Phase 2 — pick per-direction easing for press (M3 emphasized.decelerate going in,
+  // emphasized.accelerate going out per design doc §3), and apply it to the press animator's
+  // current progress. Returns 0 when no morph is in flight and the press isn't held.
+  private float easedPressProgress() {
+    final float progress = pressMorph.progress();
+    if (progress <= 0f) {
+      return 0f;
     }
+    final Easing easing =
+        pressMorph.target() >= 0.5f ? Easing.EMPHASIZED_DECELERATE : Easing.EMPHASIZED_ACCELERATE;
+    return easing.ease(progress);
+  }
+
+  private int pressWidthDeltaPx(final int naturalBodyW) {
+    return Math.max(PRESS_WIDTH_DELTA_FLOOR_PX, Math.round(naturalBodyW * PRESS_WIDTH_DELTA_RATIO));
+  }
+
+  // Composes the select shape flip and the press shape morph per design doc §5 — select first
+  // (interpolate between unselected and selected radii through EASE_IN_OUT for a symmetric
+  // toggle), then press (shrink each corner of the selected geometry by the press delta).
+  //
+  // Connected-segment mode (cornerRadii override set by ElwhaButtonGroup) bypasses the select
+  // flip — the group owns the per-segment shape and supplies it directly; the animated
+  // connected pill-pop is Phase 4. The press shrink still applies for press feedback.
+  private CornerRadii morphedRadii(
+      final int w, final int h, final int uniformArc, final float easedPress) {
+    final CornerRadii base;
+    if (cornerRadii != null) {
+      base = cornerRadii;
+    } else {
+      final CornerRadii resting = uniformRadiiFor(shape, h, uniformArc);
+      final CornerRadii selectedTarget = uniformRadiiFor(invertShape(shape), h, uniformArc);
+      base =
+          ShapeMorphPainter.interpolate(
+              resting, selectedTarget, selectMorph.progress(), Easing.EASE_IN_OUT);
+    }
+    final int pressShrink = Math.round(easedPress * PRESS_RADIUS_DELTA_PX);
+    if (pressShrink <= 0) {
+      return base;
+    }
+    return CornerRadii.of(
+        Math.max(0, base.topLeftPx() - pressShrink),
+        Math.max(0, base.topRightPx() - pressShrink),
+        Math.max(0, base.bottomRightPx() - pressShrink),
+        Math.max(0, base.bottomLeftPx() - pressShrink));
+  }
+
+  private CornerRadii uniformRadiiFor(
+      final ButtonShape shapeKind, final int bodyH, final int uniformArc) {
+    if (shapeKind == ButtonShape.ROUND) {
+      // SurfacePainter clamps each corner to half the shorter body axis, so the body-height
+      // / 2 value paints as a pill regardless of width.
+      return CornerRadii.uniform(Math.max(0, bodyH / 2));
+    }
+    // The SQUARE arc the caller already resolved via cornerRadiusPx() for the resting shape;
+    // for the inverted shape we recompute from the button's size token.
+    return CornerRadii.uniform(shapeKind == shape ? uniformArc : buttonSize.squareCornerPx());
+  }
+
+  private static ButtonShape invertShape(final ButtonShape s) {
+    return s == ButtonShape.ROUND ? ButtonShape.SQUARE : ButtonShape.ROUND;
   }
 
   private void paintContent(
