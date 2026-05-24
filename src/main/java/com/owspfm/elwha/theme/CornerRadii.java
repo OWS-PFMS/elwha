@@ -129,6 +129,41 @@ public final class CornerRadii {
     return Math.max(Math.max(topLeft, topRight), Math.max(bottomRight, bottomLeft));
   }
 
+  /**
+   * Linearly interpolates between two radii sets, corner by corner. {@code t = 0} returns {@code
+   * from}'s values, {@code t = 1} returns {@code to}'s values, in-between {@code t} returns the
+   * per-corner mix rounded to the nearest pixel. {@code t} outside {@code [0, 1]} is clamped — the
+   * morph painter consumes already-eased {@code t}, but defensive clamping keeps stray values from
+   * extrapolating past the endpoints.
+   *
+   * @param from the radii at {@code t = 0}
+   * @param to the radii at {@code t = 1}
+   * @param t the interpolation phase; clamped to {@code [0, 1]}
+   * @return a new {@code CornerRadii} with each corner interpolated
+   * @throws NullPointerException if {@code from} or {@code to} is {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static CornerRadii interpolate(
+      final CornerRadii from, final CornerRadii to, final float t) {
+    if (from == null) {
+      throw new NullPointerException("from");
+    }
+    if (to == null) {
+      throw new NullPointerException("to");
+    }
+    final float clamped = Math.max(0f, Math.min(1f, t));
+    return of(
+        lerp(from.topLeft, to.topLeft, clamped),
+        lerp(from.topRight, to.topRight, clamped),
+        lerp(from.bottomRight, to.bottomRight, clamped),
+        lerp(from.bottomLeft, to.bottomLeft, clamped));
+  }
+
+  private static int lerp(final int a, final int b, final float t) {
+    return Math.round(a + (b - a) * t);
+  }
+
   @Override
   public boolean equals(final Object obj) {
     if (this == obj) {
