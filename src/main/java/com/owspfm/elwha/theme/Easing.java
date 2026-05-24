@@ -61,6 +61,19 @@ public interface Easing {
   Easing EMPHASIZED_ACCELERATE = cubicBezier(0.3f, 0f, 0.8f, 0.15f);
 
   /**
+   * Symmetric ease-in-out — cubic-bezier {@code (0.42, 0, 0.58, 1)}, the classic CSS "ease-in-out."
+   * Satisfies {@code ease(t) + ease(1-t) = 1}, so a morph running forward and the same morph
+   * running reverse trace mirror-image curves and look visually identical. Useful for
+   * <strong>toggle</strong> motions (the select-flip case) where the two directions should not read
+   * as asymmetric.
+   *
+   * <p><strong>Elwha-pinned, not an M3 motion token.</strong> M3 only ships decelerate / accelerate
+   * variants; we add this preset because asymmetric curves read as buggy on a symmetric state
+   * toggle.
+   */
+  Easing EASE_IN_OUT = cubicBezier(0.42f, 0f, 0.58f, 1f);
+
+  /**
    * {@code spring.spatial.default} — a critically-damped (per §15.3, damping ratio {@code 0.85})
    * spring evaluation normalized so the step response settles to {@code 1.0} at {@code t = 1}. The
    * underlying motion has imperceptible overshoot at this damping; tuning to {@code 0.7}-{@code

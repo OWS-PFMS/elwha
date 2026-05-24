@@ -77,6 +77,7 @@ public final class ShapeMorphPlayground {
       new EasingPreset("EMPHASIZED", Easing.EMPHASIZED),
       new EasingPreset("EMPHASIZED_DECELERATE", Easing.EMPHASIZED_DECELERATE),
       new EasingPreset("EMPHASIZED_ACCELERATE", Easing.EMPHASIZED_ACCELERATE),
+      new EasingPreset("EASE_IN_OUT (symmetric — Elwha-pinned)", Easing.EASE_IN_OUT),
       new EasingPreset("SPRING_SPATIAL_DEFAULT (0.85)", Easing.SPRING_SPATIAL_DEFAULT),
       new EasingPreset("SPRING (0.70 — playful)", Easing.spring(0.70f)),
       new EasingPreset("LINEAR", Easing.LINEAR),
