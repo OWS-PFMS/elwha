@@ -1,7 +1,7 @@
 # ElwhaButton Shape-Morph Animation — Design Decisions
 
-**Status:** DRAFT — first pass; §15 lists the open decisions that need to lock before
-implementation. Epic [#176](https://github.com/OWS-PFMS/elwha/issues/176).
+**Status:** LOCKED — all 10 §15 decisions resolved 2026-05-24. Ready for the Phase 1 build. Epic
+[#176](https://github.com/OWS-PFMS/elwha/issues/176).
 
 **Drafted:** 2026-05-24
 
@@ -437,59 +437,53 @@ Five stories, all on `feat/176-button-shape-morph`. CHANGELOG entry lands in Pha
 
 ---
 
-## §15. Decisions — open
+## §15. Decisions — all resolved
 
-Numbered for easy walk-through. Each one needs a concrete answer before Phase 1 starts.
+_All 10 resolved 2026-05-24. Numbering is stable so existing references (§15.1, §15.2, …) hold._
 
-1. **`javax.swing.Timer` vs `com.formdev.flatlaf.util.Animator` for `MorphAnimator`'s engine.**
-   §4 argues for `javax.swing.Timer` on consistency + dep-surface grounds. Counterargument:
-   FlatLaf's Animator does the easing-table arithmetic for free and we'd skip writing an `Easing`
-   class. **Recommended: `javax.swing.Timer`** for the reasons in §4.
+1. **`javax.swing.Timer` vs `com.formdev.flatlaf.util.Animator` for `MorphAnimator`'s engine** →
+   **`javax.swing.Timer`.** Keeps Elwha's animation surface uniform with the existing ripple /
+   hover-poll / card-collapse Timers; avoids coupling to `com.formdev.flatlaf.util` (FlatLaf
+   marks it "for internal use"). We write the easing table ourselves (§4 rationale).
 
-2. **The four pinned motion values in §3 — 150 ms press, 300 ms select, decay vector
-   `[1.0, 0.3, 0.1, 0]` for the group ripple.** These are best-guesses from M3's motion-token
-   tiers; the operator may want different values, or to watch the morph first and tune them
-   live in the Workbench. **Recommended: ship with the §3 values and let the Workbench's
-   duration-multiplier slider double as a tuning surface during smoke-testing.**
+2. **The four pinned motion values in §3 (150 ms press, 300 ms select, decay vector
+   `[1.0, 0.3, 0.1, 0]` for the group ripple)** → **ship with §3's values; tune live via the
+   Workbench duration-multiplier during smoke-testing.** The §3 numbers are derived from M3's
+   motion-token tiers and are the most defensible starting point; the Workbench is the iteration
+   surface, not the spec.
 
-3. **Spring overshoot.** §3 pins damping at 0.85 (no overshoot — "responsive, not playful"). M3
-   Expressive elsewhere reads as playful enough to suggest 0.7-0.75 underdamping (small overshoot
-   on the press release). **Recommended: 0.85 for v1; revisit after smoke-testing.**
+3. **Spring overshoot / damping ratio** → **0.85 ("responsive, not playful") for v1; revisit
+   after smoke-testing.** Underdamping (0.7-0.75) is an Expressive-ier option; we adopt it later
+   if the no-overshoot read feels flat. Single damping value across all spring uses to keep the
+   helper simple.
 
-4. **Press width delta — 6 % of resting width, no minimum.** A 6 % delta on an XS 32 px button =
-   ~2 px; on an XL 136 px button = ~8 px. Both read fine in isolation. But the group's
-   ±1-neighbor borrow at 30 % decay is then ±0.6 px on XS — sub-pixel. **Recommended: floor the
-   per-segment delta at 1 px (paint-layer; layout untouched) so the smallest groups still show
-   the ripple.**
+4. **Press width delta floor** → **6 % of resting width with a 1 px paint-layer floor.** The
+   floor protects the smallest XS groups from sub-pixel borrow widths; paint-layer only
+   (`getPreferredSize()` reports the resting width, layout doesn't re-run).
 
-5. **Linux reduced-motion detection.** Shell out to `gsettings get org.gnome.desktop.interface
-   enable-animations` (works on GNOME, fails silently elsewhere), or default-on with the global
-   toggle? **Recommended: default-on, global toggle is the user-facing escape hatch.** Avoids
-   shelling out and platform-sniffing for a 1 % reliability gain.
+5. **Linux reduced-motion detection** → **default-on; global `ElwhaTheme.config(...)
+   .reducedMotion(...)` toggle is the user-facing escape hatch.** No `gsettings` shell-out,
+   no platform-sniffing — the global toggle covers the use case at zero cost.
 
-6. **Reduced-motion re-read.** §9 reads the OS preference once and caches. Alternative: re-read
-   per morph trigger. **Recommended: read-once, matches FlatLaf's existing behavior; consumers
-   that need live tracking can wire their own listener and flip the global toggle.**
+6. **Reduced-motion re-read cadence** → **read-once at first morph trigger, cached for the
+   session.** Matches FlatLaf's posture for similar desktop-property reads. Consumers needing
+   live tracking wire their own listener and flip the global toggle.
 
-7. **Animation when the button is `setEnabled(false)`.** Disabled buttons don't currently fire
-   press or select transitions, so this is moot for press / select. For programmatic
-   `setSelected(…)` on a disabled button — should the morph still play? **Recommended: no — a
-   disabled button is visually frozen. The morph applies only when the button is enabled at the
-   moment of state change.**
+7. **Animation when `setEnabled(false)`** → **no morph plays on a disabled button.** A disabled
+   button is visually frozen; programmatic `setSelected(…)` snaps to the new state without
+   transition. Re-enabling does not retroactively animate; the new state is already painted.
 
-8. **Showcase Workbench duration multiplier — 1×/2×/5× discrete steps, or a continuous slider?**
-   **Recommended: discrete (1×/2×/5×/10×)** — easier to compare two morphs side-by-side when the
-   slider snaps.
+8. **Showcase Workbench duration multiplier** → **discrete 1× / 2× / 5× / 10×.** Snapping
+   easier than a continuous slider for side-by-side comparisons.
 
-9. **Naming: `ShapeMorphPainter` vs `MorphPainter` vs `SegmentMorphPainter`.** §4 picks
-   `ShapeMorphPainter` because "morph" alone is ambiguous (cross-fades are also morphs in M3),
-   and the painter is shape-specific. **Recommended: `ShapeMorphPainter`.**
+9. **Naming of the paint helper** → **`ShapeMorphPainter`.** "Morph" alone is ambiguous (M3
+   uses the word for cross-fades too); the painter is shape-specific and the name carries that.
 
-10. **Phase 1 deliverable scope — helpers only, or helpers + a tiny smoketest?** §14 spells out
-    "no consumer wiring" for Phase 1. But the helpers are hard to validate without a test
-    harness. **Recommended: ship a one-off `ShapeMorphPlayground` `main(...)` class** (NOT
-    wired into the Showcase) that animates a single rectangle so Phase 1 is independently
-    testable. Per [[fresh-demo-per-story]].
+10. **Phase 1 deliverable scope** → **helpers + a `ShapeMorphPlayground` `main(...)` smoketest.**
+    The helpers are hard to validate in isolation without a harness; the playground is a single
+    `main(...)` class that animates a rectangle so Phase 1 is independently testable. NOT wired
+    into the Showcase — per [[fresh-demo-per-story]], each phase gets its own artifact, and the
+    Showcase wiring is Phase 5.
 
 ---
 
