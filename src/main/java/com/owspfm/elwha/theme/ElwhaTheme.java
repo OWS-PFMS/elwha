@@ -35,7 +35,7 @@ import javax.swing.plaf.FontUIResource;
  * keys, apply typography, and repaint every live window.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.3.0
  * @since v0.1.0
  */
 public final class ElwhaTheme {

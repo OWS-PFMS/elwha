@@ -12,7 +12,7 @@ import java.util.Objects;
  * — {@code install(current().withMode(Mode.DARK))} is the whole dark-mode toggle.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.3.0
  * @since v0.1.0
  */
 public final class Config {
