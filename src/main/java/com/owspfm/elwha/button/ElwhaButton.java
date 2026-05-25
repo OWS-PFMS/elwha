@@ -106,6 +106,14 @@ public class ElwhaButton extends JComponent {
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
 
+  /**
+   * Property name fired when the {@code pressed} flag flips. Used by {@link
+   * com.owspfm.elwha.buttongroup.ElwhaButtonGroup} to drive the §6 standard-group width-ripple (a
+   * pressed segment narrows, its ±1 / ±2 neighbors borrow a diminishing fraction of the press-width
+   * delta).
+   */
+  public static final String PROPERTY_PRESSED = "pressed";
+
   private static final int DEFAULT_BORDER_WIDTH = 1;
   private static final float FOCUSED_BORDER_WIDTH = 2f;
   private static final int RIPPLE_TOTAL_MS = 400;
@@ -152,6 +160,12 @@ public class ElwhaButton extends JComponent {
   // at 0.
   private final MorphAnimator pressMorph = new MorphAnimator(this, MorphAnimator.SHORT3_MS);
   private final MorphAnimator selectMorph = new MorphAnimator(this, MorphAnimator.MEDIUM2_MS);
+  // Group-driven width ripple (#176 Phase 3, design doc §6). The pressed segment of a standard
+  // ElwhaButtonGroup gets a +1.0 borrow factor; ±1 neighbors get +0.3; ±2 get +0.1; further get
+  // 0. The factor multiplies the natural press-width delta, so during the morph the segment's
+  // painted body width = natural - (easedWidth * borrowFactor * pressWidthDelta).
+  private final MorphAnimator widthMorph = new MorphAnimator(this, MorphAnimator.SHORT3_MS);
+  private float widthBorrowFactor;
 
   // Backup poll timer for hover-clear — same workaround ElwhaChip / ElwhaIconButton use.
   private Timer hoverPollTimer;
@@ -684,12 +698,21 @@ public class ElwhaButton extends JComponent {
    * @since v0.2.0
    */
   public ElwhaButton setPressed(final boolean pressed) {
-    if (this.pressed == pressed) {
-      return this;
-    }
-    this.pressed = pressed;
-    repaint();
+    setPressedInternal(pressed);
     return this;
+  }
+
+  // Internal mutator — every `this.pressed = ...` assignment routes through here so the
+  // PROPERTY_PRESSED firing stays consistent (the group listens for it to drive the §6
+  // width-ripple). No-op if the value isn't actually changing.
+  private void setPressedInternal(final boolean newPressed) {
+    if (this.pressed == newPressed) {
+      return;
+    }
+    final boolean old = this.pressed;
+    this.pressed = newPressed;
+    repaint();
+    firePropertyChange(PROPERTY_PRESSED, old, newPressed);
   }
 
   // ------------------------------------------------------------ listeners
@@ -888,7 +911,7 @@ public class ElwhaButton extends JComponent {
             if (pressed && firesPressMorph()) {
               pressMorph.reverse();
             }
-            pressed = false;
+            setPressedInternal(false);
             stopHoverPolling();
             repaint();
           }
@@ -901,7 +924,7 @@ public class ElwhaButton extends JComponent {
             if (!containsClickPoint(e.getPoint())) {
               return;
             }
-            pressed = true;
+            setPressedInternal(true);
             requestFocusInWindow();
             startRipple(toBodyPoint(e.getPoint()));
             if (firesPressMorph()) {
@@ -913,14 +936,14 @@ public class ElwhaButton extends JComponent {
           @Override
           public void mouseReleased(final MouseEvent e) {
             if (!pressed || !isEnabled()) {
-              pressed = false;
+              setPressedInternal(false);
               if (firesPressMorph()) {
                 pressMorph.reverse();
               }
               repaint();
               return;
             }
-            pressed = false;
+            setPressedInternal(false);
             if (firesPressMorph()) {
               pressMorph.reverse();
             }
@@ -944,7 +967,7 @@ public class ElwhaButton extends JComponent {
             if (pressed && firesPressMorph()) {
               pressMorph.reverse();
             }
-            pressed = false;
+            setPressedInternal(false);
             repaint();
           }
         });
@@ -1115,6 +1138,7 @@ public class ElwhaButton extends JComponent {
     }
     pressMorph.stop();
     selectMorph.stop();
+    widthMorph.stop();
     super.removeNotify();
   }
 
@@ -1126,6 +1150,48 @@ public class ElwhaButton extends JComponent {
     super.addNotify();
     selectMorph.snapTo(selected ? 1f : 0f);
     pressMorph.snapTo(0f);
+    widthMorph.snapTo(0f);
+    widthBorrowFactor = 0f;
+  }
+
+  /**
+   * Starts a group-driven width-ripple borrow. Called by a hosting standard {@link
+   * com.owspfm.elwha.buttongroup.ElwhaButtonGroup} on every segment when one of its segments is
+   * pressed — the pressed segment gets {@code factor = 1.0} (full pinch), ±1 neighbors get {@code
+   * 0.3} (30 % of the natural press-width delta), ±2 neighbors get {@code 0.1}, and further-out
+   * segments get {@code 0.0} (no ripple). Design doc §6.
+   *
+   * <p>The factor multiplies the natural press-width delta of <em>this</em> button (so a smaller
+   * neighbor borrows proportionally less). The morph itself is the standard {@link
+   * MorphAnimator#SHORT3_MS} (150 ms) press timing.
+   *
+   * <p>Calling with {@code factor = 0.0} is equivalent to {@link #releaseWidthBorrow()} —
+   * convenient when a group computes a borrow vector with some zero entries.
+   *
+   * @param factor the borrow factor in {@code [-1, 1]}; clamped if outside
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void startWidthBorrow(final float factor) {
+    final float clamped = Math.max(-1f, Math.min(1f, factor));
+    if (clamped == 0f) {
+      releaseWidthBorrow();
+      return;
+    }
+    widthBorrowFactor = clamped;
+    widthMorph.start();
+  }
+
+  /**
+   * Releases a group-driven width-ripple borrow — the morph reverses to {@code 0}, the painted
+   * width returns to the natural width. Idempotent. Called by the hosting group on every segment
+   * when the pressed segment releases.
+   *
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void releaseWidthBorrow() {
+    widthMorph.reverse();
   }
 
   // ----------------------------------------------------------- paint
@@ -1141,9 +1207,18 @@ public class ElwhaButton extends JComponent {
     // #176 Phase 2 — press width morph. Paint-layer only; layout (and getPreferredSize) report
     // the natural width. The body is re-centered inside the natural footprint so the morph reads
     // as the button "pulling in" on press rather than shifting.
+    //
+    // #176 Phase 3 — additive group-driven width borrow. A standard ElwhaButtonGroup calls
+    // startWidthBorrow / releaseWidthBorrow on every segment when one of its segments is
+    // pressed; the two morphs combine linearly so an outright-pressed CLICKABLE in a group
+    // shrinks by (press + borrow), a SELECTABLE-in-a-group shrinks by borrow only (the press
+    // morph is suppressed for SELECTABLE per §5), and a solo button shrinks by press only.
     final float easedPress = easedPressProgress();
+    final float easedWidth = widthMorph.progress();
     final int pressWidthDeltaPx = pressWidthDeltaPx(naturalBodyW);
-    final int paintedBodyW = Math.max(1, naturalBodyW - Math.round(easedPress * pressWidthDeltaPx));
+    final int totalShrink =
+        Math.round((easedPress + easedWidth * widthBorrowFactor) * pressWidthDeltaPx);
+    final int paintedBodyW = Math.max(1, naturalBodyW - totalShrink);
     final int bodyXShift = (naturalBodyW - paintedBodyW) / 2;
 
     final ColorRole surfaceRole = effectiveSurfaceRole();

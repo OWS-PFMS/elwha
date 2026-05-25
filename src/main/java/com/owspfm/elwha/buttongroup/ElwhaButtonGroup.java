@@ -68,9 +68,17 @@ public final class ElwhaButtonGroup extends JComponent {
   /** The inner padding between butted segments of a connected group, in pixels (M3 §11). */
   private static final int CONNECTED_GAP_PX = 2;
 
+  // #176 Phase 3 — the decay vector for the standard-group width-ripple (design doc §6 / §15.5).
+  // Index = absolute segment distance from the pressed segment. Distances beyond the table length
+  // get 0 (no ripple). The pressed segment gets 1.0 (full pinch) so the group fully owns the
+  // segment's press-width signal — the button's pressMorph is suppressed for SELECTABLE segments
+  // per §5, and standard-group segments are always SELECTABLE.
+  private static final float[] WIDTH_RIPPLE_DECAY = {1.0f, 0.3f, 0.1f};
+
   private final List<Segment> segments = new ArrayList<>();
   private final List<SelectionListener> selectionListeners = new ArrayList<>();
   private final PropertyChangeListener segmentSelectionListener = this::onSegmentSelectionChanged;
+  private final PropertyChangeListener segmentPressListener = this::onSegmentPressChanged;
 
   private ButtonGroupVariant variant = ButtonGroupVariant.STANDARD;
   private SelectionMode selectionMode = SelectionMode.SINGLE;
@@ -236,6 +244,7 @@ public final class ElwhaButtonGroup extends JComponent {
     segments.add(segment);
     segment.makeSelectable();
     segment.addSelectionListener(segmentSelectionListener);
+    segment.addPressListener(segmentPressListener);
     super.add(segment.component());
     // A REQUIRED group must always carry exactly one selection — seed the first segment so the
     // invariant holds before the user has clicked anything.
@@ -261,6 +270,7 @@ public final class ElwhaButtonGroup extends JComponent {
   public ElwhaButtonGroup clear() {
     for (final Segment segment : segments) {
       segment.removeSelectionListener(segmentSelectionListener);
+      segment.removePressListener(segmentPressListener);
       super.remove(segment.component());
     }
     segments.clear();
@@ -640,6 +650,34 @@ public final class ElwhaButtonGroup extends JComponent {
     fireSelectionChanged();
   }
 
+  // #176 Phase 3 — width-ripple dispatch (design doc §6). When any STANDARD-variant segment's
+  // PROPERTY_PRESSED flips, every segment in the group gets a startWidthBorrow / releaseWidthBorrow
+  // call with the appropriate decay factor (1.0 at the press source, 0.3 at ±1, 0.1 at ±2, 0
+  // beyond — WIDTH_RIPPLE_DECAY). CONNECTED groups skip — M3 explicitly excludes them from the
+  // width-ripple choreography (the segments are visually butted; ripple math would break the
+  // connection).
+  private void onSegmentPressChanged(final PropertyChangeEvent event) {
+    if (variant != ButtonGroupVariant.STANDARD) {
+      return;
+    }
+    final Segment source = findSegment((JComponent) event.getSource());
+    if (source == null) {
+      return;
+    }
+    final int pressedIdx = segments.indexOf(source);
+    final boolean nowPressed = Boolean.TRUE.equals(event.getNewValue());
+    for (int j = 0; j < segments.size(); j++) {
+      final int distance = Math.abs(j - pressedIdx);
+      final float factor = distance < WIDTH_RIPPLE_DECAY.length ? WIDTH_RIPPLE_DECAY[distance] : 0f;
+      final Segment seg = segments.get(j);
+      if (nowPressed && factor > 0f) {
+        seg.startWidthBorrow(factor);
+      } else {
+        seg.releaseWidthBorrow();
+      }
+    }
+  }
+
   private Segment findSegment(final JComponent component) {
     for (final Segment segment : segments) {
       if (segment.component() == component) {
@@ -706,10 +744,12 @@ public final class ElwhaButtonGroup extends JComponent {
       if (variant == ButtonGroupVariant.CONNECTED) {
         segment.applyCornerRadii(connectedRadii(i, count, rowHeight, segment.isSelected()));
       } else {
-        // Standard: the selected segment renders square, unselected segments round (M3 §10). The
-        // transient press width/shape morph is the deferred animation epic, not rendered here.
+        // Standard: the round ↔ square selection signal is animated by each segment's own
+        // selectMorph (#176 Phase 2). The group only sets the resting shape; applyStandardShape
+        // coerces ROUND on ButtonSegments (the morph drives the inversion on select) and applies
+        // the static v1 shape on IconButtonSegments (icon-button morph not yet wired).
         segment.applyCornerRadii(null);
-        segment.applyShape(segment.isSelected() ? ButtonShape.SQUARE : ButtonShape.ROUND);
+        segment.applyStandardShape(segment.isSelected());
       }
     }
     revalidate();
@@ -906,6 +946,13 @@ public final class ElwhaButtonGroup extends JComponent {
 
     abstract void applyShape(ButtonShape shape);
 
+    // #176 Phase 3 — set the segment's resting shape under the STANDARD-variant contract
+    // ("selected = square, unselected = round"). For ButtonSegment this coerces to ROUND so the
+    // button's own selectMorph drives the round ↔ square animation (the static applyShape would
+    // fight the morph). For IconButtonSegment this still applies the static shape because icon-
+    // button shape morph isn't wired yet (separate epic).
+    abstract void applyStandardShape(boolean selected);
+
     abstract void applyCornerRadii(CornerRadii radii);
 
     abstract void makeSelectable();
@@ -917,6 +964,21 @@ public final class ElwhaButtonGroup extends JComponent {
     abstract void addSelectionListener(PropertyChangeListener listener);
 
     abstract void removeSelectionListener(PropertyChangeListener listener);
+
+    // #176 Phase 3 — group-driven width-ripple hooks (design doc §6). The group calls these on
+    // every segment whenever any segment is pressed (decay vector [1.0, 0.3, 0.1, 0]). Segment
+    // types that aren't morph-wired yet (IconButtonSegment) no-op so the group can drive the
+    // ripple without branching on segment type.
+    abstract void startWidthBorrow(float factor);
+
+    abstract void releaseWidthBorrow();
+
+    // #176 Phase 3 — register / unregister a press listener so the group can detect when a
+    // ButtonSegment's underlying ElwhaButton fires PROPERTY_PRESSED. IconButtonSegment passes
+    // because ElwhaIconButton hasn't been morph-wired to fire press events yet.
+    abstract void addPressListener(PropertyChangeListener listener);
+
+    abstract void removePressListener(PropertyChangeListener listener);
 
     abstract Dimension preferredSize();
   }
@@ -955,6 +1017,14 @@ public final class ElwhaButtonGroup extends JComponent {
     }
 
     @Override
+    void applyStandardShape(final boolean selected) {
+      // The button's own selectMorph drives the visible round ↔ square animation; the group
+      // only sets the resting shape to ROUND once and lets the morph do the rest. `selected` is
+      // intentionally ignored — the morph reads its target from button.isSelected().
+      button.setShape(ButtonShape.ROUND);
+    }
+
+    @Override
     void applyCornerRadii(final CornerRadii radii) {
       button.setCornerRadii(radii);
     }
@@ -982,6 +1052,26 @@ public final class ElwhaButtonGroup extends JComponent {
     @Override
     void removeSelectionListener(final PropertyChangeListener listener) {
       button.removePropertyChangeListener(ElwhaButton.PROPERTY_SELECTED, listener);
+    }
+
+    @Override
+    void startWidthBorrow(final float factor) {
+      button.startWidthBorrow(factor);
+    }
+
+    @Override
+    void releaseWidthBorrow() {
+      button.releaseWidthBorrow();
+    }
+
+    @Override
+    void addPressListener(final PropertyChangeListener listener) {
+      button.addPropertyChangeListener(ElwhaButton.PROPERTY_PRESSED, listener);
+    }
+
+    @Override
+    void removePressListener(final PropertyChangeListener listener) {
+      button.removePropertyChangeListener(ElwhaButton.PROPERTY_PRESSED, listener);
     }
 
     @Override
@@ -1024,6 +1114,13 @@ public final class ElwhaButtonGroup extends JComponent {
     }
 
     @Override
+    void applyStandardShape(final boolean selected) {
+      // IconButton hasn't been morph-wired yet (separate epic). Keep the v1 static "selected =
+      // square, unselected = round" contract until the icon-button shape morph lands.
+      button.setShape(selected ? ShapeScale.SM : ShapeScale.FULL);
+    }
+
+    @Override
     void applyCornerRadii(final CornerRadii radii) {
       button.setCornerRadii(radii);
     }
@@ -1051,6 +1148,27 @@ public final class ElwhaButtonGroup extends JComponent {
     @Override
     void removeSelectionListener(final PropertyChangeListener listener) {
       button.removePropertyChangeListener(ElwhaIconButton.PROPERTY_SELECTED, listener);
+    }
+
+    @Override
+    void startWidthBorrow(final float factor) {
+      // No-op until ElwhaIconButton is morph-wired (separate epic).
+    }
+
+    @Override
+    void releaseWidthBorrow() {
+      // No-op until ElwhaIconButton is morph-wired (separate epic).
+    }
+
+    @Override
+    void addPressListener(final PropertyChangeListener listener) {
+      // No-op until ElwhaIconButton fires PROPERTY_PRESSED (separate epic). An icon button
+      // segment can't be the press source of a width-ripple yet — only ButtonSegments can.
+    }
+
+    @Override
+    void removePressListener(final PropertyChangeListener listener) {
+      // No-op — see addPressListener.
     }
 
     @Override
