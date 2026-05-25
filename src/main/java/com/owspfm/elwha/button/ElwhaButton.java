@@ -885,7 +885,7 @@ public class ElwhaButton extends JComponent {
               return;
             }
             hovered = false;
-            if (pressed) {
+            if (pressed && firesPressMorph()) {
               pressMorph.reverse();
             }
             pressed = false;
@@ -904,7 +904,9 @@ public class ElwhaButton extends JComponent {
             pressed = true;
             requestFocusInWindow();
             startRipple(toBodyPoint(e.getPoint()));
-            pressMorph.start();
+            if (firesPressMorph()) {
+              pressMorph.start();
+            }
             repaint();
           }
 
@@ -912,12 +914,16 @@ public class ElwhaButton extends JComponent {
           public void mouseReleased(final MouseEvent e) {
             if (!pressed || !isEnabled()) {
               pressed = false;
-              pressMorph.reverse();
+              if (firesPressMorph()) {
+                pressMorph.reverse();
+              }
               repaint();
               return;
             }
             pressed = false;
-            pressMorph.reverse();
+            if (firesPressMorph()) {
+              pressMorph.reverse();
+            }
             if (containsClickPoint(e.getPoint())) {
               activate(e.getModifiersEx());
             }
@@ -935,7 +941,7 @@ public class ElwhaButton extends JComponent {
 
           @Override
           public void focusLost(final FocusEvent e) {
-            if (pressed) {
+            if (pressed && firesPressMorph()) {
               pressMorph.reverse();
             }
             pressed = false;
@@ -1201,6 +1207,14 @@ public class ElwhaButton extends JComponent {
     RipplePainter.paint(g, w, h, rippleOrigin, rippleProgress, radii, resolveForegroundColor());
   }
 
+  // #176 Phase 2 — SELECTABLE buttons own their shape signal through the select-flip; firing the
+  // press shape + width morph on top of an in-flight select-flip stacks too much motion on a
+  // quick click. The press color overlay (StateLayer.PRESSED) still fires — that's tracked by
+  // the `pressed` flag, not pressMorph. Design doc §5.
+  private boolean firesPressMorph() {
+    return interactionMode != ButtonInteractionMode.SELECTABLE;
+  }
+
   // #176 Phase 2 — pick per-direction easing for press (M3 emphasized.decelerate going in,
   // emphasized.accelerate going out per design doc §3), and apply it to the press animator's
   // current progress. Returns 0 when no morph is in flight and the press isn't held.
@@ -1241,11 +1255,22 @@ public class ElwhaButton extends JComponent {
     if (pressShrink <= 0) {
       return base;
     }
+    // #176 Phase 2 — only shrink corners that aren't already at "pill territory" (>= bodyH/2).
+    // For a pill corner the radius is already at its maximum; subtracting 4 px would visibly
+    // change the shape category from "pill" to "rounded-rect," which reads as shaving off the
+    // pill rather than shrinking — most obvious on small ROUND buttons where the pill arc is
+    // already small. For a pill, the width pinch alone is the press signal. Mixed-radii bodies
+    // (connected segments mid-flip, etc.) shrink only the non-pill corners. Design doc §5.
+    final int pillThreshold = h / 2;
     return CornerRadii.of(
-        Math.max(0, base.topLeftPx() - pressShrink),
-        Math.max(0, base.topRightPx() - pressShrink),
-        Math.max(0, base.bottomRightPx() - pressShrink),
-        Math.max(0, base.bottomLeftPx() - pressShrink));
+        shrinkOrKeepPill(base.topLeftPx(), pressShrink, pillThreshold),
+        shrinkOrKeepPill(base.topRightPx(), pressShrink, pillThreshold),
+        shrinkOrKeepPill(base.bottomRightPx(), pressShrink, pillThreshold),
+        shrinkOrKeepPill(base.bottomLeftPx(), pressShrink, pillThreshold));
+  }
+
+  private static int shrinkOrKeepPill(final int radius, final int shrink, final int pillThreshold) {
+    return radius >= pillThreshold ? radius : Math.max(0, radius - shrink);
   }
 
   private CornerRadii uniformRadiiFor(

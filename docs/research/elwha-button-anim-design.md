@@ -266,6 +266,25 @@ buttons keep it at 0.
 The existing ripple Timer is **untouched**. Press fires both the ripple and the morph; they layer
 in the paint stack (surface ← morph-shape ← ripple ← icon/label).
 
+**Two rules added during Phase 2 smoketest (2026-05-24)** that the original spec missed:
+
+1. **`SELECTABLE` buttons skip the press shape / width morph.** The `pressMorph` is not fired
+   for `ButtonInteractionMode.SELECTABLE`. The select-flip owns the shape signal there, and
+   stacking the 150 ms press cycle on top of the 300 ms select flip reads as "too much happening"
+   on a quick click — the operator could only resolve the motion by holding the press long enough
+   to separate the timings. The press color overlay (the `StateLayer.PRESSED` composite, driven
+   by the `pressed` flag — *not* `pressMorph`) still fires, so the click still has a tactile
+   beat. Standalone `CLICKABLE` buttons fire `pressMorph` as before.
+
+2. **The press shape shrink doesn't apply to pill corners.** A corner whose radius is already
+   ≥ `bodyH / 2` is a pill — subtracting `PRESS_RADIUS_DELTA_PX` from it visibly changes the
+   shape category from pill to rounded-rect ("shaving off the pill"), most obvious on a small
+   `ROUND` button where the pill arc is already small. For pill corners the width pinch is the
+   press signal; the radius stays at `bodyH / 2`. Non-pill corners (square shapes, mid-flip
+   geometries, connected-segment inner corners) shrink by the press delta as before. Encoded as
+   a per-corner `shrinkOrKeepPill(...)` helper so mixed-radii bodies (connected segments mid
+   flip, anywhere a button's corners aren't uniform) shrink only the non-pill ones.
+
 ---
 
 ## §6. ElwhaButtonGroup width-ripple — the standard-group neighbor choreography
