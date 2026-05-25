@@ -44,6 +44,7 @@ import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
+import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.Theme;
@@ -461,6 +462,7 @@ public final class ElwhaShowcase {
     controls.addSection("State");
     controls.addControl("", selectedBox);
     controls.addControl("", enabledBox);
+    installMorphControls(controls);
 
     final Runnable apply =
         () -> {
@@ -592,6 +594,51 @@ public final class ElwhaShowcase {
       code.append("\nbutton.setEnabled(false);");
     }
     return code.toString();
+  }
+
+  // #176 Phase 5 — shared "Animation" control group used by the Button and Button Group
+  // workbenches per design doc §13. Surfaces the global reduced-motion toggle (drives
+  // MorphAnimator.setReducedMotion, the same one ElwhaTheme.config(...).reducedMotion(...) wires)
+  // and the workbench-only duration multiplier so an operator can slow morphs down for
+  // observation. Listeners write directly to MorphAnimator globals — no stage rebuild needed
+  // because the morphs read these on every tick.
+  private static void installMorphControls(final WorkbenchControls controls) {
+    final JCheckBox reducedMotionBox = new JCheckBox("Reduced motion");
+    reducedMotionBox.setSelected(MorphAnimator.isReducedMotion());
+    reducedMotionBox.addActionListener(
+        e -> MorphAnimator.setReducedMotion(reducedMotionBox.isSelected()));
+
+    final JComboBox<MorphSpeed> speedBox = new JComboBox<>(MorphSpeed.values());
+    speedBox.setSelectedItem(MorphSpeed.NORMAL);
+    speedBox.addActionListener(
+        e ->
+            MorphAnimator.setDurationMultiplier(
+                ((MorphSpeed) speedBox.getSelectedItem()).multiplier));
+
+    controls.addSection("Animation");
+    controls.addControl("", reducedMotionBox);
+    controls.addControl("Speed", speedBox);
+  }
+
+  // Workbench-only speed presets — 1× is the §3 spec, 2× / 5× let the operator watch a single
+  // morph cycle at a slow enough rate to read the curve. Not a consumer API.
+  private enum MorphSpeed {
+    NORMAL("1× — natural", 1f),
+    HALF("2× — slow", 2f),
+    FIFTH("5× — very slow", 5f);
+
+    final String label;
+    final float multiplier;
+
+    MorphSpeed(final String label, final float multiplier) {
+      this.label = label;
+      this.multiplier = multiplier;
+    }
+
+    @Override
+    public String toString() {
+      return label;
+    }
   }
 
   /**
@@ -1236,6 +1283,7 @@ public final class ElwhaShowcase {
     controls.addControl("Connected colour style", colorBox);
     controls.addSection("State");
     controls.addControl("", enabledBox);
+    installMorphControls(controls);
 
     final Runnable apply =
         () -> {

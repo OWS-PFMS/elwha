@@ -95,6 +95,12 @@ public final class ElwhaTheme {
     applyTypography(config.typography());
 
     current = config;
+    // #176 Phase 5 — apply the reduced-motion override if the config carries one. {@code null}
+    // means "defer to the OS reduced-motion signal" (which MorphAnimator detects at class-load
+    // per design doc §9); a non-null Boolean forces the global toggle.
+    if (config.reducedMotion() != null) {
+      MorphAnimator.setReducedMotion(config.reducedMotion());
+    }
     repaintAllWindows();
   }
 

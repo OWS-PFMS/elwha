@@ -20,11 +20,18 @@ public final class Config {
   private final Theme theme;
   private final Mode mode;
   private final Typography typography;
+  // #176 Phase 5 — global reduced-motion override. {@code null} = "let the OS reduced-motion
+  // signal decide" (the {@link MorphAnimator} class-load detection in
+  // ShapeMorphPainter / MorphAnimator picks up macOS / Windows / Linux preferences); a
+  // {@code Boolean} value forces on or off regardless of OS state. Snapshot tooling pins this
+  // to {@code true} for determinism (design doc §10).
+  private final Boolean reducedMotion;
 
-  private Config(Theme theme, Mode mode, Typography typography) {
+  private Config(Theme theme, Mode mode, Typography typography, Boolean reducedMotion) {
     this.theme = theme;
     this.mode = mode;
     this.typography = typography;
+    this.reducedMotion = reducedMotion;
   }
 
   /**
@@ -61,6 +68,19 @@ public final class Config {
   }
 
   /**
+   * Returns the explicit reduced-motion override, or {@code null} when the config defers to the OS
+   * reduced-motion signal. {@code true} forces every {@link MorphAnimator} into the snap-to-target
+   * behavior — see {@link MorphAnimator#setReducedMotion(boolean)}.
+   *
+   * @return the explicit override, or {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public Boolean reducedMotion() {
+    return reducedMotion;
+  }
+
+  /**
    * Returns a copy of this config with a different theme.
    *
    * @param newTheme the theme for the derived config
@@ -69,7 +89,7 @@ public final class Config {
    * @since v0.1.0
    */
   public Config withTheme(Theme newTheme) {
-    return new Config(Objects.requireNonNull(newTheme, "theme"), mode, typography);
+    return new Config(Objects.requireNonNull(newTheme, "theme"), mode, typography, reducedMotion);
   }
 
   /**
@@ -81,7 +101,7 @@ public final class Config {
    * @since v0.1.0
    */
   public Config withMode(Mode newMode) {
-    return new Config(theme, Objects.requireNonNull(newMode, "mode"), typography);
+    return new Config(theme, Objects.requireNonNull(newMode, "mode"), typography, reducedMotion);
   }
 
   /**
@@ -93,7 +113,21 @@ public final class Config {
    * @since v0.1.0
    */
   public Config withTypography(Typography newTypography) {
-    return new Config(theme, mode, Objects.requireNonNull(newTypography, "typography"));
+    return new Config(
+        theme, mode, Objects.requireNonNull(newTypography, "typography"), reducedMotion);
+  }
+
+  /**
+   * Returns a copy of this config with a different reduced-motion override. Pass {@code null} to
+   * defer to the OS reduced-motion signal; pass {@code true} / {@code false} to force on / off.
+   *
+   * @param newReducedMotion the override, or {@code null}
+   * @return a new config identical to this one but with {@code newReducedMotion}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public Config withReducedMotion(Boolean newReducedMotion) {
+    return new Config(theme, mode, typography, newReducedMotion);
   }
 
   /**
@@ -119,6 +153,7 @@ public final class Config {
     private Theme theme;
     private Mode mode = Mode.SYSTEM;
     private Typography typography;
+    private Boolean reducedMotion;
 
     private Builder() {}
 
@@ -162,6 +197,23 @@ public final class Config {
     }
 
     /**
+     * Sets the reduced-motion override. {@code null} (the default) defers to the OS signal; {@code
+     * true} forces every Elwha morph animation to snap to its destination ({@link
+     * MorphAnimator#setReducedMotion}); {@code false} forces animations on regardless of OS state.
+     * Snapshot tooling and visual-regression tests pin this to {@code true} for determinism —
+     * design doc §10.
+     *
+     * @param value the override, or {@code null} to defer to the OS
+     * @return this builder, for chaining
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public Builder reducedMotion(Boolean value) {
+      this.reducedMotion = value;
+      return this;
+    }
+
+    /**
      * Builds the immutable {@link Config}.
      *
      * @return the completed config
@@ -174,7 +226,7 @@ public final class Config {
         throw new IllegalStateException("Config requires a theme — call theme(...) before build()");
       }
       Typography resolvedTypography = typography != null ? typography : Typography.defaults();
-      return new Config(theme, mode, resolvedTypography);
+      return new Config(theme, mode, resolvedTypography, reducedMotion);
     }
   }
 }

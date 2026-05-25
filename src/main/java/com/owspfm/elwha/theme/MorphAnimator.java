@@ -41,22 +41,72 @@ public final class MorphAnimator {
   private static final int TICK_INTERVAL_MS = 16;
 
   private static volatile boolean reducedMotion;
+  // #176 Phase 5 — workbench-driven global duration multiplier. Default {@code 1.0} (the §3
+  // pinned durations apply verbatim); the Showcase's Animation control group raises this to
+  // {@code 2.0} / {@code 5.0} so an operator can watch a single morph cycle without chasing a
+  // fast click. Not part of the consumer-facing API (the §3 durations are pinned for a reason);
+  // the multiplier is workbench-only.
+  private static volatile float durationMultiplier = 1f;
 
-  // #176 Phase 2 — auto-detect macOS reduced-motion at class-load. Linux + Windows are deferred
-  // to Phase 5 per design doc §9; consumers can flip the global toggle via
-  // setReducedMotion(boolean) regardless of platform. Wrapped in try/catch because a headless
-  // JVM (CI snapshot harness, build server) has no Toolkit and would otherwise NPE on class
-  // load — every Elwha component lives inside a Swing app at runtime, so this only matters for
-  // build-time class loading.
+  // #176 Phase 2 / Phase 5 — auto-detect OS reduced-motion at class-load (design doc §9). Each
+  // platform check is wrapped independently so a failure on one (a JVM without an AWT Toolkit, a
+  // Linux box without {@code gsettings}, a Windows box with the property unset) doesn't shadow
+  // the others. Consumers can still flip the global toggle via {@link
+  // #setReducedMotion(boolean)} regardless of platform — or via {@code
+  // ElwhaTheme.config(...).reducedMotion(...)} for the public surface.
   static {
+    if (detectMacReducedMotion() || detectWindowsReducedMotion() || detectLinuxReducedMotion()) {
+      reducedMotion = true;
+    }
+  }
+
+  private static boolean detectMacReducedMotion() {
     try {
-      final Object macReduce =
-          Toolkit.getDefaultToolkit().getDesktopProperty("apple.awt.reduceMotion");
-      if (Boolean.TRUE.equals(macReduce)) {
-        reducedMotion = true;
-      }
+      final Object value = Toolkit.getDefaultToolkit().getDesktopProperty("apple.awt.reduceMotion");
+      return Boolean.TRUE.equals(value);
     } catch (final RuntimeException ignored) {
-      // Headless or otherwise unavailable — leave reducedMotion at its default (false).
+      return false;
+    }
+  }
+
+  private static boolean detectWindowsReducedMotion() {
+    // The JDK exposes the "Show animations in Windows" Ease-of-Access toggle through this
+    // desktop property — its value is the closest signal Windows offers; when animations are
+    // disabled, motion-heavy effects across Swing already collapse. Inverted on read because
+    // the property returns "are animations enabled," not "is motion reduced."
+    try {
+      final Object value =
+          Toolkit.getDefaultToolkit().getDesktopProperty("win.text.animationsEnabled");
+      return Boolean.FALSE.equals(value);
+    } catch (final RuntimeException ignored) {
+      return false;
+    }
+  }
+
+  private static boolean detectLinuxReducedMotion() {
+    // GNOME exposes the toggle through {@code gsettings get org.gnome.desktop.interface
+    // enable-animations}. Wrapped in process-level safety: short timeout, swallow every
+    // exception, OS-name guard so other JVMs don't spawn the process. KDE / others don't have
+    // a portable equivalent — users on those desktops fall back to the
+    // {@code ElwhaTheme.config(...).reducedMotion(...)} explicit override.
+    final String osName = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT);
+    if (!osName.contains("linux")) {
+      return false;
+    }
+    try {
+      final Process p =
+          new ProcessBuilder("gsettings", "get", "org.gnome.desktop.interface", "enable-animations")
+              .redirectErrorStream(true)
+              .start();
+      if (!p.waitFor(500, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+        p.destroyForcibly();
+        return false;
+      }
+      final String output = new String(p.getInputStream().readAllBytes()).trim();
+      // gsettings prints "true" or "false" — animations enabled means motion isn't reduced.
+      return "false".equalsIgnoreCase(output);
+    } catch (final Exception ignored) {
+      return false;
     }
   }
 
@@ -110,6 +160,33 @@ public final class MorphAnimator {
    */
   public static boolean isReducedMotion() {
     return reducedMotion;
+  }
+
+  /**
+   * Sets the global animation-duration multiplier — every subsequent {@link #start()} / {@link
+   * #reverse()} call uses {@code duration * multiplier} as its effective duration. The default is
+   * {@code 1.0}. Used by The Elwha Showcase's Animation control group to slow morphs down for
+   * observation (1× / 2× / 5×). Not part of the consumer-facing API — the §3 durations are pinned
+   * values, not a tuning knob.
+   *
+   * @param multiplier the global multiplier; clamped to {@code >= 0.1} to defend against a
+   *     zero-or-negative tick step
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static void setDurationMultiplier(final float multiplier) {
+    durationMultiplier = Math.max(0.1f, multiplier);
+  }
+
+  /**
+   * Returns the current global animation-duration multiplier.
+   *
+   * @return the multiplier; {@code 1.0} by default
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static float durationMultiplier() {
+    return durationMultiplier;
   }
 
   /**
@@ -251,7 +328,10 @@ public final class MorphAnimator {
     final long now = System.nanoTime();
     final float deltaSeconds = (now - lastTickNanos) / 1_000_000_000f;
     lastTickNanos = now;
-    final float rate = 1000f / durationMs;
+    // #176 Phase 5 — the global durationMultiplier stretches effective duration so the Showcase
+    // can slow morphs down for observation without touching the per-animator durationMs.
+    final float effectiveDurationMs = durationMs * durationMultiplier;
+    final float rate = 1000f / effectiveDurationMs;
     final float step = deltaSeconds * rate;
     if (target > progress) {
       progress = Math.min(target, progress + step);
