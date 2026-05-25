@@ -164,11 +164,21 @@ critically-damped spatial springs with response times of:
 | Press shape morph (in) | 150 ms (`short3`) | `emphasized.decelerate` | Press needs to read as immediate; deceleration in matches the "snap to pressed state." |
 | Press shape morph (out / release) | 150 ms (`short3`) | `emphasized.accelerate` | Releases feel snappier with acceleration out. |
 | Press width morph | 150 ms (`short3`) | `spring.spatial.default` (250 ms response capped to the 150 ms window) | Spring gives the springy choreography M3 calls out without overshoot. |
-| Select shape flip | 300 ms (`medium2`) | `emphasized` | Slower than press — selection is a **state change**, not an interaction tic. |
+| Select shape flip | 300 ms (`medium2`) | `ease-in-out` (Elwha-pinned, see below) | Slower than press — selection is a **state change**, not an interaction tic. |
 | Group width-ripple (STANDARD) | 150 ms (`short3`) | `spring.spatial.default` | Matches the press to read coherently. |
 
 These are the **Elwha-locked values**, not M3-mandated. Comments in `ShapeMorphPainter` cite the M3
 token names so the rationale travels with the code.
+
+**Why the select-flip uses a non-M3 curve.** M3's motion tokens are exclusively decelerate or
+accelerate variants; the select flip is a *symmetric toggle* — forward (unselected → selected) and
+reverse (selected → unselected) must read as visually identical, or the toggle looks buggy.
+Asymmetric curves like `emphasized` (which we originally pinned here) trace different visual
+paths in each direction: forward shows a long dwell at the start state, while reverse snaps off
+the start state and then crawls. We diverge from M3 with `EASE_IN_OUT = cubic-bezier(0.42, 0,
+0.58, 1)` (the classic CSS ease-in-out, which satisfies `ease(t) + ease(1-t) = 1`) so a select-on
+and a select-off look like mirror images of the same motion. The Phase 1 playground
+(`ShapeMorphPlayground`) was the validation surface — see §15.2 for the empirical decision.
 
 ---
 
@@ -255,6 +265,25 @@ buttons keep it at 0.
 
 The existing ripple Timer is **untouched**. Press fires both the ripple and the morph; they layer
 in the paint stack (surface ← morph-shape ← ripple ← icon/label).
+
+**Two rules added during Phase 2 smoketest (2026-05-24)** that the original spec missed:
+
+1. **`SELECTABLE` buttons skip the press shape / width morph.** The `pressMorph` is not fired
+   for `ButtonInteractionMode.SELECTABLE`. The select-flip owns the shape signal there, and
+   stacking the 150 ms press cycle on top of the 300 ms select flip reads as "too much happening"
+   on a quick click — the operator could only resolve the motion by holding the press long enough
+   to separate the timings. The press color overlay (the `StateLayer.PRESSED` composite, driven
+   by the `pressed` flag — *not* `pressMorph`) still fires, so the click still has a tactile
+   beat. Standalone `CLICKABLE` buttons fire `pressMorph` as before.
+
+2. **The press shape shrink doesn't apply to pill corners.** A corner whose radius is already
+   ≥ `bodyH / 2` is a pill — subtracting `PRESS_RADIUS_DELTA_PX` from it visibly changes the
+   shape category from pill to rounded-rect ("shaving off the pill"), most obvious on a small
+   `ROUND` button where the pill arc is already small. For pill corners the width pinch is the
+   press signal; the radius stays at `bodyH / 2`. Non-pill corners (square shapes, mid-flip
+   geometries, connected-segment inner corners) shrink by the press delta as before. Encoded as
+   a per-corner `shrinkOrKeepPill(...)` helper so mixed-radii bodies (connected segments mid
+   flip, anywhere a button's corners aren't uniform) shrink only the non-pill ones.
 
 ---
 
@@ -451,6 +480,17 @@ _All 10 resolved 2026-05-24. Numbering is stable so existing references (§15.1,
    Workbench duration-multiplier during smoke-testing.** The §3 numbers are derived from M3's
    motion-token tiers and are the most defensible starting point; the Workbench is the iteration
    surface, not the spec.
+
+   **Phase 1 playground update (2026-05-24):** the select-flip curve was originally pinned to
+   `EMPHASIZED`. Smoke-testing in `ShapeMorphPlayground` showed `EMPHASIZED` reads as visibly
+   asymmetric on a symmetric toggle (forward and reverse trace different visual paths because the
+   curve is heavily decelerating). **Curve re-pinned to `EASE_IN_OUT`** — the classic
+   symmetric-across-midpoint cubic-bezier (0.42, 0, 0.58, 1) — added to {@code Easing} as an
+   explicit Elwha divergence from M3 tokens (none of M3's variants are symmetric). The duration
+   stays at 300 ms (`medium2`); the operator's playground read suggested 150 ms felt better in
+   isolation, but a bare rectangle has no semantic weight, and a real button needs the longer
+   dwell to register as a deliberate state change. **Re-validate the 300 ms duration in Phase 2
+   on a real button.**
 
 3. **Spring overshoot / damping ratio** → **0.85 ("responsive, not playful") for v1; revisit
    after smoke-testing.** Underdamping (0.7-0.75) is an Expressive-ier option; we adopt it later

@@ -35,7 +35,7 @@ import javax.swing.plaf.FontUIResource;
  * keys, apply typography, and repaint every live window.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.3.0
  * @since v0.1.0
  */
 public final class ElwhaTheme {
@@ -95,6 +95,12 @@ public final class ElwhaTheme {
     applyTypography(config.typography());
 
     current = config;
+    // #176 Phase 5 — apply the reduced-motion override if the config carries one. {@code null}
+    // means "defer to the OS reduced-motion signal" (which MorphAnimator detects at class-load
+    // per design doc §9); a non-null Boolean forces the global toggle.
+    if (config.reducedMotion() != null) {
+      MorphAnimator.setReducedMotion(config.reducedMotion());
+    }
     repaintAllWindows();
   }
 
