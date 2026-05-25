@@ -167,6 +167,16 @@ public class ElwhaButton extends JComponent {
   private final MorphAnimator widthMorph = new MorphAnimator(this, MorphAnimator.SHORT3_MS);
   private float widthBorrowFactor;
 
+  // #176 Phase 4 — animated connected-segment pill-pop. setCornerRadii(...) becomes the morph
+  // target rather than the painted value: the previously-set radii are saved in
+  // cornerRadiiFrom and cornerRadiiMorph animates from old → new through EASE_IN_OUT at the
+  // §3-pinned MEDIUM2 (300 ms). The connected ElwhaButtonGroup pumps every segment's radii on
+  // selection change; idempotent calls (value unchanged) skip the morph. Going to / from
+  // {@code null} (i.e. switching variant) snaps without animation since one endpoint would be
+  // undefined.
+  private final MorphAnimator cornerRadiiMorph = new MorphAnimator(this, MorphAnimator.MEDIUM2_MS);
+  private CornerRadii cornerRadiiFrom;
+
   // Backup poll timer for hover-clear — same workaround ElwhaChip / ElwhaIconButton use.
   private Timer hoverPollTimer;
 
@@ -552,10 +562,40 @@ public class ElwhaButton extends JComponent {
     if (Objects.equals(this.cornerRadii, radii)) {
       return this;
     }
+    // #176 Phase 4 — when both the old value and the new value are non-null, animate from one to
+    // the other via cornerRadiiMorph (300 ms EASE_IN_OUT, the connected pill-pop choreography in
+    // design doc §7). Mid-animation, capture the currently-displayed (interpolated) value as the
+    // new `from` so the next animation starts from where the eye is, not from the previous
+    // target — avoids the visible snap when a connected group pumps state changes faster than
+    // 300 ms apart. Going to or from {@code null} (variant switching) snaps because one endpoint
+    // would be undefined.
+    final CornerRadii newFrom = captureCornerRadiiFromValue();
+    this.cornerRadiiFrom = newFrom;
     this.cornerRadii = radii;
+    if (this.cornerRadiiFrom != null && this.cornerRadii != null) {
+      cornerRadiiMorph.snapTo(0f);
+      cornerRadiiMorph.start();
+    } else {
+      cornerRadiiMorph.snapTo(1f);
+    }
     revalidate();
     repaint();
     return this;
+  }
+
+  // Returns the currently-displayed radii — either the previous static target, or the in-flight
+  // interpolated value if a cornerRadii morph is mid-flight. Used as the `from` endpoint for a
+  // newly-started morph so a rapid state-change sequence reads as a continuous motion rather
+  // than a series of snaps.
+  private CornerRadii captureCornerRadiiFromValue() {
+    if (this.cornerRadii == null || this.cornerRadiiFrom == null) {
+      return this.cornerRadii;
+    }
+    if (!cornerRadiiMorph.isRunning()) {
+      return this.cornerRadii;
+    }
+    return ShapeMorphPainter.interpolate(
+        this.cornerRadiiFrom, this.cornerRadii, cornerRadiiMorph.progress(), Easing.EASE_IN_OUT);
   }
 
   /**
@@ -1139,6 +1179,7 @@ public class ElwhaButton extends JComponent {
     pressMorph.stop();
     selectMorph.stop();
     widthMorph.stop();
+    cornerRadiiMorph.stop();
     super.removeNotify();
   }
 
@@ -1152,6 +1193,12 @@ public class ElwhaButton extends JComponent {
     pressMorph.snapTo(0f);
     widthMorph.snapTo(0f);
     widthBorrowFactor = 0f;
+    // #176 Phase 4 — first-display paints the current cornerRadii target directly; subsequent
+    // setCornerRadii(...) calls (e.g. selection moves in a connected group) will animate via
+    // captureCornerRadiiFromValue. snapTo(1) is the "morph is done" state so morphedRadii uses
+    // the target verbatim.
+    cornerRadiiMorph.snapTo(1f);
+    cornerRadiiFrom = null;
   }
 
   /**
@@ -1318,7 +1365,19 @@ public class ElwhaButton extends JComponent {
       final int w, final int h, final int uniformArc, final float easedPress) {
     final CornerRadii base;
     if (cornerRadii != null) {
-      base = cornerRadii;
+      // #176 Phase 4 — connected-segment animated pill-pop. Interpolate from the previous radii
+      // to the current target through EASE_IN_OUT (symmetric so a slide-left and slide-right
+      // read identically), driven by cornerRadiiMorph. Once the morph completes (progress = 1)
+      // the interpolation collapses to the target. Static / first-set values bypass the
+      // interpolation entirely (cornerRadiiFrom == null) so non-connected use of setCornerRadii
+      // is unaffected.
+      if (cornerRadiiFrom != null && cornerRadiiMorph.progress() < 1f) {
+        base =
+            ShapeMorphPainter.interpolate(
+                cornerRadiiFrom, cornerRadii, cornerRadiiMorph.progress(), Easing.EASE_IN_OUT);
+      } else {
+        base = cornerRadii;
+      }
     } else {
       final CornerRadii resting = uniformRadiiFor(shape, h, uniformArc);
       final CornerRadii selectedTarget = uniformRadiiFor(invertShape(shape), h, uniformArc);
