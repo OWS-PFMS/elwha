@@ -2,6 +2,8 @@ package com.owspfm.elwha.fab;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.StateLayer;
@@ -44,14 +46,20 @@ import javax.swing.Timer;
  * docs/research/elwha-fab-design.md}; tracks M3 Expressive post-May-2025 (drops baseline Small,
  * Surface, baseline Extended, and Lowered FABs).
  *
- * <p><strong>Phase 1 + 2 scope.</strong> Phase 1 (#187–#189) shipped the Standard form: {@link
+ * <p><strong>Phase 1 + 2 + 3 scope.</strong> Phase 1 (#187–#189) shipped the Standard form: {@link
  * #standard(Icon)} factory + container rendering across all three sizes and six color styles + the
  * full state model (hover state layer + level-4 elevation bump, focus state layer + focus ring,
- * press state layer + ripple). Phase 2 (#190–#191) layers in the Extended form: {@link
+ * press state layer + ripple). Phase 2 (#190–#191) layered in the Extended form: {@link
  * #extended(String)} and {@link #extended(Icon, String)} factories, per-size label typography
  * (Inter Medium / Regular per design doc §4.2), dynamic content-driven width, and RTL mirroring of
- * the icon-leading / label-trailing order. The {@code morphTo(...)} API (#192–#193) is still Phase
- * 3 — see the design doc §13 story breakdown.
+ * the icon-leading / label-trailing order. Phase 3 (#192–#193) adds the bidirectional Standard ↔
+ * Extended morph via {@link #morphTo(Form)} — one {@link MorphAnimator} at {@link
+ * MorphAnimator#MEDIUM2_MS 300 ms} drives three parallel transitions per design doc §9.1: container
+ * width (the visible "shape morph" — Standard's square body grows / shrinks into Extended's wider
+ * round-rect through the eased progress), icon translation (centered ↔ leading inset), and label
+ * opacity fade. Bidirectional morph requires an instance constructed via {@link #extended(Icon,
+ * String)} so both forms' content rules can be satisfied; the other factories are single-form by
+ * construction.
  *
  * <p><strong>Posture.</strong> Extends {@link JComponent} with a hand-rolled {@link
  * AccessibleJComponent} override, matching {@link com.owspfm.elwha.button.ElwhaButton} and {@link
@@ -353,15 +361,47 @@ public final class ElwhaFab extends JComponent {
   // this is fine — the unused outer pixels are transparent.
   private static final Insets SHADOW_RESERVE = ShadowPainter.shadowInsets(HOVER_ELEVATION);
 
-  // Which content rule this instance enforces — chosen at construction by the static factory and
-  // immutable thereafter. STANDARD pins icon-required / text-forbidden (design doc §3); EXTENDED
-  // pins text-required / icon-optional.
-  private enum Form {
+  /**
+   * The two FAB forms — pinned by the construction factory and the destination value of {@link
+   * #morphTo(Form)}. {@link #STANDARD} is icon-only / text-forbidden, {@link #EXTENDED} is
+   * text-required / icon-optional, per the M3 content rules in design doc §3.
+   *
+   * <p>A FAB constructed via {@link ElwhaFab#standard(Icon)} resists morphing to {@link #EXTENDED}
+   * (no label text to draw); one constructed via {@link ElwhaFab#extended(String)} resists morphing
+   * to {@link #STANDARD} (no icon to draw). Only {@link ElwhaFab#extended(Icon, String)} produces
+   * an instance that can move freely in either direction — Nav Rail (#159) is the consumer pattern.
+   *
+   * @author Charles Bryan
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public enum Form {
+
+    /**
+     * Standard (icon-only) FAB — square container, icon centered. Construction factory: {@link
+     * ElwhaFab#standard(Icon)}.
+     *
+     * @version v0.3.0
+     * @since v0.3.0
+     */
     STANDARD,
+
+    /**
+     * Extended (icon + label, or label-only) FAB — content-hugging round-rect, icon leading and
+     * label trailing in LTR (mirrored in RTL). Construction factories: {@link
+     * ElwhaFab#extended(String)} and {@link ElwhaFab#extended(Icon, String)}.
+     *
+     * @version v0.3.0
+     * @since v0.3.0
+     */
     EXTENDED
   }
 
+  // Construction-time form — pinned by the factory and immutable. Tracks which content (icon, text)
+  // is required for either morph endpoint to be reachable. currentForm is the live destination,
+  // possibly different from form after morphTo(...) has run.
   private final Form form;
+  private Form currentForm;
   private Size size = Size.SMALL;
   private Color color = Color.PRIMARY_CONTAINER;
   private final Icon icon;
@@ -381,13 +421,22 @@ public final class ElwhaFab extends JComponent {
 
   private final List<ActionListener> actionListeners = new ArrayList<>();
 
+  // The form-morph progress source. 0 paints Standard, 1 paints Extended; every value in between is
+  // an interpolated frame of the §9.1 morph (container width, icon X, label alpha). The same
+  // animator drives both directions — start() animates toward Extended, reverse() toward Standard.
+  // Initialized in the constructor by snapping to the construction-time form so a non-morphing FAB
+  // paints identically to its pre-Phase-3 behavior.
+  private final MorphAnimator formMorph = new MorphAnimator(this, MorphAnimator.MEDIUM2_MS);
+
   private ElwhaFab(final Form form, final Icon icon, final String text) {
     this.form = form;
+    this.currentForm = form;
     this.icon = icon;
     this.text = text;
     if (icon instanceof FlatSVGIcon svg) {
       svg.setColorFilter(iconFilter);
     }
+    formMorph.snapTo(form == Form.EXTENDED ? 1f : 0f);
     setOpaque(false);
     setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     setFocusable(true);
@@ -539,6 +588,81 @@ public final class ElwhaFab extends JComponent {
    */
   public String getText() {
     return text;
+  }
+
+  // ------------------------------------------------------------- morph
+
+  /**
+   * Animates this FAB to the given {@link Form} per design doc §9 — one 300 ms {@link
+   * MorphAnimator} drives container width, icon translation, and label opacity in parallel, all as
+   * functions of a single eased progress {@code [0, 1]}. Calling with the current form is a no-op;
+   * a fresh call while a morph is in flight retargets the existing animator (forward becomes
+   * reverse or vice versa) so the FAB never falls out of sync with its drive signal.
+   *
+   * <p><strong>Content prerequisites.</strong> {@link Form#EXTENDED} requires non-{@code null}
+   * label text — an instance built via {@link #standard(Icon)} cannot morph to {@code EXTENDED}.
+   * {@link Form#STANDARD} requires a non-{@code null} icon — an instance built via {@link
+   * #extended(String)} cannot morph to {@code STANDARD}. Only {@link #extended(Icon, String)}
+   * carries the content for both endpoints; that is the Nav Rail (#159) consumer pattern.
+   *
+   * @param target the destination form
+   * @return {@code this} for fluent chaining
+   * @throws NullPointerException if {@code target} is {@code null}
+   * @throws IllegalStateException if the target form's content rules cannot be satisfied
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaFab morphTo(final Form target) {
+    if (target == null) {
+      throw new NullPointerException("target");
+    }
+    if (target == Form.EXTENDED && text == null) {
+      throw new IllegalStateException(
+          "morphTo(EXTENDED) requires a non-null label — construct via extended(Icon, String)");
+    }
+    if (target == Form.STANDARD && icon == null) {
+      throw new IllegalStateException(
+          "morphTo(STANDARD) requires a non-null icon — construct via extended(Icon, String)");
+    }
+    if (target == currentForm) {
+      return this;
+    }
+    currentForm = target;
+    if (target == Form.EXTENDED) {
+      formMorph.start();
+    } else {
+      formMorph.reverse();
+    }
+    revalidate();
+    return this;
+  }
+
+  /**
+   * Returns the live form — the destination of the most recent {@link #morphTo(Form)} call, or the
+   * construction-time form if {@code morphTo} has never been called. Stays {@link Form#EXTENDED} or
+   * {@link Form#STANDARD} for the entire animation; querying mid-morph does not report an
+   * intermediate state.
+   *
+   * @return the live form (never {@code null})
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public Form getForm() {
+    return currentForm;
+  }
+
+  /**
+   * Returns whether the form-morph animator is currently running — {@code true} from the {@link
+   * #morphTo(Form)} call that initiates a direction change until the animator's progress settles on
+   * its target value. Useful for consumers ({@code NavRail}) that want to defer follow-on layout
+   * work until the morph completes.
+   *
+   * @return {@code true} if a morph is in flight
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public boolean isMorphing() {
+    return formMorph.isRunning();
   }
 
   // ------------------------------------------------------------- listeners
@@ -734,11 +858,23 @@ public final class ElwhaFab extends JComponent {
 
   // The painted body width. Standard is square (containerPx); Extended is content-hugging — leading
   // inset + (icon + icon-label gap when present) + label width + trailing inset — clamped up to the
-  // M3 minimum (80 dp). No max-width clamp and no truncation per design doc §4.3.
+  // M3 minimum (80 dp). No max-width clamp and no truncation per design doc §4.3. Mid-morph the
+  // width interpolates between the two endpoints through Easing.EMPHASIZED so the body's apparent
+  // shape glides from square (Standard) to rounded-rect (Extended) and back.
   private int bodyWidthPx() {
-    if (form == Form.STANDARD) {
-      return size.containerPx();
+    final int standardW = size.containerPx();
+    final int extendedW = extendedBodyWidthPx();
+    final float eased = Easing.EMPHASIZED.ease(formMorph.progress());
+    if (eased <= 0f) {
+      return standardW;
     }
+    if (eased >= 1f) {
+      return extendedW;
+    }
+    return Math.round(standardW + (extendedW - standardW) * eased);
+  }
+
+  private int extendedBodyWidthPx() {
     final int leading = size.extendedLeadingPx();
     final int trailing = size.extendedTrailingPx();
     final int labelW = labelWidthPx();
@@ -857,6 +993,10 @@ public final class ElwhaFab extends JComponent {
     if (rippleTimer != null) {
       rippleTimer.stop();
     }
+    // Snap the form morph to its destination on detach so a re-add starts cleanly. snapTo also
+    // stops the underlying Timer — equivalent to {@link MorphAnimator#immediateFinish()} but
+    // explicit about the parking value we want.
+    formMorph.snapTo(currentForm == Form.EXTENDED ? 1f : 0f);
     super.removeNotify();
   }
 
@@ -864,6 +1004,13 @@ public final class ElwhaFab extends JComponent {
 
   @Override
   protected void paintComponent(final Graphics g) {
+    // Mid-morph the body width changes every frame; revalidate so the parent layout can grow /
+    // shrink the FAB's reserved footprint in lockstep with the painted body. Outside of an active
+    // morph this is a no-op — preferred size is stable.
+    if (formMorph.isRunning()) {
+      revalidate();
+    }
+
     final int bodyW = bodyWidthPx();
     final int bodyH = bodyHeightPx();
     final int arc = size.cornerRadiusPx();
@@ -874,6 +1021,16 @@ public final class ElwhaFab extends JComponent {
     final StateLayer overlay = activeOverlay();
     final ColorRole borderRole = focused ? ColorRole.PRIMARY : null;
     final float borderWidth = focused ? FOCUS_BORDER_WIDTH : 0f;
+    // §9.1 step 1 — container shape change. In Phase 3 today, Standard and Extended share the same
+    // per-size corner radius — the visible "shape morph" is the width morph that bodyWidthPx()
+    // already drives, plus the SurfacePainter clamp Math.min(arc, min(w, h)) keeping the rounded
+    // ends well-formed at every interpolated width. Routing through the int-arc SurfacePainter /
+    // ShadowPainter paths matches the convention every other shadowed Elwha primitive uses (a
+    // value that's a RoundRectangle2D arcWidth — corner diameter, not radius — so body and shadow
+    // silhouette agree on the same corner). A future asymmetric-radii variant routes through
+    // {@link com.owspfm.elwha.theme.ShapeMorphPainter#interpolate} + the per-corner SurfacePainter
+    // overload — the per-corner painter uses the same numeric value as a real radius, so callers
+    // mixing it with ShadowPainter must reconcile the convention.
 
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
@@ -911,45 +1068,14 @@ public final class ElwhaFab extends JComponent {
         g, bodyW, bodyH, rippleOrigin, rippleProgress, arc, color.onContainerRole().resolve());
   }
 
-  // Standard: icon centered. Extended (LTR): icon at the leading inset, label after the icon-label
-  // gap, both vertically centered on the body. RTL mirroring is S5 — for now the layout is
-  // hard-LTR. design doc §4.2 / §7.2.
+  // Unified Standard ↔ Extended paint. Three transitions run on the same eased progress per design
+  // doc §9.1: container width (already baked into bodyW from bodyWidthPx), icon X (centered ↔
+  // leading-inset), and label alpha (0 ↔ 1). RTL mirrors the icon-leading / label-trailing order
+  // through bodyW so the design doc §11 contract holds for every mid-morph frame too.
   private void paintContent(
       final Graphics2D g, final int bodyW, final int bodyH, final float contentAlpha) {
-    final Graphics2D g2 = (Graphics2D) g.create();
-    try {
-      if (contentAlpha < 1f) {
-        g2.setComposite(AlphaComposite.SrcOver.derive(contentAlpha));
-      }
-      if (form == Form.STANDARD) {
-        paintIconCentered(g2, bodyW, bodyH);
-        return;
-      }
-      paintExtended(g2, bodyW, bodyH);
-    } finally {
-      g2.dispose();
-    }
-  }
-
-  private void paintIconCentered(final Graphics2D g, final int bodyW, final int bodyH) {
-    if (icon == null) {
-      return;
-    }
-    final int ix = (bodyW - icon.getIconWidth()) / 2;
-    final int iy = (bodyH - icon.getIconHeight()) / 2;
-    icon.paintIcon(this, g, ix, iy);
-  }
-
-  // Extended layout. Reading-order positions stay icon → label per design doc §11; pixel-mirror
-  // happens in RTL so the icon sits at the body's trailing edge instead of its leading edge. When
-  // the M3 80 dp minimum-width floor binds (very short label at SMALL), the content block is
-  // centered inside the inflated body — the leading and trailing insets share the slack equally so
-  // the result reads symmetric rather than left-anchored.
-  private void paintExtended(final Graphics2D g, final int bodyW, final int bodyH) {
+    final float eased = Easing.EMPHASIZED.ease(formMorph.progress());
     final boolean ltr = getComponentOrientation().isLeftToRight();
-    final int leading = size.extendedLeadingPx();
-    final int iconW = (icon != null) ? size.iconPx() : 0;
-    final int gap = (icon != null) ? size.extendedIconGapPx() : 0;
 
     final Font font = size.labelTypeRole().resolve();
     g.setFont(font);
@@ -961,28 +1087,76 @@ public final class ElwhaFab extends JComponent {
     final FontMetrics fm = getFontMetrics(font);
     final int labelW = (text == null || text.isEmpty()) ? 0 : fm.stringWidth(text);
 
-    // The natural content width (without the 80 dp floor). When floor binds, this is less than
-    // bodyW and we recenter so the content block sits in the middle of the inflated body.
-    final int contentW = leading + iconW + gap + labelW + size.extendedTrailingPx();
-    final int slack = Math.max(0, bodyW - contentW);
+    final int iconW = (icon != null) ? icon.getIconWidth() : 0;
+    final int iconH = (icon != null) ? icon.getIconHeight() : 0;
+    final int leading = size.extendedLeadingPx();
+    final int gap = size.extendedIconGapPx();
+
+    // Extended-form icon X (LTR-positioned, mirrored via bodyW for RTL). Slack-centers the content
+    // block when the 80 dp floor binds, matching the Phase 2 layout exactly.
+    final int extendedContentW =
+        leading
+            + iconW
+            + ((iconW > 0 && labelW > 0) ? gap : 0)
+            + labelW
+            + size.extendedTrailingPx();
+    final int slack = Math.max(0, bodyW - extendedContentW);
     final int leadOffset = leading + slack / 2;
+    final int extendedIconX = ltr ? leadOffset : bodyW - leadOffset - iconW;
 
-    final int iconX = ltr ? leadOffset : bodyW - leadOffset - iconW;
-    final int labelX;
-    if (ltr) {
-      labelX = leadOffset + iconW + gap;
-    } else {
-      labelX = bodyW - leadOffset - iconW - gap - labelW;
-    }
+    // Standard-form icon X — centered in whatever current bodyW is, so the icon stays optically
+    // centered even mid-morph (it slides outward as the body grows).
+    final int standardIconX = (bodyW - iconW) / 2;
 
-    if (icon != null) {
-      final int iy = (bodyH - icon.getIconHeight()) / 2;
-      icon.paintIcon(this, g, iconX, iy);
-    }
-    if (labelW > 0) {
-      final int baseline = bodyH / 2 + (fm.getAscent() - fm.getDescent()) / 2;
-      g.setColor(color.onContainerRole().resolve());
-      g.drawString(text, labelX, baseline);
+    // Eased horizontal lerp between the two anchors. iy is constant (vertical center) — design doc
+    // §4.1 and §4.2 both put the icon on the vertical midline.
+    final int iconX = Math.round(standardIconX + (extendedIconX - standardIconX) * eased);
+    final int iconY = (bodyH - iconH) / 2;
+
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      if (contentAlpha < 1f) {
+        g2.setComposite(AlphaComposite.SrcOver.derive(contentAlpha));
+      }
+      if (icon != null) {
+        icon.paintIcon(this, g2, iconX, iconY);
+      }
+      // Label alpha is shifted into the *second half* of the eased progress — the M3
+      // container-emphasized fade pattern. Going Standard → Extended (forward), the body
+      // expands through the first half with no visible label, then the label fades in during
+      // the second half once the body has room. Going Extended → Standard (reverse), the same
+      // curve runs backwards: the label fades out during the first half of the reverse, then
+      // the body shrinks through the second half with no visible label — which prevents the
+      // glyph from being seen outside the body as it contracts.
+      final float labelAlpha = Math.max(0f, Math.min(1f, (eased - 0.5f) * 2f));
+      if (labelW > 0 && labelAlpha > 0f) {
+        final int labelX;
+        if (iconW > 0) {
+          labelX = ltr ? leadOffset + iconW + gap : bodyW - leadOffset - iconW - gap - labelW;
+        } else {
+          labelX = ltr ? leadOffset : bodyW - leadOffset - labelW;
+        }
+        final Graphics2D gl = (Graphics2D) g2.create();
+        try {
+          // Defensive clip — even with the shifted alpha curve, a slow morph or a future
+          // wider-label edge case shouldn't be able to paint glyph pixels past the shrinking
+          // body's trailing edge. The clip rect is the painted body, not the component bounds
+          // (which include the shadow reserve).
+          gl.clipRect(0, 0, bodyW, bodyH);
+          // Compose the label's morph-alpha on top of the inherited content alpha (which is < 1
+          // only on the disabled paint branch). DST_IN-style compositing isn't needed — both
+          // factors are independent SRC_OVER alpha multipliers.
+          gl.setComposite(AlphaComposite.SrcOver.derive(contentAlpha * labelAlpha));
+          gl.setColor(color.onContainerRole().resolve());
+          gl.setFont(font);
+          final int baseline = bodyH / 2 + (fm.getAscent() - fm.getDescent()) / 2;
+          gl.drawString(text, labelX, baseline);
+        } finally {
+          gl.dispose();
+        }
+      }
+    } finally {
+      g2.dispose();
     }
   }
 
