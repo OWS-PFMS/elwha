@@ -337,6 +337,11 @@ public final class ElwhaFab extends JComponent {
   private static final int RIPPLE_TOTAL_MS = 400;
   private static final int RIPPLE_TICK_MS = 16;
   private static final int HOVER_POLL_INTERVAL_MS = 100;
+  // Brief keyboard-activation press-state flash. Mouse press holds pressed=true for the full
+  // mouse-down duration; keyboard activation is instantaneous so this paints the M3 10% PRESSED
+  // state-layer overlay for ~150 ms to give screen-reader / keyboard users the same visual
+  // confirmation a mouse user gets. Pairs with the ripple lifecycle (~400 ms total).
+  private static final int KEYBOARD_PRESS_FLASH_MS = 150;
 
   // M3 placement-diagram annotation: Extended FAB width is "Dynamic, min 80". The floor binds only
   // for the smallest size with a very short label — Medium/Large Extended naturally exceed 80 dp
@@ -675,8 +680,22 @@ public final class ElwhaFab extends JComponent {
             if (!isEnabled()) {
               return;
             }
+            pressed = true;
+            repaint();
             startRipple(new Point(bodyWidthPx() / 2, bodyHeightPx() / 2));
             activate(0);
+            // One-shot press-flash release. Repeated activations within the flash window each
+            // schedule a new release Timer; redundant fires after pressed is already false are
+            // harmless (state is idempotent).
+            final Timer release =
+                new Timer(
+                    KEYBOARD_PRESS_FLASH_MS,
+                    ev -> {
+                      pressed = false;
+                      repaint();
+                    });
+            release.setRepeats(false);
+            release.start();
           }
         };
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "elwhafab.activate");
@@ -813,19 +832,22 @@ public final class ElwhaFab extends JComponent {
       rippleTimer.stop();
     }
     final long startNanos = System.nanoTime();
-    rippleTimer =
-        new Timer(
-            RIPPLE_TICK_MS,
-            e -> {
-              rippleProgress =
-                  Math.min(1f, (System.nanoTime() - startNanos) / (RIPPLE_TOTAL_MS * 1_000_000f));
-              repaint();
-              if (rippleProgress >= 1f) {
-                rippleTimer.stop();
-              }
-            });
-    rippleTimer.setRepeats(true);
-    rippleTimer.start();
+    // Capture the Timer reference locally so the lambda stops its own Timer even if a re-press
+    // already replaced the field — a stale tick from the previous Timer would otherwise read
+    // rippleTimer-after-reassignment and call stop() on the new Timer, freezing it mid-animation.
+    final Timer self = new Timer(RIPPLE_TICK_MS, null);
+    self.addActionListener(
+        e -> {
+          rippleProgress =
+              Math.min(1f, (System.nanoTime() - startNanos) / (RIPPLE_TOTAL_MS * 1_000_000f));
+          repaint();
+          if (rippleProgress >= 1f) {
+            self.stop();
+          }
+        });
+    self.setRepeats(true);
+    rippleTimer = self;
+    self.start();
     repaint();
   }
 
@@ -931,7 +953,12 @@ public final class ElwhaFab extends JComponent {
 
     final Font font = size.labelTypeRole().resolve();
     g.setFont(font);
-    final FontMetrics fm = g.getFontMetrics();
+    // Source the FontMetrics from the component, not Graphics2D — labelWidthPx() reads it through
+    // the same getFontMetrics(font) path, so layout and paint agree exactly. Graphics2D's
+    // FontMetrics inherits the paint pipeline's FontRenderContext (subpixel-AA hints + fractional
+    // metrics on HiDPI macOS) and would disagree with the component's by 1–3 px, clipping the
+    // trailing glyph into the trailing inset.
+    final FontMetrics fm = getFontMetrics(font);
     final int labelW = (text == null || text.isEmpty()) ? 0 : fm.stringWidth(text);
 
     // The natural content width (without the 80 dp floor). When floor binds, this is less than
@@ -981,6 +1008,10 @@ public final class ElwhaFab extends JComponent {
   public void updateUI() {
     super.updateUI();
     setOpaque(false);
+    // Extended FAB preferred width depends on FontMetrics of the per-size label TypeRole; a theme
+    // reinstall that changes Typography would otherwise leave the parent layout holding a stale
+    // preferred size until something else triggered relayout (e.g., the window resize).
+    revalidate();
     repaint();
   }
 
@@ -992,6 +1023,13 @@ public final class ElwhaFab extends JComponent {
       hovered = false;
       pressed = false;
       stopHoverPolling();
+      // A ripple in flight when the FAB is disabled mid-press is invisible (paintRippleLayer is
+      // unreachable on the disabled paint branch) but the Timer would otherwise keep ticking and
+      // scheduling repaints for the rest of the 400 ms window — wasted EDT work.
+      if (rippleTimer != null) {
+        rippleTimer.stop();
+      }
+      rippleProgress = 1f;
     }
     repaint();
   }
@@ -1005,6 +1043,14 @@ public final class ElwhaFab extends JComponent {
 
   @Override
   public Dimension getMinimumSize() {
+    return getPreferredSize();
+  }
+
+  // M3 FAB has a fixed shape — without this override BoxLayout / GridBag fill would stretch the
+  // body past its 56 / 80 / 96 dp container, elongate the painted round-rect, and elongate the
+  // ripple. Matches ElwhaIconButton's same override.
+  @Override
+  public Dimension getMaximumSize() {
     return getPreferredSize();
   }
 
