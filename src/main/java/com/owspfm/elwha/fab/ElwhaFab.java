@@ -1046,14 +1046,6 @@ public final class ElwhaFab extends JComponent {
     return getPreferredSize();
   }
 
-  // M3 FAB has a fixed shape — without this override BoxLayout / GridBag fill would stretch the
-  // body past its 56 / 80 / 96 dp container, elongate the painted round-rect, and elongate the
-  // ripple. Matches ElwhaIconButton's same override.
-  @Override
-  public Dimension getMaximumSize() {
-    return getPreferredSize();
-  }
-
   @Override
   public AccessibleContext getAccessibleContext() {
     if (accessibleContext == null) {
