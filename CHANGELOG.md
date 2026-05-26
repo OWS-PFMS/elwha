@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- **`ElwhaFab` Extended-form shadow regression** ([#199](https://github.com/OWS-PFMS/elwha/issues/199), regression introduced by [#198](https://github.com/OWS-PFMS/elwha/pull/198)) — the `getMaximumSize() { return getPreferredSize(); }` override added in the PR #198 code-review fixes caused the Extended FAB to render with an asymmetric dark concentration of shadow at the bottom-left corner. The override was preventative (no playground was actually stretching the FAB), and removing it restores the clean M3 elevation halo at all three sizes. `ElwhaIconButton`'s same override is unaffected because its `getPreferredSize()` returns the body alone — `ElwhaFab`'s includes the shadow reserve, and `max == preferred` on a halo-inclusive preferred disrupts Swing's paint pipeline. The exact mechanism is the subject of follow-up [#200](https://github.com/OWS-PFMS/elwha/issues/200).
+
 ### Changed
 
 - **V3 Card playground action rows use `ElwhaButton`** ([#120](https://github.com/OWS-PFMS/elwha/issues/120), closes epic [#103](https://github.com/OWS-PFMS/elwha/issues/103)) — `ElwhaCardPlayground`'s gallery gains a "Card ↔ Button pairings" section demonstrating the M3 spec §3.3 pairing table (Elevated → Outlined + Filled, Filled → Text + Outlined, Outlined → Text + Filled-tonal), and the full-slot card's action row now uses `ElwhaButton` instead of raw `JButton`. The playground's remaining utility buttons (snippet "Copy", card-list add/remove) also move to `ElwhaButton` so the playground dogfoods the library end-to-end. The V1 → V3 migration doc gains an "Action-button pairing" pattern. No library API change — `ElwhaCardActions` already accepted any `JComponent`; this is the playground + docs demonstrating the full M3 action-row vocabulary.
