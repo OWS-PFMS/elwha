@@ -6,9 +6,12 @@ import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.SurfacePainter;
+import com.owspfm.elwha.theme.TypeRole;
 import java.awt.AlphaComposite;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
@@ -41,12 +44,14 @@ import javax.swing.Timer;
  * docs/research/elwha-fab-design.md}; tracks M3 Expressive post-May-2025 (drops baseline Small,
  * Surface, baseline Extended, and Lowered FABs).
  *
- * <p><strong>Phase 1 scope.</strong> The Standard form, visually complete. Size + Color enums, the
- * {@link #standard(Icon)} factory, container rendering at all three sizes across the six color
- * styles, and the full state model (hover state layer + level-4 elevation bump, focus state layer +
- * focus ring, press state layer + ripple) are all live. The {@code extended(...)} factories
- * (#190–#191) and the {@code morphTo(...)} API (#192–#193) follow in Phase 2 / 3 — see the design
- * doc §13 story breakdown.
+ * <p><strong>Phase 1 + 2 scope.</strong> Phase 1 (#187–#189) shipped the Standard form: {@link
+ * #standard(Icon)} factory + container rendering across all three sizes and six color styles + the
+ * full state model (hover state layer + level-4 elevation bump, focus state layer + focus ring,
+ * press state layer + ripple). Phase 2 (#190–#191) layers in the Extended form: {@link
+ * #extended(String)} and {@link #extended(Icon, String)} factories, per-size label typography
+ * (Inter Medium / Regular per design doc §4.2), dynamic content-driven width, and RTL mirroring of
+ * the icon-leading / label-trailing order. The {@code morphTo(...)} API (#192–#193) is still Phase
+ * 3 — see the design doc §13 story breakdown.
  *
  * <p><strong>Posture.</strong> Extends {@link JComponent} with a hand-rolled {@link
  * AccessibleJComponent} override, matching {@link com.owspfm.elwha.button.ElwhaButton} and {@link
@@ -83,39 +88,57 @@ public final class ElwhaFab extends JComponent {
 
     /**
      * Small — 56 dp container, 24 dp icon, 16 dp corner radius. The default size. Matches M3's
-     * "Regular FAB" (Standard) / "Small Extended FAB" (Extended).
+     * "Regular FAB" (Standard) / "Small Extended FAB" (Extended). Extended-form padding 16 / 8 / 16
+     * dp; label typography {@link TypeRole#TITLE_MEDIUM} (Inter Medium / 16 pt).
      *
      * @version v0.3.0
      * @since v0.3.0
      */
-    SMALL(56, 24, 16),
+    SMALL(56, 24, 16, 16, 8, 16, TypeRole.TITLE_MEDIUM),
 
     /**
      * Medium — 80 dp container, 28 dp icon, 20 dp corner radius. Matches M3's "Medium FAB" /
-     * "Medium Extended FAB".
+     * "Medium Extended FAB". Extended-form padding 26 / 12 / 26 dp; label typography {@link
+     * TypeRole#TITLE_LARGE} (Inter Regular / 22 pt).
      *
      * @version v0.3.0
      * @since v0.3.0
      */
-    MEDIUM(80, 28, 20),
+    MEDIUM(80, 28, 20, 26, 12, 26, TypeRole.TITLE_LARGE),
 
     /**
      * Large — 96 dp container, 36 dp icon, 28 dp corner radius. Matches M3's "Large FAB" / "Large
-     * Extended FAB".
+     * Extended FAB". Extended-form padding 28 / 16 / 28 dp; label typography {@link
+     * TypeRole#HEADLINE_SMALL} (Inter Regular / 24 pt).
      *
      * @version v0.3.0
      * @since v0.3.0
      */
-    LARGE(96, 36, 28);
+    LARGE(96, 36, 28, 28, 16, 28, TypeRole.HEADLINE_SMALL);
 
     private final int containerPx;
     private final int iconPx;
     private final int cornerRadiusPx;
+    private final int extendedLeadingPx;
+    private final int extendedIconGapPx;
+    private final int extendedTrailingPx;
+    private final TypeRole labelTypeRole;
 
-    Size(final int containerPx, final int iconPx, final int cornerRadiusPx) {
+    Size(
+        final int containerPx,
+        final int iconPx,
+        final int cornerRadiusPx,
+        final int extendedLeadingPx,
+        final int extendedIconGapPx,
+        final int extendedTrailingPx,
+        final TypeRole labelTypeRole) {
       this.containerPx = containerPx;
       this.iconPx = iconPx;
       this.cornerRadiusPx = cornerRadiusPx;
+      this.extendedLeadingPx = extendedLeadingPx;
+      this.extendedIconGapPx = extendedIconGapPx;
+      this.extendedTrailingPx = extendedTrailingPx;
+      this.labelTypeRole = labelTypeRole;
     }
 
     /**
@@ -150,6 +173,60 @@ public final class ElwhaFab extends JComponent {
      */
     public int cornerRadiusPx() {
       return cornerRadiusPx;
+    }
+
+    /**
+     * Returns the leading inset in pixels for the Extended form — the gap between the container's
+     * leading edge and the icon (or label, when the icon is absent). Per design doc §4.2: SMALL →
+     * 16 dp, MEDIUM → 26 dp, LARGE → 28 dp.
+     *
+     * @return the leading inset
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public int extendedLeadingPx() {
+      return extendedLeadingPx;
+    }
+
+    /**
+     * Returns the icon-to-label gap in pixels for the Extended form — applied only when an icon is
+     * present. Per design doc §4.2: SMALL → 8 dp, MEDIUM → 12 dp, LARGE → 16 dp.
+     *
+     * @return the icon-label gap
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public int extendedIconGapPx() {
+      return extendedIconGapPx;
+    }
+
+    /**
+     * Returns the trailing inset in pixels for the Extended form — the gap between the label's
+     * trailing edge and the container's trailing edge. Per design doc §4.2: SMALL → 16 dp, MEDIUM →
+     * 26 dp, LARGE → 28 dp.
+     *
+     * @return the trailing inset
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public int extendedTrailingPx() {
+      return extendedTrailingPx;
+    }
+
+    /**
+     * Returns the type role that drives the Extended-form label font. Maps M3's per-size FAB label
+     * typography onto Elwha's bundled Inter via {@link
+     * com.owspfm.elwha.theme.Typography#defaults()} — SMALL → {@link TypeRole#TITLE_MEDIUM} (Inter
+     * Medium / 16 pt), MEDIUM → {@link TypeRole#TITLE_LARGE} (Inter Regular / 22 pt), LARGE →
+     * {@link TypeRole#HEADLINE_SMALL} (Inter Regular / 24 pt). Design doc §4.2 captures the Roboto
+     * → Inter substitution rule.
+     *
+     * @return the label type role
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public TypeRole labelTypeRole() {
+      return labelTypeRole;
     }
   }
 
@@ -261,14 +338,29 @@ public final class ElwhaFab extends JComponent {
   private static final int RIPPLE_TICK_MS = 16;
   private static final int HOVER_POLL_INTERVAL_MS = 100;
 
+  // M3 placement-diagram annotation: Extended FAB width is "Dynamic, min 80". The floor binds only
+  // for the smallest size with a very short label — Medium/Large Extended naturally exceed 80 dp
+  // from leading + iconPx + gap + trailing alone. Design doc §4.3.
+  private static final int EXTENDED_MIN_WIDTH_PX = 80;
+
   // The component reserves shadow space for HOVER_ELEVATION so the hover bump never clips against
   // the component bounds. At rest the smaller resting shadow paints inside the larger reserve;
   // this is fine — the unused outer pixels are transparent.
   private static final Insets SHADOW_RESERVE = ShadowPainter.shadowInsets(HOVER_ELEVATION);
 
+  // Which content rule this instance enforces — chosen at construction by the static factory and
+  // immutable thereafter. STANDARD pins icon-required / text-forbidden (design doc §3); EXTENDED
+  // pins text-required / icon-optional.
+  private enum Form {
+    STANDARD,
+    EXTENDED
+  }
+
+  private final Form form;
   private Size size = Size.SMALL;
   private Color color = Color.PRIMARY_CONTAINER;
   private final Icon icon;
+  private final String text;
 
   private boolean hovered;
   private boolean pressed;
@@ -284,8 +376,10 @@ public final class ElwhaFab extends JComponent {
 
   private final List<ActionListener> actionListeners = new ArrayList<>();
 
-  private ElwhaFab(final Icon icon) {
+  private ElwhaFab(final Form form, final Icon icon, final String text) {
+    this.form = form;
     this.icon = icon;
+    this.text = text;
     if (icon instanceof FlatSVGIcon svg) {
       svg.setColorFilter(iconFilter);
     }
@@ -310,7 +404,51 @@ public final class ElwhaFab extends JComponent {
     if (icon == null) {
       throw new NullPointerException("icon");
     }
-    return new ElwhaFab(icon);
+    return new ElwhaFab(Form.STANDARD, icon, null);
+  }
+
+  /**
+   * Creates an Extended FAB — text-only, no icon. Per the M3 content rule (design doc §3) the label
+   * text is required; passing {@code null} throws. There is intentionally no {@code extended(Icon)}
+   * factory: an icon-only Extended FAB is a Standard FAB, which has its own factory.
+   *
+   * @param text the label text to render (required)
+   * @return a configured Extended FAB at the default {@link Size#SMALL} size and {@link
+   *     Color#PRIMARY_CONTAINER} color
+   * @throws NullPointerException if {@code text} is {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static ElwhaFab extended(final String text) {
+    if (text == null) {
+      throw new NullPointerException("text");
+    }
+    return new ElwhaFab(Form.EXTENDED, null, text);
+  }
+
+  /**
+   * Creates an Extended FAB — icon (leading) plus text (trailing). Per the M3 content rule (design
+   * doc §3) the label text is required and the icon is optional; the icon-bearing factory exists as
+   * a convenience for the common case. Passing {@code null} text throws; {@code null} icon would
+   * collapse to the text-only Extended FAB and is rejected here — use {@link #extended(String)}.
+   *
+   * @param icon the leading icon (required by this overload; use {@link #extended(String)} for the
+   *     no-icon case)
+   * @param text the label text (required)
+   * @return a configured Extended FAB at the default {@link Size#SMALL} size and {@link
+   *     Color#PRIMARY_CONTAINER} color
+   * @throws NullPointerException if {@code icon} or {@code text} is {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static ElwhaFab extended(final Icon icon, final String text) {
+    if (icon == null) {
+      throw new NullPointerException("icon");
+    }
+    if (text == null) {
+      throw new NullPointerException("text");
+    }
+    return new ElwhaFab(Form.EXTENDED, icon, text);
   }
 
   /**
@@ -375,7 +513,8 @@ public final class ElwhaFab extends JComponent {
   }
 
   /**
-   * Returns the installed icon. Standard FAB always has an icon; Extended FAB (Phase 2) may not.
+   * Returns the installed icon. Standard FAB always has an icon; Extended FAB created via {@link
+   * #extended(String)} has none. Extended FAB created via {@link #extended(Icon, String)} has one.
    *
    * @return the icon, or {@code null} when none is installed
    * @version v0.3.0
@@ -383,6 +522,18 @@ public final class ElwhaFab extends JComponent {
    */
   public Icon getIcon() {
     return icon;
+  }
+
+  /**
+   * Returns the installed label text. Standard FAB always returns {@code null}; both Extended
+   * factories always return a non-null, non-empty string.
+   *
+   * @return the label text, or {@code null} for the Standard form
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public String getText() {
+    return text;
   }
 
   // ------------------------------------------------------------- listeners
@@ -524,7 +675,7 @@ public final class ElwhaFab extends JComponent {
             if (!isEnabled()) {
               return;
             }
-            startRipple(new Point(size.containerPx() / 2, size.containerPx() / 2));
+            startRipple(new Point(bodyWidthPx() / 2, bodyHeightPx() / 2));
             activate(0);
           }
         };
@@ -544,8 +695,8 @@ public final class ElwhaFab extends JComponent {
   // from the component bounds by the shadow reserve). Points in the reserve are NOT click targets —
   // the visible surface is what counts.
   private boolean containsPoint(final Point componentPoint) {
-    final int bodyW = size.containerPx();
-    final int bodyH = size.containerPx();
+    final int bodyW = bodyWidthPx();
+    final int bodyH = bodyHeightPx();
     final int x = componentPoint.x - SHADOW_RESERVE.left;
     final int y = componentPoint.y - SHADOW_RESERVE.top;
     return x >= 0 && y >= 0 && x < bodyW && y < bodyH;
@@ -555,11 +706,42 @@ public final class ElwhaFab extends JComponent {
   // body — used as the ripple origin so a click near the body edge still seeds the ripple inside
   // the visible chrome.
   private Point toBodyPoint(final Point componentPoint) {
-    final int bodyW = size.containerPx();
-    final int bodyH = size.containerPx();
+    final int bodyW = bodyWidthPx();
+    final int bodyH = bodyHeightPx();
     final int x = componentPoint.x - SHADOW_RESERVE.left;
     final int y = componentPoint.y - SHADOW_RESERVE.top;
     return new Point(Math.max(0, Math.min(bodyW - 1, x)), Math.max(0, Math.min(bodyH - 1, y)));
+  }
+
+  // The painted body width. Standard is square (containerPx); Extended is content-hugging — leading
+  // inset + (icon + icon-label gap when present) + label width + trailing inset — clamped up to the
+  // M3 minimum (80 dp). No max-width clamp and no truncation per design doc §4.3.
+  private int bodyWidthPx() {
+    if (form == Form.STANDARD) {
+      return size.containerPx();
+    }
+    final int leading = size.extendedLeadingPx();
+    final int trailing = size.extendedTrailingPx();
+    final int labelW = labelWidthPx();
+    final int contentW =
+        (icon != null)
+            ? leading + size.iconPx() + size.extendedIconGapPx() + labelW + trailing
+            : leading + labelW + trailing;
+    return Math.max(EXTENDED_MIN_WIDTH_PX, contentW);
+  }
+
+  // The painted body height. Identical for both forms at a given size — Extended re-uses the
+  // Standard container height per design doc §4 (the May-2025 alignment rule).
+  private int bodyHeightPx() {
+    return size.containerPx();
+  }
+
+  private int labelWidthPx() {
+    if (text == null || text.isEmpty()) {
+      return 0;
+    }
+    final FontMetrics fm = getFontMetrics(size.labelTypeRole().resolve());
+    return fm.stringWidth(text);
   }
 
   private void ensureHoverPolling() {
@@ -660,8 +842,8 @@ public final class ElwhaFab extends JComponent {
 
   @Override
   protected void paintComponent(final Graphics g) {
-    final int bodyW = size.containerPx();
-    final int bodyH = size.containerPx();
+    final int bodyW = bodyWidthPx();
+    final int bodyH = bodyHeightPx();
     final int arc = size.cornerRadiusPx();
     final boolean focused = isFocusOwner() && isEnabled();
     final int elevation = (hovered && isEnabled()) ? HOVER_ELEVATION : RESTING_ELEVATION;
@@ -679,7 +861,7 @@ public final class ElwhaFab extends JComponent {
         ShadowPainter.paint(g2, bodyW, bodyH, arc, elevation);
         SurfacePainter.paint(g2, bodyW, bodyH, arc, surfaceRole, overlay, borderRole, borderWidth);
         paintRippleLayer(g2, bodyW, bodyH, arc);
-        paintIcon(g2, bodyW, bodyH, 1f);
+        paintContent(g2, bodyW, bodyH, 1f);
         return;
       }
 
@@ -692,7 +874,7 @@ public final class ElwhaFab extends JComponent {
       } finally {
         dim.dispose();
       }
-      paintIcon(g2, bodyW, bodyH, StateLayer.disabledContentOpacity());
+      paintContent(g2, bodyW, bodyH, StateLayer.disabledContentOpacity());
     } finally {
       g2.dispose();
     }
@@ -707,21 +889,73 @@ public final class ElwhaFab extends JComponent {
         g, bodyW, bodyH, rippleOrigin, rippleProgress, arc, color.onContainerRole().resolve());
   }
 
-  private void paintIcon(
+  // Standard: icon centered. Extended (LTR): icon at the leading inset, label after the icon-label
+  // gap, both vertically centered on the body. RTL mirroring is S5 — for now the layout is
+  // hard-LTR. design doc §4.2 / §7.2.
+  private void paintContent(
       final Graphics2D g, final int bodyW, final int bodyH, final float contentAlpha) {
-    if (icon == null) {
-      return;
-    }
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       if (contentAlpha < 1f) {
         g2.setComposite(AlphaComposite.SrcOver.derive(contentAlpha));
       }
-      final int ix = (bodyW - icon.getIconWidth()) / 2;
-      final int iy = (bodyH - icon.getIconHeight()) / 2;
-      icon.paintIcon(this, g2, ix, iy);
+      if (form == Form.STANDARD) {
+        paintIconCentered(g2, bodyW, bodyH);
+        return;
+      }
+      paintExtended(g2, bodyW, bodyH);
     } finally {
       g2.dispose();
+    }
+  }
+
+  private void paintIconCentered(final Graphics2D g, final int bodyW, final int bodyH) {
+    if (icon == null) {
+      return;
+    }
+    final int ix = (bodyW - icon.getIconWidth()) / 2;
+    final int iy = (bodyH - icon.getIconHeight()) / 2;
+    icon.paintIcon(this, g, ix, iy);
+  }
+
+  // Extended layout. Reading-order positions stay icon → label per design doc §11; pixel-mirror
+  // happens in RTL so the icon sits at the body's trailing edge instead of its leading edge. When
+  // the M3 80 dp minimum-width floor binds (very short label at SMALL), the content block is
+  // centered inside the inflated body — the leading and trailing insets share the slack equally so
+  // the result reads symmetric rather than left-anchored.
+  private void paintExtended(final Graphics2D g, final int bodyW, final int bodyH) {
+    final boolean ltr = getComponentOrientation().isLeftToRight();
+    final int leading = size.extendedLeadingPx();
+    final int iconW = (icon != null) ? size.iconPx() : 0;
+    final int gap = (icon != null) ? size.extendedIconGapPx() : 0;
+
+    final Font font = size.labelTypeRole().resolve();
+    g.setFont(font);
+    final FontMetrics fm = g.getFontMetrics();
+    final int labelW = (text == null || text.isEmpty()) ? 0 : fm.stringWidth(text);
+
+    // The natural content width (without the 80 dp floor). When floor binds, this is less than
+    // bodyW and we recenter so the content block sits in the middle of the inflated body.
+    final int contentW = leading + iconW + gap + labelW + size.extendedTrailingPx();
+    final int slack = Math.max(0, bodyW - contentW);
+    final int leadOffset = leading + slack / 2;
+
+    final int iconX = ltr ? leadOffset : bodyW - leadOffset - iconW;
+    final int labelX;
+    if (ltr) {
+      labelX = leadOffset + iconW + gap;
+    } else {
+      labelX = bodyW - leadOffset - iconW - gap - labelW;
+    }
+
+    if (icon != null) {
+      final int iy = (bodyH - icon.getIconHeight()) / 2;
+      icon.paintIcon(this, g, iconX, iy);
+    }
+    if (labelW > 0) {
+      final int baseline = bodyH / 2 + (fm.getAscent() - fm.getDescent()) / 2;
+      g.setColor(color.onContainerRole().resolve());
+      g.drawString(text, labelX, baseline);
     }
   }
 
@@ -764,11 +998,9 @@ public final class ElwhaFab extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
-    final int bodyW = size.containerPx();
-    final int bodyH = size.containerPx();
     return new Dimension(
-        bodyW + SHADOW_RESERVE.left + SHADOW_RESERVE.right,
-        bodyH + SHADOW_RESERVE.top + SHADOW_RESERVE.bottom);
+        bodyWidthPx() + SHADOW_RESERVE.left + SHADOW_RESERVE.right,
+        bodyHeightPx() + SHADOW_RESERVE.top + SHADOW_RESERVE.bottom);
   }
 
   @Override
@@ -785,11 +1017,14 @@ public final class ElwhaFab extends JComponent {
   }
 
   /**
-   * Accessible role: {@link AccessibleRole#PUSH_BUTTON}. Name resolution falls through tooltip →
-   * component name → the literal {@code "Floating action button"} — Standard FAB is icon-only, so
-   * consumers SHOULD set a tooltip (which doubles as the M3 hover-tooltip per design doc §10.4 and
-   * as the accessible-name fallback) or call {@code getAccessibleContext().setAccessibleName(...)}
-   * on every FAB or screen-reader users will hear nothing meaningful.
+   * Accessible role: {@link AccessibleRole#PUSH_BUTTON}. Name resolution priority is: declared
+   * accessible name → Extended-form label text → tooltip → component name → the literal {@code
+   * "Floating action button"}. The Extended-form label sits above tooltip on purpose — design doc
+   * §10.4 says "Extended FAB: label text is automatically the accessible name." Standard FAB is
+   * icon-only, so consumers SHOULD still set a tooltip (which doubles as the M3 hover-tooltip per
+   * design doc §10.4 and as the accessible-name fallback) or call {@code
+   * getAccessibleContext().setAccessibleName(...)} on every Standard FAB or screen-reader users
+   * will hear nothing meaningful.
    *
    * @version v0.3.0
    * @since v0.3.0
@@ -806,6 +1041,9 @@ public final class ElwhaFab extends JComponent {
       final String declared = super.getAccessibleName();
       if (declared != null && !declared.isEmpty()) {
         return declared;
+      }
+      if (form == Form.EXTENDED && text != null && !text.isEmpty()) {
+        return text;
       }
       final String tip = getToolTipText();
       if (tip != null && !tip.isEmpty()) {
