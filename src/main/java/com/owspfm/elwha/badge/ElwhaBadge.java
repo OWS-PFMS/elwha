@@ -71,6 +71,14 @@ public final class ElwhaBadge extends JComponent {
     LARGE
   }
 
+  /**
+   * Property name fired by {@link #setContent(String)} on change — listened by {@link
+   * ElwhaBadgeAnchor} to recompute Large badge bounds when content width changes.
+   *
+   * @since v0.3.0
+   */
+  public static final String PROPERTY_CONTENT = "content";
+
   /** Maximum label length (characters, including any trailing {@code +}). Design doc §3. */
   private static final int MAX_CONTENT_LEN = 4;
 
@@ -203,8 +211,10 @@ public final class ElwhaBadge extends JComponent {
     if (content.isEmpty()) {
       throw new IllegalArgumentException("Large badge content must not be empty");
     }
+    final String previous = this.content;
     this.content =
         content.length() > MAX_CONTENT_LEN ? content.substring(0, MAX_CONTENT_LEN) : content;
+    firePropertyChange(PROPERTY_CONTENT, previous, this.content);
     revalidate();
     repaint();
     return this;
