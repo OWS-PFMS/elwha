@@ -9,6 +9,10 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRelation;
+import javax.accessibility.AccessibleRelationSet;
+import javax.accessibility.AccessibleRole;
 import javax.swing.JComponent;
 
 /**
@@ -17,15 +21,16 @@ import javax.swing.JComponent;
  * default {@code Error} / {@code On error} color mapping. Spec lives in {@code
  * docs/research/elwha-badge-design.md}.
  *
- * <p><strong>S1 + S2 scope (#210, #211).</strong> S1 shipped the class skeleton, per-variant static
- * factories with content validation (null → NPE, empty → IAE, &gt;4 chars → silent truncate per
- * design doc §3), Small + Large container rendering, and the color override surface with default
- * {@link ColorRole#ERROR} / {@link ColorRole#ON_ERROR} mapping locked in by construction. S2 adds
- * the Large label paint at the {@link TypeRole#LABEL_SMALL} typography role, the 4 dp interior
- * padding per design doc §4.2, content-driven Large width (single-digit square at 16 × 16 dp
- * expanding to fit the 4-character cap, per §4.1), and the {@link #setContent(String)} setter
- * (truncating for Large, {@link IllegalStateException} for Small). Placement via anchor primitive
- * lands in S3 (#212); RTL in S4 (#213); accessibility wiring in S5 (#214).
+ * <p><strong>Phase 1 scope (#210–#214).</strong> Class skeleton + per-variant factories with
+ * content validation (null → NPE, empty → IAE, &gt;4 chars → silent truncate per design doc §3),
+ * Small + Large container rendering, the color override surface with default {@link
+ * ColorRole#ERROR} / {@link ColorRole#ON_ERROR} mapping enforced by construction, Large label paint
+ * at {@link TypeRole#LABEL_SMALL} with 4 dp interior padding (§4.2), content-driven Large width via
+ * {@link #setContent(String)}, the push-model accessibility surface ({@link
+ * #getAccessibilityText()} / {@link #withAccessibilityText(String)} with hardcoded English defaults
+ * per §10.3, custom {@link AccessibleContext} reporting {@link AccessibleRole#LABEL} with a {@link
+ * AccessibleRelation#LABEL_FOR} relation set by the anchor). Placement geometry, RTL mirroring, and
+ * host-name splicing live in the companion {@link ElwhaBadgeAnchor}.
  *
  * <p><strong>Posture.</strong> Extends {@link JComponent} directly — badges are decorations, not
  * actions; the host destination owns the click / focus / Space / Enter surface. {@link
@@ -79,6 +84,16 @@ public final class ElwhaBadge extends JComponent {
    */
   public static final String PROPERTY_CONTENT = "content";
 
+  /**
+   * Property name fired when {@link #getAccessibilityText()} effectively changes (either via {@link
+   * #withAccessibilityText(String)} or because {@link #setContent(String)} altered the
+   * default-derived value). {@link ElwhaBadgeAnchor} listens to keep {@code host.accessibleName} in
+   * sync.
+   *
+   * @since v0.3.0
+   */
+  public static final String PROPERTY_ACCESSIBILITY_TEXT = "accessibilityText";
+
   /** Maximum label length (characters, including any trailing {@code +}). Design doc §3. */
   private static final int MAX_CONTENT_LEN = 4;
 
@@ -115,6 +130,8 @@ public final class ElwhaBadge extends JComponent {
   private String content;
   private ColorRole containerColor = ColorRole.ERROR;
   private ColorRole labelColor;
+  private String accessibilityTextOverride;
+  private JComponent labelForTarget;
 
   private ElwhaBadge(final Variant variant, final String content) {
     this.variant = variant;
@@ -212,12 +229,68 @@ public final class ElwhaBadge extends JComponent {
       throw new IllegalArgumentException("Large badge content must not be empty");
     }
     final String previous = this.content;
+    final String previousAccText = getAccessibilityText();
     this.content =
         content.length() > MAX_CONTENT_LEN ? content.substring(0, MAX_CONTENT_LEN) : content;
     firePropertyChange(PROPERTY_CONTENT, previous, this.content);
+    if (accessibilityTextOverride == null) {
+      firePropertyChange(PROPERTY_ACCESSIBILITY_TEXT, previousAccText, getAccessibilityText());
+    }
     revalidate();
     repaint();
     return this;
+  }
+
+  /**
+   * Returns the accessibility announcement for this badge. Default values per design doc §10.3:
+   * Small returns {@code "New notification"}; Large returns {@code "{content} new notifications"}.
+   * Overridden by {@link #withAccessibilityText(String)} when the consumer wants a custom string.
+   *
+   * <p>{@link ElwhaBadgeAnchor} splices the returned value into the host's accessible name on
+   * attach and on change, so AT users discover the badge via the host destination per the M3
+   * accessibility use-case requirement.
+   *
+   * @return the announcement string AT will hear after the host's accessible name
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public String getAccessibilityText() {
+    if (accessibilityTextOverride != null) {
+      return accessibilityTextOverride;
+    }
+    if (variant == Variant.SMALL) {
+      return "New notification";
+    }
+    return content + " new notifications";
+  }
+
+  /**
+   * Overrides the default accessibility announcement string. Pass {@code null} to clear the
+   * override and revert to the default-derived value (Small: {@code "New notification"}; Large:
+   * {@code "{content} new notifications"}).
+   *
+   * @param text the override string, or {@code null} to clear
+   * @return this badge for fluent chaining
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaBadge withAccessibilityText(final String text) {
+    final String previous = getAccessibilityText();
+    this.accessibilityTextOverride = text;
+    firePropertyChange(PROPERTY_ACCESSIBILITY_TEXT, previous, getAccessibilityText());
+    return this;
+  }
+
+  /**
+   * Package-private hook called by {@link ElwhaBadgeAnchor} to set or clear the host this badge
+   * labels — exposed through the badge's {@link AccessibleContext} as an {@link
+   * AccessibleRelation#LABEL_FOR} relation. Not part of the public API; consumers use the anchor
+   * primitive's attach/detach surface instead.
+   *
+   * @param host the host this badge is labelling, or {@code null} to clear the relation
+   */
+  void anchorSetLabelFor(final JComponent host) {
+    this.labelForTarget = host;
   }
 
   /**
@@ -311,6 +384,37 @@ public final class ElwhaBadge extends JComponent {
     SurfacePainter.paint((Graphics2D) g, w, h, arc, containerColor, null, null, 0f);
     if (variant == Variant.LARGE) {
       paintLabel((Graphics2D) g, w, h);
+    }
+  }
+
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaBadge();
+    }
+    return accessibleContext;
+  }
+
+  private final class AccessibleElwhaBadge extends AccessibleJComponent {
+
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.LABEL;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      final String explicit = accessibleName;
+      return explicit != null ? explicit : getAccessibilityText();
+    }
+
+    @Override
+    public AccessibleRelationSet getAccessibleRelationSet() {
+      final AccessibleRelationSet set = super.getAccessibleRelationSet();
+      if (labelForTarget != null) {
+        set.add(new AccessibleRelation(AccessibleRelation.LABEL_FOR, labelForTarget));
+      }
+      return set;
     }
   }
 

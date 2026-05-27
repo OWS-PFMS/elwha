@@ -46,6 +46,15 @@ import javax.swing.SwingUtilities;
  * The {@link Attachment} returned is valid from the moment {@link #attach(IconBearing, ElwhaBadge)}
  * returns regardless of when actual badge mounting happens.
  *
+ * <p><strong>Push-model accessibility.</strong> On attach, the host's pre-attach accessible name is
+ * captured and replaced with {@code "{hostBaseName} {badge.accessibilityText}"} (host name first,
+ * badge text appended per design doc §10.4). The anchor listens for {@link
+ * ElwhaBadge#PROPERTY_ACCESSIBILITY_TEXT} on the badge and updates the spliced name in lock-step.
+ * On detach, the host's accessible name is restored to its captured pre-attach value, and the
+ * badge's {@link javax.accessibility.AccessibleRelation#LABEL_FOR LABEL_FOR} relation back to the
+ * host is cleared. Badges are non-focusable and have no independent accessible action — AT users
+ * address the badge by navigating to the host destination.
+ *
  * @author Charles Bryan
  * @version v0.3.0
  * @since v0.3.0
@@ -156,6 +165,9 @@ public final class ElwhaBadgeAnchor {
     private JLayeredPane layeredPane;
     private boolean detached;
 
+    private String hostBaseName;
+    private boolean hostBaseNameCaptured;
+
     private final ComponentListener hostBoundsListener =
         new ComponentAdapter() {
           @Override
@@ -193,6 +205,8 @@ public final class ElwhaBadgeAnchor {
 
     private final PropertyChangeListener hostOrientationListener = e -> refresh();
 
+    private final PropertyChangeListener badgeAccessibilityListener = e -> applyAccessibleName();
+
     private Attachment(
         final JComponent host,
         final Supplier<Rectangle> iconBoundsSupplier,
@@ -208,7 +222,25 @@ public final class ElwhaBadgeAnchor {
       host.addHierarchyListener(hierarchyListener);
       host.addPropertyChangeListener("componentOrientation", hostOrientationListener);
       badge.addPropertyChangeListener(ElwhaBadge.PROPERTY_CONTENT, badgeContentListener);
+      badge.addPropertyChangeListener(
+          ElwhaBadge.PROPERTY_ACCESSIBILITY_TEXT, badgeAccessibilityListener);
+      hostBaseName = host.getAccessibleContext().getAccessibleName();
+      hostBaseNameCaptured = true;
+      badge.anchorSetLabelFor(host);
+      applyAccessibleName();
       reseatToCurrentHierarchy();
+    }
+
+    private void applyAccessibleName() {
+      if (detached || !hostBaseNameCaptured) {
+        return;
+      }
+      final String announcement = badge.getAccessibilityText();
+      final String combined =
+          hostBaseName == null || hostBaseName.isEmpty()
+              ? announcement
+              : hostBaseName + " " + announcement;
+      host.getAccessibleContext().setAccessibleName(combined);
     }
 
     private void reseatToCurrentHierarchy() {
@@ -285,6 +317,12 @@ public final class ElwhaBadgeAnchor {
       host.removeHierarchyListener(hierarchyListener);
       host.removePropertyChangeListener("componentOrientation", hostOrientationListener);
       badge.removePropertyChangeListener(ElwhaBadge.PROPERTY_CONTENT, badgeContentListener);
+      badge.removePropertyChangeListener(
+          ElwhaBadge.PROPERTY_ACCESSIBILITY_TEXT, badgeAccessibilityListener);
+      if (hostBaseNameCaptured) {
+        host.getAccessibleContext().setAccessibleName(hostBaseName);
+      }
+      badge.anchorSetLabelFor(null);
       if (layeredPane != null) {
         layeredPane.remove(badge);
         layeredPane.repaint();
