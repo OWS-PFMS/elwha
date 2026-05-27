@@ -87,18 +87,24 @@ Source: M3 "Configuration" + "Container" cards.
 
 **Concretely:**
 - Small badge: no content; conveys boolean presence ("has unread"). M3 default announcement = "New notification."
-- Large badge: short label or count. 4-character cap enforced; values longer than 4 chars are silently truncated. M3 convention is `1–999` numeric values with `999+` for overflow.
+- Large badge: short label or count. M3 convention is `1–999` numeric values with `999+` for overflow.
 
 **Enforcement** via per-variant static factories:
 
 ```java
 ElwhaBadge.small()                       // no content possible
-ElwhaBadge.large(String content)         // content required (non-null)
+ElwhaBadge.large(String content)         // content required (non-null, non-empty)
+ElwhaBadge.large(int count)              // non-negative count; >999 → "999+"
 ```
 
-Null content on `large(...)` produces `NullPointerException` at construction (fail-fast per Elwha convention). Empty string is rejected with `IllegalArgumentException` — an empty Large is just a Small with extra paint cost.
+Null content on `large(String)` produces `NullPointerException`; empty content and negative `count` produce `IllegalArgumentException`. Empty-Large is just a worse Small; the integer overload rejects negatives because the badge has no meaningful display for them.
 
-**Truncation rule:** content longer than 4 chars is truncated *after construction* to its first 4 characters. The original argument is not retained. Rationale: the cap is a layout invariant (a wider pill would break the anchor geometry) and per [[CLAUDE.md]] "be liberal in what you accept" makes silent truncation kinder than throwing on a count value drifting past 9999.
+**Coercion rule:** content is coerced to fit the 4-character display cap at construction time. The original argument is not retained.
+
+- **Pure-numeric content > 999** collapses to the M3 `"999+"` sentinel. Applies to both `large(String)` (when the string is all-digit) and `large(int)`. So `large("1234")`, `large("999999")`, and `large(50000)` all store `"999+"`.
+- **Everything else** (status text, mixed alphanumeric, content the consumer already capped) is literal-truncated to the first 4 characters. So `large("BETAONE")` stores `"BETA"`; `large("999+")` stores `"999+"` verbatim.
+
+Rationale: the cap is a layout invariant (a wider pill would break the anchor geometry), and the numeric collapse implements the M3 contract that counts cap at `999+` rather than letting layout-breaking 4-digit numbers slip through.
 
 ---
 
@@ -456,7 +462,7 @@ Decisions captured during the spec pass on 2026-05-26.
 | **One component vs two** | One `ElwhaBadge` covers Small + Large via per-variant factories. |
 | **Build anchor primitive day one** | Yes. Avoids FAB epic's retroactive #205 work; badges have no standalone use case. |
 | **Variant axis as the API split** | `small()` / `large(String)` factories enforce content rules at the API. |
-| **4-char cap behavior** | Silent truncation to first 4 chars. Cap is a layout invariant; liberal-acceptance principle. |
+| **4-char cap behavior** | Numeric-aware coercion: pure-digit content > 999 collapses to `"999+"` (the M3 overflow sentinel); everything else is literal-truncated to 4 chars. `large(int)` overload added for the common count case. Cap is a layout invariant; the numeric collapse honors M3's `999+` contract directly rather than punting it to the consumer. |
 | **Empty Large content** | Rejected with `IllegalArgumentException` — empty Large is a worse Small. |
 | **Default color = Error / On-error** | Per M3 default color mapping. No new theme tokens. |
 | **Inverted-looking M3 color callout reconciled** | Rail-page callout points at the active-indicator pill, not the badge container. Conventional fill-on-fill mapping is authoritative. |

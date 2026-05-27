@@ -47,7 +47,7 @@ public final class ElwhaBadgeRtlPlayground {
 
   private final JFrame frame = new JFrame("ElwhaBadge — S4 RTL (#213)");
 
-  private final ElwhaIconButton liveHost = new ElwhaIconButton(MaterialIcons.edit());
+  private final ElwhaIconButton liveHost = new ElwhaIconButton(MaterialIcons.favoriteFilled());
 
   private ElwhaBadgeRtlPlayground() {}
 
@@ -101,7 +101,7 @@ public final class ElwhaBadgeRtlPlayground {
     final JPanel stage = new JPanel(new GridBagLayout());
     stage.setBorder(BorderFactory.createTitledBorder(label + " — static orientation"));
     stage.setComponentOrientation(orientation);
-    final ElwhaIconButton host = new ElwhaIconButton(MaterialIcons.edit());
+    final ElwhaIconButton host = new ElwhaIconButton(MaterialIcons.favoriteFilled());
     host.setComponentOrientation(orientation);
     final GridBagConstraints gc = new GridBagConstraints();
     gc.insets = new Insets(32, 32, 32, 32);

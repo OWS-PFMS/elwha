@@ -97,6 +97,12 @@ public final class ElwhaBadge extends JComponent {
   /** Maximum label length (characters, including any trailing {@code +}). Design doc §3. */
   private static final int MAX_CONTENT_LEN = 4;
 
+  /**
+   * M3 sentinel for pure-numeric counts &gt; 999. Returned by {@link #coerceContent(String)} and
+   * used by {@link #large(int)} on overflow.
+   */
+  private static final String OVERFLOW_SENTINEL = "999+";
+
   /** Small badge box dimension in dp — square, fully round. */
   private static final int SMALL_SIZE_DP = 6;
 
@@ -153,11 +159,20 @@ public final class ElwhaBadge extends JComponent {
   }
 
   /**
-   * Creates a {@link Variant#LARGE Large} badge with the given label content. Content longer than
-   * {@value #MAX_CONTENT_LEN} characters is silently truncated to the first {@value
-   * #MAX_CONTENT_LEN} characters per design doc §3 — the cap is a layout invariant.
+   * Creates a {@link Variant#LARGE Large} badge with the given label content. Content is coerced to
+   * fit the 4-character display cap per design doc §3:
    *
-   * @param content the label content; 1 to {@value #MAX_CONTENT_LEN} characters
+   * <ul>
+   *   <li>Pure-numeric content &gt; 999 collapses to the M3 {@code "999+"} overflow sentinel — so
+   *       {@code large("1234")} and {@code large("999999")} both render as {@code "999+"}.
+   *   <li>Everything else (status text, mixed alphanumeric, an explicit {@code "+"} the consumer
+   *       provided) is literal-truncated to the first {@value #MAX_CONTENT_LEN} characters — so
+   *       {@code large("BETAONE")} renders as {@code "BETA"}.
+   * </ul>
+   *
+   * <p>For the common case of displaying a count, prefer {@link #large(int)}.
+   *
+   * @param content the label content
    * @return a new Large badge in the default {@link ColorRole#ERROR} / {@link ColorRole#ON_ERROR}
    *     color mapping
    * @throws NullPointerException if {@code content} is {@code null}
@@ -174,9 +189,55 @@ public final class ElwhaBadge extends JComponent {
       throw new IllegalArgumentException(
           "Large badge content must not be empty — use ElwhaBadge.small() for a no-content badge");
     }
-    final String truncated =
-        content.length() > MAX_CONTENT_LEN ? content.substring(0, MAX_CONTENT_LEN) : content;
-    return new ElwhaBadge(Variant.LARGE, truncated);
+    return new ElwhaBadge(Variant.LARGE, coerceContent(content));
+  }
+
+  /**
+   * Creates a {@link Variant#LARGE Large} badge displaying a non-negative count. Counts ≤ 999
+   * render verbatim ({@code "0"} through {@code "999"}); counts &gt; 999 collapse to the M3 {@code
+   * "999+"} overflow sentinel per the four-character cap (design doc §3).
+   *
+   * @param count the non-negative count to display
+   * @return a new Large badge with the count or overflow sentinel as content
+   * @throws IllegalArgumentException if {@code count} is negative
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static ElwhaBadge large(final int count) {
+    if (count < 0) {
+      throw new IllegalArgumentException("Large badge count must be non-negative");
+    }
+    return large(Integer.toString(count));
+  }
+
+  /**
+   * Coerces user-supplied content to the four-character display cap. Pure-numeric input &gt; 999
+   * collapses to the M3 {@code "999+"} overflow sentinel; everything else (status text, mixed
+   * alphanumeric, an explicit {@code "+"} the consumer provided) is literal-truncated to the first
+   * {@value #MAX_CONTENT_LEN} characters. Design doc §3.
+   */
+  private static String coerceContent(final String content) {
+    if (isAllDigits(content) && exceedsNumericCap(content)) {
+      return OVERFLOW_SENTINEL;
+    }
+    return content.length() > MAX_CONTENT_LEN ? content.substring(0, MAX_CONTENT_LEN) : content;
+  }
+
+  private static boolean isAllDigits(final String s) {
+    for (int i = 0; i < s.length(); i++) {
+      if (!Character.isDigit(s.charAt(i))) {
+        return false;
+      }
+    }
+    return !s.isEmpty();
+  }
+
+  /**
+   * Returns true for all-digit strings strictly greater than 999. String-level comparison is safe
+   * here because both operands are decimal-digit-only with the same lexical-vs-numeric ordering.
+   */
+  private static boolean exceedsNumericCap(final String digits) {
+    return digits.length() > 3 || (digits.length() == 3 && digits.compareTo("999") > 0);
   }
 
   /**
@@ -205,9 +266,10 @@ public final class ElwhaBadge extends JComponent {
 
   /**
    * Updates the label content of a {@link Variant#LARGE Large} badge. Same content rules as the
-   * {@link #large(String)} factory: {@code null} rejected, empty rejected, &gt; {@value
-   * #MAX_CONTENT_LEN} chars silently truncated. Triggers a {@code revalidate()} and {@code
-   * repaint()} so the container resizes to the new content width.
+   * {@link #large(String)} factory: {@code null} rejected, empty rejected, pure-numeric &gt; 999
+   * collapses to {@code "999+"}, everything else literal-truncated to the first {@value
+   * #MAX_CONTENT_LEN} characters. Triggers a {@code revalidate()} and {@code repaint()} so the
+   * container resizes to the new content width.
    *
    * @param content the new label content
    * @return this badge for fluent chaining
@@ -230,8 +292,7 @@ public final class ElwhaBadge extends JComponent {
     }
     final String previous = this.content;
     final String previousAccText = getAccessibilityText();
-    this.content =
-        content.length() > MAX_CONTENT_LEN ? content.substring(0, MAX_CONTENT_LEN) : content;
+    this.content = coerceContent(content);
     firePropertyChange(PROPERTY_CONTENT, previous, this.content);
     if (accessibilityTextOverride == null) {
       firePropertyChange(PROPERTY_ACCESSIBILITY_TEXT, previousAccText, getAccessibilityText());
@@ -239,6 +300,24 @@ public final class ElwhaBadge extends JComponent {
     revalidate();
     repaint();
     return this;
+  }
+
+  /**
+   * Updates the content of a {@link Variant#LARGE Large} badge from a non-negative count. Counts ≤
+   * 999 render verbatim; counts &gt; 999 collapse to {@code "999+"} per design doc §3.
+   *
+   * @param count the non-negative count to display
+   * @return this badge for fluent chaining
+   * @throws IllegalStateException if this is a {@link Variant#SMALL Small} badge
+   * @throws IllegalArgumentException if {@code count} is negative
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaBadge setContent(final int count) {
+    if (count < 0) {
+      throw new IllegalArgumentException("Large badge count must be non-negative");
+    }
+    return setContent(Integer.toString(count));
   }
 
   /**

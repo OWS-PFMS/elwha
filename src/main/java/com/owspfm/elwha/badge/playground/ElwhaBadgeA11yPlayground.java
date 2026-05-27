@@ -60,7 +60,7 @@ public final class ElwhaBadgeA11yPlayground {
 
   private final JFrame frame = new JFrame("ElwhaBadge — S5 accessibility (#214)");
 
-  private final ElwhaIconButton host = new ElwhaIconButton(MaterialIcons.edit());
+  private final ElwhaIconButton host = new ElwhaIconButton(MaterialIcons.favoriteFilled());
 
   private final JLabel inspectorValue = new JLabel("(detached)");
 

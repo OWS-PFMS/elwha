@@ -79,7 +79,7 @@ public final class ElwhaBadgeContentPlayground {
     gc.insets = new Insets(8, 24, 8, 24);
     gc.anchor = GridBagConstraints.CENTER;
 
-    final String[] inputs = {"1", "12", "999", "999+", "OVERFLOW"};
+    final String[] inputs = {"1", "12", "999", "1234", "999999", "BETA"};
     for (int col = 0; col < inputs.length; col++) {
       final ElwhaBadge badge = ElwhaBadge.large(inputs[col]);
       gc.gridx = col;

@@ -49,7 +49,7 @@ public final class ElwhaBadgeAnchorPlayground {
 
   private final JFrame frame = new JFrame("ElwhaBadge — S3 anchor (#212)");
 
-  private final ElwhaIconButton host = new ElwhaIconButton(MaterialIcons.edit());
+  private final ElwhaIconButton host = new ElwhaIconButton(MaterialIcons.favoriteFilled());
 
   private ElwhaBadge badge = ElwhaBadge.large("3");
 
