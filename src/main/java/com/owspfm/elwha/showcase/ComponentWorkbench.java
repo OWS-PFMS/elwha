@@ -13,6 +13,9 @@ import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.KeyboardFocusManager;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -88,6 +91,23 @@ public final class ComponentWorkbench extends JPanel {
     surfacePanel = new SurfaceControlPanel(surfaceControls, true);
     surfacePanel.addChangeListener(this::onSurfaceChanged);
     stageSurface = surfacePanel.surface();
+    stageSurface.setLayout(new GridBagLayout());
+
+    // A click on the stage background — either the bare host margin or the surface around the
+    // live component — clears the focus owner. With a single live component on the stage, focus
+    // sticks to the component on first click and has nowhere natural to go until the user clicks
+    // another focusable element or Tabs away; clearing it on a background click matches the user
+    // expectation that the workbench surface is a "deselect" target. Swing's events don't bubble,
+    // so this listener never fires on clicks that hit the live component or any of its children.
+    final MouseAdapter clearFocusOnBackgroundClick =
+        new MouseAdapter() {
+          @Override
+          public void mousePressed(final MouseEvent event) {
+            KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner();
+          }
+        };
+    stageHost.addMouseListener(clearFocusOnBackgroundClick);
+    stageSurface.addMouseListener(clearFocusOnBackgroundClick);
     stageSurface.setLayout(new GridBagLayout());
 
     controlsCards = new JPanel(new CardLayout());
