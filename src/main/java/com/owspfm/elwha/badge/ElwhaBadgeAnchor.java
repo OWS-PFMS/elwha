@@ -32,8 +32,10 @@ import javax.swing.SwingUtilities;
  * <p><strong>Bounds geometry.</strong> The badge's bottom-leading corner is pinned a variant-
  * dependent offset from the icon's top-trailing corner — Small 6 × 6 dp, Large 14 × 12 dp (design
  * doc §5.1). As Large content widens via {@link ElwhaBadge#setContent(String)} the container grows
- * leftward, keeping the pin glued in place (design doc §5.2). For S3 the anchor is LTR- only — RTL
- * flipping lands in S4 (#213).
+ * leading-ward, keeping the pin glued in place (design doc §5.2). The anchor reads {@code
+ * host.getComponentOrientation()} at every bounds computation and at any {@code
+ * componentOrientation} property change on the host, so RTL hosts mirror the badge to the icon's
+ * upper-leading corner automatically — design doc §11.
  *
  * <p><strong>Invariant: one badge per host.</strong> Each host carries at most one anchored badge.
  * Re-attaching replaces the prior attachment (its badge is detached first); there is no multi-slot
@@ -189,6 +191,8 @@ public final class ElwhaBadgeAnchor {
 
     private final PropertyChangeListener badgeContentListener = e -> refresh();
 
+    private final PropertyChangeListener hostOrientationListener = e -> refresh();
+
     private Attachment(
         final JComponent host,
         final Supplier<Rectangle> iconBoundsSupplier,
@@ -202,6 +206,7 @@ public final class ElwhaBadgeAnchor {
       host.addComponentListener(hostBoundsListener);
       host.addHierarchyBoundsListener(ancestorBoundsListener);
       host.addHierarchyListener(hierarchyListener);
+      host.addPropertyChangeListener("componentOrientation", hostOrientationListener);
       badge.addPropertyChangeListener(ElwhaBadge.PROPERTY_CONTENT, badgeContentListener);
       reseatToCurrentHierarchy();
     }
@@ -241,18 +246,30 @@ public final class ElwhaBadgeAnchor {
         return;
       }
       final Rectangle icon = iconBoundsSupplier.get();
-      final Point topTrailingInHost = new Point(icon.x + icon.width, icon.y);
+      final boolean ltr = host.getComponentOrientation().isLeftToRight();
+
+      // "Top-trailing" in image coords: right edge in LTR, left edge in RTL.
+      final int iconTopTrailingX = ltr ? icon.x + icon.width : icon.x;
+      final Point topTrailingInHost = new Point(iconTopTrailingX, icon.y);
       final Point topTrailingInLayered =
           SwingUtilities.convertPoint(host, topTrailingInHost, layeredPane);
+
       final int offsetY =
           badge.getVariant() == ElwhaBadge.Variant.SMALL ? SMALL_OFFSET_Y_DP : LARGE_OFFSET_Y_DP;
       final int offsetX =
           badge.getVariant() == ElwhaBadge.Variant.SMALL ? SMALL_OFFSET_X_DP : LARGE_OFFSET_X_DP;
       final Dimension pref = badge.getPreferredSize();
-      final int bottomLeadingX = topTrailingInLayered.x - offsetX;
-      final int bottomLeadingY = topTrailingInLayered.y + offsetY;
-      final int badgeX = bottomLeadingX - pref.width;
-      final int badgeY = bottomLeadingY - pref.height;
+
+      // Pinned-corner X (the badge's bottom-leading corner, which is bottom-left in LTR /
+      // bottom-right in RTL) sits offsetX inward from the icon's top-trailing X.
+      final int pinX = ltr ? topTrailingInLayered.x - offsetX : topTrailingInLayered.x + offsetX;
+      final int pinY = topTrailingInLayered.y + offsetY;
+
+      // Convert pinned corner → top-left for setBounds. In LTR the pin IS the left edge; in RTL
+      // the pin is the right edge, so subtract the width.
+      final int badgeX = ltr ? pinX : pinX - pref.width;
+      final int badgeY = pinY - pref.height;
+
       badge.setBounds(badgeX, badgeY, pref.width, pref.height);
       badge.revalidate();
       badge.repaint();
@@ -266,6 +283,7 @@ public final class ElwhaBadgeAnchor {
       host.removeComponentListener(hostBoundsListener);
       host.removeHierarchyBoundsListener(ancestorBoundsListener);
       host.removeHierarchyListener(hierarchyListener);
+      host.removePropertyChangeListener("componentOrientation", hostOrientationListener);
       badge.removePropertyChangeListener(ElwhaBadge.PROPERTY_CONTENT, badgeContentListener);
       if (layeredPane != null) {
         layeredPane.remove(badge);
