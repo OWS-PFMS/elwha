@@ -31,6 +31,8 @@ import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
+import com.owspfm.elwha.fab.ElwhaFab;
+import com.owspfm.elwha.fab.playground.FabPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonGroup;
 import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
@@ -68,6 +70,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -366,6 +369,7 @@ public final class ElwhaShowcase {
     addLeaf(components, "Button", buildButtonComponent());
     addLeaf(components, "Chip", buildChipComponent());
     addLeaf(components, "Icon Button", buildIconButtonComponent());
+    addLeaf(components, "FAB", buildFabComponent());
     addLeaf(components, "Button Group", buildButtonGroupComponent());
     addLeaf(components, "Card", buildCardComponent());
     addLeaf(components, "Surface", buildSurfaceComponent());
@@ -1170,6 +1174,250 @@ public final class ElwhaShowcase {
 
     MaterialIcons.IconPair pair(final int size) {
       return MaterialIcons.pair(baseName, size);
+    }
+  }
+
+  // ------------------------------------------------------------- FAB
+
+  private static JComponent buildFabComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", buildFabWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("Variants & states", FabPlaygroundPanels.buildVariantGalleryPanel()),
+                gallerySection("Sizes & forms", FabPlaygroundPanels.buildSizesPanel()))));
+    return tabs;
+  }
+
+  private static JComponent buildFabWorkbench() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+
+    final JComboBox<FabForm> formBox = new JComboBox<>(FabForm.values());
+    formBox.setSelectedItem(FabForm.STANDARD);
+    final JComboBox<ElwhaFab.Size> sizeBox = new JComboBox<>(ElwhaFab.Size.values());
+    sizeBox.setSelectedItem(ElwhaFab.Size.SMALL);
+    final JComboBox<ElwhaFab.Color> colorBox = new JComboBox<>(ElwhaFab.Color.values());
+    colorBox.setSelectedItem(ElwhaFab.Color.PRIMARY_CONTAINER);
+    final JComboBox<FabIconChoice> iconBox = new JComboBox<>(FabIconChoice.values());
+    iconBox.setSelectedItem(FabIconChoice.ADD);
+    final JTextField labelField = new JTextField("Compose", 14);
+    final JCheckBox hoveredBox = new JCheckBox("Hovered");
+    final JCheckBox pressedBox = new JCheckBox("Pressed");
+    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    final JButton morphButton = new JButton("Toggle Standard ↔ Extended");
+
+    // Holder for the live FAB so the morph button can drive morphTo(...) on whatever stage
+    // instance the apply runnable last mounted, even though that runnable rebuilds on every
+    // control change.
+    final java.util.concurrent.atomic.AtomicReference<ElwhaFab> liveFab =
+        new java.util.concurrent.atomic.AtomicReference<>();
+
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("FAB");
+    controls.addControl("Form", formBox);
+    controls.addControl("Size", sizeBox);
+    controls.addControl("Color", colorBox);
+    controls.addSection("Content");
+    controls.addControl("Icon", iconBox);
+    controls.addControl("Label text", labelField);
+    controls.addSection("State");
+    controls.addControl("", hoveredBox);
+    controls.addControl("", pressedBox);
+    controls.addControl("", enabledBox);
+    controls.addSection("Morph");
+    controls.addControl("", morphButton);
+
+    final Runnable apply =
+        () -> {
+          final FabForm form = (FabForm) formBox.getSelectedItem();
+          final ElwhaFab.Size size = (ElwhaFab.Size) sizeBox.getSelectedItem();
+          final ElwhaFab.Color color = (ElwhaFab.Color) colorBox.getSelectedItem();
+          final FabIconChoice iconChoice = (FabIconChoice) iconBox.getSelectedItem();
+          final String label = labelField.getText() == null ? "" : labelField.getText();
+          final boolean hovered = hoveredBox.isSelected();
+          final boolean pressed = pressedBox.isSelected();
+          final boolean enabled = enabledBox.isSelected();
+
+          // Label text is only meaningful for the Extended forms — disable the field on Standard
+          // so the operator sees that the value is currently ignored, but don't lose its content.
+          labelField.setEnabled(form != FabForm.STANDARD);
+          // The text-only Extended form ignores the icon picker.
+          iconBox.setEnabled(form != FabForm.EXTENDED_TEXT);
+
+          final ElwhaFab fab;
+          final String safeLabel = label.isEmpty() ? "Compose" : label;
+          switch (form) {
+            case STANDARD -> fab = ElwhaFab.standard(iconChoice.icon(size.iconPx()));
+            case EXTENDED_TEXT -> fab = ElwhaFab.extended(safeLabel);
+            case EXTENDED_ICON_TEXT ->
+                fab = ElwhaFab.extended(iconChoice.icon(size.iconPx()), safeLabel);
+            default -> fab = ElwhaFab.standard(iconChoice.icon(size.iconPx()));
+          }
+          fab.setFabSize(size).setColor(color);
+          fab.setHovered(hovered);
+          fab.setPressed(pressed);
+          fab.setEnabled(enabled);
+          workbench.setStage(fab);
+          workbench.setCode(renderFabCode(form, size, color, iconChoice, safeLabel, enabled));
+          liveFab.set(fab);
+          // Morph is only bidirectional on instances built via extended(Icon, String) per design
+          // doc §9.3 — Standard (no text) and text-only Extended (no icon) lack the content
+          // required for the opposite form, so morphTo throws there. Reflect that at the control
+          // level rather than letting the click crash.
+          final boolean morphable = form == FabForm.EXTENDED_ICON_TEXT;
+          morphButton.setEnabled(morphable && enabled);
+          morphButton.setToolTipText(
+              morphable
+                  ? "Click to animate the §9.1 Standard ↔ Extended morph on this instance."
+                  : "Morph requires an extended(Icon, String) FAB — pick the icon + text form.");
+        };
+    morphButton.addActionListener(
+        event -> {
+          final ElwhaFab fab = liveFab.get();
+          if (fab == null) {
+            return;
+          }
+          fab.morphTo(
+              fab.getForm() == ElwhaFab.Form.EXTENDED
+                  ? ElwhaFab.Form.STANDARD
+                  : ElwhaFab.Form.EXTENDED);
+        });
+    formBox.addActionListener(event -> apply.run());
+    sizeBox.addActionListener(event -> apply.run());
+    colorBox.addActionListener(event -> apply.run());
+    iconBox.addActionListener(event -> apply.run());
+    labelField.addActionListener(event -> apply.run());
+    labelField
+        .getDocument()
+        .addDocumentListener(
+            new javax.swing.event.DocumentListener() {
+              @Override
+              public void insertUpdate(final javax.swing.event.DocumentEvent e) {
+                apply.run();
+              }
+
+              @Override
+              public void removeUpdate(final javax.swing.event.DocumentEvent e) {
+                apply.run();
+              }
+
+              @Override
+              public void changedUpdate(final javax.swing.event.DocumentEvent e) {
+                apply.run();
+              }
+            });
+    hoveredBox.addActionListener(event -> apply.run());
+    pressedBox.addActionListener(event -> apply.run());
+    enabledBox.addActionListener(event -> apply.run());
+    apply.run();
+    return workbench;
+  }
+
+  private static String renderFabCode(
+      final FabForm form,
+      final ElwhaFab.Size size,
+      final ElwhaFab.Color color,
+      final FabIconChoice iconChoice,
+      final String label,
+      final boolean enabled) {
+    final StringBuilder code = new StringBuilder(240);
+    switch (form) {
+      case STANDARD ->
+          code.append("ElwhaFab fab = ElwhaFab.standard(MaterialIcons.")
+              .append(iconChoice.codeMethodName())
+              .append("(")
+              .append(size.iconPx())
+              .append("));");
+      case EXTENDED_TEXT ->
+          code.append("ElwhaFab fab = ElwhaFab.extended(\"").append(label).append("\");");
+      case EXTENDED_ICON_TEXT ->
+          code.append("ElwhaFab fab = ElwhaFab.extended(MaterialIcons.")
+              .append(iconChoice.codeMethodName())
+              .append("(")
+              .append(size.iconPx())
+              .append("), \"")
+              .append(label)
+              .append("\");");
+      default -> {
+        /* unreachable */
+      }
+    }
+    if (size != ElwhaFab.Size.SMALL) {
+      code.append("\nfab.setFabSize(ElwhaFab.Size.").append(size).append(");");
+    }
+    if (color != ElwhaFab.Color.PRIMARY_CONTAINER) {
+      code.append("\nfab.setColor(ElwhaFab.Color.").append(color).append(");");
+    }
+    if (!enabled) {
+      code.append("\nfab.setEnabled(false);");
+    }
+    return code.toString();
+  }
+
+  /** Form choices offered by the FAB Workbench's form picker. */
+  private enum FabForm {
+    STANDARD("Standard (icon only)"),
+    EXTENDED_TEXT("Extended (text only)"),
+    EXTENDED_ICON_TEXT("Extended (icon + text)");
+
+    private final String displayName;
+
+    FabForm(final String displayName) {
+      this.displayName = displayName;
+    }
+
+    @Override
+    public String toString() {
+      return displayName;
+    }
+  }
+
+  /**
+   * Single-icon choices offered by the FAB Workbench's icon picker — FAB has no toggle state. M3
+   * shows FAB icons at FILL=1 (the bolder filled variant) in its component docs, so the picker
+   * resolves to the filled glyph where one is bundled. {@code add} (the M3 archetypal FAB icon) is
+   * a geometric mark with no enclosed area, so {@code MaterialIcons} doesn't ship a separate filled
+   * variant — there's no visible difference at FILL=1 to bundle.
+   */
+  private enum FabIconChoice {
+    ADD("add"),
+    EDIT("edit"),
+    FAVORITE("favorite"),
+    STAR("star"),
+    DELETE("delete");
+
+    private final String methodName;
+
+    FabIconChoice(final String methodName) {
+      this.methodName = methodName;
+    }
+
+    javax.swing.Icon icon(final int size) {
+      return switch (methodName) {
+        case "add" -> MaterialIcons.add(size);
+        case "edit" -> MaterialIcons.editFilled(size);
+        case "favorite" -> MaterialIcons.favoriteFilled(size);
+        case "star" -> MaterialIcons.starFilled(size);
+        case "delete" -> MaterialIcons.deleteFilled(size);
+        default -> MaterialIcons.add(size);
+      };
+    }
+
+    /**
+     * The {@code MaterialIcons} method name that {@link #icon(int)} actually calls — used by the
+     * code-view renderer so the equivalent-Java snippet matches the live FAB exactly.
+     */
+    String codeMethodName() {
+      return switch (methodName) {
+        case "add" -> "add";
+        case "edit" -> "editFilled";
+        case "favorite" -> "favoriteFilled";
+        case "star" -> "starFilled";
+        case "delete" -> "deleteFilled";
+        default -> "add";
+      };
     }
   }
 
