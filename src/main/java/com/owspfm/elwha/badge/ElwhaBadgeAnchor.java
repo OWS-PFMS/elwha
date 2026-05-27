@@ -196,8 +196,12 @@ public final class ElwhaBadgeAnchor {
 
     private final HierarchyListener hierarchyListener =
         e -> {
-          if ((e.getChangeFlags() & HierarchyEvent.PARENT_CHANGED) != 0) {
+          final long flags = e.getChangeFlags();
+          if ((flags & HierarchyEvent.PARENT_CHANGED) != 0) {
             reseatToCurrentHierarchy();
+          }
+          if ((flags & HierarchyEvent.SHOWING_CHANGED) != 0) {
+            syncBadgeVisibility();
           }
         };
 
@@ -259,9 +263,20 @@ public final class ElwhaBadgeAnchor {
       }
       layeredPane = next;
       if (layeredPane != null) {
+        syncBadgeVisibility();
         layeredPane.add(badge, JLayeredPane.PALETTE_LAYER);
         refresh();
       }
+    }
+
+    /**
+     * Badge sits on a shared {@link JLayeredPane} that doesn't follow the host's effective
+     * visibility automatically — switching cards (e.g., {@code CardLayout}, {@code JTabbedPane})
+     * hides the host but the badge keeps painting on top of whatever card replaces it. Mirror
+     * {@code host.isShowing()} on the badge so it disappears alongside its host.
+     */
+    private void syncBadgeVisibility() {
+      badge.setVisible(host.isShowing());
     }
 
     /**
