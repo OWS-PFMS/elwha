@@ -489,6 +489,54 @@ Filed for posterity; not in this epic.
 
 ---
 
+## §15. Floating FAB composition (consumer recipe)
+
+§4.4 punts placement out of scope: the primitive renders correctly wherever the parent layout places it; *making it float above content* is a Swing composition concern the lib doesn't bake into the FAB itself. This section documents the recipe so consumers don't have to derive it from scratch. A reusable `ElwhaFabAnchor` primitive that absorbs this glue is tracked separately on [#205](https://github.com/OWS-PFMS/elwha/issues/205) — until that lands, every consumer assembles the same four pieces:
+
+1. **Z-order — `JLayeredPane`.** Every `JFrame` already has one (`frame.getLayeredPane()`). Add the FAB to `JLayeredPane.PALETTE_LAYER` (or higher); the content pane is on `FRAME_CONTENT_LAYER` and paints below. The FAB now floats above whatever the content does — scrolling, repaint, tab swap, anything.
+
+2. **Position — bottom-trailing corner, 16 dp inset.** The layered pane has no layout manager, so the FAB needs explicit bounds. Set them from `getPreferredSize()` plus the M3 16 dp inset.
+
+3. **Resize handling — `ComponentListener`.** When the frame resizes, the layered pane resizes too. Re-compute the FAB's bounds on every `componentResized` so the anchor stays glued to the corner.
+
+4. **RTL — `getComponentOrientation()`.** Flip the X anchor when the orientation is right-to-left. The Y anchor doesn't change.
+
+```java
+final ElwhaFab fab =
+    ElwhaFab.extended(MaterialIcons.editFilled(ElwhaFab.Size.SMALL.iconPx()), "Compose");
+
+final JLayeredPane layeredPane = frame.getLayeredPane();
+layeredPane.add(fab, JLayeredPane.PALETTE_LAYER);
+
+final Runnable position = () -> {
+  final Dimension pref = fab.getPreferredSize();
+  final int inset = 16; // dp; M3 placement diagram
+  final boolean ltr = layeredPane.getComponentOrientation().isLeftToRight();
+  final int x = ltr
+      ? layeredPane.getWidth() - pref.width - inset
+      : inset;
+  final int y = layeredPane.getHeight() - pref.height - inset;
+  fab.setBounds(x, y, pref.width, pref.height);
+};
+layeredPane.addComponentListener(new ComponentAdapter() {
+  @Override
+  public void componentResized(final ComponentEvent e) {
+    position.run();
+  }
+});
+position.run();
+```
+
+**Where to put the listener.** On the *layered pane*, not the frame — the layered pane's bounds are what the FAB anchors to.
+
+**Initial position.** The recipe above calls `position.run()` once at the end so the FAB is placed correctly before its first paint, not just after the first resize event. Without it, the FAB initially renders at `(0, 0)` and flickers into position on first resize.
+
+**Scroll-aware behavior** (`G14b` / `G33` / `G34`). Not in this recipe. M3's hide-on-scroll-down and shrink-to-Standard-on-scroll-down patterns require a `JScrollPane` hook; deferred per §14 until [#205](https://github.com/OWS-PFMS/elwha/issues/205) lands the wrapping primitive.
+
+**Working example.** The Elwha Showcase mounts a floating FAB via exactly this recipe — visible on every tab, clicks navigate the sidebar to the FAB Workbench entry. See `ElwhaShowcase.addFloatingFab(JFrame, JTree)` for the live implementation.
+
+---
+
 ## Appendix A — Decision history
 
 Decisions captured during the spec pass on 2026-05-25. Earlier decisions superseded by later ones are listed with their replacement noted.

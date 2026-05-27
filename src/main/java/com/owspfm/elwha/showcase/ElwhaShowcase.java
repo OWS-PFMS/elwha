@@ -62,6 +62,8 @@ import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
@@ -76,6 +78,7 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -90,6 +93,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
 /**
@@ -167,10 +171,65 @@ public final class ElwhaShowcase {
     frame.setContentPane(root);
     frame.setSize(1320, 860);
     frame.setLocationRelativeTo(null);
+    addFloatingFab(frame, nav);
     frame.setVisible(true);
     // Park initial focus on the nav tree, not the header button group — otherwise a focused mode
     // segment and the selected mode segment read as two selections at once.
     SwingUtilities.invokeLater(nav::requestFocusInWindow);
+  }
+
+  // Mounts a real floating ElwhaFab on the frame's layered pane (PALETTE_LAYER, above the content
+  // pane) so it's visible from every Showcase tab. Anchored bottom-trailing with the M3 16 dp
+  // inset, RTL-aware via the layered pane's component orientation, repositioned on resize. Click
+  // navigates the sidebar to the FAB entry — the floating instance is the showcase's
+  // self-demonstration of the §15 recipe (and the working example referenced from that section).
+  private void addFloatingFab(final JFrame frame, final JTree nav) {
+    final ElwhaFab floatingFab =
+        ElwhaFab.extended(MaterialIcons.editFilled(ElwhaFab.Size.SMALL.iconPx()), "FAB Workbench");
+    floatingFab.setToolTipText(
+        "Floating ElwhaFab — click to open the FAB Workbench. Composes the design-doc §15"
+            + " JLayeredPane recipe.");
+    floatingFab.addActionListener(event -> selectNavLeaf(nav, "FAB"));
+
+    final JLayeredPane layeredPane = frame.getLayeredPane();
+    layeredPane.add(floatingFab, JLayeredPane.PALETTE_LAYER);
+
+    final Runnable position =
+        () -> {
+          final Dimension pref = floatingFab.getPreferredSize();
+          final int inset = 16;
+          final boolean ltr = layeredPane.getComponentOrientation().isLeftToRight();
+          final int x = ltr ? layeredPane.getWidth() - pref.width - inset : inset;
+          final int y = layeredPane.getHeight() - pref.height - inset;
+          floatingFab.setBounds(x, y, pref.width, pref.height);
+        };
+    layeredPane.addComponentListener(
+        new ComponentAdapter() {
+          @Override
+          public void componentResized(final ComponentEvent event) {
+            position.run();
+          }
+        });
+    position.run();
+  }
+
+  // Programmatic navigation: walks the sidebar tree to the leaf whose user-object label matches
+  // `label` and selects it, also scrolling the path into view. Used by the floating FAB's click
+  // handler so the Workbench entry is reachable from anywhere.
+  private void selectNavLeaf(final JTree nav, final String label) {
+    final DefaultMutableTreeNode root = (DefaultMutableTreeNode) nav.getModel().getRoot();
+    final java.util.Enumeration<javax.swing.tree.TreeNode> nodes = root.depthFirstEnumeration();
+    while (nodes.hasMoreElements()) {
+      final javax.swing.tree.TreeNode node = nodes.nextElement();
+      if (node instanceof DefaultMutableTreeNode dm
+          && dm.isLeaf()
+          && label.equals(dm.getUserObject())) {
+        final TreePath path = new TreePath(dm.getPath());
+        nav.setSelectionPath(path);
+        nav.scrollPathToVisible(path);
+        return;
+      }
+    }
   }
 
   // --- header bar ---
