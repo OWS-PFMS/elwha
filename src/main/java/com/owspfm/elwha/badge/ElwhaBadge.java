@@ -165,9 +165,10 @@ public final class ElwhaBadge extends JComponent {
    * <ul>
    *   <li>Pure-numeric content &gt; 999 collapses to the M3 {@code "999+"} overflow sentinel — so
    *       {@code large("1234")} and {@code large("999999")} both render as {@code "999+"}.
-   *   <li>Everything else (status text, mixed alphanumeric, an explicit {@code "+"} the consumer
-   *       provided) is literal-truncated to the first {@value #MAX_CONTENT_LEN} characters — so
-   *       {@code large("BETAONE")} renders as {@code "BETA"}.
+   *   <li>Non-numeric content longer than 3 characters keeps its first 3 characters and gains a
+   *       {@code "+"} suffix — {@code large("Message")} renders as {@code "Mes+"}, {@code
+   *       large("BETA")} as {@code "BET+"}.
+   *   <li>Shorter content (≤ 3 characters, or numeric ≤ 999) passes through verbatim.
    * </ul>
    *
    * <p>For the common case of displaying a count, prefer {@link #large(int)}.
@@ -211,16 +212,24 @@ public final class ElwhaBadge extends JComponent {
   }
 
   /**
-   * Coerces user-supplied content to the four-character display cap. Pure-numeric input &gt; 999
-   * collapses to the M3 {@code "999+"} overflow sentinel; everything else (status text, mixed
-   * alphanumeric, an explicit {@code "+"} the consumer provided) is literal-truncated to the first
-   * {@value #MAX_CONTENT_LEN} characters. Design doc §3.
+   * Coerces user-supplied content to the M3 4-character display cap, signaling overflow with a
+   * trailing {@code "+"} rather than silently chopping characters. Design doc §3.
+   *
+   * <ul>
+   *   <li>Pure-numeric input &gt; 999 collapses to {@code "999+"}.
+   *   <li>Anything else longer than 3 characters keeps its first 3 characters and gains a {@code
+   *       "+"} suffix — {@code "Message"} → {@code "Mes+"}, {@code "BETA"} → {@code "BET+"}.
+   *   <li>Inputs already short enough (≤ 3 characters, or numeric ≤ 999) pass through verbatim.
+   * </ul>
    */
   private static String coerceContent(final String content) {
     if (isAllDigits(content) && exceedsNumericCap(content)) {
       return OVERFLOW_SENTINEL;
     }
-    return content.length() > MAX_CONTENT_LEN ? content.substring(0, MAX_CONTENT_LEN) : content;
+    if (content.length() > MAX_CONTENT_LEN - 1) {
+      return content.substring(0, MAX_CONTENT_LEN - 1) + "+";
+    }
+    return content;
   }
 
   private static boolean isAllDigits(final String s) {
@@ -267,9 +276,9 @@ public final class ElwhaBadge extends JComponent {
   /**
    * Updates the label content of a {@link Variant#LARGE Large} badge. Same content rules as the
    * {@link #large(String)} factory: {@code null} rejected, empty rejected, pure-numeric &gt; 999
-   * collapses to {@code "999+"}, everything else literal-truncated to the first {@value
-   * #MAX_CONTENT_LEN} characters. Triggers a {@code revalidate()} and {@code repaint()} so the
-   * container resizes to the new content width.
+   * collapses to {@code "999+"}, non-numeric longer than 3 characters keeps its first 3 plus a
+   * {@code "+"} suffix ({@code "Message"} → {@code "Mes+"}). Triggers a {@code revalidate()} and
+   * {@code repaint()} so the container resizes to the new content width.
    *
    * @param content the new label content
    * @return this badge for fluent chaining

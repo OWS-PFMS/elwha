@@ -102,9 +102,10 @@ Null content on `large(String)` produces `NullPointerException`; empty content a
 **Coercion rule:** content is coerced to fit the 4-character display cap at construction time. The original argument is not retained.
 
 - **Pure-numeric content > 999** collapses to the M3 `"999+"` sentinel. Applies to both `large(String)` (when the string is all-digit) and `large(int)`. So `large("1234")`, `large("999999")`, and `large(50000)` all store `"999+"`.
-- **Everything else** (status text, mixed alphanumeric, content the consumer already capped) is literal-truncated to the first 4 characters. So `large("BETAONE")` stores `"BETA"`; `large("999+")` stores `"999+"` verbatim.
+- **Non-numeric content longer than 3 characters** keeps its first 3 characters and gains a `"+"` suffix. So `large("Message")` stores `"Mes+"`, `large("BETA")` stores `"BET+"`. The `"+"` consistently signals "this is truncated" the same way M3's numeric overflow does, rather than silently chopping characters.
+- **Shorter content** (≤ 3 characters, or numeric ≤ 999) passes through verbatim. So `large("OK")` stores `"OK"`, `large("999")` stores `"999"`, `large("99+")` stores `"99+"`.
 
-Rationale: the cap is a layout invariant (a wider pill would break the anchor geometry), and the numeric collapse implements the M3 contract that counts cap at `999+` rather than letting layout-breaking 4-digit numbers slip through.
+Rationale: the cap is a layout invariant (a wider pill would break the anchor geometry); the numeric collapse implements the M3 contract that counts cap at `999+`; and propagating the `"+"` signal to non-numeric overflow keeps the truncation visible rather than silently lying about content length.
 
 ---
 
@@ -462,7 +463,7 @@ Decisions captured during the spec pass on 2026-05-26.
 | **One component vs two** | One `ElwhaBadge` covers Small + Large via per-variant factories. |
 | **Build anchor primitive day one** | Yes. Avoids FAB epic's retroactive #205 work; badges have no standalone use case. |
 | **Variant axis as the API split** | `small()` / `large(String)` factories enforce content rules at the API. |
-| **4-char cap behavior** | Numeric-aware coercion: pure-digit content > 999 collapses to `"999+"` (the M3 overflow sentinel); everything else is literal-truncated to 4 chars. `large(int)` overload added for the common count case. Cap is a layout invariant; the numeric collapse honors M3's `999+` contract directly rather than punting it to the consumer. |
+| **4-char cap behavior** | Overflow-aware coercion: pure-digit content > 999 collapses to `"999+"` (the M3 overflow sentinel); non-numeric content longer than 3 characters keeps its first 3 plus a `"+"` suffix (`"Message"` → `"Mes+"`). Shorter content passes through verbatim. `large(int)` overload added for the common count case. The `"+"` signal is consistent across numeric and non-numeric overflow rather than silently chopping characters. |
 | **Empty Large content** | Rejected with `IllegalArgumentException` — empty Large is a worse Small. |
 | **Default color = Error / On-error** | Per M3 default color mapping. No new theme tokens. |
 | **Inverted-looking M3 color callout reconciled** | Rail-page callout points at the active-indicator pill, not the badge container. Conventional fill-on-fill mapping is authoritative. |
