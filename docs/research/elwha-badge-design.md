@@ -117,13 +117,13 @@ Both variants use fixed token-driven dimensions. Large's width is content-driven
 |---|---|---|---|
 | **Small** | 6 dp | 6 dp | 3 dp (full round) |
 | **Large** (1 digit) | 16 dp | 16 dp | 8 dp (full round) |
-| **Large** (max chars, e.g. `999+`) | 16 dp | 34 dp | 8 dp |
+| **Large** (max chars, e.g. `999+` in Roboto) | 16 dp | ≈ 34 dp | 8 dp |
 
-Per the M3 measurements table.
+Per the M3 measurements table. The `34 dp` value is the M3 reference dimension for `"999+"` at the spec'd typography — a *measurement*, not an enforced cap. Our implementation sizes the container to `max(16, textWidth + 8)` so wider glyphs at consumer-substituted fonts grow the pill to fit rather than clipping; the 4-character content cap is what bounds growth.
 
 ### §4.1 Large width is dynamic
 
-Width grows leftward from the anchor's pinned bottom-leading corner as content widens. Single-digit content is square (16×16); 4-character content reaches 16×34. Anchor placement stays pinned (per §5.2); only width changes.
+Width grows **trailing-ward** from the anchor's pinned bottom-leading corner as content widens — rightward in LTR, leftward in RTL. Single-digit content is square (16×16); 4-character content reaches approximately 16×34 at the M3 reference typography. Anchor placement stays pinned (per §5.2); only the trailing edge moves.
 
 ### §4.2 Interior padding (Large)
 
@@ -148,7 +148,7 @@ Per the M3 measurements table. "H × W" — first value is vertical (badge botto
 
 ### §5.2 Pin behavior
 
-The badge's **bottom-leading corner** is the pinned anchor point. As Large badge content grows wider, the badge extends *leftward* in LTR (rightward in RTL); the anchor corner doesn't move. This matches the M3 "Large badge container … width expands, but keeps the same placement" rule.
+The badge's **bottom-leading corner** is the pinned anchor point. As Large badge content grows wider, the **trailing edge** of the badge moves outward — rightward in LTR, leftward in RTL; the pinned leading corner doesn't move. Verified against the M3 spec visual: a `"999+"` badge anchored to an icon's upper-trailing corner extends *past* the icon's trailing edge as content widens, rather than fanning back across the icon body. The M3 "Large badge container … width expands, but keeps the same placement" rule refers to the pinned corner, not the trailing edge.
 
 ### §5.3 Icon bounding box
 

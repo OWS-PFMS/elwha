@@ -242,11 +242,11 @@ public final class ElwhaBadge extends JComponent {
   }
 
   /**
-   * Returns true for all-digit strings strictly greater than 999. String-level comparison is safe
-   * here because both operands are decimal-digit-only with the same lexical-vs-numeric ordering.
+   * Returns true for all-digit strings strictly greater than 999. Length alone is sufficient — no
+   * three-digit decimal string exceeds 999, so anything &gt; 3 digits is &gt; 999 by definition.
    */
   private static boolean exceedsNumericCap(final String digits) {
-    return digits.length() > 3 || (digits.length() == 3 && digits.compareTo("999") > 0);
+    return digits.length() > 3;
   }
 
   /**
@@ -517,7 +517,11 @@ public final class ElwhaBadge extends JComponent {
       final FontMetrics fm = g2.getFontMetrics();
       final int textWidth = fm.stringWidth(content);
       final int x = (w - textWidth) / 2;
-      final int y = (h - fm.getHeight()) / 2 + fm.getAscent();
+      // Center the visible glyph band (ascent − descent) rather than the full line box
+      // (which includes external leading). With Inter Label-Small in a 16 dp pill the line-box
+      // formula left the baseline 1–2 dp below the pill center; centering the glyph band fixes
+      // the downward drift M3 mockups don't show.
+      final int y = (h + fm.getAscent() - fm.getDescent()) / 2;
       g2.drawString(content, x, y);
     } finally {
       g2.dispose();
