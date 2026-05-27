@@ -2,6 +2,7 @@ package com.owspfm.elwha.showcase;
 
 import com.owspfm.elwha.badge.ElwhaBadge;
 import com.owspfm.elwha.badge.ElwhaBadgeAnchor;
+import com.owspfm.elwha.badge.playground.BadgePlaygroundPanels;
 import com.owspfm.elwha.button.ButtonInteractionMode;
 import com.owspfm.elwha.button.ButtonShape;
 import com.owspfm.elwha.button.ButtonSize;
@@ -2178,7 +2179,13 @@ public final class ElwhaShowcase {
   private static JComponent buildBadgeComponent() {
     final JTabbedPane tabs = new JTabbedPane();
     tabs.addTab("Workbench", buildBadgeWorkbench());
-    // Gallery tab lands in S7 (#216).
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("Variants", BadgePlaygroundPanels.buildVariantsPanel()),
+                gallerySection("Content range", BadgePlaygroundPanels.buildContentRangePanel()),
+                gallerySection("Orientation", BadgePlaygroundPanels.buildOrientationPanel()))));
     return tabs;
   }
 
