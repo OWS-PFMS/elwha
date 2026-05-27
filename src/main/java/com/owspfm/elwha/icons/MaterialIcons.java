@@ -322,6 +322,23 @@ public final class MaterialIcons {
     return load("add", size);
   }
 
+  /** Minus / remove glyph (horizontal bar). */
+  public static FlatSVGIcon remove() {
+    return remove(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #remove()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon remove(final int size) {
+    return load("remove", size);
+  }
+
   /** Checkmark glyph. */
   public static FlatSVGIcon check() {
     return check(DEFAULT_SIZE);

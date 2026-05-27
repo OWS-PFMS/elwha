@@ -82,7 +82,7 @@ import javax.swing.Timer;
  * @version v0.3.0
  * @since v0.1.0
  */
-public class ElwhaIconButton extends JComponent {
+public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badge.IconBearing {
 
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
@@ -344,6 +344,29 @@ public class ElwhaIconButton extends JComponent {
    */
   public Icon getSelectedIcon() {
     return selectedIcon;
+  }
+
+  /**
+   * Returns the current icon's bounding box in this component's coordinate space, matching the
+   * geometry {@link #paintIcon(java.awt.Graphics, float)} draws against. Anchors badges at the
+   * upper-trailing corner of the rendered icon via {@link com.owspfm.elwha.badge.ElwhaBadgeAnchor}
+   * (epic #209).
+   *
+   * @return the rendered icon's bounding box; an empty rectangle if no icon is installed
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  @Override
+  public java.awt.Rectangle getIconBounds() {
+    final Icon icon = currentIcon();
+    if (icon == null) {
+      return new java.awt.Rectangle();
+    }
+    final int w = icon.getIconWidth();
+    final int h = icon.getIconHeight();
+    final int x = (getWidth() - w) / 2;
+    final int y = (getHeight() - h) / 2;
+    return new java.awt.Rectangle(x, y, w, h);
   }
 
   private Icon currentIcon() {
