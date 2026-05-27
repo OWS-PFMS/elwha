@@ -228,10 +228,17 @@ public final class ElwhaBadgeAnchor {
       badge.addPropertyChangeListener(ElwhaBadge.PROPERTY_CONTENT, badgeContentListener);
       badge.addPropertyChangeListener(
           ElwhaBadge.PROPERTY_ACCESSIBILITY_TEXT, badgeAccessibilityListener);
-      hostBaseName = host.getAccessibleContext().getAccessibleName();
-      hostBaseNameCaptured = true;
+      // host.getAccessibleContext() can be null for bare JComponent subclasses that don't
+      // initialize one (most production hosts will return non-null via AccessibleJComponent,
+      // but the explicit-bounds overload accepts arbitrary JComponents). Skip the a11y splice
+      // entirely when no context is exposed; the badge still paints / anchors correctly.
+      final javax.accessibility.AccessibleContext ctx = host.getAccessibleContext();
+      if (ctx != null) {
+        hostBaseName = ctx.getAccessibleName();
+        hostBaseNameCaptured = true;
+        applyAccessibleName();
+      }
       badge.anchorSetLabelFor(host);
-      applyAccessibleName();
       reseatToCurrentHierarchy();
     }
 
@@ -239,12 +246,16 @@ public final class ElwhaBadgeAnchor {
       if (detached || !hostBaseNameCaptured) {
         return;
       }
+      final javax.accessibility.AccessibleContext ctx = host.getAccessibleContext();
+      if (ctx == null) {
+        return;
+      }
       final String announcement = badge.getAccessibilityText();
       final String combined =
           hostBaseName == null || hostBaseName.isEmpty()
               ? announcement
               : hostBaseName + " " + announcement;
-      host.getAccessibleContext().setAccessibleName(combined);
+      ctx.setAccessibleName(combined);
     }
 
     private void reseatToCurrentHierarchy() {
@@ -293,6 +304,17 @@ public final class ElwhaBadgeAnchor {
         return;
       }
       final Rectangle icon = iconBoundsSupplier.get();
+      // Empty iconBounds — host has no icon currently installed. Without this guard the
+      // anchor would still place the badge at (offsetY, -offsetX) relative to the host's
+      // origin, floating in space. Hide until iconBounds become non-empty; the next refresh
+      // (triggered by a host resize / parent change) re-shows.
+      if (icon.width <= 0 || icon.height <= 0) {
+        badge.setVisible(false);
+        return;
+      }
+      // Re-sync visibility in case a prior refresh hid us; the SHOWING_CHANGED listener
+      // alone doesn't fire when the icon transitions from absent to present.
+      syncBadgeVisibility();
       final boolean ltr = host.getComponentOrientation().isLeftToRight();
 
       // "Top-trailing" in image coords: right edge in LTR, left edge in RTL.
@@ -335,7 +357,10 @@ public final class ElwhaBadgeAnchor {
       badge.removePropertyChangeListener(
           ElwhaBadge.PROPERTY_ACCESSIBILITY_TEXT, badgeAccessibilityListener);
       if (hostBaseNameCaptured) {
-        host.getAccessibleContext().setAccessibleName(hostBaseName);
+        final javax.accessibility.AccessibleContext ctx = host.getAccessibleContext();
+        if (ctx != null) {
+          ctx.setAccessibleName(hostBaseName);
+        }
       }
       badge.anchorSetLabelFor(null);
       if (layeredPane != null) {
