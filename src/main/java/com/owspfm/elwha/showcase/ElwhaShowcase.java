@@ -2458,6 +2458,7 @@ public final class ElwhaShowcase {
       {"star", "Starred"}
     };
     final JPanel row = new JPanel(new java.awt.GridLayout(1, entries.length, 0, 0));
+    row.setOpaque(false);
     row.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
     for (final String[] entry : entries) {
       final com.owspfm.elwha.navrail.ElwhaNavRailDestination d =
