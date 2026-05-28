@@ -43,6 +43,8 @@ import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.navrail.ElwhaNavRailDestination;
+import com.owspfm.elwha.navrail.ElwhaNavigationRail;
 import com.owspfm.elwha.navrail.playground.NavRailDestinationPlaygroundPanels;
 import com.owspfm.elwha.navrail.playground.NavigationRailPlaygroundPanels;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
@@ -65,13 +67,18 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
+import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -90,16 +97,12 @@ import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
-import javax.swing.JTree;
+import javax.swing.Scrollable;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
+import javax.swing.Timer;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeCellRenderer;
-import javax.swing.tree.TreePath;
-import javax.swing.tree.TreeSelectionModel;
 
 /**
  * The Elwha Showcase — the unified, curated playground for the whole Elwha component set.
@@ -132,16 +135,93 @@ import javax.swing.tree.TreeSelectionModel;
  */
 public final class ElwhaShowcase {
 
+  private static final int RAIL_COLLAPSED_WIDTH = 96;
+  private static final String HOME_KEY = "__landing_home";
+  private static final String FOUNDATIONS_KEY = "__landing_foundations";
+  private static final String COMPONENTS_KEY = "__landing_components";
+  private static final String CONTAINERS_KEY = "__landing_containers";
+  private static final String AREA_FOUNDATIONS = "Foundations";
+  private static final String AREA_COMPONENTS = "Components";
+  private static final String AREA_CONTAINERS = "Containers";
+  // Maximum width of the landing-page card grid. Caps cards at ~320 dp each (960 / 3) so the
+  // grid reads as a dashboard tile-row rather than stretching cards to the full frame width.
+  private static final int MAX_GRID_WIDTH = 960;
+
   private final List<Runnable> tokenRefreshers = new ArrayList<>();
   private final JPanel content = new JPanel(new CardLayout());
   private final List<Theme> primaryThemes = MaterialPalettes.primary();
   private final List<Theme> secondaryThemes = MaterialPalettes.secondary();
+  // Insertion-ordered so Home and area landings list leaves in the same order they appear in the
+  // area sections (which is also the rail's primary-destination order).
+  private final Map<String, LeafEntry> leaves = new LinkedHashMap<>();
   private JLabel statusLabel;
   private JComboBox<Theme> palettePicker;
   private Theme primarySelection;
   private Theme secondarySelection;
   private boolean secondaryTier;
   private boolean pickerAdjusting;
+  private ElwhaNavigationRail rail;
+  private ElwhaNavRailDestination foundationsPrim;
+  private ElwhaNavRailDestination componentsPrim;
+  private ElwhaNavRailDestination containersPrim;
+
+  /**
+   * Catalog entry for one Showcase leaf — what every landing-page card renders and what the
+   * back-affordance returns to. Holds the leaf's display label, supporting copy, parent area, and
+   * the realised JComponent surface that goes into the CardLayout.
+   */
+  private static final class LeafEntry {
+    final String label;
+    final String supporting;
+    final String area;
+    final JComponent surface;
+
+    LeafEntry(
+        final String label, final String supporting, final String area, final JComponent surface) {
+      this.label = label;
+      this.supporting = supporting;
+      this.area = area;
+      this.surface = surface;
+    }
+  }
+
+  // Vertical-only scrollable page used for landing surfaces. Tracks the JScrollPane viewport
+  // width (instead of the page's natural preferred width) so the embedded grid never pushes
+  // horizontal scroll — the grid itself has a bounded max-width, and the BoxLayout column aligns
+  // it to the leading edge while padding any remaining horizontal space.
+  private static final class LandingPage extends JPanel implements Scrollable {
+    LandingPage() {
+      setOpaque(false);
+      setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+    }
+
+    @Override
+    public Dimension getPreferredScrollableViewportSize() {
+      return getPreferredSize();
+    }
+
+    @Override
+    public int getScrollableUnitIncrement(
+        final Rectangle visibleRect, final int orientation, final int direction) {
+      return 16;
+    }
+
+    @Override
+    public int getScrollableBlockIncrement(
+        final Rectangle visibleRect, final int orientation, final int direction) {
+      return 96;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+      return true;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportHeight() {
+      return false;
+    }
+  }
 
   private ElwhaShowcase() {}
 
@@ -162,39 +242,96 @@ public final class ElwhaShowcase {
     final JFrame frame = new JFrame("The Elwha Showcase");
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-    final JPanel root = new JPanel(new BorderLayout());
-    root.add(buildHeaderBar(), BorderLayout.NORTH);
+    // The rail spans the full window height on the layered pane, so the header bar lives INSIDE
+    // the content area (above the CardLayout content) rather than across the top of the frame.
+    // Without this, the header would extend across the rail's leading column and the rail would
+    // read as a sidebar pocket rather than a real-app shell. Content pane gets a 96-dp leading
+    // inset matching the Collapsed rail width; the Expanded morph overlays into the inset area
+    // without reflowing content. Mirrors the FAB Phase 5 layered-pane recipe (#206) at a
+    // structural level.
+    final JPanel contentWrapper = new JPanel(new BorderLayout());
+    contentWrapper.setBorder(BorderFactory.createEmptyBorder(0, RAIL_COLLAPSED_WIDTH, 0, 0));
+    contentWrapper.add(buildHeaderBar(), BorderLayout.NORTH);
+    contentWrapper.add(content, BorderLayout.CENTER);
 
-    final JTree nav = buildNav();
-    final JScrollPane navScroll = new JScrollPane(nav);
-    navScroll.setPreferredSize(new Dimension(236, 0));
-    navScroll.setBorder(
-        BorderFactory.createMatteBorder(0, 0, 0, 1, UIManager.getColor("Component.borderColor")));
-    root.add(navScroll, BorderLayout.WEST);
-    root.add(content, BorderLayout.CENTER);
+    final JPanel root = new JPanel(new BorderLayout());
+    root.add(contentWrapper, BorderLayout.CENTER);
+
+    // Populate the catalog of leaves + build all CardLayout cards (4 landings + 17 wrapped
+    // leaves). Must run before the rail is built so the rail's primary action listeners can
+    // resolve landing keys that already have cards registered.
+    populateCatalog();
+    populateLandingCards();
+    populateLeafCards();
+
+    rail = buildShowcaseRail();
+    mountRailOnLayeredPane(frame, rail);
+    addFloatingFab(frame);
 
     frame.setContentPane(root);
     frame.setSize(1320, 860);
     frame.setLocationRelativeTo(null);
-    addFloatingFab(frame, nav);
     frame.setVisible(true);
-    // Park initial focus on the nav tree, not the header button group — otherwise a focused mode
+    // Initial card: the Foundations landing (rail's first primary is selected by default).
+    showCard(FOUNDATIONS_KEY);
+    // Park initial focus on the rail, not the header button group — otherwise a focused mode
     // segment and the selected mode segment read as two selections at once.
-    SwingUtilities.invokeLater(nav::requestFocusInWindow);
+    SwingUtilities.invokeLater(rail::requestFocusInWindow);
+  }
+
+  // Mounts the ElwhaNavigationRail on the frame's JLayeredPane at PALETTE_LAYER, leading edge,
+  // full layered-pane height (the header bar lives inside the content area, not above the rail —
+  // see buildAndShow). Position is recomputed on layered-pane resize and on every variant morph
+  // tick (during the Collapsed↔Expanded morph the rail's preferred width lerps, but the layered
+  // pane uses absolute positioning so the parent never auto-relayouts — a 60 Hz Swing Timer keyed
+  // to isMorphing() polls and re-setBounds until the morph settles).
+  private void mountRailOnLayeredPane(final JFrame frame, final ElwhaNavigationRail target) {
+    final JLayeredPane layeredPane = frame.getLayeredPane();
+    layeredPane.add(target, JLayeredPane.PALETTE_LAYER);
+
+    final Runnable position =
+        () -> {
+          final Dimension pref = target.getPreferredSize();
+          final boolean ltr = layeredPane.getComponentOrientation().isLeftToRight();
+          final int x = ltr ? 0 : layeredPane.getWidth() - pref.width;
+          target.setBounds(x, 0, pref.width, layeredPane.getHeight());
+        };
+    layeredPane.addComponentListener(
+        new ComponentAdapter() {
+          @Override
+          public void componentResized(final ComponentEvent event) {
+            position.run();
+          }
+        });
+
+    final Timer morphTracker =
+        new Timer(
+            16,
+            e -> {
+              position.run();
+              if (!target.isMorphing()) {
+                ((Timer) e.getSource()).stop();
+              }
+            });
+    morphTracker.setCoalesce(true);
+    target.addPropertyChangeListener(
+        ElwhaNavigationRail.PROPERTY_VARIANT, e -> morphTracker.restart());
+    position.run();
   }
 
   // Mounts a real floating ElwhaFab on the frame's layered pane (PALETTE_LAYER, above the content
   // pane) so it's visible from every Showcase tab. Anchored bottom-trailing with the M3 16 dp
   // inset, RTL-aware via the layered pane's component orientation, repositioned on resize. Click
-  // navigates the sidebar to the FAB entry — the floating instance is the showcase's
-  // self-demonstration of the §15 recipe (and the working example referenced from that section).
-  private void addFloatingFab(final JFrame frame, final JTree nav) {
+  // navigates to the FAB leaf — the floating instance is the showcase's self-demonstration of the
+  // FAB design-doc §15 recipe (and the working example referenced from that section). Co-exists
+  // with the navigation rail, which lives at the leading edge of the same layered pane.
+  private void addFloatingFab(final JFrame frame) {
     final ElwhaFab floatingFab =
         ElwhaFab.extended(MaterialIcons.editFilled(ElwhaFab.Size.SMALL.iconPx()), "FAB Workbench");
     floatingFab.setToolTipText(
-        "Floating ElwhaFab — click to open the FAB Workbench. Composes the design-doc §15"
+        "Floating ElwhaFab — click to open the FAB Workbench. Composes the FAB design-doc §15"
             + " JLayeredPane recipe.");
-    floatingFab.addActionListener(event -> selectNavLeaf(nav, "FAB"));
+    floatingFab.addActionListener(event -> showCard("FAB"));
 
     final JLayeredPane layeredPane = frame.getLayeredPane();
     layeredPane.add(floatingFab, JLayeredPane.PALETTE_LAYER);
@@ -218,23 +355,37 @@ public final class ElwhaShowcase {
     position.run();
   }
 
-  // Programmatic navigation: walks the sidebar tree to the leaf whose user-object label matches
-  // `label` and selects it, also scrolling the path into view. Used by the floating FAB's click
-  // handler so the Workbench entry is reachable from anywhere.
-  private void selectNavLeaf(final JTree nav, final String label) {
-    final DefaultMutableTreeNode root = (DefaultMutableTreeNode) nav.getModel().getRoot();
-    final java.util.Enumeration<javax.swing.tree.TreeNode> nodes = root.depthFirstEnumeration();
-    while (nodes.hasMoreElements()) {
-      final javax.swing.tree.TreeNode node = nodes.nextElement();
-      if (node instanceof DefaultMutableTreeNode dm
-          && dm.isLeaf()
-          && label.equals(dm.getUserObject())) {
-        final TreePath path = new TreePath(dm.getPath());
-        nav.setSelectionPath(path);
-        nav.scrollPathToVisible(path);
-        return;
-      }
+  // Swap the CardLayout to the named card and re-sync the rail's selected primary to the area
+  // that hosts this card. Programmatic setSelected on the rail does NOT fire its action listener,
+  // so calling this from inside a rail action listener can't re-enter.
+  private void showCard(final String key) {
+    ((CardLayout) content.getLayout()).show(content, key);
+    final ElwhaNavRailDestination targetPrim = primaryForKey(key);
+    if (targetPrim != null && rail != null && rail.getSelected() != targetPrim) {
+      rail.setSelected(targetPrim);
     }
+  }
+
+  private ElwhaNavRailDestination primaryForKey(final String key) {
+    if (FOUNDATIONS_KEY.equals(key)) {
+      return foundationsPrim;
+    }
+    if (COMPONENTS_KEY.equals(key)) {
+      return componentsPrim;
+    }
+    if (CONTAINERS_KEY.equals(key)) {
+      return containersPrim;
+    }
+    final LeafEntry entry = leaves.get(key);
+    if (entry == null) {
+      return null;
+    }
+    return switch (entry.area) {
+      case AREA_FOUNDATIONS -> foundationsPrim;
+      case AREA_COMPONENTS -> componentsPrim;
+      case AREA_CONTAINERS -> containersPrim;
+      default -> null;
+    };
   }
 
   // --- header bar ---
@@ -418,64 +569,302 @@ public final class ElwhaShowcase {
             + requested.resolved());
   }
 
-  // --- sidebar nav + content cards ---
+  // --- navigation rail + content cards ---
 
-  private JTree buildNav() {
-    final DefaultMutableTreeNode root = new DefaultMutableTreeNode("Showcase");
+  // Catalog of every Showcase leaf — label, supporting blurb, area, and the realised surface
+  // component. The order here is the order Home + the area landings render their cards in, and
+  // is also the order the Components/Containers area destinations are traversed from. Foundations
+  // appears first per the rail's first-primary-selected-by-default contract — see buildAndShow.
+  private void populateCatalog() {
+    register(
+        new LeafEntry(
+            "Color Roles",
+            "Material 3 color roles, swatched and live-wired to the active palette.",
+            AREA_FOUNDATIONS,
+            scroll(FoundationsPanels.buildColorRoles(tokenRefreshers))));
+    register(
+        new LeafEntry(
+            "Type Scale",
+            "The full M3 typography scale rendered in the bundled Inter type-face.",
+            AREA_FOUNDATIONS,
+            scroll(FoundationsPanels.buildTypeScale(tokenRefreshers))));
+    register(
+        new LeafEntry(
+            "Swing Comps",
+            "Raw Swing primitives — sanity-check the FlatLaf theme under Elwha tokens.",
+            AREA_FOUNDATIONS,
+            scroll(FoundationsPanels.buildSwingComps(tokenRefreshers))));
 
-    final DefaultMutableTreeNode foundations = new DefaultMutableTreeNode("Foundations");
-    addLeaf(foundations, "Color Roles", scroll(FoundationsPanels.buildColorRoles(tokenRefreshers)));
-    addLeaf(foundations, "Type Scale", scroll(FoundationsPanels.buildTypeScale(tokenRefreshers)));
-    addLeaf(foundations, "Swing Comps", scroll(FoundationsPanels.buildSwingComps(tokenRefreshers)));
-    root.add(foundations);
+    register(
+        new LeafEntry(
+            "Button",
+            "The M3 Expressive button — five variants, four sizes, the morph kit, all knobs.",
+            AREA_COMPONENTS,
+            buildButtonComponent()));
+    register(
+        new LeafEntry(
+            "Chip",
+            "Assist / filter / input / suggestion chips with trailing-slot variants.",
+            AREA_COMPONENTS,
+            buildChipComponent()));
+    register(
+        new LeafEntry(
+            "Icon Button",
+            "Icon-only buttons with the same variant + interaction-mode contract as Button.",
+            AREA_COMPONENTS,
+            buildIconButtonComponent()));
+    register(
+        new LeafEntry(
+            "FAB",
+            "Floating Action Button — Standard ↔ Extended morph, three sizes, four colors.",
+            AREA_COMPONENTS,
+            buildFabComponent()));
+    register(
+        new LeafEntry(
+            "Badge",
+            "M3 Badge primitive + anchor — dot, count, and label forms on any icon-bearing host.",
+            AREA_COMPONENTS,
+            buildBadgeComponent()));
+    register(
+        new LeafEntry(
+            "Nav Rail Destination",
+            "The rail's destination atom — Collapsed / Expanded layouts and badge slot.",
+            AREA_COMPONENTS,
+            buildNavRailDestinationComponent()));
+    register(
+        new LeafEntry(
+            "Navigation Rail",
+            "The full rail container — chrome slots, sections, Collapsed ↔ Expanded morph.",
+            AREA_COMPONENTS,
+            buildNavigationRailComponent()));
+    register(
+        new LeafEntry(
+            "Button Group",
+            "M3 segmented + connected button groups with single / required / multi selection.",
+            AREA_COMPONENTS,
+            buildButtonGroupComponent()));
+    register(
+        new LeafEntry(
+            "Card",
+            "ElwhaCard variants and composition primitives (header, body, actions, media).",
+            AREA_COMPONENTS,
+            buildCardComponent()));
+    register(
+        new LeafEntry(
+            "Surface",
+            "The token-driven surface primitive underpinning every chrome component.",
+            AREA_COMPONENTS,
+            buildSurfaceComponent()));
 
-    final DefaultMutableTreeNode components = new DefaultMutableTreeNode("Components");
-    addLeaf(components, "Button", buildButtonComponent());
-    addLeaf(components, "Chip", buildChipComponent());
-    addLeaf(components, "Icon Button", buildIconButtonComponent());
-    addLeaf(components, "FAB", buildFabComponent());
-    addLeaf(components, "Badge", buildBadgeComponent());
-    addLeaf(components, "Nav Rail Destination", buildNavRailDestinationComponent());
-    addLeaf(components, "Navigation Rail", buildNavigationRailComponent());
-    addLeaf(components, "Button Group", buildButtonGroupComponent());
-    addLeaf(components, "Card", buildCardComponent());
-    addLeaf(components, "Surface", buildSurfaceComponent());
-    root.add(components);
-
-    final DefaultMutableTreeNode containers = new DefaultMutableTreeNode("Containers");
-    addLeaf(containers, "Chip List", new ChipListContainer().component());
-    addLeaf(containers, "Card List", new CardListContainer().component());
-    addLeaf(containers, "Button Group (mutex)", buildButtonGroupContainer());
-    addLeaf(containers, "Icon Button Group (mutex)", buildIconButtonGroupContainer());
-    root.add(containers);
-
-    final JTree tree = new JTree(root);
-    tree.setRootVisible(false);
-    tree.setShowsRootHandles(true);
-    tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
-    tree.setCellRenderer(navRenderer());
-    tree.setRowHeight(28);
-    tree.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-    for (int i = 0; i < tree.getRowCount(); i++) {
-      tree.expandRow(i);
-    }
-    tree.addTreeSelectionListener(
-        event -> {
-          final DefaultMutableTreeNode node =
-              (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
-          if (node != null && node.isLeaf()) {
-            ((CardLayout) content.getLayout()).show(content, node.getUserObject().toString());
-          }
-        });
-    // Open on the first Foundations leaf (row 0 = Foundations section, row 1 = Color Roles).
-    tree.setSelectionRow(1);
-    return tree;
+    register(
+        new LeafEntry(
+            "Chip List",
+            "ElwhaChipList — orientation, selection model, drag-reorder, tab-strip semantics.",
+            AREA_CONTAINERS,
+            new ChipListContainer().component()));
+    register(
+        new LeafEntry(
+            "Card List",
+            "ElwhaCardList — vertical and horizontal card containers with selection + reorder.",
+            AREA_CONTAINERS,
+            new CardListContainer().component()));
+    register(
+        new LeafEntry(
+            "Button Group (mutex)",
+            "Mutually-exclusive button-group demo — radio-style selection across N segments.",
+            AREA_CONTAINERS,
+            buildButtonGroupContainer()));
+    register(
+        new LeafEntry(
+            "Icon Button Group (mutex)",
+            "Icon-only mutex group — toolbar-style segmented control with single selection.",
+            AREA_CONTAINERS,
+            buildIconButtonGroupContainer()));
   }
 
-  private void addLeaf(
-      final DefaultMutableTreeNode section, final String label, final Component panel) {
-    section.add(new DefaultMutableTreeNode(label));
-    content.add(panel, label);
+  private void register(final LeafEntry entry) {
+    leaves.put(entry.label, entry);
+  }
+
+  // The four landing cards, populated into the CardLayout content panel. Each is a grid of
+  // ElwhaCards — title + supporting text + an actionable click that routes to the leaf surface.
+  // Home is the master index (all 17 leaves, grouped by area heading); each area landing covers
+  // just its own leaves. ElwhaCard's actionable mode is the entire raison-d'être here: the cards
+  // are the navigation surface, not decoration.
+  private void populateLandingCards() {
+    content.add(buildHomeLanding(), HOME_KEY);
+    content.add(buildAreaLanding(AREA_FOUNDATIONS), FOUNDATIONS_KEY);
+    content.add(buildAreaLanding(AREA_COMPONENTS), COMPONENTS_KEY);
+    content.add(buildAreaLanding(AREA_CONTAINERS), CONTAINERS_KEY);
+  }
+
+  // Wraps each leaf surface with a leading-edge "← {area}" back affordance and registers it in
+  // the CardLayout under the leaf label. The back row is a thin BorderLayout NORTH strip; the
+  // leaf surface fills CENTER unchanged.
+  private void populateLeafCards() {
+    for (final LeafEntry entry : leaves.values()) {
+      content.add(withBackToLanding(entry.area, entry.surface), entry.label);
+    }
+  }
+
+  private JComponent buildHomeLanding() {
+    final LandingPage page = new LandingPage();
+    page.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+    page.add(landingTitle("Welcome", "Every Elwha surface on one page. Pick anywhere to dive in."));
+    page.add(Box.createVerticalStrut(16));
+    for (final String area : List.of(AREA_FOUNDATIONS, AREA_COMPONENTS, AREA_CONTAINERS)) {
+      page.add(sectionHeading(area));
+      page.add(Box.createVerticalStrut(8));
+      page.add(landingGrid(leavesIn(area)));
+      page.add(Box.createVerticalStrut(20));
+    }
+    return scroll(page);
+  }
+
+  private JComponent buildAreaLanding(final String area) {
+    final LandingPage page = new LandingPage();
+    page.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+    page.add(landingTitle(area, areaBlurb(area)));
+    page.add(Box.createVerticalStrut(16));
+    page.add(landingGrid(leavesIn(area)));
+    return scroll(page);
+  }
+
+  private static String areaBlurb(final String area) {
+    return switch (area) {
+      case AREA_FOUNDATIONS ->
+          "The design-token foundation — color, type, and the raw-Swing baseline.";
+      case AREA_COMPONENTS ->
+          "The single-instance surfaces — every Elwha primitive in its own Workbench + Gallery.";
+      case AREA_CONTAINERS ->
+          "The multi-instance surfaces — lists, groups, and the composition demos.";
+      default -> "";
+    };
+  }
+
+  private List<LeafEntry> leavesIn(final String area) {
+    final List<LeafEntry> out = new ArrayList<>();
+    for (final LeafEntry entry : leaves.values()) {
+      if (entry.area.equals(area)) {
+        out.add(entry);
+      }
+    }
+    // Alpha-sort within each area so landing-page cards read left-to-right, top-down by label.
+    out.sort(Comparator.comparing(e -> e.label));
+    return out;
+  }
+
+  // A 3-column GridLayout grid of leaf cards, capped at MAX_GRID_WIDTH so individual cards stay
+  // at a dashboard-tile measure (~320 dp each) instead of stretching to the frame width.
+  // GridLayout divides its container width evenly across columns — so capping container.maxSize
+  // is enough; the BoxLayout column hosting the grid respects the max and aligns the grid
+  // leading-edge. ElwhaCardSupportingText is HTML-auto-wrapping so the cards' supporting copy
+  // reflows naturally at the chosen card width.
+  private JComponent landingGrid(final List<LeafEntry> entries) {
+    final JPanel grid = new JPanel(new GridLayout(0, 3, 12, 12));
+    grid.setOpaque(false);
+    grid.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    grid.setMaximumSize(new Dimension(MAX_GRID_WIDTH, Integer.MAX_VALUE));
+    for (final LeafEntry entry : entries) {
+      grid.add(leafCard(entry));
+    }
+    return grid;
+  }
+
+  private ElwhaCard leafCard(final LeafEntry entry) {
+    final ElwhaCard card = ElwhaCard.elevatedCard().setActionable(true);
+    card.add(new ElwhaCardHeader().setTitle(entry.label));
+    card.add(new ElwhaCardDivider());
+    card.add(new ElwhaCardSupportingText(entry.supporting));
+    card.setToolTipText("Open " + entry.label);
+    card.addActionListener(e -> showCard(entry.label));
+    return card;
+  }
+
+  private static JComponent landingTitle(final String title, final String subtitle) {
+    final JPanel head = new JPanel();
+    head.setLayout(new BoxLayout(head, BoxLayout.Y_AXIS));
+    head.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    head.setOpaque(false);
+    final JLabel titleLabel = new JLabel(title);
+    titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 26f));
+    titleLabel.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    head.add(titleLabel);
+    final JLabel subtitleLabel = new JLabel(subtitle);
+    subtitleLabel.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+    subtitleLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+    subtitleLabel.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    head.add(subtitleLabel);
+    return head;
+  }
+
+  private static JComponent sectionHeading(final String text) {
+    final JLabel label = new JLabel(text);
+    label.setFont(label.getFont().deriveFont(Font.BOLD, 16f));
+    label.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    label.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+    return label;
+  }
+
+  // Wraps a leaf surface with a leading "← {area}" back-button strip. Routes the click back to
+  // the leaf's parent landing — substitute for a breadcrumbs primitive we don't have yet. The
+  // back row is intentionally a thin FlowLayout strip so the leaf's existing chrome (the
+  // Workbench / Gallery JTabbedPane on most leaves) sits visually adjacent to it.
+  private JComponent withBackToLanding(final String area, final JComponent leafSurface) {
+    final JPanel wrapper = new JPanel(new BorderLayout());
+    wrapper.setOpaque(false);
+
+    final JPanel backRow = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 6));
+    backRow.setOpaque(false);
+    final ElwhaButton back = ElwhaButton.textButton("← " + area);
+    back.setToolTipText("Back to " + area);
+    back.addActionListener(e -> showCard(landingKeyFor(area)));
+    backRow.add(back);
+
+    wrapper.add(backRow, BorderLayout.NORTH);
+    wrapper.add(leafSurface, BorderLayout.CENTER);
+    return wrapper;
+  }
+
+  private static String landingKeyFor(final String area) {
+    return switch (area) {
+      case AREA_FOUNDATIONS -> FOUNDATIONS_KEY;
+      case AREA_COMPONENTS -> COMPONENTS_KEY;
+      case AREA_CONTAINERS -> CONTAINERS_KEY;
+      default -> HOME_KEY;
+    };
+  }
+
+  // Builds the Showcase's navigation rail — 3 primary destinations (one per area) wired to area
+  // landings, plus an extended FAB linking to the Home master-index landing. Both the rail-FAB
+  // and the bottom-trailing floating FAB share the layered pane; together they demonstrate two
+  // distinct M3 FAB placement modes (chrome slot + true floating anchor) on a single frame.
+  private ElwhaNavigationRail buildShowcaseRail() {
+    final ElwhaNavigationRail target = ElwhaNavigationRail.collapsed();
+    target.getAccessibleContext().setAccessibleName("Showcase navigation rail");
+    target.setSurfaceFilled(true);
+    target.setMenuButton(new ElwhaIconButton(MaterialIcons.menu()));
+
+    final ElwhaFab homeFab =
+        ElwhaFab.extended(MaterialIcons.home(ElwhaFab.Size.SMALL.iconPx()), "Home");
+    homeFab.setToolTipText("Open the Home landing — index of every Showcase surface.");
+    homeFab.addActionListener(e -> showCard(HOME_KEY));
+    target.setFab(homeFab);
+
+    foundationsPrim = ElwhaNavRailDestination.of(MaterialIcons.symbol("palette"), AREA_FOUNDATIONS);
+    componentsPrim = ElwhaNavRailDestination.of(MaterialIcons.symbol("widgets"), AREA_COMPONENTS);
+    containersPrim = ElwhaNavRailDestination.of(MaterialIcons.symbol("layers"), AREA_CONTAINERS);
+
+    target.setPrimary(List.of(foundationsPrim, componentsPrim, containersPrim));
+
+    // Action listeners (not selection listeners) so re-clicking the already-selected primary
+    // while inside a leaf returns to that area's landing — the single-step "back to area" trick
+    // without a breadcrumbs component.
+    foundationsPrim.addActionListener(e -> showCard(FOUNDATIONS_KEY));
+    componentsPrim.addActionListener(e -> showCard(COMPONENTS_KEY));
+    containersPrim.addActionListener(e -> showCard(CONTAINERS_KEY));
+
+    return target;
   }
 
   // --- component surfaces: Workbench (interactive) + Gallery (matrix) ---
@@ -2789,13 +3178,5 @@ public final class ElwhaShowcase {
     pane.setBorder(BorderFactory.createEmptyBorder());
     pane.getVerticalScrollBar().setUnitIncrement(16);
     return pane;
-  }
-
-  private static DefaultTreeCellRenderer navRenderer() {
-    final DefaultTreeCellRenderer renderer = new DefaultTreeCellRenderer();
-    renderer.setLeafIcon(null);
-    renderer.setOpenIcon(null);
-    renderer.setClosedIcon(null);
-    return renderer;
   }
 }

@@ -235,6 +235,40 @@ public final class MaterialIcons {
     return load("help_fill", size);
   }
 
+  /** House / home glyph (outline). */
+  public static FlatSVGIcon home() {
+    return home(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #home()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon home(final int size) {
+    return load("home", size);
+  }
+
+  /** House / home glyph (filled / solid) — pairs with {@link #home()} as the "active" state. */
+  public static FlatSVGIcon homeFilled() {
+    return homeFilled(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #homeFilled()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon homeFilled(final int size) {
+    return load("home_fill", size);
+  }
+
   /** Heart / favorite glyph (outline). */
   public static FlatSVGIcon favorite() {
     return favorite(DEFAULT_SIZE);
