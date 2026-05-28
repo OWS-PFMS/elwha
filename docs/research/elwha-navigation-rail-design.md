@@ -70,6 +70,9 @@ Per-container:
 - **Sections** — zero or more. Each section is a header label + a list of secondary destinations. Sections are shown only when `variant == EXPANDED`.
 - **Menu button slot** — optional `ElwhaIconButton`; if absent, the rail is fixed-state (consumer must drive variant changes via API).
 - **Anchored action slot** — optional `ElwhaFab`. If present, the rail orchestrates the FAB's Standard↔Extended form to track its own Collapsed↔Expanded variant.
+- **Trailing actions slot** — optional `List<ElwhaIconButton>`, anchored to the bottom of the rail surface, below the destination stack. Typically holds utility/system actions (theme toggle, settings, help, playground launcher) — not destinations. *Elwha extension beyond the M3 token tables; rationale below.*
+
+> **Note on the trailing actions slot (Elwha extension):** the formal M3 nav rail token spec doesn't enumerate a trailing/footer slot. However, m3.material.io itself renders a rail with bottom-anchored utility buttons (theme toggle, playground launcher), so the pattern is demonstrated by the spec's own home site even though not formally documented. Elwha follows the demonstrated pattern: an optional list-of-actions slot below the destinations, treated as "rail-hosted but not a destination" content. Consumers that don't need it pass nothing.
 
 ## §4. Size axis (M3 token-locked)
 
@@ -196,6 +199,10 @@ Focus ring: standard Elwha focus treatment (matches Button / Chip). No M3-specif
 | Outbx  |               | ─── Section ──  |
 |        |               |                 |
 | ...    |               | i Secondary     |
+|        |               |                 |
+|        |               |                 |   ← trailing actions
+| (●)    |               | (●)             |     anchored to bottom
+| (☾)    |               | (☾)             |     (icon-only buttons)
 +--------+               +-----------------+
    COLLAPSED                  EXPANDED
    96dp                       220–360dp
@@ -228,6 +235,10 @@ public final class ElwhaNavigationRail extends JComponent {
   public void setPrimary(List<ElwhaNavRailDestination>);
   public void addSection(String header, List<ElwhaNavRailDestination>);
   public void clearSections();
+
+  // Trailing actions (Elwha extension — see §3)
+  public void setTrailingActions(List<ElwhaIconButton>);   // null/empty = no actions
+  public List<ElwhaIconButton> getTrailingActions();
 
   // Selection (single-mandatory)
   public ElwhaNavRailDestination getSelected();
@@ -384,7 +395,7 @@ Story numbers TBD; filed under epic #159 once this design doc is reviewed.
 
 ### Phase 2 — `ElwhaNavigationRail` (Collapsed only)
 
-6. Rail container skeleton — `collapsed()` factory, surface paint, divider, elevation, header chrome slots (menu button, FAB).
+6. Rail container skeleton — `collapsed()` factory, surface paint, divider, elevation, header chrome slots (menu button, FAB), trailing-actions slot (§3).
 7. Primary destinations + single-mandatory selection model — container holds the list, drives `selected` push to each destination, fires selection events.
 8. Keyboard navigation (per §10.2) — Tab in/out, ↑/↓ within, Space/Enter to select.
 9. Rail playground + Showcase Workbench entry — interactive demo for a static Collapsed rail.
@@ -421,6 +432,8 @@ Story numbers TBD; filed under epic #159 once this design doc is reviewed.
 - Multi-select destinations.
 - Drag-reorder of destinations.
 - Custom destination layouts (icon-only, label-only, icon+label-stacked horizontally) — the two M3 layouts are the contract.
+- **Navigation Drawer** (separate component) — explicitly deprecated by M3 Expressive in favor of the Expanded rail variant. We do not build a standalone `ElwhaNavigationDrawer`; the Expanded rail's section support covers the same use cases.
+- **Hover-flyout contextual submenu** (the m3.material.io docs-site pattern where hovering a rail destination reveals a sub-list of pages). Not an M3 component; a desktop convention. If a future use-case wants this, it'd be filed as a separate generic `ElwhaHoverFlyout` affordance — decoupled from the rail — so any component (IconButton, Chip, rail destination) could host one. Not in scope for the rail epic.
 
 ## §15. Resolved decisions
 
