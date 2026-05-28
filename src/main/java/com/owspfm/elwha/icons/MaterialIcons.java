@@ -1040,4 +1040,103 @@ public final class MaterialIcons {
    * @since v0.1.0
    */
   public record IconPair(FlatSVGIcon resting, FlatSVGIcon filled) {}
+
+  /**
+   * Wraps a Material Symbol name as a strongly-typed handle that resolves both fill-axis variants
+   * on demand. Created via {@link #symbol(String)}.
+   *
+   * <p>The selection-state semantics ({@link #unselected()} vs {@link #selected()}) are framed for
+   * consumers that toggle a glyph's fill axis based on a discrete selected state — primarily {@link
+   * com.owspfm.elwha.navrail.ElwhaNavRailDestination ElwhaNavRailDestination}'s active-indicator
+   * pill, but also any future component that wants the same fill-1-when-active pattern without
+   * threading two {@link FlatSVGIcon} instances by hand.
+   *
+   * <p><strong>Graceful fallback.</strong> If the bundle doesn't ship a {@code <name>_fill.svg}
+   * (e.g., linework-only glyphs like chevrons, check, +, −, dots — Material Symbols itself doesn't
+   * publish fill-1 variants for these), {@link #selected()} returns the unfilled glyph. The
+   * consumer sees no visual fill swap, which is the correct result for a glyph with no semantic
+   * fill axis. {@link #hasSelectedVariant()} reports the runtime resolution if a consumer wants to
+   * decide whether the fill swap will be visible.
+   *
+   * @author Charles Bryan
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static final class Symbol {
+
+    private final String name;
+
+    Symbol(final String name) {
+      this.name = name;
+    }
+
+    /** Bare glyph name (no path, no extension, no {@code _fill} suffix). */
+    public String name() {
+      return name;
+    }
+
+    /** Unselected glyph (fill-0) at {@link #DEFAULT_SIZE}. */
+    public FlatSVGIcon unselected() {
+      return unselected(DEFAULT_SIZE);
+    }
+
+    /**
+     * Sized variant of {@link #unselected()}.
+     *
+     * @param size pixel size for the returned icon
+     * @return the unfilled glyph at the requested size
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public FlatSVGIcon unselected(final int size) {
+      return load(name, size);
+    }
+
+    /**
+     * Selected glyph (fill-1) at {@link #DEFAULT_SIZE}; falls back to the unfilled glyph if the
+     * bundle doesn't ship a fill variant for this symbol — see class-level note on graceful
+     * fallback.
+     */
+    public FlatSVGIcon selected() {
+      return selected(DEFAULT_SIZE);
+    }
+
+    /**
+     * Sized variant of {@link #selected()}.
+     *
+     * @param size pixel size for the returned icon
+     * @return the fill-1 glyph if bundled; otherwise the unfilled glyph
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public FlatSVGIcon selected(final int size) {
+      return hasSelectedVariant() ? load(name + "_fill", size) : load(name, size);
+    }
+
+    /**
+     * Reports whether the bundle ships a fill-1 SVG for this symbol — i.e., whether {@link
+     * #selected()} will visibly differ from {@link #unselected()}.
+     *
+     * @return {@code true} if a {@code <name>_fill.svg} resource exists; {@code false} otherwise
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public boolean hasSelectedVariant() {
+      return MaterialIcons.class.getClassLoader().getResource(BASE + name + "_fill.svg") != null;
+    }
+  }
+
+  /**
+   * Factory for a {@link Symbol} handle wrapping the named glyph. The base SVG ({@code <name>.svg})
+   * must be bundled; the fill variant ({@code <name>_fill.svg}) is optional and resolved at paint
+   * time — see {@link Symbol} for fallback semantics.
+   *
+   * @param name the bare Material Symbol name (no path, no extension, no {@code _fill} suffix)
+   * @return a symbol handle backed by the bundle
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static Symbol symbol(final String name) {
+    return new Symbol(name);
+  }
 }
