@@ -1,6 +1,8 @@
 package com.owspfm.elwha.navrail;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.badge.ElwhaBadge;
+import com.owspfm.elwha.badge.ElwhaBadgeAnchor;
 import com.owspfm.elwha.badge.IconBearing;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
@@ -108,6 +110,9 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   private boolean selected;
   private boolean hovered;
   private boolean pressed;
+
+  private ElwhaBadge badge;
+  private ElwhaBadgeAnchor.Attachment badgeAttachment;
 
   private Point rippleOrigin;
   private float rippleProgress = 1f;
@@ -218,6 +223,47 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     this.selected = selected;
     firePropertyChange(PROPERTY_SELECTED, previous, selected);
     repaint();
+  }
+
+  /**
+   * Anchors a badge to this destination's icon. Passing {@code null} detaches any current badge.
+   * Setting a new non-null badge while one is already attached cleanly detaches the prior one
+   * first.
+   *
+   * <p>The badge is positioned by {@link ElwhaBadgeAnchor} using {@link #getIconBounds()} —
+   * upper-right of the icon glyph by default. Accessibility content from the badge splices into
+   * this destination's accessible name via the anchor's push-model (see {@code ElwhaBadgeAnchor}).
+   *
+   * <p>Expanded-variant badge placement (beside the label) is a Phase 3 concern — Collapsed
+   * placement only at this stage.
+   *
+   * @param badge the badge to anchor, or {@code null} to clear
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void setBadge(final ElwhaBadge badge) {
+    if (this.badge == badge) {
+      return;
+    }
+    if (badgeAttachment != null) {
+      ElwhaBadgeAnchor.detach(badgeAttachment);
+      badgeAttachment = null;
+    }
+    this.badge = badge;
+    if (badge != null) {
+      badgeAttachment = ElwhaBadgeAnchor.attach(this, badge);
+    }
+  }
+
+  /**
+   * Returns the currently attached badge, or {@code null} if none.
+   *
+   * @return the attached badge, or {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaBadge getBadge() {
+    return badge;
   }
 
   /**
