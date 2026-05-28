@@ -71,12 +71,37 @@ public final class ElwhaNavigationRail extends JComponent {
     EXPANDED
   }
 
+  /**
+   * Listener fired when the rail's selected destination changes. Parallels the chip-list selection
+   * listener pattern.
+   *
+   * @author Charles Bryan
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  @FunctionalInterface
+  public interface NavRailSelectionListener {
+    /**
+     * Called when the rail's selected destination changes (no-op same-instance calls suppressed).
+     *
+     * @param previous the previously-selected destination, or {@code null} if none
+     * @param current the now-selected destination, or {@code null} if the rail is empty
+     */
+    void selectionChanged(ElwhaNavRailDestination previous, ElwhaNavRailDestination current);
+  }
+
+  /** Property name fired when the selected destination changes. */
+  public static final String PROPERTY_SELECTED = "selected";
+
   static final int COLLAPSED_WIDTH_PX = 96;
   static final int CHROME_PAD_PX = 16;
   static final int CHROME_GAP_PX = 16;
+  static final int DESTINATION_GAP_PX = 4;
   static final int TRAILING_ACTION_GAP_PX = 4;
   static final int DIVIDER_WIDTH_PX = 1;
   static final int ELEVATION_GRADIENT_PX = 12;
+  static final int M3_PRIMARY_MIN = 3;
+  static final int M3_PRIMARY_MAX = 7;
 
   private Variant variant;
   private boolean surfaceFilled;
@@ -86,6 +111,16 @@ public final class ElwhaNavigationRail extends JComponent {
   private ElwhaIconButton menuButton;
   private ElwhaFab fab;
   private final List<ElwhaIconButton> trailingActions = new ArrayList<>();
+
+  private final List<ElwhaNavRailDestination> primary = new ArrayList<>();
+  private ElwhaNavRailDestination selected;
+  private final List<NavRailSelectionListener> selectionListeners = new ArrayList<>();
+  private final java.awt.event.ActionListener destinationClickListener =
+      e -> {
+        if (e.getSource() instanceof ElwhaNavRailDestination d) {
+          setSelected(d);
+        }
+      };
 
   private boolean missingAccessibleNameWarned;
 
@@ -304,6 +339,177 @@ public final class ElwhaNavigationRail extends JComponent {
   }
 
   /**
+   * Sets the rail's primary destinations — the vertical stack of {@link ElwhaNavRailDestination}s
+   * that live between the header chrome and the trailing actions. {@code null} is treated as an
+   * empty list; otherwise the rail stores a defensive copy.
+   *
+   * <p>M3 recommends 3–7 primary destinations; the rail logs a {@link Logger#warning(String)} if
+   * the list size falls outside that range but does not throw (design doc §3 phrasing).
+   *
+   * <p>Selection invariant (single-mandatory):
+   *
+   * <ul>
+   *   <li>If the new list is empty, {@link #getSelected()} becomes {@code null}.
+   *   <li>If the previously-selected destination is still present in the new list, it remains
+   *       selected.
+   *   <li>Otherwise the new list's first entry becomes the selected destination by default.
+   * </ul>
+   *
+   * <p>Each destination's {@link
+   * ElwhaNavRailDestination#addActionListener(java.awt.event.ActionListener) action listener} chain
+   * is augmented with an internal handler that routes clicks to {@link #setSelected}; consumers can
+   * still subscribe their own action listeners on a destination for additional side effects, but
+   * the rail's container is the single source of truth for which destination is selected.
+   *
+   * @param destinations the new list of primary destinations, or {@code null} to clear
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void setPrimary(final List<ElwhaNavRailDestination> destinations) {
+    for (final ElwhaNavRailDestination old : primary) {
+      remove(old);
+      old.removeActionListener(destinationClickListener);
+    }
+    primary.clear();
+    if (destinations != null) {
+      for (final ElwhaNavRailDestination d : destinations) {
+        if (d == null) {
+          continue;
+        }
+        primary.add(d);
+        add(d);
+        d.addActionListener(destinationClickListener);
+      }
+    }
+    if (!primary.isEmpty()
+        && (primary.size() < M3_PRIMARY_MIN || primary.size() > M3_PRIMARY_MAX)) {
+      LOG.warning(
+          "ElwhaNavigationRail.setPrimary received "
+              + primary.size()
+              + " destinations; M3 recommends "
+              + M3_PRIMARY_MIN
+              + "–"
+              + M3_PRIMARY_MAX
+              + ". This is advisory only — paint and layout still work.");
+    }
+
+    final ElwhaNavRailDestination prior = selected;
+    final ElwhaNavRailDestination next;
+    if (primary.isEmpty()) {
+      next = null;
+    } else if (prior != null && primary.contains(prior)) {
+      next = prior;
+    } else {
+      next = primary.get(0);
+    }
+    applySelection(prior, next);
+
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns a defensive copy of the current primary destinations list.
+   *
+   * @return a defensive copy of the primary destinations
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public List<ElwhaNavRailDestination> getPrimary() {
+    return new ArrayList<>(primary);
+  }
+
+  /**
+   * Returns the currently-selected destination, or {@code null} if the primary list is empty.
+   *
+   * @return the selected destination, or {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaNavRailDestination getSelected() {
+    return selected;
+  }
+
+  /**
+   * Selects the given destination. Pass {@code null} only when the primary list is empty
+   * (clearing); otherwise the destination must be a member of the current primary list.
+   *
+   * <p>Same-instance calls are no-ops (clicks on the already-selected destination cause no
+   * selection events). On a state change, the previous destination's selected flag is pushed to
+   * {@code false}, the new one's to {@code true}, and both a {@link #PROPERTY_SELECTED "selected"}
+   * property-change event and a {@link NavRailSelectionListener#selectionChanged} notification are
+   * fired in that order.
+   *
+   * @param destination the destination to select, or {@code null} only when {@link #getPrimary()
+   *     primary} is empty
+   * @throws IllegalArgumentException if {@code destination} is non-null but not in the current
+   *     primary list
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void setSelected(final ElwhaNavRailDestination destination) {
+    if (destination == null) {
+      if (!primary.isEmpty()) {
+        throw new IllegalArgumentException(
+            "setSelected(null) is only legal when the primary list is empty");
+      }
+      applySelection(selected, null);
+      return;
+    }
+    if (!primary.contains(destination)) {
+      throw new IllegalArgumentException("destination is not a member of the current primary list");
+    }
+    if (selected == destination) {
+      return;
+    }
+    applySelection(selected, destination);
+  }
+
+  private void applySelection(
+      final ElwhaNavRailDestination prior, final ElwhaNavRailDestination next) {
+    if (prior == next) {
+      return;
+    }
+    if (prior != null) {
+      prior.setSelected(false);
+    }
+    this.selected = next;
+    if (next != null) {
+      next.setSelected(true);
+    }
+    firePropertyChange(PROPERTY_SELECTED, prior, next);
+    for (final NavRailSelectionListener l : new ArrayList<>(selectionListeners)) {
+      l.selectionChanged(prior, next);
+    }
+  }
+
+  /**
+   * Adds a selection listener. Fires on {@link #setSelected} state changes (not on no-op same-
+   * instance calls). The listener is invoked on the same thread that triggered the change —
+   * typically the EDT.
+   *
+   * @param listener the listener to add; {@code null} is ignored
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void addSelectionListener(final NavRailSelectionListener listener) {
+    if (listener != null) {
+      selectionListeners.add(listener);
+    }
+  }
+
+  /**
+   * Removes a previously-added selection listener.
+   *
+   * @param listener the listener to remove
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void removeSelectionListener(final NavRailSelectionListener listener) {
+    selectionListeners.remove(listener);
+  }
+
+  /**
    * Sets the rail's trailing actions — utility / system icon buttons (theme toggle, settings, help,
    * playground launcher, etc.) anchored to the bottom of the rail surface, below the destination
    * stack. {@code null} and an empty list both clear the slot.
@@ -381,9 +587,25 @@ public final class ElwhaNavigationRail extends JComponent {
     if (fab != null) {
       h += fab.getPreferredSize().height + CHROME_GAP_PX;
     }
-    h += CHROME_PAD_PX;
+    h += destinationStackHeight();
+    if (!trailingActions.isEmpty()) {
+      h += CHROME_GAP_PX;
+    }
     h += trailingHeight();
+    h += CHROME_PAD_PX;
     return Math.max(h, COLLAPSED_WIDTH_PX);
+  }
+
+  private int destinationStackHeight() {
+    if (primary.isEmpty()) {
+      return 0;
+    }
+    int h = 0;
+    for (final ElwhaNavRailDestination d : primary) {
+      h += d.getPreferredSize().height;
+    }
+    h += DESTINATION_GAP_PX * (primary.size() - 1);
+    return h;
   }
 
   private int trailingHeight() {
@@ -412,6 +634,13 @@ public final class ElwhaNavigationRail extends JComponent {
     if (fab != null) {
       final Dimension d = fab.getPreferredSize();
       fab.setBounds((w - d.width) / 2, topY, d.width, d.height);
+      topY += d.height + CHROME_GAP_PX;
+    }
+
+    for (final ElwhaNavRailDestination dest : primary) {
+      final Dimension d = dest.getPreferredSize();
+      dest.setBounds((w - d.width) / 2, topY, d.width, d.height);
+      topY += d.height + DESTINATION_GAP_PX;
     }
 
     if (trailingActions.isEmpty()) {
