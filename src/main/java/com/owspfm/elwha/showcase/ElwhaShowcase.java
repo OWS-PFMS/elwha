@@ -2525,6 +2525,8 @@ public final class ElwhaShowcase {
             stack(
                 gallerySection("Variants", NavigationRailPlaygroundPanels.buildVariantsPanel()),
                 gallerySection(
+                    "Expanded variant", NavigationRailPlaygroundPanels.buildExpandedPanel()),
+                gallerySection(
                     "Surface knobs", NavigationRailPlaygroundPanels.buildSurfacePanel()))));
     return tabs;
   }
@@ -2552,25 +2554,79 @@ public final class ElwhaShowcase {
     }
     dests.get(1).setBadge(com.owspfm.elwha.badge.ElwhaBadge.small());
     rail.setPrimary(dests);
+    rail.setSurfaceFilled(true);
+    rail.setMenuButton(new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.menu()));
+
+    // Custom Workbench stage for Nav Rail: the ComponentWorkbench default "single comp centered on
+    // a surface" pattern doesn't fit chrome components — the rail IS the surface, so placing it
+    // on another surface reads as "chrome inside chrome" decoration. Instead build a fake-app
+    // frame: rail docks on the leading edge, a content panel with selected-label + log fills the
+    // rest. Matches the standalone playground's Interactive tab so the rail-as-chrome semantics
+    // are visible at a glance.
+    final javax.swing.JTextArea railLog = new javax.swing.JTextArea(6, 30);
+    railLog.setEditable(false);
+    railLog.setLineWrap(true);
+    railLog.setWrapStyleWord(true);
+    final javax.swing.JScrollPane logScroll = new javax.swing.JScrollPane(railLog);
+    logScroll.setBorder(BorderFactory.createTitledBorder("Selection + variant log"));
+
+    final JLabel selectedLabel = new JLabel("Selected: Home");
+    selectedLabel.setFont(selectedLabel.getFont().deriveFont(Font.BOLD, 18f));
+    selectedLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
+
+    final JPanel contentArea = new JPanel(new BorderLayout());
+    contentArea.setOpaque(false);
+    contentArea.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+    contentArea.add(selectedLabel, BorderLayout.NORTH);
+    contentArea.add(logScroll, BorderLayout.CENTER);
+
+    final JPanel fakeAppFrame =
+        new JPanel(new BorderLayout()) {
+          @Override
+          public Dimension getPreferredSize() {
+            // Stretch the fake app frame to a tall preferred size so the ComponentWorkbench's
+            // stage surface grows to accommodate it (sizeStageSurface picks max(chosen, content)).
+            // Without this the rail's natural preferred height (chrome + few destinations ≈
+            // 380 dp) leaves the rail marooned in the middle of a much larger empty surface;
+            // 720 dp is a comfortable laptop-friendly window-frame height.
+            return new Dimension(720, 720);
+          }
+        };
+    fakeAppFrame.setBackground(com.owspfm.elwha.theme.ColorRole.SURFACE_CONTAINER_LOW.resolve());
+    fakeAppFrame.setBorder(
+        BorderFactory.createLineBorder(
+            com.owspfm.elwha.theme.ColorRole.OUTLINE_VARIANT.resolve(), 1));
+    fakeAppFrame.add(rail, BorderLayout.WEST);
+    fakeAppFrame.add(contentArea, BorderLayout.CENTER);
 
     final JPanel railRow = new JPanel(new BorderLayout());
     railRow.setOpaque(false);
-    railRow.add(rail, BorderLayout.WEST);
-    final JLabel selectedLabel = new JLabel("Selected: Home");
-    selectedLabel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-    railRow.add(selectedLabel, BorderLayout.CENTER);
-    rail.addSelectionListener(
-        (prev, cur) ->
-            selectedLabel.setText("Selected: " + (cur == null ? "(none)" : cur.getLabel())));
+    railRow.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+    railRow.add(fakeAppFrame, BorderLayout.CENTER);
 
-    final JCheckBox surfaceFilled = new JCheckBox("Surface filled");
+    rail.addSelectionListener(
+        (prev, cur) -> {
+          final String label = cur == null ? "(none)" : cur.getLabel();
+          selectedLabel.setText("Selected: " + label);
+          railLog.append(
+              "Selection: " + (prev == null ? "(none)" : prev.getLabel()) + " → " + label + "\n");
+          railLog.setCaretPosition(railLog.getDocument().getLength());
+        });
+    rail.addPropertyChangeListener(
+        com.owspfm.elwha.navrail.ElwhaNavigationRail.PROPERTY_VARIANT,
+        e -> {
+          railLog.append("Variant → " + e.getNewValue() + "\n");
+          railLog.setCaretPosition(railLog.getDocument().getLength());
+        });
+
+    final JCheckBox surfaceFilled = new JCheckBox("Surface filled", true);
     surfaceFilled.addActionListener(e -> rail.setSurfaceFilled(surfaceFilled.isSelected()));
     final JCheckBox dividerBox = new JCheckBox("Divider");
     dividerBox.addActionListener(e -> rail.setDivider(dividerBox.isSelected()));
     final JCheckBox elevationBox = new JCheckBox("Elevation 1");
     elevationBox.addActionListener(e -> rail.setElevation(elevationBox.isSelected() ? 1 : 0));
 
-    final JCheckBox menuBox = new JCheckBox("Menu button");
+    final JCheckBox menuBox = new JCheckBox("Menu button", true);
     menuBox.addActionListener(
         e ->
             rail.setMenuButton(
@@ -2582,7 +2638,7 @@ public final class ElwhaShowcase {
         e ->
             rail.setFab(
                 fabBox.isSelected()
-                    ? com.owspfm.elwha.fab.ElwhaFab.standard(MaterialIcons.edit())
+                    ? com.owspfm.elwha.fab.ElwhaFab.extended(MaterialIcons.edit(), "Compose")
                     : null));
     final JCheckBox trailingBox = new JCheckBox("Trailing actions");
     trailingBox.addActionListener(
@@ -2598,7 +2654,75 @@ public final class ElwhaShowcase {
           }
         });
 
+    // --- Phase 3: Variant + Expanded layout controls ---
+    final javax.swing.JRadioButton collapsedBtn = new javax.swing.JRadioButton("Collapsed", true);
+    final javax.swing.JRadioButton expandedBtn = new javax.swing.JRadioButton("Expanded");
+    final javax.swing.ButtonGroup variantGrp = new javax.swing.ButtonGroup();
+    variantGrp.add(collapsedBtn);
+    variantGrp.add(expandedBtn);
+    collapsedBtn.addActionListener(
+        e -> rail.morphTo(com.owspfm.elwha.navrail.ElwhaNavigationRail.Variant.COLLAPSED));
+    expandedBtn.addActionListener(
+        e -> rail.morphTo(com.owspfm.elwha.navrail.ElwhaNavigationRail.Variant.EXPANDED));
+    rail.addPropertyChangeListener(
+        com.owspfm.elwha.navrail.ElwhaNavigationRail.PROPERTY_VARIANT,
+        e -> {
+          final com.owspfm.elwha.navrail.ElwhaNavigationRail.Variant v =
+              (com.owspfm.elwha.navrail.ElwhaNavigationRail.Variant) e.getNewValue();
+          if (v == com.owspfm.elwha.navrail.ElwhaNavigationRail.Variant.EXPANDED) {
+            expandedBtn.setSelected(true);
+          } else {
+            collapsedBtn.setSelected(true);
+          }
+        });
+
+    final javax.swing.JSlider widthSlider = new javax.swing.JSlider(220, 360, 256);
+    widthSlider.setMajorTickSpacing(70);
+    widthSlider.setPaintTicks(true);
+    final JLabel widthLabel = new JLabel("256 px");
+    widthSlider.addChangeListener(
+        e -> {
+          final int v = widthSlider.getValue();
+          rail.setExpandedWidth(v);
+          widthLabel.setText(v + " px");
+        });
+
+    final JCheckBox sectionsBox = new JCheckBox("Sections");
+    sectionsBox.addActionListener(
+        e -> {
+          if (sectionsBox.isSelected()) {
+            rail.clearSections();
+            final java.util.List<com.owspfm.elwha.navrail.ElwhaNavRailDestination> tools =
+                new java.util.ArrayList<>();
+            tools.add(
+                com.owspfm.elwha.navrail.ElwhaNavRailDestination.of(
+                    MaterialIcons.symbol("dark_mode"), "Theme"));
+            tools.add(
+                com.owspfm.elwha.navrail.ElwhaNavRailDestination.of(
+                    MaterialIcons.symbol("help"), "Help"));
+            rail.addSection("Tools", tools);
+            final java.util.List<com.owspfm.elwha.navrail.ElwhaNavRailDestination> other =
+                new java.util.ArrayList<>();
+            other.add(
+                com.owspfm.elwha.navrail.ElwhaNavRailDestination.of(
+                    MaterialIcons.symbol("info"), "About"));
+            other.add(
+                com.owspfm.elwha.navrail.ElwhaNavRailDestination.of(
+                    MaterialIcons.symbol("star"), "Sponsor"));
+            rail.addSection("Other", other);
+          } else {
+            rail.clearSections();
+          }
+        });
+
     final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Variant");
+    controls.addControl("", collapsedBtn);
+    controls.addControl("", expandedBtn);
+    controls.addSection("Layout");
+    controls.addControl("Expanded width:", widthSlider);
+    controls.addControl("", widthLabel);
+    controls.addControl("", sectionsBox);
     controls.addSection("Surface");
     controls.addControl("", surfaceFilled);
     controls.addControl("", dividerBox);
@@ -2614,9 +2738,11 @@ public final class ElwhaShowcase {
     workbench.setStage(railRow);
     workbench.setCode(
         "ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();\n"
-            + "rail.setMenuButton(new ElwhaIconButton(MaterialIcons.moreVert()));\n"
-            + "rail.setFab(ElwhaFab.standard(MaterialIcons.edit()));\n"
+            + "rail.setMenuButton(new ElwhaIconButton(MaterialIcons.menu()));\n"
+            + "rail.setFab(ElwhaFab.extended(MaterialIcons.edit(), \"Compose\"));\n"
             + "rail.setPrimary(List.of(home, liked, watched, stacks, starred));\n"
+            + "rail.addSection(\"Tools\", List.of(settings, help));\n"
+            + "rail.morphTo(Variant.EXPANDED);  // 350ms morph\n"
             + "rail.addSelectionListener((prev, cur) -> selectTab(cur));");
     return workbench;
   }
