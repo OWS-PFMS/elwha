@@ -151,6 +151,9 @@ Additional decisions made during design-doc drafting:
 12. **State-layer overlay shape** — pill-shaped (follows the active indicator), not full-row. Hit target is still full-row.
 13. **`AccessibleRole`** — `PAGE_TAB_LIST` (container) + `PAGE_TAB` (destination). Matches ARIA `tablist`/`tab` for navigation rails.
 14. **`Escape` in Expanded** — not handled by the lib. Consumer-controlled; rail is non-modal, doesn't claim global Escape.
+15. **Trailing actions slot (Elwha extension)** — *Resolved 2026-05-28:* add an optional `List<ElwhaIconButton>` slot anchored to the bottom of the rail surface, below the destinations. The formal M3 nav rail token spec doesn't enumerate this, but m3.material.io itself renders rails with bottom-anchored utility buttons (theme toggle, playground launcher). Elwha follows the demonstrated pattern. See design doc §3.
+16. **No standalone Navigation Drawer** — *Resolved 2026-05-28:* M3 Expressive explicitly deprecates the Navigation Drawer in favor of the Expanded rail variant ([9to5google 2025-05-14](https://9to5google.com/2025/05/14/material-3-expressive-navigation/)). Elwha follows Expressive — the Expanded rail's section support covers the drawer's old use case.
+17. **Hover-flyout submenu (deferred)** — *Resolved 2026-05-28:* the m3.material.io docs-site pattern of hover-revealing a contextual sub-list of pages is a desktop convention, not an M3 component. If a use-case emerges, file as a separate generic `ElwhaHoverFlyout` affordance — decoupled from the rail — not as a rail feature. Out of scope for the rail epic. See design doc §14.
 
 ## 13. Screenshot index (25 captures)
 
