@@ -4,18 +4,28 @@ import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.theme.ColorRole;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.FocusTraversalPolicy;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
+import javax.swing.AbstractAction;
+import javax.swing.Action;
+import javax.swing.ActionMap;
+import javax.swing.InputMap;
 import javax.swing.JComponent;
+import javax.swing.KeyStroke;
 
 /**
  * The M3 Expressive Navigation Rail container — a vertical {@link JComponent} that docks to a
@@ -54,6 +64,14 @@ import javax.swing.JComponent;
  * destination's {@link AccessibleRole#PAGE_TAB} from Phase 1 — matches ARIA {@code tablist} /
  * {@code tab}). Consumers must supply an accessible name via {@link #setAccessibleName(String)};
  * the rail logs a {@link Logger#warning(String)} at first paint if no name is set.
+ *
+ * <p><strong>Keyboard navigation</strong> (design doc §10.2): Tab enters the rail at the menu
+ * button (if present) → FAB (if present) → exactly one destination (the focused one, falling back
+ * to the selected one, then the first) → trailing actions (in order) → next focusable after the
+ * rail. Shift+Tab reverses. Within the destination band, ↑ / ↓ move focus cyclically to the
+ * previous / next destination; Home / End jump to the first / last; Space / Enter activate the
+ * focused destination (selection only changes on activation, never on focus traversal). Escape is
+ * intentionally not consumed.
  *
  * @author Charles Bryan
  * @version v0.3.0
@@ -128,6 +146,8 @@ public final class ElwhaNavigationRail extends JComponent {
     this.variant = Objects.requireNonNull(variant, "variant");
     setLayout(null);
     setOpaque(false);
+    setFocusTraversalPolicyProvider(true);
+    setFocusTraversalPolicy(new RailFocusTraversalPolicy());
   }
 
   /**
@@ -369,6 +389,7 @@ public final class ElwhaNavigationRail extends JComponent {
     for (final ElwhaNavRailDestination old : primary) {
       remove(old);
       old.removeActionListener(destinationClickListener);
+      uninstallKeyboardNavigation(old);
     }
     primary.clear();
     if (destinations != null) {
@@ -379,6 +400,7 @@ public final class ElwhaNavigationRail extends JComponent {
         primary.add(d);
         add(d);
         d.addActionListener(destinationClickListener);
+        installKeyboardNavigation(d);
       }
     }
     if (!primary.isEmpty()
@@ -738,6 +760,146 @@ public final class ElwhaNavigationRail extends JComponent {
     @Override
     public AccessibleRole getAccessibleRole() {
       return AccessibleRole.PAGE_TAB_LIST;
+    }
+  }
+
+  // ---------------------------------------------------------- keyboard navigation
+
+  private static final String ACTION_FOCUS_NEXT = "elwhaNavRail.focusNext";
+  private static final String ACTION_FOCUS_PREV = "elwhaNavRail.focusPrev";
+  private static final String ACTION_FOCUS_FIRST = "elwhaNavRail.focusFirst";
+  private static final String ACTION_FOCUS_LAST = "elwhaNavRail.focusLast";
+
+  private void installKeyboardNavigation(final ElwhaNavRailDestination d) {
+    final InputMap im = d.getInputMap(JComponent.WHEN_FOCUSED);
+    final ActionMap am = d.getActionMap();
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), ACTION_FOCUS_NEXT);
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), ACTION_FOCUS_PREV);
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0), ACTION_FOCUS_FIRST);
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0), ACTION_FOCUS_LAST);
+    am.put(ACTION_FOCUS_NEXT, focusNeighborAction(+1));
+    am.put(ACTION_FOCUS_PREV, focusNeighborAction(-1));
+    am.put(ACTION_FOCUS_FIRST, focusEdgeAction(true));
+    am.put(ACTION_FOCUS_LAST, focusEdgeAction(false));
+  }
+
+  private void uninstallKeyboardNavigation(final ElwhaNavRailDestination d) {
+    final InputMap im = d.getInputMap(JComponent.WHEN_FOCUSED);
+    final ActionMap am = d.getActionMap();
+    im.remove(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0));
+    im.remove(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0));
+    im.remove(KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0));
+    im.remove(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0));
+    am.remove(ACTION_FOCUS_NEXT);
+    am.remove(ACTION_FOCUS_PREV);
+    am.remove(ACTION_FOCUS_FIRST);
+    am.remove(ACTION_FOCUS_LAST);
+  }
+
+  private Action focusNeighborAction(final int delta) {
+    return new AbstractAction() {
+      @Override
+      public void actionPerformed(final ActionEvent e) {
+        if (!(e.getSource() instanceof ElwhaNavRailDestination from) || primary.isEmpty()) {
+          return;
+        }
+        final int fromIndex = primary.indexOf(from);
+        if (fromIndex < 0) {
+          return;
+        }
+        final int size = primary.size();
+        final int target = ((fromIndex + delta) % size + size) % size;
+        primary.get(target).requestFocusInWindow();
+      }
+    };
+  }
+
+  private Action focusEdgeAction(final boolean first) {
+    return new AbstractAction() {
+      @Override
+      public void actionPerformed(final ActionEvent e) {
+        if (primary.isEmpty()) {
+          return;
+        }
+        primary.get(first ? 0 : primary.size() - 1).requestFocusInWindow();
+      }
+    };
+  }
+
+  private ElwhaNavRailDestination currentTabStopDestination() {
+    for (final ElwhaNavRailDestination d : primary) {
+      if (d.isFocusOwner()) {
+        return d;
+      }
+    }
+    if (selected != null && primary.contains(selected)) {
+      return selected;
+    }
+    return primary.isEmpty() ? null : primary.get(0);
+  }
+
+  /**
+   * Custom focus traversal policy: Tab visits menu button (if any) → FAB (if any) → exactly one
+   * destination (the focused one, falling back to the selected one, then the first) → trailing
+   * actions (in order). Other destinations are excluded from Tab order; arrow keys (↑/↓/Home/End)
+   * move focus within the destination band.
+   */
+  private final class RailFocusTraversalPolicy extends FocusTraversalPolicy {
+
+    @Override
+    public Component getComponentAfter(final Container root, final Component current) {
+      final List<Component> order = tabOrder();
+      final int i = order.indexOf(current);
+      if (i < 0 || order.isEmpty()) {
+        return order.isEmpty() ? null : order.get(0);
+      }
+      if (i + 1 >= order.size()) {
+        return null;
+      }
+      return order.get(i + 1);
+    }
+
+    @Override
+    public Component getComponentBefore(final Container root, final Component current) {
+      final List<Component> order = tabOrder();
+      final int i = order.indexOf(current);
+      if (i <= 0) {
+        return null;
+      }
+      return order.get(i - 1);
+    }
+
+    @Override
+    public Component getFirstComponent(final Container root) {
+      final List<Component> order = tabOrder();
+      return order.isEmpty() ? null : order.get(0);
+    }
+
+    @Override
+    public Component getLastComponent(final Container root) {
+      final List<Component> order = tabOrder();
+      return order.isEmpty() ? null : order.get(order.size() - 1);
+    }
+
+    @Override
+    public Component getDefaultComponent(final Container root) {
+      return getFirstComponent(root);
+    }
+
+    private List<Component> tabOrder() {
+      final List<Component> out = new ArrayList<>();
+      if (menuButton != null) {
+        out.add(menuButton);
+      }
+      if (fab != null) {
+        out.add(fab);
+      }
+      final ElwhaNavRailDestination tabStop = currentTabStopDestination();
+      if (tabStop != null) {
+        out.add(tabStop);
+      }
+      out.addAll(trailingActions);
+      return out;
     }
   }
 }
