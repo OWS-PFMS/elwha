@@ -573,6 +573,56 @@ public final class MaterialIcons {
   }
 
   /**
+   * Hamburger menu glyph — three horizontal lines. M3's canonical menu / drawer affordance, and the
+   * menu-button glyph used in the Navigation Rail Collapsed variant (Phase 2 of epic #159).
+   *
+   * @return the icon at the default size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon menu() {
+    return menu(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #menu()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon menu(final int size) {
+    return load("menu", size);
+  }
+
+  /**
+   * Hamburger-with-arrow "menu open" glyph — M3's canonical collapse affordance shown when a
+   * navigation drawer or rail is in its expanded state. Pairs with {@link #menu()} as the rail's
+   * Collapsed ↔ Expanded toggle (design doc §4.3); the consumer flips the icon when calling {@code
+   * rail.morphTo(...)} in Phase 3.
+   *
+   * @return the icon at the default size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon menuOpen() {
+    return menuOpen(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #menuOpen()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon menuOpen(final int size) {
+    return load("menu_open", size);
+  }
+
+  /**
    * Vertical 3-dot overflow glyph — M3 standard for "more actions" affordance in headers, app bars,
    * list items, and card trailing-actions slots.
    */

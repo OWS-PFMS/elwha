@@ -43,8 +43,17 @@ import javax.swing.KeyStroke;
  * {@value #CHROME_PAD_PX} dp leading / top padding and a {@value #CHROME_GAP_PX} dp gap between the
  * menu button and the FAB. Trailing actions stack at the bottom of the rail with {@value
  * #CHROME_PAD_PX} dp bottom pad and {@value #TRAILING_ACTION_GAP_PX} dp inter-action gap. The
- * destination region (story #235 fills it) is the slack between the chrome and the trailing actions
- * and grows with the rail's height.
+ * destination region is the slack between the chrome and the trailing actions and grows with the
+ * rail's height.
+ *
+ * <p><strong>Vertical-space contract.</strong> {@link #getMinimumSize()} honestly reports the
+ * height required to host every populated slot (chrome + every destination + every trailing action
+ * + paddings); consumers should give the rail at least that much height (typically the full
+ * content-area height of the host window). When the host gives the rail less than its minimum, the
+ * trailing actions slide down to the bottom of the destination stack rather than overlapping it —
+ * content then clips at the rail's bottom edge as graceful degradation. Collapsing the
+ * trailing-actions stack into an overflow menu (parallel to a future {@code ElwhaFabMenu}) is filed
+ * as a follow-up.
  *
  * <p><strong>Paint contract.</strong>
  *
@@ -62,8 +71,9 @@ import javax.swing.KeyStroke;
  *
  * <p><strong>Accessibility.</strong> {@link AccessibleRole#PAGE_TAB_LIST} (pairs with each
  * destination's {@link AccessibleRole#PAGE_TAB} from Phase 1 — matches ARIA {@code tablist} /
- * {@code tab}). Consumers must supply an accessible name via {@link #setAccessibleName(String)};
- * the rail logs a {@link Logger#warning(String)} at first paint if no name is set.
+ * {@code tab}). Consumers must supply an accessible name via {@code
+ * getAccessibleContext().setAccessibleName(...)}; the rail logs a {@link Logger#warning(String)} at
+ * first paint if no name is set.
  *
  * <p><strong>Keyboard navigation</strong> (design doc §10.2): Tab enters the rail at the menu
  * button (if present) → FAB (if present) → exactly one destination (the focused one, falling back
@@ -659,22 +669,33 @@ public final class ElwhaNavigationRail extends JComponent {
       topY += d.height + CHROME_GAP_PX;
     }
 
+    int destinationsBottom = topY;
     for (final ElwhaNavRailDestination dest : primary) {
       final Dimension d = dest.getPreferredSize();
       dest.setBounds((w - d.width) / 2, topY, d.width, d.height);
       topY += d.height + DESTINATION_GAP_PX;
+      destinationsBottom = topY - DESTINATION_GAP_PX;
     }
 
     if (trailingActions.isEmpty()) {
       return;
     }
-    int by = h - CHROME_PAD_PX;
-    for (int i = trailingActions.size() - 1; i >= 0; i--) {
-      final ElwhaIconButton a = trailingActions.get(i);
+
+    // Bottom-anchor trailing actions. If the rail's allocated height is too small to honor the
+    // bottom anchor without overlapping the destination stack, fall back to placing them
+    // immediately below the destinations with a chrome gap — the rail's bottom edge then clips
+    // the overflow instead of letting the two regions visually collide. (Production placement
+    // always grants the rail at least getMinimumSize() height, so this branch is a graceful-
+    // degradation fallback for constrained hosts. Trailing-actions overflow-menu collapsing is
+    // a future follow-up.)
+    final int trailingBlock = trailingHeight();
+    final int bottomAnchorTop = h - CHROME_PAD_PX - trailingBlock;
+    final int safeTop = destinationsBottom + CHROME_GAP_PX;
+    int by = Math.max(bottomAnchorTop, safeTop);
+    for (final ElwhaIconButton a : trailingActions) {
       final Dimension d = a.getPreferredSize();
-      by -= d.height;
       a.setBounds((w - d.width) / 2, by, d.width, d.height);
-      by -= TRAILING_ACTION_GAP_PX;
+      by += d.height + TRAILING_ACTION_GAP_PX;
     }
   }
 
