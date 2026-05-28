@@ -44,6 +44,7 @@ import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.navrail.playground.NavRailDestinationPlaygroundPanels;
+import com.owspfm.elwha.navrail.playground.NavigationRailPlaygroundPanels;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
@@ -435,6 +436,7 @@ public final class ElwhaShowcase {
     addLeaf(components, "FAB", buildFabComponent());
     addLeaf(components, "Badge", buildBadgeComponent());
     addLeaf(components, "Nav Rail Destination", buildNavRailDestinationComponent());
+    addLeaf(components, "Navigation Rail", buildNavigationRailComponent());
     addLeaf(components, "Button Group", buildButtonGroupComponent());
     addLeaf(components, "Card", buildCardComponent());
     addLeaf(components, "Surface", buildSurfaceComponent());
@@ -2509,6 +2511,113 @@ public final class ElwhaShowcase {
             + "    ElwhaNavRailDestination.of(MaterialIcons.symbol(\"widgets\"), \"Home\");\n"
             + "home.setSelected(true);\n"
             + "home.setBadge(ElwhaBadge.large(3));");
+    return workbench;
+  }
+
+  // ------------------------------------------------------------- Navigation Rail (Phase 2)
+
+  private static JComponent buildNavigationRailComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", buildNavigationRailWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("Variants", NavigationRailPlaygroundPanels.buildVariantsPanel()),
+                gallerySection(
+                    "Surface knobs", NavigationRailPlaygroundPanels.buildSurfacePanel()))));
+    return tabs;
+  }
+
+  private static JComponent buildNavigationRailWorkbench() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+
+    final com.owspfm.elwha.navrail.ElwhaNavigationRail rail =
+        com.owspfm.elwha.navrail.ElwhaNavigationRail.collapsed();
+    rail.getAccessibleContext().setAccessibleName("Showcase Navigation Rail");
+
+    final String[][] entries = {
+      {"widgets", "Home"},
+      {"favorite", "Liked"},
+      {"visibility", "Watched"},
+      {"layers", "Stacks"},
+      {"star", "Starred"}
+    };
+    final java.util.List<com.owspfm.elwha.navrail.ElwhaNavRailDestination> dests =
+        new java.util.ArrayList<>();
+    for (final String[] entry : entries) {
+      dests.add(
+          com.owspfm.elwha.navrail.ElwhaNavRailDestination.of(
+              MaterialIcons.symbol(entry[0]), entry[1]));
+    }
+    dests.get(1).setBadge(com.owspfm.elwha.badge.ElwhaBadge.small());
+    rail.setPrimary(dests);
+
+    final JPanel railRow = new JPanel(new BorderLayout());
+    railRow.setOpaque(false);
+    railRow.add(rail, BorderLayout.WEST);
+    final JLabel selectedLabel = new JLabel("Selected: Home");
+    selectedLabel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+    railRow.add(selectedLabel, BorderLayout.CENTER);
+    rail.addSelectionListener(
+        (prev, cur) ->
+            selectedLabel.setText("Selected: " + (cur == null ? "(none)" : cur.getLabel())));
+
+    final JCheckBox surfaceFilled = new JCheckBox("Surface filled");
+    surfaceFilled.addActionListener(e -> rail.setSurfaceFilled(surfaceFilled.isSelected()));
+    final JCheckBox dividerBox = new JCheckBox("Divider");
+    dividerBox.addActionListener(e -> rail.setDivider(dividerBox.isSelected()));
+    final JCheckBox elevationBox = new JCheckBox("Elevation 1");
+    elevationBox.addActionListener(e -> rail.setElevation(elevationBox.isSelected() ? 1 : 0));
+
+    final JCheckBox menuBox = new JCheckBox("Menu button");
+    menuBox.addActionListener(
+        e ->
+            rail.setMenuButton(
+                menuBox.isSelected()
+                    ? new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.menu())
+                    : null));
+    final JCheckBox fabBox = new JCheckBox("FAB");
+    fabBox.addActionListener(
+        e ->
+            rail.setFab(
+                fabBox.isSelected()
+                    ? com.owspfm.elwha.fab.ElwhaFab.standard(MaterialIcons.edit())
+                    : null));
+    final JCheckBox trailingBox = new JCheckBox("Trailing actions");
+    trailingBox.addActionListener(
+        e -> {
+          if (trailingBox.isSelected()) {
+            final java.util.List<com.owspfm.elwha.iconbutton.ElwhaIconButton> actions =
+                new java.util.ArrayList<>();
+            actions.add(new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.help()));
+            actions.add(new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.info()));
+            rail.setTrailingActions(actions);
+          } else {
+            rail.setTrailingActions(null);
+          }
+        });
+
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Surface");
+    controls.addControl("", surfaceFilled);
+    controls.addControl("", dividerBox);
+    controls.addControl("", elevationBox);
+    controls.addSection("Chrome");
+    controls.addControl("", menuBox);
+    controls.addControl("", fabBox);
+    controls.addControl("", trailingBox);
+    controls.addSection("Selection");
+    controls.addControl("", new JLabel("Click any destination to select."));
+    controls.addControl("Current:", selectedLabel);
+
+    workbench.setStage(railRow);
+    workbench.setCode(
+        "ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();\n"
+            + "rail.setMenuButton(new ElwhaIconButton(MaterialIcons.moreVert()));\n"
+            + "rail.setFab(ElwhaFab.standard(MaterialIcons.edit()));\n"
+            + "rail.setPrimary(List.of(home, liked, watched, stacks, starred));\n"
+            + "rail.addSelectionListener((prev, cur) -> selectTab(cur));");
     return workbench;
   }
 
