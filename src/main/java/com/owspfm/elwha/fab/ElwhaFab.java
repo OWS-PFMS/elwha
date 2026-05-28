@@ -2,6 +2,7 @@ package com.owspfm.elwha.fab;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
@@ -865,13 +866,7 @@ public final class ElwhaFab extends JComponent {
     final int standardW = size.containerPx();
     final int extendedW = extendedBodyWidthPx();
     final float eased = Easing.EMPHASIZED.ease(formMorph.progress());
-    if (eased <= 0f) {
-      return standardW;
-    }
-    if (eased >= 1f) {
-      return extendedW;
-    }
-    return Math.round(standardW + (extendedW - standardW) * eased);
+    return ContentMorphPainter.containerWidth(standardW, extendedW, eased);
   }
 
   private int extendedBodyWidthPx() {
@@ -1110,7 +1105,7 @@ public final class ElwhaFab extends JComponent {
 
     // Eased horizontal lerp between the two anchors. iy is constant (vertical center) — design doc
     // §4.1 and §4.2 both put the icon on the vertical midline.
-    final int iconX = Math.round(standardIconX + (extendedIconX - standardIconX) * eased);
+    final int iconX = ContentMorphPainter.iconX(standardIconX, extendedIconX, eased);
     final int iconY = (bodyH - iconH) / 2;
 
     final Graphics2D g2 = (Graphics2D) g.create();
@@ -1128,7 +1123,7 @@ public final class ElwhaFab extends JComponent {
       // curve runs backwards: the label fades out during the first half of the reverse, then
       // the body shrinks through the second half with no visible label — which prevents the
       // glyph from being seen outside the body as it contracts.
-      final float labelAlpha = Math.max(0f, Math.min(1f, (eased - 0.5f) * 2f));
+      final float labelAlpha = ContentMorphPainter.labelAlpha(eased);
       if (labelW > 0 && labelAlpha > 0f) {
         final int labelX;
         if (iconW > 0) {

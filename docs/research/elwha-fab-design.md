@@ -320,17 +320,19 @@ Per M3's "FAB → Extended FAB" transition diagram, three transitions run in par
 
 | Step | Implementation |
 |---|---|
-| **Container shape change** | `ShapeMorphPainter.interpolate(standardRadii, extendedRadii, progress, easing)` — circular ↔ rounded-rect |
-| **Icon translation** | Positional interpolation: center (Standard) ↔ leading inset (Extended) |
-| **Label opacity** | `AlphaComposite` fade-in (forward) / fade-out (reverse) on the label render path |
+| **Container width** | `ContentMorphPainter.containerWidth(standardW, extendedW, eased)` — drives both layout-time preferred size and paint-time body geometry that `ShapeMorphPainter` / `SurfacePainter` / `ShadowPainter` render into |
+| **Container shape change** | `ShapeMorphPainter.interpolate(standardRadii, extendedRadii, progress, easing)` — circular ↔ rounded-rect (today both forms share the same per-size radius, so the visible "shape morph" is the container-width morph above plus the painter's `min(arc, min(w, h))` clamp keeping the ends well-formed) |
+| **Icon translation** | `ContentMorphPainter.iconX(standardX, extendedX, eased)` — center (Standard) ↔ leading inset (Extended) positional interpolation |
+| **Label opacity** | `ContentMorphPainter.labelAlpha(eased)` — `AlphaComposite` fade-in (forward) / fade-out (reverse) cross-faded across the 0.5 inflection: label invisible while the body expands through the first half, fades in across the second half (and vice versa in reverse) |
 
-Reverse direction (Extended → Standard) inverts each step — `MorphAnimator.reverse()` runs progress backwards; all three transitions naturally play in reverse.
+Reverse direction (Extended → Standard) inverts each step — `MorphAnimator.reverse()` runs progress backwards; all four transitions naturally play in reverse.
 
 ### §9.2 Motion kit reuse
 
 Reuses the shared theme kit (no new infra):
 
 - **`com.owspfm.elwha.theme.ShapeMorphPainter`** — stateless static `interpolate(from, to, progress, easing)` returning `CornerRadii`. Already designed for non-button consumers ("composing a shape morph with its own glyph paint" per its Javadoc).
+- **`com.owspfm.elwha.theme.ContentMorphPainter`** — stateless static primitives for the content-side half of the morph: `iconX(from, to, progress)`, `labelAlpha(progress)` (with the 0.5 cross-fade inflection baked in plus an inflection-parameter overload for non-FAB consumers), and `containerWidth(from, to, progress)`. Parallels `ShapeMorphPainter` and is intended for future consumers (Navigation Rail expand / collapse) — primitives take an already-eased `progress` so a single `MorphAnimator` can drive multiple parallel transitions through one shared eased value.
 - **`com.owspfm.elwha.theme.MorphAnimator`** — time-driven progress source. `new MorphAnimator(host, durationMs)` with `start()` / `reverse()` / `progress()`. Use `MorphAnimator.MEDIUM2_MS` (300 ms) for the form morph.
 - **`com.owspfm.elwha.theme.Easing`** — pluggable curves.
 
