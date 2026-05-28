@@ -29,6 +29,10 @@ import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
+import javax.accessibility.AccessibleState;
+import javax.accessibility.AccessibleStateSet;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.ActionMap;
@@ -133,7 +137,6 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     setOpaque(false);
     setFocusable(true);
     initInteraction();
-    getAccessibleContext().setAccessibleName(label);
   }
 
   private void applyIconColorFilter(final Icon icon) {
@@ -646,5 +649,53 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
       rippleTimer.stop();
     }
     super.removeNotify();
+  }
+
+  // ----------------------------------------------------------- accessibility
+
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaNavRailDestination();
+    }
+    return accessibleContext;
+  }
+
+  /**
+   * The destination's accessible context. Reports {@link AccessibleRole#PAGE_TAB} (the standard
+   * pairing with a {@code PAGE_TAB_LIST}-roled container — matches ARIA {@code tablist} / {@code
+   * tab}), the destination's label as the accessible name, and {@link AccessibleState#SELECTED}
+   * when {@link ElwhaNavRailDestination#isSelected()} is true. Badge content fragments are spliced
+   * in by {@link com.owspfm.elwha.badge.ElwhaBadgeAnchor} via its push-model accessibility wiring —
+   * see story #228.
+   *
+   * @author Charles Bryan
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  protected class AccessibleElwhaNavRailDestination extends AccessibleJComponent {
+
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.PAGE_TAB;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      final String override = super.getAccessibleName();
+      if (override != null && !override.isEmpty()) {
+        return override;
+      }
+      return label;
+    }
+
+    @Override
+    public AccessibleStateSet getAccessibleStateSet() {
+      final AccessibleStateSet states = super.getAccessibleStateSet();
+      if (selected) {
+        states.add(AccessibleState.SELECTED);
+      }
+      return states;
+    }
   }
 }
