@@ -433,7 +433,7 @@ Story numbers TBD; filed under epic #159 once this design doc is reviewed.
 - Drag-reorder of destinations.
 - Custom destination layouts (icon-only, label-only, icon+label-stacked horizontally) — the two M3 layouts are the contract.
 - **Navigation Drawer** (separate component) — explicitly deprecated by M3 Expressive in favor of the Expanded rail variant. We do not build a standalone `ElwhaNavigationDrawer`; the Expanded rail's section support covers the same use cases.
-- **Hover-flyout contextual submenu** (the m3.material.io docs-site pattern where hovering a rail destination reveals a sub-list of pages). Not an M3 component; a desktop convention. If a future use-case wants this, it'd be filed as a separate generic `ElwhaHoverFlyout` affordance — decoupled from the rail — so any component (IconButton, Chip, rail destination) could host one. Not in scope for the rail epic.
+- **Hover-flyout contextual submenu** (the m3.material.io docs-site pattern where hovering a rail destination reveals a sub-list of pages). DOM inspection of m3.material.io confirms it's implemented as **two sibling components** — `<mio-left-nav-rail>` + `<mio-navigation-drawer>` — not as a rail extension. The drawer is what shows the sub-list; the rail just triggers it on hover. This is the structural argument for keeping it out of the rail epic: even M3's own site composes a rail and a separate Nav-Drawer-shaped component at the consumer level. Whether Elwha ships an `ElwhaNavigationDrawer` (given M3 Expressive deprecates the baseline Nav Drawer) is an open library-roadmap decision tracked separately from #159; the rail does not need to wait on it.
 
 ## §15. Resolved decisions
 
