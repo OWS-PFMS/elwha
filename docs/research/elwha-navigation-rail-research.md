@@ -130,18 +130,27 @@ Active-label color is **orientation-dependent**: collapsed (vertical) = `Seconda
 | `ContentMorphPainter` extraction | Foundation for the destination's Compact↔Expanded morph | 🟡 filed as [#223](https://github.com/OWS-PFMS/elwha/issues/223); not implemented |
 | `MaterialIcons` fill-0→fill-1 axis | Selected-destination glyph state | 🟡 not filed; planned as Phase 1 story under #159 |
 
-## 12. Open decisions (post-capture)
+## 12. Decisions (post-capture)
 
-The following were carried forward as open questions at capture time; some have since been resolved. Resolved items are folded into `elwha-navigation-rail-design.md`.
+All previously-open questions have been resolved during design-doc drafting on 2026-05-27. Final shapes live in `elwha-navigation-rail-design.md`; this section is the audit trail.
 
 1. **Prerequisite sequencing** — *Resolved:* FAB & Badge sequenced before the rail; both shipped before Phase 1 of #159 starts.
-2. **Icon fill** — two-icon destination API vs a `MaterialIcons` fill axis. *Resolution pending* — leaning fill axis on `MaterialIcons` so existing icon-bearing components benefit, but final call is a Phase 1 design item.
-3. **Destination component shape** — *Resolved 2026-05-27:* dedicated rail-destination component (working name `ElwhaNavRailDestination` / `ElwhaNavRailButton` — final name TBD in the design doc) rather than extending `ElwhaIconButton` / `ElwhaButton` with rail-specific modes. Triggered by reviewing the screenshots: destinations have stacked-vs-inline label layout, selection-pill scope that changes between modes, icon-anchored badges, and single-mandatory selection — none of which fit a general-purpose button without bloating it for one consumer. Shared scaffolding stays at the painter/theme layer; the destination composes those primitives.
-4. **Compact↔Expanded morph** — *Resolved 2026-05-27:* the destination's morph is a *superset* of FAB's. FAB does icon-only → icon+label-inline (label fades in as the container widens). The rail destination does icon-over-label-stacked → icon+label-inline-in-pill — FAB's choreography *plus* a stacked↔inline label-position morph FAB doesn't have. `ContentMorphPainter` (#223) extracts the FAB-shaped primitives (icon-X interpolation, label alpha, container width); the relocation half is designed during the rail Phase 3 implementation, composed on top of those primitives.
-5. **Animation scope** — collapsed↔expanded transition + indicator grow-from-center: v1 or polish follow-up. *Open.*
-6. **Component naming** — `ElwhaNavigationRail` vs `ElwhaNavRail`; destination component `ElwhaNavRailDestination` vs `ElwhaNavRailButton`. *Open* — settle in the design doc.
-7. **Expanded width API** — `setExpandedWidth(int)` clamped to [220, 360] vs a fixed default. *Open.*
-8. **Active-indicator `Fill` option** in expanded — include or skip (M3 frames it as "consider modifying… to fill the container"). *Open.*
+2. **Icon fill** — *Resolved:* `MaterialIcons` fill-0→fill-1 axis as the primary path (single Material symbol resolves both states); two-icon factory as an escape hatch for custom non-Material glyphs. Filed as Phase 1 story under #159.
+3. **Destination component shape** — *Resolved:* dedicated `ElwhaNavRailDestination` (final name) rather than extending `ElwhaIconButton` / `ElwhaButton` with rail-specific modes. Triggered by reviewing the screenshots: destinations have stacked-vs-inline label layout, selection-pill scope that changes between modes, icon-anchored badges, and single-mandatory selection — none of which fit a general-purpose button without bloating it for one consumer. Shared scaffolding stays at the painter/theme layer; the destination composes those primitives.
+4. **Collapsed↔Expanded morph** — *Resolved:* the destination's morph is a **subset** of FAB's choreography plus an active-indicator dimension/shape interpolation. The label *cross-fades* between two discrete anchor positions (stacked-below in Collapsed, inline-beside in Expanded) — it does not translate along a path. Verified against the M3 reference animation video. `ContentMorphPainter` (#223) covers the rail's needs without extension. (Initial draft modeled the label as path-interpolated; the video correction simplified this substantially.)
+5. **Animation scope** — *Resolved:* core Collapsed↔Expanded morph in Phase 3; indicator grow-from-center on selection deferred to a separate Phase 5 (polish).
+6. **Component naming** — *Resolved:* `ElwhaNavigationRail` for the container; `ElwhaNavRailDestination` for the slot. M3's `Collapsed` / `Expanded` variant naming retained (no Elwha rename to "Compact").
+7. **Expanded width API** — *Resolved:* `setExpandedWidth(int)` clamped to [220, 360], default per a sensible midpoint (TBD on Phase 3 smoke).
+8. **Active-indicator `Fill` option** in Expanded — *Resolved:* out of scope; ship `Hug` (default) only. M3 frames `Fill` as a "consider modifying" customization. File a follow-up if a consumer needs it.
+
+Additional decisions made during design-doc drafting:
+
+9. **Active-indicator dimensions (Collapsed)** — locked from M3 tokens: 32dp tall × 56dp wide, 16dp leading/trailing horizontal pad, 4dp icon-label space. Expanded: 56dp tall, 8dp icon-label horizontal space, `Hug` width.
+10. **Morph duration** — `MorphAnimator.MEDIUM3_MS` (350 ms) placeholder; smoke-test confirms.
+11. **Easing curve** — match FAB's curve.
+12. **State-layer overlay shape** — pill-shaped (follows the active indicator), not full-row. Hit target is still full-row.
+13. **`AccessibleRole`** — `PAGE_TAB_LIST` (container) + `PAGE_TAB` (destination). Matches ARIA `tablist`/`tab` for navigation rails.
+14. **`Escape` in Expanded** — not handled by the lib. Consumer-controlled; rail is non-modal, doesn't claim global Escape.
 
 ## 13. Screenshot index (25 captures)
 

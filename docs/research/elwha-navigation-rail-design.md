@@ -1,15 +1,17 @@
 # ElwhaNavigationRail — Design Decisions
 
-**Status:** DRAFT for epic [#159](https://github.com/OWS-PFMS/elwha/issues/159), milestone v0.3.0. Sections marked **[OPEN]** are decisions to settle before phase breakdown. Sections marked **[LOCKED]** are not expected to move during implementation. Seeded from `elwha-navigation-rail-research.md` (25-screenshot M3 capture). Mirrors the structure of `elwha-fab-design.md` and `elwha-badge-design.md`.
+**Status:** DRAFT for epic [#159](https://github.com/OWS-PFMS/elwha/issues/159), milestone v0.3.0. Mirrors the structure of `elwha-fab-design.md` and `elwha-badge-design.md`. Sections marked **[LOCKED]** are not expected to move during implementation. Seeded from `elwha-navigation-rail-research.md` (25-screenshot M3 capture + M3 token tables for Vertical/Horizontal nav rail items).
 
 ## TL;DR
 
 Two new public types compose the rail:
 
-- **`ElwhaNavigationRail`** — the container. Two variants (`COMPACT` / `EXPANDED`), optional menu toggle, optional anchored `ElwhaFab`, primary destinations always, expanded-only secondary destinations grouped under section headers, animated `morphTo(Variant)` between variants.
-- **`ElwhaNavRailDestination`** (working name; final name §8) — the rail slot. Dedicated component, **not** an extended mode on `ElwhaIconButton` / `ElwhaButton`. Composes shared painters (`SurfacePainter`, `RipplePainter`, `ShapeMorphPainter`, `ContentMorphPainter`, `MorphAnimator`) plus `ElwhaBadge` via `ElwhaBadgeAnchor`. Handles its own Compact↔Expanded morph (icon-over-label-stacked ↔ icon-beside-label-inline-in-pill) driven by its parent rail's variant.
+- **`ElwhaNavigationRail`** — the container. Two variants (`COLLAPSED` / `EXPANDED`, matching M3 naming), optional menu toggle, optional anchored `ElwhaFab`, primary destinations always, expanded-only secondary destinations grouped under section headers, animated `morphTo(Variant)` between variants.
+- **`ElwhaNavRailDestination`** — the rail slot (the "rail button"). Dedicated component, **not** an extended mode on `ElwhaIconButton` / `ElwhaButton`. Composes shared painters (`SurfacePainter`, `RipplePainter`, `ShapeMorphPainter`, `ContentMorphPainter`, `MorphAnimator`) plus `ElwhaBadge` via `ElwhaBadgeAnchor`. Handles its own Collapsed↔Expanded morph driven by its parent rail's variant.
 
 Single-mandatory selection lives on the container, conceptually parallel to chip-list `SINGLE_MANDATORY` (pattern reuse, not code reuse — the rail is not an `ElwhaList<T>`).
+
+The destination morph is a **subset** of FAB's choreography plus an active-indicator dimension/shape morph. The label *cross-fades* between two discrete anchor positions (stacked-below in Collapsed, inline-beside in Expanded) — it does not translate along a path. This means `ContentMorphPainter` (#223) covers the rail's needs without extension.
 
 Hard dependencies, both shipped: `ElwhaFab` ([#160](https://github.com/OWS-PFMS/elwha/issues/160) ✅), `ElwhaBadge` ([#209](https://github.com/OWS-PFMS/elwha/issues/209) ✅). Foundation prereq open: `ContentMorphPainter` extraction ([#223](https://github.com/OWS-PFMS/elwha/issues/223)). Small prereq open: `MaterialIcons` fill-0→fill-1 axis (to be filed as a Phase 1 story).
 
@@ -17,9 +19,9 @@ Hard dependencies, both shipped: `ElwhaFab` ([#160](https://github.com/OWS-PFMS/
 
 ## §0. Posture: M3 Expressive baseline, post-May-2025
 
-Same posture as the FAB and Badge designs. The M3 Expressive update deprecated the baseline navigation rail; only the Expressive `Collapsed` and `Expanded` (renamed `Compact` / `Expanded` here, §1) variants are built. No baseline fallback, no deprecation shim — pre-1.0, no compat layers.
+Same posture as the FAB and Badge designs. The M3 Expressive update deprecated the baseline navigation rail; only the Expressive `Collapsed` and `Expanded` variants are built. No baseline fallback, no deprecation shim — pre-1.0, no compat layers.
 
-Follows [`elwha-design-direction.md`](elwha-design-direction.md) §9 (raw Swing + tokens can't express this) and the `m3-morph-is-multi-component` doctrine — the Compact↔Expanded transition's primitives come from the shared morph kit.
+Follows [`elwha-design-direction.md`](elwha-design-direction.md) §9 (raw Swing + tokens can't express this) and the `m3-morph-is-multi-component` doctrine — the Collapsed↔Expanded transition's primitives come from the shared morph kit.
 
 ## §1. Scope decisions — Elwha adaptation of the M3 spec
 
@@ -31,9 +33,9 @@ Out of scope (from `elwha-navigation-rail-research.md` §1):
 - Breakpoint-driven auto-switching between variants — the consumer flips the variant explicitly.
 - Page-content transitions — Elwha fires the selection event; the consumer swaps content.
 
-In scope: `Compact` ↔ `Expanded` variants and the animated transition between them. The header chrome (menu toggle, FAB) is hosted, not owned — the rail accepts an `ElwhaIconButton` for the menu and an `ElwhaFab` for the action slot.
+In scope: `Collapsed` ↔ `Expanded` variants and the animated transition between them. The header chrome (menu toggle, FAB) is hosted, not owned — the rail accepts an `ElwhaIconButton` for the menu and an `ElwhaFab` for the action slot.
 
-**Naming note (M3 → Elwha):** the M3 spec uses "Collapsed" / "Expanded." Elwha uses **Compact** / **Expanded** to align with M3 Expressive component-size terminology elsewhere in the lib (Card, Button group). The destination's two layouts use the same Compact / Expanded names. **[OPEN]** if reviewer prefers staying with M3's "Collapsed" naming.
+**Naming:** Elwha retains M3's `Collapsed` / `Expanded` terminology rather than overlaying its own (e.g., "Compact"). The destination's two layouts use the same Collapsed / Expanded names.
 
 ## §2. Component model — two components, one epic
 
@@ -42,23 +44,23 @@ The rail is two cooperating components — split for the reasons enumerated belo
 | Component | Owns |
 |---|---|
 | `ElwhaNavigationRail` | container chrome, variant state, destination list, section grouping, selection model, morph orchestration (drives every destination's morph in lock-step) |
-| `ElwhaNavRailDestination` | one slot's icon + label + active indicator + badge anchor, the Compact↔Expanded layout transition, hit target, focus + ripple |
+| `ElwhaNavRailDestination` | one slot's icon + label + active indicator + badge anchor, the Collapsed↔Expanded layout transition, hit target, focus + ripple |
 
 **Why split:**
 
 1. The destination has its own paint contract that differs from the container's (its body paints the active-indicator pill, ripple, state layer; the container paints the rail surface + optional divider). Composing them as separate `JComponent`s lets each own its paint cleanly without conditionals.
 2. The destination's API (label, icon, selected, badge) maps to a per-slot consumer call. The container's API (variant, menu, fab, primary[], sections[]) maps to a global call. One class with both surfaces would conflate.
-3. Section grouping introduces a non-flat structure in expanded mode (header → secondary destinations). A list of `ElwhaNavRailDestination` instances + section-header markers is easier to reason about than per-slot conditionals.
+3. Section grouping introduces a non-flat structure in Expanded (header → secondary destinations). A list of `ElwhaNavRailDestination` instances + section-header markers is easier to reason about than per-slot conditionals.
 4. The destination is the rail's "rail button" — naming it gives the consumer a clear handle for keyboard navigation, focus traversal, and testing.
 
-**Why NOT extend `ElwhaIconButton` / `ElwhaButton` for the destination:** decided 2026-05-27. The destination has (a) stacked-vs-inline label layout, (b) selection-pill scope that changes between modes (icon-only in Compact, full-row in Expanded), (c) icon-anchored badges, (d) single-mandatory selection driven by a parent container, and (e) a per-mode hit-target invariant (full rail width regardless of indicator shape). None of those fit a general-purpose button; adding them as modes would bloat Button / IconButton for one consumer. Shared scaffolding lives at the painter/theme layer instead.
+**Why NOT extend `ElwhaIconButton` / `ElwhaButton` for the destination:** decided 2026-05-27. The destination has (a) stacked-vs-inline label layout, (b) selection-pill scope that changes between modes (icon-only pill in Collapsed, full-row pill in Expanded), (c) icon-anchored badges, (d) single-mandatory selection driven by a parent container, and (e) a per-mode hit-target invariant (full rail width regardless of indicator shape). None of those fit a general-purpose button; adding them as modes would bloat Button / IconButton for one consumer. Shared scaffolding lives at the painter/theme layer instead.
 
 ## §3. Content rules
 
 Per-destination:
 
 - **Label text** — required. One word ideal. Never truncated, ellipsized, or shrunk (M3 G21). Wraps to ≤ 2 lines.
-- **Icon** — required; pair of glyphs for the fill axis (fill-0 unselected, fill-1 selected). **[OPEN]** API shape: two-icon param (`destination(Icon unsel, Icon sel, String label)`) vs one-glyph + `MaterialIcons` fill axis. Leaning fill axis so other icon-bearing components benefit.
+- **Icon** — required. Resolved via the `MaterialIcons` fill axis (consumer passes a single Material symbol; the destination resolves the fill-1 form for the selected state). A two-icon escape hatch accepts arbitrary `Icon` instances for consumers using custom (non-Material) glyphs. See §8 for factories.
 - **Badge** — optional. Either `ElwhaBadge.small()` (dot, no content) or `ElwhaBadge.large(...)` (numeric or capped-count). Attached via `ElwhaBadgeAnchor.attach(this, badge)`; the destination implements `IconBearing` for the anchor's positioning.
 - **Selected** — destination doesn't carry its own selected boolean publicly; the container's selection model is authoritative. The destination paints from a state set by the rail.
 
@@ -67,75 +69,112 @@ Per-container:
 - **Primary destinations** — 3–7 (M3-recommended range; not enforced, but a `Logger.warning` is filed if outside).
 - **Sections** — zero or more. Each section is a header label + a list of secondary destinations. Sections are shown only when `variant == EXPANDED`.
 - **Menu button slot** — optional `ElwhaIconButton`; if absent, the rail is fixed-state (consumer must drive variant changes via API).
-- **Anchored action slot** — optional `ElwhaFab`. If present, the rail orchestrates the FAB's Standard↔Extended form to track its own Compact↔Expanded variant.
+- **Anchored action slot** — optional `ElwhaFab`. If present, the rail orchestrates the FAB's Standard↔Extended form to track its own Collapsed↔Expanded variant.
 
-## §4. Variant axis (M3 Expressive)
+## §4. Size axis (M3 token-locked)
 
-| Aspect | Compact | Expanded |
+### §4.1 Token reference [LOCKED]
+
+From the M3 Specs tab tokens (`Nav rail item - Vertical` / `Nav rail item - Horizontal`):
+
+| Token | Collapsed (Vertical) | Expanded (Horizontal) |
+|---|---|---|
+| Active indicator height | 32dp | 56dp |
+| Active indicator width | 56dp (icon pill) | row-content-width (`Hug`) |
+| Icon-label space | 4dp (vertical, after indicator) | 8dp (horizontal, after icon) |
+| Leading space | 16dp | 16dp |
+| Trailing space | 16dp | 16dp |
+| Icon glyph | 24dp | 24dp |
+
+### §4.2 Derived destination geometry
+
+Inside the Collapsed active indicator: 4dp pad above + 24dp icon + 4dp pad below = 32dp tall; 16dp pad left + 24dp icon + 16dp pad right = 56dp wide.
+
+**Collapsed destination content** (top of indicator to bottom of label-area):
+
+```
+32 (indicator) + 4 (icon-label space) + ~14 (label text) + 6 (below-label padding, visual)
+= 56dp content height
+```
+
+Plus 4dp inter-destination gap = **60dp Collapsed pitch.**
+
+**Expanded destination content:** 56dp (the indicator IS the row at full Hug width). **Expanded pitch = 56dp** (rows visually contiguous; verify against M3 specs for any inter-row gap).
+
+Neat coincidence: Collapsed destination content height (top of indicator to bottom of label-area) and Expanded destination row height are both **56dp**. The destination's vertical *footprint* is the same in both variants; only its internal layout (stacked vs inline) changes.
+
+### §4.3 Variant comparison
+
+| Aspect | Collapsed | Expanded |
 |---|---|---|
 | Container width | 96dp fixed | 220–360dp configurable |
+| Destination row footprint | 56dp content + 4dp inter-row | 56dp (contiguous) |
 | Destination layout | icon-over-label stacked | icon-beside-label inline |
-| Active indicator | pill on icon | horizontal pill (`Hug` default / `Fill` **[OPEN]**) |
+| Active indicator | 32×56 icon pill | 56-tall row pill, `Hug` width |
 | Anchored FAB | Standard (icon only) | Extended (icon + text) |
-| Destinations shown | primary only | primary + sectioned secondary |
-| Badge placement | upper-right of icon | beside the label **[OPEN]** — verify against #209 anchor's current capability |
+| Destinations shown | primary only (3–7) | primary + sectioned secondary |
+| Badge placement | upper-right of icon | beside the label |
 | Menu icon | ☰ ("expand") | collapse glyph ("collapse") |
 
-Destination height in Expanded: **~56dp**. Compact destination height **[OPEN]** — verify from M3 specs tab.
+`Fill`-width indicator mode in Expanded is **out of scope** (§14); file a follow-up if a consumer needs it.
 
 ## §5. Color axis
 
-Color roles from the theme `ColorRole` facade:
+Color roles from the theme `ColorRole` facade (all eight needed roles confirmed present on `ColorRole.java`):
 
 | Part | Role |
 |---|---|
 | Container | `SurfaceContainer` (optional fill) |
 | Active item icon | `OnSecondaryContainer` |
 | Active indicator | `SecondaryContainer` |
-| Active item label | `Secondary` (Compact) · `OnSecondaryContainer` (Expanded) |
+| Active item label | `Secondary` (Collapsed) · `OnSecondaryContainer` (Expanded) |
 | Inactive item icon | `OnSurfaceVariant` |
 | Inactive item label | `OnSurfaceVariant` |
 | Large badge (delegated) | owned by `ElwhaBadge` |
 | Small badge (delegated) | owned by `ElwhaBadge` |
 | Divider | `OutlineVariant` |
 
-Active-label color is variant-dependent — see §11 footnote on why. Pre-flight check: confirm `ColorRole` exposes every role above. (Spot-check expected to pass; flag if not.)
+Active-label color is variant-dependent — see §11 footnote on why.
 
 ## §6. State model
 
 Per-destination states: `Enabled` (default), `Hovered`, `Focused`, `Pressed`, `Disabled`. Mapped via `theme/StateLayer`. Selected is orthogonal — a destination can be `Hovered + Selected` simultaneously.
 
-**Invariant (LOCKED):** the destination hit target spans the **full rail width** in both Compact and Expanded, regardless of the active-indicator pill's shape (icon-only pill in Compact still gets a row-wide hit). Reconfirmed across three M3 screenshots.
+**Invariant (LOCKED):** the destination hit target spans the **full rail width** in both Collapsed and Expanded, regardless of the active-indicator pill's shape (icon-only pill in Collapsed still gets a row-wide hit). Reconfirmed across three M3 screenshots.
 
-Ripple originates from the click point and uses `RipplePainter`. State layer overlay sits on the active-indicator pill *and* the hit area — **[OPEN]** verify M3 reference for hover-over-unselected behavior (is the overlay drawn under the indicator shape or under the full row?).
+**State-layer overlay (LOCKED):** pill-shaped, aligned with the active-indicator pill — matches M3 reference visuals. In Collapsed this means hover/focus/press feedback paints under a 32×56 puck behind the icon; in Expanded it paints under the row-wide pill. The hit target is full-row in both, but the visual affordance is the pill. (Pattern matches Button / Chip: state layer follows the surface, not the hit area.)
+
+Ripple originates from the click point and uses `RipplePainter`, clipped to the pill shape (matches state-layer scope).
 
 Focus ring: standard Elwha focus treatment (matches Button / Chip). No M3-specific deviation expected.
 
 ## §7. Anatomy
 
-### §7.1 Compact destination
+### §7.1 Collapsed destination
 
 ```
-+----------------------+   ← full-width hit target
-|        +----+        |
-|        | ic |        |   ← icon, optional badge anchored UR
-|        +----+        |
-|        Label         |   ← label below icon
-+----------------------+
-
-(selected: pill behind icon only; label sits unstyled below)
+    +------------------+
+    |    +--------+    |   ← 32×56 active indicator (visible
+    |    |  icon  |    |     under select, hover, focus, press)
+    |    +--------+    |
+    +------------------+
+         (4dp gap)
+         (label)              ← ~14dp Inter Medium
+         (6dp below)
+     ─ ─ ─ ─ ─ ─ ─ ─ ─
+         (4dp inter-destination gap)
+         next destination's indicator…
 ```
 
 ### §7.2 Expanded destination
 
 ```
-+--------------------------------------+   ← full-width hit target
-|   +----+                             |
-|   | ic |  Label              [+3]    |   ← inline, badge optional
++--------------------------------------+   ← 56dp tall pill (active
+|   +----+                             |     indicator at Hug width)
+|   | ic |   Label             [+3]    |
 |   +----+                             |
 +--------------------------------------+
-
-(selected: pill wraps the entire row)
+  (16dp leading)(8dp gap)(label)(badge slot)(16dp trailing)
 ```
 
 ### §7.3 Container
@@ -158,7 +197,7 @@ Focus ring: standard Elwha focus treatment (matches Button / Chip). No M3-specif
 |        |               |                 |
 | ...    |               | i Secondary     |
 +--------+               +-----------------+
-   COMPACT                    EXPANDED
+   COLLAPSED                  EXPANDED
    96dp                       220–360dp
 ```
 
@@ -166,13 +205,13 @@ Focus ring: standard Elwha focus treatment (matches Button / Chip). No M3-specif
 
 Sketch only; concrete signatures land during Phase 1 implementation review.
 
-**`ElwhaNavigationRail`** *(naming [OPEN]: `ElwhaNavigationRail` vs `ElwhaNavRail`)*
+**`ElwhaNavigationRail`** [LOCKED name]
 
 ```java
 public final class ElwhaNavigationRail extends JComponent {
 
   // Construction
-  public static ElwhaNavigationRail compact();
+  public static ElwhaNavigationRail collapsed();
   public static ElwhaNavigationRail expanded();
 
   // Variant + morph
@@ -201,15 +240,18 @@ public final class ElwhaNavigationRail extends JComponent {
   public void setElevation(int level);         // 0 or 1
 }
 
-public enum Variant { COMPACT, EXPANDED }
+public enum Variant { COLLAPSED, EXPANDED }
 ```
 
-**`ElwhaNavRailDestination`** *(naming [OPEN]: `ElwhaNavRailDestination` vs `ElwhaNavRailButton`)*
+**`ElwhaNavRailDestination`** [LOCKED name]
 
 ```java
 public final class ElwhaNavRailDestination extends JComponent implements IconBearing {
 
-  // Construction — see §3 [OPEN] on icon API
+  // Construction — fill axis primary path
+  public static ElwhaNavRailDestination of(MaterialIcons.Symbol icon, String label);
+
+  // Construction — escape hatch for custom (non-Material) glyphs
   public static ElwhaNavRailDestination of(Icon unselected, Icon selected, String label);
 
   // Identity
@@ -233,65 +275,59 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
 
 Follows `component-api-conventions.md` and `code-style.md`:
 
-- per-variant static factories (`compact()` / `expanded()` for the rail);
+- per-variant static factories (`collapsed()` / `expanded()` for the rail);
 - `getX()` only, no `getEffectiveX()`;
 - single-arg convenience constructors where the M3 default makes sense;
 - Javadoc `@author` / `@version` / `@since` on every public class + method, bumped each touch (verified by `validate-versions`).
 
-## §9. Compact ↔ Expanded morph
+## §9. Collapsed ↔ Expanded morph [LOCKED motion contract]
 
-The morph is the rail's central animation. It runs in two coordinated tiers:
+The morph is the rail's central animation. It runs in two coordinated tiers.
 
 ### §9.1 Container morph
 
-`ElwhaNavigationRail.morphTo(Variant)` drives a `MorphAnimator` (duration **[OPEN]** — likely `MEDIUM2_MS` 300 ms matching FAB, possibly `MEDIUM3_MS` 350 ms for the wider distance). The container animates its preferred width from 96dp to `expandedWidthPx` (or in reverse).
+`ElwhaNavigationRail.morphTo(Variant)` drives a `MorphAnimator` at duration `MorphAnimator.MEDIUM3_MS` (**350 ms** — placeholder, smoke-test confirms; longer than FAB's `MEDIUM2_MS` 300 ms to account for the wider distance the container travels). The container animates its preferred width from 96dp to `expandedWidthPx` (or in reverse).
 
 When the rail hosts an `ElwhaFab`, the container `morphTo` simultaneously calls `fab.morphTo(EXTENDED | STANDARD)` so the FAB's Standard↔Extended choreography stays phase-locked with the rail's variant change. The FAB morph contract from `elwha-fab-design.md` §9 covers the FAB's own internals.
 
-### §9.2 Per-destination morph (LOCKED motion contract)
+Easing matches FAB: the curve `MorphAnimator` selects for its 350 ms tier (currently the same family FAB uses for its 300 ms tier; verify on smoke).
 
-Every destination runs in lock-step with the container's progress (it doesn't own a `MorphAnimator` — the container's progress is pushed in). Each frame composes:
+### §9.2 Per-destination morph
+
+Every destination runs in lock-step with the container's progress (it doesn't own a `MorphAnimator` — the container pushes its progress in). The rail's destination morph is a *subset of FAB's choreography* plus an active-indicator dimension/shape interpolation:
 
 | Transition | Implementation |
 |---|---|
-| Container width | `ContentMorphPainter.containerWidth(compactW, expandedW, progress, easing)` |
-| Active-indicator shape | `ShapeMorphPainter.interpolate(compactRadii, expandedRadii, progress, easing)` — circular icon pill ↔ horizontal row pill |
-| Icon X translation | `ContentMorphPainter.iconX(centerX, leadingX, progress, easing)` — centered ↔ leading inset |
-| Label position | **stacked-below ↔ inline-beside** — composed on top of `ContentMorphPainter` primitives, lives in the destination's paint method (rail-specific, see §9.3) |
-| Label alpha | `ContentMorphPainter.labelAlpha(progress, inflection)` — fade across the position transition |
-| Label color | `ColorRole` interpolation — `OnSurfaceVariant` ↔ `OnSecondaryContainer` if selected (Expanded label moves inside the pill) |
-| Badge position | delegated to `ElwhaBadgeAnchor` — the anchor reads the host's `getIconBounds()` each frame and tracks the icon translation automatically |
+| Active-indicator width | `lerp(56, rowContentWidth, progress)` |
+| Active-indicator height | `lerp(32, 56, progress)` |
+| Active-indicator shape (corner-radius) | `ShapeMorphPainter.interpolate(collapsedRadii, expandedRadii, progress, easing)` — pill in both, but the corner-radius:height ratio shifts |
+| Label paint position | **Discrete switch** at `progress = 0.5`: stacked-below anchor for `[0, 0.5)`, inline-beside anchor for `[0.5, 1.0]`. No translation along a path. |
+| Label alpha | `ContentMorphPainter.labelAlpha(progress)` — cross-fade with 0.5 inflection (fades out at the stacked anchor, fades in at the inline anchor). Existing FAB choreography, no new primitives. |
+| Label color | Token interpolation — `OnSurfaceVariant` ↔ `OnSecondaryContainer` (selected only) |
+| Badge position | delegated to `ElwhaBadgeAnchor` — the anchor reads the host's `getIconBounds()` each frame and tracks the icon position automatically |
 
-### §9.3 The stacked↔inline relocation
+**Why the label is a discrete-switch + cross-fade and not a translation:** verified against the M3 reference animation — the label disappears in its stacked position before reappearing in its inline position, rather than sliding between them. Implementation-wise this is two `Point` anchors and one `labelAlpha(...)` call, no path interpolation.
 
-This is the "superset" piece — the choreography FAB doesn't have. In Compact, the label is rendered **below** the icon, horizontally centered. In Expanded, the label is rendered **beside** the icon, on a horizontal pill. The relocation interpolates:
-
-- Label X: `iconBottomCenterX` → `iconRightEdgeX + leadingGap`
-- Label Y: `iconBottomY + verticalGap` → `iconCenterY` (vertically centered with icon)
-- Label baseline: vertically-aligned-with-icon-bottom in Compact ↔ vertically-aligned-with-icon-center in Expanded
-
-**Implementation choice [OPEN]:** inline this math in `ElwhaNavRailDestination.paintComponent`, or extend `ContentMorphPainter` with a `labelOrigin(...)` primitive. Leaning inline for now (rail-specific math; not yet a multi-consumer pattern); extract later if a third consumer needs it.
-
-### §9.4 Motion kit reuse
+### §9.3 Motion kit reuse
 
 | Helper | Use |
 |---|---|
 | `MorphAnimator` (container-owned) | Drives every destination + the FAB in lock-step |
-| `Easing` | `easeInOutCubic` default; **[OPEN]** confirm against M3 motion tokens |
-| `ShapeMorphPainter` | Active-indicator shape morph (existing helper) |
-| `ContentMorphPainter` | Container width + icon X + label alpha primitives (NEW — [#223](https://github.com/OWS-PFMS/elwha/issues/223)) |
+| `Easing` | FAB-matching curve; smoke-test confirms |
+| `ShapeMorphPainter` | Active-indicator corner-radius shape morph (existing helper) |
+| `ContentMorphPainter` | `labelAlpha` primitive (NEW — [#223](https://github.com/OWS-PFMS/elwha/issues/223)). Width and icon-X primitives are unused by the rail (the rail does its own indicator-dimension lerps; the icon doesn't translate). |
 | `SurfacePainter`, `RipplePainter`, `StateLayer` | Per-frame surface paint, ripple, hover/press overlays |
 | `ElwhaBadgeAnchor` | Badge position tracks the icon glyph automatically (existing) |
 
-No new motion infra beyond #223.
+No new motion infra beyond #223. The rail consumes a strict subset of `ContentMorphPainter`'s API; #223's scope as filed remains correct.
 
 ## §10. Accessibility
 
-### §10.1 Architectural choice
+### §10.1 Architectural choice [LOCKED]
 
-The container is a `JComponent` with `AccessibleRole.PAGE_TAB_LIST` (or `LIST` — **[OPEN]**, evaluate which JAWS/NVDA narrate more usefully for rails). The destination is a `JComponent` with `AccessibleRole.PAGE_TAB` (or `RADIO_BUTTON` to encode the single-mandatory exclusivity — **[OPEN]**).
+The container is a `JComponent` with `AccessibleRole.PAGE_TAB_LIST`. The destination is a `JComponent` with `AccessibleRole.PAGE_TAB`. This matches the ARIA `tablist` + `tab` pattern that is the documented standard for navigation rails — nav destinations are page tabs that switch views, not form-input controls.
 
-Rationale: extending `AbstractButton` for the destination was tempting (free Space/Enter + tab focus) but conflicts with the rail's container-driven selection model (each destination's `selected` is downstream of the container, not click-toggle-owned). A plain `JComponent` with explicit focus + keybinding wiring is cleaner; ripple-on-press is per-component anyway.
+Rationale: extending `AbstractButton` for the destination was tempting (free Space/Enter + tab focus) but conflicts with the rail's container-driven selection model (each destination's `selected` is downstream of the container, not click-toggle-owned). A plain `JComponent` with explicit focus + keybinding wiring is cleaner; ripple-on-press is per-component anyway. `RADIO_BUTTON` was considered but rejected — semantically wrong (radio buttons are form-input controls) and would confuse screen-reader users into thinking they're filling out a form.
 
 ### §10.2 Keyboard navigation
 
@@ -302,9 +338,10 @@ Rationale: extending `AbstractButton` for the destination was tempting (free Spa
 | `↑ / ↓` | Move focus between destinations within the rail (focus, not selection) |
 | `Space / Enter` | Select the focused destination |
 | `Home / End` | First / last destination |
-| `Escape` | If Expanded with menu, collapse (rail consumer can suppress) — **[OPEN]** |
 
 Selection moves only on explicit activation (Space / Enter / click), not on focus traversal. Matches `aria-activedescendant`-style tab lists.
+
+`Escape` is intentionally **not** handled by the rail. The expanded rail is non-modal (§1), so claiming `Escape` would steal it from whatever the host app uses it for (closing dialogs that opened from a destination, dismissing menus, etc.). Consumers that want Escape-to-collapse can wire it with three lines of `InputMap` on the rail; the lib does not default it.
 
 ### §10.3 Labeling
 
@@ -317,14 +354,14 @@ Selection moves only on explicit activation (Space / Enter / click), not on focu
 | M3 requirement | Mechanism |
 |---|---|
 | 4.5:1 contrast on all labels | Token system enforces; verify on every Material palette before release |
-| 24×24px min tap target | Compact destination is row-width × ~56dp; passes |
+| 24×24px min tap target | Collapsed destination is rail-width × 60dp; passes |
 | Reduced-motion preference | `MorphAnimator` already respects the OS reduced-motion hint (see [[m3-morph-is-multi-component]]) |
 
 ## §11. RTL mirroring
 
 The whole rail mirrors under `ComponentOrientation.RIGHT_TO_LEFT`: container docks to the right of the content area, destinations lay out icon-on-right + label-on-left in Expanded, active-indicator pill mirrors, badge position mirrors (via `ElwhaBadgeAnchor` RTL support from #209).
 
-Active-label color stays variant-dependent: in Compact the label is *below* the indicator (so `Secondary` for contrast against the rail surface); in Expanded the label sits *inside* the `SecondaryContainer` pill (so `OnSecondaryContainer` for contrast against the pill). The orientation of the label relative to the pill is the deciding factor, not LTR/RTL.
+Active-label color stays variant-dependent: in Collapsed the label is *below* the indicator (so `Secondary` for contrast against the rail surface); in Expanded the label sits *inside* the `SecondaryContainer` pill (so `OnSecondaryContainer` for contrast against the pill). The orientation of the label relative to the pill is the deciding factor, not LTR/RTL.
 
 ## §12. Guidelines reference
 
@@ -333,47 +370,44 @@ Active-label color stays variant-dependent: in Compact the label is *below* the 
 - `elwha-fab-design.md` §9 — the morph kit the rail composes with.
 - `elwha-badge-design.md` §5 / §9 / §10 / §11 — the badge anchor contract the destination depends on.
 
-## §13. Story breakdown (Phases 1–4)
+## §13. Story breakdown (Phases 1–5)
 
 Story numbers TBD; filed under epic #159 once this design doc is reviewed.
 
-### Phase 1 — `ElwhaNavRailDestination` (Compact form)
+### Phase 1 — `ElwhaNavRailDestination` (Collapsed form)
 
-1. `MaterialIcons` fill-0→fill-1 axis story — adds an optional `Icon iconSelected(...)` resolver or a `MaterialIcons.filled(...)` overload (decision in story). Selected glyphs needed for the destination.
-2. `ElwhaNavRailDestination` skeleton — class shell, factories, `IconBearing` impl, Compact layout (icon-over-label), state layer, ripple, focus, basic paint. No selected state, no badge yet.
-3. Destination selected state in Compact — active-indicator pill around the icon, color shift, fill-0→fill-1 swap. No animation yet.
+1. `MaterialIcons` fill-0→fill-1 axis story — adds a `MaterialIcons.filled(...)` resolver (or analogous) so a single symbol-handle resolves both states. Selected glyphs needed for the destination.
+2. `ElwhaNavRailDestination` skeleton — class shell, factories (fill-axis primary + two-icon escape hatch), `IconBearing` impl, Collapsed layout (icon-over-label, 32×56 indicator, 4 / 16 / 16 paddings), state layer (pill-shaped), ripple, focus, basic paint. No selected state, no badge yet.
+3. Destination selected state in Collapsed — active-indicator pill around the icon, color shift, fill-0→fill-1 swap. No animation yet.
 4. Destination badge slot — `setBadge` + `ElwhaBadgeAnchor.attach(this, badge)` integration. Verify badge tracks icon position via `IconBearing`.
 5. Destination playground + Showcase Gallery panel — visual smoke-test artifacts (per `fresh-demo-per-story`).
 
-### Phase 2 — `ElwhaNavigationRail` (Compact only)
+### Phase 2 — `ElwhaNavigationRail` (Collapsed only)
 
-6. Rail container skeleton — `compact()` factory, surface paint, divider, elevation, header chrome slots (menu button, FAB).
+6. Rail container skeleton — `collapsed()` factory, surface paint, divider, elevation, header chrome slots (menu button, FAB).
 7. Primary destinations + single-mandatory selection model — container holds the list, drives `selected` push to each destination, fires selection events.
 8. Keyboard navigation (per §10.2) — Tab in/out, ↑/↓ within, Space/Enter to select.
-9. Rail playground + Showcase Workbench entry — interactive demo for a static Compact rail.
+9. Rail playground + Showcase Workbench entry — interactive demo for a static Collapsed rail.
 
-### Phase 3 — Expanded variant + Compact↔Expanded morph
+### Phase 3 — Expanded variant + Collapsed↔Expanded morph
 
-10. Expanded layout: destination inline form (icon-beside-label, full-row pill) — static, no morph yet.
+10. Expanded layout: destination inline form (icon-beside-label, 56-tall row pill at `Hug` width) — static, no morph yet.
 11. Expanded layout: container width range + section headers + secondary destinations — static.
-12. `ContentMorphPainter` consumer wiring — destination composes the primitives for the icon-X + label-alpha + width transitions.
-13. Stacked↔inline label-relocation morph (§9.3) — the rail-specific math layered on top of `ContentMorphPainter`.
-14. `ElwhaNavigationRail.morphTo(Variant)` — orchestrates every destination + the FAB in lock-step.
-15. Expanded keyboard navigation + secondary-destination focus traversal.
+12. `ContentMorphPainter` consumer wiring — destination composes `labelAlpha` for the cross-fade; rail-local lerps drive indicator height/width.
+13. `ElwhaNavigationRail.morphTo(Variant)` — orchestrates every destination + the FAB in lock-step. Discrete label-anchor switch at 0.5; corner-radius via `ShapeMorphPainter`; smoke-confirm 350 ms `MEDIUM3_MS` duration.
+14. Expanded keyboard navigation + secondary-destination focus traversal.
 
 ### Phase 4 — Showcase integration + placement
 
-16. Showcase Workbench: Navigation Rail entry, variant toggle, all-knobs configuration.
-17. Showcase Gallery panel: side-by-side Compact + Expanded reference, selected/unselected/badge variants.
-18. Real placement on the Showcase frame (replaces the temporary sidebar) — analogous to the FAB Phase 5 floating-FAB placement on the layered pane.
+15. Showcase Workbench: Navigation Rail entry, variant toggle, all-knobs configuration.
+16. Showcase Gallery panel: side-by-side Collapsed + Expanded reference, selected/unselected/badge variants.
+17. Real placement on the Showcase frame (replaces the temporary sidebar) — analogous to the FAB Phase 5 floating-FAB placement on the layered pane.
 
-### Phase 5 — Polish
+### Phase 5 — Polish (separate)
 
-19. Active-indicator grow-from-center animation on selection (deferred from §10 if Phase 3 ships static-indicator-swap).
-20. Reduced-motion fallback verification.
-21. CHANGELOG `[Unreleased]` entry curation + `@version` audit.
-
-**[OPEN]** is Phase 5 phased separately or folded into Phase 4 — depends on whether the indicator-grow animation lands in Phase 3 implementation.
+18. Active-indicator grow-from-center animation on selection.
+19. Reduced-motion fallback verification.
+20. CHANGELOG `[Unreleased]` entry curation + `@version` audit.
 
 ## §14. Out of scope (LOCKED)
 
@@ -382,24 +416,28 @@ Story numbers TBD; filed under epic #159 once this design doc is reviewed.
 - Breakpoint-driven auto-switching between variants.
 - Page-content transitions ("top level transition pattern").
 - Phone / compact window size classes.
+- **Active-indicator `Fill` mode in Expanded.** M3 frames `Hug` as default and `Fill` as a "consider modifying" customization. Skipped; file a follow-up if a consumer needs it.
+- Built-in `Escape`-to-collapse keybinding (consumer-controlled, §10.2).
 - Multi-select destinations.
 - Drag-reorder of destinations.
 - Custom destination layouts (icon-only, label-only, icon+label-stacked horizontally) — the two M3 layouts are the contract.
 
-## §15. Open decisions, indexed
+## §15. Resolved decisions
 
-The DRAFT decisions to settle before Phase 1 starts (cross-references back to where each is flagged):
+All previously-flagged `[OPEN]` items from prior drafts of this doc, with the resolution recorded:
 
-1. §1 — "Compact" vs M3's "Collapsed" naming.
-2. §3 — Icon API: two-icon param vs `MaterialIcons` fill axis.
-3. §4 — Active-indicator `Fill` mode in Expanded: include or skip.
-4. §4 — Compact destination height (verify against M3 Specs tab).
-5. §6 — State-layer overlay shape on hover (under-indicator vs full-row).
-6. §6 — Confirm `ColorRole` exposes every role in the §5 table.
-7. §8 — Naming: `ElwhaNavigationRail` vs `ElwhaNavRail`; `ElwhaNavRailDestination` vs `ElwhaNavRailButton`.
-8. §9.1 — Morph duration: 300 ms (MEDIUM2) or 350 ms (MEDIUM3).
-9. §9.3 — Stacked↔inline label-relocation math: inline in destination vs extend `ContentMorphPainter`.
-10. §9.4 — Easing curve confirmation against M3 motion tokens.
-11. §10.1 — `AccessibleRole` choice: `PAGE_TAB_LIST + PAGE_TAB` vs `LIST + RADIO_BUTTON`.
-12. §10.2 — `Escape` in Expanded: collapse vs consumer-controlled.
-13. §13 — Phase 5 separate or folded.
+| # | Topic | Resolution |
+|---|---|---|
+| 1 | Variant naming | M3's `Collapsed` / `Expanded` retained (§1) |
+| 2 | Icon API | Fill axis on `MaterialIcons` primary + two-icon escape hatch (§3, §8) |
+| 3 | Active-indicator `Fill` mode | Out of scope; ship `Hug` only (§4.3, §14) |
+| 4 | Collapsed dimensions | Locked from M3 tokens: 32×56 indicator, 16 leading/trailing, 4 icon-label (§4.1) |
+| 5 | State-layer overlay shape | Pill-shaped, follows active indicator (§6) |
+| 6 | `ColorRole` coverage | Confirmed — all 8 roles present (§5) |
+| 7 | Class naming | `ElwhaNavigationRail` + `ElwhaNavRailDestination` (§8) |
+| 8 | Morph duration | `MEDIUM3_MS` 350 ms placeholder; smoke-test confirms (§9.1) |
+| 9 | Label relocation math | Moot — no translation, only cross-fade between discrete anchors (§9.2) |
+| 10 | Easing curve | Match FAB's curve (§9.1) |
+| 11 | `AccessibleRole` | `PAGE_TAB_LIST` + `PAGE_TAB` (§10.1) |
+| 12 | `Escape` in Expanded | Consumer-controlled; not handled by the lib (§10.2) |
+| 13 | Phase 5 cadence | Separate phase (§13) |
