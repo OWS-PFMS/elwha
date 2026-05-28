@@ -62,6 +62,65 @@ public final class NavigationRailPlaygroundPanels {
     return grid;
   }
 
+  /**
+   * Builds the Expanded-variant gallery panel — three side-by-side rails demonstrating the Phase 3
+   * Expanded form: primary destinations only, primary + one section, primary + two sections.
+   *
+   * @return the panel
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static JPanel buildExpandedPanel() {
+    final JPanel grid = new JPanel(new FlowLayout(FlowLayout.LEADING, 24, 16));
+    grid.add(cell("Expanded — primary only", expandedPrimaryOnly()));
+    grid.add(cell("Expanded — one section", expandedOneSection()));
+    grid.add(cell("Expanded — two sections", expandedTwoSections()));
+    return grid;
+  }
+
+  private static JPanel expandedPrimaryOnly() {
+    return hostRail(buildExpandedBase(0));
+  }
+
+  private static JPanel expandedOneSection() {
+    return hostRail(buildExpandedBase(1));
+  }
+
+  private static JPanel expandedTwoSections() {
+    return hostRail(buildExpandedBase(2));
+  }
+
+  private static ElwhaNavigationRail buildExpandedBase(final int sectionCount) {
+    final ElwhaNavigationRail rail = ElwhaNavigationRail.expanded();
+    rail.getAccessibleContext().setAccessibleName("Sample navigation");
+    rail.setSurfaceFilled(true);
+    rail.setDivider(true);
+    rail.setExpandedWidth(240);
+    rail.setMenuButton(new ElwhaIconButton(MaterialIcons.menuOpen()));
+    rail.setFab(ElwhaFab.extended(MaterialIcons.edit(), "Compose"));
+    final List<ElwhaNavRailDestination> dests = new ArrayList<>();
+    dests.add(ElwhaNavRailDestination.of(MaterialIcons.symbol("widgets"), "Home"));
+    final ElwhaNavRailDestination liked =
+        ElwhaNavRailDestination.of(MaterialIcons.symbol("favorite"), "Liked");
+    liked.setBadge(ElwhaBadge.small());
+    dests.add(liked);
+    dests.add(ElwhaNavRailDestination.of(MaterialIcons.symbol("visibility"), "Watched"));
+    rail.setPrimary(dests);
+    if (sectionCount >= 1) {
+      final List<ElwhaNavRailDestination> tools = new ArrayList<>();
+      tools.add(ElwhaNavRailDestination.of(MaterialIcons.symbol("dark_mode"), "Theme"));
+      tools.add(ElwhaNavRailDestination.of(MaterialIcons.symbol("help"), "Help"));
+      rail.addSection("Tools", tools);
+    }
+    if (sectionCount >= 2) {
+      final List<ElwhaNavRailDestination> other = new ArrayList<>();
+      other.add(ElwhaNavRailDestination.of(MaterialIcons.symbol("info"), "About"));
+      other.add(ElwhaNavRailDestination.of(MaterialIcons.symbol("star"), "Sponsor"));
+      rail.addSection("Other", other);
+    }
+    return rail;
+  }
+
   private static JPanel cell(final String title, final JPanel railHost) {
     final JPanel cell = new JPanel(new BorderLayout(0, 8));
     cell.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));

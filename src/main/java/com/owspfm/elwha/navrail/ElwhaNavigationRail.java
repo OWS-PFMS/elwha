@@ -3,11 +3,16 @@ package com.owspfm.elwha.navrail;
 import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.ContentMorphPainter;
+import com.owspfm.elwha.theme.MorphAnimator;
+import com.owspfm.elwha.theme.ShadowPainter;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FocusTraversalPolicy;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -15,6 +20,7 @@ import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -33,10 +39,13 @@ import javax.swing.KeyStroke;
  * stack of {@link ElwhaNavRailDestination primary destinations}, and an optional list of trailing
  * utility actions.
  *
- * <p><strong>Phase 2 / Story #234 skeleton.</strong> This first revision lays out the rail's
- * Collapsed chrome — header slots, the destination region (empty until story #235 wires the list),
- * the trailing actions slot, surface paint, divider, and elevation. The Expanded variant and the
- * Collapsed↔Expanded morph land in Phase 3; only {@link Variant#COLLAPSED} is functional today.
+ * <p><strong>Phase 3 — both variants and the Collapsed↔Expanded morph.</strong> The rail now
+ * supports {@link Variant#COLLAPSED} (96 dp fixed) and {@link Variant#EXPANDED} (220–360 dp
+ * configurable). The variant is changed via {@link #setVariant(Variant)} (snap) or {@link
+ * #morphTo(Variant)} (animated, 350 ms — drives every {@link ElwhaNavRailDestination} in lock-step
+ * and orchestrates the slotted {@link ElwhaFab}'s Standard↔Extended form per design doc §9). The
+ * Expanded variant adds optional sections (section header + secondary destinations) via {@link
+ * #addSection(String, List)} / {@link #clearSections()}; sections render only in Expanded.
  *
  * <p><strong>Geometry (M3 token-locked, see {@code elwha-navigation-rail-design.md} §4).</strong>
  * Collapsed width is fixed at {@value #COLLAPSED_WIDTH_PX} dp. Header chrome is top-anchored with
@@ -95,8 +104,38 @@ public final class ElwhaNavigationRail extends JComponent {
   public enum Variant {
     /** Compact icon-and-label rail, fixed 96 dp wide. */
     COLLAPSED,
-    /** Wide rail with inline labels + section headers; lands in Phase 3 of epic #159. */
+    /** Wide rail with inline labels + section headers (220–360 dp). */
     EXPANDED
+  }
+
+  /**
+   * One section in the Expanded rail — a header label plus the secondary destinations that fall
+   * under it. Sections paint only when {@link Variant#EXPANDED}; in Collapsed they're silently
+   * hidden (their destinations are still tracked for selection-model membership but neither painted
+   * nor laid out).
+   *
+   * @author Charles Bryan
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static final class Section {
+    private final String header;
+    private final List<ElwhaNavRailDestination> destinations;
+
+    Section(final String header, final List<ElwhaNavRailDestination> destinations) {
+      this.header = Objects.requireNonNull(header, "header");
+      this.destinations = List.copyOf(destinations);
+    }
+
+    /** Returns the section header label. */
+    public String getHeader() {
+      return header;
+    }
+
+    /** Returns the section's secondary destinations as an unmodifiable list. */
+    public List<ElwhaNavRailDestination> getDestinations() {
+      return destinations;
+    }
   }
 
   /**
@@ -121,7 +160,17 @@ public final class ElwhaNavigationRail extends JComponent {
   /** Property name fired when the selected destination changes. */
   public static final String PROPERTY_SELECTED = "selected";
 
+  /**
+   * Property name fired when the rail's variant changes — once per {@link #setVariant(Variant)} or
+   * per {@link #morphTo(Variant)} call (fires at the start of the morph, reporting the new target
+   * value; not per tick).
+   */
+  public static final String PROPERTY_VARIANT = "variant";
+
   static final int COLLAPSED_WIDTH_PX = 96;
+  static final int EXPANDED_WIDTH_MIN_PX = 220;
+  static final int EXPANDED_WIDTH_MAX_PX = 360;
+  static final int EXPANDED_WIDTH_DEFAULT_PX = 256;
   static final int CHROME_PAD_PX = 16;
   static final int CHROME_GAP_PX = 16;
   static final int DESTINATION_GAP_PX = 4;
@@ -130,8 +179,22 @@ public final class ElwhaNavigationRail extends JComponent {
   static final int ELEVATION_GRADIENT_PX = 12;
   static final int M3_PRIMARY_MIN = 3;
   static final int M3_PRIMARY_MAX = 7;
+  static final int SECTION_HEADER_TOP_PAD_PX = 16;
+  static final int SECTION_HEADER_BOTTOM_PAD_PX = 8;
+  // Headers align with the destination icon column (rail CHROME_PAD + destination
+  // LEADING_PAD_EXPANDED)
+  // so "Tools" / "Other" sit directly above the icon glyphs below them, matching M3's expanded
+  // rail.
+  static final int SECTION_HEADER_LEADING_PAD_PX =
+      CHROME_PAD_PX + ElwhaNavRailDestination.LEADING_PAD_EXPANDED;
+
+  // Mirrors {@code ElwhaFab.HOVER_ELEVATION} (which is private). Used to compute the FAB's
+  // shadow-blur reserve so the rail can compensate when placing the FAB in Expanded — the FAB's
+  // visible pill sits inset within its bounds by this elevation's shadow insets.
+  private static final int FAB_HOVER_ELEVATION = 4;
 
   private Variant variant;
+  private int expandedWidthPx = EXPANDED_WIDTH_DEFAULT_PX;
   private boolean surfaceFilled;
   private boolean divider;
   private int elevation;
@@ -141,6 +204,7 @@ public final class ElwhaNavigationRail extends JComponent {
   private final List<ElwhaIconButton> trailingActions = new ArrayList<>();
 
   private final List<ElwhaNavRailDestination> primary = new ArrayList<>();
+  private final List<Section> sections = new ArrayList<>();
   private ElwhaNavRailDestination selected;
   private final List<NavRailSelectionListener> selectionListeners = new ArrayList<>();
   private final java.awt.event.ActionListener destinationClickListener =
@@ -152,12 +216,19 @@ public final class ElwhaNavigationRail extends JComponent {
 
   private boolean missingAccessibleNameWarned;
 
+  // Morph state ------------------------------------------------------------
+  private final MorphAnimator variantMorph = new MorphAnimator(this, MorphAnimator.MEDIUM3_MS);
+  private Variant morphFrom = Variant.COLLAPSED;
+  private Variant morphTo = Variant.COLLAPSED;
+
   private ElwhaNavigationRail(final Variant variant) {
     this.variant = Objects.requireNonNull(variant, "variant");
     setLayout(null);
     setOpaque(false);
     setFocusTraversalPolicyProvider(true);
     setFocusTraversalPolicy(new RailFocusTraversalPolicy());
+    variantMorph.snapTo(variant == Variant.EXPANDED ? 1f : 0f);
+    variantMorph.addProgressListener(this::broadcastMorphProgress);
   }
 
   /**
@@ -173,6 +244,18 @@ public final class ElwhaNavigationRail extends JComponent {
   }
 
   /**
+   * Creates an Expanded rail — 220–360 dp wide (default {@value #EXPANDED_WIDTH_DEFAULT_PX} dp),
+   * icon-beside-label destinations, optional sections, Extended-form FAB if present.
+   *
+   * @return a new rail in {@link Variant#EXPANDED}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static ElwhaNavigationRail expanded() {
+    return new ElwhaNavigationRail(Variant.EXPANDED);
+  }
+
+  /**
    * Returns the rail's current variant.
    *
    * @return the active variant
@@ -184,28 +267,120 @@ public final class ElwhaNavigationRail extends JComponent {
   }
 
   /**
-   * Snaps the rail to the given variant without animation. Animated {@code morphTo(Variant)}
-   * arrives in Phase 3.
+   * Snaps the rail to the given variant without animation. The animated counterpart is {@link
+   * #morphTo(Variant)}; consumers driving programmatic state (e.g. initial app config or a settings
+   * restore) typically prefer this snap path while interactive consumers (clicking the menu button)
+   * prefer {@code morphTo}.
    *
-   * <p>Calling with {@link Variant#EXPANDED} throws {@link UnsupportedOperationException} until the
-   * Expanded layout lands in Phase 3 (epic #159). The enum exposes both values now so the API shape
-   * is locked, but only {@link Variant#COLLAPSED} is functional in Phase 2.
+   * <p>The variant is broadcast to every primary + secondary destination via package-private {@code
+   * setHostVariant}, and the slotted FAB's form is snapped to Standard / Extended accordingly so
+   * chrome stays in sync with the rail.
    *
    * @param v the new variant; must not be {@code null}
-   * @throws UnsupportedOperationException if {@code v} is {@link Variant#EXPANDED}
    * @version v0.3.0
    * @since v0.3.0
    */
   public void setVariant(final Variant v) {
     Objects.requireNonNull(v, "variant");
-    if (v == Variant.EXPANDED) {
-      throw new UnsupportedOperationException(
-          "EXPANDED variant lands in Phase 3 of epic #159 (Navigation Rail)");
-    }
     if (this.variant == v) {
       return;
     }
+    final Variant prior = this.variant;
     this.variant = v;
+    variantMorph.snapTo(v == Variant.EXPANDED ? 1f : 0f);
+    pushHostVariantToDestinations();
+    snapFabFormToVariant();
+    syncMenuButtonGlyph();
+    firePropertyChange(PROPERTY_VARIANT, prior, v);
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Animates the rail to the target variant — 350 ms ({@link MorphAnimator#MEDIUM3_MS}) drives the
+   * container width interpolation, every destination's per-frame morph (active-indicator dimensions
+   * + label cross-fade per design doc §9.2), and orchestrates the slotted {@link ElwhaFab}'s
+   * Standard↔Extended form so all chrome runs in phase.
+   *
+   * <p>Same-target calls are no-ops. {@link MorphAnimator#setReducedMotion(boolean) Reduced motion}
+   * collapses the morph into a single-frame snap (the animator handles this internally — the rail
+   * needs no special path).
+   *
+   * @param target the target variant; must not be {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void morphTo(final Variant target) {
+    Objects.requireNonNull(target, "target");
+    if (this.variant == target) {
+      return;
+    }
+    final Variant prior = this.variant;
+    this.morphFrom = this.variant;
+    this.morphTo = target;
+    this.variant = target;
+    if (fab != null) {
+      fab.morphTo(target == Variant.EXPANDED ? ElwhaFab.Form.EXTENDED : ElwhaFab.Form.STANDARD);
+    }
+    firePropertyChange(PROPERTY_VARIANT, prior, target);
+    if (target == Variant.EXPANDED) {
+      variantMorph.start();
+    } else {
+      variantMorph.reverse();
+    }
+    syncMenuButtonGlyph();
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Reports whether the rail's variant-morph animator is currently scheduled — {@code true} from
+   * the {@link #morphTo(Variant)} call that starts a transition until the animator settles. Useful
+   * for consumers that want to defer follow-on layout work until the morph completes.
+   *
+   * @return {@code true} if the morph animator is running
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public boolean isMorphing() {
+    return variantMorph.isRunning();
+  }
+
+  /**
+   * Returns the rail's configured Expanded width.
+   *
+   * @return the Expanded width in pixels
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public int getExpandedWidth() {
+    return expandedWidthPx;
+  }
+
+  /**
+   * Sets the rail's Expanded width — the container width used in {@link Variant#EXPANDED} and as
+   * the target endpoint of {@link #morphTo(Variant)} transitions. Must lie in {@code [220, 360]} —
+   * the M3-tokened range for Expanded rails.
+   *
+   * @param px the Expanded width in pixels
+   * @throws IllegalArgumentException if {@code px} is outside {@code [220, 360]}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void setExpandedWidth(final int px) {
+    if (px < EXPANDED_WIDTH_MIN_PX || px > EXPANDED_WIDTH_MAX_PX) {
+      throw new IllegalArgumentException(
+          "expandedWidth must be in ["
+              + EXPANDED_WIDTH_MIN_PX
+              + ", "
+              + EXPANDED_WIDTH_MAX_PX
+              + "]: "
+              + px);
+    }
+    if (this.expandedWidthPx == px) {
+      return;
+    }
+    this.expandedWidthPx = px;
     revalidate();
     repaint();
   }
@@ -298,9 +473,12 @@ public final class ElwhaNavigationRail extends JComponent {
 
   /**
    * Slots an icon button into the rail's menu position (top of the rail, above the FAB). Pass
-   * {@code null} to clear. The lib does not bind any default click semantics to this button in
-   * Phase 2; consumers are free to wire it to whatever action they want (typically
-   * variant-toggling, which the rail will pick up automatically in Phase 3).
+   * {@code null} to clear. The rail auto-wires the button to toggle its variant on click — clicking
+   * morphs Collapsed↔Expanded — and auto-swaps the icon between {@link
+   * com.owspfm.elwha.icons.MaterialIcons#menu() menu} (in Collapsed) and {@link
+   * com.owspfm.elwha.icons.MaterialIcons#menuOpen() menuOpen} (in Expanded) to match M3 §4.3.
+   * Consumers needing different click semantics should pass {@code null} here and host their own
+   * icon button outside the rail.
    *
    * @param menu the icon button to slot, or {@code null} to remove
    * @version v0.3.0
@@ -311,14 +489,34 @@ public final class ElwhaNavigationRail extends JComponent {
       return;
     }
     if (this.menuButton != null) {
+      this.menuButton.removeActionListener(menuToggleListener);
       remove(this.menuButton);
     }
     this.menuButton = menu;
     if (menu != null) {
       add(menu);
+      menu.addActionListener(menuToggleListener);
+      syncMenuButtonGlyph();
     }
     revalidate();
     repaint();
+  }
+
+  // Auto-wires the menu button to toggle the rail's variant per M3 §4.3 — hamburger glyph in
+  // Collapsed (expand affordance), menuOpen glyph in Expanded (collapse affordance). Consumers
+  // that need a different click semantic should slot a different ElwhaIconButton and listen on
+  // the rail's PROPERTY_SELECTED / variant change events instead.
+  private final java.awt.event.ActionListener menuToggleListener =
+      e -> morphTo(variant == Variant.EXPANDED ? Variant.COLLAPSED : Variant.EXPANDED);
+
+  private void syncMenuButtonGlyph() {
+    if (menuButton == null) {
+      return;
+    }
+    menuButton.setIcon(
+        variant == Variant.EXPANDED
+            ? com.owspfm.elwha.icons.MaterialIcons.menuOpen()
+            : com.owspfm.elwha.icons.MaterialIcons.menu());
   }
 
   /**
@@ -352,9 +550,32 @@ public final class ElwhaNavigationRail extends JComponent {
     this.fab = fab;
     if (fab != null) {
       add(fab);
+      snapFabFormToVariant();
     }
     revalidate();
     repaint();
+  }
+
+  private void snapFabFormToVariant() {
+    if (fab == null) {
+      return;
+    }
+    final ElwhaFab.Form target =
+        variant == Variant.EXPANDED ? ElwhaFab.Form.EXTENDED : ElwhaFab.Form.STANDARD;
+    if (fab.getForm() != target) {
+      try {
+        fab.morphTo(target);
+        // Force the FAB to its end-state immediately for snap semantics — morphTo starts the
+        // animator, but a setVariant call should not animate. Reaching into MorphAnimator from
+        // outside the FAB isn't exposed; the FAB animator runs the 300ms transition; for now we
+        // accept that a non-animated setVariant call snaps the rail but the FAB transitions over
+        // 300ms. This is consistent with consumer expectation that the FAB carries its own motion
+        // semantics independently of the rail's snap vs morph distinction.
+      } catch (final IllegalStateException ex) {
+        // The FAB was constructed in a form that can't morph to the target (standard-only or
+        // extended-only). Leave it as-is — consumer chose those construction-time semantics.
+      }
+    }
   }
 
   /**
@@ -409,6 +630,7 @@ public final class ElwhaNavigationRail extends JComponent {
         }
         primary.add(d);
         add(d);
+        d.setHostVariant(variant);
         d.addActionListener(destinationClickListener);
         installKeyboardNavigation(d);
       }
@@ -427,17 +649,119 @@ public final class ElwhaNavigationRail extends JComponent {
 
     final ElwhaNavRailDestination prior = selected;
     final ElwhaNavRailDestination next;
-    if (primary.isEmpty()) {
+    if (allDestinations().isEmpty()) {
       next = null;
-    } else if (prior != null && primary.contains(prior)) {
+    } else if (prior != null && allDestinations().contains(prior)) {
       next = prior;
-    } else {
+    } else if (!primary.isEmpty()) {
       next = primary.get(0);
+    } else {
+      next = allDestinations().get(0);
     }
     applySelection(prior, next);
 
     revalidate();
     repaint();
+  }
+
+  /**
+   * Adds a section to the Expanded rail — a header label plus its secondary destinations. Sections
+   * paint and lay out only when {@link #getVariant()} is {@link Variant#EXPANDED}; in Collapsed
+   * they are silently hidden but their destinations remain valid selection-model members.
+   *
+   * <p>Selection-model union: section destinations are added to the rail's all-destinations set, so
+   * {@link #setSelected(ElwhaNavRailDestination)} accepts them. Each secondary destination receives
+   * the same click-routing + keyboard-navigation wiring as primary destinations.
+   *
+   * @param header the section header label; must not be {@code null}
+   * @param secondary the section's destinations; copied defensively
+   * @throws NullPointerException if {@code header} is null
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void addSection(final String header, final List<ElwhaNavRailDestination> secondary) {
+    Objects.requireNonNull(header, "header");
+    final List<ElwhaNavRailDestination> dests =
+        secondary == null ? Collections.emptyList() : new ArrayList<>(secondary);
+    dests.removeIf(Objects::isNull);
+    final Section section = new Section(header, dests);
+    sections.add(section);
+    for (final ElwhaNavRailDestination d : dests) {
+      add(d);
+      d.setHostVariant(variant);
+      d.addActionListener(destinationClickListener);
+      installKeyboardNavigation(d);
+    }
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Removes every section previously added via {@link #addSection(String, List)}, detaching every
+   * secondary destination from the rail. If the currently-selected destination was a member of a
+   * removed section, selection falls back to the first primary destination (or {@code null} when
+   * primary is also empty).
+   *
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void clearSections() {
+    if (sections.isEmpty()) {
+      return;
+    }
+    final ElwhaNavRailDestination prior = selected;
+    for (final Section s : sections) {
+      for (final ElwhaNavRailDestination d : s.getDestinations()) {
+        remove(d);
+        d.removeActionListener(destinationClickListener);
+        uninstallKeyboardNavigation(d);
+      }
+    }
+    sections.clear();
+    if (prior != null && !primary.contains(prior)) {
+      applySelection(prior, primary.isEmpty() ? null : primary.get(0));
+    }
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns a defensive copy of the current sections. Section instances themselves are immutable.
+   *
+   * @return the sections list
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public List<Section> getSections() {
+    return new ArrayList<>(sections);
+  }
+
+  /** All destinations across primary + every section, in document order. */
+  private List<ElwhaNavRailDestination> allDestinations() {
+    final List<ElwhaNavRailDestination> out = new ArrayList<>(primary);
+    for (final Section s : sections) {
+      out.addAll(s.getDestinations());
+    }
+    return out;
+  }
+
+  private void pushHostVariantToDestinations() {
+    for (final ElwhaNavRailDestination d : allDestinations()) {
+      d.setHostVariant(variant);
+    }
+  }
+
+  private void broadcastMorphProgress() {
+    // The animator's progress runs 0→1 going forward (toward EXPANDED) and 1→0 going reverse
+    // (toward COLLAPSED). Destinations interpret progress as "from→to fraction" — always 0 at the
+    // start of THIS morph and 1 at the end. Invert when the target is COLLAPSED so reverse morphs
+    // and forward morphs share the same 0→1 contract from the destination's perspective.
+    final float raw = variantMorph.progress();
+    final float p = (morphTo == Variant.EXPANDED) ? raw : (1f - raw);
+    for (final ElwhaNavRailDestination d : allDestinations()) {
+      d.setMorphProgress(p, morphFrom, morphTo);
+    }
+    revalidate();
   }
 
   /**
@@ -481,15 +805,16 @@ public final class ElwhaNavigationRail extends JComponent {
    */
   public void setSelected(final ElwhaNavRailDestination destination) {
     if (destination == null) {
-      if (!primary.isEmpty()) {
+      if (!allDestinations().isEmpty()) {
         throw new IllegalArgumentException(
-            "setSelected(null) is only legal when the primary list is empty");
+            "setSelected(null) is only legal when primary and sections are empty");
       }
       applySelection(selected, null);
       return;
     }
-    if (!primary.contains(destination)) {
-      throw new IllegalArgumentException("destination is not a member of the current primary list");
+    if (!allDestinations().contains(destination)) {
+      throw new IllegalArgumentException(
+          "destination is not a member of the rail's primary or secondary list");
     }
     if (selected == destination) {
       return;
@@ -591,8 +916,7 @@ public final class ElwhaNavigationRail extends JComponent {
     if (isPreferredSizeSet()) {
       return super.getPreferredSize();
     }
-    final int prefHeight = preferredContentHeight();
-    return new Dimension(COLLAPSED_WIDTH_PX, prefHeight);
+    return new Dimension(currentWidthPx(), preferredContentHeight());
   }
 
   @Override
@@ -600,7 +924,7 @@ public final class ElwhaNavigationRail extends JComponent {
     if (isMinimumSizeSet()) {
       return super.getMinimumSize();
     }
-    return new Dimension(COLLAPSED_WIDTH_PX, preferredContentHeight());
+    return new Dimension(currentWidthPx(), preferredContentHeight());
   }
 
   @Override
@@ -608,7 +932,21 @@ public final class ElwhaNavigationRail extends JComponent {
     if (isMaximumSizeSet()) {
       return super.getMaximumSize();
     }
-    return new Dimension(COLLAPSED_WIDTH_PX, Integer.MAX_VALUE);
+    return new Dimension(currentWidthPx(), Integer.MAX_VALUE);
+  }
+
+  /**
+   * Current container width — driven by variant and (mid-morph) by the morph animator's container-
+   * width interpolation. Steady-state in COLLAPSED reports {@link #COLLAPSED_WIDTH_PX}; steady-
+   * state in EXPANDED reports {@link #expandedWidthPx}; during a morph reports the lerped value so
+   * the parent {@link BorderLayout}-style host relayouts in step.
+   */
+  int currentWidthPx() {
+    if (!variantMorph.isRunning()) {
+      return variant == Variant.EXPANDED ? expandedWidthPx : COLLAPSED_WIDTH_PX;
+    }
+    return ContentMorphPainter.containerWidth(
+        COLLAPSED_WIDTH_PX, expandedWidthPx, variantMorph.progress());
   }
 
   private int preferredContentHeight() {
@@ -619,7 +957,10 @@ public final class ElwhaNavigationRail extends JComponent {
     if (fab != null) {
       h += fab.getPreferredSize().height + CHROME_GAP_PX;
     }
-    h += destinationStackHeight();
+    h += primaryStackHeight();
+    if (variant == Variant.EXPANDED) {
+      h += sectionsStackHeight();
+    }
     if (!trailingActions.isEmpty()) {
       h += CHROME_GAP_PX;
     }
@@ -628,16 +969,42 @@ public final class ElwhaNavigationRail extends JComponent {
     return Math.max(h, COLLAPSED_WIDTH_PX);
   }
 
-  private int destinationStackHeight() {
+  private int primaryStackHeight() {
     if (primary.isEmpty()) {
       return 0;
     }
     int h = 0;
     for (final ElwhaNavRailDestination d : primary) {
-      h += d.getPreferredSize().height;
+      h += ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX;
     }
-    h += DESTINATION_GAP_PX * (primary.size() - 1);
+    if (variant == Variant.COLLAPSED) {
+      h += DESTINATION_GAP_PX * (primary.size() - 1);
+    }
     return h;
+  }
+
+  private int sectionsStackHeight() {
+    if (sections.isEmpty()) {
+      return 0;
+    }
+    final int headerHeight = sectionHeaderHeight();
+    int h = 0;
+    for (final Section s : sections) {
+      h += SECTION_HEADER_TOP_PAD_PX;
+      h += headerHeight;
+      h += SECTION_HEADER_BOTTOM_PAD_PX;
+      h += s.getDestinations().size() * ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX;
+    }
+    return h;
+  }
+
+  private int sectionHeaderHeight() {
+    final Font f = getFont();
+    if (f == null) {
+      return 14;
+    }
+    final FontMetrics fm = getFontMetrics(f);
+    return fm.getHeight();
   }
 
   private int trailingHeight() {
@@ -656,47 +1023,110 @@ public final class ElwhaNavigationRail extends JComponent {
   public void doLayout() {
     final int w = getWidth();
     final int h = getHeight();
+    // During a morph in either direction, lay out destinations with the wider Expanded bounds —
+    // the destination's own paint lerps the indicator inside those bounds, and Collapsed paint
+    // self-clips to the centered 56-wide pill region. Using the wider bounds avoids a bounds-jump
+    // mid-morph that would otherwise crop the indicator.
+    final boolean expandedish = variant == Variant.EXPANDED || variantMorph.isRunning();
 
     int topY = CHROME_PAD_PX;
     if (menuButton != null) {
       final Dimension d = menuButton.getPreferredSize();
-      menuButton.setBounds((w - d.width) / 2, topY, d.width, d.height);
+      final int x = expandedish ? iconColumnAlignedX(d.width) : (w - d.width) / 2;
+      menuButton.setBounds(x, topY, d.width, d.height);
       topY += d.height + CHROME_GAP_PX;
     }
     if (fab != null) {
       final Dimension d = fab.getPreferredSize();
-      fab.setBounds((w - d.width) / 2, topY, d.width, d.height);
+      // FAB reserves shadow-blur padding around its painted pill (the pill is inset by the
+      // hover-elevation shadow insets within the FAB's bounds). To put the FAB's painted pill
+      // leading edge at CHROME_PAD in rail coords (so its internal icon lands on the icon column
+      // at CHROME_PAD + LEADING_PAD_EXPANDED, matching destination icons), pull the FAB bounds
+      // left by the shadow inset. In Collapsed, the FAB centers horizontally as before — the
+      // shadow inset effectively shifts the visible pill a few px left of geometric center, which
+      // M3 spec accepts as the price of a halo-reserving FAB.
+      final int fabShadowLeft = ShadowPainter.shadowInsets(FAB_HOVER_ELEVATION).left;
+      final int x = expandedish ? CHROME_PAD_PX - fabShadowLeft : (w - d.width) / 2;
+      fab.setBounds(x, topY, d.width, d.height);
       topY += d.height + CHROME_GAP_PX;
     }
 
     int destinationsBottom = topY;
+    final int rowContentWidth = w - 2 * CHROME_PAD_PX;
     for (final ElwhaNavRailDestination dest : primary) {
-      final Dimension d = dest.getPreferredSize();
-      dest.setBounds((w - d.width) / 2, topY, d.width, d.height);
-      topY += d.height + DESTINATION_GAP_PX;
-      destinationsBottom = topY - DESTINATION_GAP_PX;
+      topY = layoutOneDestination(dest, topY, w, rowContentWidth, expandedish);
+      destinationsBottom = topY;
+      if (variant == Variant.COLLAPSED && !variantMorph.isRunning()) {
+        topY += DESTINATION_GAP_PX;
+      }
+    }
+
+    if (variant == Variant.EXPANDED && !sections.isEmpty()) {
+      final int headerH = sectionHeaderHeight();
+      for (final Section s : sections) {
+        topY += SECTION_HEADER_TOP_PAD_PX;
+        topY += headerH;
+        topY += SECTION_HEADER_BOTTOM_PAD_PX;
+        for (final ElwhaNavRailDestination dest : s.getDestinations()) {
+          topY = layoutOneDestination(dest, topY, w, rowContentWidth, true);
+          destinationsBottom = topY;
+        }
+      }
+    } else if (variant == Variant.COLLAPSED) {
+      // Hide secondary destinations in Collapsed by parking them off-screen — they remain in the
+      // selection-model union but neither paint nor accept input. (Setting them invisible would
+      // also work; off-screen parking matches the Phase 2 pattern of the rail layout-managing its
+      // own children via setBounds.)
+      for (final Section s : sections) {
+        for (final ElwhaNavRailDestination dest : s.getDestinations()) {
+          dest.setBounds(0, -10_000, 0, 0);
+        }
+      }
     }
 
     if (trailingActions.isEmpty()) {
       return;
     }
 
-    // Bottom-anchor trailing actions. If the rail's allocated height is too small to honor the
-    // bottom anchor without overlapping the destination stack, fall back to placing them
-    // immediately below the destinations with a chrome gap — the rail's bottom edge then clips
-    // the overflow instead of letting the two regions visually collide. (Production placement
-    // always grants the rail at least getMinimumSize() height, so this branch is a graceful-
-    // degradation fallback for constrained hosts. Trailing-actions overflow-menu collapsing is
-    // a future follow-up.)
     final int trailingBlock = trailingHeight();
     final int bottomAnchorTop = h - CHROME_PAD_PX - trailingBlock;
     final int safeTop = destinationsBottom + CHROME_GAP_PX;
     int by = Math.max(bottomAnchorTop, safeTop);
     for (final ElwhaIconButton a : trailingActions) {
       final Dimension d = a.getPreferredSize();
-      a.setBounds((w - d.width) / 2, by, d.width, d.height);
+      final int ax = expandedish ? iconColumnAlignedX(d.width) : (w - d.width) / 2;
+      a.setBounds(ax, by, d.width, d.height);
       by += d.height + TRAILING_ACTION_GAP_PX;
     }
+  }
+
+  /**
+   * Returns the x where an icon-button-sized component should be placed in Expanded so its internal
+   * (centered) glyph lands on the rail's icon column (at {@code CHROME_PAD + LEADING_PAD_EXPANDED}
+   * from the rail's leading edge — the same column the destination icons and the FAB's
+   * icon-inside-pill sit on).
+   */
+  private static int iconColumnAlignedX(final int buttonWidth) {
+    final int columnX = CHROME_PAD_PX + ElwhaNavRailDestination.LEADING_PAD_EXPANDED;
+    return columnX - (buttonWidth - ElwhaNavRailDestination.ICON_SIZE_PX) / 2;
+  }
+
+  private int layoutOneDestination(
+      final ElwhaNavRailDestination dest,
+      final int topY,
+      final int railWidth,
+      final int rowContentWidth,
+      final boolean expandedish) {
+    final int rowH = ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX;
+    if (expandedish) {
+      dest.setRowContentWidth(rowContentWidth);
+      dest.setBounds(CHROME_PAD_PX, topY, rowContentWidth, rowH);
+    } else {
+      dest.setRowContentWidth(0);
+      final int cw = ElwhaNavRailDestination.COLLAPSED_WIDTH_PX;
+      dest.setBounds((railWidth - cw) / 2, topY, cw, rowH);
+    }
+    return topY + rowH;
   }
 
   @Override
@@ -723,8 +1153,41 @@ public final class ElwhaNavigationRail extends JComponent {
         final int x = ltr ? w - DIVIDER_WIDTH_PX : 0;
         g2.fillRect(x, 0, DIVIDER_WIDTH_PX, h);
       }
+
+      if (variant == Variant.EXPANDED && !sections.isEmpty()) {
+        paintSectionHeaders(g2);
+      }
     } finally {
       g2.dispose();
+    }
+  }
+
+  private void paintSectionHeaders(final Graphics2D g2) {
+    final Font font = getFont();
+    if (font == null) {
+      return;
+    }
+    g2.setFont(font);
+    g2.setColor(ColorRole.ON_SURFACE_VARIANT.resolve());
+    final FontMetrics fm = g2.getFontMetrics();
+    final int headerH = fm.getHeight();
+
+    int topY = CHROME_PAD_PX;
+    if (menuButton != null) {
+      topY += menuButton.getPreferredSize().height + CHROME_GAP_PX;
+    }
+    if (fab != null) {
+      topY += fab.getPreferredSize().height + CHROME_GAP_PX;
+    }
+    topY += primary.size() * ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX;
+
+    for (final Section s : sections) {
+      topY += SECTION_HEADER_TOP_PAD_PX;
+      final int baseline = topY + fm.getAscent();
+      g2.drawString(s.getHeader(), SECTION_HEADER_LEADING_PAD_PX, baseline);
+      topY += headerH;
+      topY += SECTION_HEADER_BOTTOM_PAD_PX;
+      topY += s.getDestinations().size() * ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX;
     }
   }
 
@@ -821,16 +1284,20 @@ public final class ElwhaNavigationRail extends JComponent {
     return new AbstractAction() {
       @Override
       public void actionPerformed(final ActionEvent e) {
-        if (!(e.getSource() instanceof ElwhaNavRailDestination from) || primary.isEmpty()) {
+        if (!(e.getSource() instanceof ElwhaNavRailDestination from)) {
           return;
         }
-        final int fromIndex = primary.indexOf(from);
+        final List<ElwhaNavRailDestination> traversable = traversableDestinations();
+        if (traversable.isEmpty()) {
+          return;
+        }
+        final int fromIndex = traversable.indexOf(from);
         if (fromIndex < 0) {
           return;
         }
-        final int size = primary.size();
+        final int size = traversable.size();
         final int target = ((fromIndex + delta) % size + size) % size;
-        primary.get(target).requestFocusInWindow();
+        traversable.get(target).requestFocusInWindow();
       }
     };
   }
@@ -839,24 +1306,39 @@ public final class ElwhaNavigationRail extends JComponent {
     return new AbstractAction() {
       @Override
       public void actionPerformed(final ActionEvent e) {
-        if (primary.isEmpty()) {
+        final List<ElwhaNavRailDestination> traversable = traversableDestinations();
+        if (traversable.isEmpty()) {
           return;
         }
-        primary.get(first ? 0 : primary.size() - 1).requestFocusInWindow();
+        traversable.get(first ? 0 : traversable.size() - 1).requestFocusInWindow();
       }
     };
   }
 
+  /**
+   * The flat list of destinations the keyboard navigates over — primary in document order, then
+   * each section's secondary destinations in section order. In Collapsed variant the rail hides
+   * sections; secondary destinations are excluded from keyboard traversal in that variant since
+   * they're not visible.
+   */
+  private List<ElwhaNavRailDestination> traversableDestinations() {
+    if (variant == Variant.COLLAPSED) {
+      return new ArrayList<>(primary);
+    }
+    return allDestinations();
+  }
+
   private ElwhaNavRailDestination currentTabStopDestination() {
-    for (final ElwhaNavRailDestination d : primary) {
+    final List<ElwhaNavRailDestination> traversable = traversableDestinations();
+    for (final ElwhaNavRailDestination d : traversable) {
       if (d.isFocusOwner()) {
         return d;
       }
     }
-    if (selected != null && primary.contains(selected)) {
+    if (selected != null && traversable.contains(selected)) {
       return selected;
     }
-    return primary.isEmpty() ? null : primary.get(0);
+    return traversable.isEmpty() ? null : traversable.get(0);
   }
 
   /**

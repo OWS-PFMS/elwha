@@ -38,6 +38,13 @@ public final class MorphAnimator {
   /** {@code motion.duration.medium2} — 300 ms; the select-flip duration per design doc §3. */
   public static final int MEDIUM2_MS = 300;
 
+  /**
+   * {@code motion.duration.medium3} — 350 ms; the Navigation Rail Collapsed↔Expanded morph duration
+   * (design doc §9.1 of {@code elwha-navigation-rail-design.md}). Longer than {@link #MEDIUM2_MS}
+   * to account for the wider distance the container travels.
+   */
+  public static final int MEDIUM3_MS = 350;
+
   private static final int TICK_INTERVAL_MS = 16;
 
   private static volatile boolean reducedMotion;
@@ -112,6 +119,7 @@ public final class MorphAnimator {
 
   private final WeakReference<JComponent> hostRef;
   private final Timer timer;
+  private final java.util.List<Runnable> progressListeners = new java.util.ArrayList<>();
 
   private int durationMs;
   private float progress;
@@ -345,11 +353,53 @@ public final class MorphAnimator {
   }
 
   private void repaintHost() {
+    fireProgress();
     final JComponent host = hostRef.get();
     if (host == null) {
       timer.stop();
       return;
     }
     host.repaint();
+  }
+
+  /**
+   * Registers a callback fired on every progress change — every animator tick plus the synthetic
+   * tick that {@link #snapTo(float)}, {@link #immediateFinish()}, and the reduced-motion path of
+   * {@link #start()} / {@link #reverse()} emit. The callback runs <em>before</em> the host repaint
+   * is scheduled so a parent that broadcasts {@code progress()} to its children sees their state
+   * updated for the same paint cycle. Removed via {@link #removeProgressListener(Runnable)}.
+   *
+   * <p>Used by parent containers that drive multiple children in lock-step — e.g. {@code
+   * ElwhaNavigationRail} pushing morph progress to every {@link
+   * com.owspfm.elwha.navrail.ElwhaNavRailDestination} per tick (design doc §9.2).
+   *
+   * @param listener the callback to invoke each tick; {@code null} is ignored
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void addProgressListener(final Runnable listener) {
+    if (listener != null) {
+      progressListeners.add(listener);
+    }
+  }
+
+  /**
+   * Removes a previously-added progress listener.
+   *
+   * @param listener the callback to remove
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void removeProgressListener(final Runnable listener) {
+    progressListeners.remove(listener);
+  }
+
+  private void fireProgress() {
+    if (progressListeners.isEmpty()) {
+      return;
+    }
+    for (final Runnable r : new java.util.ArrayList<>(progressListeners)) {
+      r.run();
+    }
   }
 }

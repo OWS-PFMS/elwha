@@ -6,6 +6,7 @@ import com.owspfm.elwha.badge.ElwhaBadgeAnchor;
 import com.owspfm.elwha.badge.IconBearing;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
 import java.awt.AlphaComposite;
@@ -47,17 +48,33 @@ import javax.swing.Timer;
  * implementing {@link IconBearing} that paints a single icon (with an optional label) and exposes a
  * pill-shaped active-indicator region for state-layer / ripple / future selected paint.
  *
- * <p><strong>Phase 1 / Story #226 skeleton.</strong> This first revision lays out the Collapsed
- * form only — icon over label, full-row hit target, pill-shaped state layer and ripple aligned with
- * the 32×56 active-indicator region. No selected state and no badge slot at this stage; those land
- * in stories #227 and #228. The Expanded form, the Collapsed↔Expanded morph, and the parent
- * container come later in the epic.
+ * <p><strong>Phase 3 — both variants and the Collapsed↔Expanded morph.</strong> Collapsed renders
+ * icon-over-label with a 32×56 icon pill (Phase 1 layout). Expanded renders icon-beside-label with
+ * a 56-tall Hug-width row pill (icon left, label inline). The variant is pushed in by the parent
+ * {@link ElwhaNavigationRail} via the package-private {@code setHostVariant(Variant)}; the morph
+ * progress is pushed in via {@code setMorphProgress(float, Variant, Variant)} once per {@link
+ * com.owspfm.elwha.theme.MorphAnimator} tick. The destination is not animator-aware itself — the
+ * container owns the clock and broadcasts progress to every destination in lock-step (design doc
+ * §9.2).
  *
  * <p><strong>Geometry (M3 token-locked, see {@code elwha-navigation-rail-design.md} §4).</strong>
- * Component is {@value #COLLAPSED_WIDTH_PX} dp wide × {@value #COLLAPSED_CONTENT_HEIGHT_PX} dp
- * tall. The 32×56 indicator pill is centered horizontally at the top; the 24-dp icon glyph centers
- * inside it; the label sits 4 dp below, centered horizontally. The destination's hit target is the
- * full component bounds regardless of pill shape — the pill only governs paint.
+ *
+ * <ul>
+ *   <li><strong>Collapsed:</strong> {@value #COLLAPSED_WIDTH_PX} dp wide × {@value
+ *       #COLLAPSED_CONTENT_HEIGHT_PX} dp tall. The 32×56 indicator pill is centered horizontally at
+ *       the top; the 24-dp icon glyph centers inside it; the label sits {@value
+ *       #ICON_LABEL_GAP_COLLAPSED} dp below, centered horizontally.
+ *   <li><strong>Expanded:</strong> Hug-width × {@value #EXPANDED_CONTENT_HEIGHT_PX} dp tall, full
+ *       row pill (corner-radius = height/2). Inside the pill: {@value #LEADING_PAD_EXPANDED} dp
+ *       leading pad + 24 dp icon + {@value #ICON_LABEL_GAP_EXPANDED} dp gap + label + {@value
+ *       #TRAILING_PAD_EXPANDED} dp trailing pad. The destination's hit target is its full bounds
+ *       regardless of pill shape.
+ *   <li><strong>Mid-morph (rail-driven):</strong> indicator width lerps {@code 56 → hugWidth},
+ *       indicator height lerps {@code 32 → 56}, indicator left-anchor slides {@code centeredAtTop →
+ *       leftAtRow}. Label paint anchor switches discretely at progress 0.5 (stacked below for
+ *       {@code [0, 0.5)}, inline beside for {@code [0.5, 1.0]}); label alpha cross-fades via {@link
+ *       ContentMorphPainter#labelAlpha(float)} symmetric about 0.5.
+ * </ul>
  *
  * <p><strong>Paint contract.</strong>
  *
@@ -66,8 +83,8 @@ import javax.swing.Timer;
  *       destinations.
  *   <li>State-layer overlay paints at the {@link StateLayer#HOVER hover}, {@link StateLayer#FOCUS
  *       focus}, and {@link StateLayer#PRESSED pressed} opacities — clipped to the pill shape so the
- *       affordance reads as "the icon got hit", not "the whole row got hit". Selected adds a {@link
- *       ColorRole#SECONDARY_CONTAINER}-filled pill in story #227.
+ *       affordance reads as "the icon got hit" in Collapsed and "the whole row got hit" in
+ *       Expanded.
  *   <li>Ripple is seeded at the click point and clipped to the pill region — matches state-layer
  *       scope, same pattern as Button / Chip ripple clipping.
  *   <li>Focus ring: thin {@link ColorRole#PRIMARY} stroke around the pill (M3 keyboard-focus
@@ -83,8 +100,7 @@ import javax.swing.Timer;
  * }</pre>
  *
  * <p>The variant (Collapsed / Expanded) and the selected boolean are pushed down by the parent
- * {@code ElwhaNavigationRail} once that container lands in Phase 2 — they are not part of the
- * destination's public surface today.
+ * {@code ElwhaNavigationRail} — they are not part of the destination's public surface.
  *
  * @author Charles Bryan
  * @version v0.3.0
@@ -97,10 +113,16 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
 
   static final int COLLAPSED_WIDTH_PX = 96;
   static final int COLLAPSED_CONTENT_HEIGHT_PX = 56;
-  static final int INDICATOR_WIDTH_PX = 56;
-  static final int INDICATOR_HEIGHT_PX = 32;
+  static final int EXPANDED_CONTENT_HEIGHT_PX = 56;
+  static final int INDICATOR_WIDTH_COLLAPSED_PX = 56;
+  static final int INDICATOR_HEIGHT_COLLAPSED_PX = 32;
+  static final int INDICATOR_HEIGHT_EXPANDED_PX = 56;
   static final int ICON_SIZE_PX = 24;
-  static final int ICON_LABEL_GAP_PX = 4;
+  static final int ICON_LABEL_GAP_COLLAPSED = 4;
+  static final int ICON_LABEL_GAP_EXPANDED = 8;
+  static final int LEADING_PAD_EXPANDED = 16;
+  static final int TRAILING_PAD_EXPANDED = 16;
+  static final float LABEL_ANCHOR_SWITCH_PROGRESS = 0.5f;
 
   private static final int RIPPLE_TOTAL_MS = 400;
   private static final int RIPPLE_TICK_MS = 16;
@@ -126,6 +148,12 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   private final List<ActionListener> actionListeners = new ArrayList<>();
 
   private final FlatSVGIcon.ColorFilter iconFilter = new FlatSVGIcon.ColorFilter(c -> iconColor());
+
+  private ElwhaNavigationRail.Variant hostVariant = ElwhaNavigationRail.Variant.COLLAPSED;
+  private boolean morphing;
+  private ElwhaNavigationRail.Variant morphFrom = ElwhaNavigationRail.Variant.COLLAPSED;
+  private ElwhaNavigationRail.Variant morphTo = ElwhaNavigationRail.Variant.COLLAPSED;
+  private float morphProgress;
 
   private ElwhaNavRailDestination(
       final Icon iconUnselected, final Icon iconSelected, final String label) {
@@ -237,8 +265,8 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
    * upper-right of the icon glyph by default. Accessibility content from the badge splices into
    * this destination's accessible name via the anchor's push-model (see {@code ElwhaBadgeAnchor}).
    *
-   * <p>Expanded-variant badge placement (beside the label) is a Phase 3 concern — Collapsed
-   * placement only at this stage.
+   * <p>In Expanded variant the badge tracks the icon's new position (left-anchored, vertically
+   * centered) automatically because the anchor reads {@link #getIconBounds()} every frame.
    *
    * @param badge the badge to anchor, or {@code null} to clear
    * @version v0.3.0
@@ -293,8 +321,90 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     actionListeners.remove(listener);
   }
 
+  // -------------------------------------------------------------- variant / morph
+
+  /**
+   * Pushes the parent rail's variant into this destination — drives the static layout (icon-over-
+   * label vs icon-beside-label) and indicator paint. Called by {@link ElwhaNavigationRail} whenever
+   * {@code setVariant(Variant)} runs. Not for consumer use.
+   *
+   * @param v the new variant
+   */
+  void setHostVariant(final ElwhaNavigationRail.Variant v) {
+    if (this.hostVariant == v && !this.morphing) {
+      return;
+    }
+    this.hostVariant = v;
+    this.morphing = false;
+    this.morphProgress = 0f;
+    revalidate();
+    repaint();
+  }
+
+  /** The host variant currently driving this destination's layout. Package-private for tests. */
+  ElwhaNavigationRail.Variant getHostVariant() {
+    return hostVariant;
+  }
+
+  /**
+   * Drives one frame of the Collapsed↔Expanded morph. The rail container owns the {@link
+   * com.owspfm.elwha.theme.MorphAnimator} and broadcasts {@code progress} to every destination per
+   * tick. {@code progress} runs {@code [0, 1]} regardless of direction — the destination reads the
+   * {@code from}/{@code to} parameters to interpret which endpoint is which.
+   *
+   * <p>When {@code progress} reaches {@code 1.0} the destination snaps its host variant to {@code
+   * to} and clears the morphing flag — subsequent paints render the static end-state.
+   *
+   * @param progress the eased animation phase in {@code [0, 1]}
+   * @param from the starting variant
+   * @param to the destination variant
+   */
+  void setMorphProgress(
+      final float progress,
+      final ElwhaNavigationRail.Variant from,
+      final ElwhaNavigationRail.Variant to) {
+    final float clamped = Math.max(0f, Math.min(1f, progress));
+    this.morphFrom = from;
+    this.morphTo = to;
+    this.morphProgress = clamped;
+    if (clamped >= 1f) {
+      this.hostVariant = to;
+      this.morphing = false;
+    } else if (clamped <= 0f) {
+      this.hostVariant = from;
+      this.morphing = false;
+    } else {
+      this.morphing = true;
+    }
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Pushes the row content width the rail allocates to this destination in Expanded. Drives the
+   * Hug-width indicator pill so the indicator spans the full row content area — only relevant when
+   * the rail's selected destination is this one. The rail calls this once at layout time per
+   * destination in Expanded; it has no effect on Collapsed paint.
+   *
+   * @param widthPx the row content width in pixels
+   */
+  void setRowContentWidth(final int widthPx) {
+    if (this.rowContentWidthPx == widthPx) {
+      return;
+    }
+    this.rowContentWidthPx = widthPx;
+    repaint();
+  }
+
+  private int rowContentWidthPx;
+
+  // ------------------------------------------------------------------- sizing
+
   @Override
   public Dimension getPreferredSize() {
+    if (currentLayoutIsExpanded()) {
+      return new Dimension(expandedHugWidth(), EXPANDED_CONTENT_HEIGHT_PX);
+    }
     return new Dimension(COLLAPSED_WIDTH_PX, COLLAPSED_CONTENT_HEIGHT_PX);
   }
 
@@ -305,20 +415,93 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
 
   @Override
   public Dimension getMaximumSize() {
+    if (currentLayoutIsExpanded()) {
+      return new Dimension(Integer.MAX_VALUE, EXPANDED_CONTENT_HEIGHT_PX);
+    }
     return getPreferredSize();
   }
 
-  @Override
-  public Rectangle getIconBounds() {
-    final Rectangle pill = pillRect();
-    final int iconX = pill.x + (pill.width - ICON_SIZE_PX) / 2;
-    final int iconY = pill.y + (pill.height - ICON_SIZE_PX) / 2;
-    return new Rectangle(iconX, iconY, ICON_SIZE_PX, ICON_SIZE_PX);
+  private boolean currentLayoutIsExpanded() {
+    if (morphing) {
+      return morphProgress >= LABEL_ANCHOR_SWITCH_PROGRESS;
+    }
+    return hostVariant == ElwhaNavigationRail.Variant.EXPANDED;
   }
 
+  private int expandedHugWidth() {
+    final FontMetrics fm = getFontMetrics(getFont());
+    final int labelWidth = label.isEmpty() ? 0 : fm.stringWidth(label);
+    return LEADING_PAD_EXPANDED
+        + ICON_SIZE_PX
+        + (label.isEmpty() ? 0 : ICON_LABEL_GAP_EXPANDED + labelWidth)
+        + TRAILING_PAD_EXPANDED;
+  }
+
+  // ------------------------------------------------------------------ geometry
+
+  @Override
+  public Rectangle getIconBounds() {
+    final IndicatorGeometry geom = currentIndicatorGeometry();
+    return new Rectangle(geom.iconX, geom.iconY, ICON_SIZE_PX, ICON_SIZE_PX);
+  }
+
+  /** Returns the pill bounds; preserved for back-compat with internal callers. */
   Rectangle pillRect() {
-    final int x = (getWidth() - INDICATOR_WIDTH_PX) / 2;
-    return new Rectangle(x, 0, INDICATOR_WIDTH_PX, INDICATOR_HEIGHT_PX);
+    final IndicatorGeometry geom = currentIndicatorGeometry();
+    return new Rectangle(geom.pillX, geom.pillY, geom.pillWidth, geom.pillHeight);
+  }
+
+  private record IndicatorGeometry(
+      int pillX, int pillY, int pillWidth, int pillHeight, int iconX, int iconY) {}
+
+  private IndicatorGeometry geometryForCollapsed() {
+    final int pillX = (getWidth() - INDICATOR_WIDTH_COLLAPSED_PX) / 2;
+    final int pillY = 0;
+    final int pillW = INDICATOR_WIDTH_COLLAPSED_PX;
+    final int pillH = INDICATOR_HEIGHT_COLLAPSED_PX;
+    final int iconX = pillX + (pillW - ICON_SIZE_PX) / 2;
+    final int iconY = pillY + (pillH - ICON_SIZE_PX) / 2;
+    return new IndicatorGeometry(pillX, pillY, pillW, pillH, iconX, iconY);
+  }
+
+  private IndicatorGeometry geometryForExpanded() {
+    final int rowWidth =
+        rowContentWidthPx > 0 ? rowContentWidthPx : Math.max(getWidth(), expandedHugWidth());
+    final int pillX = 0;
+    final int pillY = 0;
+    final int pillW = rowWidth;
+    final int pillH = INDICATOR_HEIGHT_EXPANDED_PX;
+    final int iconX = pillX + LEADING_PAD_EXPANDED;
+    final int iconY = pillY + (pillH - ICON_SIZE_PX) / 2;
+    return new IndicatorGeometry(pillX, pillY, pillW, pillH, iconX, iconY);
+  }
+
+  private IndicatorGeometry currentIndicatorGeometry() {
+    if (!morphing) {
+      return hostVariant == ElwhaNavigationRail.Variant.EXPANDED
+          ? geometryForExpanded()
+          : geometryForCollapsed();
+    }
+    final IndicatorGeometry from =
+        morphFrom == ElwhaNavigationRail.Variant.EXPANDED
+            ? geometryForExpanded()
+            : geometryForCollapsed();
+    final IndicatorGeometry to =
+        morphTo == ElwhaNavigationRail.Variant.EXPANDED
+            ? geometryForExpanded()
+            : geometryForCollapsed();
+    final float t = morphProgress;
+    final int pillX = lerpInt(from.pillX, to.pillX, t);
+    final int pillY = lerpInt(from.pillY, to.pillY, t);
+    final int pillW = lerpInt(from.pillWidth, to.pillWidth, t);
+    final int pillH = lerpInt(from.pillHeight, to.pillHeight, t);
+    final int iconX = lerpInt(from.iconX, to.iconX, t);
+    final int iconY = lerpInt(from.iconY, to.iconY, t);
+    return new IndicatorGeometry(pillX, pillY, pillW, pillH, iconX, iconY);
+  }
+
+  private static int lerpInt(final int a, final int b, final float t) {
+    return Math.round(a + (b - a) * t);
   }
 
   // -------------------------------------------------------------------- paint
@@ -328,26 +511,26 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      final Rectangle pill = pillRect();
-      paintActiveIndicator(g2, pill);
-      paintStateLayer(g2, pill);
-      paintRippleLayer(g2, pill);
-      paintIcon(g2, pill);
-      paintLabel(g2, pill);
-      paintFocusRing(g2, pill);
+      final IndicatorGeometry geom = currentIndicatorGeometry();
+      paintActiveIndicator(g2, geom);
+      paintStateLayer(g2, geom);
+      paintRippleLayer(g2, geom);
+      paintIcon(g2, geom);
+      paintLabel(g2, geom);
+      paintFocusRing(g2, geom);
     } finally {
       g2.dispose();
     }
   }
 
-  private void paintActiveIndicator(final Graphics2D g2, final Rectangle pill) {
+  private void paintActiveIndicator(final Graphics2D g2, final IndicatorGeometry geom) {
     if (!selected) {
       return;
     }
     final Graphics2D s = (Graphics2D) g2.create();
     try {
       s.setColor(ColorRole.SECONDARY_CONTAINER.resolve());
-      s.fill(pillShape(pill));
+      s.fill(pillShape(geom));
     } finally {
       s.dispose();
     }
@@ -369,7 +552,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     return null;
   }
 
-  private void paintStateLayer(final Graphics2D g2, final Rectangle pill) {
+  private void paintStateLayer(final Graphics2D g2, final IndicatorGeometry geom) {
     final StateLayer overlay = activeOverlay();
     if (overlay == null) {
       return;
@@ -378,51 +561,112 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     try {
       s.setComposite(AlphaComposite.SrcOver.derive(overlay.opacity()));
       s.setColor(stateLayerColor());
-      s.fill(pillShape(pill));
+      s.fill(pillShape(geom));
     } finally {
       s.dispose();
     }
   }
 
-  private void paintRippleLayer(final Graphics2D g2, final Rectangle pill) {
+  private void paintRippleLayer(final Graphics2D g2, final IndicatorGeometry geom) {
     if (rippleOrigin == null || rippleProgress >= 1f) {
       return;
     }
     final Graphics2D r = (Graphics2D) g2.create();
     try {
-      r.translate(pill.x, pill.y);
-      final Point localOrigin = new Point(rippleOrigin.x - pill.x, rippleOrigin.y - pill.y);
+      r.translate(geom.pillX, geom.pillY);
+      final Point localOrigin = new Point(rippleOrigin.x - geom.pillX, rippleOrigin.y - geom.pillY);
       RipplePainter.paint(
-          r, pill.width, pill.height, localOrigin, rippleProgress, pill.height, stateLayerColor());
+          r,
+          geom.pillWidth,
+          geom.pillHeight,
+          localOrigin,
+          rippleProgress,
+          geom.pillHeight,
+          stateLayerColor());
     } finally {
       r.dispose();
     }
   }
 
-  private void paintIcon(final Graphics2D g2, final Rectangle pill) {
+  private void paintIcon(final Graphics2D g2, final IndicatorGeometry geom) {
     final Icon icon = selected ? iconSelected : iconUnselected;
     if (icon == null) {
       return;
     }
-    final int x = pill.x + (pill.width - icon.getIconWidth()) / 2;
-    final int y = pill.y + (pill.height - icon.getIconHeight()) / 2;
-    icon.paintIcon(this, g2, x, y);
+    icon.paintIcon(this, g2, geom.iconX, geom.iconY);
   }
 
-  private void paintLabel(final Graphics2D g2, final Rectangle pill) {
+  private void paintLabel(final Graphics2D g2, final IndicatorGeometry geom) {
     if (label.isEmpty()) {
       return;
     }
     g2.setFont(getFont());
-    g2.setColor(labelColor());
     final FontMetrics fm = g2.getFontMetrics();
     final int labelWidth = fm.stringWidth(label);
-    final int x = (getWidth() - labelWidth) / 2;
-    final int y = pill.y + pill.height + ICON_LABEL_GAP_PX + fm.getAscent();
-    g2.drawString(label, x, y);
+
+    if (morphing) {
+      final float stackedAlpha = stackedLabelAlpha(morphProgress);
+      final float inlineAlpha = inlineLabelAlpha(morphProgress);
+      paintStackedLabel(g2, fm, labelWidth, stackedAlpha);
+      paintInlineLabel(g2, fm, labelWidth, geom, inlineAlpha);
+      return;
+    }
+
+    if (hostVariant == ElwhaNavigationRail.Variant.EXPANDED) {
+      paintInlineLabel(g2, fm, labelWidth, geom, 1f);
+    } else {
+      paintStackedLabel(g2, fm, labelWidth, 1f);
+    }
   }
 
-  private void paintFocusRing(final Graphics2D g2, final Rectangle pill) {
+  private void paintStackedLabel(
+      final Graphics2D g2, final FontMetrics fm, final int labelWidth, final float alpha) {
+    if (alpha <= 0f) {
+      return;
+    }
+    final Graphics2D l = (Graphics2D) g2.create();
+    try {
+      l.setComposite(AlphaComposite.SrcOver.derive(alpha));
+      l.setColor(labelColor());
+      final int x = (getWidth() - labelWidth) / 2;
+      final int y = INDICATOR_HEIGHT_COLLAPSED_PX + ICON_LABEL_GAP_COLLAPSED + fm.getAscent();
+      l.drawString(label, x, y);
+    } finally {
+      l.dispose();
+    }
+  }
+
+  private void paintInlineLabel(
+      final Graphics2D g2,
+      final FontMetrics fm,
+      final int labelWidth,
+      final IndicatorGeometry geom,
+      final float alpha) {
+    if (alpha <= 0f) {
+      return;
+    }
+    final Graphics2D l = (Graphics2D) g2.create();
+    try {
+      l.setComposite(AlphaComposite.SrcOver.derive(alpha));
+      l.setColor(labelColor());
+      final int x = LEADING_PAD_EXPANDED + ICON_SIZE_PX + ICON_LABEL_GAP_EXPANDED;
+      final int rowHeight = geom.pillHeight > 0 ? geom.pillHeight : EXPANDED_CONTENT_HEIGHT_PX;
+      final int y = (rowHeight - fm.getHeight()) / 2 + fm.getAscent();
+      l.drawString(label, x, y);
+    } finally {
+      l.dispose();
+    }
+  }
+
+  private static float stackedLabelAlpha(final float progress) {
+    return ContentMorphPainter.labelAlpha(1f - progress, LABEL_ANCHOR_SWITCH_PROGRESS);
+  }
+
+  private static float inlineLabelAlpha(final float progress) {
+    return ContentMorphPainter.labelAlpha(progress, LABEL_ANCHOR_SWITCH_PROGRESS);
+  }
+
+  private void paintFocusRing(final Graphics2D g2, final IndicatorGeometry geom) {
     if (!isFocusOwner() || !isEnabled()) {
       return;
     }
@@ -431,13 +675,13 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
       f.setStroke(new BasicStroke(FOCUS_RING_STROKE));
       f.setColor(ColorRole.PRIMARY.resolve());
       final float inset = FOCUS_RING_STROKE / 2f;
-      final float arc = pill.height;
+      final float arc = geom.pillHeight;
       f.draw(
           new RoundRectangle2D.Float(
-              pill.x + inset,
-              pill.y + inset,
-              pill.width - 2f * inset,
-              pill.height - 2f * inset,
+              geom.pillX + inset,
+              geom.pillY + inset,
+              geom.pillWidth - 2f * inset,
+              geom.pillHeight - 2f * inset,
               arc,
               arc));
     } finally {
@@ -445,9 +689,9 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     }
   }
 
-  private RoundRectangle2D.Float pillShape(final Rectangle pill) {
+  private RoundRectangle2D.Float pillShape(final IndicatorGeometry geom) {
     return new RoundRectangle2D.Float(
-        pill.x, pill.y, pill.width, pill.height, pill.height, pill.height);
+        geom.pillX, geom.pillY, geom.pillWidth, geom.pillHeight, geom.pillHeight, geom.pillHeight);
   }
 
   private Color iconColor() {
