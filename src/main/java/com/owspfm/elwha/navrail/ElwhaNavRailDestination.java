@@ -1,5 +1,6 @@
 package com.owspfm.elwha.navrail;
 
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.badge.IconBearing;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
@@ -115,15 +116,25 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
 
   private final List<ActionListener> actionListeners = new ArrayList<>();
 
+  private final FlatSVGIcon.ColorFilter iconFilter = new FlatSVGIcon.ColorFilter(c -> iconColor());
+
   private ElwhaNavRailDestination(
       final Icon iconUnselected, final Icon iconSelected, final String label) {
     this.iconUnselected = Objects.requireNonNull(iconUnselected, "iconUnselected");
     this.iconSelected = Objects.requireNonNull(iconSelected, "iconSelected");
     this.label = Objects.requireNonNull(label, "label");
+    applyIconColorFilter(iconUnselected);
+    applyIconColorFilter(iconSelected);
     setOpaque(false);
     setFocusable(true);
     initInteraction();
     getAccessibleContext().setAccessibleName(label);
+  }
+
+  private void applyIconColorFilter(final Icon icon) {
+    if (icon instanceof FlatSVGIcon svg) {
+      svg.setColorFilter(iconFilter);
+    }
   }
 
   /**
@@ -172,6 +183,41 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   /** The icon rendered in the selected state. */
   public Icon getIconSelected() {
     return iconSelected;
+  }
+
+  /**
+   * Reports whether this destination is currently the rail's selected destination. The container is
+   * the single source of truth — this getter reflects the most-recent {@link #setSelected(boolean)}
+   * push from the parent rail.
+   *
+   * @return {@code true} if this destination paints in its selected form
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public boolean isSelected() {
+    return selected;
+  }
+
+  /**
+   * Updates this destination's selected state. Push-only from the parent {@code
+   * ElwhaNavigationRail} container — clicking the destination does <em>not</em> auto-flip this
+   * field; the container reacts to the action event and decides which destination is selected.
+   *
+   * <p>Paint switches instantaneously — no animation in Phase 1. The grow-from-center
+   * active-indicator animation is a Phase 5 polish item.
+   *
+   * @param selected new selected state
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void setSelected(final boolean selected) {
+    if (this.selected == selected) {
+      return;
+    }
+    final boolean previous = this.selected;
+    this.selected = selected;
+    firePropertyChange(PROPERTY_SELECTED, previous, selected);
+    repaint();
   }
 
   /**
@@ -234,6 +280,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       final Rectangle pill = pillRect();
+      paintActiveIndicator(g2, pill);
       paintStateLayer(g2, pill);
       paintRippleLayer(g2, pill);
       paintIcon(g2, pill);
@@ -241,6 +288,19 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
       paintFocusRing(g2, pill);
     } finally {
       g2.dispose();
+    }
+  }
+
+  private void paintActiveIndicator(final Graphics2D g2, final Rectangle pill) {
+    if (!selected) {
+      return;
+    }
+    final Graphics2D s = (Graphics2D) g2.create();
+    try {
+      s.setColor(ColorRole.SECONDARY_CONTAINER.resolve());
+      s.fill(pillShape(pill));
+    } finally {
+      s.dispose();
     }
   }
 
@@ -268,7 +328,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     final Graphics2D s = (Graphics2D) g2.create();
     try {
       s.setComposite(AlphaComposite.SrcOver.derive(overlay.opacity()));
-      s.setColor(resolveContentColor());
+      s.setColor(stateLayerColor());
       s.fill(pillShape(pill));
     } finally {
       s.dispose();
@@ -284,13 +344,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
       r.translate(pill.x, pill.y);
       final Point localOrigin = new Point(rippleOrigin.x - pill.x, rippleOrigin.y - pill.y);
       RipplePainter.paint(
-          r,
-          pill.width,
-          pill.height,
-          localOrigin,
-          rippleProgress,
-          pill.height,
-          resolveContentColor());
+          r, pill.width, pill.height, localOrigin, rippleProgress, pill.height, stateLayerColor());
     } finally {
       r.dispose();
     }
@@ -311,7 +365,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
       return;
     }
     g2.setFont(getFont());
-    g2.setColor(resolveContentColor());
+    g2.setColor(labelColor());
     final FontMetrics fm = g2.getFontMetrics();
     final int labelWidth = fm.stringWidth(label);
     final int x = (getWidth() - labelWidth) / 2;
@@ -347,8 +401,16 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
         pill.x, pill.y, pill.width, pill.height, pill.height, pill.height);
   }
 
-  private Color resolveContentColor() {
-    return ColorRole.ON_SURFACE_VARIANT.resolve();
+  private Color iconColor() {
+    return (selected ? ColorRole.ON_SECONDARY_CONTAINER : ColorRole.ON_SURFACE_VARIANT).resolve();
+  }
+
+  private Color labelColor() {
+    return (selected ? ColorRole.SECONDARY : ColorRole.ON_SURFACE_VARIANT).resolve();
+  }
+
+  private Color stateLayerColor() {
+    return iconColor();
   }
 
   // ---------------------------------------------------------------- interaction
