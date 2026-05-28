@@ -67,15 +67,15 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Image;
-import java.awt.Insets;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,6 +97,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
+import javax.swing.Scrollable;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
@@ -142,6 +143,9 @@ public final class ElwhaShowcase {
   private static final String AREA_FOUNDATIONS = "Foundations";
   private static final String AREA_COMPONENTS = "Components";
   private static final String AREA_CONTAINERS = "Containers";
+  // Maximum width of the landing-page card grid. Caps cards at ~320 dp each (960 / 3) so the
+  // grid reads as a dashboard tile-row rather than stretching cards to the full frame width.
+  private static final int MAX_GRID_WIDTH = 960;
 
   private final List<Runnable> tokenRefreshers = new ArrayList<>();
   private final JPanel content = new JPanel(new CardLayout());
@@ -156,7 +160,6 @@ public final class ElwhaShowcase {
   private Theme secondarySelection;
   private boolean secondaryTier;
   private boolean pickerAdjusting;
-  private JComponent headerBar;
   private ElwhaNavigationRail rail;
   private ElwhaNavRailDestination foundationsPrim;
   private ElwhaNavRailDestination componentsPrim;
@@ -182,6 +185,44 @@ public final class ElwhaShowcase {
     }
   }
 
+  // Vertical-only scrollable page used for landing surfaces. Tracks the JScrollPane viewport
+  // width (instead of the page's natural preferred width) so the embedded grid never pushes
+  // horizontal scroll — the grid itself has a bounded max-width, and the BoxLayout column aligns
+  // it to the leading edge while padding any remaining horizontal space.
+  private static final class LandingPage extends JPanel implements Scrollable {
+    LandingPage() {
+      setOpaque(false);
+      setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+    }
+
+    @Override
+    public Dimension getPreferredScrollableViewportSize() {
+      return getPreferredSize();
+    }
+
+    @Override
+    public int getScrollableUnitIncrement(
+        final Rectangle visibleRect, final int orientation, final int direction) {
+      return 16;
+    }
+
+    @Override
+    public int getScrollableBlockIncrement(
+        final Rectangle visibleRect, final int orientation, final int direction) {
+      return 96;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+      return true;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportHeight() {
+      return false;
+    }
+  }
+
   private ElwhaShowcase() {}
 
   /**
@@ -201,18 +242,19 @@ public final class ElwhaShowcase {
     final JFrame frame = new JFrame("The Elwha Showcase");
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-    headerBar = buildHeaderBar();
-
-    final JPanel root = new JPanel(new BorderLayout());
-    root.add(headerBar, BorderLayout.NORTH);
-
-    // No WEST nav slot — the rail floats on the layered pane. The content pane fills the full
-    // frame width with a leading inset equal to the rail's Collapsed width so the Collapsed rail
-    // sits flush with content; the Expanded morph overlays into the inset area without reflowing
-    // content. Mirrors the FAB Phase 5 layered-pane recipe (#206) at a structural level.
+    // The rail spans the full window height on the layered pane, so the header bar lives INSIDE
+    // the content area (above the CardLayout content) rather than across the top of the frame.
+    // Without this, the header would extend across the rail's leading column and the rail would
+    // read as a sidebar pocket rather than a real-app shell. Content pane gets a 96-dp leading
+    // inset matching the Collapsed rail width; the Expanded morph overlays into the inset area
+    // without reflowing content. Mirrors the FAB Phase 5 layered-pane recipe (#206) at a
+    // structural level.
     final JPanel contentWrapper = new JPanel(new BorderLayout());
     contentWrapper.setBorder(BorderFactory.createEmptyBorder(0, RAIL_COLLAPSED_WIDTH, 0, 0));
+    contentWrapper.add(buildHeaderBar(), BorderLayout.NORTH);
     contentWrapper.add(content, BorderLayout.CENTER);
+
+    final JPanel root = new JPanel(new BorderLayout());
     root.add(contentWrapper, BorderLayout.CENTER);
 
     // Populate the catalog of leaves + build all CardLayout cards (4 landings + 17 wrapped
@@ -238,10 +280,11 @@ public final class ElwhaShowcase {
   }
 
   // Mounts the ElwhaNavigationRail on the frame's JLayeredPane at PALETTE_LAYER, leading edge,
-  // full height beneath the header bar. Position is recomputed on layered-pane resize and on
-  // every variant morph tick (during the Collapsed↔Expanded morph the rail's preferred width
-  // lerps, but the layered pane uses absolute positioning so the parent never auto-relayouts —
-  // a 60 Hz Swing Timer keyed to isMorphing() polls and re-setBounds until the morph settles).
+  // full layered-pane height (the header bar lives inside the content area, not above the rail —
+  // see buildAndShow). Position is recomputed on layered-pane resize and on every variant morph
+  // tick (during the Collapsed↔Expanded morph the rail's preferred width lerps, but the layered
+  // pane uses absolute positioning so the parent never auto-relayouts — a 60 Hz Swing Timer keyed
+  // to isMorphing() polls and re-setBounds until the morph settles).
   private void mountRailOnLayeredPane(final JFrame frame, final ElwhaNavigationRail target) {
     final JLayeredPane layeredPane = frame.getLayeredPane();
     layeredPane.add(target, JLayeredPane.PALETTE_LAYER);
@@ -249,15 +292,9 @@ public final class ElwhaShowcase {
     final Runnable position =
         () -> {
           final Dimension pref = target.getPreferredSize();
-          final int headerH =
-              headerBar.getHeight() > 0
-                  ? headerBar.getHeight()
-                  : headerBar.getPreferredSize().height;
           final boolean ltr = layeredPane.getComponentOrientation().isLeftToRight();
           final int x = ltr ? 0 : layeredPane.getWidth() - pref.width;
-          final int y = headerH;
-          final int h = Math.max(0, layeredPane.getHeight() - headerH);
-          target.setBounds(x, y, pref.width, h);
+          target.setBounds(x, 0, pref.width, layeredPane.getHeight());
         };
     layeredPane.addComponentListener(
         new ComponentAdapter() {
@@ -671,8 +708,7 @@ public final class ElwhaShowcase {
   }
 
   private JComponent buildHomeLanding() {
-    final JPanel page = new JPanel();
-    page.setLayout(new BoxLayout(page, BoxLayout.Y_AXIS));
+    final LandingPage page = new LandingPage();
     page.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
     page.add(landingTitle("Welcome", "Every Elwha surface on one page. Pick anywhere to dive in."));
     page.add(Box.createVerticalStrut(16));
@@ -686,8 +722,7 @@ public final class ElwhaShowcase {
   }
 
   private JComponent buildAreaLanding(final String area) {
-    final JPanel page = new JPanel();
-    page.setLayout(new BoxLayout(page, BoxLayout.Y_AXIS));
+    final LandingPage page = new LandingPage();
     page.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
     page.add(landingTitle(area, areaBlurb(area)));
     page.add(Box.createVerticalStrut(16));
@@ -714,40 +749,32 @@ public final class ElwhaShowcase {
         out.add(entry);
       }
     }
+    // Alpha-sort within each area so landing-page cards read left-to-right, top-down by label.
+    out.sort(Comparator.comparing(e -> e.label));
     return out;
   }
 
-  // A responsive 3-column GridBag grid of leaf cards. Each cell is fixed-preferred so a card
-  // shrinks horizontally instead of being padded by the layout; the column count is hardcoded at
-  // 3 since the showcase frame is desktop-only and the natural reading width sits there.
+  // A 3-column GridLayout grid of leaf cards, capped at MAX_GRID_WIDTH so individual cards stay
+  // at a dashboard-tile measure (~320 dp each) instead of stretching to the frame width.
+  // GridLayout divides its container width evenly across columns — so capping container.maxSize
+  // is enough; the BoxLayout column hosting the grid respects the max and aligns the grid
+  // leading-edge. ElwhaCardSupportingText is HTML-auto-wrapping so the cards' supporting copy
+  // reflows naturally at the chosen card width.
   private JComponent landingGrid(final List<LeafEntry> entries) {
-    final JPanel grid = new JPanel(new GridBagLayout());
+    final JPanel grid = new JPanel(new GridLayout(0, 3, 12, 12));
     grid.setOpaque(false);
     grid.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    final int columns = 3;
-    final GridBagConstraints gbc = new GridBagConstraints();
-    gbc.fill = GridBagConstraints.BOTH;
-    gbc.weightx = 1.0;
-    gbc.weighty = 0.0;
-    gbc.insets = new Insets(6, 6, 6, 6);
-    for (int i = 0; i < entries.size(); i++) {
-      gbc.gridx = i % columns;
-      gbc.gridy = i / columns;
-      grid.add(leafCard(entries.get(i)), gbc);
+    grid.setMaximumSize(new Dimension(MAX_GRID_WIDTH, Integer.MAX_VALUE));
+    for (final LeafEntry entry : entries) {
+      grid.add(leafCard(entry));
     }
-    // Trailing filler to consume the bottom — keeps the grid top-aligned inside the BoxLayout
-    // column.
-    gbc.gridx = 0;
-    gbc.gridy = (entries.size() + columns - 1) / columns;
-    gbc.gridwidth = columns;
-    gbc.weighty = 1.0;
-    grid.add(Box.createVerticalGlue(), gbc);
     return grid;
   }
 
   private ElwhaCard leafCard(final LeafEntry entry) {
-    final ElwhaCard card = ElwhaCard.outlinedCard().setActionable(true);
+    final ElwhaCard card = ElwhaCard.elevatedCard().setActionable(true);
     card.add(new ElwhaCardHeader().setTitle(entry.label));
+    card.add(new ElwhaCardDivider());
     card.add(new ElwhaCardSupportingText(entry.supporting));
     card.setToolTipText("Open " + entry.label);
     card.addActionListener(e -> showCard(entry.label));
@@ -819,7 +846,7 @@ public final class ElwhaShowcase {
     target.setMenuButton(new ElwhaIconButton(MaterialIcons.menu()));
 
     final ElwhaFab homeFab =
-        ElwhaFab.extended(MaterialIcons.gridView(ElwhaFab.Size.SMALL.iconPx()), "Home");
+        ElwhaFab.extended(MaterialIcons.home(ElwhaFab.Size.SMALL.iconPx()), "Home");
     homeFab.setToolTipText("Open the Home landing — index of every Showcase surface.");
     homeFab.addActionListener(e -> showCard(HOME_KEY));
     target.setFab(homeFab);
