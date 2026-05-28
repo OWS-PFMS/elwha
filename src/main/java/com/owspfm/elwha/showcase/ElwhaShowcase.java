@@ -43,6 +43,7 @@ import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.navrail.playground.NavRailDestinationPlaygroundPanels;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
@@ -433,6 +434,7 @@ public final class ElwhaShowcase {
     addLeaf(components, "Icon Button", buildIconButtonComponent());
     addLeaf(components, "FAB", buildFabComponent());
     addLeaf(components, "Badge", buildBadgeComponent());
+    addLeaf(components, "Nav Rail Destination", buildNavRailDestinationComponent());
     addLeaf(components, "Button Group", buildButtonGroupComponent());
     addLeaf(components, "Card", buildCardComponent());
     addLeaf(components, "Surface", buildSurfaceComponent());
@@ -2426,6 +2428,100 @@ public final class ElwhaShowcase {
       }
     }
     return true;
+  }
+
+  // ------------------------------------------------------------- Nav rail destination
+
+  private static JComponent buildNavRailDestinationComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", buildNavRailDestinationWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("Variants", NavRailDestinationPlaygroundPanels.buildVariantsPanel()),
+                gallerySection(
+                    "Factory axis", NavRailDestinationPlaygroundPanels.buildFactoryAxisPanel()))));
+    return tabs;
+  }
+
+  private static JComponent buildNavRailDestinationWorkbench() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+
+    final java.util.List<com.owspfm.elwha.navrail.ElwhaNavRailDestination> destinations =
+        new java.util.ArrayList<>();
+    final String[][] entries = {
+      {"widgets", "Home"},
+      {"favorite", "Liked"},
+      {"visibility", "Watched"},
+      {"layers", "Stacks"},
+      {"star", "Starred"}
+    };
+    final JPanel row = new JPanel(new java.awt.GridLayout(1, entries.length, 0, 0));
+    row.setOpaque(false);
+    row.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+    for (final String[] entry : entries) {
+      final com.owspfm.elwha.navrail.ElwhaNavRailDestination d =
+          com.owspfm.elwha.navrail.ElwhaNavRailDestination.of(
+              MaterialIcons.symbol(entry[0]), entry[1]);
+      d.addActionListener(
+          e -> {
+            for (final com.owspfm.elwha.navrail.ElwhaNavRailDestination other : destinations) {
+              other.setSelected(other == d);
+            }
+          });
+      destinations.add(d);
+      row.add(d);
+    }
+    destinations.get(0).setSelected(true);
+
+    final JComboBox<String> badgeBox =
+        new JComboBox<>(new String[] {"None", "Small (dot)", "Large · 3", "Large · 999+"});
+    badgeBox.setSelectedIndex(0);
+    final JComboBox<String> targetBox = new JComboBox<>();
+    for (final String[] entry : entries) {
+      targetBox.addItem(entry[1]);
+    }
+
+    final ElwhaButton applyBadge = ElwhaButton.outlinedButton("Apply badge");
+    final JLabel badgeStatus = new JLabel(" ");
+    applyBadge.addActionListener(
+        e -> {
+          final com.owspfm.elwha.navrail.ElwhaNavRailDestination target =
+              destinations.get(targetBox.getSelectedIndex());
+          target.setBadge(badgeFor((String) badgeBox.getSelectedItem()));
+          badgeStatus.setText(badgeBox.getSelectedItem() + " → " + target.getLabel());
+        });
+
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Selection");
+    controls.addControl(
+        "", new JLabel("Click any destination to select it (tab-strip semantics)."));
+    controls.addSection("Badge");
+    controls.addControl("Target", targetBox);
+    controls.addControl("Variant", badgeBox);
+    controls.addControl("", applyBadge);
+    controls.addControl("Last:", badgeStatus);
+
+    workbench.setStage(row);
+    workbench.setCode(
+        "ElwhaNavRailDestination home =\n"
+            + "    ElwhaNavRailDestination.of(MaterialIcons.symbol(\"widgets\"), \"Home\");\n"
+            + "home.setSelected(true);\n"
+            + "home.setBadge(ElwhaBadge.large(3));");
+    return workbench;
+  }
+
+  private static com.owspfm.elwha.badge.ElwhaBadge badgeFor(final String label) {
+    if (label == null) {
+      return null;
+    }
+    return switch (label) {
+      case "Small (dot)" -> com.owspfm.elwha.badge.ElwhaBadge.small();
+      case "Large · 3" -> com.owspfm.elwha.badge.ElwhaBadge.large(3);
+      case "Large · 999+" -> com.owspfm.elwha.badge.ElwhaBadge.large("999+");
+      default -> null;
+    };
   }
 
   // --- helpers ---
