@@ -1,6 +1,6 @@
 # ElwhaDialog — Design Decisions
 
-**Status:** Phase 1 **implemented** (S1–S5, #261–#265) — the Basic Dialog is functional and accessible, sans entrance motion. All sections LOCKED: the modality mechanism (§2) and Java API (§8) settled in S1, the action row / scrim / dismiss / content-scroll / a11y / RTL in S2–S5. Remaining: Phase 2 motion (§13, #266) and Phase 3 Showcase integration (§15, #267/#268). Commits stack on the epic branch; one PR lands the whole epic.
+**Status:** Phases 1–2 **implemented** (S1–S6, #261–#266) — the Basic Dialog is functional, accessible, and animated (scrim fade + container scale-in/out). All sections LOCKED. Remaining: Phase 3 Showcase integration (§15, #267/#268). Commits stack on the epic branch; one PR lands the whole epic.
 
 **Drafted:** 2026-05-29
 
@@ -297,14 +297,18 @@ Captured from the M3 Dialogs spec + MDC docs during this pass.
 
 ## §13. Motion contract [LOCKED] + reduced-motion matrix
 
+**Implemented in S6 (#266).**
+
 **Entrance (M3 "dialog enters"):**
 1. Scrim fades 0 → 32% alpha.
 2. Container fades 0 → 1 and scales **0.80 → 1.0** about its center.
-3. Duration / easing from the M3 emphasized-decelerate token; resolved against `MorphAnimator`'s existing curve at implementation.
+3. Eased **`Easing.EMPHASIZED_DECELERATE`** over **`MorphAnimator.MEDIUM2_MS` (300 ms)** — the M3 emphasized-decelerate "enter" curve.
 
-> **Provenance note:** the `0.80 → 1.0` scale and the duration/easing are the only spec values *not* pinned by component source (all tokens + dimensions are cross-verified against Compose Material3 — see Appendix B). M3 motion is defined in the motion spec, not in component constants, and the curve is tuned against `MorphAnimator` at implementation regardless. Treat the `0.80` start scale as a sound M3-conventional default, not a locked spec figure.
+**Exit:** a **symmetric reverse** of the entrance (scale 1.0 → 0.80, fade 1 → 0, scrim fades out), then the overlay detaches from the layered pane. (Design draft floated a subtler 1.0 → ~0.90 exit; a clean reverse of the entrance is simpler and reads well, so the implementation reverses the same tween.)
 
-**Exit:** reverses (scale 1.0 → ~0.90, fade to 0, scrim fades out), then the overlay detaches from the layered pane.
+**Mechanics:** a single `MorphAnimator` hosted on the surface drives both layers — the surface is its repaint host, and a progress listener repaints the scrim and tears the overlay down once the exit reaches 0. The surface override scales + alpha-composites the whole subtree (background + children) about its center; at full progress it's a plain paint (no transform on the steady state). The eased value also feeds the scrim alpha (`32% × progress`).
+
+> **Provenance note:** the `0.80 → 1.0` scale was the one spec value not pinned by component source (M3 motion lives in the motion spec, not component constants — see Appendix B). It's a sound M3-conventional default, validated in `DialogMotionDemo`.
 
 **Reuse:** the shared `MorphAnimator` (`theme/`) drives the tween; no new animation engine. This mirrors how FAB / Button / Nav Rail reuse the morph infrastructure rather than each rolling its own.
 

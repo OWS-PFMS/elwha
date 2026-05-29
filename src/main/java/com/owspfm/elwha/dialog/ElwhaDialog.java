@@ -3,10 +3,13 @@ package com.owspfm.elwha.dialog;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.TypeRole;
+import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -85,6 +88,12 @@ public final class ElwhaDialog {
   /** M3 dialog container elevation — Level 3 (design doc §6). */
   static final int ELEVATION = 3;
 
+  /** Entrance / exit duration — M3 medium2 (300 ms), design doc §13. */
+  static final int MOTION_MS = MorphAnimator.MEDIUM2_MS;
+
+  /** Container scale at the start of the entrance (and end of the exit); grows to 1.0 (§13). */
+  static final float SCALE_FROM = 0.8f;
+
   private final Icon icon;
   private final String headline;
   private final String supportingText;
@@ -107,7 +116,10 @@ public final class ElwhaDialog {
   private Window hostWindow;
   private ComponentOrientation orientation = ComponentOrientation.LEFT_TO_RIGHT;
   private Component focusOwnerBeforeShow;
-  private boolean dismissing;
+  private MorphAnimator entrance;
+  private float motionProgress = 1f;
+  private DismissCause exitCause;
+  private boolean closing;
 
   private ElwhaDialog(final Builder b) {
     this.icon = b.icon;
@@ -156,6 +168,8 @@ public final class ElwhaDialog {
     this.focusOwnerBeforeShow =
         KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
 
+    this.motionProgress = 0f;
+    this.closing = false;
     this.scrim = new Scrim();
     this.surface = new DialogSurface();
     buildSurfaceContent();
@@ -180,6 +194,14 @@ public final class ElwhaDialog {
     installFocusTrap();
 
     relayout();
+
+    // Entrance: scrim fade + container scale-in + fade (§13), eased emphasized-decelerate. One
+    // animator hosted on the surface drives both layers; reduced motion snaps to the end state.
+    entrance = new MorphAnimator(surface, MOTION_MS);
+    entrance.addProgressListener(this::onMotionTick);
+    entrance.snapTo(0f);
+    entrance.start();
+
     layeredPane.revalidate();
     layeredPane.repaint();
 
@@ -198,14 +220,49 @@ public final class ElwhaDialog {
     dismiss(DismissCause.PROGRAMMATIC);
   }
 
-  // Tears the overlay down, restores focus, and fires onClose. Guarded against re-entry so an
-  // action listener that also calls dismiss() can't double-fire onClose.
+  // Begins closing: runs the exit motion, then tears the overlay down when it reaches 0 (reduced
+  // motion snaps + fires the listener synchronously, so this path still completes). Re-entry
+  // guarded
+  // so an action listener that also calls dismiss() — or a scrim click mid-exit — can't
+  // double-fire.
   void dismiss(final DismissCause cause) {
-    if (dismissing || layeredPane == null) {
+    if (closing || layeredPane == null) {
       return;
     }
-    dismissing = true;
+    closing = true;
+    exitCause = cause;
+    if (entrance != null) {
+      entrance.reverse();
+    } else {
+      performTeardown(cause);
+    }
+  }
 
+  // Per-tick motion update: ease the linear progress, push it to the scrim (the surface is the
+  // animator's own repaint host), and finish teardown once the exit has fully collapsed.
+  private void onMotionTick() {
+    if (entrance == null) {
+      return;
+    }
+    motionProgress = Easing.EMPHASIZED_DECELERATE.ease(entrance.progress());
+    if (scrim != null) {
+      scrim.repaint();
+    }
+    if (closing && entrance.target() == 0f && entrance.progress() == 0f) {
+      performTeardown(exitCause);
+    }
+  }
+
+  // Detaches the overlay, restores focus, and fires onClose. Idempotent — the exit-motion
+  // completion
+  // tick can land on progress 0 more than once.
+  private void performTeardown(final DismissCause cause) {
+    if (layeredPane == null) {
+      return;
+    }
+    if (entrance != null) {
+      entrance.stop();
+    }
     if (focusTrap != null) {
       KeyboardFocusManager.getCurrentKeyboardFocusManager()
           .removePropertyChangeListener("focusOwner", focusTrap);
@@ -225,8 +282,10 @@ public final class ElwhaDialog {
     scrollDivider = null;
     relayoutListener = null;
     focusTrap = null;
+    entrance = null;
     hostWindow = null;
     focusOwnerBeforeShow = null;
+    closing = false;
 
     if (toRestore != null) {
       SwingUtilities.invokeLater(toRestore::requestFocusInWindow);
@@ -234,7 +293,6 @@ public final class ElwhaDialog {
       closed.repaint();
     }
 
-    dismissing = false;
     if (onClose != null) {
       onClose.accept(cause);
     }
@@ -745,7 +803,7 @@ public final class ElwhaDialog {
   // The dialog body: an ElwhaSurface (managed shadow reserve + rounded-corner child clip) painting
   // the SURFACE_CONTAINER_HIGH / 28px / Level-3 container. Width is clamped to the M3 280-560px
   // band; height is content-driven and capped by the host frame at layout time.
-  private static final class DialogSurface extends ElwhaSurface {
+  private final class DialogSurface extends ElwhaSurface {
     private static final int MIN_BODY_WIDTH = 280;
     private static final int MAX_BODY_WIDTH = 560;
 
@@ -756,6 +814,32 @@ public final class ElwhaDialog {
       setBorderRole(null);
       setElevation(ELEVATION);
       setFocusable(true);
+    }
+
+    // Entrance/exit motion (§13): scale the whole surface (background + children) about its center
+    // from SCALE_FROM → 1.0 and fade 0 → 1, both keyed to the eased motionProgress. At full
+    // progress
+    // it's a plain paint — no transform cost on the steady state.
+    @Override
+    public void paint(final Graphics g) {
+      final float p = Math.max(0f, Math.min(1f, motionProgress));
+      if (p >= 1f) {
+        super.paint(g);
+        return;
+      }
+      final Graphics2D g2 = (Graphics2D) g.create();
+      try {
+        final float scale = SCALE_FROM + (1f - SCALE_FROM) * p;
+        final int cx = getWidth() / 2;
+        final int cy = getHeight() / 2;
+        g2.translate(cx, cy);
+        g2.scale(scale, scale);
+        g2.translate(-cx, -cy);
+        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, p));
+        super.paint(g2);
+      } finally {
+        g2.dispose();
+      }
     }
 
     @Override
@@ -819,10 +903,14 @@ public final class ElwhaDialog {
       final Graphics2D g2 = (Graphics2D) g.create();
       try {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        final float p = Math.max(0f, Math.min(1f, motionProgress));
         final Color scrim = ColorRole.SCRIM.resolve();
         g2.setColor(
             new Color(
-                scrim.getRed(), scrim.getGreen(), scrim.getBlue(), Math.round(255 * SCRIM_ALPHA)));
+                scrim.getRed(),
+                scrim.getGreen(),
+                scrim.getBlue(),
+                Math.round(255 * SCRIM_ALPHA * p)));
         g2.fillRect(0, 0, getWidth(), getHeight());
       } finally {
         g2.dispose();
