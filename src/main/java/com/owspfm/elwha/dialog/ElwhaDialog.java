@@ -17,6 +17,7 @@ import java.awt.ComponentOrientation;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
@@ -459,37 +460,60 @@ public final class ElwhaDialog {
     }
 
     if (headline != null) {
-      final JLabel headlineLabel = new JLabel(headline);
-      headlineLabel.setFont(TypeRole.HEADLINE_SMALL.resolve());
-      headlineLabel.setForeground(ColorRole.ON_SURFACE.resolve());
-      headlineLabel.setHorizontalAlignment(
-          centered ? SwingConstants.CENTER : SwingConstants.LEADING);
-      headlineLabel.setAlignmentX(alignX);
-      header.add(headlineLabel);
+      header.add(
+          headerLabel(
+              headline,
+              TypeRole.HEADLINE_SMALL.resolve(),
+              ColorRole.ON_SURFACE.resolve(),
+              centered,
+              alignX,
+              contentWidth));
     }
 
     if (supportingText != null) {
       if (headline != null) {
         header.add(Box.createVerticalStrut(SpaceScale.LG.px()));
       }
-      final JLabel supporting = new JLabel(wrapHtml(supportingText, centered, contentWidth));
-      supporting.setFont(TypeRole.BODY_MEDIUM.resolve());
-      supporting.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
-      supporting.setAlignmentX(alignX);
-      header.add(supporting);
+      header.add(
+          headerLabel(
+              supportingText,
+              TypeRole.BODY_MEDIUM.resolve(),
+              ColorRole.ON_SURFACE_VARIANT.resolve(),
+              centered,
+              alignX,
+              contentWidth));
     }
 
     return header;
   }
 
-  // Wraps supporting prose so it word-wraps at the dialog's actual content width rather than
-  // forcing
-  // the dialog wide on one line or overflowing a host-clamped narrow body. {@code contentWidth} is
-  // the real available column from availableContentWidth().
-  private static String wrapHtml(
-      final String text, final boolean centered, final int contentWidth) {
-    final String align = centered ? "text-align:center;" : "";
-    return "<html><div style='" + align + "width:" + contentWidth + "px'>" + text + "</div></html>";
+  // A headline / supporting-text label. If the text fits one line within contentWidth it stays a
+  // plain label (so horizontalAlignment can center it); if longer it word-wraps via an HTML width
+  // div. Centering is done with the label's horizontalAlignment, NOT HTML {@code text-align:center}
+  // — that combination suppresses wrapping in Swing's HTML view and clips long centered text.
+  private JLabel headerLabel(
+      final String text,
+      final Font font,
+      final Color color,
+      final boolean centered,
+      final float alignX,
+      final int contentWidth) {
+    final JLabel label = new JLabel(text);
+    label.setFont(font);
+    label.setForeground(color);
+    if (label.getPreferredSize().width > contentWidth) {
+      label.setText(wrapHtml(text, contentWidth));
+    }
+    label.setHorizontalAlignment(centered ? SwingConstants.CENTER : SwingConstants.LEADING);
+    label.setAlignmentX(alignX);
+    return label;
+  }
+
+  // Wraps prose so it word-wraps at the dialog's actual content width rather than forcing the
+  // dialog
+  // wide on one line or overflowing a host-clamped narrow body.
+  private static String wrapHtml(final String text, final int contentWidth) {
+    return "<html><div style='width:" + contentWidth + "px'>" + text + "</div></html>";
   }
 
   // Esc → cancel semantics (§5/§9): fires the cancel action when present (so its consumer listener

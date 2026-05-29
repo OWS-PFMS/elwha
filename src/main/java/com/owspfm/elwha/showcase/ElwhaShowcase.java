@@ -903,43 +903,30 @@ public final class ElwhaShowcase {
     return target;
   }
 
-  // Opens a small modal About dialog describing the Elwha library and the Showcase app. A plain
-  // JDialog rather than JOptionPane so the body can carry hyperlinks and a tier-aware layout;
-  // Elwha doesn't ship a dialog primitive yet — a future epic.
+  // Opens the About dialog using ElwhaDialog — the library's own M3 dialog primitive (#254),
+  // dogfooded here in place of the hand-rolled JDialog this epic exists to replace. Headline +
+  // tagline ride the dialog's own slots; the rich link/paragraph body rides the content slot; the
+  // primitive supplies the scrim, the Close action, and Esc / scrim dismissal.
   private void openAboutDialog() {
-    final JFrame owner = (JFrame) SwingUtilities.getWindowAncestor(rail);
-    final javax.swing.JDialog dialog = new javax.swing.JDialog(owner, "About Elwha", true);
+    final JPanel aboutBody = new JPanel();
+    aboutBody.setOpaque(false);
+    aboutBody.setLayout(new BoxLayout(aboutBody, BoxLayout.Y_AXIS));
 
-    final JPanel body = new JPanel();
-    body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-    body.setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
-
-    final JLabel title = new JLabel("Elwha");
-    title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
-    title.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    body.add(title);
-
-    final JLabel tagline = new JLabel("A Swing component library built on FlatLaf.");
-    tagline.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
-    tagline.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    tagline.setBorder(BorderFactory.createEmptyBorder(2, 0, 12, 0));
-    body.add(tagline);
-
-    body.add(
+    aboutBody.add(
         aboutParagraph(
             "<html><body style='width:380px'>Elwha provides Material 3 Expressive components for"
                 + " desktop Java &mdash; buttons, chips, cards, FABs, badges, button groups, a"
                 + " navigation rail, and the token foundation underneath them. Apache 2.0, JDK"
                 + " 21.</body></html>"));
 
-    body.add(Box.createVerticalStrut(12));
+    aboutBody.add(Box.createVerticalStrut(12));
 
     final JLabel sectionShowcase = new JLabel("The Elwha Showcase");
     sectionShowcase.setFont(sectionShowcase.getFont().deriveFont(Font.BOLD, 14f));
     sectionShowcase.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    body.add(sectionShowcase);
+    aboutBody.add(sectionShowcase);
 
-    body.add(
+    aboutBody.add(
         aboutParagraph(
             "<html><body style='width:380px'>This app is the unified, curated playground for the"
                 + " whole component set. Foundations covers the design tokens; Components is a"
@@ -947,45 +934,23 @@ public final class ElwhaShowcase {
                 + " surfaces. Switch palette and light/dark/system from the header bar to see the"
                 + " whole library re-theme live.</body></html>"));
 
-    body.add(Box.createVerticalStrut(12));
+    aboutBody.add(Box.createVerticalStrut(12));
 
     final JLabel sectionLinks = new JLabel("Links");
     sectionLinks.setFont(sectionLinks.getFont().deriveFont(Font.BOLD, 14f));
     sectionLinks.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    body.add(sectionLinks);
+    aboutBody.add(sectionLinks);
 
-    body.add(aboutParagraph("<html>Repository: github.com/OWS-PFMS/elwha</html>"));
-    body.add(aboutParagraph("<html>License: Apache License 2.0</html>"));
+    aboutBody.add(aboutParagraph("<html>Repository: github.com/OWS-PFMS/elwha</html>"));
+    aboutBody.add(aboutParagraph("<html>License: Apache License 2.0</html>"));
 
-    final JPanel actions = new JPanel(new FlowLayout(FlowLayout.TRAILING, 8, 8));
-    final ElwhaButton close = ElwhaButton.textButton("Close");
-    close.addActionListener(e -> dialog.dispose());
-    actions.add(close);
-
-    final JPanel root = new JPanel(new BorderLayout());
-    root.add(body, BorderLayout.CENTER);
-    root.add(actions, BorderLayout.SOUTH);
-
-    dialog.setContentPane(root);
-    dialog.pack();
-    dialog.setLocationRelativeTo(owner);
-    // Esc-to-close — ElwhaButton extends JComponent not JButton, so the standard root-pane
-    // default-button (Enter → fire) hookup doesn't apply; bind Esc explicitly instead.
-    final javax.swing.KeyStroke esc =
-        javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0);
-    dialog.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(esc, "close-about");
-    dialog
-        .getRootPane()
-        .getActionMap()
-        .put(
-            "close-about",
-            new javax.swing.AbstractAction() {
-              @Override
-              public void actionPerformed(final java.awt.event.ActionEvent e) {
-                dialog.dispose();
-              }
-            });
-    dialog.setVisible(true);
+    ElwhaDialog.builder()
+        .headline("Elwha")
+        .supportingText("A Swing component library built on FlatLaf.")
+        .content(aboutBody)
+        .confirmAction(ElwhaButton.textButton("Close"))
+        .build()
+        .show(rail);
   }
 
   private static JLabel aboutParagraph(final String html) {
@@ -3441,11 +3406,16 @@ public final class ElwhaShowcase {
   }
 
   // Static, non-modal snapshots via ElwhaDialog.renderPreview() — real rendered surfaces (their
-  // buttons are live but inert: clicking calls dismiss(), a no-op with no overlay attached), laid
-  // out in a wrapping row so the validator can read every variant at once without dialogs stacking.
+  // buttons are live but inert: clicking calls dismiss(), a no-op with no overlay attached),
+  // stacked
+  // vertically so each variant reads as its own dialog card without competing for one row's width.
   private static JComponent buildDialogGallery() {
-    final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 24, 24));
-    row.add(
+    final JPanel column = new JPanel();
+    column.setOpaque(false);
+    column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+    column.setBorder(BorderFactory.createEmptyBorder(8, 20, 24, 20));
+    addPreview(
+        column,
         ElwhaDialog.builder()
             .headline("Discard draft?")
             .supportingText("Your changes haven't been saved and will be lost.")
@@ -3453,7 +3423,8 @@ public final class ElwhaShowcase {
             .cancelAction(ElwhaButton.textButton("Cancel"))
             .build()
             .renderPreview());
-    row.add(
+    addPreview(
+        column,
         ElwhaDialog.builder()
             .icon(MaterialIcons.symbol("delete").unselected(28))
             .headline("Delete item?")
@@ -3462,7 +3433,8 @@ public final class ElwhaShowcase {
             .cancelAction(ElwhaButton.textButton("Cancel"))
             .build()
             .renderPreview());
-    row.add(
+    addPreview(
+        column,
         ElwhaDialog.builder()
             .headline("Leave without saving?")
             .confirmAction(ElwhaButton.filledButton("Leave"))
@@ -3470,7 +3442,20 @@ public final class ElwhaShowcase {
             .cancelAction(ElwhaButton.textButton("Cancel"))
             .build()
             .renderPreview());
-    return row;
+    return column;
+  }
+
+  // Adds one preview to the vertical gallery column, wrapped in a left-aligned FlowLayout row so
+  // the
+  // surface keeps its natural width (BoxLayout would stretch it) and left-anchors, with a gap
+  // below.
+  private static void addPreview(final JPanel column, final JComponent preview) {
+    final JPanel rowWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    rowWrap.setOpaque(false);
+    rowWrap.setAlignmentX(Component.LEFT_ALIGNMENT);
+    rowWrap.add(preview);
+    column.add(rowWrap);
+    column.add(Box.createVerticalStrut(24));
   }
 
   private static JComponent stack(final JComponent... parts) {
