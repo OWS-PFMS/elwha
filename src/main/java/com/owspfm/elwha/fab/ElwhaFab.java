@@ -761,7 +761,13 @@ public final class ElwhaFab extends JComponent {
               return;
             }
             pressed = true;
-            requestFocusInWindow();
+            // Honor JComponent's setRequestFocusEnabled — clicks grab focus by default, but
+            // chrome-slot contexts (e.g. ElwhaNavigationRail) suppress click-focus so the rail's
+            // tablist-style focus ring is a keyboard-only affordance. Tab navigation still works
+            // regardless, since it's gated by isFocusable() not isRequestFocusEnabled().
+            if (isRequestFocusEnabled()) {
+              requestFocusInWindow();
+            }
             startRipple(toBodyPoint(e.getPoint()));
             repaint();
           }
