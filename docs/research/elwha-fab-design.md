@@ -483,7 +483,7 @@ Filed for posterity; not in this epic.
 | Item | Disposition | Reference |
 |---|---|---|
 | Enter/exit "appearing" animation | DEFERRED | G12a / G31 |
-| Scroll-collapse utility (`FabScrollCollapser`?) | DEFERRED | G14b / G33 / G34 — bidirectional morph already supports this once a scroll-source helper exists |
+| Scroll-collapse utility | DONE | G14b / G33 / G34 — shipped as `ElwhaFabAnchor.ScrollResponse` (HIDE / SHRINK), epic [#205](https://github.com/OWS-PFMS/elwha/issues/205) Phase 2; SHRINK reuses the bidirectional morph |
 | Container-transform expansion pattern | OUT OF SCOPE | G13 / G32 — major motion infra well beyond Elwha's stance |
 | `ElwhaFabMenu` | FUTURE EPIC | #185 — soft-spec stub filed; not scheduled |
 | Window-class-driven auto-size switching | NOT IN SCOPE | Library-not-framework; consumer composition decision |
@@ -545,7 +545,7 @@ position.run();
 
 **Initial position.** The recipe above calls `position.run()` once at the end so the FAB is placed correctly before its first paint, not just after the first resize event. Without it, the FAB initially renders at `(0, 0)` and flickers into position on first resize.
 
-**Scroll-aware behavior** (`G14b` / `G33` / `G34`). Not in this recipe, and not in `ElwhaFabAnchor` Phase 1. M3's hide-on-scroll-down and shrink-to-Standard-on-scroll-down patterns require a `JScrollPane` hook; they are `ElwhaFabAnchor`'s Phase 2 ([#205](https://github.com/OWS-PFMS/elwha/issues/205)).
+**Scroll-aware behavior** (`G14b` / `G33` / `G34`). Not in this manual recipe, but shipped in `ElwhaFabAnchor` Phase 2 ([#205](https://github.com/OWS-PFMS/elwha/issues/205)) via `setScrollResponse(...)`: `HIDE` slides the FAB off the anchored edge on scroll-down (G14b); `SHRINK` morphs Extended ↔ Standard on scroll (G33 / G34), reusing the bidirectional §9 morph. Both honor reduced motion. Use the primitive rather than wiring a `JScrollPane` listener by hand.
 
 **Working example.** The Elwha Showcase mounts its floating FAB via `ElwhaFabAnchor` — visible on every tab, clicks navigate the sidebar to the FAB Workbench entry. See `ElwhaShowcase.buildFloatingFabAnchor(JComponent)` for the live wiring.
 
