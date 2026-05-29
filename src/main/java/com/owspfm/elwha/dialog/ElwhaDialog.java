@@ -30,6 +30,8 @@ import java.awt.event.ComponentListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeListener;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -819,7 +821,14 @@ public final class ElwhaDialog {
     // Entrance/exit motion (§13): scale the whole surface (background + children) about its center
     // from SCALE_FROM → 1.0 and fade 0 → 1, both keyed to the eased motionProgress. At full
     // progress
-    // it's a plain paint — no transform cost on the steady state.
+    // it's a plain live paint — no transform or buffer cost on the steady state.
+    //
+    // During the tween the surface is rasterized once at full size into a device-resolution buffer,
+    // and only that bitmap is scaled. Scaling the *live* component instead re-rasterizes its text
+    // at
+    // the animated scale every frame, so glyph advances snap to the pixel grid differently per
+    // frame
+    // and the words visibly shuffle left/right; rendering once at a stable scale removes that.
     @Override
     public void paint(final Graphics g) {
       final float p = Math.max(0f, Math.min(1f, motionProgress));
@@ -827,16 +836,37 @@ public final class ElwhaDialog {
         super.paint(g);
         return;
       }
+      final int w = getWidth();
+      final int h = getHeight();
+      if (w <= 0 || h <= 0) {
+        return;
+      }
+      final AffineTransform tx = ((Graphics2D) g).getTransform();
+      final double sx = tx.getScaleX() > 0 ? tx.getScaleX() : 1.0;
+      final double sy = tx.getScaleY() > 0 ? tx.getScaleY() : 1.0;
+      final int deviceW = Math.max(1, (int) Math.ceil(w * sx));
+      final int deviceH = Math.max(1, (int) Math.ceil(h * sy));
+      final BufferedImage buffer = new BufferedImage(deviceW, deviceH, BufferedImage.TYPE_INT_ARGB);
+      final Graphics2D bg = buffer.createGraphics();
+      try {
+        bg.scale(sx, sy);
+        super.paint(bg);
+      } finally {
+        bg.dispose();
+      }
+
       final Graphics2D g2 = (Graphics2D) g.create();
       try {
         final float scale = SCALE_FROM + (1f - SCALE_FROM) * p;
-        final int cx = getWidth() / 2;
-        final int cy = getHeight() / 2;
+        final int cx = w / 2;
+        final int cy = h / 2;
+        g2.setRenderingHint(
+            RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g2.translate(cx, cy);
         g2.scale(scale, scale);
         g2.translate(-cx, -cy);
         g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, p));
-        super.paint(g2);
+        g2.drawImage(buffer, 0, 0, w, h, null);
       } finally {
         g2.dispose();
       }
