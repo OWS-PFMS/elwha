@@ -493,7 +493,19 @@ Filed for posterity; not in this epic.
 
 ## §15. Floating FAB composition (consumer recipe)
 
-§4.4 punts placement out of scope: the primitive renders correctly wherever the parent layout places it; *making it float above content* is a Swing composition concern the lib doesn't bake into the FAB itself. This section documents the recipe so consumers don't have to derive it from scratch. A reusable `ElwhaFabAnchor` primitive that absorbs this glue is tracked separately on [#205](https://github.com/OWS-PFMS/elwha/issues/205) — until that lands, every consumer assembles the same four pieces:
+§4.4 punts placement out of scope: the primitive renders correctly wherever the parent layout places it; *making it float above content* is a Swing composition concern the lib doesn't bake into the FAB itself.
+
+**Recommended: `ElwhaFabAnchor`.** As of [#205](https://github.com/OWS-PFMS/elwha/issues/205) Phase 1, the library ships a placement primitive that absorbs this glue. Wrap your content and FAB and drop the anchor in where a single component is expected:
+
+```java
+final ElwhaFab fab =
+    ElwhaFab.extended(MaterialIcons.editFilled(ElwhaFab.Size.SMALL.iconPx()), "Compose");
+frame.setContentPane(new ElwhaFabAnchor(content, fab));   // BOTTOM_TRAILING, 16 dp, RTL-aware
+```
+
+`ElwhaFabAnchor` owns z-order, corner placement (configurable `Corner` + inset), resize-pinning, and RTL — and pins the FAB's *visible body* to the spec margin (it backs out the shadow-halo reserve, which the raw recipe below does not). Scroll-aware hide/shrink (G14b / G33 / G34) is its Phase 2.
+
+**Under the hood (manual recipe).** The recipe below is what the anchor does internally — documented for the case where you're floating a FAB on an *existing* layered pane (as the navigation rail does on the frame's own pane) rather than wrapping a content region. Every consumer of the manual path assembles the same four pieces:
 
 1. **Z-order — `JLayeredPane`.** Every `JFrame` already has one (`frame.getLayeredPane()`). Add the FAB to `JLayeredPane.PALETTE_LAYER` (or higher); the content pane is on `FRAME_CONTENT_LAYER` and paints below. The FAB now floats above whatever the content does — scrolling, repaint, tab swap, anything.
 
@@ -533,9 +545,9 @@ position.run();
 
 **Initial position.** The recipe above calls `position.run()` once at the end so the FAB is placed correctly before its first paint, not just after the first resize event. Without it, the FAB initially renders at `(0, 0)` and flickers into position on first resize.
 
-**Scroll-aware behavior** (`G14b` / `G33` / `G34`). Not in this recipe. M3's hide-on-scroll-down and shrink-to-Standard-on-scroll-down patterns require a `JScrollPane` hook; deferred per §14 until [#205](https://github.com/OWS-PFMS/elwha/issues/205) lands the wrapping primitive.
+**Scroll-aware behavior** (`G14b` / `G33` / `G34`). Not in this recipe, and not in `ElwhaFabAnchor` Phase 1. M3's hide-on-scroll-down and shrink-to-Standard-on-scroll-down patterns require a `JScrollPane` hook; they are `ElwhaFabAnchor`'s Phase 2 ([#205](https://github.com/OWS-PFMS/elwha/issues/205)).
 
-**Working example.** The Elwha Showcase mounts a floating FAB via exactly this recipe — visible on every tab, clicks navigate the sidebar to the FAB Workbench entry. See `ElwhaShowcase.addFloatingFab(JFrame, JTree)` for the live implementation.
+**Working example.** The Elwha Showcase mounts its floating FAB via `ElwhaFabAnchor` — visible on every tab, clicks navigate the sidebar to the FAB Workbench entry. See `ElwhaShowcase.buildFloatingFabAnchor(JComponent)` for the live wiring.
 
 ---
 
