@@ -22,7 +22,9 @@ import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 
 /**
  * The Material 3 <strong>Full-screen Dialog</strong> primitive — a modal overlay that fills the
@@ -74,6 +76,10 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   private final JComponent content;
   private final ElwhaButton confirmAction;
   private final boolean showDivider;
+
+  // Live overlay state — non-null only while shown.
+  private JScrollPane contentScroll;
+  private DividerLine scrollDivider;
 
   private ElwhaFullScreenDialog(final Builder b) {
     super(b.dismissibleByEsc, b.onClose);
@@ -142,6 +148,13 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   protected void layoutSurface(final int paneWidth, final int paneHeight) {
     surface.setBounds(0, 0, paneWidth, paneHeight);
     surface.revalidate();
+    SwingUtilities.invokeLater(this::updateScrollDivider);
+  }
+
+  @Override
+  protected void clearTransientState() {
+    contentScroll = null;
+    scrollDivider = null;
   }
 
   /**
@@ -174,25 +187,50 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
         BorderFactory.createEmptyBorder(
             SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px()));
 
+    // The divider is always mounted under the bar; its visibility is showDivider OR'd with "content
+    // is scrolling" (M3 scroll affordance). Invisible → BorderLayout reserves no space for it.
+    final DividerLine divider = new DividerLine();
+    divider.setVisible(showDivider);
+    this.scrollDivider = divider;
+
     final JPanel top = new JPanel(new BorderLayout());
     top.setOpaque(false);
     top.add(buildAppBar(), BorderLayout.CENTER);
-    if (showDivider) {
-      top.add(new DividerLine(), BorderLayout.SOUTH);
-    }
+    top.add(divider, BorderLayout.SOUTH);
     column.add(top, BorderLayout.NORTH);
 
     if (content != null) {
       content.setOpaque(false);
-      final JPanel contentHolder = new JPanel(new BorderLayout());
-      contentHolder.setOpaque(false);
-      contentHolder.setBorder(BorderFactory.createEmptyBorder(SpaceScale.LG.px(), 0, 0, 0));
-      contentHolder.add(content, BorderLayout.CENTER);
-      column.add(contentHolder, BorderLayout.CENTER);
+      // Edge-to-edge content within the column; scrolls vertically when taller than the frame
+      // leaves room (the app bar stays pinned). No horizontal scrollbar — content must reflow.
+      final JScrollPane scroll =
+          new JScrollPane(
+              content,
+              JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+              JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+      scroll.setOpaque(false);
+      scroll.getViewport().setOpaque(false);
+      scroll.setBorder(BorderFactory.createEmptyBorder(SpaceScale.LG.px(), 0, 0, 0));
+      scroll.getViewport().addChangeListener(e -> updateScrollDivider());
+      this.contentScroll = scroll;
+      column.add(scroll, BorderLayout.CENTER);
     }
 
     host.add(column);
     return host;
+  }
+
+  // Divider visible when the consumer requested it OR the content is taller than its viewport (i.e.
+  // it's scrolling) — the M3 scroll affordance, mirroring the Basic Dialog's scroll divider.
+  private void updateScrollDivider() {
+    if (scrollDivider == null) {
+      return;
+    }
+    final boolean scrolls =
+        contentScroll != null
+            && contentScroll.getViewport().getViewSize().height
+                > contentScroll.getViewport().getExtentSize().height;
+    scrollDivider.setVisible(showDivider || scrolls);
   }
 
   // The top app bar (§5): leading close affordance → start-aligned headline → trailing confirm. The
