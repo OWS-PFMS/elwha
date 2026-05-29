@@ -333,7 +333,7 @@ M3's second dialog type, for longer-form input flows (e.g., "create event"). **N
 - **Measurements** (captured 2026-05-29 from the M3 "Full-screen dialog padding and size measurements" spec table, for when this variant is built): container shape **0dp** corners (square — fills the frame), container height dynamic, max width 560dp; **header height 56dp**, headline **start-aligned**, close-affordance icon 24dp, divider height 1dp; **bottom action bar height 56dp**; top/left/right padding 24dp; 8dp between elements.
 - **When:** content too large for a basic dialog, multi-field forms, or mobile-narrow frames where a centered dialog would be cramped.
 - **Likely shape:** either a `Variant.FULL_SCREEN` on `ElwhaDialog` or a sibling `ElwhaFullScreenDialog` — decide when the first consumer flow needs it. The overlay/host-resolution machinery from Phase 1 is reusable either way.
-- **Tracking:** file as a follow-up story/epic after Basic Dialog Phase 1 lands and a consumer flow is identified in OWS-Local-Search-GUI.
+- **Tracking:** filed as follow-up epic [#271](https://github.com/OWS-PFMS/elwha/issues/271) (stub, unmilestoned). Schedule when a consumer flow needs longer-form input; the measurements above are carried into that epic.
 
 ---
 
