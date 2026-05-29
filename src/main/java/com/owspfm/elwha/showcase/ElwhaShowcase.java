@@ -34,6 +34,7 @@ import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
+import com.owspfm.elwha.dialog.ElwhaDialog;
 import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.fab.ElwhaFabAnchor;
 import com.owspfm.elwha.fab.playground.FabPlaygroundPanels;
@@ -657,6 +658,13 @@ public final class ElwhaShowcase {
             "The token-driven surface primitive underpinning every chrome component.",
             AREA_COMPONENTS,
             buildSurfaceComponent()));
+    register(
+        new LeafEntry(
+            "Dialog",
+            "M3 Basic Dialog — modal overlay with icon / headline / supporting / content /"
+                + " actions.",
+            AREA_COMPONENTS,
+            buildDialogComponent()));
 
     register(
         new LeafEntry(
@@ -879,43 +887,30 @@ public final class ElwhaShowcase {
     return target;
   }
 
-  // Opens a small modal About dialog describing the Elwha library and the Showcase app. A plain
-  // JDialog rather than JOptionPane so the body can carry hyperlinks and a tier-aware layout;
-  // Elwha doesn't ship a dialog primitive yet — a future epic.
+  // Opens the About dialog using ElwhaDialog — the library's own M3 dialog primitive (#254),
+  // dogfooded here in place of the hand-rolled JDialog this epic exists to replace. Headline +
+  // tagline ride the dialog's own slots; the rich link/paragraph body rides the content slot; the
+  // primitive supplies the scrim, the Close action, and Esc / scrim dismissal.
   private void openAboutDialog() {
-    final JFrame owner = (JFrame) SwingUtilities.getWindowAncestor(rail);
-    final javax.swing.JDialog dialog = new javax.swing.JDialog(owner, "About Elwha", true);
+    final JPanel aboutBody = new JPanel();
+    aboutBody.setOpaque(false);
+    aboutBody.setLayout(new BoxLayout(aboutBody, BoxLayout.Y_AXIS));
 
-    final JPanel body = new JPanel();
-    body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-    body.setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
-
-    final JLabel title = new JLabel("Elwha");
-    title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
-    title.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    body.add(title);
-
-    final JLabel tagline = new JLabel("A Swing component library built on FlatLaf.");
-    tagline.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
-    tagline.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    tagline.setBorder(BorderFactory.createEmptyBorder(2, 0, 12, 0));
-    body.add(tagline);
-
-    body.add(
+    aboutBody.add(
         aboutParagraph(
             "<html><body style='width:380px'>Elwha provides Material 3 Expressive components for"
                 + " desktop Java &mdash; buttons, chips, cards, FABs, badges, button groups, a"
                 + " navigation rail, and the token foundation underneath them. Apache 2.0, JDK"
                 + " 21.</body></html>"));
 
-    body.add(Box.createVerticalStrut(12));
+    aboutBody.add(Box.createVerticalStrut(12));
 
     final JLabel sectionShowcase = new JLabel("The Elwha Showcase");
     sectionShowcase.setFont(sectionShowcase.getFont().deriveFont(Font.BOLD, 14f));
     sectionShowcase.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    body.add(sectionShowcase);
+    aboutBody.add(sectionShowcase);
 
-    body.add(
+    aboutBody.add(
         aboutParagraph(
             "<html><body style='width:380px'>This app is the unified, curated playground for the"
                 + " whole component set. Foundations covers the design tokens; Components is a"
@@ -923,45 +918,23 @@ public final class ElwhaShowcase {
                 + " surfaces. Switch palette and light/dark/system from the header bar to see the"
                 + " whole library re-theme live.</body></html>"));
 
-    body.add(Box.createVerticalStrut(12));
+    aboutBody.add(Box.createVerticalStrut(12));
 
     final JLabel sectionLinks = new JLabel("Links");
     sectionLinks.setFont(sectionLinks.getFont().deriveFont(Font.BOLD, 14f));
     sectionLinks.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    body.add(sectionLinks);
+    aboutBody.add(sectionLinks);
 
-    body.add(aboutParagraph("<html>Repository: github.com/OWS-PFMS/elwha</html>"));
-    body.add(aboutParagraph("<html>License: Apache License 2.0</html>"));
+    aboutBody.add(aboutParagraph("<html>Repository: github.com/OWS-PFMS/elwha</html>"));
+    aboutBody.add(aboutParagraph("<html>License: Apache License 2.0</html>"));
 
-    final JPanel actions = new JPanel(new FlowLayout(FlowLayout.TRAILING, 8, 8));
-    final ElwhaButton close = ElwhaButton.textButton("Close");
-    close.addActionListener(e -> dialog.dispose());
-    actions.add(close);
-
-    final JPanel root = new JPanel(new BorderLayout());
-    root.add(body, BorderLayout.CENTER);
-    root.add(actions, BorderLayout.SOUTH);
-
-    dialog.setContentPane(root);
-    dialog.pack();
-    dialog.setLocationRelativeTo(owner);
-    // Esc-to-close — ElwhaButton extends JComponent not JButton, so the standard root-pane
-    // default-button (Enter → fire) hookup doesn't apply; bind Esc explicitly instead.
-    final javax.swing.KeyStroke esc =
-        javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0);
-    dialog.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(esc, "close-about");
-    dialog
-        .getRootPane()
-        .getActionMap()
-        .put(
-            "close-about",
-            new javax.swing.AbstractAction() {
-              @Override
-              public void actionPerformed(final java.awt.event.ActionEvent e) {
-                dialog.dispose();
-              }
-            });
-    dialog.setVisible(true);
+    ElwhaDialog.builder()
+        .headline("Elwha")
+        .supportingText("A Swing component library built on FlatLaf.")
+        .content(aboutBody)
+        .confirmAction(ElwhaButton.textButton("Close"))
+        .build()
+        .show(rail);
   }
 
   private static JLabel aboutParagraph(final String html) {
@@ -3253,6 +3226,221 @@ public final class ElwhaShowcase {
   }
 
   // --- helpers ---
+
+  // --- Dialog leaf: trigger-button Workbench + static-snapshot Gallery (design doc §15) ---
+  //
+  // Dialogs are modal overlays, not embeddable surfaces, so the Dialog leaf breaks the standard
+  // ComponentWorkbench pattern: the Workbench is a control panel of trigger buttons that open live
+  // ElwhaDialogs on this Showcase frame (which doubles as the real-world overlay-on-frame smoke
+  // test), and the Gallery shows static non-modal renderPreview() snapshots rather than a live
+  // matrix that would stack dialogs onto the frame.
+
+  private static JComponent buildDialogComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", buildDialogWorkbench());
+    tabs.addTab("Gallery", scroll(stack(gallerySection("Variants", buildDialogGallery()))));
+    return tabs;
+  }
+
+  private enum DialogVariant {
+    BASIC,
+    WITH_ICON,
+    DESTRUCTIVE,
+    SCROLLABLE
+  }
+
+  private static JComponent buildDialogWorkbench() {
+    final JComboBox<Integer> actionCount = new JComboBox<>(new Integer[] {1, 2, 3});
+    actionCount.setSelectedItem(2);
+    final JCheckBox scrimDismiss = new JCheckBox("scrim-dismissible", true);
+    final JCheckBox escDismiss = new JCheckBox("Esc-dismissible", true);
+    final JCheckBox reducedMotion = new JCheckBox("reduced motion");
+    final JLabel status = new JLabel("Configure, then open a dialog — it opens on this frame.");
+
+    final ElwhaButton basic = ElwhaButton.filledButton("Open basic dialog");
+    final ElwhaButton withIcon = ElwhaButton.filledTonalButton("Open dialog with icon");
+    final ElwhaButton destructive = ElwhaButton.filledTonalButton("Open destructive confirm");
+    final ElwhaButton scrollable = ElwhaButton.filledTonalButton("Open scrollable-content dialog");
+
+    basic.addActionListener(
+        e ->
+            openWorkbenchDialog(
+                basic,
+                DialogVariant.BASIC,
+                actionCount,
+                scrimDismiss,
+                escDismiss,
+                reducedMotion,
+                status));
+    withIcon.addActionListener(
+        e ->
+            openWorkbenchDialog(
+                withIcon,
+                DialogVariant.WITH_ICON,
+                actionCount,
+                scrimDismiss,
+                escDismiss,
+                reducedMotion,
+                status));
+    destructive.addActionListener(
+        e ->
+            openWorkbenchDialog(
+                destructive,
+                DialogVariant.DESTRUCTIVE,
+                actionCount,
+                scrimDismiss,
+                escDismiss,
+                reducedMotion,
+                status));
+    scrollable.addActionListener(
+        e ->
+            openWorkbenchDialog(
+                scrollable,
+                DialogVariant.SCROLLABLE,
+                actionCount,
+                scrimDismiss,
+                escDismiss,
+                reducedMotion,
+                status));
+
+    final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
+    controls.add(new JLabel("Actions:"));
+    controls.add(actionCount);
+    controls.add(scrimDismiss);
+    controls.add(escDismiss);
+    controls.add(reducedMotion);
+
+    final JPanel triggers = new JPanel(new GridLayout(0, 1, 0, 12));
+    triggers.setBorder(BorderFactory.createEmptyBorder(24, 64, 16, 64));
+    triggers.add(basic);
+    triggers.add(withIcon);
+    triggers.add(destructive);
+    triggers.add(scrollable);
+    triggers.add(status);
+
+    final JPanel panel = new JPanel(new BorderLayout());
+    panel.add(controls, BorderLayout.NORTH);
+    panel.add(triggers, BorderLayout.CENTER);
+    return panel;
+  }
+
+  // Builds a dialog per the chosen variant + the shared controls and shows it on the frame the
+  // trigger lives in. A destructive dialog forces scrim/Esc dismissal off regardless of the toggles
+  // — M3's "dialogs requiring a decision aren't dismissible without an explicit choice".
+  private static void openWorkbenchDialog(
+      final Component parent,
+      final DialogVariant variant,
+      final JComboBox<Integer> actionCount,
+      final JCheckBox scrimDismiss,
+      final JCheckBox escDismiss,
+      final JCheckBox reducedMotion,
+      final JLabel status) {
+    MorphAnimator.setReducedMotion(reducedMotion.isSelected());
+
+    final ElwhaDialog.Builder builder = ElwhaDialog.builder();
+    switch (variant) {
+      case BASIC ->
+          builder
+              .headline("Sync your library?")
+              .supportingText("This downloads the latest catalogue to all of your devices.");
+      case WITH_ICON ->
+          builder
+              .icon(MaterialIcons.symbol("cached").unselected(28))
+              .headline("Refresh data?")
+              .supportingText("We'll pull the newest records from the server.");
+      case DESTRUCTIVE ->
+          builder
+              .icon(MaterialIcons.symbol("delete").unselected(28))
+              .headline("Delete this collection?")
+              .supportingText("This permanently removes the collection and everything in it.");
+      case SCROLLABLE -> builder.headline("Terms of service").content(buildScrollableContent());
+    }
+
+    final boolean destructive = variant == DialogVariant.DESTRUCTIVE;
+    final int count = (Integer) actionCount.getSelectedItem();
+    builder.confirmAction(ElwhaButton.filledButton(destructive ? "Delete" : "Confirm"));
+    if (count >= 3) {
+      builder.alternateAction(ElwhaButton.textButton("Not now"));
+    }
+    if (count >= 2) {
+      builder.cancelAction(ElwhaButton.textButton("Cancel"));
+    }
+
+    builder
+        .dismissibleByScrim(!destructive && scrimDismiss.isSelected())
+        .dismissibleByEsc(!destructive && escDismiss.isSelected())
+        .onClose(cause -> status.setText("Last close: " + cause.name()))
+        .build()
+        .show(parent);
+  }
+
+  private static JComponent buildScrollableContent() {
+    final JPanel body = new JPanel();
+    body.setOpaque(false);
+    body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+    for (int i = 1; i <= 16; i++) {
+      final JLabel line =
+          new JLabel("§ " + i + ". A clause the reader scrolls past to reach the actions.");
+      line.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+      line.setAlignmentX(Component.LEFT_ALIGNMENT);
+      body.add(line);
+      body.add(Box.createVerticalStrut(8));
+    }
+    return body;
+  }
+
+  // Static, non-modal snapshots via ElwhaDialog.renderPreview() — real rendered surfaces (their
+  // buttons are live but inert: clicking calls dismiss(), a no-op with no overlay attached),
+  // stacked
+  // vertically so each variant reads as its own dialog card without competing for one row's width.
+  private static JComponent buildDialogGallery() {
+    final JPanel column = new JPanel();
+    column.setOpaque(false);
+    column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+    column.setBorder(BorderFactory.createEmptyBorder(8, 20, 24, 20));
+    addPreview(
+        column,
+        ElwhaDialog.builder()
+            .headline("Discard draft?")
+            .supportingText("Your changes haven't been saved and will be lost.")
+            .confirmAction(ElwhaButton.filledButton("Discard"))
+            .cancelAction(ElwhaButton.textButton("Cancel"))
+            .build()
+            .renderPreview());
+    addPreview(
+        column,
+        ElwhaDialog.builder()
+            .icon(MaterialIcons.symbol("delete").unselected(28))
+            .headline("Delete item?")
+            .supportingText("This action can't be undone.")
+            .confirmAction(ElwhaButton.filledButton("Delete"))
+            .cancelAction(ElwhaButton.textButton("Cancel"))
+            .build()
+            .renderPreview());
+    addPreview(
+        column,
+        ElwhaDialog.builder()
+            .headline("Leave without saving?")
+            .confirmAction(ElwhaButton.filledButton("Leave"))
+            .alternateAction(ElwhaButton.textButton("Save"))
+            .cancelAction(ElwhaButton.textButton("Cancel"))
+            .build()
+            .renderPreview());
+    return column;
+  }
+
+  // Adds one preview to the vertical gallery column, wrapped in a left-aligned FlowLayout row so
+  // the
+  // surface keeps its natural width (BoxLayout would stretch it) and left-anchors, with a gap
+  // below.
+  private static void addPreview(final JPanel column, final JComponent preview) {
+    final JPanel rowWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    rowWrap.setOpaque(false);
+    rowWrap.setAlignmentX(Component.LEFT_ALIGNMENT);
+    rowWrap.add(preview);
+    column.add(rowWrap);
+    column.add(Box.createVerticalStrut(24));
+  }
 
   private static JComponent stack(final JComponent... parts) {
     final JPanel column = new JPanel();

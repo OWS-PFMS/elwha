@@ -782,6 +782,22 @@ public class ElwhaButton extends JComponent {
   }
 
   /**
+   * Programmatically activates the button, firing its action listeners (and, in {@code SELECTABLE}
+   * mode, toggling selection) exactly as a click or keyboard activation would — the {@link
+   * javax.swing.JButton#doClick()} analogue {@code JComponent} doesn't provide. No ripple or press
+   * animation runs; this is the plumbing path for host components that drive a button by key
+   * binding, such as an {@code ElwhaDialog} mapping Enter to its confirming action.
+   *
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public void doClick() {
+    if (isEnabled()) {
+      activate(0);
+    }
+  }
+
+  /**
    * Convenience: scopes a {@link PropertyChangeListener} to {@link #PROPERTY_SELECTED}.
    *
    * @param listener the listener
