@@ -961,7 +961,22 @@ public final class ElwhaShowcase {
     dialog.setContentPane(root);
     dialog.pack();
     dialog.setLocationRelativeTo(owner);
-    dialog.getRootPane().setDefaultButton(close);
+    // Esc-to-close — ElwhaButton extends JComponent not JButton, so the standard root-pane
+    // default-button (Enter → fire) hookup doesn't apply; bind Esc explicitly instead.
+    final javax.swing.KeyStroke esc =
+        javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0);
+    dialog.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(esc, "close-about");
+    dialog
+        .getRootPane()
+        .getActionMap()
+        .put(
+            "close-about",
+            new javax.swing.AbstractAction() {
+              @Override
+              public void actionPerformed(final java.awt.event.ActionEvent e) {
+                dialog.dispose();
+              }
+            });
     dialog.setVisible(true);
   }
 
