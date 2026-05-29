@@ -164,6 +164,7 @@ public final class ElwhaShowcase {
   private ElwhaNavRailDestination foundationsPrim;
   private ElwhaNavRailDestination componentsPrim;
   private ElwhaNavRailDestination containersPrim;
+  private ElwhaButtonGroup modeToggle;
 
   /**
    * Catalog entry for one Showcase leaf — what every landing-page card renders and what the
@@ -274,9 +275,17 @@ public final class ElwhaShowcase {
     frame.setVisible(true);
     // Initial card: the Foundations landing (rail's first primary is selected by default).
     showCard(FOUNDATIONS_KEY);
-    // Park initial focus on the rail, not the header button group — otherwise a focused mode
-    // segment and the selected mode segment read as two selections at once.
-    SwingUtilities.invokeLater(rail::requestFocusInWindow);
+    // Park initial focus on the currently-selected mode segment in the header. The rail's first
+    // destination would otherwise auto-claim focus on startup — visually that reads as a
+    // navigation prompt before the user has done anything, when the friendlier landing point is
+    // a header control the user can immediately act on with arrow keys.
+    SwingUtilities.invokeLater(
+        () -> {
+          final int idx = modeToggle.getSelectedIndex();
+          if (idx >= 0) {
+            modeToggle.getButtonAt(idx).requestFocusInWindow();
+          }
+        });
   }
 
   // Mounts the ElwhaNavigationRail on the frame's JLayeredPane at PALETTE_LAYER, leading edge,
@@ -451,6 +460,7 @@ public final class ElwhaShowcase {
     }
     // Listener attached after seeding so the initial selection does not re-install the theme.
     toggle.addSelectionListener(group -> switchMode(modes[group.getSelectedIndex()]));
+    modeToggle = toggle;
     return toggle;
   }
 
@@ -873,7 +883,108 @@ public final class ElwhaShowcase {
     componentsPrim.addActionListener(e -> showCard(COMPONENTS_KEY));
     containersPrim.addActionListener(e -> showCard(CONTAINERS_KEY));
 
+    // Trailing-action slot — the rail's bottom-anchored utility row. The Showcase exercises this
+    // slot with a single "About" entry so the design doc's chrome contract has a live demo on
+    // its own canonical playground (which it otherwise wouldn't).
+    final ElwhaIconButton aboutButton =
+        new ElwhaIconButton(MaterialIcons.info(IconButtonSize.M.iconPx()));
+    aboutButton.setToolTipText("About Elwha and the Showcase");
+    aboutButton.addActionListener(e -> openAboutDialog());
+    target.setTrailingActions(List.of(aboutButton));
+
     return target;
+  }
+
+  // Opens a small modal About dialog describing the Elwha library and the Showcase app. A plain
+  // JDialog rather than JOptionPane so the body can carry hyperlinks and a tier-aware layout;
+  // Elwha doesn't ship a dialog primitive yet — a future epic.
+  private void openAboutDialog() {
+    final JFrame owner = (JFrame) SwingUtilities.getWindowAncestor(rail);
+    final javax.swing.JDialog dialog = new javax.swing.JDialog(owner, "About Elwha", true);
+
+    final JPanel body = new JPanel();
+    body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+    body.setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
+
+    final JLabel title = new JLabel("Elwha");
+    title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
+    title.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    body.add(title);
+
+    final JLabel tagline = new JLabel("A Swing component library built on FlatLaf.");
+    tagline.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+    tagline.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    tagline.setBorder(BorderFactory.createEmptyBorder(2, 0, 12, 0));
+    body.add(tagline);
+
+    body.add(
+        aboutParagraph(
+            "<html><body style='width:380px'>Elwha provides Material 3 Expressive components for"
+                + " desktop Java &mdash; buttons, chips, cards, FABs, badges, button groups, a"
+                + " navigation rail, and the token foundation underneath them. Apache 2.0, JDK"
+                + " 21.</body></html>"));
+
+    body.add(Box.createVerticalStrut(12));
+
+    final JLabel sectionShowcase = new JLabel("The Elwha Showcase");
+    sectionShowcase.setFont(sectionShowcase.getFont().deriveFont(Font.BOLD, 14f));
+    sectionShowcase.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    body.add(sectionShowcase);
+
+    body.add(
+        aboutParagraph(
+            "<html><body style='width:380px'>This app is the unified, curated playground for the"
+                + " whole component set. Foundations covers the design tokens; Components is a"
+                + " Workbench + Gallery per primitive; Containers covers the multi-instance"
+                + " surfaces. Switch palette and light/dark/system from the header bar to see the"
+                + " whole library re-theme live.</body></html>"));
+
+    body.add(Box.createVerticalStrut(12));
+
+    final JLabel sectionLinks = new JLabel("Links");
+    sectionLinks.setFont(sectionLinks.getFont().deriveFont(Font.BOLD, 14f));
+    sectionLinks.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    body.add(sectionLinks);
+
+    body.add(aboutParagraph("<html>Repository: github.com/OWS-PFMS/elwha</html>"));
+    body.add(aboutParagraph("<html>License: Apache License 2.0</html>"));
+
+    final JPanel actions = new JPanel(new FlowLayout(FlowLayout.TRAILING, 8, 8));
+    final ElwhaButton close = ElwhaButton.textButton("Close");
+    close.addActionListener(e -> dialog.dispose());
+    actions.add(close);
+
+    final JPanel root = new JPanel(new BorderLayout());
+    root.add(body, BorderLayout.CENTER);
+    root.add(actions, BorderLayout.SOUTH);
+
+    dialog.setContentPane(root);
+    dialog.pack();
+    dialog.setLocationRelativeTo(owner);
+    // Esc-to-close — ElwhaButton extends JComponent not JButton, so the standard root-pane
+    // default-button (Enter → fire) hookup doesn't apply; bind Esc explicitly instead.
+    final javax.swing.KeyStroke esc =
+        javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0);
+    dialog.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(esc, "close-about");
+    dialog
+        .getRootPane()
+        .getActionMap()
+        .put(
+            "close-about",
+            new javax.swing.AbstractAction() {
+              @Override
+              public void actionPerformed(final java.awt.event.ActionEvent e) {
+                dialog.dispose();
+              }
+            });
+    dialog.setVisible(true);
+  }
+
+  private static JLabel aboutParagraph(final String html) {
+    final JLabel label = new JLabel(html);
+    label.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    label.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+    return label;
   }
 
   // --- component surfaces: Workbench (interactive) + Gallery (matrix) ---
