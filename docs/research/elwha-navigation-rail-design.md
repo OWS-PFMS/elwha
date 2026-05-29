@@ -366,7 +366,7 @@ Selection moves only on explicit activation (Space / Enter / click), not on focu
 |---|---|
 | 4.5:1 contrast on all labels | Token system enforces; verify on every Material palette before release |
 | 24×24px min tap target | Collapsed destination is rail-width × 60dp; passes |
-| Reduced-motion preference | `MorphAnimator` already respects the OS reduced-motion hint (see [[m3-morph-is-multi-component]]) |
+| Reduced-motion preference | `MorphAnimator` already respects the OS reduced-motion hint (see [[m3-morph-is-multi-component]]); verification matrix in §13 Phase 5 |
 
 ## §11. RTL mirroring
 
@@ -416,9 +416,22 @@ Story numbers TBD; filed under epic #159 once this design doc is reviewed.
 
 ### Phase 5 — Polish (separate)
 
-18. Active-indicator grow-from-center animation on selection.
-19. Reduced-motion fallback verification.
-20. CHANGELOG `[Unreleased]` entry curation + `@version` audit.
+18. Active-indicator grow-from-center animation on selection. **Shipped** — per-destination `MorphAnimator` at `MEDIUM2_MS`, indicator pill grows from icon-center outward to the full Collapsed `32×56` / Expanded full-row size. Icon fill-0→fill-1 swap and label color shift land discretely at progress 0.5.
+19. Full `ShadowPainter`-driven drop shadow when the rail sits on a layered pane (replaces the Phase 2 placeholder trailing-edge gradient). **Shipped** — `paintComponent` calls `ShadowPainter.paint(g, bodyWidth, h, 0, elevation)`; the rail exposes `trailingShadowReserve()` so a layered-pane host can size bounds to `pref.width + reserve` and let the halo land outside the body silhouette. The Showcase calls `setElevation(1)` on its floating rail. Layout-managed hosts that don't widen bounds see the halo clip on the body's trailing edge — the documented trade-off.
+20. Reduced-motion fallback verification. **Shipped** — `MorphAnimator`'s static `reducedMotion` flag is the single source of truth, auto-detected at class-load (macOS `apple.awt.reduceMotion`, Windows `win.text.animationsEnabled`, GNOME `gsettings enable-animations`) and overridable via `ElwhaTheme.config(...).reducedMotion(...)` and The Elwha Showcase's Animation control. Verification matrix below.
+
+#### §13.1 Reduced-motion verification matrix
+
+Every per-tick animation path the rail participates in honors the global `MorphAnimator.isReducedMotion()` flag — `start()` / `reverse()` snap to the destination value and the underlying `Timer` never schedules ticks. Manual smoke pass on `ElwhaShowcase` with Reduced motion ON:
+
+| Path | Animator | Result |
+|---|---|---|
+| Rail `Collapsed↔Expanded` morph (variant + container width + per-destination indicator) | Rail-owned `MorphAnimator(MEDIUM3_MS)` | ✅ Snaps in one paint cycle; no in-between progress |
+| Destination grow-from-center selected-indicator | Per-destination `MorphAnimator(MEDIUM2_MS)` | ✅ Indicator paints at full pill size on click; no grow |
+| Slotted FAB Standard↔Extended transform driven by the rail | `ElwhaFab`-owned `MorphAnimator` | ✅ FAB snaps in lock-step with the rail variant change |
+| Showcase JLayeredPane 60-Hz morph-tracker timer | n/a — bounds re-position only fires while `rail.isMorphing()` returns true | ✅ Becomes a single bounds-set on the snap tick; no slow-pan |
+
+Regression check (Reduced motion OFF) confirms all four paths animate normally — the new per-destination animator hasn't broken the existing rail or FAB orchestration.
 
 ## §14. Out of scope (LOCKED)
 

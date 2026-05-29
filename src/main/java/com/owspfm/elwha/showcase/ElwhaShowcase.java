@@ -289,12 +289,20 @@ public final class ElwhaShowcase {
     final JLayeredPane layeredPane = frame.getLayeredPane();
     layeredPane.add(target, JLayeredPane.PALETTE_LAYER);
 
+    // Reserve trailing-edge clearance for the rail's elevation drop shadow — when elevation > 0,
+    // the rail's ShadowPainter halo extends outward from the body silhouette. Bounds are widened
+    // by trailingShadowReserve() so the halo lands cleanly on the layered pane behind the content
+    // area, not clipping against the rail's right edge. The content area's leading inset (= rail
+    // body width) is unchanged: the halo overlays the content's leading edge, which is exactly
+    // M3's "rail elevated above content" read.
     final Runnable position =
         () -> {
           final Dimension pref = target.getPreferredSize();
+          final int reserve = target.trailingShadowReserve();
+          final int boundsW = pref.width + reserve;
           final boolean ltr = layeredPane.getComponentOrientation().isLeftToRight();
-          final int x = ltr ? 0 : layeredPane.getWidth() - pref.width;
-          target.setBounds(x, 0, pref.width, layeredPane.getHeight());
+          final int x = ltr ? 0 : layeredPane.getWidth() - boundsW;
+          target.setBounds(x, 0, boundsW, layeredPane.getHeight());
         };
     layeredPane.addComponentListener(
         new ComponentAdapter() {
@@ -843,6 +851,7 @@ public final class ElwhaShowcase {
     final ElwhaNavigationRail target = ElwhaNavigationRail.collapsed();
     target.getAccessibleContext().setAccessibleName("Showcase navigation rail");
     target.setSurfaceFilled(true);
+    target.setElevation(1);
     target.setMenuButton(new ElwhaIconButton(MaterialIcons.menu()));
 
     final ElwhaFab homeFab =
