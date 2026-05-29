@@ -9,6 +9,7 @@ import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -16,6 +17,8 @@ import java.awt.GridBagLayout;
 import java.awt.LayoutManager;
 import java.awt.event.KeyEvent;
 import java.util.function.Consumer;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
 import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.InputMap;
@@ -80,6 +83,7 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   // Live overlay state — non-null only while shown.
   private JScrollPane contentScroll;
   private DividerLine scrollDivider;
+  private ElwhaIconButton closeButton;
 
   private ElwhaFullScreenDialog(final Builder b) {
     super(b.dismissibleByEsc, b.onClose);
@@ -151,10 +155,28 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     SwingUtilities.invokeLater(this::updateScrollDivider);
   }
 
+  // A full-screen dialog is an input flow, so focus belongs in the form (§9): the first focusable
+  // content field, else the close affordance, else (via the base) the surface itself — never the
+  // inert background.
+  @Override
+  protected Component initialFocusTarget() {
+    if (content != null) {
+      if (content.isFocusable() && content.isEnabled() && !(content instanceof JPanel)) {
+        return content;
+      }
+      final Component field = firstFocusable(content);
+      if (field != null) {
+        return field;
+      }
+    }
+    return closeButton;
+  }
+
   @Override
   protected void clearTransientState() {
     contentScroll = null;
     scrollDivider = null;
+    closeButton = null;
   }
 
   /**
@@ -233,27 +255,32 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     scrollDivider.setVisible(showDivider || scrolls);
   }
 
-  // The top app bar (§5): leading close affordance → start-aligned headline → trailing confirm. The
-  // leading / trailing edges mirror automatically for RTL via BorderLayout + the base's
-  // applyComponentOrientation.
+  // The top app bar (§5): leading close affordance → start-aligned headline → trailing confirm.
+  // LINE_START / LINE_END (not WEST / EAST) so the edges mirror for RTL (§10) once the base applies
+  // the component orientation; the headline's gap-from-close flips to the trailing side to match.
   private JComponent buildAppBar() {
     final AppBar bar = new AppBar();
 
     final ElwhaIconButton close = ElwhaIconButton.standardIconButton(MaterialIcons.close());
     close.setToolTipText("Close");
     close.addActionListener(e -> dismiss(DismissCause.CANCEL));
-    bar.add(verticalCenter(close), BorderLayout.WEST);
+    this.closeButton = close;
+    bar.add(verticalCenter(close), BorderLayout.LINE_START);
 
     if (headline != null) {
       final JLabel title = new JLabel(headline);
       title.setFont(TypeRole.TITLE_LARGE.resolve());
       title.setForeground(ColorRole.ON_SURFACE.resolve());
-      title.setBorder(BorderFactory.createEmptyBorder(0, SpaceScale.SM.px(), 0, 0));
+      final int gap = SpaceScale.SM.px();
+      title.setBorder(
+          orientation.isLeftToRight()
+              ? BorderFactory.createEmptyBorder(0, gap, 0, 0)
+              : BorderFactory.createEmptyBorder(0, 0, 0, gap));
       bar.add(title, BorderLayout.CENTER);
     }
 
     if (confirmAction != null) {
-      bar.add(verticalCenter(confirmAction), BorderLayout.EAST);
+      bar.add(verticalCenter(confirmAction), BorderLayout.LINE_END);
     }
     return bar;
   }
@@ -277,6 +304,22 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
       setBorderRole(null);
       setElevation(0);
       setFocusable(true);
+    }
+
+    // Reports AccessibleRole.DIALOG so assistive tech announces this as a dialog (§9); the
+    // accessible name is set to the headline by the base at show time.
+    @Override
+    public AccessibleContext getAccessibleContext() {
+      if (accessibleContext == null) {
+        accessibleContext =
+            new AccessibleJComponent() {
+              @Override
+              public AccessibleRole getAccessibleRole() {
+                return AccessibleRole.DIALOG;
+              }
+            };
+      }
+      return accessibleContext;
     }
   }
 
