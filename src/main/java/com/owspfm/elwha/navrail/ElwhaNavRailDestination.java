@@ -551,12 +551,24 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
 
   private RoundRectangle2D.Float growFromCenter(final IndicatorGeometry geom, final float t) {
     final float clamped = Math.max(0f, Math.min(1f, t));
-    final float w = geom.pillWidth * clamped;
-    final float h = geom.pillHeight * clamped;
     final float cx = geom.iconX + ICON_SIZE_PX / 2f;
     final float cy = geom.iconY + ICON_SIZE_PX / 2f;
+    // Lerp each edge independently from the icon-center seed point to the static end geometry.
+    // In Collapsed the icon center IS the pill center (symmetric grow); in Expanded the pill is
+    // anchored at the row leading edge with the icon offset toward the leading side, so the
+    // pill grows asymmetrically — emerging from the icon and expanding outward to fill the row.
+    final float left = lerp(cx, geom.pillX, clamped);
+    final float right = lerp(cx, geom.pillX + geom.pillWidth, clamped);
+    final float top = lerp(cy, geom.pillY, clamped);
+    final float bottom = lerp(cy, geom.pillY + geom.pillHeight, clamped);
+    final float w = right - left;
+    final float h = bottom - top;
     final float arc = h;
-    return new RoundRectangle2D.Float(cx - w / 2f, cy - h / 2f, w, h, arc, arc);
+    return new RoundRectangle2D.Float(left, top, w, h, arc, arc);
+  }
+
+  private static float lerp(final float a, final float b, final float t) {
+    return a + (b - a) * t;
   }
 
   private StateLayer activeOverlay() {
