@@ -6,14 +6,12 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.ShadowPainter;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FocusTraversalPolicy;
 import java.awt.Font;
 import java.awt.FontMetrics;
-import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -71,11 +69,18 @@ import javax.swing.KeyStroke;
  *       rail body in {@link ColorRole#SURFACE_CONTAINER} — M3's token for rail backgrounds.
  *   <li>Optional trailing-edge divider (1 px {@link ColorRole#OUTLINE_VARIANT}) when {@link
  *       #setDivider(boolean) divider} is enabled. Mirrors under right-to-left orientation.
- *   <li>Elevation 0 (default) paints no shadow; elevation 1 paints a soft inset trailing-edge
- *       gradient as a self-contained visual elevation cue. Full {@link
- *       com.owspfm.elwha.theme.ShadowPainter}-driven drop shadow integration arrives in Phase 4
- *       when the rail is hosted on the Showcase frame's layered pane (where insets can be
- *       reserved).
+ *   <li>Elevation 0 (default) paints no shadow; elevation 1 paints an M3-aligned drop shadow via
+ *       {@link com.owspfm.elwha.theme.ShadowPainter} — same painter / same tokens as {@link
+ *       com.owspfm.elwha.card.ElwhaCard} and {@link com.owspfm.elwha.fab.ElwhaFab}. The shadow halo
+ *       extends outward from the body silhouette; the host must reserve {@link
+ *       com.owspfm.elwha.theme.ShadowPainter#shadowInsets(int)
+ *       ShadowPainter.shadowInsets(elevation).right} (LTR) pixels of trailing-edge bounds clearance
+ *       so the halo renders without clipping. A layered-pane host (e.g. The Elwha Showcase frame)
+ *       sets the rail's {@link #setBounds bounds} to {@code preferredSize.width +
+ *       shadowInsets(elevation).right} on the trailing side and the halo falls cleanly onto the
+ *       content area behind the rail. A layout-managed host (e.g. {@code BorderLayout.WEST}) won't
+ *       widen bounds — the halo silently clips on the body's trailing edge, which is the documented
+ *       trade-off for hosts that can't reserve inset.
  * </ul>
  *
  * <p><strong>Accessibility.</strong> {@link AccessibleRole#PAGE_TAB_LIST} (pairs with each
@@ -176,7 +181,6 @@ public final class ElwhaNavigationRail extends JComponent {
   static final int DESTINATION_GAP_PX = 4;
   static final int TRAILING_ACTION_GAP_PX = 4;
   static final int DIVIDER_WIDTH_PX = 1;
-  static final int ELEVATION_GRADIENT_PX = 12;
   static final int M3_PRIMARY_MIN = 3;
   static final int M3_PRIMARY_MAX = 7;
   static final int SECTION_HEADER_TOP_PAD_PX = 16;
@@ -494,6 +498,7 @@ public final class ElwhaNavigationRail extends JComponent {
     }
     this.menuButton = menu;
     if (menu != null) {
+      menu.setRequestFocusEnabled(false);
       add(menu);
       menu.addActionListener(menuToggleListener);
       syncMenuButtonGlyph();
@@ -549,6 +554,7 @@ public final class ElwhaNavigationRail extends JComponent {
     }
     this.fab = fab;
     if (fab != null) {
+      fab.setRequestFocusEnabled(false);
       add(fab);
       snapFabFormToVariant();
     }
@@ -891,6 +897,7 @@ public final class ElwhaNavigationRail extends JComponent {
         if (a == null) {
           continue;
         }
+        a.setRequestFocusEnabled(false);
         trailingActions.add(a);
         add(a);
       }
@@ -1021,7 +1028,10 @@ public final class ElwhaNavigationRail extends JComponent {
 
   @Override
   public void doLayout() {
-    final int w = getWidth();
+    // bodyWidth() is the rail's body width — getWidth() minus any trailing-edge shadow reserve
+    // a layered-pane host added to its bounds. All centering / row-width math operates on the
+    // body, never on the bounds.
+    final int w = bodyWidth();
     final int h = getHeight();
     // During a morph in either direction, lay out destinations with the wider Expanded bounds —
     // the destination's own paint lerps the indicator inside those bounds, and Collapsed paint
@@ -1135,22 +1145,22 @@ public final class ElwhaNavigationRail extends JComponent {
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      final int w = getWidth();
+      final int bodyW = bodyWidth();
       final int h = getHeight();
+
+      if (elevation > 0) {
+        ShadowPainter.paint(g2, bodyW, h, 0, elevation);
+      }
 
       if (surfaceFilled) {
         g2.setColor(ColorRole.SURFACE_CONTAINER.resolve());
-        g2.fillRect(0, 0, w, h);
-      }
-
-      if (elevation > 0) {
-        paintElevationGradient(g2, w, h);
+        g2.fillRect(0, 0, bodyW, h);
       }
 
       if (divider) {
         g2.setColor(ColorRole.OUTLINE_VARIANT.resolve());
         final boolean ltr = getComponentOrientation().isLeftToRight();
-        final int x = ltr ? w - DIVIDER_WIDTH_PX : 0;
+        final int x = ltr ? bodyW - DIVIDER_WIDTH_PX : 0;
         g2.fillRect(x, 0, DIVIDER_WIDTH_PX, h);
       }
 
@@ -1191,21 +1201,32 @@ public final class ElwhaNavigationRail extends JComponent {
     }
   }
 
-  private void paintElevationGradient(final Graphics2D g, final int w, final int h) {
-    final boolean ltr = getComponentOrientation().isLeftToRight();
-    final Color edgeColor = new Color(0, 0, 0, 30);
-    final Color transparent = new Color(0, 0, 0, 0);
-    final int gradientWidth = Math.min(ELEVATION_GRADIENT_PX, Math.max(1, w / 4));
-    if (ltr) {
-      final int edgeX = w - gradientWidth;
-      final GradientPaint gp = new GradientPaint(edgeX, 0, transparent, (float) w, 0, edgeColor);
-      g.setPaint(gp);
-      g.fillRect(edgeX, 0, gradientWidth, h);
-    } else {
-      final GradientPaint gp = new GradientPaint(0, 0, edgeColor, gradientWidth, 0, transparent);
-      g.setPaint(gp);
-      g.fillRect(0, 0, gradientWidth, h);
-    }
+  // The rail's body width — distinct from getWidth() when an elevation-aware host (e.g. The
+  // Elwha Showcase on a JLayeredPane) widens the rail's bounds by the trailing-edge shadow
+  // reserve so the ShadowPainter halo can render outside the body silhouette without clipping
+  // against the component bounds. Layout-managed hosts (BorderLayout.WEST etc.) won't widen
+  // bounds, so bodyWidth() == getWidth() and the trailing halo silently clips on the body's
+  // right edge — the documented trade-off in the class Javadoc.
+  private int bodyWidth() {
+    return getWidth() - trailingShadowReserve();
+  }
+
+  /**
+   * Returns the trailing-edge bounds reserve a layered-pane host should add to the rail's {@link
+   * #setBounds(int, int, int, int) bounds} so the {@link ShadowPainter} halo can render outside the
+   * body silhouette without clipping. Equal to {@link ShadowPainter#shadowInsets(int)
+   * ShadowPainter.shadowInsets(getElevation()).right} when {@link #getElevation() elevation} {@code
+   * > 0}, otherwise zero. A host that mounts the rail at a leading edge should size its bounds to
+   * {@code getPreferredSize().width + trailingShadowReserve()} on the trailing side; layout-managed
+   * hosts that can't reserve the inset will see the halo silently clip on the body edge.
+   *
+   * @return the trailing-edge halo reserve in pixels; {@code 0} when {@link #getElevation()
+   *     elevation} is {@code 0}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public int trailingShadowReserve() {
+    return elevation > 0 ? ShadowPainter.shadowInsets(elevation).right : 0;
   }
 
   private void warnIfMissingAccessibleName() {

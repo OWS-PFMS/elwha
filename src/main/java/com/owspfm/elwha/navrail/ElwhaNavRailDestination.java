@@ -7,6 +7,7 @@ import com.owspfm.elwha.badge.IconBearing;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
+import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
 import java.awt.AlphaComposite;
@@ -128,6 +129,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   private static final int RIPPLE_TICK_MS = 16;
   private static final int HOVER_POLL_INTERVAL_MS = 100;
   private static final float FOCUS_RING_STROKE = 2f;
+  private static final float ICON_SWAP_PROGRESS = 0.5f;
 
   private final Icon iconUnselected;
   private final Icon iconSelected;
@@ -154,6 +156,8 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   private ElwhaNavigationRail.Variant morphFrom = ElwhaNavigationRail.Variant.COLLAPSED;
   private ElwhaNavigationRail.Variant morphTo = ElwhaNavigationRail.Variant.COLLAPSED;
   private float morphProgress;
+
+  private final MorphAnimator selectionAnimator = new MorphAnimator(this, MorphAnimator.MEDIUM2_MS);
 
   private ElwhaNavRailDestination(
       final Icon iconUnselected, final Icon iconSelected, final String label) {
@@ -239,8 +243,11 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
    * ElwhaNavigationRail} container — clicking the destination does <em>not</em> auto-flip this
    * field; the container reacts to the action event and decides which destination is selected.
    *
-   * <p>Paint switches instantaneously — no animation in Phase 1. The grow-from-center
-   * active-indicator animation is a Phase 5 polish item.
+   * <p>The paint transition is animated via the M3 <strong>grow-from-center</strong> motion: the
+   * active-indicator pill expands outward from the icon's geometric center to its full Collapsed
+   * 32×56 (or Expanded full-row) size over {@link MorphAnimator#MEDIUM2_MS}. Going unselected
+   * reverses the animation. Under {@link MorphAnimator#isReducedMotion() reduced motion} the paint
+   * snaps to the end state with no in-between frames.
    *
    * @param selected new selected state
    * @version v0.3.0
@@ -252,6 +259,11 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     }
     final boolean previous = this.selected;
     this.selected = selected;
+    if (selected) {
+      selectionAnimator.start();
+    } else {
+      selectionAnimator.reverse();
+    }
     firePropertyChange(PROPERTY_SELECTED, previous, selected);
     repaint();
   }
@@ -524,16 +536,39 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   }
 
   private void paintActiveIndicator(final Graphics2D g2, final IndicatorGeometry geom) {
-    if (!selected) {
+    final float t = selectionAnimator.progress();
+    if (t <= 0f) {
       return;
     }
     final Graphics2D s = (Graphics2D) g2.create();
     try {
       s.setColor(ColorRole.SECONDARY_CONTAINER.resolve());
-      s.fill(pillShape(geom));
+      s.fill(growFromCenter(geom, t));
     } finally {
       s.dispose();
     }
+  }
+
+  private RoundRectangle2D.Float growFromCenter(final IndicatorGeometry geom, final float t) {
+    final float clamped = Math.max(0f, Math.min(1f, t));
+    final float cx = geom.iconX + ICON_SIZE_PX / 2f;
+    final float cy = geom.iconY + ICON_SIZE_PX / 2f;
+    // Lerp each edge independently from the icon-center seed point to the static end geometry.
+    // In Collapsed the icon center IS the pill center (symmetric grow); in Expanded the pill is
+    // anchored at the row leading edge with the icon offset toward the leading side, so the
+    // pill grows asymmetrically — emerging from the icon and expanding outward to fill the row.
+    final float left = lerp(cx, geom.pillX, clamped);
+    final float right = lerp(cx, geom.pillX + geom.pillWidth, clamped);
+    final float top = lerp(cy, geom.pillY, clamped);
+    final float bottom = lerp(cy, geom.pillY + geom.pillHeight, clamped);
+    final float w = right - left;
+    final float h = bottom - top;
+    final float arc = h;
+    return new RoundRectangle2D.Float(left, top, w, h, arc, arc);
+  }
+
+  private static float lerp(final float a, final float b, final float t) {
+    return a + (b - a) * t;
   }
 
   private StateLayer activeOverlay() {
@@ -589,11 +624,15 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   }
 
   private void paintIcon(final Graphics2D g2, final IndicatorGeometry geom) {
-    final Icon icon = selected ? iconSelected : iconUnselected;
+    final Icon icon = paintSelectedForm() ? iconSelected : iconUnselected;
     if (icon == null) {
       return;
     }
     icon.paintIcon(this, g2, geom.iconX, geom.iconY);
+  }
+
+  private boolean paintSelectedForm() {
+    return selectionAnimator.progress() >= ICON_SWAP_PROGRESS;
   }
 
   private void paintLabel(final Graphics2D g2, final IndicatorGeometry geom) {
@@ -695,11 +734,12 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   }
 
   private Color iconColor() {
-    return (selected ? ColorRole.ON_SECONDARY_CONTAINER : ColorRole.ON_SURFACE_VARIANT).resolve();
+    return (paintSelectedForm() ? ColorRole.ON_SECONDARY_CONTAINER : ColorRole.ON_SURFACE_VARIANT)
+        .resolve();
   }
 
   private Color labelColor() {
-    return (selected ? ColorRole.SECONDARY : ColorRole.ON_SURFACE_VARIANT).resolve();
+    return (paintSelectedForm() ? ColorRole.SECONDARY : ColorRole.ON_SURFACE_VARIANT).resolve();
   }
 
   private Color stateLayerColor() {
@@ -738,9 +778,10 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
               return;
             }
             pressed = true;
-            if (isRequestFocusEnabled()) {
-              requestFocusInWindow();
-            }
+            // Mouse activation deliberately does NOT request focus — the focus ring is a
+            // keyboard-only affordance for M3 tablist-style components. Keyboard nav still picks
+            // the right destination on Tab-entry via the rail's FocusTraversalPolicy (focused →
+            // selected → first).
             startRipple(e.getPoint());
             repaint();
           }
@@ -887,11 +928,18 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   }
 
   @Override
+  public void addNotify() {
+    super.addNotify();
+    selectionAnimator.snapTo(selected ? 1f : 0f);
+  }
+
+  @Override
   public void removeNotify() {
     stopHoverPolling();
     if (rippleTimer != null) {
       rippleTimer.stop();
     }
+    selectionAnimator.stop();
     super.removeNotify();
   }
 
