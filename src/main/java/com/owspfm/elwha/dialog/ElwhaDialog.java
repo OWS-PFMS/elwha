@@ -868,6 +868,12 @@ public final class ElwhaDialog {
     private static final int MIN_BODY_WIDTH = 280;
     private static final int MAX_BODY_WIDTH = 560;
 
+    // Cached full-size render reused across the scale tween's frames (see paint()). Held only while
+    // animating; released at the steady state.
+    private BufferedImage motionSnapshot;
+    private int snapshotW;
+    private int snapshotH;
+
     DialogSurface() {
       setLayout(new BorderLayout());
       setSurfaceRole(ColorRole.SURFACE_CONTAINER_HIGH);
@@ -882,16 +888,20 @@ public final class ElwhaDialog {
     // progress
     // it's a plain live paint — no transform or buffer cost on the steady state.
     //
-    // During the tween the surface is rasterized once at full size into a device-resolution buffer,
-    // and only that bitmap is scaled. Scaling the *live* component instead re-rasterizes its text
-    // at
-    // the animated scale every frame, so glyph advances snap to the pixel grid differently per
-    // frame
-    // and the words visibly shuffle left/right; rendering once at a stable scale removes that.
+    // The content is static during the tween, so the surface is rasterized ONCE at full size into a
+    // device-resolution buffer (cached in motionSnapshot) and only that bitmap is scaled per frame.
+    // This serves two ends: (1) text is rasterized at one stable scale, so glyph advances don't
+    // snap
+    // to the pixel grid differently each frame (no left/right "shuffle"); (2) the ~18 frames of the
+    // tween reuse one render instead of re-allocating a multi-MB buffer and re-running the full
+    // shadow + child paint every tick — the dominant cost behind open/close lag under load. The
+    // snapshot is released when the animation reaches the steady state and re-rendered on the next
+    // open/close (so theme / content / size changes are picked up).
     @Override
     public void paint(final Graphics g) {
       final float p = Math.max(0f, Math.min(1f, motionProgress));
       if (p >= 1f) {
+        motionSnapshot = null;
         super.paint(g);
         return;
       }
@@ -905,13 +915,18 @@ public final class ElwhaDialog {
       final double sy = tx.getScaleY() > 0 ? tx.getScaleY() : 1.0;
       final int deviceW = Math.max(1, (int) Math.ceil(w * sx));
       final int deviceH = Math.max(1, (int) Math.ceil(h * sy));
-      final BufferedImage buffer = new BufferedImage(deviceW, deviceH, BufferedImage.TYPE_INT_ARGB);
-      final Graphics2D bg = buffer.createGraphics();
-      try {
-        bg.scale(sx, sy);
-        super.paint(bg);
-      } finally {
-        bg.dispose();
+      if (motionSnapshot == null || snapshotW != deviceW || snapshotH != deviceH) {
+        final BufferedImage snap = new BufferedImage(deviceW, deviceH, BufferedImage.TYPE_INT_ARGB);
+        final Graphics2D bg = snap.createGraphics();
+        try {
+          bg.scale(sx, sy);
+          super.paint(bg);
+        } finally {
+          bg.dispose();
+        }
+        motionSnapshot = snap;
+        snapshotW = deviceW;
+        snapshotH = deviceH;
       }
 
       final Graphics2D g2 = (Graphics2D) g.create();
@@ -925,7 +940,7 @@ public final class ElwhaDialog {
         g2.scale(scale, scale);
         g2.translate(-cx, -cy);
         g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, p));
-        g2.drawImage(buffer, 0, 0, w, h, null);
+        g2.drawImage(motionSnapshot, 0, 0, w, h, null);
       } finally {
         g2.dispose();
       }
