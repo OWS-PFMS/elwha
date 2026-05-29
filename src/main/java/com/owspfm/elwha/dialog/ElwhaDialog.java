@@ -25,6 +25,8 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -32,6 +34,7 @@ import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.JRootPane;
 import javax.swing.KeyStroke;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 /**
@@ -199,23 +202,69 @@ public final class ElwhaDialog {
     }
   }
 
-  // Builds the dialog surface's child content. S1 renders the container + headline; later Phase 1
-  // stories layer in the icon, supporting text, content slot, and the action row.
+  // Builds the dialog surface's child content: a 24px-padded body with the icon/headline/supporting
+  // header pinned to the top. The content slot (S4) and action row (S3) land in CENTER / SOUTH as
+  // those stories arrive. The icon-present centering rule (§7) is the single layout conditional.
   private void buildSurfaceContent() {
+    final boolean centered = icon != null;
+
     final JPanel body = new JPanel(new BorderLayout());
     body.setOpaque(false);
     body.setBorder(
         BorderFactory.createEmptyBorder(
             SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px()));
 
+    body.add(buildHeader(centered), BorderLayout.NORTH);
+    surface.add(body, BorderLayout.CENTER);
+  }
+
+  // The icon → headline → supporting-text stack. Vertical box; every child shares one horizontal
+  // alignment (center when an icon is present, leading otherwise) so the column reads as a unit.
+  private JComponent buildHeader(final boolean centered) {
+    final float alignX = centered ? Component.CENTER_ALIGNMENT : Component.LEFT_ALIGNMENT;
+    final JPanel header = new JPanel();
+    header.setOpaque(false);
+    header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+    header.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+    if (icon != null) {
+      final JLabel iconLabel = new JLabel(icon);
+      iconLabel.setAlignmentX(alignX);
+      header.add(iconLabel);
+      header.add(Box.createVerticalStrut(SpaceScale.LG.px()));
+    }
+
     if (headline != null) {
       final JLabel headlineLabel = new JLabel(headline);
       headlineLabel.setFont(TypeRole.HEADLINE_SMALL.resolve());
       headlineLabel.setForeground(ColorRole.ON_SURFACE.resolve());
-      body.add(headlineLabel, BorderLayout.NORTH);
+      headlineLabel.setHorizontalAlignment(
+          centered ? SwingConstants.CENTER : SwingConstants.LEADING);
+      headlineLabel.setAlignmentX(alignX);
+      header.add(headlineLabel);
     }
 
-    surface.add(body, BorderLayout.CENTER);
+    if (supportingText != null) {
+      if (headline != null) {
+        header.add(Box.createVerticalStrut(SpaceScale.LG.px()));
+      }
+      final JLabel supporting = new JLabel(wrapHtml(supportingText, centered));
+      supporting.setFont(TypeRole.BODY_MEDIUM.resolve());
+      supporting.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+      supporting.setAlignmentX(alignX);
+      header.add(supporting);
+    }
+
+    return header;
+  }
+
+  // Wraps supporting prose so it word-wraps at the M3 max content width rather than forcing the
+  // dialog arbitrarily wide on one line. The width clamp in DialogSurface keeps the body within the
+  // 280-560 band; this fixes the wrap column so long prose breaks predictably.
+  private static String wrapHtml(final String text, final boolean centered) {
+    final int wrapWidth = DialogSurface.MAX_BODY_WIDTH - 2 * SpaceScale.XL.px();
+    final String align = centered ? "text-align:center;" : "";
+    return "<html><div style='" + align + "width:" + wrapWidth + "px'>" + text + "</div></html>";
   }
 
   private void installKeyBindings() {
