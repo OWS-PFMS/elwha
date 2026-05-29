@@ -9,6 +9,8 @@ import com.owspfm.elwha.theme.TypeRole;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.ComponentOrientation;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
@@ -16,6 +18,7 @@ import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.RenderingHints;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -23,8 +26,11 @@ import java.awt.event.ComponentListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.beans.PropertyChangeListener;
 import java.util.Objects;
 import java.util.function.Consumer;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
@@ -96,6 +102,9 @@ public final class ElwhaDialog {
   private JScrollPane contentScroll;
   private JComponent scrollDivider;
   private ComponentListener relayoutListener;
+  private PropertyChangeListener focusTrap;
+  private Window hostWindow;
+  private ComponentOrientation orientation = ComponentOrientation.LEFT_TO_RIGHT;
   private Component focusOwnerBeforeShow;
   private boolean dismissing;
 
@@ -141,6 +150,8 @@ public final class ElwhaDialog {
       throw new IllegalStateException("parent is not in a realized window with a root pane");
     }
     this.layeredPane = root.getLayeredPane();
+    this.hostWindow = SwingUtilities.getWindowAncestor(root);
+    this.orientation = parent.getComponentOrientation();
     this.focusOwnerBeforeShow =
         KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
 
@@ -148,6 +159,10 @@ public final class ElwhaDialog {
     this.surface = new DialogSurface();
     buildSurfaceContent();
     installKeyBindings();
+    surface.applyComponentOrientation(orientation);
+    if (headline != null) {
+      surface.getAccessibleContext().setAccessibleName(headline);
+    }
 
     layeredPane.add(scrim, JLayeredPane.MODAL_LAYER);
     layeredPane.add(surface, JLayeredPane.MODAL_LAYER);
@@ -161,12 +176,13 @@ public final class ElwhaDialog {
           }
         };
     layeredPane.addComponentListener(relayoutListener);
+    installFocusTrap();
 
     relayout();
     layeredPane.revalidate();
     layeredPane.repaint();
 
-    SwingUtilities.invokeLater(surface::requestFocusInWindow);
+    SwingUtilities.invokeLater(this::focusInitial);
   }
 
   /**
@@ -189,6 +205,10 @@ public final class ElwhaDialog {
     }
     dismissing = true;
 
+    if (focusTrap != null) {
+      KeyboardFocusManager.getCurrentKeyboardFocusManager()
+          .removePropertyChangeListener("focusOwner", focusTrap);
+    }
     layeredPane.removeComponentListener(relayoutListener);
     layeredPane.remove(scrim);
     layeredPane.remove(surface);
@@ -203,6 +223,8 @@ public final class ElwhaDialog {
     contentScroll = null;
     scrollDivider = null;
     relayoutListener = null;
+    focusTrap = null;
+    hostWindow = null;
     focusOwnerBeforeShow = null;
 
     if (toRestore != null) {
@@ -323,7 +345,9 @@ public final class ElwhaDialog {
   // The icon → headline → supporting-text stack. Vertical box; every child shares one horizontal
   // alignment (center when an icon is present, leading otherwise) so the column reads as a unit.
   private JComponent buildHeader(final boolean centered) {
-    final float alignX = centered ? Component.CENTER_ALIGNMENT : Component.LEFT_ALIGNMENT;
+    final float leading =
+        orientation.isLeftToRight() ? Component.LEFT_ALIGNMENT : Component.RIGHT_ALIGNMENT;
+    final float alignX = centered ? Component.CENTER_ALIGNMENT : leading;
     final JPanel header = new JPanel();
     header.setOpaque(false);
     header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
@@ -403,6 +427,66 @@ public final class ElwhaDialog {
         body.run();
       }
     };
+  }
+
+  // Keyboard focus trap (§10): while shown, if focus escapes the dialog surface to the now-inert
+  // scrimmed background (still inside the host window), pull it back. Focus moving to a different
+  // window is left alone — the host window simply lost activation.
+  private void installFocusTrap() {
+    focusTrap =
+        evt -> {
+          final Object next = evt.getNewValue();
+          if (!(next instanceof Component) || surface == null) {
+            return;
+          }
+          final Component owner = (Component) next;
+          if (SwingUtilities.isDescendingFrom(owner, surface)) {
+            return;
+          }
+          if (SwingUtilities.getWindowAncestor(owner) != hostWindow) {
+            return;
+          }
+          SwingUtilities.invokeLater(this::focusInitial);
+        };
+    KeyboardFocusManager.getCurrentKeyboardFocusManager()
+        .addPropertyChangeListener("focusOwner", focusTrap);
+  }
+
+  // Initial / recovered focus target (§10): the confirming action, else the first focusable
+  // descendant (a content field), else the surface itself — never the inert background.
+  private void focusInitial() {
+    if (surface == null) {
+      return;
+    }
+    if (confirmAction != null && confirmAction.requestFocusInWindow()) {
+      return;
+    }
+    final Component first = firstFocusable(surface);
+    if (first != null) {
+      first.requestFocusInWindow();
+    } else {
+      surface.requestFocusInWindow();
+    }
+  }
+
+  // Depth-first search for the first focus-accepting descendant, skipping the surface itself.
+  private static Component firstFocusable(final Container root) {
+    for (final Component child : root.getComponents()) {
+      if (child.isFocusable()
+          && child.isEnabled()
+          && child.isVisible()
+          && child.isDisplayable()
+          && !(child instanceof JPanel)) {
+        return child;
+      }
+      if (child instanceof Container) {
+        final Component nested = firstFocusable((Container) child);
+        if (nested != null) {
+          return nested;
+        }
+      }
+    }
+    return null;
   }
 
   // Sizes + centers the surface inside the layered pane (respecting the M3 24px side / 80px
@@ -666,6 +750,22 @@ public final class ElwhaDialog {
     @Override
     public Dimension getMinimumSize() {
       return getPreferredSize();
+    }
+
+    // Reports AccessibleRole.DIALOG so assistive tech announces this as a dialog (§10); the
+    // accessible name is set to the headline by the enclosing ElwhaDialog at show time.
+    @Override
+    public AccessibleContext getAccessibleContext() {
+      if (accessibleContext == null) {
+        accessibleContext =
+            new AccessibleJComponent() {
+              @Override
+              public AccessibleRole getAccessibleRole() {
+                return AccessibleRole.DIALOG;
+              }
+            };
+      }
+      return accessibleContext;
     }
   }
 
