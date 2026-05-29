@@ -1,5 +1,6 @@
 package com.owspfm.elwha.dialog.playground;
 
+import com.owspfm.elwha.dialog.DismissCause;
 import com.owspfm.elwha.dialog.ElwhaDialog;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -26,7 +27,7 @@ import javax.swing.WindowConstants;
  * <p>Validate: with the dialog closed, clicking "Background button" advances the counter and the
  * field is editable. Open the dialog; now neither responds — input is blocked. Toggle
  * "scrim-dismissible" off and confirm a scrim click no longer closes it (Esc still does unless that
- * is toggled off too). Every close logs its {@link ElwhaDialog.DismissCause}.
+ * is toggled off too). Every close logs its {@link DismissCause}.
  *
  * <p>Run:
  *
