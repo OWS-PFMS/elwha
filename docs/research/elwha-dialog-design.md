@@ -1,6 +1,6 @@
 # ElwhaDialog — Design Decisions
 
-**Status:** Phase 1 in progress. Tokens, anatomy, action-row order, scrim, dismiss semantics, motion contract, and accessibility are **LOCKED**. The modality mechanism (§2) and the Java API surface (§8) are now **LOCKED** as of Phase 1 S1 (#261) — the layered-pane scrim overlay was prototyped, confirmed to block input cleanly, and chosen; `show()` is non-blocking + `onClose` callback.
+**Status:** Phase 1 **implemented** (S1–S5, #261–#265) — the Basic Dialog is functional and accessible, sans entrance motion. All sections LOCKED: the modality mechanism (§2) and Java API (§8) settled in S1, the action row / scrim / dismiss / content-scroll / a11y / RTL in S2–S5. Remaining: Phase 2 motion (§13, #266) and Phase 3 Showcase integration (§15, #267/#268). Commits stack on the epic branch; one PR lands the whole epic.
 
 **Drafted:** 2026-05-29
 
@@ -216,10 +216,11 @@ public final class ElwhaDialog {
 }
 ```
 
-**Open API questions to settle in Phase 1 (after the §2 prototype):**
-- Does `show()` block (pseudo-modal, like `JOptionPane`) or return immediately and report via `onClose`? Overlay path leans **non-blocking + callback**; JDialog path could block. The `DismissCause` callback works for both.
-- Whether `confirmAction` auto-receives the Enter binding or it's opt-in.
-- Whether the action buttons are passed pre-built (consumer wires their own listeners) or the dialog wraps them to inject the close-after-fire. Pre-built + dialog-attaches-a-trailing-listener is the leaning design.
+**API questions resolved in Phase 1 (S1–S5):**
+- **`show()` is non-blocking + `onClose(DismissCause)` callback** — the overlay can't pseudo-block an event pump the way `JDialog` can, and the callback is cleaner.
+- **`confirmAction` auto-receives the Enter binding** (no opt-in); `cancelAction` auto-receives Esc (Esc closes with `DismissCause.ESC` when no cancel action is set). Implemented via `ElwhaButton.doClick()` — a `JButton.doClick()` analogue added to `ElwhaButton` (#263) because `JComponent` lacks one.
+- **Action buttons are passed pre-built; the dialog attaches a trailing close-after-fire listener** to each, so the consumer's own listener runs first and the dialog then closes with the role's cause.
+- **Focus trap is a `KeyboardFocusManager` focus-owner listener** that pulls focus back into the surface if it escapes to the scrimmed background within the host window (no custom `FocusTraversalPolicy` needed).
 
 ### §8.1 Default values
 
