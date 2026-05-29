@@ -1407,6 +1407,15 @@ public final class ElwhaNavigationRail extends JComponent {
 
     @Override
     public Component getDefaultComponent(final Container root) {
+      // M3 tablist contract: when focus first enters the rail's cycle (window activation,
+      // focus-cycle-root activation, programmatic Focus-default lookups), it lands on the
+      // currently-selected destination — not on navigation chrome. Tab walking from outside
+      // (getFirstComponent → tabOrder[0] = menuButton) still enters at the menu per the design
+      // doc §10.2; only the "no explicit traversal request, just pick the default" path changes.
+      final ElwhaNavRailDestination tabStop = currentTabStopDestination();
+      if (tabStop != null) {
+        return tabStop;
+      }
       return getFirstComponent(root);
     }
 
