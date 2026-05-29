@@ -1,5 +1,8 @@
 package com.owspfm.elwha.dialog;
 
+import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.iconbutton.ElwhaIconButton;
+import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
@@ -8,6 +11,8 @@ import com.owspfm.elwha.theme.TypeRole;
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.GridBagLayout;
 import java.awt.LayoutManager;
 import java.awt.event.KeyEvent;
 import java.util.function.Consumer;
@@ -40,6 +45,14 @@ import javax.swing.KeyStroke;
  * horizontally (M3 spec) with {@link SpaceScale#XL} (24px) padding, so the dialog reads correctly
  * at any frame width.
  *
+ * <p><strong>Top app bar.</strong> A {@value #APP_BAR_PX}px-tall bar pinned at the top of the
+ * column carries the leading close affordance (an {@link ElwhaIconButton} with the {@link
+ * MaterialIcons#close()} glyph, dismissing with {@link DismissCause#CANCEL}), the start-aligned
+ * headline ({@link TypeRole#TITLE_LARGE}), and an optional trailing confirm text button (dismissing
+ * with {@link DismissCause#CONFIRM} after the consumer's listener runs). Esc → close, Enter →
+ * confirm — the same hand-wiring the Basic Dialog uses since {@code ElwhaButton} is not a {@code
+ * JButton}. An optional 1px {@link ColorRole#OUTLINE_VARIANT} divider sits under the bar.
+ *
  * <p><strong>Lifecycle.</strong> {@link #show(java.awt.Component)} resolves the host frame from any
  * component in the tree, attaches the overlay, and returns immediately; the outcome is reported
  * through {@link Builder#onClose(Consumer)} with a {@link DismissCause}. {@link #dismiss()} closes
@@ -54,13 +67,26 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   /** Max width of the centered content column (M3 full-screen spec table, §4 F4). */
   static final int CONTENT_COLUMN_PX = 560;
 
+  /** Top app bar height (M3 full-screen spec table, §4 F6). */
+  static final int APP_BAR_PX = 56;
+
   private final String headline;
   private final JComponent content;
+  private final ElwhaButton confirmAction;
+  private final boolean showDivider;
 
   private ElwhaFullScreenDialog(final Builder b) {
     super(b.dismissibleByEsc, b.onClose);
     this.headline = b.headline;
     this.content = b.content;
+    this.confirmAction = b.confirmAction;
+    this.showDivider = b.showDivider;
+    if (confirmAction != null) {
+      // The consumer's own listener was registered before the button reached the builder, so it
+      // runs first; this trailing listener then closes the dialog with CONFIRM (§5/§9). Wired once
+      // here (not per show) so repeated shows don't stack the close listener.
+      confirmAction.addActionListener(e -> dismiss(DismissCause.CONFIRM));
+    }
   }
 
   /**
@@ -94,16 +120,20 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     return headline;
   }
 
-  // Esc → close with cancel semantics (§9). Enter → confirm is wired in S3 alongside the app bar.
+  // Esc → close with cancel semantics (§9); Enter → the confirming action (§5). The hand-wired twin
+  // of Esc this epic shares with the Basic Dialog, since ElwhaButton isn't a JButton.
   @Override
   protected void installKeyBindings() {
-    if (!isDismissibleByEsc()) {
-      return;
-    }
     final InputMap im = surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
     final ActionMap am = surface.getActionMap();
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-fsd-cancel");
-    am.put("elwha-fsd-cancel", action(() -> dismiss(DismissCause.CANCEL)));
+    if (isDismissibleByEsc()) {
+      im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-fsd-cancel");
+      am.put("elwha-fsd-cancel", action(() -> dismiss(DismissCause.CANCEL)));
+    }
+    if (confirmAction != null) {
+      im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "elwha-fsd-confirm");
+      am.put("elwha-fsd-confirm", action(confirmAction::doClick));
+    }
   }
 
   // Fill the layered pane edge-to-edge (the backdrop, when present, is already stretched by the
@@ -131,9 +161,9 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
 
   // ----------------------------------------------------- column build
 
-  // The centered max-560 column: headline pinned to the top, content below. The column (incl. its
-  // 24px padding) is centered horizontally within the frame-filling surface; on a frame narrower
-  // than the column max it spans the full width.
+  // The centered max-560 column: top app bar (+ optional divider) pinned, content below. The column
+  // (incl. its 24px padding) is centered horizontally within the frame-filling surface; on a frame
+  // narrower than the column max it spans the full width.
   private JComponent buildColumnHost() {
     final JPanel host = new JPanel(new CenteredColumnLayout(CONTENT_COLUMN_PX));
     host.setOpaque(false);
@@ -144,12 +174,13 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
         BorderFactory.createEmptyBorder(
             SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px()));
 
-    if (headline != null) {
-      final JLabel headlineLabel = new JLabel(headline);
-      headlineLabel.setFont(TypeRole.TITLE_LARGE.resolve());
-      headlineLabel.setForeground(ColorRole.ON_SURFACE.resolve());
-      column.add(headlineLabel, BorderLayout.NORTH);
+    final JPanel top = new JPanel(new BorderLayout());
+    top.setOpaque(false);
+    top.add(buildAppBar(), BorderLayout.CENTER);
+    if (showDivider) {
+      top.add(new DividerLine(), BorderLayout.SOUTH);
     }
+    column.add(top, BorderLayout.NORTH);
 
     if (content != null) {
       content.setOpaque(false);
@@ -164,6 +195,40 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     return host;
   }
 
+  // The top app bar (§5): leading close affordance → start-aligned headline → trailing confirm. The
+  // leading / trailing edges mirror automatically for RTL via BorderLayout + the base's
+  // applyComponentOrientation.
+  private JComponent buildAppBar() {
+    final AppBar bar = new AppBar();
+
+    final ElwhaIconButton close = ElwhaIconButton.standardIconButton(MaterialIcons.close());
+    close.setToolTipText("Close");
+    close.addActionListener(e -> dismiss(DismissCause.CANCEL));
+    bar.add(verticalCenter(close), BorderLayout.WEST);
+
+    if (headline != null) {
+      final JLabel title = new JLabel(headline);
+      title.setFont(TypeRole.TITLE_LARGE.resolve());
+      title.setForeground(ColorRole.ON_SURFACE.resolve());
+      title.setBorder(BorderFactory.createEmptyBorder(0, SpaceScale.SM.px(), 0, 0));
+      bar.add(title, BorderLayout.CENTER);
+    }
+
+    if (confirmAction != null) {
+      bar.add(verticalCenter(confirmAction), BorderLayout.EAST);
+    }
+    return bar;
+  }
+
+  // Wraps a fixed-size control so BorderLayout's full-height region stretch doesn't deform it — the
+  // GridBag centers the control vertically (and horizontally) at its preferred size.
+  private static JPanel verticalCenter(final JComponent c) {
+    final JPanel wrap = new JPanel(new GridBagLayout());
+    wrap.setOpaque(false);
+    wrap.add(c);
+    return wrap;
+  }
+
   // The frame-filling container: SURFACE / 0dp / no shadow. Focusable so the base focus trap has a
   // last-resort target when the dialog carries no focusable content.
   private static final class FullScreenSurface extends ElwhaSurface {
@@ -174,6 +239,38 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
       setBorderRole(null);
       setElevation(0);
       setFocusable(true);
+    }
+  }
+
+  // The app bar panel — forces the M3 56px height regardless of its (shorter) children.
+  private static final class AppBar extends JPanel {
+    AppBar() {
+      super(new BorderLayout());
+      setOpaque(false);
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+      final Dimension d = super.getPreferredSize();
+      return new Dimension(d.width, Math.max(APP_BAR_PX, d.height));
+    }
+  }
+
+  // A 1px OUTLINE_VARIANT line under the app bar (and, in a later story, above scrolled content).
+  private static final class DividerLine extends JComponent {
+    DividerLine() {
+      setOpaque(false);
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+      return new Dimension(0, 1);
+    }
+
+    @Override
+    protected void paintComponent(final Graphics g) {
+      g.setColor(ColorRole.OUTLINE_VARIANT.resolve());
+      g.fillRect(0, 0, getWidth(), 1);
     }
   }
 
@@ -220,9 +317,9 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   }
 
   /**
-   * Fluent builder for {@link ElwhaFullScreenDialog}. The top app bar (close affordance + optional
-   * confirm action) and edge-to-edge scrolling content are layered on in later Phase-1 stories; the
-   * skeleton fills the frame with a headline + content column.
+   * Fluent builder for {@link ElwhaFullScreenDialog}. Edge-to-edge scrolling content and a11y / RTL
+   * refinements are layered on in later Phase-1 stories; this builds the frame-filling dialog with
+   * a top app bar (close → headline → optional confirm) over a content column.
    *
    * @author Charles Bryan (cfb3@uw.edu)
    * @version v0.3.0
@@ -231,6 +328,8 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   public static final class Builder {
     private String headline;
     private JComponent content;
+    private ElwhaButton confirmAction;
+    private boolean showDivider;
     private boolean dismissibleByEsc = true;
     private Consumer<DismissCause> onClose;
 
@@ -261,6 +360,35 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
      */
     public Builder content(final JComponent content) {
       this.content = content;
+      return this;
+    }
+
+    /**
+     * Sets the optional confirming action — the trailing app-bar text button (M3 default; e.g.
+     * "Save"), and the target of the Enter key. Firing it runs the consumer's own listener, then
+     * closes the dialog with {@link DismissCause#CONFIRM}. When absent, the app bar is close +
+     * headline only.
+     *
+     * @param button the confirming action, or {@code null} for none
+     * @return {@code this}
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public Builder confirmAction(final ElwhaButton button) {
+      this.confirmAction = button;
+      return this;
+    }
+
+    /**
+     * Whether a 1px divider is drawn under the top app bar. Default {@code false}.
+     *
+     * @param v whether to show the app-bar divider
+     * @return {@code this}
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public Builder showDivider(final boolean v) {
+      this.showDivider = v;
       return this;
     }
 
