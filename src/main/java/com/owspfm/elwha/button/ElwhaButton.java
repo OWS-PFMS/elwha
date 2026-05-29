@@ -1296,10 +1296,9 @@ public class ElwhaButton extends JComponent {
 
       if (variant == ButtonVariant.ELEVATED && isEnabled()) {
         // The shadow follows the press width / radius too — its shape tracks the surface body.
-        // CornerRadii values are real radii, but ShadowPainter takes a RoundRectangle2D arcWidth
-        // (corner diameter, 2× radius) like every other shadowed primitive feeds it. Double the
-        // radius here so the shadow silhouette matches the body's; passing the bare radius halves
-        // the shadow's corners and the squarer halo bulges past the pill ends (#218, cf. #199).
+        // CornerRadii stores real radii; ShadowPainter wants a RoundRectangle2D arcWidth (corner
+        // diameter), so double it — otherwise the shadow's corners are half the body's and the
+        // squarer halo bulges past the pill ends (#218, cf. #199).
         ShadowPainter.paint(
             g2, paintedBodyW, bodyH, morphedRadii.largestPx() * 2, elevationLevel());
       }
