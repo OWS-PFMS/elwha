@@ -36,6 +36,7 @@ import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.dialog.ElwhaDialog;
 import com.owspfm.elwha.fab.ElwhaFab;
+import com.owspfm.elwha.fab.ElwhaFabAnchor;
 import com.owspfm.elwha.fab.playground.FabPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonGroup;
@@ -268,9 +269,8 @@ public final class ElwhaShowcase {
 
     rail = buildShowcaseRail();
     mountRailOnLayeredPane(frame, rail);
-    addFloatingFab(frame);
 
-    frame.setContentPane(root);
+    frame.setContentPane(buildFloatingFabAnchor(root));
     frame.setSize(1320, 860);
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
@@ -337,40 +337,24 @@ public final class ElwhaShowcase {
     position.run();
   }
 
-  // Mounts a real floating ElwhaFab on the frame's layered pane (PALETTE_LAYER, above the content
-  // pane) so it's visible from every Showcase tab. Anchored bottom-trailing with the M3 16 dp
-  // inset, RTL-aware via the layered pane's component orientation, repositioned on resize. Click
-  // navigates to the FAB leaf — the floating instance is the showcase's self-demonstration of the
-  // FAB design-doc §15 recipe (and the working example referenced from that section). Co-exists
-  // with the navigation rail, which lives at the leading edge of the same layered pane.
-  private void addFloatingFab(final JFrame frame) {
+  // Wraps the Showcase content in an ElwhaFabAnchor (#205) so a real floating ElwhaFab sits
+  // bottom-trailing above every tab — 16 dp off the visible-body edge, RTL-aware, re-pinned on
+  // resize — all owned by the primitive instead of the hand-rolled JLayeredPane glue this method
+  // used to carry. Click navigates to the FAB leaf; the floating instance is the Showcase's
+  // self-demonstration of ElwhaFabAnchor. Co-exists with the navigation rail, which floats at the
+  // leading edge of the frame's own layered pane (a different pane), so the two never contend.
+  private ElwhaFabAnchor buildFloatingFabAnchor(final JComponent content) {
     final ElwhaFab floatingFab =
         ElwhaFab.extended(MaterialIcons.editFilled(ElwhaFab.Size.SMALL.iconPx()), "FAB Workbench");
     floatingFab.setToolTipText(
-        "Floating ElwhaFab — click to open the FAB Workbench. Composes the FAB design-doc §15"
-            + " JLayeredPane recipe.");
+        "Floating ElwhaFab — click to open the FAB Workbench. Placed by ElwhaFabAnchor (#205).");
     floatingFab.addActionListener(event -> showCard("FAB"));
-
-    final JLayeredPane layeredPane = frame.getLayeredPane();
-    layeredPane.add(floatingFab, JLayeredPane.PALETTE_LAYER);
-
-    final Runnable position =
-        () -> {
-          final Dimension pref = floatingFab.getPreferredSize();
-          final int inset = 16;
-          final boolean ltr = layeredPane.getComponentOrientation().isLeftToRight();
-          final int x = ltr ? layeredPane.getWidth() - pref.width - inset : inset;
-          final int y = layeredPane.getHeight() - pref.height - inset;
-          floatingFab.setBounds(x, y, pref.width, pref.height);
-        };
-    layeredPane.addComponentListener(
-        new ComponentAdapter() {
-          @Override
-          public void componentResized(final ComponentEvent event) {
-            position.run();
-          }
-        });
-    position.run();
+    // Suppress the click-acquired focus ring, matching the rail's slotted controls (#256). The FAB
+    // paints its focus ring on any isFocusOwner(), so a mouse click would leave a lingering ring;
+    // setRequestFocusEnabled(false) blocks click-focus while keyboard Tab traversal still reaches
+    // it. The library-level fix (focus-visible: ring on keyboard focus only) is tracked separately.
+    floatingFab.setRequestFocusEnabled(false);
+    return new ElwhaFabAnchor(content, floatingFab);
   }
 
   // Swap the CardLayout to the named card and re-sync the rail's selected primary to the area
