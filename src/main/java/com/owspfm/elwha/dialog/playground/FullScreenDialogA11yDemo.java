@@ -121,7 +121,8 @@ public final class FullScreenDialogA11yDemo {
       gc.gridy = i;
       final JPanel row = new JPanel(new BorderLayout(12, 0));
       row.setOpaque(false);
-      row.add(new JLabel(labels[i]), BorderLayout.WEST);
+      // LINE_START so the label mirrors to the trailing edge in RTL alongside the dialog chrome.
+      row.add(new JLabel(labels[i]), BorderLayout.LINE_START);
       final JTextField tf = new JTextField();
       tf.setPreferredSize(new Dimension(0, 28));
       row.add(tf, BorderLayout.CENTER);

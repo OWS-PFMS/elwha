@@ -15,6 +15,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.GridBagLayout;
 import java.awt.LayoutManager;
+import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
 import java.util.function.Consumer;
 import javax.accessibility.AccessibleContext;
@@ -27,6 +28,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
+import javax.swing.Scrollable;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 /**
@@ -224,10 +227,13 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     if (content != null) {
       content.setOpaque(false);
       // Edge-to-edge content within the column; scrolls vertically when taller than the frame
-      // leaves room (the app bar stays pinned). No horizontal scrollbar — content must reflow.
+      // leaves room (the app bar stays pinned). No horizontal scrollbar — content must reflow. The
+      // ContentView wrapper tracks the viewport width so content fills the column instead of
+      // sitting
+      // at its (possibly narrower) preferred width parked at the leading edge.
       final JScrollPane scroll =
           new JScrollPane(
-              content,
+              new ContentView(content),
               JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
               JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
       scroll.setOpaque(false);
@@ -334,6 +340,41 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     public Dimension getPreferredSize() {
       final Dimension d = super.getPreferredSize();
       return new Dimension(d.width, Math.max(APP_BAR_PX, d.height));
+    }
+  }
+
+  // Hosts the consumer content as a JScrollPane view that tracks the viewport width (so content
+  // fills the column) but not its height (so tall content scrolls). Content is pinned to the top.
+  private static final class ContentView extends JPanel implements Scrollable {
+    ContentView(final JComponent content) {
+      super(new BorderLayout());
+      setOpaque(false);
+      add(content, BorderLayout.NORTH);
+    }
+
+    @Override
+    public Dimension getPreferredScrollableViewportSize() {
+      return getPreferredSize();
+    }
+
+    @Override
+    public int getScrollableUnitIncrement(final Rectangle r, final int orient, final int dir) {
+      return 16;
+    }
+
+    @Override
+    public int getScrollableBlockIncrement(final Rectangle r, final int orient, final int dir) {
+      return orient == SwingConstants.VERTICAL ? r.height : r.width;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+      return true;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportHeight() {
+      return false;
     }
   }
 
