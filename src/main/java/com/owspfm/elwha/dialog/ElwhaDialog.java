@@ -37,6 +37,7 @@ import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.JRootPane;
+import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -92,6 +93,8 @@ public final class ElwhaDialog {
   private JLayeredPane layeredPane;
   private Scrim scrim;
   private DialogSurface surface;
+  private JScrollPane contentScroll;
+  private JComponent scrollDivider;
   private ComponentListener relayoutListener;
   private Component focusOwnerBeforeShow;
   private boolean dismissing;
@@ -197,6 +200,8 @@ public final class ElwhaDialog {
     layeredPane = null;
     scrim = null;
     surface = null;
+    contentScroll = null;
+    scrollDivider = null;
     relayoutListener = null;
     focusOwnerBeforeShow = null;
 
@@ -226,12 +231,65 @@ public final class ElwhaDialog {
 
     body.add(buildHeader(centered), BorderLayout.NORTH);
 
-    final JComponent actions = buildActionRow();
-    if (actions != null) {
-      body.add(actions, BorderLayout.SOUTH);
+    if (content != null) {
+      body.add(buildContentScroll(), BorderLayout.CENTER);
+    }
+
+    final JComponent south = buildSouth();
+    if (south != null) {
+      body.add(south, BorderLayout.SOUTH);
     }
 
     surface.add(body, BorderLayout.CENTER);
+  }
+
+  // The optional content slot, wrapped so it scrolls (vertically only) when taller than the space
+  // the host frame leaves the dialog — the headline/icon (NORTH) and action row (SOUTH) stay pinned
+  // while only this CENTER region scrolls (M3 scrollable-content behavior).
+  private JComponent buildContentScroll() {
+    content.setOpaque(false);
+    final JScrollPane scroll =
+        new JScrollPane(
+            content,
+            JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+            JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+    scroll.setOpaque(false);
+    scroll.getViewport().setOpaque(false);
+    scroll.setBorder(BorderFactory.createEmptyBorder(SpaceScale.LG.px(), 0, 0, 0));
+    this.contentScroll = scroll;
+    return scroll;
+  }
+
+  // The bottom region: the action row, preceded by a 1px scroll divider (M3 affordance) shown only
+  // when the content slot is actually scrolling. No divider without a scrolling content slot.
+  private JComponent buildSouth() {
+    final JComponent actions = buildActionRow();
+    if (actions == null) {
+      return null;
+    }
+    if (content == null) {
+      return actions;
+    }
+    final JPanel south = new JPanel(new BorderLayout());
+    south.setOpaque(false);
+    final ScrollDivider divider = new ScrollDivider();
+    divider.setVisible(false);
+    this.scrollDivider = divider;
+    south.add(divider, BorderLayout.NORTH);
+    south.add(actions, BorderLayout.CENTER);
+    contentScroll.getViewport().addChangeListener(e -> updateScrollDivider());
+    return south;
+  }
+
+  // Divider shows iff the content's natural height exceeds the viewport — i.e. it's scrolling.
+  private void updateScrollDivider() {
+    if (scrollDivider == null || contentScroll == null) {
+      return;
+    }
+    final boolean scrolls =
+        contentScroll.getViewport().getViewSize().height
+            > contentScroll.getViewport().getExtentSize().height;
+    scrollDivider.setVisible(scrolls);
   }
 
   // The trailing-justified action row (§5). M3 order is cancel (leading) → alternate → confirm
@@ -364,6 +422,7 @@ public final class ElwhaDialog {
     final int h = Math.min(pref.height, maxH);
     surface.setBounds((lpW - w) / 2, (lpH - h) / 2, w, h);
     surface.revalidate();
+    SwingUtilities.invokeLater(this::updateScrollDivider);
   }
 
   /**
@@ -557,6 +616,24 @@ public final class ElwhaDialog {
      */
     public ElwhaDialog build() {
       return new ElwhaDialog(this);
+    }
+  }
+
+  // A 1px OUTLINE_VARIANT line separating scrolled content from the pinned action row.
+  private static final class ScrollDivider extends JComponent {
+    ScrollDivider() {
+      setOpaque(false);
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+      return new Dimension(0, 1);
+    }
+
+    @Override
+    protected void paintComponent(final Graphics g) {
+      g.setColor(ColorRole.OUTLINE_VARIANT.resolve());
+      g.fillRect(0, 0, getWidth(), 1);
     }
   }
 
