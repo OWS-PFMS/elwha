@@ -3,6 +3,7 @@ package com.owspfm.elwha.dialog;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.TypeRole;
@@ -251,7 +252,7 @@ public final class ElwhaDialog {
         BorderFactory.createEmptyBorder(
             SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px()));
 
-    body.add(buildHeader(centered), BorderLayout.NORTH);
+    body.add(buildHeader(centered, availableContentWidth()), BorderLayout.NORTH);
 
     if (content != null) {
       body.add(buildContentScroll(), BorderLayout.CENTER);
@@ -342,9 +343,24 @@ public final class ElwhaDialog {
     row.add(button);
   }
 
+  // The width (inside the shadow reserve + 24px padding) the dialog's body will actually get,
+  // derived from the realized host width and the 280-560px clamp. Supporting text wraps to this so
+  // it can't overflow a body the host has clamped narrower than the 560px max and clip
+  // horizontally.
+  private int availableContentWidth() {
+    final Insets shadow = ShadowPainter.shadowInsets(ELEVATION);
+    final int shadowH = shadow.left + shadow.right;
+    final int maxBodyTotal = DialogSurface.MAX_BODY_WIDTH + shadowH;
+    final int avail = layeredPane != null ? layeredPane.getWidth() : 0;
+    final int bodyTotal =
+        avail > 0 ? Math.min(avail - 2 * SpaceScale.XL.px(), maxBodyTotal) : maxBodyTotal;
+    final int bodyWidth = Math.max(DialogSurface.MIN_BODY_WIDTH, bodyTotal - shadowH);
+    return Math.max(0, bodyWidth - 2 * SpaceScale.XL.px());
+  }
+
   // The icon → headline → supporting-text stack. Vertical box; every child shares one horizontal
   // alignment (center when an icon is present, leading otherwise) so the column reads as a unit.
-  private JComponent buildHeader(final boolean centered) {
+  private JComponent buildHeader(final boolean centered, final int contentWidth) {
     final float leading =
         orientation.isLeftToRight() ? Component.LEFT_ALIGNMENT : Component.RIGHT_ALIGNMENT;
     final float alignX = centered ? Component.CENTER_ALIGNMENT : leading;
@@ -374,7 +390,7 @@ public final class ElwhaDialog {
       if (headline != null) {
         header.add(Box.createVerticalStrut(SpaceScale.LG.px()));
       }
-      final JLabel supporting = new JLabel(wrapHtml(supportingText, centered));
+      final JLabel supporting = new JLabel(wrapHtml(supportingText, centered, contentWidth));
       supporting.setFont(TypeRole.BODY_MEDIUM.resolve());
       supporting.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
       supporting.setAlignmentX(alignX);
@@ -384,13 +400,14 @@ public final class ElwhaDialog {
     return header;
   }
 
-  // Wraps supporting prose so it word-wraps at the M3 max content width rather than forcing the
-  // dialog arbitrarily wide on one line. The width clamp in DialogSurface keeps the body within the
-  // 280-560 band; this fixes the wrap column so long prose breaks predictably.
-  private static String wrapHtml(final String text, final boolean centered) {
-    final int wrapWidth = DialogSurface.MAX_BODY_WIDTH - 2 * SpaceScale.XL.px();
+  // Wraps supporting prose so it word-wraps at the dialog's actual content width rather than
+  // forcing
+  // the dialog wide on one line or overflowing a host-clamped narrow body. {@code contentWidth} is
+  // the real available column from availableContentWidth().
+  private static String wrapHtml(
+      final String text, final boolean centered, final int contentWidth) {
     final String align = centered ? "text-align:center;" : "";
-    return "<html><div style='" + align + "width:" + wrapWidth + "px'>" + text + "</div></html>";
+    return "<html><div style='" + align + "width:" + contentWidth + "px'>" + text + "</div></html>";
   }
 
   // Esc → cancel semantics (§5/§9): fires the cancel action when present (so its consumer listener
@@ -501,7 +518,11 @@ public final class ElwhaDialog {
 
     final Dimension pref = surface.getPreferredSize();
     final int maxW = Math.max(0, lpW - 2 * SpaceScale.XL.px());
-    final int maxH = Math.max(0, lpH - 2 * MIN_VERTICAL_INSET);
+    // The 80px top/bottom margin is aesthetic breathing room on a roomy window, but on a short
+    // window it must yield so the dialog can use the available height instead of collapsing its
+    // (scrollable) content to nothing. Shrink it proportionally below the threshold.
+    final int verticalInset = Math.min(MIN_VERTICAL_INSET, lpH / 10);
+    final int maxH = Math.max(0, lpH - 2 * verticalInset);
     final int w = Math.min(pref.width, maxW);
     final int h = Math.min(pref.height, maxH);
     surface.setBounds((lpW - w) / 2, (lpH - h) / 2, w, h);
