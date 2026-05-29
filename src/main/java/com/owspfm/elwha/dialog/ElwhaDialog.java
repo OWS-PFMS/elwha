@@ -1,5 +1,6 @@
 package com.owspfm.elwha.dialog;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
@@ -9,6 +10,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
@@ -24,10 +26,12 @@ import java.awt.event.MouseEvent;
 import java.util.Objects;
 import java.util.function.Consumer;
 import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
+import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
@@ -77,6 +81,9 @@ public final class ElwhaDialog {
   private final String headline;
   private final String supportingText;
   private final JComponent content;
+  private final ElwhaButton confirmAction;
+  private final ElwhaButton alternateAction;
+  private final ElwhaButton cancelAction;
   private final boolean dismissibleByScrim;
   private final boolean dismissibleByEsc;
   private final Consumer<DismissCause> onClose;
@@ -94,6 +101,9 @@ public final class ElwhaDialog {
     this.headline = b.headline;
     this.supportingText = b.supportingText;
     this.content = b.content;
+    this.confirmAction = b.confirmAction;
+    this.alternateAction = b.alternateAction;
+    this.cancelAction = b.cancelAction;
     this.dismissibleByScrim = b.dismissibleByScrim;
     this.dismissibleByEsc = b.dismissibleByEsc;
     this.onClose = b.onClose;
@@ -215,7 +225,41 @@ public final class ElwhaDialog {
             SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px()));
 
     body.add(buildHeader(centered), BorderLayout.NORTH);
+
+    final JComponent actions = buildActionRow();
+    if (actions != null) {
+      body.add(actions, BorderLayout.SOUTH);
+    }
+
     surface.add(body, BorderLayout.CENTER);
+  }
+
+  // The trailing-justified action row (§5). M3 order is cancel (leading) → alternate → confirm
+  // (trailing); a trailing FlowLayout plus that add order parks the confirming action at the
+  // trailing edge regardless of which roles are present. 8px between buttons, 24px above the row.
+  // Returns null when no action role is set.
+  private JComponent buildActionRow() {
+    if (confirmAction == null && alternateAction == null && cancelAction == null) {
+      return null;
+    }
+    final JPanel row = new JPanel(new FlowLayout(FlowLayout.TRAILING, SpaceScale.SM.px(), 0));
+    row.setOpaque(false);
+    row.setBorder(BorderFactory.createEmptyBorder(SpaceScale.XL.px(), 0, 0, 0));
+    addAction(row, cancelAction, DismissCause.CANCEL);
+    addAction(row, alternateAction, DismissCause.ALTERNATE);
+    addAction(row, confirmAction, DismissCause.CONFIRM);
+    return row;
+  }
+
+  // Adds one action button to the row with the dialog's close-after-fire listener. The consumer's
+  // own listener was registered before the button reached the builder, so it runs first; this
+  // trailing listener then closes the dialog with the role's cause (§9).
+  private void addAction(final JPanel row, final ElwhaButton button, final DismissCause cause) {
+    if (button == null) {
+      return;
+    }
+    button.addActionListener(e -> dismiss(cause));
+    row.add(button);
   }
 
   // The icon → headline → supporting-text stack. Vertical box; every child shares one horizontal
@@ -267,21 +311,40 @@ public final class ElwhaDialog {
     return "<html><div style='" + align + "width:" + wrapWidth + "px'>" + text + "</div></html>";
   }
 
+  // Esc → cancel semantics (§5/§9): fires the cancel action when present (so its consumer listener
+  // runs and the close cause is CANCEL), else closes with DismissCause.ESC. Enter → the confirming
+  // action — the hand-wired twin of Esc this epic exists to formalize, since ElwhaButton isn't a
+  // JButton and can't be a root-pane default button.
   private void installKeyBindings() {
+    final InputMap im = surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+    final ActionMap am = surface.getActionMap();
+
     if (dismissibleByEsc) {
-      final KeyStroke esc = KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0);
-      surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(esc, "elwha-dialog-cancel");
-      surface
-          .getActionMap()
-          .put(
-              "elwha-dialog-cancel",
-              new AbstractAction() {
-                @Override
-                public void actionPerformed(final ActionEvent e) {
+      im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-dialog-cancel");
+      am.put(
+          "elwha-dialog-cancel",
+          action(
+              () -> {
+                if (cancelAction != null) {
+                  cancelAction.doClick();
+                } else {
                   dismiss(DismissCause.ESC);
                 }
-              });
+              }));
     }
+    if (confirmAction != null) {
+      im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "elwha-dialog-confirm");
+      am.put("elwha-dialog-confirm", action(confirmAction::doClick));
+    }
+  }
+
+  private static AbstractAction action(final Runnable body) {
+    return new AbstractAction() {
+      @Override
+      public void actionPerformed(final ActionEvent e) {
+        body.run();
+      }
+    };
   }
 
   // Sizes + centers the surface inside the layered pane (respecting the M3 24px side / 80px
@@ -337,6 +400,9 @@ public final class ElwhaDialog {
     private String headline;
     private String supportingText;
     private JComponent content;
+    private ElwhaButton confirmAction;
+    private ElwhaButton alternateAction;
+    private ElwhaButton cancelAction;
     private boolean dismissibleByScrim = true;
     private boolean dismissibleByEsc = true;
     private Consumer<DismissCause> onClose;
@@ -394,6 +460,51 @@ public final class ElwhaDialog {
      */
     public Builder content(final JComponent content) {
       this.content = content;
+      return this;
+    }
+
+    /**
+     * Sets the confirming action — the trailing-most (rightmost in LTR) button, and the target of
+     * the Enter key. Firing it (click or Enter) runs the consumer's own listener, then closes the
+     * dialog with {@link DismissCause#CONFIRM}. Pass any {@code ElwhaButton}; M3's default is a
+     * text button, but a filled / tonal one for emphasis is allowed.
+     *
+     * @param button the confirming action, or {@code null} for none
+     * @return {@code this}
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public Builder confirmAction(final ElwhaButton button) {
+      this.confirmAction = button;
+      return this;
+    }
+
+    /**
+     * Sets the optional alternate action — the middle button, between cancel and confirm. Firing it
+     * closes the dialog with {@link DismissCause#ALTERNATE}.
+     *
+     * @param button the alternate action, or {@code null} for none
+     * @return {@code this}
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public Builder alternateAction(final ElwhaButton button) {
+      this.alternateAction = button;
+      return this;
+    }
+
+    /**
+     * Sets the cancelling action — the leading-most (leftmost in LTR) button. Firing it (or Esc,
+     * when this action is present) runs the consumer's own listener, then closes the dialog with
+     * {@link DismissCause#CANCEL}.
+     *
+     * @param button the cancel action, or {@code null} for none
+     * @return {@code this}
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public Builder cancelAction(final ElwhaButton button) {
+      this.cancelAction = button;
       return this;
     }
 
