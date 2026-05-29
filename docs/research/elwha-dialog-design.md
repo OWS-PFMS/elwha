@@ -1,6 +1,6 @@
 # ElwhaDialog — Design Decisions
 
-**Status:** Phase 0 spec capture. Tokens, anatomy, action-row order, scrim, dismiss semantics, motion contract, and accessibility are **LOCKED**. The Java API surface (§8) and the modality mechanism (§2) are **DRAFT — settle in Phase 1** because the custom-dialog path (forced by `ElwhaButton extends JComponent`) has a genuine fork that wants a prototype before it locks.
+**Status:** Phase 1 in progress. Tokens, anatomy, action-row order, scrim, dismiss semantics, motion contract, and accessibility are **LOCKED**. The modality mechanism (§2) and the Java API surface (§8) are now **LOCKED** as of Phase 1 S1 (#261) — the layered-pane scrim overlay was prototyped, confirmed to block input cleanly, and chosen; `show()` is non-blocking + `onClose` callback.
 
 **Drafted:** 2026-05-29
 
@@ -60,11 +60,11 @@ Per [`elwha-design-direction.md`](elwha-design-direction.md) Elwha tracks M3 Exp
 
 ---
 
-## §2. Modality mechanism — in-window overlay, not `JDialog` [DRAFT — settle in Phase 1]
+## §2. Modality mechanism — in-window overlay, not `JDialog` [LOCKED — Phase 1 S1]
 
-This is the load-bearing architectural decision and the one thing worth prototyping before locking.
+This was the load-bearing architectural decision. **Locked 2026-05-29 (S1, #261):** the overlay path was prototyped (`DialogModalityDemo`) and confirmed — a `MODAL_LAYER` scrim with mouse/motion/wheel listeners reliably blocks input to the content pane beneath, Esc/scrim dismissal and focus restore work, and nothing leaked through FlatLaf focus edge cases. The JDialog fallback was **not** needed. `show()` is **non-blocking + `onClose(DismissCause)` callback** (the overlay can't pseudo-block an event pump the way `JDialog` does, and the callback is cleaner anyway).
 
-**Decision (recommended):** render `ElwhaDialog` as an **overlay component installed on the host frame's `JLayeredPane`** at a high z-band (the `PALETTE_LAYER` convention coordinated with #205 / #221), consisting of a full-bounds **scrim** layer plus the **dialog surface** centered on top. Modality is achieved by the scrim consuming all mouse and key events that don't land on the dialog surface, plus a focus trap (§10).
+**Decision (chosen):** render `ElwhaDialog` as an **overlay component installed on the host frame's `JLayeredPane`** at `JLayeredPane.MODAL_LAYER` — above the `PALETTE_LAYER` band that badges (#221) and the floating FAB (#205) use, so a dialog correctly covers them — consisting of a full-bounds **scrim** layer plus the **dialog surface** centered on top. Modality is achieved by the scrim consuming all mouse and key events that don't land on the dialog surface, plus a focus trap (§10).
 
 **Why not a real `JDialog`:**
 
@@ -173,7 +173,7 @@ Source: MDC `Dialog.md` numbered anatomy.
 
 ---
 
-## §8. API design [DRAFT — settle in Phase 1]
+## §8. API design [LOCKED — Phase 1 S1]
 
 Fluent builder; `show(parent)` resolves the host frame and runs the entrance motion.
 
@@ -373,7 +373,7 @@ Decisions captured during the spec pass on 2026-05-29.
 | Decision | Resolution |
 |---|---|
 | **Can't wrap `JOptionPane`** | `ElwhaButton extends JComponent`; `setDefaultButton(JButton)` rejects it. Custom dialog path mandatory. |
-| **Modality mechanism** | Recommend in-window layered-pane scrim overlay (reuses #205); JDialog documented as fallback. DRAFT — prototype in Phase 1 S1 before locking. |
+| **Modality mechanism** | **LOCKED (S1, #261):** in-window `MODAL_LAYER` scrim overlay (reuses #205/#221 layered-pane glue). Prototype confirmed input-blocking; JDialog fallback not needed. `show()` non-blocking + `onClose` callback. |
 | **One class + builder, not per-variant factories** | Variation is which optional slots are filled, not distinct visual variants. |
 | **Typed action roles, not positions** | `confirmAction`/`alternateAction`/`cancelAction`; component enforces M3 trailing-justified order regardless of add order. |
 | **Action order** | cancel (leading) → alt → confirm (trailing); trailing-most is confirming. |
