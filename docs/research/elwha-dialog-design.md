@@ -1,6 +1,6 @@
 # ElwhaDialog — Design Decisions
 
-**Status:** Phases 1–2 **implemented** (S1–S6, #261–#266) — the Basic Dialog is functional, accessible, and animated (scrim fade + container scale-in/out). All sections LOCKED. Remaining: Phase 3 Showcase integration (§15, #267/#268). Commits stack on the epic branch; one PR lands the whole epic.
+**Status:** **All phases implemented** (S1–S8, #261–#268) — the Basic Dialog is functional, accessible, animated, and integrated into The Elwha Showcase (trigger-button Workbench + static-snapshot Gallery + Components leaf). All sections LOCKED. Commits stack on the epic branch; one PR lands the whole epic. (Out of scope, deferred: the Full-screen Dialog variant, §14.)
 
 **Drafted:** 2026-05-29
 
@@ -337,9 +337,11 @@ M3's second dialog type, for longer-form input flows (e.g., "create event"). **N
 
 ---
 
-## §15. Showcase integration — trigger-button Workbench + static Gallery
+## §15. Showcase integration — trigger-button Workbench + static Gallery [IMPLEMENTED S7/S8]
 
 Per #254: dialogs don't fit the standard `ComponentWorkbench` (which embeds the live component into a stage area). They're modal overlays, not embeddable surfaces.
+
+**Implemented (S7 #267 / S8 #268):** the "Dialog" Components leaf is a plain `JTabbedPane` (Workbench + Gallery), not the embeddable `ComponentWorkbench`. The Workbench's trigger buttons `show(...)` live dialogs on the Showcase frame's own layered pane. The Gallery snapshots use `ElwhaDialog.renderPreview()` — a new method that renders the surface (container + slots + action row) as a standalone, non-modal component (no overlay, scrim, focus, or motion). The destructive trigger forces scrim/Esc dismissal off regardless of the toggles.
 
 - **Workbench** — a control panel of **trigger buttons** ("Open basic dialog", "Open dialog with icon", "Open destructive confirm", "Open scrollable-content dialog", and — once it lands — "Open full-screen dialog"). Surrounding controls configure what the buttons open: icon present, action count (1/2/3), `dismissibleByScrim`, `dismissibleByEsc`, motion preset (normal / reduced). Clicking a trigger opens a live dialog on the Showcase frame — which doubles as the real-world overlay-on-frame smoke test.
 - **Gallery** — **static rendered snapshots** of the variants (basic, with-icon, destructive, scrollable) rendered as non-modal surface previews, *not* a live matrix. Live dialogs would stack onto the frame and break the gallery's "all variants at once" read. The snapshots render the dialog surface (container + slots) without the scrim/modality.

@@ -300,10 +300,14 @@ public final class ElwhaDialog {
     }
   }
 
-  // Builds the dialog surface's child content: a 24px-padded body with the icon/headline/supporting
-  // header pinned to the top. The content slot (S4) and action row (S3) land in CENTER / SOUTH as
-  // those stories arrive. The icon-present centering rule (§7) is the single layout conditional.
   private void buildSurfaceContent() {
+    populateSurface(surface, availableContentWidth());
+  }
+
+  // Builds the 24px-padded body — icon/headline/supporting header pinned NORTH, optional content
+  // slot CENTER, action row SOUTH — into the given surface. The icon-present centering rule (§7) is
+  // the single layout conditional. Shared by show() and renderPreview().
+  private void populateSurface(final DialogSurface target, final int contentWidth) {
     final boolean centered = icon != null;
 
     final JPanel body = new JPanel(new BorderLayout());
@@ -312,7 +316,7 @@ public final class ElwhaDialog {
         BorderFactory.createEmptyBorder(
             SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px()));
 
-    body.add(buildHeader(centered, availableContentWidth()), BorderLayout.NORTH);
+    body.add(buildHeader(centered, contentWidth), BorderLayout.NORTH);
 
     if (content != null) {
       body.add(buildContentScroll(), BorderLayout.CENTER);
@@ -323,7 +327,25 @@ public final class ElwhaDialog {
       body.add(south, BorderLayout.SOUTH);
     }
 
-    surface.add(body, BorderLayout.CENTER);
+    target.add(body, BorderLayout.CENTER);
+  }
+
+  /**
+   * Renders the dialog's surface — container + slots + action row — as a standalone, non-modal
+   * component. For embedding a <em>static preview</em> (a gallery card, documentation) where {@link
+   * #show(Component)} would be wrong: there is no modal overlay, scrim, focus management, or
+   * entrance motion, and the surface is laid out at its natural size within the 280–560px band.
+   * Each call returns a fresh component. Not a substitute for {@link #show(Component)} — that
+   * presents the dialog for real.
+   *
+   * @return a non-modal render of the dialog surface
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public JComponent renderPreview() {
+    final DialogSurface preview = new DialogSurface();
+    populateSurface(preview, availableContentWidth());
+    return preview;
   }
 
   // The optional content slot, wrapped so it scrolls (vertically only) when taller than the space
