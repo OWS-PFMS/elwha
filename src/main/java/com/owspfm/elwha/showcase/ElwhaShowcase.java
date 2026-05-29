@@ -348,6 +348,11 @@ public final class ElwhaShowcase {
     floatingFab.setToolTipText(
         "Floating ElwhaFab — click to open the FAB Workbench. Placed by ElwhaFabAnchor (#205).");
     floatingFab.addActionListener(event -> showCard("FAB"));
+    // Suppress the click-acquired focus ring, matching the rail's slotted controls (#256). The FAB
+    // paints its focus ring on any isFocusOwner(), so a mouse click would leave a lingering ring;
+    // setRequestFocusEnabled(false) blocks click-focus while keyboard Tab traversal still reaches
+    // it. The library-level fix (focus-visible: ring on keyboard focus only) is tracked separately.
+    floatingFab.setRequestFocusEnabled(false);
     return new ElwhaFabAnchor(content, floatingFab);
   }
 
