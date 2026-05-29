@@ -20,6 +20,21 @@ import javax.swing.UIManager;
  * — Rounded, 400, fill 0, 20px — to keep visual consistency) and add a lookup here. Material
  * Symbols are licensed Apache-2.0; see the project LICENSE-NOTICES file for attribution.
  *
+ * <p><strong>Theming icons from a client-owned resource path.</strong> Consumer libraries and apps
+ * that want to pair their own SVGs with Elwha's theme-aware color filter should drop the SVGs at a
+ * client-owned classpath location (e.g. {@code com/acme/icons/}), construct a {@link FlatSVGIcon}
+ * against that path, and wrap it with {@link #themed(FlatSVGIcon)}:
+ *
+ * <pre>{@code
+ * Icon icon = MaterialIcons.themed(new FlatSVGIcon("com/acme/icons/foo.svg", 24, 24));
+ * }</pre>
+ *
+ * <p>For unusual cases that need raw access to the filter (e.g. applying it to an icon constructed
+ * elsewhere), use the {@link #LABEL_FOREGROUND_FILTER} constant directly. The alternative —
+ * dropping SVGs into {@code com/owspfm/icons/material/} and using {@link #get(String)} — works, but
+ * client names race Elwha's bundle on the classpath with undefined resolution order; the {@code
+ * themed} route is the recommended one for any non-trivial consumer.
+ *
  * <p><strong>Per-glyph optical centering varies.</strong> Material Symbols are designed for
  * text-baseline alignment in font usage, not optical centering when consumed as standalone
  * round-bbox icons. The {@code favorite} glyph in particular has a slightly low optical bias in its
@@ -51,10 +66,14 @@ public final class MaterialIcons {
    * per-color "map black to foreground" enumeration. The function runs at paint time, so a runtime
    * LAF switch (light ↔ dark) re-themes the icons on the next repaint with no re-allocation.
    *
-   * @version v0.1.0
-   * @since v0.1.0
+   * <p>Exposed so consumer code can apply Elwha's theming treatment to {@link FlatSVGIcon}
+   * instances loaded from a client-owned resource path. The {@link #themed(FlatSVGIcon)} decorator
+   * is the ergonomic happy path; this constant is for cases where the icon is constructed elsewhere
+   * and the caller wants to attach the filter directly.
+   *
+   * @since v0.3.0
    */
-  private static final FlatSVGIcon.ColorFilter THEME_FILTER =
+  public static final FlatSVGIcon.ColorFilter LABEL_FOREGROUND_FILTER =
       new FlatSVGIcon.ColorFilter(
           color -> {
             final Color fg = UIManager.getColor("Label.foreground");
@@ -1061,8 +1080,27 @@ public final class MaterialIcons {
   }
 
   private static FlatSVGIcon load(final String name, final int size) {
-    final FlatSVGIcon icon = new FlatSVGIcon(BASE + name + ".svg", size, size);
-    icon.setColorFilter(THEME_FILTER);
+    return themed(new FlatSVGIcon(BASE + name + ".svg", size, size));
+  }
+
+  /**
+   * Applies the Elwha theme-aware color filter ({@link #LABEL_FOREGROUND_FILTER}) to the given icon
+   * and returns it. Intended for consumer code loading SVGs from a client-owned classpath
+   * namespace:
+   *
+   * <pre>{@code
+   * Icon icon = MaterialIcons.themed(new FlatSVGIcon("com/acme/icons/foo.svg", 24, 24));
+   * }</pre>
+   *
+   * <p>Mutates and returns the passed-in icon (matches FlatLaf's fluent setter convention); the
+   * returned reference is identical to {@code icon}.
+   *
+   * @param icon the icon to theme
+   * @return the same icon, with the theme filter attached
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon themed(final FlatSVGIcon icon) {
+    icon.setColorFilter(LABEL_FOREGROUND_FILTER);
     return icon;
   }
 
