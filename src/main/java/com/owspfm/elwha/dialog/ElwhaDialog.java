@@ -720,8 +720,21 @@ public final class ElwhaDialog {
     }
 
     /**
-     * Sets the optional arbitrary content component (a form, a list). Scrolls when taller than the
-     * available frame height.
+     * Sets the optional arbitrary content component — a form, a list, any {@link JComponent} —
+     * shown below the supporting text and above the action row. The dialog hosts it transparently
+     * and does not recolor it; only the dialog's own typed slots are token-themed.
+     *
+     * <p><strong>Sizing contract.</strong> The content's preferred width feeds the dialog width,
+     * but the dialog is clamped to the M3 <strong>280–560&nbsp;px</strong> band. Vertical overflow
+     * is handled — when the content is taller than the host frame leaves room, it scrolls inside
+     * the dialog while the headline/icon and action row stay pinned (a divider marks the scroll
+     * edge). <strong>Horizontal overflow is not</strong>: there is no horizontal scrollbar, so
+     * content must be width-flexible (able to wrap / reflow within the clamped width) or it will be
+     * clipped on the trailing edge. Width-rigid content wider than ~512&nbsp;px (560 minus padding)
+     * is the one shape to avoid.
+     *
+     * <p>Focusable descendants participate in the dialog's focus trap; if no confirming action is
+     * set, initial focus lands on the first focusable descendant here.
      *
      * @param content the content component, or {@code null} for none
      * @return {@code this}
