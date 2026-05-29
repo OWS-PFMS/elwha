@@ -766,9 +766,10 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
               return;
             }
             pressed = true;
-            if (isRequestFocusEnabled()) {
-              requestFocusInWindow();
-            }
+            // Mouse activation deliberately does NOT request focus — the focus ring is a
+            // keyboard-only affordance for M3 tablist-style components. Keyboard nav still picks
+            // the right destination on Tab-entry via the rail's FocusTraversalPolicy (focused →
+            // selected → first).
             startRipple(e.getPoint());
             repaint();
           }
