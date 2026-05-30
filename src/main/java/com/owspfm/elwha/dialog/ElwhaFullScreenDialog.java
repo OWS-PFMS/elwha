@@ -71,11 +71,11 @@ import javax.swing.SwingUtilities;
  * through {@link Builder#onClose(Consumer)} with a {@link DismissCause}. {@link #dismiss()} closes
  * it programmatically.
  *
- * <p><strong>Known limitation.</strong> Because the exit motion fades a one-time snapshot of the
- * surface, an action button's press ripple freezes mid-stroke as the dialog fades out (the snapshot
- * can't keep a live animation going). It's a minor cosmetic on a departing surface; the fix —
- * suppressing the press ripple on dismiss action buttons, since the exit motion is the feedback —
- * is tracked in epic #288 (which adds {@code ElwhaButton.setRippleEnabled}).
+ * <p><strong>Action-button ripple.</strong> The dialog disables the press ripple on its dismiss
+ * action buttons — the dialog-owned close ✕ and the consumer {@code confirmAction} — via {@link
+ * com.owspfm.elwha.button.ElwhaButton#setRippleEnabled}. The exit motion fades a one-time snapshot
+ * of the surface, on which a live ripple would freeze mid-stroke; the exit motion is itself the
+ * press feedback (epic #288).
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.3.0
@@ -116,6 +116,9 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     this.showDivider = b.showDivider;
     this.contentMaxWidth = b.contentMaxWidth;
     if (confirmAction != null) {
+      // The dialog's exit motion is the press feedback; a live press ripple would freeze mid-stroke
+      // on the exit-fade snapshot (#288), so suppress it on the confirm action button.
+      confirmAction.setRippleEnabled(false);
       // The consumer's own listener was registered before the button reached the builder, so it
       // runs first; this trailing listener then closes the dialog with CONFIRM (§5/§9). Wired once
       // here (not per show) so repeated shows don't stack the close listener.
@@ -290,6 +293,8 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
 
     final ElwhaIconButton close = ElwhaIconButton.standardIconButton(MaterialIcons.close());
     close.setToolTipText("Close");
+    // Exit motion is the feedback; suppress the press ripple so it can't freeze on the fade (#288).
+    close.setRippleEnabled(false);
     close.addActionListener(e -> dismiss(DismissCause.CANCEL));
     this.closeButton = close;
     bar.add(verticalCenter(close), BorderLayout.LINE_START);
@@ -588,6 +593,11 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
      * "Save"), and the target of the Enter key. Firing it runs the consumer's own listener, then
      * closes the dialog with {@link DismissCause#CONFIRM}. When absent, the app bar is close +
      * headline only.
+     *
+     * <p>The dialog disables this button's press ripple ({@link
+     * com.owspfm.elwha.button.ElwhaButton#setRippleEnabled}) so it can't freeze on the exit-fade
+     * snapshot (#288); the exit motion is the feedback. The effect persists on the button instance
+     * if you reuse it elsewhere. (The dialog-owned close ✕ is likewise ripple-suppressed.)
      *
      * @param button the confirming action, or {@code null} for none
      * @return {@code this}
