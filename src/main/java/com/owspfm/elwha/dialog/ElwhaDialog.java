@@ -699,6 +699,18 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
       }
     }
 
+    // This surface overrides paint() to apply the scale + fade transform over a cached snapshot. A
+    // descendant's partial repaint (e.g. an action button's per-tick ripple, a content field's
+    // caret
+    // blink) would otherwise be painted directly — bypassing this paint() — which freezes the
+    // animation mid-frame and, during the scale-in, would paint the child untransformed. Declaring
+    // this a painting origin forces every descendant repaint to repaint the whole surface through
+    // paint(). (Swing contract for any component that transforms/composites its children's render.)
+    @Override
+    public boolean isPaintingOrigin() {
+      return true;
+    }
+
     @Override
     public Dimension getPreferredSize() {
       final Dimension pref = super.getPreferredSize();
