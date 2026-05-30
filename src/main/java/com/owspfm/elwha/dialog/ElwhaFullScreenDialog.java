@@ -101,6 +101,7 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   private final JComponent content;
   private final ElwhaButton confirmAction;
   private final boolean showDivider;
+  private final int contentMaxWidth;
 
   // Live overlay state — non-null only while shown.
   private JScrollPane contentScroll;
@@ -113,6 +114,7 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     this.content = b.content;
     this.confirmAction = b.confirmAction;
     this.showDivider = b.showDivider;
+    this.contentMaxWidth = b.contentMaxWidth;
     if (confirmAction != null) {
       // The consumer's own listener was registered before the button reached the builder, so it
       // runs first; this trailing listener then closes the dialog with CONFIRM (§5/§9). Wired once
@@ -222,7 +224,7 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   // (incl. its 24px padding) is centered horizontally within the frame-filling surface; on a frame
   // narrower than the column max it spans the full width.
   private JComponent buildColumnHost() {
-    final JPanel host = new JPanel(new CenteredColumnLayout(CONTENT_COLUMN_PX));
+    final JPanel host = new JPanel(new CenteredColumnLayout(contentMaxWidth));
     host.setOpaque(false);
 
     final JPanel column = new JPanel(new BorderLayout());
@@ -548,6 +550,7 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     private ElwhaButton confirmAction;
     private boolean showDivider;
     private boolean dismissibleByEsc = true;
+    private int contentMaxWidth = CONTENT_COLUMN_PX;
     private Consumer<DismissCause> onClose;
 
     private Builder() {}
@@ -606,6 +609,24 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
      */
     public Builder showDivider(final boolean v) {
       this.showDivider = v;
+      return this;
+    }
+
+    /**
+     * Sets the maximum width of the centered content column, in pixels. Default {@value
+     * #CONTENT_COLUMN_PX} (the M3 readable form width). The column is centered within the
+     * frame-filling surface and never exceeds the frame width, so on a frame narrower than this it
+     * spans the full width. Pass {@link Integer#MAX_VALUE} to let the content fill the frame width
+     * (minus padding) — appropriate for wide content like tables or dashboards, but avoid it for
+     * forms, where an over-wide line length hurts readability (the reason M3 caps it).
+     *
+     * @param px the content-column max width in pixels; clamped to {@code >= 1}
+     * @return {@code this}
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    public Builder contentMaxWidth(final int px) {
+      this.contentMaxWidth = Math.max(1, px);
       return this;
     }
 
