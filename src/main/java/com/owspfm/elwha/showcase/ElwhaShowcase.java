@@ -35,6 +35,7 @@ import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.dialog.ElwhaDialog;
+import com.owspfm.elwha.dialog.ElwhaFullScreenDialog;
 import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.fab.ElwhaFabAnchor;
 import com.owspfm.elwha.fab.playground.FabPlaygroundPanels;
@@ -920,22 +921,28 @@ public final class ElwhaShowcase {
     componentsPrim.addActionListener(e -> showCard(COMPONENTS_KEY));
     containersPrim.addActionListener(e -> showCard(CONTAINERS_KEY));
 
-    // Trailing-action slot — the rail's bottom-anchored utility row. The Showcase exercises this
-    // slot with a single "About" entry so the design doc's chrome contract has a live demo on
-    // its own canonical playground (which it otherwise wouldn't).
+    // Trailing-action slot — the rail's bottom-anchored utility row. The Showcase dogfoods BOTH M3
+    // dialog types here as live chrome: a (?) help button opens a Basic ElwhaDialog (how-to), and
+    // the (i) About button opens an ElwhaFullScreenDialog — so the rail's chrome contract and both
+    // dialog primitives have a live demo on the library's own canonical playground.
+    final ElwhaIconButton helpButton =
+        new ElwhaIconButton(MaterialIcons.help(IconButtonSize.M.iconPx()));
+    helpButton.setToolTipText("How to use the Showcase");
+    helpButton.addActionListener(e -> openHelpDialog());
     final ElwhaIconButton aboutButton =
         new ElwhaIconButton(MaterialIcons.info(IconButtonSize.M.iconPx()));
     aboutButton.setToolTipText("About Elwha and the Showcase");
     aboutButton.addActionListener(e -> openAboutDialog());
-    target.setTrailingActions(List.of(aboutButton));
+    target.setTrailingActions(List.of(helpButton, aboutButton));
 
     return target;
   }
 
-  // Opens the About dialog using ElwhaDialog — the library's own M3 dialog primitive (#254),
-  // dogfooded here in place of the hand-rolled JDialog this epic exists to replace. Headline +
-  // tagline ride the dialog's own slots; the rich link/paragraph body rides the content slot; the
-  // primitive supplies the scrim, the Close action, and Esc / scrim dismissal.
+  // Opens the About surface using ElwhaFullScreenDialog (#271) — dogfooding the M3 full-screen
+  // dialog as live Showcase chrome. Full-screen has headline + content slots only (no
+  // supportingText), so the Basic dialog's tagline folds into the first content paragraph; the
+  // leading ✕ / Esc dismiss it (no separate Close action needed). contentMaxWidth(640) keeps the
+  // longer-form About content readable without it sprawling on a wide desktop frame (#291).
   private void openAboutDialog() {
     final JPanel aboutBody = new JPanel();
     aboutBody.setOpaque(false);
@@ -943,12 +950,12 @@ public final class ElwhaShowcase {
 
     aboutBody.add(
         aboutParagraph(
-            "<html><body style='width:380px'>Elwha provides Material 3 Expressive components for"
-                + " desktop Java &mdash; buttons, chips, cards, FABs, badges, button groups, a"
-                + " navigation rail, and the token foundation underneath them. Apache 2.0, JDK"
-                + " 21.</body></html>"));
+            "<html><body style='width:600px'>A Swing component library built on FlatLaf. Elwha"
+                + " provides Material 3 Expressive components for desktop Java &mdash; buttons,"
+                + " chips, cards, FABs, badges, button groups, a navigation rail, and the token"
+                + " foundation underneath them. Apache 2.0, JDK 21.</body></html>"));
 
-    aboutBody.add(Box.createVerticalStrut(12));
+    aboutBody.add(Box.createVerticalStrut(16));
 
     final JLabel sectionShowcase = new JLabel("The Elwha Showcase");
     sectionShowcase.setFont(sectionShowcase.getFont().deriveFont(Font.BOLD, 14f));
@@ -957,13 +964,13 @@ public final class ElwhaShowcase {
 
     aboutBody.add(
         aboutParagraph(
-            "<html><body style='width:380px'>This app is the unified, curated playground for the"
+            "<html><body style='width:600px'>This app is the unified, curated playground for the"
                 + " whole component set. Foundations covers the design tokens; Components is a"
                 + " Workbench + Gallery per primitive; Containers covers the multi-instance"
                 + " surfaces. Switch palette and light/dark/system from the header bar to see the"
                 + " whole library re-theme live.</body></html>"));
 
-    aboutBody.add(Box.createVerticalStrut(12));
+    aboutBody.add(Box.createVerticalStrut(16));
 
     final JLabel sectionLinks = new JLabel("Links");
     sectionLinks.setFont(sectionLinks.getFont().deriveFont(Font.BOLD, 14f));
@@ -973,11 +980,48 @@ public final class ElwhaShowcase {
     aboutBody.add(aboutParagraph("<html>Repository: github.com/OWS-PFMS/elwha</html>"));
     aboutBody.add(aboutParagraph("<html>License: Apache License 2.0</html>"));
 
-    ElwhaDialog.builder()
-        .headline("Elwha")
-        .supportingText("A Swing component library built on FlatLaf.")
+    ElwhaFullScreenDialog.builder()
+        .headline("About Elwha")
         .content(aboutBody)
-        .confirmAction(ElwhaButton.textButton("Close"))
+        .contentMaxWidth(640)
+        .showDivider(true)
+        .build()
+        .show(rail);
+  }
+
+  // Opens a "how to use the Showcase" Basic ElwhaDialog (#254) — the other half of the rail's
+  // dialog dogfood: a short, quick-decision help surface where the Basic dialog (not full-screen)
+  // is the right M3 fit.
+  private void openHelpDialog() {
+    final JPanel helpBody = new JPanel();
+    helpBody.setOpaque(false);
+    helpBody.setLayout(new BoxLayout(helpBody, BoxLayout.Y_AXIS));
+
+    helpBody.add(
+        aboutParagraph(
+            "<html><body style='width:380px'>The navigation rail on the left has three areas:"
+                + " <b>Foundations</b> (design tokens), <b>Components</b> (a Workbench + Gallery"
+                + " per primitive), and <b>Containers</b> (multi-instance surfaces). Click an area"
+                + " to open its landing page, then click a card to open that"
+                + " component.</body></html>"));
+    helpBody.add(Box.createVerticalStrut(8));
+    helpBody.add(
+        aboutParagraph(
+            "<html><body style='width:380px'>Each component leaf has two tabs: <b>Workbench</b>"
+                + " &mdash; configure and exercise the live component &mdash; and <b>Gallery</b>"
+                + " &mdash; a static matrix of variants &amp; states.</body></html>"));
+    helpBody.add(Box.createVerticalStrut(8));
+    helpBody.add(
+        aboutParagraph(
+            "<html><body style='width:380px'>The header bar switches palette and light / dark /"
+                + " system mode &mdash; the whole library re-themes live. Re-click the current area"
+                + " in the rail to return to its landing; the <b>(i)</b> button opens About.</body>"
+                + "</html>"));
+
+    ElwhaDialog.builder()
+        .headline("How to use the Showcase")
+        .content(helpBody)
+        .confirmAction(ElwhaButton.textButton("Got it"))
         .build()
         .show(rail);
   }
@@ -3283,7 +3327,12 @@ public final class ElwhaShowcase {
   private static JComponent buildDialogComponent() {
     final JTabbedPane tabs = new JTabbedPane();
     tabs.addTab("Workbench", buildDialogWorkbench());
-    tabs.addTab("Gallery", scroll(stack(gallerySection("Variants", buildDialogGallery()))));
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("Basic", buildDialogGallery()),
+                gallerySection("Full-screen", buildFullScreenDialogGallery()))));
     return tabs;
   }
 
@@ -3300,12 +3349,15 @@ public final class ElwhaShowcase {
     final JCheckBox scrimDismiss = new JCheckBox("scrim-dismissible", true);
     final JCheckBox escDismiss = new JCheckBox("Esc-dismissible", true);
     final JCheckBox reducedMotion = new JCheckBox("reduced motion");
+    final JCheckBox fsConfirm = new JCheckBox("FS: confirm action", true);
+    final JCheckBox fsDivider = new JCheckBox("FS: divider", true);
     final JLabel status = new JLabel("Configure, then open a dialog — it opens on this frame.");
 
     final ElwhaButton basic = ElwhaButton.filledButton("Open basic dialog");
     final ElwhaButton withIcon = ElwhaButton.filledTonalButton("Open dialog with icon");
     final ElwhaButton destructive = ElwhaButton.filledTonalButton("Open destructive confirm");
     final ElwhaButton scrollable = ElwhaButton.filledTonalButton("Open scrollable-content dialog");
+    final ElwhaButton fullScreen = ElwhaButton.filledTonalButton("Open full-screen dialog");
 
     basic.addActionListener(
         e ->
@@ -3347,6 +3399,10 @@ public final class ElwhaShowcase {
                 escDismiss,
                 reducedMotion,
                 status));
+    fullScreen.addActionListener(
+        e ->
+            openWorkbenchFullScreenDialog(
+                fullScreen, fsConfirm, fsDivider, escDismiss, reducedMotion, status));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
     controls.add(new JLabel("Actions:"));
@@ -3354,6 +3410,8 @@ public final class ElwhaShowcase {
     controls.add(scrimDismiss);
     controls.add(escDismiss);
     controls.add(reducedMotion);
+    controls.add(fsConfirm);
+    controls.add(fsDivider);
 
     final JPanel triggers = new JPanel(new GridLayout(0, 1, 0, 12));
     triggers.setBorder(BorderFactory.createEmptyBorder(24, 64, 16, 64));
@@ -3361,6 +3419,7 @@ public final class ElwhaShowcase {
     triggers.add(withIcon);
     triggers.add(destructive);
     triggers.add(scrollable);
+    triggers.add(fullScreen);
     triggers.add(status);
 
     final JPanel panel = new JPanel(new BorderLayout());
@@ -3434,6 +3493,53 @@ public final class ElwhaShowcase {
     return body;
   }
 
+  // Opens a live ElwhaFullScreenDialog on the trigger's frame — the real overlay-on-frame smoke
+  // test
+  // for the M3 full-screen variant (epic #271). A small sample form stands in for the longer-form-
+  // input use case the full-screen dialog targets. Esc + reduced-motion reuse the shared toggles.
+  private static void openWorkbenchFullScreenDialog(
+      final Component parent,
+      final JCheckBox fsConfirm,
+      final JCheckBox fsDivider,
+      final JCheckBox escDismiss,
+      final JCheckBox reducedMotion,
+      final JLabel status) {
+    MorphAnimator.setReducedMotion(reducedMotion.isSelected());
+    final ElwhaFullScreenDialog.Builder builder =
+        ElwhaFullScreenDialog.builder()
+            .headline("New event")
+            .content(buildFullScreenSampleForm())
+            .showDivider(fsDivider.isSelected())
+            .dismissibleByEsc(escDismiss.isSelected())
+            .onClose(cause -> status.setText("Last close: " + cause.name()));
+    if (fsConfirm.isSelected()) {
+      builder.confirmAction(ElwhaButton.textButton("Save"));
+    }
+    builder.build().show(parent);
+  }
+
+  // A few labeled fields standing in for a "create event"-style form. Field widths come from the
+  // 560-column when shown live (the content tracks the viewport width); the column count gives the
+  // static gallery preview a sensible natural width.
+  private static JComponent buildFullScreenSampleForm() {
+    final JPanel form = new JPanel();
+    form.setOpaque(false);
+    form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
+    for (final String label : new String[] {"Title", "Location", "Start", "End", "Notes"}) {
+      final JLabel caption = new JLabel(label);
+      caption.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+      caption.setAlignmentX(Component.LEFT_ALIGNMENT);
+      final JTextField field = new JTextField(18);
+      field.setAlignmentX(Component.LEFT_ALIGNMENT);
+      field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+      form.add(caption);
+      form.add(Box.createVerticalStrut(4));
+      form.add(field);
+      form.add(Box.createVerticalStrut(16));
+    }
+    return form;
+  }
+
   // Static, non-modal snapshots via ElwhaDialog.renderPreview() — real rendered surfaces (their
   // buttons are live but inert: clicking calls dismiss(), a no-op with no overlay attached),
   // stacked
@@ -3469,6 +3575,27 @@ public final class ElwhaShowcase {
             .confirmAction(ElwhaButton.filledButton("Leave"))
             .alternateAction(ElwhaButton.textButton("Save"))
             .cancelAction(ElwhaButton.textButton("Cancel"))
+            .build()
+            .renderPreview());
+    return column;
+  }
+
+  // Static, non-modal full-screen-dialog snapshot via renderPreview() — the surface rendered at its
+  // natural (560-column) preferred size rather than filling a frame, so it reads as a preview card
+  // alongside the Basic snapshots (a live full-screen dialog would cover the whole frame). Buttons
+  // are live but inert (dismiss() no-ops with no overlay attached).
+  private static JComponent buildFullScreenDialogGallery() {
+    final JPanel column = new JPanel();
+    column.setOpaque(false);
+    column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+    column.setBorder(BorderFactory.createEmptyBorder(8, 20, 24, 20));
+    addPreview(
+        column,
+        ElwhaFullScreenDialog.builder()
+            .headline("New event")
+            .content(buildFullScreenSampleForm())
+            .confirmAction(ElwhaButton.textButton("Save"))
+            .showDivider(true)
             .build()
             .renderPreview());
     return column;

@@ -3,8 +3,6 @@ package com.owspfm.elwha.dialog;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
-import com.owspfm.elwha.theme.Easing;
-import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
@@ -13,32 +11,21 @@ import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.ComponentOrientation;
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
-import java.awt.KeyboardFocusManager;
 import java.awt.RenderingHints;
-import java.awt.Window;
-import java.awt.event.ActionEvent;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.ComponentListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.beans.PropertyChangeListener;
-import java.util.Objects;
 import java.util.function.Consumer;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
-import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -49,7 +36,6 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
-import javax.swing.JRootPane;
 import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
@@ -62,19 +48,17 @@ import javax.swing.SwingUtilities;
  * docs/research/elwha-dialog-design.md}; tracks M3 Expressive post-May-2025.
  *
  * <p><strong>Why not {@code JOptionPane}.</strong> {@code ElwhaButton extends JComponent}, so
- * {@link JRootPane#setDefaultButton(javax.swing.JButton)} rejects it and {@code JOptionPane} is
- * fully closed to Elwha actions. {@code ElwhaDialog} is the custom path that formalizes the
- * hand-rolled About-dialog chrome from #252 — including the Esc-to-dismiss and Enter-to-confirm key
- * wiring done by hand (the About dialog already proved the Esc half).
+ * {@link javax.swing.JRootPane#setDefaultButton(javax.swing.JButton)} rejects it and {@code
+ * JOptionPane} is fully closed to Elwha actions. {@code ElwhaDialog} is the custom path that
+ * formalizes the hand-rolled About-dialog chrome from #252 — including the Esc-to-dismiss and
+ * Enter-to-confirm key wiring done by hand (the About dialog already proved the Esc half).
  *
- * <p><strong>Modality mechanism (design doc §2, locked Phase 1 S1).</strong> Rather than a separate
- * top-level {@code JDialog}, the dialog is an overlay installed on {@code
- * SwingUtilities.getRootPane(parent).getLayeredPane()} at {@link JLayeredPane#MODAL_LAYER}: a
- * full-bounds scrim layer that consumes all input not landing on the dialog surface, plus the
- * centered surface on top. Only this path can paint the M3 scrim over the app content and run the
- * scale-in entrance (Phase 2) in the same window; a {@code JDialog} can do neither. Input blocking
- * is the scrim-consumes-events pattern plus the focus trap — the same approach every web dialog
- * uses. Reuses the {@code ElwhaFabAnchor} (#205) / {@code ElwhaBadgeAnchor} layered-pane glue.
+ * <p><strong>Overlay host.</strong> The shared overlay-host lifecycle — host resolution, {@link
+ * JLayeredPane#MODAL_LAYER} attach, dismiss/teardown, focus trap + restore, relayout-on-resize, and
+ * the entrance/exit motion plumbing — lives in {@link AbstractElwhaDialog} (extracted in epic #271
+ * S1 so the Full-screen Dialog can reuse it). This class supplies the Basic-Dialog anatomy: the
+ * {@code SURFACE_CONTAINER_HIGH} / 28px / Level-3 surface clamped to the M3 280–560px band, the
+ * scrim backdrop, the centered layout, the typed three-action row, and the scale-in entrance.
  *
  * <p><strong>Lifecycle.</strong> {@link #show(Component)} resolves the host frame from any
  * component in the tree (mirroring {@code JOptionPane.showXxx(parentComponent, ...)}), attaches the
@@ -86,16 +70,18 @@ import javax.swing.SwingUtilities;
  * @version v0.3.0
  * @since v0.3.0
  */
-public final class ElwhaDialog {
+public final class ElwhaDialog extends AbstractElwhaDialog {
 
   /** M3 dialog container elevation — Level 3 (design doc §6). */
   static final int ELEVATION = 3;
 
-  /** Entrance / exit duration — M3 medium2 (300 ms), design doc §13. */
-  static final int MOTION_MS = MorphAnimator.MEDIUM2_MS;
-
   /** Container scale at the start of the entrance (and end of the exit); grows to 1.0 (§13). */
   static final float SCALE_FROM = 0.8f;
+
+  /**
+   * Minimum top/bottom margin between the dialog body and the frame edge (MDC {@code Dialog.md}).
+   */
+  private static final int MIN_VERTICAL_INSET = 80;
 
   private final Icon icon;
   private final String headline;
@@ -105,26 +91,13 @@ public final class ElwhaDialog {
   private final ElwhaButton alternateAction;
   private final ElwhaButton cancelAction;
   private final boolean dismissibleByScrim;
-  private final boolean dismissibleByEsc;
-  private final Consumer<DismissCause> onClose;
 
   // Live overlay state — non-null only while shown.
-  private JLayeredPane layeredPane;
-  private Scrim scrim;
-  private DialogSurface surface;
   private JScrollPane contentScroll;
   private JComponent scrollDivider;
-  private ComponentListener relayoutListener;
-  private PropertyChangeListener focusTrap;
-  private Window hostWindow;
-  private ComponentOrientation orientation = ComponentOrientation.LEFT_TO_RIGHT;
-  private Component focusOwnerBeforeShow;
-  private MorphAnimator entrance;
-  private float motionProgress = 1f;
-  private DismissCause exitCause;
-  private boolean closing;
 
   private ElwhaDialog(final Builder b) {
+    super(b.dismissibleByEsc, b.onClose);
     this.icon = b.icon;
     this.headline = b.headline;
     this.supportingText = b.supportingText;
@@ -133,8 +106,6 @@ public final class ElwhaDialog {
     this.alternateAction = b.alternateAction;
     this.cancelAction = b.cancelAction;
     this.dismissibleByScrim = b.dismissibleByScrim;
-    this.dismissibleByEsc = b.dismissibleByEsc;
-    this.onClose = b.onClose;
   }
 
   /**
@@ -148,166 +119,89 @@ public final class ElwhaDialog {
     return new Builder();
   }
 
-  /**
-   * Shows the dialog as a modal overlay on the host frame resolved from {@code parent}. Returns
-   * immediately; the outcome is reported through {@link Builder#onClose(Consumer)}.
-   *
-   * @param parent any component in the target window's tree; used to resolve the host root pane and
-   *     to restore focus on close
-   * @throws NullPointerException if {@code parent} is {@code null}
-   * @throws IllegalStateException if {@code parent} is not yet in a realized window
-   * @version v0.3.0
-   * @since v0.3.0
-   */
-  public void show(final Component parent) {
-    Objects.requireNonNull(parent, "parent");
-    final JRootPane root = SwingUtilities.getRootPane(parent);
-    if (root == null) {
-      throw new IllegalStateException("parent is not in a realized window with a root pane");
-    }
-    this.layeredPane = root.getLayeredPane();
-    this.hostWindow = SwingUtilities.getWindowAncestor(root);
-    this.orientation = parent.getComponentOrientation();
-    this.focusOwnerBeforeShow =
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+  // ----------------------------------------------------- anatomy hooks
 
-    this.motionProgress = 0f;
-    this.closing = false;
-    this.scrim = new Scrim();
-    this.surface = new DialogSurface();
-    buildSurfaceContent();
-    installKeyBindings();
-    surface.applyComponentOrientation(orientation);
-    if (headline != null) {
-      surface.getAccessibleContext().setAccessibleName(headline);
-    }
-
-    layeredPane.add(scrim, JLayeredPane.MODAL_LAYER);
-    layeredPane.add(surface, JLayeredPane.MODAL_LAYER);
-    layeredPane.moveToFront(surface);
-
-    relayoutListener =
-        new ComponentAdapter() {
-          @Override
-          public void componentResized(final ComponentEvent e) {
-            relayout();
-          }
-        };
-    layeredPane.addComponentListener(relayoutListener);
-    installFocusTrap();
-
-    relayout();
-
-    // Entrance: scrim fade + container scale-in + fade (§13), eased emphasized-decelerate. One
-    // animator hosted on the surface drives both layers; reduced motion snaps to the end state.
-    entrance = new MorphAnimator(surface, MOTION_MS);
-    entrance.addProgressListener(this::onMotionTick);
-    entrance.snapTo(0f);
-    entrance.start();
-
-    layeredPane.revalidate();
-    layeredPane.repaint();
-
-    SwingUtilities.invokeLater(this::focusInitial);
+  @Override
+  protected JComponent createSurface() {
+    final DialogSurface s = new DialogSurface();
+    populateSurface(s, availableContentWidth());
+    return s;
   }
 
-  /**
-   * Closes the dialog programmatically (cancel-equivalent), reporting {@link
-   * DismissCause#PROGRAMMATIC} to {@link Builder#onClose(Consumer)}. A no-op if not currently
-   * shown.
-   *
-   * @version v0.3.0
-   * @since v0.3.0
-   */
-  public void dismiss() {
-    dismiss(DismissCause.PROGRAMMATIC);
+  @Override
+  protected JComponent createBackdrop() {
+    return new Scrim();
   }
 
-  // Begins closing: runs the exit motion, then tears the overlay down when it reaches 0 (reduced
-  // motion snaps + fires the listener synchronously, so this path still completes). Re-entry
-  // guarded
-  // so an action listener that also calls dismiss() — or a scrim click mid-exit — can't
-  // double-fire.
-  void dismiss(final DismissCause cause) {
-    if (closing || layeredPane == null) {
-      return;
+  @Override
+  protected String accessibleName() {
+    return headline;
+  }
+
+  // Esc → cancel semantics (§5/§9): fires the cancel action when present (so its consumer listener
+  // runs and the close cause is CANCEL), else closes with DismissCause.ESC. Enter → the confirming
+  // action — the hand-wired twin of Esc this epic exists to formalize, since ElwhaButton isn't a
+  // JButton and can't be a root-pane default button.
+  @Override
+  protected void installKeyBindings() {
+    final InputMap im = surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+    final ActionMap am = surface.getActionMap();
+
+    if (isDismissibleByEsc()) {
+      im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-dialog-cancel");
+      am.put(
+          "elwha-dialog-cancel",
+          action(
+              () -> {
+                if (cancelAction != null) {
+                  cancelAction.doClick();
+                } else {
+                  dismiss(DismissCause.ESC);
+                }
+              }));
     }
-    closing = true;
-    exitCause = cause;
-    if (entrance != null) {
-      entrance.reverse();
-    } else {
-      performTeardown(cause);
+    if (confirmAction != null) {
+      im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "elwha-dialog-confirm");
+      am.put("elwha-dialog-confirm", action(confirmAction::doClick));
     }
   }
 
-  // Per-tick motion update: ease the linear progress, push it to the scrim (the surface is the
-  // animator's own repaint host), and finish teardown once the exit has fully collapsed.
-  private void onMotionTick() {
-    if (entrance == null) {
-      return;
-    }
-    motionProgress = Easing.EMPHASIZED_DECELERATE.ease(entrance.progress());
-    if (scrim != null) {
-      scrim.repaint();
-    }
-    if (closing && entrance.target() == 0f && entrance.progress() == 0f) {
-      performTeardown(exitCause);
-    }
+  // Initial focus: the confirming action (§10), else the base falls through to the first focusable
+  // descendant (a content field), else the surface.
+  @Override
+  protected Component initialFocusTarget() {
+    return confirmAction;
   }
 
-  // Detaches the overlay, restores focus, and fires onClose. Idempotent — the exit-motion
-  // completion
-  // tick can land on progress 0 more than once.
-  private void performTeardown(final DismissCause cause) {
-    if (layeredPane == null) {
-      return;
-    }
-    if (entrance != null) {
-      entrance.stop();
-    }
-    if (focusTrap != null) {
-      KeyboardFocusManager.getCurrentKeyboardFocusManager()
-          .removePropertyChangeListener("focusOwner", focusTrap);
-    }
-    layeredPane.removeComponentListener(relayoutListener);
-    layeredPane.remove(scrim);
-    layeredPane.remove(surface);
-    layeredPane.revalidate();
-    layeredPane.repaint();
+  // Sizes + centers the surface inside the layered pane (respecting the M3 24px side / 80px
+  // top-bottom insets). The backdrop is already stretched over the full pane by the base.
+  @Override
+  protected void layoutSurface(final int lpW, final int lpH) {
+    final Dimension pref = surface.getPreferredSize();
+    final int maxW = Math.max(0, lpW - 2 * SpaceScale.XL.px());
+    // The 80px top/bottom margin is aesthetic breathing room on a roomy window, but on a short
+    // window it must yield so the dialog can use the available height instead of collapsing its
+    // (scrollable) content to nothing. Shrink it proportionally below the threshold.
+    final int verticalInset = Math.min(MIN_VERTICAL_INSET, lpH / 10);
+    final int maxH = Math.max(0, lpH - 2 * verticalInset);
+    final int w = Math.min(pref.width, maxW);
+    final int h = Math.min(pref.height, maxH);
+    surface.setBounds((lpW - w) / 2, (lpH - h) / 2, w, h);
+    surface.revalidate();
+    SwingUtilities.invokeLater(this::updateScrollDivider);
+  }
 
-    final Component toRestore = focusOwnerBeforeShow;
-    final JLayeredPane closed = layeredPane;
-    layeredPane = null;
-    scrim = null;
-    surface = null;
+  @Override
+  protected void clearTransientState() {
     contentScroll = null;
     scrollDivider = null;
-    relayoutListener = null;
-    focusTrap = null;
-    entrance = null;
-    hostWindow = null;
-    focusOwnerBeforeShow = null;
-    closing = false;
-
-    if (toRestore != null) {
-      SwingUtilities.invokeLater(toRestore::requestFocusInWindow);
-    } else {
-      closed.repaint();
-    }
-
-    if (onClose != null) {
-      onClose.accept(cause);
-    }
   }
 
-  private void buildSurfaceContent() {
-    populateSurface(surface, availableContentWidth());
-  }
+  // ----------------------------------------------------- surface content
 
   // Builds the 24px-padded body — icon/headline/supporting header pinned NORTH, optional content
   // slot CENTER, action row SOUTH — into the given surface. The icon-present centering rule (§7) is
-  // the single layout conditional. Shared by show() and renderPreview().
+  // the single layout conditional. Shared by createSurface() and renderPreview().
   private void populateSurface(final DialogSurface target, final int contentWidth) {
     final boolean centered = icon != null;
 
@@ -514,147 +408,6 @@ public final class ElwhaDialog {
   // wide on one line or overflowing a host-clamped narrow body.
   private static String wrapHtml(final String text, final int contentWidth) {
     return "<html><div style='width:" + contentWidth + "px'>" + text + "</div></html>";
-  }
-
-  // Esc → cancel semantics (§5/§9): fires the cancel action when present (so its consumer listener
-  // runs and the close cause is CANCEL), else closes with DismissCause.ESC. Enter → the confirming
-  // action — the hand-wired twin of Esc this epic exists to formalize, since ElwhaButton isn't a
-  // JButton and can't be a root-pane default button.
-  private void installKeyBindings() {
-    final InputMap im = surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-    final ActionMap am = surface.getActionMap();
-
-    if (dismissibleByEsc) {
-      im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-dialog-cancel");
-      am.put(
-          "elwha-dialog-cancel",
-          action(
-              () -> {
-                if (cancelAction != null) {
-                  cancelAction.doClick();
-                } else {
-                  dismiss(DismissCause.ESC);
-                }
-              }));
-    }
-    if (confirmAction != null) {
-      im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "elwha-dialog-confirm");
-      am.put("elwha-dialog-confirm", action(confirmAction::doClick));
-    }
-  }
-
-  private static AbstractAction action(final Runnable body) {
-    return new AbstractAction() {
-      @Override
-      public void actionPerformed(final ActionEvent e) {
-        body.run();
-      }
-    };
-  }
-
-  // Keyboard focus trap (§10): while shown, if focus escapes the dialog surface to the now-inert
-  // scrimmed background (still inside the host window), pull it back. Focus moving to a different
-  // window is left alone — the host window simply lost activation.
-  private void installFocusTrap() {
-    focusTrap =
-        evt -> {
-          final Object next = evt.getNewValue();
-          if (!(next instanceof Component) || surface == null) {
-            return;
-          }
-          final Component owner = (Component) next;
-          if (SwingUtilities.isDescendingFrom(owner, surface)) {
-            return;
-          }
-          if (SwingUtilities.getWindowAncestor(owner) != hostWindow) {
-            return;
-          }
-          SwingUtilities.invokeLater(this::focusInitial);
-        };
-    KeyboardFocusManager.getCurrentKeyboardFocusManager()
-        .addPropertyChangeListener("focusOwner", focusTrap);
-  }
-
-  // Initial / recovered focus target (§10): the confirming action, else the first focusable
-  // descendant (a content field), else the surface itself — never the inert background.
-  private void focusInitial() {
-    if (surface == null) {
-      return;
-    }
-    if (confirmAction != null && confirmAction.requestFocusInWindow()) {
-      return;
-    }
-    final Component first = firstFocusable(surface);
-    if (first != null) {
-      first.requestFocusInWindow();
-    } else {
-      surface.requestFocusInWindow();
-    }
-  }
-
-  // Depth-first search for the first focus-accepting descendant, skipping the surface itself.
-  private static Component firstFocusable(final Container root) {
-    for (final Component child : root.getComponents()) {
-      if (child.isFocusable()
-          && child.isEnabled()
-          && child.isVisible()
-          && child.isDisplayable()
-          && !(child instanceof JPanel)) {
-        return child;
-      }
-      if (child instanceof Container) {
-        final Component nested = firstFocusable((Container) child);
-        if (nested != null) {
-          return nested;
-        }
-      }
-    }
-    return null;
-  }
-
-  // Sizes + centers the surface inside the layered pane (respecting the M3 24px side / 80px
-  // top-bottom insets) and stretches the scrim over the full layered pane. Re-run on host resize.
-  private void relayout() {
-    if (layeredPane == null) {
-      return;
-    }
-    final int lpW = layeredPane.getWidth();
-    final int lpH = layeredPane.getHeight();
-    scrim.setBounds(0, 0, lpW, lpH);
-
-    final Dimension pref = surface.getPreferredSize();
-    final int maxW = Math.max(0, lpW - 2 * SpaceScale.XL.px());
-    // The 80px top/bottom margin is aesthetic breathing room on a roomy window, but on a short
-    // window it must yield so the dialog can use the available height instead of collapsing its
-    // (scrollable) content to nothing. Shrink it proportionally below the threshold.
-    final int verticalInset = Math.min(MIN_VERTICAL_INSET, lpH / 10);
-    final int maxH = Math.max(0, lpH - 2 * verticalInset);
-    final int w = Math.min(pref.width, maxW);
-    final int h = Math.min(pref.height, maxH);
-    surface.setBounds((lpW - w) / 2, (lpH - h) / 2, w, h);
-    surface.revalidate();
-    SwingUtilities.invokeLater(this::updateScrollDivider);
-  }
-
-  /**
-   * Minimum top/bottom margin between the dialog body and the frame edge (MDC {@code Dialog.md}).
-   */
-  private static final int MIN_VERTICAL_INSET = 80;
-
-  /** Why the dialog closed — reported to {@link Builder#onClose(Consumer)}. */
-  public enum DismissCause {
-    /** A confirming action fired. */
-    CONFIRM,
-    /** A cancelling action fired, or Esc was pressed with cancel semantics. */
-    CANCEL,
-    /** An alternate action fired. */
-    ALTERNATE,
-    /** The scrim was clicked while scrim-dismiss was enabled. */
-    SCRIM,
-    /** The Escape key was pressed while Esc-dismiss was enabled. */
-    ESC,
-    /** {@link ElwhaDialog#dismiss()} was called. */
-    PROGRAMMATIC
   }
 
   /**
@@ -946,6 +699,18 @@ public final class ElwhaDialog {
       }
     }
 
+    // This surface overrides paint() to apply the scale + fade transform over a cached snapshot. A
+    // descendant's partial repaint (e.g. an action button's per-tick ripple, a content field's
+    // caret
+    // blink) would otherwise be painted directly — bypassing this paint() — which freezes the
+    // animation mid-frame and, during the scale-in, would paint the child untransformed. Declaring
+    // this a painting origin forces every descendant repaint to repaint the whole surface through
+    // paint(). (Swing contract for any component that transforms/composites its children's render.)
+    @Override
+    public boolean isPaintingOrigin() {
+      return true;
+    }
+
     @Override
     public Dimension getPreferredSize() {
       final Dimension pref = super.getPreferredSize();
@@ -962,7 +727,7 @@ public final class ElwhaDialog {
     }
 
     // Reports AccessibleRole.DIALOG so assistive tech announces this as a dialog (§10); the
-    // accessible name is set to the headline by the enclosing ElwhaDialog at show time.
+    // accessible name is set to the headline by the base at show time.
     @Override
     public AccessibleContext getAccessibleContext() {
       if (accessibleContext == null) {

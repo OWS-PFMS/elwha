@@ -409,6 +409,30 @@ public final class MaterialIcons {
     return load("check", size);
   }
 
+  /**
+   * Close / dismiss "✕" glyph — M3's leading close affordance for full-screen dialogs and the
+   * trailing dismiss affordance for chips, banners, and snackbars.
+   *
+   * @return the icon at the default size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon close() {
+    return close(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #close()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static FlatSVGIcon close(final int size) {
+    return load("close", size);
+  }
+
   /** Eye / visibility glyph (outline). */
   public static FlatSVGIcon visibility() {
     return visibility(DEFAULT_SIZE);

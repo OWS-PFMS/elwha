@@ -1,6 +1,7 @@
 package com.owspfm.elwha.dialog.playground;
 
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.dialog.DismissCause;
 import com.owspfm.elwha.dialog.ElwhaDialog;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -20,7 +21,7 @@ import javax.swing.WindowConstants;
  * → alternate → confirm trailing) holds regardless of which roles are present, that the 8px gap and
  * 24px-above spacing render, and that the keyboard wiring works: Enter fires the confirming action,
  * Esc fires the cancel action (or closes with ESC when there is none). The status line logs the
- * {@link ElwhaDialog.DismissCause} and which consumer listeners ran.
+ * {@link DismissCause} and which consumer listeners ran.
  *
  * <p>Validate: open "Confirm + cancel" — confirm sits rightmost, cancel left of it; press Enter and
  * the status shows "confirm listener ran → CONFIRM"; reopen and press Esc → "cancel listener ran →
@@ -123,7 +124,7 @@ public final class DialogActionRowDemo {
     lastNote = text;
   }
 
-  private void log(final ElwhaDialog.DismissCause cause) {
+  private void log(final DismissCause cause) {
     status.setText(lastNote + " → " + cause.name());
     lastNote = "—";
   }
