@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * corners) and the size-independent caching insight this painter adopts in its place.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.3.0
  * @since v0.2.0
  */
 public final class ShadowPainter {
@@ -67,26 +67,29 @@ public final class ShadowPainter {
    *     on {@code g} are preserved by drawImage's image-sampling semantics)
    * @param width the body width in pixels
    * @param height the body height in pixels
-   * @param cornerRadiusPx the body's round-rect corner radius in pixels (clamped internally to
-   *     {@code min(width, height) / 2})
+   * @param arcWidthPx the body's round-rect {@code RoundRectangle2D} arcWidth in pixels — the
+   *     corner <em>diameter</em> (2× the corner radius), <strong>not</strong> the radius. This is
+   *     the same value the int-arc {@link SurfacePainter#paint(Graphics2D, int, int, int,
+   *     ColorRole, StateLayer, ColorRole, float)} overload takes, so passing the identical arc to
+   *     both keeps the shadow silhouette in lock-step with the body. Callers holding a real radius
+   *     (e.g. {@link CornerRadii}, which stores radii) must double it. Clamped internally to {@code
+   *     min(width, height)}; a value {@code >= min(width, height)} yields a pill capsule.
    * @param elevationLevel the M3 elevation level (1..{@link #MAX_ELEVATION}); {@code <= 0} is a
    *     no-op
-   * @version v0.2.0
+   * @version v0.3.0
    * @since v0.2.0
    */
   public static void paint(
-      Graphics2D g, int width, int height, int cornerRadiusPx, int elevationLevel) {
+      Graphics2D g, int width, int height, int arcWidthPx, int elevationLevel) {
     if (elevationLevel <= 0 || width <= 0 || height <= 0) {
       return;
     }
     final int elevation = Math.min(MAX_ELEVATION, elevationLevel);
     final Insets insets = shadowInsets(elevation);
-    // arc here is arcWidth in RoundRectangle2D's sense — the FULL diameter of the corner ellipse,
-    // i.e. 2 × corner radius. Convention matches SurfacePainter / ElwhaCard.paintRipple /
-    // ShapeScale
-    // so the shadow silhouette matches the body silhouette exactly. A FULL pill (arc clamped to
-    // min(w,h)) is corner-radius = min(w,h)/2 = pill capsule.
-    final int arc = Math.max(0, Math.min(cornerRadiusPx, Math.min(width, height)));
+    // arcWidthPx is a RoundRectangle2D arcWidth — the full corner diameter, 2× the radius — so the
+    // shadow silhouette matches the body painted by the int-arc SurfacePainter overload exactly. A
+    // FULL pill (arc clamped to min(w,h)) is corner-radius = min(w,h)/2 = pill capsule.
+    final int arc = Math.max(0, Math.min(arcWidthPx, Math.min(width, height)));
     final int cornerRadius = arc / 2;
 
     // 9-slice requires a non-empty center slice; small bodies fall back to a direct render at exact

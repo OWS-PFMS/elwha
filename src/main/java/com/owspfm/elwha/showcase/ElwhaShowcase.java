@@ -65,6 +65,7 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -164,6 +165,7 @@ public final class ElwhaShowcase {
   private boolean secondaryTier;
   private boolean pickerAdjusting;
   private ElwhaNavigationRail rail;
+  private ElwhaFabAnchor floatingFabAnchor;
   private ElwhaNavRailDestination foundationsPrim;
   private ElwhaNavRailDestination componentsPrim;
   private ElwhaNavRailDestination containersPrim;
@@ -271,7 +273,8 @@ public final class ElwhaShowcase {
     rail = buildShowcaseRail();
     mountRailOnLayeredPane(frame, rail);
 
-    frame.setContentPane(buildFloatingFabAnchor(root));
+    floatingFabAnchor = buildFloatingFabAnchor(root);
+    frame.setContentPane(floatingFabAnchor);
     frame.setSize(1320, 860);
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
@@ -367,6 +370,48 @@ public final class ElwhaShowcase {
     if (targetPrim != null && rail != null && rail.getSelected() != targetPrim) {
       rail.setSelected(targetPrim);
     }
+    updateFabScrollSource();
+  }
+
+  // Point the floating FAB's SHRINK response at the newly-shown card's scroll region (#274). The
+  // content is a CardLayout, so the scrollable region is the active card, not the anchor's content;
+  // re-target on every card swap. Cycling the response through NONE first restores the FAB to
+  // Extended so a freshly-shown card always starts un-shrunk (setScrollSource alone would carry the
+  // prior card's shrunk state). Cards without a scroll pane leave the FAB Extended and inert.
+  private void updateFabScrollSource() {
+    if (floatingFabAnchor == null) {
+      return;
+    }
+    final JScrollPane source = activeCardScrollPane();
+    floatingFabAnchor.setScrollResponse(ElwhaFabAnchor.ScrollResponse.NONE);
+    floatingFabAnchor.setScrollSource(source);
+    if (source != null) {
+      floatingFabAnchor.setScrollResponse(ElwhaFabAnchor.ScrollResponse.SHRINK);
+    }
+  }
+
+  private JScrollPane activeCardScrollPane() {
+    for (final Component card : content.getComponents()) {
+      if (card.isVisible()) {
+        return findScrollPane(card);
+      }
+    }
+    return null;
+  }
+
+  private static JScrollPane findScrollPane(final Component component) {
+    if (component instanceof JScrollPane scrollPane) {
+      return scrollPane;
+    }
+    if (component instanceof Container container) {
+      for (final Component child : container.getComponents()) {
+        final JScrollPane found = findScrollPane(child);
+        if (found != null) {
+          return found;
+        }
+      }
+    }
+    return null;
   }
 
   private ElwhaNavRailDestination primaryForKey(final String key) {
