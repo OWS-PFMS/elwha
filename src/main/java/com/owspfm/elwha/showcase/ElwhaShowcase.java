@@ -876,22 +876,28 @@ public final class ElwhaShowcase {
     componentsPrim.addActionListener(e -> showCard(COMPONENTS_KEY));
     containersPrim.addActionListener(e -> showCard(CONTAINERS_KEY));
 
-    // Trailing-action slot — the rail's bottom-anchored utility row. The Showcase exercises this
-    // slot with a single "About" entry so the design doc's chrome contract has a live demo on
-    // its own canonical playground (which it otherwise wouldn't).
+    // Trailing-action slot — the rail's bottom-anchored utility row. The Showcase dogfoods BOTH M3
+    // dialog types here as live chrome: a (?) help button opens a Basic ElwhaDialog (how-to), and
+    // the (i) About button opens an ElwhaFullScreenDialog — so the rail's chrome contract and both
+    // dialog primitives have a live demo on the library's own canonical playground.
+    final ElwhaIconButton helpButton =
+        new ElwhaIconButton(MaterialIcons.help(IconButtonSize.M.iconPx()));
+    helpButton.setToolTipText("How to use the Showcase");
+    helpButton.addActionListener(e -> openHelpDialog());
     final ElwhaIconButton aboutButton =
         new ElwhaIconButton(MaterialIcons.info(IconButtonSize.M.iconPx()));
     aboutButton.setToolTipText("About Elwha and the Showcase");
     aboutButton.addActionListener(e -> openAboutDialog());
-    target.setTrailingActions(List.of(aboutButton));
+    target.setTrailingActions(List.of(helpButton, aboutButton));
 
     return target;
   }
 
-  // Opens the About dialog using ElwhaDialog — the library's own M3 dialog primitive (#254),
-  // dogfooded here in place of the hand-rolled JDialog this epic exists to replace. Headline +
-  // tagline ride the dialog's own slots; the rich link/paragraph body rides the content slot; the
-  // primitive supplies the scrim, the Close action, and Esc / scrim dismissal.
+  // Opens the About surface using ElwhaFullScreenDialog (#271) — dogfooding the M3 full-screen
+  // dialog as live Showcase chrome. Full-screen has headline + content slots only (no
+  // supportingText), so the Basic dialog's tagline folds into the first content paragraph; the
+  // leading ✕ / Esc dismiss it (no separate Close action needed). contentMaxWidth(640) keeps the
+  // longer-form About content readable without it sprawling on a wide desktop frame (#291).
   private void openAboutDialog() {
     final JPanel aboutBody = new JPanel();
     aboutBody.setOpaque(false);
@@ -899,12 +905,12 @@ public final class ElwhaShowcase {
 
     aboutBody.add(
         aboutParagraph(
-            "<html><body style='width:380px'>Elwha provides Material 3 Expressive components for"
-                + " desktop Java &mdash; buttons, chips, cards, FABs, badges, button groups, a"
-                + " navigation rail, and the token foundation underneath them. Apache 2.0, JDK"
-                + " 21.</body></html>"));
+            "<html><body style='width:600px'>A Swing component library built on FlatLaf. Elwha"
+                + " provides Material 3 Expressive components for desktop Java &mdash; buttons,"
+                + " chips, cards, FABs, badges, button groups, a navigation rail, and the token"
+                + " foundation underneath them. Apache 2.0, JDK 21.</body></html>"));
 
-    aboutBody.add(Box.createVerticalStrut(12));
+    aboutBody.add(Box.createVerticalStrut(16));
 
     final JLabel sectionShowcase = new JLabel("The Elwha Showcase");
     sectionShowcase.setFont(sectionShowcase.getFont().deriveFont(Font.BOLD, 14f));
@@ -913,13 +919,13 @@ public final class ElwhaShowcase {
 
     aboutBody.add(
         aboutParagraph(
-            "<html><body style='width:380px'>This app is the unified, curated playground for the"
+            "<html><body style='width:600px'>This app is the unified, curated playground for the"
                 + " whole component set. Foundations covers the design tokens; Components is a"
                 + " Workbench + Gallery per primitive; Containers covers the multi-instance"
                 + " surfaces. Switch palette and light/dark/system from the header bar to see the"
                 + " whole library re-theme live.</body></html>"));
 
-    aboutBody.add(Box.createVerticalStrut(12));
+    aboutBody.add(Box.createVerticalStrut(16));
 
     final JLabel sectionLinks = new JLabel("Links");
     sectionLinks.setFont(sectionLinks.getFont().deriveFont(Font.BOLD, 14f));
@@ -929,11 +935,48 @@ public final class ElwhaShowcase {
     aboutBody.add(aboutParagraph("<html>Repository: github.com/OWS-PFMS/elwha</html>"));
     aboutBody.add(aboutParagraph("<html>License: Apache License 2.0</html>"));
 
-    ElwhaDialog.builder()
-        .headline("Elwha")
-        .supportingText("A Swing component library built on FlatLaf.")
+    ElwhaFullScreenDialog.builder()
+        .headline("About Elwha")
         .content(aboutBody)
-        .confirmAction(ElwhaButton.textButton("Close"))
+        .contentMaxWidth(640)
+        .showDivider(true)
+        .build()
+        .show(rail);
+  }
+
+  // Opens a "how to use the Showcase" Basic ElwhaDialog (#254) — the other half of the rail's
+  // dialog dogfood: a short, quick-decision help surface where the Basic dialog (not full-screen)
+  // is the right M3 fit.
+  private void openHelpDialog() {
+    final JPanel helpBody = new JPanel();
+    helpBody.setOpaque(false);
+    helpBody.setLayout(new BoxLayout(helpBody, BoxLayout.Y_AXIS));
+
+    helpBody.add(
+        aboutParagraph(
+            "<html><body style='width:380px'>The navigation rail on the left has three areas:"
+                + " <b>Foundations</b> (design tokens), <b>Components</b> (a Workbench + Gallery"
+                + " per primitive), and <b>Containers</b> (multi-instance surfaces). Click an area"
+                + " to open its landing page, then click a card to open that"
+                + " component.</body></html>"));
+    helpBody.add(Box.createVerticalStrut(8));
+    helpBody.add(
+        aboutParagraph(
+            "<html><body style='width:380px'>Each component leaf has two tabs: <b>Workbench</b>"
+                + " &mdash; configure and exercise the live component &mdash; and <b>Gallery</b>"
+                + " &mdash; a static matrix of variants &amp; states.</body></html>"));
+    helpBody.add(Box.createVerticalStrut(8));
+    helpBody.add(
+        aboutParagraph(
+            "<html><body style='width:380px'>The header bar switches palette and light / dark /"
+                + " system mode &mdash; the whole library re-themes live. Re-click the current area"
+                + " in the rail to return to its landing; the <b>(i)</b> button opens About.</body>"
+                + "</html>"));
+
+    ElwhaDialog.builder()
+        .headline("How to use the Showcase")
+        .content(helpBody)
+        .confirmAction(ElwhaButton.textButton("Got it"))
         .build()
         .show(rail);
   }
