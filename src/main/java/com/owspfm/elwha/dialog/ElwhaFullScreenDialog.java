@@ -8,15 +8,20 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.TypeRole;
+import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
 import java.awt.LayoutManager;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
 import java.util.function.Consumer;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
@@ -77,6 +82,14 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
 
   /** Top app bar height (M3 full-screen spec table, §4 F6). */
   static final int APP_BAR_PX = 56;
+
+  /** Entrance/exit slide distance cap in px (§11 — tuned default; the M3 spec doesn't pin it). */
+  static final int SLIDE_MAX_PX = 48;
+
+  /**
+   * Entrance/exit slide distance as a fraction of frame height, capped at {@link #SLIDE_MAX_PX}.
+   */
+  static final float SLIDE_FRACTION = 0.08f;
 
   private final String headline;
   private final JComponent content;
@@ -301,8 +314,17 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   }
 
   // The frame-filling container: SURFACE / 0dp / no shadow. Focusable so the base focus trap has a
-  // last-resort target when the dialog carries no focusable content.
-  private static final class FullScreenSurface extends ElwhaSurface {
+  // last-resort target when the dialog carries no focusable content. Non-static so paint() reads
+  // the
+  // enclosing dialog's motionProgress for the slide-up entrance.
+  private final class FullScreenSurface extends ElwhaSurface {
+
+    // Cached full-size render reused across the slide tween's frames (see paint()); released at the
+    // steady state. Mirrors DialogSurface's optimization.
+    private BufferedImage motionSnapshot;
+    private int snapshotW;
+    private int snapshotH;
+
     FullScreenSurface() {
       setLayout(new BorderLayout());
       setSurfaceRole(ColorRole.SURFACE);
@@ -310,6 +332,61 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
       setBorderRole(null);
       setElevation(0);
       setFocusable(true);
+    }
+
+    // Entrance/exit motion (§11): translate the whole surface up from a small downward offset
+    // (slide-up) and fade 0 → 1, keyed to the eased motionProgress. At full progress it's a plain
+    // live paint — no transform or buffer cost on the steady state.
+    //
+    // The content is static during the tween, so the surface is rasterized ONCE at full size into a
+    // device-resolution buffer (motionSnapshot) and only that bitmap is offset + alpha-composited
+    // per frame — text is rasterized at one stable scale (no glyph-grid shimmer) and the ~18 frames
+    // reuse one render instead of re-running the full child paint each tick. The snapshot is
+    // released at the steady state and re-rendered on the next open/close.
+    @Override
+    public void paint(final Graphics g) {
+      final float p = Math.max(0f, Math.min(1f, motionProgress));
+      if (p >= 1f) {
+        motionSnapshot = null;
+        super.paint(g);
+        return;
+      }
+      final int w = getWidth();
+      final int h = getHeight();
+      if (w <= 0 || h <= 0) {
+        return;
+      }
+      final AffineTransform tx = ((Graphics2D) g).getTransform();
+      final double sx = tx.getScaleX() > 0 ? tx.getScaleX() : 1.0;
+      final double sy = tx.getScaleY() > 0 ? tx.getScaleY() : 1.0;
+      final int deviceW = Math.max(1, (int) Math.ceil(w * sx));
+      final int deviceH = Math.max(1, (int) Math.ceil(h * sy));
+      if (motionSnapshot == null || snapshotW != deviceW || snapshotH != deviceH) {
+        final BufferedImage snap = new BufferedImage(deviceW, deviceH, BufferedImage.TYPE_INT_ARGB);
+        final Graphics2D bg = snap.createGraphics();
+        try {
+          bg.scale(sx, sy);
+          super.paint(bg);
+        } finally {
+          bg.dispose();
+        }
+        motionSnapshot = snap;
+        snapshotW = deviceW;
+        snapshotH = deviceH;
+      }
+
+      final Graphics2D g2 = (Graphics2D) g.create();
+      try {
+        final int dist = Math.min(SLIDE_MAX_PX, Math.round(h * SLIDE_FRACTION));
+        final int offsetY = Math.round((1f - p) * dist);
+        g2.setRenderingHint(
+            RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2.translate(0, offsetY);
+        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, p));
+        g2.drawImage(motionSnapshot, 0, 0, w, h, null);
+      } finally {
+        g2.dispose();
+      }
     }
 
     // Reports AccessibleRole.DIALOG so assistive tech announces this as a dialog (§9); the
