@@ -35,6 +35,7 @@ import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
 import com.owspfm.elwha.dialog.ElwhaDialog;
+import com.owspfm.elwha.dialog.ElwhaFullScreenDialog;
 import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.fab.ElwhaFabAnchor;
 import com.owspfm.elwha.fab.playground.FabPlaygroundPanels;
@@ -3238,7 +3239,12 @@ public final class ElwhaShowcase {
   private static JComponent buildDialogComponent() {
     final JTabbedPane tabs = new JTabbedPane();
     tabs.addTab("Workbench", buildDialogWorkbench());
-    tabs.addTab("Gallery", scroll(stack(gallerySection("Variants", buildDialogGallery()))));
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("Basic", buildDialogGallery()),
+                gallerySection("Full-screen", buildFullScreenDialogGallery()))));
     return tabs;
   }
 
@@ -3255,12 +3261,15 @@ public final class ElwhaShowcase {
     final JCheckBox scrimDismiss = new JCheckBox("scrim-dismissible", true);
     final JCheckBox escDismiss = new JCheckBox("Esc-dismissible", true);
     final JCheckBox reducedMotion = new JCheckBox("reduced motion");
+    final JCheckBox fsConfirm = new JCheckBox("FS: confirm action", true);
+    final JCheckBox fsDivider = new JCheckBox("FS: divider", true);
     final JLabel status = new JLabel("Configure, then open a dialog — it opens on this frame.");
 
     final ElwhaButton basic = ElwhaButton.filledButton("Open basic dialog");
     final ElwhaButton withIcon = ElwhaButton.filledTonalButton("Open dialog with icon");
     final ElwhaButton destructive = ElwhaButton.filledTonalButton("Open destructive confirm");
     final ElwhaButton scrollable = ElwhaButton.filledTonalButton("Open scrollable-content dialog");
+    final ElwhaButton fullScreen = ElwhaButton.filledTonalButton("Open full-screen dialog");
 
     basic.addActionListener(
         e ->
@@ -3302,6 +3311,10 @@ public final class ElwhaShowcase {
                 escDismiss,
                 reducedMotion,
                 status));
+    fullScreen.addActionListener(
+        e ->
+            openWorkbenchFullScreenDialog(
+                fullScreen, fsConfirm, fsDivider, escDismiss, reducedMotion, status));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
     controls.add(new JLabel("Actions:"));
@@ -3309,6 +3322,8 @@ public final class ElwhaShowcase {
     controls.add(scrimDismiss);
     controls.add(escDismiss);
     controls.add(reducedMotion);
+    controls.add(fsConfirm);
+    controls.add(fsDivider);
 
     final JPanel triggers = new JPanel(new GridLayout(0, 1, 0, 12));
     triggers.setBorder(BorderFactory.createEmptyBorder(24, 64, 16, 64));
@@ -3316,6 +3331,7 @@ public final class ElwhaShowcase {
     triggers.add(withIcon);
     triggers.add(destructive);
     triggers.add(scrollable);
+    triggers.add(fullScreen);
     triggers.add(status);
 
     final JPanel panel = new JPanel(new BorderLayout());
@@ -3389,6 +3405,53 @@ public final class ElwhaShowcase {
     return body;
   }
 
+  // Opens a live ElwhaFullScreenDialog on the trigger's frame — the real overlay-on-frame smoke
+  // test
+  // for the M3 full-screen variant (epic #271). A small sample form stands in for the longer-form-
+  // input use case the full-screen dialog targets. Esc + reduced-motion reuse the shared toggles.
+  private static void openWorkbenchFullScreenDialog(
+      final Component parent,
+      final JCheckBox fsConfirm,
+      final JCheckBox fsDivider,
+      final JCheckBox escDismiss,
+      final JCheckBox reducedMotion,
+      final JLabel status) {
+    MorphAnimator.setReducedMotion(reducedMotion.isSelected());
+    final ElwhaFullScreenDialog.Builder builder =
+        ElwhaFullScreenDialog.builder()
+            .headline("New event")
+            .content(buildFullScreenSampleForm())
+            .showDivider(fsDivider.isSelected())
+            .dismissibleByEsc(escDismiss.isSelected())
+            .onClose(cause -> status.setText("Last close: " + cause.name()));
+    if (fsConfirm.isSelected()) {
+      builder.confirmAction(ElwhaButton.textButton("Save"));
+    }
+    builder.build().show(parent);
+  }
+
+  // A few labeled fields standing in for a "create event"-style form. Field widths come from the
+  // 560-column when shown live (the content tracks the viewport width); the column count gives the
+  // static gallery preview a sensible natural width.
+  private static JComponent buildFullScreenSampleForm() {
+    final JPanel form = new JPanel();
+    form.setOpaque(false);
+    form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
+    for (final String label : new String[] {"Title", "Location", "Start", "End", "Notes"}) {
+      final JLabel caption = new JLabel(label);
+      caption.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+      caption.setAlignmentX(Component.LEFT_ALIGNMENT);
+      final JTextField field = new JTextField(18);
+      field.setAlignmentX(Component.LEFT_ALIGNMENT);
+      field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+      form.add(caption);
+      form.add(Box.createVerticalStrut(4));
+      form.add(field);
+      form.add(Box.createVerticalStrut(16));
+    }
+    return form;
+  }
+
   // Static, non-modal snapshots via ElwhaDialog.renderPreview() — real rendered surfaces (their
   // buttons are live but inert: clicking calls dismiss(), a no-op with no overlay attached),
   // stacked
@@ -3424,6 +3487,27 @@ public final class ElwhaShowcase {
             .confirmAction(ElwhaButton.filledButton("Leave"))
             .alternateAction(ElwhaButton.textButton("Save"))
             .cancelAction(ElwhaButton.textButton("Cancel"))
+            .build()
+            .renderPreview());
+    return column;
+  }
+
+  // Static, non-modal full-screen-dialog snapshot via renderPreview() — the surface rendered at its
+  // natural (560-column) preferred size rather than filling a frame, so it reads as a preview card
+  // alongside the Basic snapshots (a live full-screen dialog would cover the whole frame). Buttons
+  // are live but inert (dismiss() no-ops with no overlay attached).
+  private static JComponent buildFullScreenDialogGallery() {
+    final JPanel column = new JPanel();
+    column.setOpaque(false);
+    column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+    column.setBorder(BorderFactory.createEmptyBorder(8, 20, 24, 20));
+    addPreview(
+        column,
+        ElwhaFullScreenDialog.builder()
+            .headline("New event")
+            .content(buildFullScreenSampleForm())
+            .confirmAction(ElwhaButton.textButton("Save"))
+            .showDivider(true)
             .build()
             .renderPreview());
     return column;

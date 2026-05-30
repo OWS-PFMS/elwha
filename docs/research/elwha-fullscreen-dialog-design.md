@@ -288,6 +288,12 @@ The 560dp content column stays centered (orientation-neutral). The app-bar order
 
 Verify both states in the S6 demo and the Showcase Workbench motion-preset control.
 
+### §11.2 Known limitation — action-button ripple freezes during the exit fade
+
+The exit fade composites a **one-time snapshot** of the surface at uniform alpha (a live subtree can't be faded — each child resets the alpha composite). Consequently, when an action button (close / confirm) is clicked, its press ripple is captured into that snapshot and **freezes mid-stroke** as the dialog fades out, instead of completing. This is inherent to the snapshot-based fade and is **not** fixable by keeping the ripple live (breaks the fade) or by timing tricks (a delayed close feels laggy). It is addressed in a **separate epic — [#288](https://github.com/OWS-PFMS/elwha/issues/288)** — which adds `ElwhaButton.setRippleEnabled(boolean)` and has the dialogs suppress the press ripple on dismiss action buttons (the exit motion is the dismiss feedback; "no ripple > frozen ripple"). #288 also fixes the same latent behavior in the Basic Dialog. Until #288 lands, the full-screen dialog ships with this minor cosmetic on a departing surface.
+
+(The distinct *at-rest* ripple freeze — a child animating while the dialog is open and not closing — was a separate bug, fixed by declaring the surface a painting origin so descendant repaints route through the motion `paint()`.)
+
 ---
 
 ## §12. Showcase integration — extend the existing Dialog leaf [S7/S8]

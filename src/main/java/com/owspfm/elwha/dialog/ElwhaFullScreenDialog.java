@@ -71,6 +71,12 @@ import javax.swing.SwingUtilities;
  * through {@link Builder#onClose(Consumer)} with a {@link DismissCause}. {@link #dismiss()} closes
  * it programmatically.
  *
+ * <p><strong>Known limitation.</strong> Because the exit motion fades a one-time snapshot of the
+ * surface, an action button's press ripple freezes mid-stroke as the dialog fades out (the snapshot
+ * can't keep a live animation going). It's a minor cosmetic on a departing surface; the fix —
+ * suppressing the press ripple on dismiss action buttons, since the exit motion is the feedback —
+ * is tracked in epic #288 (which adds {@code ElwhaButton.setRippleEnabled}).
+ *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.3.0
  * @since v0.3.0
