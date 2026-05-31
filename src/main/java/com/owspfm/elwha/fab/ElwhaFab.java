@@ -432,16 +432,30 @@ public final class ElwhaFab extends JComponent {
   private ElwhaFab(final Form form, final Icon icon, final String text) {
     this.form = form;
     this.currentForm = form;
-    this.icon = icon;
+    this.icon = themeIcon(icon);
     this.text = text;
-    if (icon instanceof FlatSVGIcon svg) {
-      svg.setColorFilter(iconFilter);
-    }
     formMorph.snapTo(form == Form.EXTENDED ? 1f : 0f);
     setOpaque(false);
     setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     setFocusable(true);
     initInteraction();
+  }
+
+  // Binds this FAB's per-instance color filter to its own copy of the glyph. A consumer may pass
+  // the
+  // same FlatSVGIcon to several components (Icon reuse is a permitted pattern); installing the
+  // filter
+  // on the shared instance would make the last-constructed component's color win for all of them,
+  // since FlatSVGIcon holds a single colorFilter field. Cloning is cheap — the copy shares the
+  // parsed
+  // SVGDocument and only carries its own filter. Non-FlatSVGIcon icons are returned untouched.
+  private Icon themeIcon(final Icon candidate) {
+    if (candidate instanceof FlatSVGIcon svg) {
+      final FlatSVGIcon copy = new FlatSVGIcon(svg);
+      copy.setColorFilter(iconFilter);
+      return copy;
+    }
+    return candidate;
   }
 
   /**

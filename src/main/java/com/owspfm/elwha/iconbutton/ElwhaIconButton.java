@@ -338,10 +338,8 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
    * @since v0.1.0
    */
   public ElwhaIconButton setIcons(final Icon resting, final Icon selected) {
-    applyIconColorFilter(resting);
-    applyIconColorFilter(selected);
-    this.restingIcon = resting;
-    this.selectedIcon = selected;
+    this.restingIcon = themeIcon(resting);
+    this.selectedIcon = themeIcon(selected);
     revalidate();
     repaint();
     return this;
@@ -403,10 +401,20 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     return restingIcon;
   }
 
-  private void applyIconColorFilter(final Icon icon) {
-    if (icon instanceof FlatSVGIcon svg) {
-      svg.setColorFilter(iconFilter);
+  // Binds this button's per-instance color filter to its own copy of the glyph. A consumer may pass
+  // the same FlatSVGIcon to several components (Icon reuse is a permitted pattern); installing the
+  // filter on the shared instance would make the last-constructed component's color win for all of
+  // them, since FlatSVGIcon holds a single colorFilter field. Cloning is cheap — the copy shares
+  // the
+  // parsed SVGDocument and only carries its own filter. Null and non-FlatSVGIcon icons pass
+  // through.
+  private Icon themeIcon(final Icon candidate) {
+    if (candidate instanceof FlatSVGIcon svg) {
+      final FlatSVGIcon copy = new FlatSVGIcon(svg);
+      copy.setColorFilter(iconFilter);
+      return copy;
     }
+    return candidate;
   }
 
   // ----------------------------------------------------------- token setters

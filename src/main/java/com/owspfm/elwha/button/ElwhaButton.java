@@ -434,10 +434,8 @@ public class ElwhaButton extends JComponent {
    * @since v0.3.0
    */
   public ElwhaButton setIcons(final Icon resting, final Icon selected) {
-    applyIconFilter(resting);
-    applyIconFilter(selected);
-    this.icon = resting;
-    this.selectedIcon = selected;
+    this.icon = themeIcon(resting);
+    this.selectedIcon = themeIcon(selected);
     revalidate();
     repaint();
     return this;
@@ -465,10 +463,20 @@ public class ElwhaButton extends JComponent {
     return selectedIcon;
   }
 
-  private void applyIconFilter(final Icon candidate) {
+  // Binds this button's per-instance color filter to its own copy of the glyph. A consumer may pass
+  // the same FlatSVGIcon to several components (Icon reuse is a permitted pattern); installing the
+  // filter on the shared instance would make the last-constructed component's color win for all of
+  // them, since FlatSVGIcon holds a single colorFilter field. Cloning is cheap — the copy shares
+  // the
+  // parsed SVGDocument and only carries its own filter. Null and non-FlatSVGIcon icons pass
+  // through.
+  private Icon themeIcon(final Icon candidate) {
     if (candidate instanceof FlatSVGIcon svg) {
-      svg.setColorFilter(iconFilter);
+      final FlatSVGIcon copy = new FlatSVGIcon(svg);
+      copy.setColorFilter(iconFilter);
+      return copy;
     }
+    return candidate;
   }
 
   // The leading icon for the current state — the selected icon when the button is selected or
