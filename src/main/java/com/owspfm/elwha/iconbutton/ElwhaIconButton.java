@@ -131,6 +131,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   private Point rippleOrigin;
   private float rippleProgress = 1f;
   private Timer rippleTimer;
+  private boolean rippleEnabled = true;
 
   // Morph state ------------------------------------------------------------
   // Press shape morph (#295) — animates to the pressed (squarer) geometry on press and back on
@@ -697,6 +698,42 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     return this;
   }
 
+  /**
+   * Enables or disables the press / touch ripple — the expanding {@link
+   * com.owspfm.elwha.theme.RipplePainter} circle seeded at the click point on press or keyboard
+   * activation. Disable it for hosts whose own motion is the press feedback: a dialog that
+   * dismisses on an action click would otherwise freeze the in-flight ripple onto its exit-fade
+   * snapshot (epic #288). Disabling mid-ripple clears any in-flight ripple immediately.
+   *
+   * <p>This gates <em>only</em> the press ripple; the pressed state-layer darken is unaffected.
+   * Default {@code true}.
+   *
+   * @param rippleEnabled whether press / touch ripples animate
+   * @return {@code this} for fluent chaining
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public ElwhaIconButton setRippleEnabled(final boolean rippleEnabled) {
+    this.rippleEnabled = rippleEnabled;
+    if (!rippleEnabled && rippleTimer != null && rippleTimer.isRunning()) {
+      rippleTimer.stop();
+      rippleProgress = 1f;
+      repaint();
+    }
+    return this;
+  }
+
+  /**
+   * Reports whether the press / touch ripple is enabled.
+   *
+   * @return {@code true} if press ripples animate (the default), {@code false} if suppressed
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public boolean isRippleEnabled() {
+    return this.rippleEnabled;
+  }
+
   // ------------------------------------------------------------- listeners
 
   /**
@@ -935,6 +972,9 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   // ----------------------------------------------------------------- ripple
 
   private void startRipple(final Point origin) {
+    if (!rippleEnabled) {
+      return;
+    }
     rippleOrigin = origin;
     rippleProgress = 0f;
     if (rippleTimer != null && rippleTimer.isRunning()) {

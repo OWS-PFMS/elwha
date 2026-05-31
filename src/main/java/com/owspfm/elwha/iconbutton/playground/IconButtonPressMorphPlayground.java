@@ -13,6 +13,8 @@ import com.owspfm.elwha.theme.ShapeScale;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.JCheckBox;
@@ -40,11 +42,11 @@ import javax.swing.SwingUtilities;
  * animator, not a side effect of the ripple. "Reduced motion" collapses the morph to an instant
  * snap.
  *
- * <p><strong>Ripple on / off.</strong> The morph is independent of the press ripple by construction
- * (separate animators, separate paint layers). The literal ripple-OFF toggle ({@code
- * setRippleEnabled}) is delivered by epic #288, on a parallel branch — it is intentionally not
- * duplicated here. With #288 merged, the morph on a ripple-suppressed button is exactly the frames
- * you see under slow-mo with the ripple omitted.
+ * <p><strong>Ripple on / off.</strong> The toolbar's "Ripple" box drives {@link
+ * ElwhaIconButton#setRippleEnabled(boolean)} (epic #288) on every button. Toggle it off and the
+ * press morph still fires unchanged — the morph and the ripple are independent paint layers driven
+ * by separate animators. This is the #290 dialog-dismiss case: a ripple-suppressed ✕ still confirms
+ * a click via the shape morph alone.
  *
  * <p>Independent of The Elwha Showcase, per [[fresh-demo-per-story]] (each story gets its own
  * artifact).
@@ -59,6 +61,9 @@ import javax.swing.SwingUtilities;
 public final class IconButtonPressMorphPlayground {
 
   private static final float SLOW_MOTION_MULTIPLIER = 5f;
+
+  // Every icon button on the frame, so the "Ripple" toggle can drive setRippleEnabled across all.
+  private static final List<ElwhaIconButton> BUTTONS = new ArrayList<>();
 
   private IconButtonPressMorphPlayground() {}
 
@@ -95,6 +100,10 @@ public final class IconButtonPressMorphPlayground {
         e ->
             MorphAnimator.setDurationMultiplier(slowMo.isSelected() ? SLOW_MOTION_MULTIPLIER : 1f));
     toolbar.add(slowMo);
+
+    final JCheckBox ripple = new JCheckBox("Ripple", true);
+    ripple.addActionListener(e -> BUTTONS.forEach(b -> b.setRippleEnabled(ripple.isSelected())));
+    toolbar.add(ripple);
 
     final JCheckBox reduced = new JCheckBox("Reduced motion (global)");
     reduced.setSelected(MorphAnimator.isReducedMotion());
@@ -179,6 +188,9 @@ public final class IconButtonPressMorphPlayground {
   }
 
   private static JPanel wrap(final java.awt.Component c) {
+    if (c instanceof ElwhaIconButton b) {
+      BUTTONS.add(b);
+    }
     final JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
     p.add(c);
     return p;

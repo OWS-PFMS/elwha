@@ -316,6 +316,9 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
     if (button == null) {
       return;
     }
+    // The dialog's exit motion is the press feedback; a live press ripple would freeze mid-stroke
+    // on the exit-fade snapshot (#288), so suppress it on every dismiss action button.
+    button.setRippleEnabled(false);
     button.addActionListener(e -> dismiss(cause));
     row.add(button);
   }
@@ -505,6 +508,10 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
      * dialog with {@link DismissCause#CONFIRM}. Pass any {@code ElwhaButton}; M3's default is a
      * text button, but a filled / tonal one for emphasis is allowed.
      *
+     * <p>The dialog disables this button's press ripple ({@link ElwhaButton#setRippleEnabled}) so
+     * it can't freeze on the exit-fade snapshot (#288); the exit motion is the feedback. The effect
+     * persists on the button instance if you reuse it elsewhere.
+     *
      * @param button the confirming action, or {@code null} for none
      * @return {@code this}
      * @version v0.3.0
@@ -518,6 +525,10 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
     /**
      * Sets the optional alternate action — the middle button, between cancel and confirm. Firing it
      * closes the dialog with {@link DismissCause#ALTERNATE}.
+     *
+     * <p>The dialog disables this button's press ripple ({@link ElwhaButton#setRippleEnabled}) so
+     * it can't freeze on the exit-fade snapshot (#288); the exit motion is the feedback. The effect
+     * persists on the button instance if you reuse it elsewhere.
      *
      * @param button the alternate action, or {@code null} for none
      * @return {@code this}
@@ -533,6 +544,10 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
      * Sets the cancelling action — the leading-most (leftmost in LTR) button. Firing it (or Esc,
      * when this action is present) runs the consumer's own listener, then closes the dialog with
      * {@link DismissCause#CANCEL}.
+     *
+     * <p>The dialog disables this button's press ripple ({@link ElwhaButton#setRippleEnabled}) so
+     * it can't freeze on the exit-fade snapshot (#288); the exit motion is the feedback. The effect
+     * persists on the button instance if you reuse it elsewhere.
      *
      * @param button the cancel action, or {@code null} for none
      * @return {@code this}
