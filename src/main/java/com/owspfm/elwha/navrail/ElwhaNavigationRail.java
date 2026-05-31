@@ -192,11 +192,6 @@ public final class ElwhaNavigationRail extends JComponent {
   static final int SECTION_HEADER_LEADING_PAD_PX =
       CHROME_PAD_PX + ElwhaNavRailDestination.LEADING_PAD_EXPANDED;
 
-  // Mirrors {@code ElwhaFab.HOVER_ELEVATION} (which is private). Used to compute the FAB's
-  // shadow-blur reserve so the rail can compensate when placing the FAB in Expanded — the FAB's
-  // visible pill sits inset within its bounds by this elevation's shadow insets.
-  private static final int FAB_HOVER_ELEVATION = 4;
-
   private Variant variant;
   private int expandedWidthPx = EXPANDED_WIDTH_DEFAULT_PX;
   private boolean surfaceFilled;
@@ -498,7 +493,6 @@ public final class ElwhaNavigationRail extends JComponent {
     }
     this.menuButton = menu;
     if (menu != null) {
-      menu.setRequestFocusEnabled(false);
       add(menu);
       menu.addActionListener(menuToggleListener);
       syncMenuButtonGlyph();
@@ -554,7 +548,6 @@ public final class ElwhaNavigationRail extends JComponent {
     }
     this.fab = fab;
     if (fab != null) {
-      fab.setRequestFocusEnabled(false);
       add(fab);
       snapFabFormToVariant();
     }
@@ -897,7 +890,6 @@ public final class ElwhaNavigationRail extends JComponent {
         if (a == null) {
           continue;
         }
-        a.setRequestFocusEnabled(false);
         trailingActions.add(a);
         add(a);
       }
@@ -1055,7 +1047,7 @@ public final class ElwhaNavigationRail extends JComponent {
       // left by the shadow inset. In Collapsed, the FAB centers horizontally as before — the
       // shadow inset effectively shifts the visible pill a few px left of geometric center, which
       // M3 spec accepts as the price of a halo-reserving FAB.
-      final int fabShadowLeft = ShadowPainter.shadowInsets(FAB_HOVER_ELEVATION).left;
+      final int fabShadowLeft = fab.getShadowInsets().left;
       final int x = expandedish ? CHROME_PAD_PX - fabShadowLeft : (w - d.width) / 2;
       fab.setBounds(x, topY, d.width, d.height);
       topY += d.height + CHROME_GAP_PX;

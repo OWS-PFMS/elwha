@@ -146,6 +146,60 @@ public final class BadgePlaygroundPanels {
     return matrix;
   }
 
+  /**
+   * Trailing-edge panel — the M3 "Favorites 84" composition ([#219]): a Large badge anchored at the
+   * trailing edge of an icon + label row (not on the icon's corner), shown in LTR and RTL so the
+   * mirror is visible. The row is wider than its content so the badge right-aligns in clear
+   * trailing space, the way a list-row count reads.
+   *
+   * @return the trailing-edge matrix
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static JPanel buildTrailingEdgePanel() {
+    final JPanel matrix = new JPanel(new GridBagLayout());
+    matrix.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+    final GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(CELL_GAP, CELL_GAP, CELL_GAP, CELL_GAP);
+    gbc.anchor = GridBagConstraints.CENTER;
+
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    matrix.add(headerLabel("LTR"), gbc);
+    gbc.gridx = 1;
+    matrix.add(headerLabel("RTL"), gbc);
+
+    gbc.gridy = 1;
+    gbc.gridx = 0;
+    matrix.add(trailingEdgeCell(ComponentOrientation.LEFT_TO_RIGHT), gbc);
+    gbc.gridx = 1;
+    matrix.add(trailingEdgeCell(ComponentOrientation.RIGHT_TO_LEFT), gbc);
+
+    return matrix;
+  }
+
+  private static JPanel trailingEdgeCell(final ComponentOrientation orientation) {
+    final JPanel cell = new JPanel(new GridBagLayout());
+    cell.setComponentOrientation(orientation);
+    cell.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+    final JLabel content =
+        new JLabel("Favorites", MaterialIcons.favoriteFilled(), javax.swing.SwingConstants.LEADING);
+    content.setIconTextGap(8);
+    content.setComponentOrientation(orientation);
+
+    final JPanel row = new JPanel(new java.awt.BorderLayout());
+    row.setOpaque(false);
+    row.setComponentOrientation(orientation);
+    row.add(content, java.awt.BorderLayout.LINE_START);
+    row.setPreferredSize(new java.awt.Dimension(200, 40));
+
+    cell.add(row, new GridBagConstraints());
+    ElwhaBadgeAnchor.attachTrailingEdge(row, ElwhaBadge.large("84"));
+    return cell;
+  }
+
   private static JPanel galleryCell(final Icon icon, final ElwhaBadge badge) {
     return galleryCell(icon, badge, ComponentOrientation.LEFT_TO_RIGHT);
   }

@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShadowPainter;
@@ -410,6 +411,9 @@ public final class ElwhaFab extends JComponent {
 
   private boolean hovered;
   private boolean pressed;
+  // Focus-visible: true only while focus was last gained via keyboard traversal. Drives the 2 dp
+  // ring, so a pointer click (which grabs focus but should not show a ring) leaves it off.
+  private boolean focusVisible;
 
   private Point rippleOrigin;
   private float rippleProgress = 1f;
@@ -432,16 +436,30 @@ public final class ElwhaFab extends JComponent {
   private ElwhaFab(final Form form, final Icon icon, final String text) {
     this.form = form;
     this.currentForm = form;
-    this.icon = icon;
+    this.icon = themeIcon(icon);
     this.text = text;
-    if (icon instanceof FlatSVGIcon svg) {
-      svg.setColorFilter(iconFilter);
-    }
     formMorph.snapTo(form == Form.EXTENDED ? 1f : 0f);
     setOpaque(false);
     setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     setFocusable(true);
     initInteraction();
+  }
+
+  // Binds this FAB's per-instance color filter to its own copy of the glyph. A consumer may pass
+  // the
+  // same FlatSVGIcon to several components (Icon reuse is a permitted pattern); installing the
+  // filter
+  // on the shared instance would make the last-constructed component's color win for all of them,
+  // since FlatSVGIcon holds a single colorFilter field. Cloning is cheap — the copy shares the
+  // parsed
+  // SVGDocument and only carries its own filter. Non-FlatSVGIcon icons are returned untouched.
+  private Icon themeIcon(final Icon candidate) {
+    if (candidate instanceof FlatSVGIcon svg) {
+      final FlatSVGIcon copy = new FlatSVGIcon(svg);
+      copy.setColorFilter(iconFilter);
+      return copy;
+    }
+    return candidate;
   }
 
   /**
@@ -761,10 +779,13 @@ public final class ElwhaFab extends JComponent {
               return;
             }
             pressed = true;
-            // Honor JComponent's setRequestFocusEnabled — clicks grab focus by default, but
-            // chrome-slot contexts (e.g. ElwhaNavigationRail) suppress click-focus so the rail's
-            // tablist-style focus ring is a keyboard-only affordance. Tab navigation still works
-            // regardless, since it's gated by isFocusable() not isRequestFocusEnabled().
+            // A pointer press is not a focus-visible interaction: clear the ring even if the click
+            // grabs focus (or the FAB was already keyboard-focused). The ring is re-armed only by a
+            // subsequent keyboard traversal in focusGained.
+            focusVisible = false;
+            // Still honor setRequestFocusEnabled — a consumer may suppress click-focus for reasons
+            // beyond the ring (not stealing focus from a document). The ring no longer depends on
+            // it.
             if (isRequestFocusEnabled()) {
               requestFocusInWindow();
             }
@@ -792,12 +813,14 @@ public final class ElwhaFab extends JComponent {
         new FocusAdapter() {
           @Override
           public void focusGained(final FocusEvent e) {
+            focusVisible = FocusVisible.isKeyboardCause(e.getCause());
             repaint();
           }
 
           @Override
           public void focusLost(final FocusEvent e) {
             pressed = false;
+            focusVisible = false;
             repaint();
           }
         });
@@ -1015,7 +1038,7 @@ public final class ElwhaFab extends JComponent {
     final int bodyW = bodyWidthPx();
     final int bodyH = bodyHeightPx();
     final int arc = size.cornerRadiusPx();
-    final boolean focused = isFocusOwner() && isEnabled();
+    final boolean focused = focusVisible && isEnabled();
     final int elevation = (hovered && isEnabled()) ? HOVER_ELEVATION : RESTING_ELEVATION;
 
     final ColorRole surfaceRole = color.containerRole();
@@ -1219,6 +1242,24 @@ public final class ElwhaFab extends JComponent {
   @Override
   public Dimension getMinimumSize() {
     return getPreferredSize();
+  }
+
+  /**
+   * The shadow-halo insets this FAB reserves around its visible body. {@link #getPreferredSize()}
+   * pads the body by these insets on every edge so the hover-elevation shadow never clips against
+   * the component bounds; the reserve is constant (sized for the hover elevation) and does not
+   * shrink at rest. Placement consumers — {@link ElwhaFabAnchor}, {@link
+   * com.owspfm.elwha.navrail.ElwhaNavigationRail} — read this to back the halo out of the bounds
+   * when pinning the visible body to a spec margin, rather than duplicating the private elevation
+   * constant and recomputing {@link ShadowPainter#shadowInsets(int)} themselves.
+   *
+   * @return a copy of the reserved halo insets (never {@code null}); mutating the returned instance
+   *     does not affect the FAB
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public Insets getShadowInsets() {
+    return (Insets) SHADOW_RESERVE.clone();
   }
 
   @Override
