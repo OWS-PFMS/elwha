@@ -43,6 +43,8 @@ public final class NavRailDestinationBadgeAnchorDemo {
   private static final int LARGE_OFFSET_X = 12;
   private static final int LARGE_OFFSET_Y = 14;
 
+  private static final String LABEL = "Favorites";
+
   private static int failures;
 
   private NavRailDestinationBadgeAnchorDemo() {}
@@ -74,7 +76,7 @@ public final class NavRailDestinationBadgeAnchorDemo {
     final String dir = ltr ? "LTR" : "RTL";
 
     final ElwhaNavRailDestination dest =
-        ElwhaNavRailDestination.of(MaterialIcons.symbol("favorite"), "Favorites");
+        ElwhaNavRailDestination.of(MaterialIcons.symbol("favorite"), LABEL);
     dest.setComponentOrientation(orientation);
     dest.setSelected(true);
 
@@ -92,10 +94,26 @@ public final class NavRailDestinationBadgeAnchorDemo {
     assertIconCorner(dir, dest, badge, root.getLayeredPane(), ltr);
 
     // --- Toggle to Expanded: the already-attached badge must re-pin to the trailing edge. ---
+    // Size the row to its Expanded hug width first, then flip the variant: reanchorBadgeForVariant
+    // runs synchronously inside setHostVariant and reads the final row width directly. (A live rail
+    // relayouts the row and the EDT-delivered COMPONENT_RESIZED refreshes the anchor; this harness
+    // never realizes a window, so that event is never dispatched — pre-size to stay deterministic.)
+    dest.setBounds(
+        60, 60, expandedRowWidth(dest), ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX);
     dest.setHostVariant(ElwhaNavigationRail.Variant.EXPANDED);
-    final int expandedWidth = dest.getPreferredSize().width;
-    dest.setBounds(60, 60, expandedWidth, ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX);
     assertTrailingEdge(dir, dest, badge, root.getLayeredPane(), ltr);
+  }
+
+  // The Expanded hug width for this destination — mirrors the package-private
+  // ElwhaNavRailDestination.expandedHugWidth() so the harness can size the row before flipping the
+  // variant (and thus before the synchronous re-anchor reads the row width).
+  private static int expandedRowWidth(final ElwhaNavRailDestination dest) {
+    final int labelWidth = dest.getFontMetrics(dest.getFont()).stringWidth(LABEL);
+    return ElwhaNavRailDestination.LEADING_PAD_EXPANDED
+        + ElwhaNavRailDestination.ICON_SIZE_PX
+        + ElwhaNavRailDestination.ICON_LABEL_GAP_EXPANDED
+        + labelWidth
+        + ElwhaNavRailDestination.TRAILING_PAD_EXPANDED;
   }
 
   private static JRootPane mount(
