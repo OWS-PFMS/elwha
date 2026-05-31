@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShadowPainter;
@@ -410,6 +411,9 @@ public final class ElwhaFab extends JComponent {
 
   private boolean hovered;
   private boolean pressed;
+  // Focus-visible: true only while focus was last gained via keyboard traversal. Drives the 2 dp
+  // ring, so a pointer click (which grabs focus but should not show a ring) leaves it off.
+  private boolean focusVisible;
 
   private Point rippleOrigin;
   private float rippleProgress = 1f;
@@ -775,10 +779,13 @@ public final class ElwhaFab extends JComponent {
               return;
             }
             pressed = true;
-            // Honor JComponent's setRequestFocusEnabled — clicks grab focus by default, but
-            // chrome-slot contexts (e.g. ElwhaNavigationRail) suppress click-focus so the rail's
-            // tablist-style focus ring is a keyboard-only affordance. Tab navigation still works
-            // regardless, since it's gated by isFocusable() not isRequestFocusEnabled().
+            // A pointer press is not a focus-visible interaction: clear the ring even if the click
+            // grabs focus (or the FAB was already keyboard-focused). The ring is re-armed only by a
+            // subsequent keyboard traversal in focusGained.
+            focusVisible = false;
+            // Still honor setRequestFocusEnabled — a consumer may suppress click-focus for reasons
+            // beyond the ring (not stealing focus from a document). The ring no longer depends on
+            // it.
             if (isRequestFocusEnabled()) {
               requestFocusInWindow();
             }
@@ -806,12 +813,14 @@ public final class ElwhaFab extends JComponent {
         new FocusAdapter() {
           @Override
           public void focusGained(final FocusEvent e) {
+            focusVisible = FocusVisible.isKeyboardCause(e.getCause());
             repaint();
           }
 
           @Override
           public void focusLost(final FocusEvent e) {
             pressed = false;
+            focusVisible = false;
             repaint();
           }
         });
@@ -1029,7 +1038,7 @@ public final class ElwhaFab extends JComponent {
     final int bodyW = bodyWidthPx();
     final int bodyH = bodyHeightPx();
     final int arc = size.cornerRadiusPx();
-    final boolean focused = isFocusOwner() && isEnabled();
+    final boolean focused = focusVisible && isEnabled();
     final int elevation = (hovered && isEnabled()) ? HOVER_ELEVATION : RESTING_ELEVATION;
 
     final ColorRole surfaceRole = color.containerRole();

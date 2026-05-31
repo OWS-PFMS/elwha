@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeMorphPainter;
@@ -124,6 +125,9 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   private boolean hovered;
   private boolean pressed;
   private boolean selected;
+  // Focus-visible: true only while focus was last gained via keyboard traversal. Drives the ring,
+  // so a pointer click (which grabs focus but should not show a ring) leaves it off.
+  private boolean focusVisible;
   private Icon restingIcon;
   private Icon selectedIcon;
 
@@ -840,6 +844,9 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
             }
             pressed = true;
             pressMorph.start();
+            // A pointer press is not a focus-visible interaction: clear the ring even if the click
+            // grabs focus. The ring is re-armed only by keyboard traversal in focusGained.
+            focusVisible = false;
             // Honor JComponent's setRequestFocusEnabled — clicks grab focus by default, but
             // toolbar contexts typically suppress click-focus (the toolbar action shouldn't pull
             // focus away from the document / list / editor being acted on). Tab navigation still
@@ -873,6 +880,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
         new FocusAdapter() {
           @Override
           public void focusGained(final FocusEvent e) {
+            focusVisible = FocusVisible.isKeyboardCause(e.getCause());
             repaint();
           }
 
@@ -880,6 +888,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
           public void focusLost(final FocusEvent e) {
             final boolean wasPressed = pressed;
             pressed = false;
+            focusVisible = false;
             if (wasPressed) {
               pressMorph.reverse();
             }
@@ -1034,7 +1043,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     final int w = getWidth();
     final int h = getHeight();
     final int arc = shape.px();
-    final boolean focused = isFocusOwner() && isEnabled();
+    final boolean focused = focusVisible && isEnabled();
 
     final ColorRole surfaceRole = getSurfaceRole();
     final StateLayer overlay = activeOverlay();

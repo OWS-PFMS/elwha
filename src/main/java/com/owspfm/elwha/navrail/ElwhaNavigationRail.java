@@ -493,7 +493,6 @@ public final class ElwhaNavigationRail extends JComponent {
     }
     this.menuButton = menu;
     if (menu != null) {
-      menu.setRequestFocusEnabled(false);
       add(menu);
       menu.addActionListener(menuToggleListener);
       syncMenuButtonGlyph();
@@ -549,7 +548,6 @@ public final class ElwhaNavigationRail extends JComponent {
     }
     this.fab = fab;
     if (fab != null) {
-      fab.setRequestFocusEnabled(false);
       add(fab);
       snapFabFormToVariant();
     }
@@ -892,7 +890,6 @@ public final class ElwhaNavigationRail extends JComponent {
         if (a == null) {
           continue;
         }
-        a.setRequestFocusEnabled(false);
         trailingActions.add(a);
         add(a);
       }

@@ -4,6 +4,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShadowPainter;
@@ -147,6 +148,9 @@ public class ElwhaButton extends JComponent {
   private boolean hovered;
   private boolean pressed;
   private boolean selected;
+  // Focus-visible: true only while focus was last gained via keyboard traversal. Drives the ring,
+  // so a pointer click (which grabs focus but should not show a ring) leaves it off.
+  private boolean focusVisible;
 
   // Ripple state -----------------------------------------------------------
   private Point rippleOrigin;
@@ -1027,6 +1031,9 @@ public class ElwhaButton extends JComponent {
               return;
             }
             setPressedInternal(true);
+            // A pointer press is not a focus-visible interaction: clear the ring even though the
+            // click grabs focus. The ring is re-armed only by keyboard traversal in focusGained.
+            focusVisible = false;
             requestFocusInWindow();
             startRipple(toBodyPoint(e.getPoint()));
             if (firesPressMorph()) {
@@ -1061,6 +1068,7 @@ public class ElwhaButton extends JComponent {
         new FocusAdapter() {
           @Override
           public void focusGained(final FocusEvent e) {
+            focusVisible = FocusVisible.isKeyboardCause(e.getCause());
             repaint();
           }
 
@@ -1070,6 +1078,7 @@ public class ElwhaButton extends JComponent {
               pressMorph.reverse();
             }
             setPressedInternal(false);
+            focusVisible = false;
             repaint();
           }
         });
@@ -1314,7 +1323,7 @@ public class ElwhaButton extends JComponent {
     final int bodyH = Math.max(1, buttonSize.containerHeightPx());
     final Point bodyOrigin = bodyOrigin();
     final int arc = cornerRadiusPx();
-    final boolean focused = isFocusOwner() && isEnabled();
+    final boolean focused = focusVisible && isEnabled();
 
     // #176 Phase 2 — press width morph. Paint-layer only; layout (and getPreferredSize) report
     // the natural width. The body is re-centered inside the natural footprint so the morph reads
