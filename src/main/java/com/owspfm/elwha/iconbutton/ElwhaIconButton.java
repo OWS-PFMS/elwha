@@ -128,6 +128,8 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   // Focus-visible: true only while focus was last gained via keyboard traversal. Drives the ring,
   // so a pointer click (which grabs focus but should not show a ring) leaves it off.
   private boolean focusVisible;
+  private Icon rawRestingIcon;
+  private Icon rawSelectedIcon;
   private Icon restingIcon;
   private Icon selectedIcon;
 
@@ -342,11 +344,20 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
    * @since v0.1.0
    */
   public ElwhaIconButton setIcons(final Icon resting, final Icon selected) {
-    this.restingIcon = themeIcon(resting);
-    this.selectedIcon = themeIcon(selected);
+    this.rawRestingIcon = resting;
+    this.rawSelectedIcon = selected;
+    rescaleIcons();
     revalidate();
     repaint();
     return this;
+  }
+
+  // Re-derives the painted glyphs from the raw installed icons at the active iconSize. Called
+  // whenever the icons or the icon size change so the painted dims always match the iconSize the
+  // layout and getIconBounds() report (#196). Idempotent — safe to call before any icon is set.
+  private void rescaleIcons() {
+    this.restingIcon = themeIcon(rawRestingIcon, iconSize);
+    this.selectedIcon = themeIcon(rawSelectedIcon, iconSize);
   }
 
   /**
@@ -405,16 +416,22 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     return restingIcon;
   }
 
-  // Binds this button's per-instance color filter to its own copy of the glyph. A consumer may pass
-  // the same FlatSVGIcon to several components (Icon reuse is a permitted pattern); installing the
-  // filter on the shared instance would make the last-constructed component's color win for all of
-  // them, since FlatSVGIcon holds a single colorFilter field. Cloning is cheap — the copy shares
-  // the
-  // parsed SVGDocument and only carries its own filter. Null and non-FlatSVGIcon icons pass
-  // through.
-  private Icon themeIcon(final Icon candidate) {
+  // Binds this button's per-instance color filter to its own copy of the glyph, sized to the active
+  // iconSize. A consumer may pass the same FlatSVGIcon to several components (Icon reuse is a
+  // permitted pattern); installing the filter on the shared instance would make the
+  // last-constructed component's color win for all of them, since FlatSVGIcon holds a single
+  // colorFilter field. Cloning is cheap — the copy shares the parsed SVGDocument and only carries
+  // its own filter.
+  //
+  // #196 hybrid: when the source glyph's native size disagrees with iconSize, derive a copy at
+  // iconSize so the painted glyph (and getIconBounds()) honor the size the layout reserves rather
+  // than the icon's intrinsic dims. Null and non-FlatSVGIcon icons pass through unscaled.
+  private Icon themeIcon(final Icon candidate, final int targetPx) {
     if (candidate instanceof FlatSVGIcon svg) {
-      final FlatSVGIcon copy = new FlatSVGIcon(svg);
+      final FlatSVGIcon copy =
+          (svg.getIconWidth() == targetPx && svg.getIconHeight() == targetPx)
+              ? new FlatSVGIcon(svg)
+              : svg.derive(targetPx, targetPx);
       copy.setColorFilter(iconFilter);
       return copy;
     }
@@ -562,6 +579,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     this.buttonSize = size;
     this.containerSize = size.containerPx();
     this.iconSize = size.iconPx();
+    rescaleIcons();
     revalidate();
     repaint();
     return this;
@@ -613,18 +631,19 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
 
   /**
    * Sets the rendered icon size in pixels. Lower-level escape hatch — prefer {@link
-   * #setButtonSize(IconButtonSize)} for the M3-spec sizes. The icon size is only a layout hint; the
-   * actual rendered icon is whatever {@link Icon} was installed via {@link #setIcon(Icon)} / {@link
-   * #setIcons(Icon, Icon)} (the {@link FlatSVGIcon}s {@link com.owspfm.elwha.icons.MaterialIcons}
-   * returns already carry their own size).
+   * #setButtonSize(IconButtonSize)} for the M3-spec sizes. An installed {@link FlatSVGIcon} (such
+   * as those {@link com.owspfm.elwha.icons.MaterialIcons} returns) is re-derived to this size and
+   * painted at it; a non-{@link FlatSVGIcon} {@link Icon} can't be rescaled losslessly and still
+   * paints at its intrinsic dims.
    *
    * @param px the icon size, clamped to {@code >= 1}
    * @return {@code this} for fluent chaining
-   * @version v0.1.0
+   * @version v0.3.0
    * @since v0.1.0
    */
   public ElwhaIconButton setIconSize(final int px) {
     this.iconSize = Math.max(1, px);
+    rescaleIcons();
     repaint();
     return this;
   }
