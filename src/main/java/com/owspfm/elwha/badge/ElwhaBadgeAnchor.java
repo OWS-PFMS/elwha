@@ -19,11 +19,15 @@ import javax.swing.JRootPane;
 import javax.swing.SwingUtilities;
 
 /**
- * Placement primitive that attaches an {@link ElwhaBadge} to a host icon-bearing component at the
- * upper-trailing corner of the host's icon bounding box, per M3 Expressive badge anchor geometry
- * (design doc §5). Owns three concerns the consumer would otherwise have to assemble manually:
- * placement (this story), RTL mirroring (S4, #213), and push-model accessibility wiring (S5, #214).
- * Mirrors the FAB §15 floating-FAB recipe as a first-class primitive — the lesson #205 tracked.
+ * Placement primitive that attaches an {@link ElwhaBadge} to a host icon-bearing component, per M3
+ * Expressive badge anchor geometry (design doc §5). Two placements are offered via {@link
+ * AnchorMode}: the default {@link AnchorMode#ICON_CORNER} pins the badge to the upper-trailing
+ * corner of the host's icon bounding box (the canonical nav-rail case); {@link
+ * AnchorMode#TRAILING_EDGE} pins it to the host composition's trailing edge, vertically centered —
+ * the M3 "Favorites 84" pattern, where a Large badge follows a label + icon row ([#219]). Owns
+ * three concerns the consumer would otherwise have to assemble manually: placement, RTL mirroring
+ * (S4, #213), and push-model accessibility wiring (S5, #214). Mirrors the FAB §15 floating-FAB
+ * recipe as a first-class primitive — the lesson #205 tracked.
  *
  * <p><strong>Z-order.</strong> The badge is added to the host's nearest {@link JLayeredPane}
  * ancestor (the root pane's layered pane in the common JFrame/JDialog case) at {@link
@@ -79,6 +83,42 @@ public final class ElwhaBadgeAnchor {
   private ElwhaBadgeAnchor() {}
 
   /**
+   * Where the badge is pinned relative to its host — the two placements M3 documents (design doc §1
+   * / §14).
+   *
+   * @author Charles Bryan
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public enum AnchorMode {
+
+    /**
+     * The badge's bottom-leading corner is pinned a variant-dependent offset from the host's icon
+     * top-trailing corner — the canonical nav-rail / icon-with-badge case. Requires the host to
+     * expose icon bounds (an {@link IconBearing} host or the explicit-bounds overload).
+     *
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    ICON_CORNER,
+
+    /**
+     * The badge is pinned at the host composition's overall trailing edge, vertically centered on
+     * the host — the M3 "Favorites 84" pattern, where a Large badge follows a label + icon row at
+     * its trailing end rather than sitting on the icon's corner (design doc §1 Do/Don't). The icon
+     * bounds are not consulted; the host's full bounds drive placement, so this mode works on any
+     * host (icon-bearing or not). RTL mirrors the trailing edge to the leading (left) edge.
+     *
+     * <p>The badge is centered on the host's vertical center, the robust approximation of the
+     * spec's "centered on the label baseline" for an arbitrary host composition.
+     *
+     * @version v0.3.0
+     * @since v0.3.0
+     */
+    TRAILING_EDGE
+  }
+
+  /**
    * Attaches the given badge to an {@link IconBearing} host. The host must also be a {@link
    * JComponent}. If the host already has an anchored badge, the prior attachment is detached first.
    *
@@ -91,12 +131,36 @@ public final class ElwhaBadgeAnchor {
    * @since v0.3.0
    */
   public static Attachment attach(final IconBearing host, final ElwhaBadge badge) {
+    return attach(host, badge, AnchorMode.ICON_CORNER);
+  }
+
+  /**
+   * Attaches the given badge to an {@link IconBearing} host at the requested {@link AnchorMode}.
+   * The host must also be a {@link JComponent}. If the host already has an anchored badge, the
+   * prior attachment is detached first.
+   *
+   * <p>{@link AnchorMode#ICON_CORNER} pins the badge to the host's icon corner (the icon bounds are
+   * read from {@link IconBearing#getIconBounds()}); {@link AnchorMode#TRAILING_EDGE} pins it to the
+   * host composition's trailing edge and ignores the icon bounds.
+   *
+   * @param host the host component; must implement {@link IconBearing} and be a {@link JComponent}
+   * @param badge the badge to anchor
+   * @param mode the placement mode
+   * @return an attachment handle that can be passed to {@link #detach(Attachment)}
+   * @throws NullPointerException if any argument is {@code null}
+   * @throws IllegalArgumentException if {@code host} is not a {@link JComponent}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static Attachment attach(
+      final IconBearing host, final ElwhaBadge badge, final AnchorMode mode) {
     Objects.requireNonNull(host, "host");
     Objects.requireNonNull(badge, "badge");
+    Objects.requireNonNull(mode, "mode");
     if (!(host instanceof JComponent jc)) {
       throw new IllegalArgumentException("IconBearing host must be a JComponent");
     }
-    return doAttach(jc, host::getIconBounds, badge);
+    return doAttach(jc, host::getIconBounds, badge, mode);
   }
 
   /**
@@ -118,7 +182,28 @@ public final class ElwhaBadgeAnchor {
     Objects.requireNonNull(iconBounds, "iconBounds");
     Objects.requireNonNull(badge, "badge");
     final Rectangle frozen = new Rectangle(iconBounds);
-    return doAttach(host, () -> frozen, badge);
+    return doAttach(host, () -> frozen, badge, AnchorMode.ICON_CORNER);
+  }
+
+  /**
+   * Attaches the given badge to an arbitrary host at its trailing edge ({@link
+   * AnchorMode#TRAILING_EDGE}) — the M3 "Favorites 84" pattern, where a Large badge follows a label
+   * + icon composition at the row's trailing end, vertically centered. The host need not be {@link
+   * IconBearing} (the icon bounds are not consulted in this mode); any {@link JComponent}
+   * composition works. RTL mirrors the trailing edge to the leading (left) edge. If the host
+   * already has an anchored badge, the prior attachment is detached first.
+   *
+   * @param host the host composition
+   * @param badge the badge to anchor (a Large badge per the M3 pattern, though not enforced)
+   * @return an attachment handle that can be passed to {@link #detach(Attachment)}
+   * @throws NullPointerException if either argument is {@code null}
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public static Attachment attachTrailingEdge(final JComponent host, final ElwhaBadge badge) {
+    Objects.requireNonNull(host, "host");
+    Objects.requireNonNull(badge, "badge");
+    return doAttach(host, Rectangle::new, badge, AnchorMode.TRAILING_EDGE);
   }
 
   /**
@@ -136,12 +221,15 @@ public final class ElwhaBadgeAnchor {
   }
 
   private static Attachment doAttach(
-      final JComponent host, final Supplier<Rectangle> iconBoundsSupplier, final ElwhaBadge badge) {
+      final JComponent host,
+      final Supplier<Rectangle> iconBoundsSupplier,
+      final ElwhaBadge badge,
+      final AnchorMode mode) {
     final Attachment prior = (Attachment) host.getClientProperty(HOST_ATTACHMENT_KEY);
     if (prior != null) {
       prior.detach();
     }
-    final Attachment attachment = new Attachment(host, iconBoundsSupplier, badge);
+    final Attachment attachment = new Attachment(host, iconBoundsSupplier, badge, mode);
     host.putClientProperty(HOST_ATTACHMENT_KEY, attachment);
     attachment.install();
     return attachment;
@@ -161,6 +249,7 @@ public final class ElwhaBadgeAnchor {
     private final JComponent host;
     private final Supplier<Rectangle> iconBoundsSupplier;
     private final ElwhaBadge badge;
+    private final AnchorMode mode;
 
     private JLayeredPane layeredPane;
     private boolean detached;
@@ -214,10 +303,12 @@ public final class ElwhaBadgeAnchor {
     private Attachment(
         final JComponent host,
         final Supplier<Rectangle> iconBoundsSupplier,
-        final ElwhaBadge badge) {
+        final ElwhaBadge badge,
+        final AnchorMode mode) {
       this.host = host;
       this.iconBoundsSupplier = iconBoundsSupplier;
       this.badge = badge;
+      this.mode = mode;
     }
 
     private void install() {
@@ -303,6 +394,10 @@ public final class ElwhaBadgeAnchor {
       if (detached || layeredPane == null) {
         return;
       }
+      if (mode == AnchorMode.TRAILING_EDGE) {
+        refreshTrailingEdge();
+        return;
+      }
       final Rectangle icon = iconBoundsSupplier.get();
       // Empty iconBounds — host has no icon currently installed. Without this guard the
       // anchor would still place the badge at (offsetY, -offsetX) relative to the host's
@@ -340,6 +435,32 @@ public final class ElwhaBadgeAnchor {
       final int badgeY = pinY - pref.height;
 
       badge.setBounds(badgeX, badgeY, pref.width, pref.height);
+      badge.revalidate();
+      badge.repaint();
+    }
+
+    // TRAILING_EDGE placement: the badge sits flush against the host composition's trailing edge,
+    // vertically centered on the host — the M3 "Favorites 84" pattern. The icon bounds are not
+    // consulted; the host's full bounds drive placement. RTL mirrors the trailing edge to the left.
+    private void refreshTrailingEdge() {
+      final int hostW = host.getWidth();
+      final int hostH = host.getHeight();
+      if (hostW <= 0 || hostH <= 0) {
+        badge.setVisible(false);
+        return;
+      }
+      syncBadgeVisibility();
+      final boolean ltr = host.getComponentOrientation().isLeftToRight();
+      final Dimension pref = badge.getPreferredSize();
+
+      // Align the badge's trailing edge to the host's trailing edge (right in LTR, left in RTL) and
+      // center it vertically on the host.
+      final int badgeXInHost = ltr ? hostW - pref.width : 0;
+      final int badgeYInHost = (hostH - pref.height) / 2;
+      final Point topLeftInLayered =
+          SwingUtilities.convertPoint(host, new Point(badgeXInHost, badgeYInHost), layeredPane);
+
+      badge.setBounds(topLeftInLayered.x, topLeftInLayered.y, pref.width, pref.height);
       badge.revalidate();
       badge.repaint();
     }

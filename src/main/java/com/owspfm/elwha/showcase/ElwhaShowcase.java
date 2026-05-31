@@ -2744,11 +2744,54 @@ public final class ElwhaShowcase {
             stack(
                 gallerySection("Variants", BadgePlaygroundPanels.buildVariantsPanel()),
                 gallerySection("Content range", BadgePlaygroundPanels.buildContentRangePanel()),
-                gallerySection("Orientation", BadgePlaygroundPanels.buildOrientationPanel()))));
+                gallerySection("Orientation", BadgePlaygroundPanels.buildOrientationPanel()),
+                gallerySection(
+                    "Trailing edge — Favorites 84",
+                    BadgePlaygroundPanels.buildTrailingEdgePanel()))));
     return tabs;
   }
 
   private static final String BADGE_DEFAULT_CONTENT = "3";
+
+  // Builds the Workbench's badge host for the chosen anchor mode: an ElwhaIconButton for
+  // ICON_CORNER
+  // (an IconBearing host), or a fixed-width "favorites" icon + label row for TRAILING_EDGE (the M3
+  // "Favorites 84" composition). Both carry the "Favorites" accessible name and report name changes
+  // to the inspector so the a11y splice stays visible regardless of mode.
+  private static JComponent buildBadgeHost(
+      final boolean trailingEdge, final boolean rtl, final JLabel a11yInspector) {
+    final java.awt.ComponentOrientation orientation =
+        rtl
+            ? java.awt.ComponentOrientation.RIGHT_TO_LEFT
+            : java.awt.ComponentOrientation.LEFT_TO_RIGHT;
+    final JComponent host;
+    if (trailingEdge) {
+      final JLabel content =
+          new JLabel(
+              "Favorites", MaterialIcons.favoriteFilled(), javax.swing.SwingConstants.LEADING);
+      content.setIconTextGap(8);
+      content.setComponentOrientation(orientation);
+      final JPanel row = new JPanel(new BorderLayout());
+      row.setOpaque(false);
+      row.add(content, BorderLayout.LINE_START);
+      row.setPreferredSize(new Dimension(220, 44));
+      host = row;
+    } else {
+      host = new ElwhaIconButton(MaterialIcons.favoriteFilled());
+    }
+    host.setComponentOrientation(orientation);
+    host.getAccessibleContext().setAccessibleName("Favorites");
+    host.getAccessibleContext()
+        .addPropertyChangeListener(
+            event -> {
+              if (javax.accessibility.AccessibleContext.ACCESSIBLE_NAME_PROPERTY.equals(
+                  event.getPropertyName())) {
+                final Object next = event.getNewValue();
+                a11yInspector.setText(next == null ? "(null)" : "\"" + next + "\"");
+              }
+            });
+    return host;
+  }
 
   private static JComponent buildBadgeWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
@@ -2807,6 +2850,8 @@ public final class ElwhaShowcase {
     // rather than the default Swing JButton chrome.
     final ElwhaButton clearOverrideButton = ElwhaButton.outlinedButton("Reset");
     final JCheckBox rtlBox = new JCheckBox("RTL");
+    final JComboBox<ElwhaBadgeAnchor.AnchorMode> anchorModeBox =
+        new JComboBox<>(ElwhaBadgeAnchor.AnchorMode.values());
     final JLabel a11yInspector = new JLabel("(detached)");
 
     final WorkbenchControls controls = workbench.controls();
@@ -2823,6 +2868,7 @@ public final class ElwhaShowcase {
     controls.addControl("", clearOverrideButton);
     controls.addControl("host.name:", a11yInspector);
     controls.addSection("Layout");
+    controls.addControl("Anchor", anchorModeBox);
     controls.addControl("", rtlBox);
 
     final java.util.concurrent.atomic.AtomicReference<ElwhaBadgeAnchor.Attachment> liveAttachment =
@@ -2857,21 +2903,9 @@ public final class ElwhaShowcase {
           incrementButton.setEnabled(isLarge && numericContent);
           contentResetButton.setEnabled(isLarge);
 
-          final ElwhaIconButton host = new ElwhaIconButton(MaterialIcons.favoriteFilled());
-          host.getAccessibleContext().setAccessibleName("Favorites");
-          host.setComponentOrientation(
-              rtlBox.isSelected()
-                  ? java.awt.ComponentOrientation.RIGHT_TO_LEFT
-                  : java.awt.ComponentOrientation.LEFT_TO_RIGHT);
-          host.getAccessibleContext()
-              .addPropertyChangeListener(
-                  event -> {
-                    if (javax.accessibility.AccessibleContext.ACCESSIBLE_NAME_PROPERTY.equals(
-                        event.getPropertyName())) {
-                      final Object next = event.getNewValue();
-                      a11yInspector.setText(next == null ? "(null)" : "\"" + next + "\"");
-                    }
-                  });
+          final boolean trailingEdge =
+              anchorModeBox.getSelectedItem() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE;
+          final JComponent host = buildBadgeHost(trailingEdge, rtlBox.isSelected(), a11yInspector);
 
           final ElwhaBadge badge;
           final String resolvedContent = contentText.isEmpty() ? "3" : contentText;
@@ -2887,7 +2921,10 @@ public final class ElwhaShowcase {
           }
 
           workbench.setStage(host);
-          liveAttachment.set(ElwhaBadgeAnchor.attach(host, badge));
+          liveAttachment.set(
+              trailingEdge
+                  ? ElwhaBadgeAnchor.attachTrailingEdge(host, badge)
+                  : ElwhaBadgeAnchor.attach((com.owspfm.elwha.badge.IconBearing) host, badge));
           a11yInspector.setText("\"" + host.getAccessibleContext().getAccessibleName() + "\"");
           workbench.setCode(
               renderBadgeCode(variant, resolvedContent, containerColor, labelColor, overrideText));
@@ -2923,6 +2960,7 @@ public final class ElwhaShowcase {
     containerColorBox.addActionListener(event -> apply.run());
     labelColorBox.addActionListener(event -> apply.run());
     rtlBox.addActionListener(event -> apply.run());
+    anchorModeBox.addActionListener(event -> apply.run());
 
     final javax.swing.event.DocumentListener docListener =
         new javax.swing.event.DocumentListener() {
