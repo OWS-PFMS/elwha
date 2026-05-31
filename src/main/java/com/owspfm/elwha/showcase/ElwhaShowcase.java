@@ -134,7 +134,7 @@ import javax.swing.event.DocumentListener;
  * -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"}
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ElwhaShowcase {
@@ -3036,7 +3036,9 @@ public final class ElwhaShowcase {
             stack(
                 gallerySection("Variants", NavRailDestinationPlaygroundPanels.buildVariantsPanel()),
                 gallerySection(
-                    "Factory axis", NavRailDestinationPlaygroundPanels.buildFactoryAxisPanel()))));
+                    "Factory axis", NavRailDestinationPlaygroundPanels.buildFactoryAxisPanel()),
+                gallerySection(
+                    "Badge anchor", NavRailDestinationPlaygroundPanels.buildBadgeAnchorPanel()))));
     return tabs;
   }
 
