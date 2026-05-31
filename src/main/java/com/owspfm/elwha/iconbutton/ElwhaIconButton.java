@@ -3,7 +3,10 @@ package com.owspfm.elwha.iconbutton;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
+import com.owspfm.elwha.theme.ShapeMorphPainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.SurfacePainter;
@@ -93,6 +96,18 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   private static final int HOVER_POLL_INTERVAL_MS = 100;
   private static final int RIPPLE_TOTAL_MS = 400;
   private static final int RIPPLE_TICK_MS = 16;
+  // M3 Expressive press shape-morph (#295). On press the corner radius morphs toward the OPPOSITE
+  // shape extreme — round-ish buttons square up, already-square buttons round out — snapping back
+  // on release. The icon button's analogue of ElwhaButton's pressMorph (#176), but with its own
+  // tuning: the icon button has no companion press-WIDTH morph (it is a fixed-size square), so the
+  // shape morph alone must carry the press cue. Hence (a) the morph magnitude is a ratio of the
+  // button's max radius — visible across all sizes, not a flat 4 px that vanishes on the round
+  // default; (b) there is no "leave pill corners alone" guard (a FULL/circular button MUST morph,
+  // else a quick click on a ripple-suppressed dismiss ✕ (#290) confirms nothing); and (c) the
+  // morph is bidirectional, so a fully-square (ShapeScale.NONE) button — which has no roundness to
+  // shed — still reads a change. MIN_DELTA floors the magnitude on the smallest sizes.
+  private static final float PRESS_RADIUS_MORPH_RATIO = 0.40f;
+  private static final int PRESS_RADIUS_MIN_DELTA_PX = 4;
 
   // Configuration ----------------------------------------------------------
   private IconButtonVariant variant = IconButtonVariant.STANDARD;
@@ -117,6 +132,13 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   private float rippleProgress = 1f;
   private Timer rippleTimer;
   private boolean rippleEnabled = true;
+
+  // Morph state ------------------------------------------------------------
+  // Press shape morph (#295) — animates to the pressed (squarer) geometry on press and back on
+  // release, at the §3-pinned short3 (150 ms) press timing. Drives the body + ripple-clip corner
+  // radius from paintComponent; coexists with the StateLayer.PRESSED overlay and the ripple,
+  // neither of which it disturbs.
+  private final MorphAnimator pressMorph = new MorphAnimator(this, MorphAnimator.SHORT3_MS);
 
   /**
    * Backup poll timer for hover-clear. Swing's {@code mouseExited} fires unreliably on macOS for
@@ -793,8 +815,12 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
             if (isCursorStillInsideButton(e)) {
               return;
             }
+            final boolean wasPressed = pressed;
             hovered = false;
             pressed = false;
+            if (wasPressed) {
+              pressMorph.reverse();
+            }
             stopHoverPolling();
             repaint();
           }
@@ -805,6 +831,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
               return;
             }
             pressed = true;
+            pressMorph.start();
             // Honor JComponent's setRequestFocusEnabled — clicks grab focus by default, but
             // toolbar contexts typically suppress click-focus (the toolbar action shouldn't pull
             // focus away from the document / list / editor being acted on). Tab navigation still
@@ -820,10 +847,12 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
           public void mouseReleased(final MouseEvent e) {
             if (!pressed || !isEnabled()) {
               pressed = false;
+              pressMorph.reverse();
               repaint();
               return;
             }
             pressed = false;
+            pressMorph.reverse();
             if (containsPoint(e.getPoint())) {
               activate(e.getModifiersEx());
             }
@@ -841,7 +870,11 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
 
           @Override
           public void focusLost(final FocusEvent e) {
+            final boolean wasPressed = pressed;
             pressed = false;
+            if (wasPressed) {
+              pressMorph.reverse();
+            }
             repaint();
           }
         });
@@ -856,6 +889,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
               return;
             }
             startRipple(new Point(getWidth() / 2, getHeight() / 2));
+            pulsePressMorph();
             activate(0);
           }
         };
@@ -969,7 +1003,20 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     if (rippleTimer != null) {
       rippleTimer.stop();
     }
+    pressMorph.stop();
     super.removeNotify();
+  }
+
+  // M3 Expressive keyboard activation (#295) — a tap has no press-and-hold, so the morph is pulsed:
+  // animate in, then auto-reverse one short3 window later so a Space / Enter activation reads the
+  // same shape feedback a mouse press does. ElwhaButton does not pulse on keyboard (its ripple is
+  // its keyboard cue); the icon button pulses because, with the ripple suppressible (#288), the
+  // morph is its only guaranteed press confirmation.
+  private void pulsePressMorph() {
+    pressMorph.start();
+    final Timer release = new Timer(MorphAnimator.SHORT3_MS, e -> pressMorph.reverse());
+    release.setRepeats(false);
+    release.start();
   }
 
   // --------------------------------------------------------------- painting
@@ -985,6 +1032,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     final StateLayer overlay = activeOverlay();
     final ColorRole borderRole = effectiveBorderRole(focused);
     final float borderStroke = focused ? Math.max(borderWidth, FOCUSED_BORDER_WIDTH) : borderWidth;
+    final CornerRadii bodyRadii = morphedRadii(w, h, arc);
 
     if (!isEnabled()) {
       // M3 disabled is a compositing pass (container at 12%, content at 38%) over the resolved
@@ -992,7 +1040,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
       final Graphics2D dim = (Graphics2D) g.create();
       try {
         dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
-        paintSurface(dim, w, h, arc, surfaceRole, null, borderRole, borderStroke);
+        paintSurface(dim, w, h, bodyRadii, surfaceRole, null, borderRole, borderStroke);
       } finally {
         dim.dispose();
       }
@@ -1000,39 +1048,86 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
       return;
     }
 
-    paintSurface((Graphics2D) g, w, h, arc, surfaceRole, overlay, borderRole, borderStroke);
-    paintRippleLayer((Graphics2D) g, w, h, arc);
+    paintSurface((Graphics2D) g, w, h, bodyRadii, surfaceRole, overlay, borderRole, borderStroke);
+    paintRippleLayer((Graphics2D) g, w, h, bodyRadii);
     paintIcon(g, 1f);
   }
 
-  // Routes the surface paint through the per-corner SurfacePainter overload when a connected-group
-  // corner override is installed, or the uniform int-arc overload otherwise.
+  // Routes every surface paint through the per-corner SurfacePainter overload. morphedRadii(...)
+  // resolves the resting / pressed / connected-group geometry into a single CornerRadii, so the
+  // int-arc path is gone here — the CornerRadii overload's per-corner clamp renders a uniform
+  // radius identically to the old int-arc call, so the resting look is unchanged.
   private void paintSurface(
       final Graphics2D g,
       final int w,
       final int h,
-      final int arc,
+      final CornerRadii radii,
       final ColorRole surfaceRole,
       final StateLayer overlay,
       final ColorRole borderRole,
       final float borderStroke) {
-    if (cornerRadii != null) {
-      SurfacePainter.paint(g, w, h, cornerRadii, surfaceRole, overlay, borderRole, borderStroke);
-    } else {
-      SurfacePainter.paint(g, w, h, arc, surfaceRole, overlay, borderRole, borderStroke);
-    }
+    SurfacePainter.paint(g, w, h, radii, surfaceRole, overlay, borderRole, borderStroke);
   }
 
-  private void paintRippleLayer(final Graphics2D g, final int w, final int h, final int arc) {
+  private void paintRippleLayer(
+      final Graphics2D g, final int w, final int h, final CornerRadii radii) {
     if (rippleProgress >= 1f || rippleOrigin == null) {
       return;
     }
-    if (cornerRadii != null) {
-      RipplePainter.paint(
-          g, w, h, rippleOrigin, rippleProgress, cornerRadii, resolveForegroundColor());
-    } else {
-      RipplePainter.paint(g, w, h, rippleOrigin, rippleProgress, arc, resolveForegroundColor());
+    RipplePainter.paint(g, w, h, rippleOrigin, rippleProgress, radii, resolveForegroundColor());
+  }
+
+  // #295 — resolves the corner geometry for the current frame: the connected-group override if
+  // installed, else the shape-derived uniform radius, with the press shape morph applied on top.
+  // Works in real-radius CornerRadii space; the resting radius converts the int-arc (diameter)
+  // shape value via /2 so the CornerRadii render matches the prior int-arc paint exactly (the
+  // cornerRadiusPx convention foot-gun — see CHANGELOG #218 / #285).
+  private CornerRadii morphedRadii(final int w, final int h, final int arc) {
+    final CornerRadii base =
+        cornerRadii != null ? cornerRadii : CornerRadii.uniform(restingRadiusPx(w, h, arc));
+    final float easedPress = easedPressProgress();
+    if (easedPress <= 0f) {
+      return base;
     }
+    final int maxRadius = Math.min(w, h) / 2;
+    return ShapeMorphPainter.interpolate(
+        base, pressedRadii(base, maxRadius), easedPress, Easing.LINEAR);
+  }
+
+  private static int restingRadiusPx(final int w, final int h, final int arc) {
+    return Math.min(arc, Math.min(w, h)) / 2;
+  }
+
+  // Bidirectional pressed geometry: round-ish corners (in the rounder half of [0, maxRadius]) lose
+  // radius, square-ish corners gain it, so the press always produces a visible change. Direction
+  // is chosen once from the largest corner so a uniform shape's four corners move together (and a
+  // mixed connected-group override doesn't morph corner-by-corner in opposing directions).
+  private static CornerRadii pressedRadii(final CornerRadii base, final int maxRadius) {
+    final int delta =
+        Math.max(PRESS_RADIUS_MIN_DELTA_PX, Math.round(maxRadius * PRESS_RADIUS_MORPH_RATIO));
+    final int signed = base.largestPx() * 2 >= maxRadius ? -delta : delta;
+    return CornerRadii.of(
+        clampRadius(base.topLeftPx() + signed, maxRadius),
+        clampRadius(base.topRightPx() + signed, maxRadius),
+        clampRadius(base.bottomRightPx() + signed, maxRadius),
+        clampRadius(base.bottomLeftPx() + signed, maxRadius));
+  }
+
+  private static int clampRadius(final int radius, final int maxRadius) {
+    return Math.max(0, Math.min(maxRadius, radius));
+  }
+
+  // Per-direction easing mirroring ElwhaButton (#176): M3 emphasized.decelerate going in (the
+  // press should read as an immediate snap-to-pressed), emphasized.accelerate going out (releases
+  // feel snappier). Returns 0 when no morph is in flight so morphedRadii short-circuits to resting.
+  private float easedPressProgress() {
+    final float progress = pressMorph.progress();
+    if (progress <= 0f) {
+      return 0f;
+    }
+    final Easing easing =
+        pressMorph.target() >= 0.5f ? Easing.EMPHASIZED_DECELERATE : Easing.EMPHASIZED_ACCELERATE;
+    return easing.ease(progress);
   }
 
   private void paintIcon(final Graphics g, final float contentAlpha) {
