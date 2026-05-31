@@ -1315,6 +1315,23 @@ public class ElwhaButton extends JComponent {
     widthMorph.reverse();
   }
 
+  /**
+   * Returns this button's current group-driven width-borrow contribution — the live {@code
+   * widthMorph.progress() × borrow factor} term that {@link #paintComponent} folds into the painted
+   * width (design doc §6). {@code 0} at rest and on any button outside a standard group's
+   * width-ripple; while a group neighbor is held it animates {@code 0 → factor → 0} in sync with
+   * the visible width pinch. Diagnostic reader for the Button Group Workbench's per-segment borrow
+   * readout ([#184]) — not part of the press-morph behavior contract.
+   *
+   * @return the current borrow contribution (the active factor scaled by morph progress); {@code 0}
+   *     at rest
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public float currentWidthBorrow() {
+    return widthMorph.progress() * widthBorrowFactor;
+  }
+
   // ----------------------------------------------------------- paint
 
   @Override

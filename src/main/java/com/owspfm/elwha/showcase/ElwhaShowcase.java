@@ -2248,6 +2248,11 @@ public final class ElwhaShowcase {
       final ButtonGroupVariant variant,
       final ResizeMode resize,
       final int maxWidth) {
+    // A STANDARD group has the §6 width-ripple; mount it with the live per-segment borrow readouts
+    // (#184). CONNECTED has no width-ripple, so it gets the bare group / flex wrapper below.
+    if (variant == ButtonGroupVariant.STANDARD) {
+      return new ButtonGroupBorrowReadout(group);
+    }
     if (variant != ButtonGroupVariant.CONNECTED || resize != ResizeMode.FLEXIBLE) {
       return group;
     }
