@@ -134,7 +134,7 @@ import javax.swing.event.DocumentListener;
  * -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"}
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ElwhaShowcase {
@@ -632,6 +632,13 @@ public final class ElwhaShowcase {
             "The full M3 typography scale rendered in the bundled Inter type-face.",
             AREA_FOUNDATIONS,
             scroll(FoundationsPanels.buildTypeScale(tokenRefreshers))));
+    register(
+        new LeafEntry(
+            "Icons",
+            "Every bundled Material Symbol, themed and labelled with its MaterialIcons factory"
+                + " call.",
+            AREA_FOUNDATIONS,
+            scroll(FoundationsPanels.buildIconGallery(tokenRefreshers))));
     register(
         new LeafEntry(
             "Swing Comps",

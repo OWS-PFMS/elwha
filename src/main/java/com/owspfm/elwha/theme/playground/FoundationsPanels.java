@@ -1,5 +1,6 @@
 package com.owspfm.elwha.theme.playground;
 
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
@@ -11,12 +12,17 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GridLayout;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
+import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -34,6 +40,7 @@ import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.JTree;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingConstants;
 import javax.swing.tree.DefaultMutableTreeNode;
 
 /**
@@ -52,7 +59,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
  * switch.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class FoundationsPanels {
@@ -85,6 +92,101 @@ public final class FoundationsPanels {
     grid.setAlignmentX(JComponent.LEFT_ALIGNMENT);
     panel.add(grid);
     return panel;
+  }
+
+  /**
+   * Uniform render size for every cell in the icon gallery — bigger than the 24-dp default so the
+   * glyphs read clearly in the grid.
+   */
+  private static final int GALLERY_ICON_SIZE_PX = 28;
+
+  /**
+   * Builds the Icons panel: every glyph factory exposed by {@link MaterialIcons}, rendered at a
+   * uniform size and labelled with its factory-method name (the call to copy). The roster is
+   * discovered reflectively from {@code MaterialIcons}' zero-arg {@link FlatSVGIcon} factories, so
+   * a newly-bundled glyph surfaces here with no edit to this builder, and it is sorted so each
+   * {@code *Filled} variant sits immediately after its outline counterpart. Each cell builds a
+   * fresh icon instance via the sized factory overload — no shared {@code ColorFilter} is mutated
+   * (cf. #197) — so every glyph re-themes correctly when the Showcase mode toggle flips
+   * light&nbsp;↔&nbsp;dark.
+   *
+   * @param refreshers registry the builder adds its token refreshers to
+   * @return the icons gallery panel
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static JComponent buildIconGallery(final List<Runnable> refreshers) {
+    final JPanel panel = new JPanel();
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+    panel.add(
+        sectionLabel(
+            "Every bundled Material Symbol — labelled with its MaterialIcons factory call",
+            refreshers));
+    panel.add(Box.createVerticalStrut(12));
+
+    final JPanel grid = new JPanel(new GridLayout(0, 6, 12, 12));
+    grid.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    for (final String name : iconFactoryNames()) {
+      grid.add(iconCell(name, refreshers));
+    }
+    panel.add(grid);
+    return panel;
+  }
+
+  private static JComponent iconCell(final String name, final List<Runnable> refreshers) {
+    final JPanel cell = new JPanel();
+    cell.setLayout(new BoxLayout(cell, BoxLayout.Y_AXIS));
+    cell.setToolTipText("MaterialIcons." + name + "()");
+
+    final JLabel icon = new JLabel(galleryIcon(name));
+    icon.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+
+    final JLabel caption = new JLabel(name);
+    caption.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    caption.setHorizontalAlignment(SwingConstants.CENTER);
+
+    final Runnable refresh =
+        () -> {
+          caption.setFont(TypeRole.LABEL_SMALL.resolve());
+          caption.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+          icon.repaint();
+        };
+    refresh.run();
+    refreshers.add(refresh);
+
+    cell.add(icon);
+    cell.add(Box.createVerticalStrut(6));
+    cell.add(caption);
+    return cell;
+  }
+
+  // The icon-factory roster is discovered reflectively: every public static zero-arg method on
+  // MaterialIcons returning a FlatSVGIcon is a glyph factory (pushPin, delete, edit, ...). Sorted
+  // by
+  // name so each *Filled variant sits immediately after its outline counterpart in the grid.
+  private static List<String> iconFactoryNames() {
+    final List<String> names = new ArrayList<>();
+    for (final Method method : MaterialIcons.class.getMethods()) {
+      if (Modifier.isStatic(method.getModifiers())
+          && method.getParameterCount() == 0
+          && method.getReturnType() == FlatSVGIcon.class) {
+        names.add(method.getName());
+      }
+    }
+    names.sort(Comparator.naturalOrder());
+    return names;
+  }
+
+  // Builds a fresh, themed icon at the uniform gallery size by invoking the factory's sized (int)
+  // overload reflectively — a per-cell instance, so no shared ColorFilter is mutated (cf. #197).
+  private static Icon galleryIcon(final String name) {
+    try {
+      return (Icon)
+          MaterialIcons.class.getMethod(name, int.class).invoke(null, GALLERY_ICON_SIZE_PX);
+    } catch (final ReflectiveOperationException e) {
+      throw new IllegalStateException("No sized overload for MaterialIcons." + name, e);
+    }
   }
 
   /**
