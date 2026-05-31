@@ -1221,6 +1221,24 @@ public final class ElwhaFab extends JComponent {
     return getPreferredSize();
   }
 
+  /**
+   * The shadow-halo insets this FAB reserves around its visible body. {@link #getPreferredSize()}
+   * pads the body by these insets on every edge so the hover-elevation shadow never clips against
+   * the component bounds; the reserve is constant (sized for the hover elevation) and does not
+   * shrink at rest. Placement consumers — {@link ElwhaFabAnchor}, {@link
+   * com.owspfm.elwha.navrail.ElwhaNavigationRail} — read this to back the halo out of the bounds
+   * when pinning the visible body to a spec margin, rather than duplicating the private elevation
+   * constant and recomputing {@link ShadowPainter#shadowInsets(int)} themselves.
+   *
+   * @return a copy of the reserved halo insets (never {@code null}); mutating the returned instance
+   *     does not affect the FAB
+   * @version v0.3.0
+   * @since v0.3.0
+   */
+  public Insets getShadowInsets() {
+    return (Insets) SHADOW_RESERVE.clone();
+  }
+
   @Override
   public AccessibleContext getAccessibleContext() {
     if (accessibleContext == null) {

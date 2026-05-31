@@ -96,14 +96,6 @@ public final class ElwhaFabAnchor extends JLayeredPane {
   // Scroll deltas below this (px) are treated as jitter and ignored for direction detection.
   private static final int SCROLL_THRESHOLD_PX = 2;
 
-  // Mirrors ElwhaFab.HOVER_ELEVATION (private). ElwhaFab.getPreferredSize() reserves the
-  // hover-elevation halo unconditionally, so the same elevation yields the halo to back out of the
-  // bounds when pinning the visible body to the spec margin. The ElwhaNavigationRail header FAB
-  // duplicates this same constant for the same reason; a shared read-only accessor on ElwhaFab
-  // would
-  // retire both copies (follow-up).
-  private static final int FAB_HOVER_ELEVATION = 4;
-
   private final Component content;
   private final ElwhaFab fab;
   private Corner corner = Corner.BOTTOM_TRAILING;
@@ -302,7 +294,7 @@ public final class ElwhaFabAnchor extends JLayeredPane {
     content.setBounds(0, 0, w, h);
 
     final Dimension pref = fab.getPreferredSize();
-    final Insets halo = ShadowPainter.shadowInsets(FAB_HOVER_ELEVATION);
+    final Insets halo = fab.getShadowInsets();
     final boolean ltr = getComponentOrientation().isLeftToRight();
     final boolean trailing = corner == Corner.BOTTOM_TRAILING || corner == Corner.TOP_TRAILING;
     final boolean fabOnRight = trailing == ltr;
