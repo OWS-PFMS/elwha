@@ -1,6 +1,11 @@
 package com.owspfm.elwha.theme.playground;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.button.ButtonSize;
+import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.buttongroup.ResizeMode;
+import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
@@ -152,26 +157,29 @@ public final class FoundationsPanels {
     return panel;
   }
 
-  // Outlined / Filled segmented toggle. Flipping it updates the shared showFilled flag and re-runs
-  // every cell's icon updater so the whole grid swaps fill axis at once.
+  // Outlined / Filled fill-axis toggle — dogfoods ElwhaButtonGroup as the M3 connected segmented
+  // control (mirroring the Showcase's own mode / tier toggles), not raw JToggleButtons. Index 1
+  // (Filled) flips the shared showFilled flag and re-runs every cell's icon updater so the whole
+  // grid swaps fill axis at once.
   private static JComponent buildFillToggle(
       final boolean[] showFilled, final List<Runnable> iconUpdaters) {
+    final ElwhaButtonGroup toggle =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL)
+            .add("Outlined", "Filled");
+    toggle.setSelectedIndex(showFilled[0] ? 1 : 0);
+    // Listener attached after seeding so the initial selection does not re-render redundantly.
+    toggle.addSelectionListener(
+        group -> {
+          showFilled[0] = group.getSelectedIndex() == 1;
+          iconUpdaters.forEach(Runnable::run);
+        });
     final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
     row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    final JToggleButton outlined = new JToggleButton("Outlined", true);
-    final JToggleButton filled = new JToggleButton("Filled");
-    final ButtonGroup group = new ButtonGroup();
-    group.add(outlined);
-    group.add(filled);
-    final Runnable apply =
-        () -> {
-          showFilled[0] = filled.isSelected();
-          iconUpdaters.forEach(Runnable::run);
-        };
-    outlined.addActionListener(event -> apply.run());
-    filled.addActionListener(event -> apply.run());
-    row.add(outlined);
-    row.add(filled);
+    row.add(toggle);
     return row;
   }
 
