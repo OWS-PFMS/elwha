@@ -3248,7 +3248,14 @@ public final class ElwhaShowcase {
                 badgeFacet[0].setCode(renderNavRailBadgeCode(badgeSlot));
               }
             });
-    badgeFacet[0] = workbench.addFacet("Badge", badgeEditor);
+    // Wrap in a WorkbenchControls so the facet column centers the editor exactly like the
+    // standalone
+    // Badge Workbench (which mounts the same editor via controls.addControl) — a raw editor handed
+    // to
+    // addFacet would be stretched full-width by the card layout and read as left-shifted.
+    final WorkbenchControls badgeControls = new WorkbenchControls();
+    badgeControls.addControl("", badgeEditor);
+    badgeFacet[0] = workbench.addFacet("Badge", badgeControls);
     badgeFacet[0].setCode(renderNavRailBadgeCode(badgeSlot));
 
     workbench.setStage(railRow);
