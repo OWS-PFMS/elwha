@@ -107,11 +107,14 @@ public final class FoundationsPanels {
 
   /**
    * Builds the Icons panel: one cell per bundled Material Symbol, rendered at a uniform size and
-   * labelled with its {@link MaterialIcons} factory call (the call to copy). An Outlined / Filled
-   * segmented toggle swaps which fill axis every cell renders — Outlined shows {@code foo()},
-   * Filled shows {@code fooFilled()} for the symbols that bundle a fill variant, and falls back to
-   * the outline (its {@code foo()} call, unchanged label) for linework-only glyphs that ship no
-   * fill axis. The roster is discovered reflectively from {@code MaterialIcons}' zero-arg {@link
+   * labelled with its base {@link MaterialIcons} factory name. An Outlined / Filled segmented
+   * control above the grid swaps which fill axis every cell renders — Outlined shows {@code foo()},
+   * Filled shows {@code fooFilled()} for the symbols that bundle a fill variant (linework-only
+   * glyphs with no fill axis keep their outline). The control itself is the fill indicator, so the
+   * cell label stays the constant base name across the toggle; only the glyph and the per-cell
+   * tooltip (which carries the exact call, including the {@code *Filled} form) change. A constant
+   * label keeps the cell from reflowing, so the centered glyph holds its position when the axis
+   * flips. The roster is discovered reflectively from {@code MaterialIcons}' zero-arg {@link
    * FlatSVGIcon} factories, so a newly-bundled glyph surfaces here with no edit to this builder.
    * Each cell builds a fresh icon instance via the sized factory overload — no shared {@code
    * ColorFilter} is mutated (cf. #197) — so every glyph re-themes correctly when the Showcase mode
@@ -128,7 +131,7 @@ public final class FoundationsPanels {
     panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
     panel.add(
         sectionLabel(
-            "Every bundled Material Symbol — toggle the fill axis; the label is the MaterialIcons"
+            "Every bundled Material Symbol — toggle the fill axis; hover for the MaterialIcons"
                 + " call",
             refreshers));
     panel.add(Box.createVerticalStrut(8));
@@ -144,45 +147,17 @@ public final class FoundationsPanels {
     final JPanel grid = new JPanel(new GridLayout(0, 6, 12, 12));
     grid.setAlignmentX(JComponent.LEFT_ALIGNMENT);
     final List<String> names = iconFactoryNames();
-
-    // Build the cell roster (base glyphs only — *Filled is the toggle's Filled state, not its own
-    // cell) and size every cell to a single fixed dimension sized for the LONGEST label any cell
-    // can
-    // show — each cell's *Filled form when it has one, else its base name. Because the cell size is
-    // toggle-invariant, GridLayout never reflows the columns when the fill axis flips, so the
-    // centered icons hold their position instead of sliding as labels grow/shrink (the alternative
-    // —
-    // letting cells size to their current label — shifts every icon on toggle).
-    final List<String> baseNames = new ArrayList<>();
     for (final String name : names) {
-      if (!name.endsWith("Filled")) {
-        baseNames.add(name);
+      // One cell per base glyph: the *Filled factories are the toggle's Filled state, not their own
+      // cells.
+      if (name.endsWith("Filled")) {
+        continue;
       }
-    }
-    final Dimension cellSize = uniformCellSize(baseNames, names);
-    for (final String name : baseNames) {
       final boolean hasFilled = names.contains(name + "Filled");
-      grid.add(iconCell(name, hasFilled, cellSize, showFilled, iconUpdaters, refreshers));
+      grid.add(iconCell(name, hasFilled, showFilled, iconUpdaters, refreshers));
     }
     panel.add(grid);
     return panel;
-  }
-
-  // One fixed cell dimension for every gallery cell, wide enough for the longest label any cell can
-  // display (the *Filled form where bundled — always the longer of the two) so a fill-axis toggle
-  // never changes a cell's preferred size and the grid never reflows.
-  private static Dimension uniformCellSize(
-      final List<String> baseNames, final List<String> allNames) {
-    final java.awt.FontMetrics fm = new JLabel().getFontMetrics(TypeRole.LABEL_SMALL.resolve());
-    int widest = 0;
-    for (final String name : baseNames) {
-      final String longest = allNames.contains(name + "Filled") ? name + "Filled" : name;
-      widest = Math.max(widest, fm.stringWidth(longest));
-    }
-    final int labelPad = 16;
-    final int width = Math.max(GALLERY_ICON_SIZE_PX + labelPad, widest + labelPad);
-    final int height = GALLERY_ICON_SIZE_PX + 6 + fm.getHeight();
-    return new Dimension(width, height);
   }
 
   // Outlined / Filled fill-axis toggle — dogfoods ElwhaButtonGroup as the M3 connected segmented
@@ -214,44 +189,31 @@ public final class FoundationsPanels {
   private static JComponent iconCell(
       final String name,
       final boolean hasFilled,
-      final Dimension cellSize,
       final boolean[] showFilled,
       final List<Runnable> iconUpdaters,
       final List<Runnable> refreshers) {
     final JPanel cell = new JPanel();
     cell.setLayout(new BoxLayout(cell, BoxLayout.Y_AXIS));
-    // Fixed, toggle-invariant size so the icon stays centered in a stable cell — see
-    // uniformCellSize. The caption can render wider/narrower without resizing the cell.
-    cell.setPreferredSize(cellSize);
-    cell.setMinimumSize(cellSize);
-    cell.setMaximumSize(cellSize);
-
-    // Both the icon and caption are full-cell-width labels that center their own content. This is
-    // what actually keeps the glyph from shifting: BoxLayout centers its children on a line at
-    // (widest child width / 2), so if the caption were the widest child that line — and the icon
-    // centered on it — would slide as the label grew (anchor -> anchorFilled). Pinning BOTH labels
-    // to the same fixed cell width fixes the centering line at cellWidth/2 regardless of label
-    // text, and each label centers its glyph / string internally via setHorizontalAlignment.
-    final int rowWidth = cellSize.width;
 
     final JLabel icon = new JLabel();
-    icon.setHorizontalAlignment(SwingConstants.CENTER);
     icon.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    pinWidth(icon, rowWidth, GALLERY_ICON_SIZE_PX);
 
-    final JLabel caption = new JLabel();
-    caption.setHorizontalAlignment(SwingConstants.CENTER);
+    // The label is the stable base glyph name and never changes on toggle — the Outlined / Filled
+    // segmented control above the grid IS the fill indicator. A constant-width label means the cell
+    // never reflows, so the centered glyph holds its position when the axis flips (an axis-varying
+    // label slid the glyph as it grew, e.g. anchor -> anchorFilled). The tooltip still carries the
+    // exact call, including the *Filled form, for copy.
+    final JLabel caption = new JLabel(name);
     caption.setAlignmentX(JComponent.CENTER_ALIGNMENT);
-    pinWidth(caption, rowWidth, new JLabel().getPreferredSize().height);
+    caption.setHorizontalAlignment(SwingConstants.CENTER);
 
-    // Renders the glyph + label for the current fill axis. In Filled mode a symbol with no bundled
-    // fill variant falls back to its outline call, so its label stays the base name (honest: that
-    // call is what painted).
+    // Swaps only the glyph + tooltip for the current fill axis; the label stays put. A symbol with
+    // no bundled fill variant keeps its outline glyph in Filled mode, and its tooltip stays the
+    // base call (honest: that call is what painted).
     final Runnable update =
         () -> {
           final String call = showFilled[0] && hasFilled ? name + "Filled" : name;
           icon.setIcon(galleryIcon(call));
-          caption.setText(call);
           cell.setToolTipText("MaterialIcons." + call + "()");
         };
     update.run();
@@ -270,15 +232,6 @@ public final class FoundationsPanels {
     cell.add(Box.createVerticalStrut(6));
     cell.add(caption);
     return cell;
-  }
-
-  // Locks a component to a fixed width (its row width) at the given height, so under BoxLayout it
-  // can never become the widest child and pull the centering line off cellWidth/2.
-  private static void pinWidth(final JComponent component, final int width, final int height) {
-    final Dimension size = new Dimension(width, height);
-    component.setPreferredSize(size);
-    component.setMinimumSize(size);
-    component.setMaximumSize(size);
   }
 
   // The icon-factory roster is discovered reflectively: every public static zero-arg method on
