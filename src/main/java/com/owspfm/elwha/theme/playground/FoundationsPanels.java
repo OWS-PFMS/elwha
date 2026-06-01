@@ -7,6 +7,7 @@ import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
 import com.owspfm.elwha.buttongroup.ResizeMode;
 import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
@@ -16,6 +17,8 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -105,20 +108,24 @@ public final class FoundationsPanels {
    */
   private static final int GALLERY_ICON_SIZE_PX = 28;
 
+  /** Padding between the glyph and the edge of its {@code ElwhaSurface} tile, per side. */
+  private static final int ICON_TILE_PAD_PX = 16;
+
   /**
-   * Builds the Icons panel: one cell per bundled Material Symbol, rendered at a uniform size and
-   * labelled with its base {@link MaterialIcons} factory name. An Outlined / Filled segmented
-   * control above the grid swaps which fill axis every cell renders — Outlined shows {@code foo()},
-   * Filled shows {@code fooFilled()} for the symbols that bundle a fill variant (linework-only
-   * glyphs with no fill axis keep their outline). The control itself is the fill indicator, so the
-   * cell label stays the constant base name across the toggle; only the glyph and the per-cell
-   * tooltip (which carries the exact call, including the {@code *Filled} form) change. A constant
-   * label keeps the cell from reflowing, so the centered glyph holds its position when the axis
-   * flips. The roster is discovered reflectively from {@code MaterialIcons}' zero-arg {@link
-   * FlatSVGIcon} factories, so a newly-bundled glyph surfaces here with no edit to this builder.
-   * Each cell builds a fresh icon instance via the sized factory overload — no shared {@code
-   * ColorFilter} is mutated (cf. #197) — so every glyph re-themes correctly when the Showcase mode
-   * toggle flips light&nbsp;↔&nbsp;dark.
+   * Builds the Icons panel: one cell per bundled Material Symbol, each glyph rendered at a uniform
+   * size on an elevated {@link ElwhaSurface} tile (dogfooding the token-driven "Paper" primitive)
+   * and labelled below with its base {@link MaterialIcons} factory name. An Outlined / Filled
+   * segmented control above the grid swaps which fill axis every cell renders — Outlined shows
+   * {@code foo()}, Filled shows {@code fooFilled()} for the symbols that bundle a fill variant
+   * (linework-only glyphs with no fill axis keep their outline). The control itself is the fill
+   * indicator, so the cell label stays the constant base name across the toggle; only the glyph and
+   * the per-cell tooltip (which carries the exact call, including the {@code *Filled} form) change.
+   * A constant label keeps the cell from reflowing, so the centered glyph holds its position when
+   * the axis flips. The roster is discovered reflectively from {@code MaterialIcons}' zero-arg
+   * {@link FlatSVGIcon} factories, so a newly-bundled glyph surfaces here with no edit to this
+   * builder. Each cell builds a fresh icon instance via the sized factory overload — no shared
+   * {@code ColorFilter} is mutated (cf. #197) — so every glyph re-themes correctly when the
+   * Showcase mode toggle flips light&nbsp;↔&nbsp;dark.
    *
    * @param refreshers registry the builder adds its token refreshers to
    * @return the icons gallery panel
@@ -196,7 +203,22 @@ public final class FoundationsPanels {
     cell.setLayout(new BoxLayout(cell, BoxLayout.Y_AXIS));
 
     final JLabel icon = new JLabel();
-    icon.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    icon.setHorizontalAlignment(SwingConstants.CENTER);
+
+    // Each glyph sits on an elevated ElwhaSurface tile — dogfooding the token-driven "Paper"
+    // primitive (it re-skins on theme switch with no listener). A fixed square content size +
+    // GridBag-centered icon makes every tile identical regardless of glyph bbox; the surface's own
+    // getInsets() adds the M3 shadow reserve around that, so elevation 1 casts a soft drop shadow.
+    final ElwhaSurface tile = new ElwhaSurface().setSurfaceRole(ColorRole.SURFACE_CONTAINER);
+    tile.setElevation(1);
+    tile.setLayout(new GridBagLayout());
+    tile.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    final int contentSide = GALLERY_ICON_SIZE_PX + 2 * ICON_TILE_PAD_PX;
+    final Dimension tileContent = new Dimension(contentSide, contentSide);
+    tile.setPreferredSize(addInsets(tileContent, tile.getInsets()));
+    tile.setMinimumSize(tile.getPreferredSize());
+    tile.setMaximumSize(tile.getPreferredSize());
+    tile.add(icon, new GridBagConstraints());
 
     // The label is the stable base glyph name and never changes on toggle — the Outlined / Filled
     // segmented control above the grid IS the fill indicator. A constant-width label means the cell
@@ -228,10 +250,17 @@ public final class FoundationsPanels {
     refresh.run();
     refreshers.add(refresh);
 
-    cell.add(icon);
+    cell.add(tile);
     cell.add(Box.createVerticalStrut(6));
     cell.add(caption);
     return cell;
+  }
+
+  // Grows a content size by a component's insets (e.g. an ElwhaSurface's shadow reserve) to get the
+  // full preferred bounds.
+  private static Dimension addInsets(final Dimension content, final java.awt.Insets insets) {
+    return new Dimension(
+        content.width + insets.left + insets.right, content.height + insets.top + insets.bottom);
   }
 
   // The icon-factory roster is discovered reflectively: every public static zero-arg method on
