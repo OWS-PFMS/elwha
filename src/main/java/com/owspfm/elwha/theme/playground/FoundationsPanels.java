@@ -226,15 +226,23 @@ public final class FoundationsPanels {
     cell.setMinimumSize(cellSize);
     cell.setMaximumSize(cellSize);
 
+    // Both the icon and caption are full-cell-width labels that center their own content. This is
+    // what actually keeps the glyph from shifting: BoxLayout centers its children on a line at
+    // (widest child width / 2), so if the caption were the widest child that line — and the icon
+    // centered on it — would slide as the label grew (anchor -> anchorFilled). Pinning BOTH labels
+    // to the same fixed cell width fixes the centering line at cellWidth/2 regardless of label
+    // text, and each label centers its glyph / string internally via setHorizontalAlignment.
+    final int rowWidth = cellSize.width;
+
     final JLabel icon = new JLabel();
+    icon.setHorizontalAlignment(SwingConstants.CENTER);
     icon.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    pinWidth(icon, rowWidth, GALLERY_ICON_SIZE_PX);
 
     final JLabel caption = new JLabel();
-    caption.setAlignmentX(JComponent.CENTER_ALIGNMENT);
     caption.setHorizontalAlignment(SwingConstants.CENTER);
-    // Pin the caption to the cell width so a longer label can't stretch the cell (and shift the
-    // icon); overflow is centered/clipped instead.
-    caption.setMaximumSize(new Dimension(cellSize.width, Integer.MAX_VALUE));
+    caption.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    pinWidth(caption, rowWidth, new JLabel().getPreferredSize().height);
 
     // Renders the glyph + label for the current fill axis. In Filled mode a symbol with no bundled
     // fill variant falls back to its outline call, so its label stays the base name (honest: that
@@ -262,6 +270,15 @@ public final class FoundationsPanels {
     cell.add(Box.createVerticalStrut(6));
     cell.add(caption);
     return cell;
+  }
+
+  // Locks a component to a fixed width (its row width) at the given height, so under BoxLayout it
+  // can never become the widest child and pull the centering line off cellWidth/2.
+  private static void pinWidth(final JComponent component, final int width, final int height) {
+    final Dimension size = new Dimension(width, height);
+    component.setPreferredSize(size);
+    component.setMinimumSize(size);
+    component.setMaximumSize(size);
   }
 
   // The icon-factory roster is discovered reflectively: every public static zero-arg method on
