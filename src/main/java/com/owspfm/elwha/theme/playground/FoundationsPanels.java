@@ -135,15 +135,25 @@ public final class FoundationsPanels {
    * @since v0.4.0
    */
   public static JComponent buildIconGallery(final List<Runnable> refreshers) {
-    final JPanel panel = new JPanel();
-    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-    panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-    panel.add(
+    // BorderLayout so the constructor code panel pins to the bottom (SOUTH) and stays visible while
+    // the grid scrolls (CENTER). The gallery owns its own scroll pane — the Showcase mounts this
+    // leaf directly, NOT through its scroll(...) wrapper, so the code panel isn't inside the
+    // scrolled
+    // region. (A prior version put the whole column in one BoxLayout inside the Showcase scroll,
+    // which both buried the code panel below the fold and nested a scrollpane-in-scrollpane that
+    // thrashed layout.)
+    final JPanel root = new JPanel(new BorderLayout());
+    root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+
+    final JPanel head = new JPanel();
+    head.setLayout(new BoxLayout(head, BoxLayout.Y_AXIS));
+    head.setOpaque(false);
+    head.add(
         sectionLabel(
             "Every bundled Material Symbol — toggle the fill axis; click a tile for its"
                 + " constructor",
             refreshers));
-    panel.add(Box.createVerticalStrut(8));
+    head.add(Box.createVerticalStrut(8));
 
     // Shared fill-axis state + the per-cell re-render callbacks the toggle fans out to. A 1-element
     // array is the lambda-capturable mutable flag (no field needed on this stateless builder).
@@ -155,11 +165,12 @@ public final class FoundationsPanels {
     final IconSelection selection = new IconSelection();
     final IconCodePanel codePanel = new IconCodePanel(refreshers);
 
-    panel.add(buildFillToggle(showFilled, iconUpdaters));
-    panel.add(Box.createVerticalStrut(12));
+    final JComponent toggle = buildFillToggle(showFilled, iconUpdaters);
+    toggle.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    head.add(toggle);
+    head.add(Box.createVerticalStrut(12));
 
     final JPanel grid = new JPanel(new GridLayout(0, 6, 12, 12));
-    grid.setAlignmentX(JComponent.LEFT_ALIGNMENT);
     final List<String> names = iconFactoryNames();
     for (final String name : names) {
       // One cell per base glyph: the *Filled factories are the toggle's Filled state, not their own
@@ -171,11 +182,26 @@ public final class FoundationsPanels {
       grid.add(
           iconCell(name, hasFilled, showFilled, iconUpdaters, refreshers, selection, codePanel));
     }
-    panel.add(grid);
-    panel.add(Box.createVerticalStrut(16));
-    codePanel.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    panel.add(codePanel);
-    return panel;
+
+    // The grid sits at the top of the scrolled area; gridHolder keeps it from stretching its rows
+    // to
+    // the full viewport height (GridLayout would otherwise grow each cell vertically).
+    final JPanel gridHolder = new JPanel(new BorderLayout());
+    gridHolder.setOpaque(false);
+    gridHolder.add(grid, BorderLayout.NORTH);
+
+    final JPanel center = new JPanel(new BorderLayout());
+    center.setOpaque(false);
+    center.add(head, BorderLayout.NORTH);
+    center.add(gridHolder, BorderLayout.CENTER);
+
+    final JScrollPane scroll = new JScrollPane(center);
+    scroll.setBorder(BorderFactory.createEmptyBorder());
+    scroll.getVerticalScrollBar().setUnitIncrement(16);
+
+    root.add(scroll, BorderLayout.CENTER);
+    root.add(codePanel, BorderLayout.SOUTH);
+    return root;
   }
 
   // Outlined / Filled fill-axis toggle — dogfoods ElwhaButtonGroup as the M3 connected segmented
@@ -361,7 +387,7 @@ public final class FoundationsPanels {
       header.add(copy, BorderLayout.EAST);
 
       add(header, BorderLayout.NORTH);
-      add(new JScrollPane(area), BorderLayout.CENTER);
+      add(area, BorderLayout.CENTER);
 
       final Runnable refresh = () -> heading.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
       refresh.run();

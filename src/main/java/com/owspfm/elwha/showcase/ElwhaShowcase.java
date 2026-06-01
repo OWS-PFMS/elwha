@@ -638,7 +638,10 @@ public final class ElwhaShowcase {
             "Every bundled Material Symbol, themed and labelled with its MaterialIcons factory"
                 + " call.",
             AREA_FOUNDATIONS,
-            scroll(FoundationsPanels.buildIconGallery(tokenRefreshers))));
+            // The gallery owns its own scroll pane (grid scrolls, constructor panel pins to the
+            // bottom), so it is mounted directly — NOT through scroll(...) which would re-bury the
+            // pinned panel inside an outer scroll region.
+            FoundationsPanels.buildIconGallery(tokenRefreshers)));
     register(
         new LeafEntry(
             "Swing Comps",
