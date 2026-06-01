@@ -3080,15 +3080,18 @@ public final class ElwhaShowcase {
       targetBox.addItem(entry[1]);
     }
 
-    final ElwhaButton applyBadge = ElwhaButton.outlinedButton("Apply badge");
+    // Live edit (no Apply button — matches every other Workbench): changing either the target
+    // destination or the badge variant applies the badge immediately.
     final JLabel badgeStatus = new JLabel(" ");
-    applyBadge.addActionListener(
-        e -> {
+    final Runnable applyBadge =
+        () -> {
           final com.owspfm.elwha.navrail.ElwhaNavRailDestination target =
               destinations.get(targetBox.getSelectedIndex());
           target.setBadge(badgeFor((String) badgeBox.getSelectedItem()));
           badgeStatus.setText(badgeBox.getSelectedItem() + " → " + target.getLabel());
-        });
+        };
+    targetBox.addActionListener(e -> applyBadge.run());
+    badgeBox.addActionListener(e -> applyBadge.run());
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Selection");
@@ -3097,8 +3100,7 @@ public final class ElwhaShowcase {
     controls.addSection("Badge");
     controls.addControl("Target", targetBox);
     controls.addControl("Variant", badgeBox);
-    controls.addControl("", applyBadge);
-    controls.addControl("Last:", badgeStatus);
+    controls.addControl("Applied:", badgeStatus);
 
     workbench.setStage(row);
     workbench.setCode(
@@ -3310,25 +3312,73 @@ public final class ElwhaShowcase {
           }
         });
 
+    // --- Sub-component selector (#306 prototype) ---
+    // The rail is a COMPOSED component: a primary comp plus embedded sub-comps that each have their
+    // own customizable surface. Rather than stack every sub-comp's controls in one flat list, a
+    // [Rail][Badge][Surface] selector swaps the controls below it to that sub-comp's own editor —
+    // one panel visible at a time. Adding a future sub-comp editor is one more button, not another
+    // stacked block. The Badge editor is the reusable BadgePlaygroundPanels.buildBadgeEditor(...),
+    // bound to the badge on the "Liked" destination on the canvas; it deliberately omits anchor/RTL
+    // (the rail owns badge anchoring per #300). The "Rail" and "Surface" cards split the rail's own
+    // knobs by concern.
+    final JPanel railCard = subControlColumn();
+    addSubControl(railCard, "Variant", collapsedBtn);
+    addSubControl(railCard, "", expandedBtn);
+    addSubControl(railCard, "Expanded width", widthSlider);
+    addSubControl(railCard, "", widthLabel);
+    addSubControl(railCard, "", sectionsBox);
+    addSubControl(railCard, "Chrome", menuBox);
+    addSubControl(railCard, "", fabBox);
+    addSubControl(railCard, "", trailingBox);
+    addSubControl(railCard, "Selection", new JLabel("Click any destination to select."));
+    addSubControl(railCard, "Current", selectedLabel);
+
+    final JPanel surfaceCard = subControlColumn();
+    addSubControl(surfaceCard, "", surfaceFilled);
+    addSubControl(surfaceCard, "", dividerBox);
+    addSubControl(surfaceCard, "", elevationBox);
+
+    // The badge sub-comp on the canvas: the "Liked" destination (dests.get(1)) carries the badge.
+    final com.owspfm.elwha.navrail.ElwhaNavRailDestination badgedDest = dests.get(1);
+    final JPanel badgeCard = subControlColumn();
+    badgeCard.add(
+        BadgePlaygroundPanels.buildBadgeEditor(
+            new BadgePlaygroundPanels.BadgeSlot() {
+              @Override
+              public com.owspfm.elwha.badge.ElwhaBadge get() {
+                return badgedDest.getBadge();
+              }
+
+              @Override
+              public void set(final com.owspfm.elwha.badge.ElwhaBadge badge) {
+                badgedDest.setBadge(badge);
+              }
+            }));
+
+    final JPanel subCards = new JPanel(new CardLayout());
+    subCards.setOpaque(false);
+    subCards.add(railCard, "Rail");
+    subCards.add(badgeCard, "Badge");
+    subCards.add(surfaceCard, "Surface");
+
+    final String[] cardNames = {"Rail", "Badge", "Surface"};
+    final ElwhaButtonGroup subCompSelector =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL)
+            .add(cardNames);
+    subCompSelector.setSelectedIndex(0);
+    subCompSelector.addSelectionListener(
+        group ->
+            ((CardLayout) subCards.getLayout())
+                .show(subCards, cardNames[group.getSelectedIndex()]));
+
     final WorkbenchControls controls = workbench.controls();
-    controls.addSection("Variant");
-    controls.addControl("", collapsedBtn);
-    controls.addControl("", expandedBtn);
-    controls.addSection("Layout");
-    controls.addControl("Expanded width:", widthSlider);
-    controls.addControl("", widthLabel);
-    controls.addControl("", sectionsBox);
-    controls.addSection("Surface");
-    controls.addControl("", surfaceFilled);
-    controls.addControl("", dividerBox);
-    controls.addControl("", elevationBox);
-    controls.addSection("Chrome");
-    controls.addControl("", menuBox);
-    controls.addControl("", fabBox);
-    controls.addControl("", trailingBox);
-    controls.addSection("Selection");
-    controls.addControl("", new JLabel("Click any destination to select."));
-    controls.addControl("Current:", selectedLabel);
+    controls.addSection("Customize");
+    controls.addControl("", subCompSelector);
+    controls.addControl("", subCards);
 
     workbench.setStage(railRow);
     workbench.setCode(
@@ -3352,6 +3402,27 @@ public final class ElwhaShowcase {
       case "Large · 999+" -> com.owspfm.elwha.badge.ElwhaBadge.large("999+");
       default -> null;
     };
+  }
+
+  // A vertical column hosting one sub-component's controls inside the #306 selector's CardLayout.
+  private static JPanel subControlColumn() {
+    final JPanel column = new JPanel();
+    column.setOpaque(false);
+    column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+    return column;
+  }
+
+  // Adds one labelled control row to a sub-control column. An empty label adds the control alone.
+  private static void addSubControl(
+      final JPanel column, final String label, final JComponent control) {
+    final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+    row.setOpaque(false);
+    row.setAlignmentX(Component.LEFT_ALIGNMENT);
+    if (!label.isEmpty()) {
+      row.add(new JLabel(label + ":"));
+    }
+    row.add(control);
+    column.add(row);
   }
 
   // --- helpers ---
