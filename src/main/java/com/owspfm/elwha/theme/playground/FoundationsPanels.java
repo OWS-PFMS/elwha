@@ -101,14 +101,16 @@ public final class FoundationsPanels {
   private static final int GALLERY_ICON_SIZE_PX = 28;
 
   /**
-   * Builds the Icons panel: every glyph factory exposed by {@link MaterialIcons}, rendered at a
-   * uniform size and labelled with its factory-method name (the call to copy). The roster is
-   * discovered reflectively from {@code MaterialIcons}' zero-arg {@link FlatSVGIcon} factories, so
-   * a newly-bundled glyph surfaces here with no edit to this builder, and it is sorted so each
-   * {@code *Filled} variant sits immediately after its outline counterpart. Each cell builds a
-   * fresh icon instance via the sized factory overload — no shared {@code ColorFilter} is mutated
-   * (cf. #197) — so every glyph re-themes correctly when the Showcase mode toggle flips
-   * light&nbsp;↔&nbsp;dark.
+   * Builds the Icons panel: one cell per bundled Material Symbol, rendered at a uniform size and
+   * labelled with its {@link MaterialIcons} factory call (the call to copy). An Outlined / Filled
+   * segmented toggle swaps which fill axis every cell renders — Outlined shows {@code foo()},
+   * Filled shows {@code fooFilled()} for the symbols that bundle a fill variant, and falls back to
+   * the outline (its {@code foo()} call, unchanged label) for linework-only glyphs that ship no
+   * fill axis. The roster is discovered reflectively from {@code MaterialIcons}' zero-arg {@link
+   * FlatSVGIcon} factories, so a newly-bundled glyph surfaces here with no edit to this builder.
+   * Each cell builds a fresh icon instance via the sized factory overload — no shared {@code
+   * ColorFilter} is mutated (cf. #197) — so every glyph re-themes correctly when the Showcase mode
+   * toggle flips light&nbsp;↔&nbsp;dark.
    *
    * @param refreshers registry the builder adds its token refreshers to
    * @return the icons gallery panel
@@ -121,30 +123,86 @@ public final class FoundationsPanels {
     panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
     panel.add(
         sectionLabel(
-            "Every bundled Material Symbol — labelled with its MaterialIcons factory call",
+            "Every bundled Material Symbol — toggle the fill axis; the label is the MaterialIcons"
+                + " call",
             refreshers));
+    panel.add(Box.createVerticalStrut(8));
+
+    // Shared fill-axis state + the per-cell re-render callbacks the toggle fans out to. A 1-element
+    // array is the lambda-capturable mutable flag (no field needed on this stateless builder).
+    final boolean[] showFilled = {false};
+    final List<Runnable> iconUpdaters = new ArrayList<>();
+
+    panel.add(buildFillToggle(showFilled, iconUpdaters));
     panel.add(Box.createVerticalStrut(12));
 
     final JPanel grid = new JPanel(new GridLayout(0, 6, 12, 12));
     grid.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-    for (final String name : iconFactoryNames()) {
-      grid.add(iconCell(name, refreshers));
+    final List<String> names = iconFactoryNames();
+    for (final String name : names) {
+      // One cell per base glyph: the *Filled factories are the toggle's Filled state, not their own
+      // cells.
+      if (name.endsWith("Filled")) {
+        continue;
+      }
+      final boolean hasFilled = names.contains(name + "Filled");
+      grid.add(iconCell(name, hasFilled, showFilled, iconUpdaters, refreshers));
     }
     panel.add(grid);
     return panel;
   }
 
-  private static JComponent iconCell(final String name, final List<Runnable> refreshers) {
+  // Outlined / Filled segmented toggle. Flipping it updates the shared showFilled flag and re-runs
+  // every cell's icon updater so the whole grid swaps fill axis at once.
+  private static JComponent buildFillToggle(
+      final boolean[] showFilled, final List<Runnable> iconUpdaters) {
+    final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    final JToggleButton outlined = new JToggleButton("Outlined", true);
+    final JToggleButton filled = new JToggleButton("Filled");
+    final ButtonGroup group = new ButtonGroup();
+    group.add(outlined);
+    group.add(filled);
+    final Runnable apply =
+        () -> {
+          showFilled[0] = filled.isSelected();
+          iconUpdaters.forEach(Runnable::run);
+        };
+    outlined.addActionListener(event -> apply.run());
+    filled.addActionListener(event -> apply.run());
+    row.add(outlined);
+    row.add(filled);
+    return row;
+  }
+
+  private static JComponent iconCell(
+      final String name,
+      final boolean hasFilled,
+      final boolean[] showFilled,
+      final List<Runnable> iconUpdaters,
+      final List<Runnable> refreshers) {
     final JPanel cell = new JPanel();
     cell.setLayout(new BoxLayout(cell, BoxLayout.Y_AXIS));
-    cell.setToolTipText("MaterialIcons." + name + "()");
 
-    final JLabel icon = new JLabel(galleryIcon(name));
+    final JLabel icon = new JLabel();
     icon.setAlignmentX(JComponent.CENTER_ALIGNMENT);
 
-    final JLabel caption = new JLabel(name);
+    final JLabel caption = new JLabel();
     caption.setAlignmentX(JComponent.CENTER_ALIGNMENT);
     caption.setHorizontalAlignment(SwingConstants.CENTER);
+
+    // Renders the glyph + label for the current fill axis. In Filled mode a symbol with no bundled
+    // fill variant falls back to its outline call, so its label stays the base name (honest: that
+    // call is what painted).
+    final Runnable update =
+        () -> {
+          final String call = showFilled[0] && hasFilled ? name + "Filled" : name;
+          icon.setIcon(galleryIcon(call));
+          caption.setText(call);
+          cell.setToolTipText("MaterialIcons." + call + "()");
+        };
+    update.run();
+    iconUpdaters.add(update);
 
     final Runnable refresh =
         () -> {
@@ -164,7 +222,8 @@ public final class FoundationsPanels {
   // The icon-factory roster is discovered reflectively: every public static zero-arg method on
   // MaterialIcons returning a FlatSVGIcon is a glyph factory (pushPin, delete, edit, ...). Sorted
   // by
-  // name so each *Filled variant sits immediately after its outline counterpart in the grid.
+  // name so a base glyph and its *Filled counterpart are adjacent (the panel keys off that
+  // pairing).
   private static List<String> iconFactoryNames() {
     final List<String> names = new ArrayList<>();
     for (final Method method : MaterialIcons.class.getMethods()) {
