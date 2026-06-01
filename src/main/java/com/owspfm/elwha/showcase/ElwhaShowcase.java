@@ -395,7 +395,9 @@ public final class ElwhaShowcase {
   }
 
   private static JScrollPane findScrollPane(final Component component) {
-    if (component instanceof JScrollPane scrollPane) {
+    if (component instanceof JScrollPane scrollPane
+        && !Boolean.TRUE.equals(
+            scrollPane.getClientProperty(ComponentWorkbench.FAB_SCROLL_IGNORE))) {
       return scrollPane;
     }
     if (component instanceof Container container) {
@@ -632,6 +634,16 @@ public final class ElwhaShowcase {
             "The full M3 typography scale rendered in the bundled Inter type-face.",
             AREA_FOUNDATIONS,
             scroll(FoundationsPanels.buildTypeScale(tokenRefreshers))));
+    register(
+        new LeafEntry(
+            "Icons",
+            "Every bundled Material Symbol, themed and labelled with its MaterialIcons factory"
+                + " call.",
+            AREA_FOUNDATIONS,
+            // The gallery owns its own scroll pane (grid scrolls, constructor panel pins to the
+            // bottom), so it is mounted directly — NOT through scroll(...) which would re-bury the
+            // pinned panel inside an outer scroll region.
+            FoundationsPanels.buildIconGallery(tokenRefreshers)));
     register(
         new LeafEntry(
             "Swing Comps",

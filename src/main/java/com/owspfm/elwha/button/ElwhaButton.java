@@ -141,6 +141,8 @@ public class ElwhaButton extends JComponent {
   private CornerRadii cornerRadii;
   private int borderWidth = DEFAULT_BORDER_WIDTH;
   private String text = "";
+  private Icon rawIcon;
+  private Icon rawSelectedIcon;
   private Icon icon;
   private Icon selectedIcon;
 
@@ -438,11 +440,20 @@ public class ElwhaButton extends JComponent {
    * @since v0.3.0
    */
   public ElwhaButton setIcons(final Icon resting, final Icon selected) {
-    this.icon = themeIcon(resting);
-    this.selectedIcon = themeIcon(selected);
+    this.rawIcon = resting;
+    this.rawSelectedIcon = selected;
+    rescaleIcons();
     revalidate();
     repaint();
     return this;
+  }
+
+  // Re-derives the painted glyphs from the raw installed icons at the active tier's iconSizePx().
+  // Called whenever the icons or the size tier change so the painted dims always match the icon
+  // slot the layout reserves (#196). Idempotent — safe to call before any icon is installed.
+  private void rescaleIcons() {
+    this.icon = themeIcon(rawIcon, buttonSize.iconSizePx());
+    this.selectedIcon = themeIcon(rawSelectedIcon, buttonSize.iconSizePx());
   }
 
   /**
@@ -467,16 +478,21 @@ public class ElwhaButton extends JComponent {
     return selectedIcon;
   }
 
-  // Binds this button's per-instance color filter to its own copy of the glyph. A consumer may pass
-  // the same FlatSVGIcon to several components (Icon reuse is a permitted pattern); installing the
-  // filter on the shared instance would make the last-constructed component's color win for all of
-  // them, since FlatSVGIcon holds a single colorFilter field. Cloning is cheap — the copy shares
-  // the
-  // parsed SVGDocument and only carries its own filter. Null and non-FlatSVGIcon icons pass
-  // through.
-  private Icon themeIcon(final Icon candidate) {
+  // Binds this button's per-instance color filter to its own copy of the glyph, sized to the active
+  // tier. A consumer may pass the same FlatSVGIcon to several components (Icon reuse is a permitted
+  // pattern); installing the filter on the shared instance would make the last-constructed
+  // component's color win for all of them, since FlatSVGIcon holds a single colorFilter field.
+  // Cloning is cheap — the copy shares the parsed SVGDocument and only carries its own filter.
+  //
+  // #196 hybrid: when the source glyph's native size disagrees with the tier's iconSizePx(), derive
+  // a copy at iconSizePx() so the painted glyph fills the icon slot the layout reserves instead of
+  // mis-centering at its intrinsic size. Null and non-FlatSVGIcon icons pass through unscaled.
+  private Icon themeIcon(final Icon candidate, final int targetPx) {
     if (candidate instanceof FlatSVGIcon svg) {
-      final FlatSVGIcon copy = new FlatSVGIcon(svg);
+      final FlatSVGIcon copy =
+          (svg.getIconWidth() == targetPx && svg.getIconHeight() == targetPx)
+              ? new FlatSVGIcon(svg)
+              : svg.derive(targetPx, targetPx);
       copy.setColorFilter(iconFilter);
       return copy;
     }
@@ -638,6 +654,7 @@ public class ElwhaButton extends JComponent {
       return this;
     }
     this.buttonSize = size;
+    rescaleIcons();
     revalidate();
     repaint();
     return this;
