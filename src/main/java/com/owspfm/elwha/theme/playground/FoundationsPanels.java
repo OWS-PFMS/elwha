@@ -144,17 +144,45 @@ public final class FoundationsPanels {
     final JPanel grid = new JPanel(new GridLayout(0, 6, 12, 12));
     grid.setAlignmentX(JComponent.LEFT_ALIGNMENT);
     final List<String> names = iconFactoryNames();
+
+    // Build the cell roster (base glyphs only — *Filled is the toggle's Filled state, not its own
+    // cell) and size every cell to a single fixed dimension sized for the LONGEST label any cell
+    // can
+    // show — each cell's *Filled form when it has one, else its base name. Because the cell size is
+    // toggle-invariant, GridLayout never reflows the columns when the fill axis flips, so the
+    // centered icons hold their position instead of sliding as labels grow/shrink (the alternative
+    // —
+    // letting cells size to their current label — shifts every icon on toggle).
+    final List<String> baseNames = new ArrayList<>();
     for (final String name : names) {
-      // One cell per base glyph: the *Filled factories are the toggle's Filled state, not their own
-      // cells.
-      if (name.endsWith("Filled")) {
-        continue;
+      if (!name.endsWith("Filled")) {
+        baseNames.add(name);
       }
+    }
+    final Dimension cellSize = uniformCellSize(baseNames, names);
+    for (final String name : baseNames) {
       final boolean hasFilled = names.contains(name + "Filled");
-      grid.add(iconCell(name, hasFilled, showFilled, iconUpdaters, refreshers));
+      grid.add(iconCell(name, hasFilled, cellSize, showFilled, iconUpdaters, refreshers));
     }
     panel.add(grid);
     return panel;
+  }
+
+  // One fixed cell dimension for every gallery cell, wide enough for the longest label any cell can
+  // display (the *Filled form where bundled — always the longer of the two) so a fill-axis toggle
+  // never changes a cell's preferred size and the grid never reflows.
+  private static Dimension uniformCellSize(
+      final List<String> baseNames, final List<String> allNames) {
+    final java.awt.FontMetrics fm = new JLabel().getFontMetrics(TypeRole.LABEL_SMALL.resolve());
+    int widest = 0;
+    for (final String name : baseNames) {
+      final String longest = allNames.contains(name + "Filled") ? name + "Filled" : name;
+      widest = Math.max(widest, fm.stringWidth(longest));
+    }
+    final int labelPad = 16;
+    final int width = Math.max(GALLERY_ICON_SIZE_PX + labelPad, widest + labelPad);
+    final int height = GALLERY_ICON_SIZE_PX + 6 + fm.getHeight();
+    return new Dimension(width, height);
   }
 
   // Outlined / Filled fill-axis toggle — dogfoods ElwhaButtonGroup as the M3 connected segmented
@@ -186,11 +214,17 @@ public final class FoundationsPanels {
   private static JComponent iconCell(
       final String name,
       final boolean hasFilled,
+      final Dimension cellSize,
       final boolean[] showFilled,
       final List<Runnable> iconUpdaters,
       final List<Runnable> refreshers) {
     final JPanel cell = new JPanel();
     cell.setLayout(new BoxLayout(cell, BoxLayout.Y_AXIS));
+    // Fixed, toggle-invariant size so the icon stays centered in a stable cell — see
+    // uniformCellSize. The caption can render wider/narrower without resizing the cell.
+    cell.setPreferredSize(cellSize);
+    cell.setMinimumSize(cellSize);
+    cell.setMaximumSize(cellSize);
 
     final JLabel icon = new JLabel();
     icon.setAlignmentX(JComponent.CENTER_ALIGNMENT);
@@ -198,6 +232,9 @@ public final class FoundationsPanels {
     final JLabel caption = new JLabel();
     caption.setAlignmentX(JComponent.CENTER_ALIGNMENT);
     caption.setHorizontalAlignment(SwingConstants.CENTER);
+    // Pin the caption to the cell width so a longer label can't stretch the cell (and shift the
+    // icon); overflow is centered/clipped instead.
+    caption.setMaximumSize(new Dimension(cellSize.width, Integer.MAX_VALUE));
 
     // Renders the glyph + label for the current fill axis. In Filled mode a symbol with no bundled
     // fill variant falls back to its outline call, so its label stays the base name (honest: that
