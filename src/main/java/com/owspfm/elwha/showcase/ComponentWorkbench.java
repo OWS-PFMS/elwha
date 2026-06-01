@@ -64,6 +64,12 @@ public final class ComponentWorkbench extends JPanel {
   // them flush at chosen MEDIUM (220 px).
   private static final int STAGE_FIT_MARGIN = 128;
 
+  // Client-property marker on the stage's scroll pane. The Showcase's floating-FAB scroll-shrink
+  // dogfood (#274) targets the first scroll pane it finds in the active page; the stage scroll
+  // (added for #179) would shadow the page/controls scroll it actually means to track, so the
+  // FAB search skips any pane carrying this flag.
+  static final String FAB_SCROLL_IGNORE = "Showcase.fabScrollIgnore";
+
   private final StageHost stageHost;
   private final ElwhaSurface stageSurface;
   private final SurfaceControlPanel surfacePanel;
@@ -156,6 +162,7 @@ public final class ComponentWorkbench extends JPanel {
     stageScroll.setOpaque(false);
     stageScroll.getVerticalScrollBar().setUnitIncrement(16);
     stageScroll.getHorizontalScrollBar().setUnitIncrement(16);
+    stageScroll.putClientProperty(FAB_SCROLL_IGNORE, Boolean.TRUE);
 
     final JSplitPane split =
         new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, stageScroll, controlsRegion);
