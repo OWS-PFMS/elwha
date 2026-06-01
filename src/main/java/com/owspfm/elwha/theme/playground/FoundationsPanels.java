@@ -190,15 +190,15 @@ public final class FoundationsPanels {
     gridHolder.setOpaque(false);
     gridHolder.add(grid, BorderLayout.NORTH);
 
-    final JPanel center = new JPanel(new BorderLayout());
-    center.setOpaque(false);
-    center.add(head, BorderLayout.NORTH);
-    center.add(gridHolder, BorderLayout.CENTER);
-
-    final JScrollPane scroll = new JScrollPane(center);
+    final JScrollPane scroll = new JScrollPane(gridHolder);
     scroll.setBorder(BorderFactory.createEmptyBorder());
     scroll.getVerticalScrollBar().setUnitIncrement(16);
 
+    // Sticky top (label + fill toggle) and sticky bottom (constructor card) flank the one scrolling
+    // region — only the icon grid moves. A small bottom pad under the header separates it from the
+    // scrolled grid.
+    head.add(Box.createVerticalStrut(4));
+    root.add(head, BorderLayout.NORTH);
     root.add(scroll, BorderLayout.CENTER);
     root.add(codePanel, BorderLayout.SOUTH);
     return root;
@@ -357,9 +357,13 @@ public final class FoundationsPanels {
   }
 
   // The "constructor code" surface beneath the grid — a read-only monospaced line showing the
-  // MaterialIcons call for the clicked tile, with a Copy button. A self-contained mini-CodeView
-  // (the showcase CodeView lives in a package that depends on this one, so it can't be imported
-  // here without a cycle).
+  // MaterialIcons call for the clicked tile, with a Copy button, presented on a filled ElwhaSurface
+  // so it reads as a distinct card-like panel (dogfooding the Paper primitive). ElwhaSurface — not
+  // ElwhaCard — because the card chassis owns its own VerticalCardLayout (fighting it to host a
+  // header+body BorderLayout is brittle), and not ElwhaCardSupportingText, which has a
+  // repaint-storm
+  // bug (#305) we deliberately keep out of this gallery. Self-contained rather than the showcase
+  // CodeView, which lives in a package that depends on this one (importing it would cycle).
   private static final class IconCodePanel extends JPanel {
     private final JTextArea area = new JTextArea();
     private final JLabel heading = new JLabel("Constructor");
@@ -367,10 +371,12 @@ public final class FoundationsPanels {
     IconCodePanel(final List<Runnable> refreshers) {
       super(new BorderLayout());
       setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
+      setOpaque(false);
       heading.putClientProperty("FlatLaf.styleClass", "h4");
       area.setEditable(false);
+      area.setOpaque(false);
       area.putClientProperty("FlatLaf.styleClass", "monospaced");
-      area.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+      area.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
       area.setText("// Click an icon tile to see its MaterialIcons constructor");
 
       final ElwhaButton copy = ElwhaButton.outlinedButton("Copy");
@@ -386,8 +392,19 @@ public final class FoundationsPanels {
       header.add(heading, BorderLayout.WEST);
       header.add(copy, BorderLayout.EAST);
 
-      add(header, BorderLayout.NORTH);
-      add(area, BorderLayout.CENTER);
+      // Inner padded panel holds the content: ElwhaSurface.getInsets() returns only the shadow
+      // reserve (zero at elevation 0) and ignores setBorder, so the padding must live on a child.
+      final JPanel content = new JPanel(new BorderLayout());
+      content.setOpaque(false);
+      content.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+      content.add(header, BorderLayout.NORTH);
+      content.add(area, BorderLayout.CENTER);
+
+      final ElwhaSurface card =
+          new ElwhaSurface().setSurfaceRole(ColorRole.SURFACE_CONTAINER).setShape(ShapeScale.LG);
+      card.setLayout(new BorderLayout());
+      card.add(content, BorderLayout.CENTER);
+      add(card, BorderLayout.CENTER);
 
       final Runnable refresh = () -> heading.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
       refresh.run();
