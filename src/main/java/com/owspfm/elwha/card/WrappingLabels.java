@@ -23,7 +23,7 @@ import javax.swing.text.View;
  * </ol>
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.4.0
  * @since v0.2.0
  */
 final class WrappingLabels {
@@ -127,8 +127,29 @@ final class WrappingLabels {
     return fm.stringWidth(plain);
   }
 
-  /** Walks the parent chain to find a usable width to wrap at. */
+  /**
+   * The width to wrap the height computation at. Once the label has an assigned width this is the
+   * label's own laid-out width — the exact width {@code BasicHTML.Renderer.paint(...)} wraps at.
+   *
+   * <p>Matching the measure width to the paint width is load-bearing, not cosmetic (#305): the
+   * "html" view is shared between measurement and painting. If {@code getPreferredSize} sizes it to
+   * a width that differs from the label's own bounds — e.g. the nearest sized ancestor's content
+   * width, which over-reports by {@code 2 * padH} when the parent is an {@code ElwhaCard} — then
+   * every measure flips the view to width A and every paint flips it back to width B. Each width
+   * change re-wraps the HTML view, firing {@code Renderer.preferenceChanged} → {@code
+   * host.revalidate() + repaint()}, which re-triggers measure + paint: a self-sustaining,
+   * EDT-pinning repaint storm. Wrapping at {@code label.getWidth()} makes {@code Renderer.setSize}
+   * a no-op between the two passes, so {@code preferenceChanged} never fires from the round-trip.
+   */
   private static int availableWidth(final JComponent label) {
+    final int own = label.getWidth();
+    if (own > 0) {
+      final java.awt.Insets ins = label.getInsets();
+      return Math.max(0, own - ins.left - ins.right);
+    }
+    // Pre-first-layout: no assigned width yet. Estimate from the nearest sized ancestor so the very
+    // first preferred-size query already reports a wrapped height for vertical-space reservation;
+    // once the chassis assigns a real width, the branch above takes over and the estimate is moot.
     Container p = label.getParent();
     while (p != null) {
       final int w = p.getWidth();
