@@ -406,7 +406,8 @@ public final class ElwhaFab extends JComponent {
   private Form currentForm;
   private Size size = Size.SMALL;
   private Color color = Color.PRIMARY_CONTAINER;
-  private final Icon icon;
+  private final Icon rawIcon;
+  private Icon icon;
   private final String text;
 
   private boolean hovered;
@@ -436,7 +437,8 @@ public final class ElwhaFab extends JComponent {
   private ElwhaFab(final Form form, final Icon icon, final String text) {
     this.form = form;
     this.currentForm = form;
-    this.icon = themeIcon(icon);
+    this.rawIcon = icon;
+    this.icon = themeIcon(icon, size.iconPx());
     this.text = text;
     formMorph.snapTo(form == Form.EXTENDED ? 1f : 0f);
     setOpaque(false);
@@ -445,17 +447,22 @@ public final class ElwhaFab extends JComponent {
     initInteraction();
   }
 
-  // Binds this FAB's per-instance color filter to its own copy of the glyph. A consumer may pass
-  // the
-  // same FlatSVGIcon to several components (Icon reuse is a permitted pattern); installing the
-  // filter
-  // on the shared instance would make the last-constructed component's color win for all of them,
-  // since FlatSVGIcon holds a single colorFilter field. Cloning is cheap — the copy shares the
-  // parsed
-  // SVGDocument and only carries its own filter. Non-FlatSVGIcon icons are returned untouched.
-  private Icon themeIcon(final Icon candidate) {
+  // Binds this FAB's per-instance color filter to its own copy of the glyph, sized to the active
+  // tier. A consumer may pass the same FlatSVGIcon to several components (Icon reuse is a permitted
+  // pattern); installing the filter on the shared instance would make the last-constructed
+  // component's color win for all of them, since FlatSVGIcon holds a single colorFilter field.
+  // Cloning is cheap — the copy shares the parsed SVGDocument and only carries its own filter.
+  //
+  // #196 hybrid: when the source glyph's native size disagrees with the tier's iconPx(), derive a
+  // copy at iconPx() so paint renders at the size the layout already reserves (a default 24 px
+  // MaterialIcons glyph self-heals to a LARGE FAB's 36 dp slot). Re-run on every size change.
+  // Non-FlatSVGIcon icons can't be scaled losslessly, so they're returned untouched.
+  private Icon themeIcon(final Icon candidate, final int targetPx) {
     if (candidate instanceof FlatSVGIcon svg) {
-      final FlatSVGIcon copy = new FlatSVGIcon(svg);
+      final FlatSVGIcon copy =
+          (svg.getIconWidth() == targetPx && svg.getIconHeight() == targetPx)
+              ? new FlatSVGIcon(svg)
+              : svg.derive(targetPx, targetPx);
       copy.setColorFilter(iconFilter);
       return copy;
     }
@@ -540,6 +547,7 @@ public final class ElwhaFab extends JComponent {
       return this;
     }
     this.size = size;
+    this.icon = themeIcon(rawIcon, size.iconPx());
     revalidate();
     repaint();
     return this;

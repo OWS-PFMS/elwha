@@ -14,6 +14,7 @@ import java.awt.Dimension;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
+import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.BorderFactory;
@@ -21,6 +22,8 @@ import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JViewport;
+import javax.swing.Scrollable;
 import javax.swing.UIManager;
 
 /**
@@ -61,7 +64,13 @@ public final class ComponentWorkbench extends JPanel {
   // them flush at chosen MEDIUM (220 px).
   private static final int STAGE_FIT_MARGIN = 128;
 
-  private final JPanel stageHost;
+  // Client-property marker on the stage's scroll pane. The Showcase's floating-FAB scroll-shrink
+  // dogfood (#274) targets the first scroll pane it finds in the active page; the stage scroll
+  // (added for #179) would shadow the page/controls scroll it actually means to track, so the
+  // FAB search skips any pane carrying this flag.
+  static final String FAB_SCROLL_IGNORE = "Showcase.fabScrollIgnore";
+
+  private final StageHost stageHost;
   private final ElwhaSurface stageSurface;
   private final SurfaceControlPanel surfacePanel;
   private final WorkbenchControls componentControls;
@@ -83,7 +92,7 @@ public final class ComponentWorkbench extends JPanel {
   public ComponentWorkbench() {
     super(new BorderLayout());
 
-    stageHost = new JPanel(new GridBagLayout());
+    stageHost = new StageHost();
     stageHost.setBorder(BorderFactory.createEmptyBorder(32, 32, 32, 32));
 
     componentControls = new WorkbenchControls();
@@ -138,7 +147,25 @@ public final class ComponentWorkbench extends JPanel {
                 1, 0, 0, 0, UIManager.getColor("Component.borderColor")),
             codeView.getBorder()));
 
-    final JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, stageHost, controlsRegion);
+    // The stage rides in a scroll pane so a cramped window scrolls rather than shrinking the
+    // surface. stageHost is Scrollable and fills the viewport when there is room (the surface
+    // centers with its full breathing room), but holds its preferred size when the viewport is
+    // narrower than the surface + margin — at which point a scrollbar appears instead of GridBag
+    // collapsing the surface toward the live component (#179).
+    final JScrollPane stageScroll =
+        new JScrollPane(
+            stageHost,
+            JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+            JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+    stageScroll.setBorder(null);
+    stageScroll.getViewport().setOpaque(false);
+    stageScroll.setOpaque(false);
+    stageScroll.getVerticalScrollBar().setUnitIncrement(16);
+    stageScroll.getHorizontalScrollBar().setUnitIncrement(16);
+    stageScroll.putClientProperty(FAB_SCROLL_IGNORE, Boolean.TRUE);
+
+    final JSplitPane split =
+        new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, stageScroll, controlsRegion);
     split.setResizeWeight(1.0);
     split.setBorder(null);
 
@@ -263,5 +290,46 @@ public final class ComponentWorkbench extends JPanel {
       height = Math.max(height, need.height + insets.top + insets.bottom + STAGE_FIT_MARGIN);
     }
     stageSurface.setPreferredSize(new Dimension(width, height));
+  }
+
+  // The stage's scroll view. Fills the viewport (so the GridBag-centered surface keeps its full
+  // breathing room) whenever the viewport is at least as large as this host's preferred size, but
+  // holds its preferred size — letting the scroll pane show a scrollbar — once the viewport is
+  // smaller. This is what stops a cramped window from shrinking the surface (#179): GridBag would
+  // otherwise collapse the surface toward (and below) the live component's marginless minimum.
+  private static final class StageHost extends JPanel implements Scrollable {
+
+    StageHost() {
+      super(new GridBagLayout());
+    }
+
+    @Override
+    public Dimension getPreferredScrollableViewportSize() {
+      return getPreferredSize();
+    }
+
+    @Override
+    public int getScrollableUnitIncrement(
+        final Rectangle visibleRect, final int orientation, final int direction) {
+      return 16;
+    }
+
+    @Override
+    public int getScrollableBlockIncrement(
+        final Rectangle visibleRect, final int orientation, final int direction) {
+      return orientation == javax.swing.SwingConstants.VERTICAL
+          ? visibleRect.height
+          : visibleRect.width;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+      return getParent() instanceof JViewport vp && vp.getWidth() >= getPreferredSize().width;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportHeight() {
+      return getParent() instanceof JViewport vp && vp.getHeight() >= getPreferredSize().height;
+    }
   }
 }

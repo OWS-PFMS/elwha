@@ -51,13 +51,17 @@ import javax.swing.SwingUtilities;
  * returns regardless of when actual badge mounting happens.
  *
  * <p><strong>Push-model accessibility.</strong> On attach, the host's pre-attach accessible name is
- * captured and replaced with {@code "{hostBaseName} {badge.accessibilityText}"} (host name first,
- * badge text appended per design doc §10.4). The anchor listens for {@link
+ * captured as the base and replaced with {@code "{hostBaseName} {badge.accessibilityText}"} (host
+ * name first, badge text appended per design doc §10.4). The anchor listens for {@link
  * ElwhaBadge#PROPERTY_ACCESSIBILITY_TEXT} on the badge and updates the spliced name in lock-step.
- * On detach, the host's accessible name is restored to its captured pre-attach value, and the
- * badge's {@link javax.accessibility.AccessibleRelation#LABEL_FOR LABEL_FOR} relation back to the
- * host is cleared. Badges are non-focusable and have no independent accessible action — AT users
- * address the badge by navigating to the host destination.
+ * It also listens on the host's {@link javax.accessibility.AccessibleContext} for accessible-name
+ * changes the consumer makes after attach (locale switch, dynamic relabel) and adopts the new value
+ * as the base, re-splicing the badge suffix onto it — so a consumer mutation is preserved rather
+ * than clobbered by the next splice, and detach restores the consumer's latest base, not the stale
+ * pre-attach one. On detach, the host's accessible name is restored to that base, the host-name
+ * listener is removed, and the badge's {@link javax.accessibility.AccessibleRelation#LABEL_FOR
+ * LABEL_FOR} relation back to the host is cleared. Badges are non-focusable and have no independent
+ * accessible action — AT users address the badge by navigating to the host destination.
  *
  * @author Charles Bryan
  * @version v0.3.0
@@ -256,6 +260,10 @@ public final class ElwhaBadgeAnchor {
 
     private String hostBaseName;
     private boolean hostBaseNameCaptured;
+    // True only while applyAccessibleName() is writing the spliced name onto the host, so the
+    // host-name listener below can tell our own write apart from a consumer's and not re-capture
+    // the suffixed value as the base (#220).
+    private boolean applyingAccessibleName;
 
     private final ComponentListener hostBoundsListener =
         new ComponentAdapter() {
@@ -300,6 +308,31 @@ public final class ElwhaBadgeAnchor {
 
     private final PropertyChangeListener badgeAccessibilityListener = e -> applyAccessibleName();
 
+    // #220 — keep the captured base name in sync with consumer mutations. The host's accessible
+    // name can legitimately change after attach (locale switch, dynamic relabel); without this the
+    // anchor would keep re-splicing the stale pre-attach base and, on detach, restore the stale
+    // value. We listen on the host's AccessibleContext and, for a name change that isn't our own
+    // splice (guarded by applyingAccessibleName), adopt the consumer's new value as the base and
+    // re-splice the badge suffix onto it.
+    private final PropertyChangeListener hostNameListener =
+        e -> {
+          if (applyingAccessibleName
+              || detached
+              || !javax.accessibility.AccessibleContext.ACCESSIBLE_NAME_PROPERTY.equals(
+                  e.getPropertyName())) {
+            return;
+          }
+          final Object next = e.getNewValue();
+          final Object source = e.getSource();
+          hostBaseName =
+              next instanceof String s
+                  ? s
+                  : source instanceof javax.accessibility.AccessibleContext ctx
+                      ? ctx.getAccessibleName()
+                      : hostBaseName;
+          applyAccessibleName();
+        };
+
     private Attachment(
         final JComponent host,
         final Supplier<Rectangle> iconBoundsSupplier,
@@ -327,6 +360,7 @@ public final class ElwhaBadgeAnchor {
       if (ctx != null) {
         hostBaseName = ctx.getAccessibleName();
         hostBaseNameCaptured = true;
+        ctx.addPropertyChangeListener(hostNameListener);
         applyAccessibleName();
       }
       badge.anchorSetLabelFor(host);
@@ -346,7 +380,12 @@ public final class ElwhaBadgeAnchor {
           hostBaseName == null || hostBaseName.isEmpty()
               ? announcement
               : hostBaseName + " " + announcement;
-      ctx.setAccessibleName(combined);
+      applyingAccessibleName = true;
+      try {
+        ctx.setAccessibleName(combined);
+      } finally {
+        applyingAccessibleName = false;
+      }
     }
 
     private void reseatToCurrentHierarchy() {
@@ -480,6 +519,7 @@ public final class ElwhaBadgeAnchor {
       if (hostBaseNameCaptured) {
         final javax.accessibility.AccessibleContext ctx = host.getAccessibleContext();
         if (ctx != null) {
+          ctx.removePropertyChangeListener(hostNameListener);
           ctx.setAccessibleName(hostBaseName);
         }
       }

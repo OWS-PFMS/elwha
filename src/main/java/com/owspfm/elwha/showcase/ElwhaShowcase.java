@@ -395,7 +395,9 @@ public final class ElwhaShowcase {
   }
 
   private static JScrollPane findScrollPane(final Component component) {
-    if (component instanceof JScrollPane scrollPane) {
+    if (component instanceof JScrollPane scrollPane
+        && !Boolean.TRUE.equals(
+            scrollPane.getClientProperty(ComponentWorkbench.FAB_SCROLL_IGNORE))) {
       return scrollPane;
     }
     if (component instanceof Container container) {
