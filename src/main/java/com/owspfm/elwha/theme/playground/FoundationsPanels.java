@@ -2,6 +2,7 @@ package com.owspfm.elwha.theme.playground;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.button.ButtonSize;
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
 import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
 import com.owspfm.elwha.buttongroup.ResizeMode;
@@ -12,6 +13,7 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.TypeRole;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -138,8 +140,8 @@ public final class FoundationsPanels {
     panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
     panel.add(
         sectionLabel(
-            "Every bundled Material Symbol — toggle the fill axis; hover for the MaterialIcons"
-                + " call",
+            "Every bundled Material Symbol — toggle the fill axis; click a tile for its"
+                + " constructor",
             refreshers));
     panel.add(Box.createVerticalStrut(8));
 
@@ -147,6 +149,11 @@ public final class FoundationsPanels {
     // array is the lambda-capturable mutable flag (no field needed on this stateless builder).
     final boolean[] showFilled = {false};
     final List<Runnable> iconUpdaters = new ArrayList<>();
+
+    // Selection state: the currently-clicked tile's selection callback (cleared before a new one is
+    // set, so only one tile shows the selected ring) and the code panel it drives.
+    final IconSelection selection = new IconSelection();
+    final IconCodePanel codePanel = new IconCodePanel(refreshers);
 
     panel.add(buildFillToggle(showFilled, iconUpdaters));
     panel.add(Box.createVerticalStrut(12));
@@ -161,9 +168,13 @@ public final class FoundationsPanels {
         continue;
       }
       final boolean hasFilled = names.contains(name + "Filled");
-      grid.add(iconCell(name, hasFilled, showFilled, iconUpdaters, refreshers));
+      grid.add(
+          iconCell(name, hasFilled, showFilled, iconUpdaters, refreshers, selection, codePanel));
     }
     panel.add(grid);
+    panel.add(Box.createVerticalStrut(16));
+    codePanel.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+    panel.add(codePanel);
     return panel;
   }
 
@@ -198,7 +209,9 @@ public final class FoundationsPanels {
       final boolean hasFilled,
       final boolean[] showFilled,
       final List<Runnable> iconUpdaters,
-      final List<Runnable> refreshers) {
+      final List<Runnable> refreshers,
+      final IconSelection selection,
+      final IconCodePanel codePanel) {
     final JPanel cell = new JPanel();
     cell.setLayout(new BoxLayout(cell, BoxLayout.Y_AXIS));
 
@@ -213,6 +226,7 @@ public final class FoundationsPanels {
     tile.setElevation(1);
     tile.setLayout(new GridBagLayout());
     tile.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+    tile.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
     final int contentSide = GALLERY_ICON_SIZE_PX + 2 * ICON_TILE_PAD_PX;
     final Dimension tileContent = new Dimension(contentSide, contentSide);
     tile.setPreferredSize(addInsets(tileContent, tile.getInsets()));
@@ -229,17 +243,57 @@ public final class FoundationsPanels {
     caption.setAlignmentX(JComponent.CENTER_ALIGNMENT);
     caption.setHorizontalAlignment(SwingConstants.CENTER);
 
-    // Swaps only the glyph + tooltip for the current fill axis; the label stays put. A symbol with
-    // no bundled fill variant keeps its outline glyph in Filled mode, and its tooltip stays the
-    // base call (honest: that call is what painted).
+    // Resolves the exact factory call for the current fill axis. A symbol with no bundled fill
+    // variant keeps its outline call in Filled mode (honest: that call is what painted).
+    final java.util.function.Supplier<String> currentCall =
+        () -> showFilled[0] && hasFilled ? name + "Filled" : name;
+
+    // Paints the tile's selected vs resting look: a PRIMARY ring + raised container fill when
+    // selected, the plain container otherwise.
+    final boolean[] selected = {false};
+    final Runnable paintSelectionState =
+        () -> {
+          if (selected[0]) {
+            tile.setSurfaceRole(ColorRole.SURFACE_CONTAINER_HIGH);
+            tile.setBorderRole(ColorRole.PRIMARY);
+            tile.setBorderWidth(2);
+          } else {
+            tile.setSurfaceRole(ColorRole.SURFACE_CONTAINER);
+            tile.setBorderRole(null);
+          }
+        };
+    paintSelectionState.run();
+
+    // Swaps only the glyph + tooltip for the current fill axis; the label stays put. If this tile
+    // is
+    // the selected one, the code panel re-renders too (so flipping the axis updates the shown
+    // call).
     final Runnable update =
         () -> {
-          final String call = showFilled[0] && hasFilled ? name + "Filled" : name;
+          final String call = currentCall.get();
           icon.setIcon(galleryIcon(call));
           cell.setToolTipText("MaterialIcons." + call + "()");
+          if (selected[0]) {
+            codePanel.show(call);
+          }
         };
     update.run();
     iconUpdaters.add(update);
+
+    tile.addMouseListener(
+        new java.awt.event.MouseAdapter() {
+          @Override
+          public void mouseClicked(final java.awt.event.MouseEvent event) {
+            selection.select(
+                () -> {
+                  selected[0] = false;
+                  paintSelectionState.run();
+                });
+            selected[0] = true;
+            paintSelectionState.run();
+            codePanel.show(currentCall.get());
+          }
+        });
 
     final Runnable refresh =
         () -> {
@@ -261,6 +315,75 @@ public final class FoundationsPanels {
   private static Dimension addInsets(final Dimension content, final java.awt.Insets insets) {
     return new Dimension(
         content.width + insets.left + insets.right, content.height + insets.top + insets.bottom);
+  }
+
+  // Single-selection coordinator for the icon tiles: holds the deselect callback of the currently
+  // selected tile and runs it before a new tile takes over, so only one tile shows the ring.
+  private static final class IconSelection {
+    private Runnable deselectCurrent;
+
+    void select(final Runnable deselect) {
+      if (deselectCurrent != null) {
+        deselectCurrent.run();
+      }
+      deselectCurrent = deselect;
+    }
+  }
+
+  // The "constructor code" surface beneath the grid — a read-only monospaced line showing the
+  // MaterialIcons call for the clicked tile, with a Copy button. A self-contained mini-CodeView
+  // (the showcase CodeView lives in a package that depends on this one, so it can't be imported
+  // here without a cycle).
+  private static final class IconCodePanel extends JPanel {
+    private final JTextArea area = new JTextArea();
+    private final JLabel heading = new JLabel("Constructor");
+
+    IconCodePanel(final List<Runnable> refreshers) {
+      super(new BorderLayout());
+      setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
+      heading.putClientProperty("FlatLaf.styleClass", "h4");
+      area.setEditable(false);
+      area.putClientProperty("FlatLaf.styleClass", "monospaced");
+      area.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+      area.setText("// Click an icon tile to see its MaterialIcons constructor");
+
+      final ElwhaButton copy = ElwhaButton.outlinedButton("Copy");
+      copy.addActionListener(
+          event ->
+              java.awt.Toolkit.getDefaultToolkit()
+                  .getSystemClipboard()
+                  .setContents(new java.awt.datatransfer.StringSelection(area.getText()), null));
+
+      final JPanel header = new JPanel(new BorderLayout());
+      header.setOpaque(false);
+      header.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+      header.add(heading, BorderLayout.WEST);
+      header.add(copy, BorderLayout.EAST);
+
+      add(header, BorderLayout.NORTH);
+      add(new JScrollPane(area), BorderLayout.CENTER);
+
+      final Runnable refresh = () -> heading.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+      refresh.run();
+      refreshers.add(refresh);
+    }
+
+    // Shows the Java to construct the named glyph. javax.swing.Icon is the declared type because
+    // the
+    // sized MaterialIcons factories return FlatSVGIcon (an Icon); the gallery renders at the
+    // GALLERY_ICON_SIZE_PX sized overload, so the snippet matches what's on screen.
+    void show(final String call) {
+      area.setText(
+          "Icon icon = MaterialIcons."
+              + call
+              + "("
+              + GALLERY_ICON_SIZE_PX
+              + ");\n"
+              + "// default size: MaterialIcons."
+              + call
+              + "()");
+      area.setCaretPosition(0);
+    }
   }
 
   // The icon-factory roster is discovered reflectively: every public static zero-arg method on
