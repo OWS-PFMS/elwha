@@ -2,18 +2,32 @@ package com.owspfm.elwha.badge.playground;
 
 import com.owspfm.elwha.badge.ElwhaBadge;
 import com.owspfm.elwha.badge.ElwhaBadgeAnchor;
+import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
+import com.owspfm.elwha.buttongroup.ButtonGroupVariant;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.theme.ColorRole;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.ComponentOrientation;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.Icon;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 
 /**
@@ -267,153 +281,218 @@ public final class BadgePlaygroundPanels {
     void set(ElwhaBadge badge);
   }
 
+  /** Default Large-badge content the editor seeds and its reset action restores. */
+  public static final String BADGE_DEFAULT_CONTENT = "3";
+
   /**
-   * Builds a reusable, live badge editor panel bound to a host's {@link BadgeSlot} — the
-   * sub-component editor a composed component's Workbench swaps in to tune its embedded badge
-   * (story #306). Every control applies immediately: changing the variant rebuilds and re-installs
-   * the badge through the slot; content / color / accessibility edits mutate the slot's current
-   * badge in place. The panel exposes the badge's own axes (variant, content, container + label
-   * color, accessibility override) and deliberately omits anchor mode and RTL — those are owned by
-   * the host (e.g. the Nav Rail drives the anchor by Collapsed&nbsp;/&nbsp;Expanded variant per
-   * #300), per the pattern's "host suppresses axes it owns" rule.
+   * Builds the canonical reusable live badge editor bound to a host's {@link BadgeSlot} — the
+   * single badge-axis control surface shared by the Badge Workbench and by any composed-component
+   * Workbench that embeds a badge (story #306). Every control applies immediately; there is no
+   * Apply button.
+   *
+   * <p>Exposes the badge's own axes, grouped into sections matching the standalone Badge Workbench:
+   *
+   * <ul>
+   *   <li><strong>Badge</strong> — a two-segment {@link ElwhaButtonGroup} (Small / Large) plus a
+   *       content field with a lib-native {@code − / + / reset} stepper row (enabled only for
+   *       numeric Large content; decrement gates at 0, increment caps at 1000 → M3 {@code "999+"}).
+   *   <li><strong>Color</strong> — container + label {@link ColorRole} pickers with the M3
+   *       Error/On&nbsp;error guidance note (label disabled for Small, which has no label
+   *       sub-part).
+   *   <li><strong>Accessibility</strong> — an override field with an outlined Reset button.
+   * </ul>
+   *
+   * <p>Deliberately omits anchor mode and RTL: those are owned by the host (e.g. the Nav Rail
+   * drives the anchor by Collapsed&nbsp;/&nbsp;Expanded variant per #300), per the pattern's "host
+   * suppresses axes it owns" rule. A host that wants those (the Badge Workbench) adds them around
+   * the editor. Variant changes rebuild the badge (variant is construction-fixed) and re-install it
+   * through the slot, preserving the other edits; content / color / a11y edits mutate the slot
+   * badge in place.
    *
    * @param slot the host's badge slot to drive
-   * @return a control panel suitable for mounting in a {@code WorkbenchControls} surface
+   * @return a sectioned control panel suitable for mounting in a {@code WorkbenchControls} surface
    * @version v0.4.0
    * @since v0.4.0
    */
   public static JPanel buildBadgeEditor(final BadgeSlot slot) {
-    final JPanel panel = new JPanel(new GridBagLayout());
-    panel.setOpaque(false);
-    panel.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
+    return buildBadgeEditor(slot, () -> {});
+  }
 
-    final javax.swing.JComboBox<String> variantBox =
-        new javax.swing.JComboBox<>(new String[] {"None", "Small (dot)", "Large"});
-    final javax.swing.JTextField contentField = new javax.swing.JTextField("3", 8);
-    final javax.swing.JComboBox<com.owspfm.elwha.theme.ColorRole> containerColorBox =
-        new javax.swing.JComboBox<>(com.owspfm.elwha.theme.ColorRole.values());
-    final javax.swing.JComboBox<com.owspfm.elwha.theme.ColorRole> labelColorBox =
-        new javax.swing.JComboBox<>(com.owspfm.elwha.theme.ColorRole.values());
-    final javax.swing.JTextField a11yField = new javax.swing.JTextField("", 12);
+  /**
+   * {@link #buildBadgeEditor(BadgeSlot)} with an {@code onChange} hook fired after every applied
+   * edit — for hosts (e.g. the Badge Workbench) that mirror the badge into a code snippet or other
+   * derived view.
+   *
+   * @param slot the host's badge slot to drive
+   * @param onChange invoked on the EDT after each control change has been applied to the slot
+   * @return a sectioned control panel
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static JPanel buildBadgeEditor(final BadgeSlot slot, final Runnable onChange) {
+    // Variant: a two-segment ElwhaButtonGroup (mandatory single-select), not a combo — there's no
+    // clean icon for "small dot" vs "large pill", so text segments read clearer. Matches the
+    // standalone Badge Workbench's control exactly (the point of the extraction).
+    final ElwhaButtonGroup variantGroup =
+        new ElwhaButtonGroup(ButtonGroupVariant.CONNECTED)
+            .setColorStyle(ButtonGroupColorStyle.FILLED)
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .add("Small", "Large");
+    final JTextField contentField = new JTextField(BADGE_DEFAULT_CONTENT, 8);
 
-    // Seed the controls from whatever badge the slot already holds.
+    // Lib-native stepper buttons (ElwhaIconButton XS, remove / add / cached). setFocusable(false)
+    // keeps focus on the content field so each click doesn't shift focus to the next button.
+    final int stepperIconPx = IconButtonSize.XS.iconPx();
+    final ElwhaIconButton decrementButton =
+        new ElwhaIconButton(MaterialIcons.remove(stepperIconPx)).setButtonSize(IconButtonSize.XS);
+    final ElwhaIconButton incrementButton =
+        new ElwhaIconButton(MaterialIcons.add(stepperIconPx)).setButtonSize(IconButtonSize.XS);
+    final ElwhaIconButton contentResetButton =
+        new ElwhaIconButton(MaterialIcons.cached(stepperIconPx)).setButtonSize(IconButtonSize.XS);
+    decrementButton.setToolTipText("Decrement count (only enabled when content is a numeric > 0)");
+    incrementButton.setToolTipText("Increment count (only enabled when content is numeric)");
+    contentResetButton.setToolTipText(
+        "Reset content to default (\"" + BADGE_DEFAULT_CONTENT + "\")");
+    decrementButton.setFocusable(false);
+    incrementButton.setFocusable(false);
+    contentResetButton.setFocusable(false);
+    final JPanel stepperRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+    stepperRow.setOpaque(false);
+    stepperRow.add(decrementButton);
+    stepperRow.add(incrementButton);
+    stepperRow.add(contentResetButton);
+
+    final JComboBox<ColorRole> containerColorBox = new JComboBox<>(ColorRole.values());
+    containerColorBox.setSelectedItem(ColorRole.ERROR);
+    final JComboBox<ColorRole> labelColorBox = new JComboBox<>(ColorRole.values());
+    labelColorBox.setSelectedItem(ColorRole.ON_ERROR);
+    final JLabel colorGuidance =
+        new JLabel(
+            "<html><i>M3 strongly prefers Error / On&nbsp;error.</i></html>",
+            MaterialIcons.info(14),
+            SwingConstants.LEADING);
+    colorGuidance.setToolTipText(
+        "<html>M3 doesn't strictly forbid other color roles, but every Badge example in the spec"
+            + " uses Error / On&nbsp;error for visibility against navigation surfaces.<br>"
+            + "Pick a different pair only when the consumer has a clear contrast story and"
+            + " accessible defaults — see design doc §6.</html>");
+
+    final JTextField a11yOverrideField = new JTextField("", 16);
+    final ElwhaButton clearOverrideButton = ElwhaButton.outlinedButton("Reset");
+
+    // Seed the variant from whatever badge the slot already holds (default Large).
     final ElwhaBadge existing = slot.get();
-    if (existing == null) {
-      variantBox.setSelectedIndex(0);
-    } else if (existing.getVariant() == ElwhaBadge.Variant.SMALL) {
-      variantBox.setSelectedIndex(1);
-    } else {
-      variantBox.setSelectedIndex(2);
-    }
-    containerColorBox.setSelectedItem(com.owspfm.elwha.theme.ColorRole.ERROR);
-    labelColorBox.setSelectedItem(com.owspfm.elwha.theme.ColorRole.ON_ERROR);
+    variantGroup.setSelectedIndex(
+        existing != null && existing.getVariant() == ElwhaBadge.Variant.SMALL ? 0 : 1);
 
-    // Rebuilds the badge for the selected variant + current control values and installs it through
-    // the slot. Variant change must construct a fresh badge (variant is construction-fixed); the
-    // content/color/a11y values are re-applied onto the new instance so a variant flip preserves
-    // the
-    // user's other edits.
-    final Runnable rebuild =
+    // Single apply: read the controls, build the badge for the current variant, install it through
+    // the slot. Variant is construction-fixed, so every apply constructs a fresh badge and re-sets
+    // it — the host's BadgeSlot.set re-anchors. Content/color/a11y values are re-applied onto the
+    // new instance so any edit preserves the others.
+    final Runnable apply =
         () -> {
-          final int v = variantBox.getSelectedIndex();
-          final boolean large = v == 2;
-          contentField.setEnabled(large);
-          labelColorBox.setEnabled(large);
-          if (v == 0) {
-            slot.set(null);
-            return;
-          }
+          final boolean isLarge = variantGroup.getSelectedIndex() == 1;
+          contentField.setEnabled(isLarge);
+          labelColorBox.setEnabled(isLarge);
+          final String contentText = contentField.getText() == null ? "" : contentField.getText();
+          final boolean numericContent = isAllAsciiDigits(contentText);
+          final int parsedCount = numericContent ? Integer.parseInt(contentText) : -1;
+          decrementButton.setEnabled(isLarge && numericContent && parsedCount > 0);
+          incrementButton.setEnabled(isLarge && numericContent);
+          contentResetButton.setEnabled(isLarge);
+
           final ElwhaBadge badge;
-          if (large) {
-            final String content = contentField.getText().isBlank() ? "0" : contentField.getText();
-            badge = ElwhaBadge.large(content);
-            badge.withLabelColor(
-                (com.owspfm.elwha.theme.ColorRole) labelColorBox.getSelectedItem());
+          if (isLarge) {
+            badge = ElwhaBadge.large(contentText.isEmpty() ? BADGE_DEFAULT_CONTENT : contentText);
+            badge.withLabelColor((ColorRole) labelColorBox.getSelectedItem());
           } else {
             badge = ElwhaBadge.small();
           }
-          badge.withContainerColor(
-              (com.owspfm.elwha.theme.ColorRole) containerColorBox.getSelectedItem());
-          if (!a11yField.getText().isBlank()) {
-            badge.withAccessibilityText(a11yField.getText());
+          badge.withContainerColor((ColorRole) containerColorBox.getSelectedItem());
+          final String overrideText =
+              a11yOverrideField.getText() == null ? "" : a11yOverrideField.getText();
+          if (!overrideText.isEmpty()) {
+            badge.withAccessibilityText(overrideText);
           }
           slot.set(badge);
+          onChange.run();
         };
 
-    // In-place edit on the current badge when the variant is unchanged — avoids a needless
-    // re-anchor
-    // on every keystroke. Falls back to a rebuild if the slot is empty / mismatched.
-    final Runnable applyContent =
-        () -> {
-          final ElwhaBadge badge = slot.get();
-          if (badge != null && badge.getVariant() == ElwhaBadge.Variant.LARGE) {
-            if (!contentField.getText().isBlank()) {
-              badge.setContent(contentField.getText());
-            }
-          } else {
-            rebuild.run();
+    clearOverrideButton.addActionListener(
+        event -> {
+          a11yOverrideField.setText("");
+          apply.run();
+        });
+    decrementButton.addActionListener(
+        event -> {
+          final String text = contentField.getText();
+          if (isAllAsciiDigits(text)) {
+            contentField.setText(Integer.toString(Math.max(0, Integer.parseInt(text) - 1)));
           }
-        };
-    final Runnable applyColors =
-        () -> {
-          final ElwhaBadge badge = slot.get();
-          if (badge == null) {
-            return;
+        });
+    incrementButton.addActionListener(
+        event -> {
+          final String text = contentField.getText();
+          if (isAllAsciiDigits(text)) {
+            // Cap at 1000 so increment-from-999 lands on the M3 "999+" overflow.
+            contentField.setText(Integer.toString(Math.min(1000, Integer.parseInt(text) + 1)));
           }
-          badge.withContainerColor(
-              (com.owspfm.elwha.theme.ColorRole) containerColorBox.getSelectedItem());
-          if (badge.getVariant() == ElwhaBadge.Variant.LARGE) {
-            badge.withLabelColor(
-                (com.owspfm.elwha.theme.ColorRole) labelColorBox.getSelectedItem());
-          }
-        };
-    final Runnable applyA11y =
-        () -> {
-          final ElwhaBadge badge = slot.get();
-          if (badge != null) {
-            badge.withAccessibilityText(a11yField.getText().isBlank() ? null : a11yField.getText());
-          }
-        };
+        });
+    contentResetButton.addActionListener(event -> contentField.setText(BADGE_DEFAULT_CONTENT));
+    variantGroup.addSelectionListener(group -> apply.run());
+    containerColorBox.addActionListener(event -> apply.run());
+    labelColorBox.addActionListener(event -> apply.run());
+    contentField.getDocument().addDocumentListener(onTextChange(apply));
+    a11yOverrideField.getDocument().addDocumentListener(onTextChange(apply));
 
-    variantBox.addActionListener(e -> rebuild.run());
-    contentField.getDocument().addDocumentListener(onTextChange(applyContent));
-    containerColorBox.addActionListener(e -> applyColors.run());
-    labelColorBox.addActionListener(e -> applyColors.run());
-    a11yField.getDocument().addDocumentListener(onTextChange(applyA11y));
+    final JPanel panel = new JPanel();
+    panel.setOpaque(false);
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    panel.add(editorSection("Badge"));
+    panel.add(editorRow("Variant", variantGroup));
+    panel.add(editorRow("Content", contentField));
+    panel.add(editorRow("", stepperRow));
+    panel.add(editorSection("Color"));
+    panel.add(editorRow("", colorGuidance));
+    panel.add(editorRow("Container", containerColorBox));
+    panel.add(editorRow("Label", labelColorBox));
+    panel.add(editorSection("Accessibility"));
+    panel.add(editorRow("Override", a11yOverrideField));
+    panel.add(editorRow("", clearOverrideButton));
 
-    // Initial enabled-state sync (don't rebuild — that would stomp the slot's existing badge).
-    final boolean largeNow = variantBox.getSelectedIndex() == 2;
-    contentField.setEnabled(largeNow);
-    labelColorBox.setEnabled(largeNow);
-
-    final GridBagConstraints gbc = new GridBagConstraints();
-    gbc.insets = new Insets(3, 0, 3, 8);
-    gbc.anchor = GridBagConstraints.WEST;
-    int rowY = 0;
-    rowY = editorRow(panel, gbc, rowY, "Variant", variantBox);
-    rowY = editorRow(panel, gbc, rowY, "Content", contentField);
-    rowY = editorRow(panel, gbc, rowY, "Container", containerColorBox);
-    rowY = editorRow(panel, gbc, rowY, "Label", labelColorBox);
-    rowY = editorRow(panel, gbc, rowY, "A11y override", a11yField);
+    apply.run();
     return panel;
   }
 
-  private static int editorRow(
-      final JPanel panel,
-      final GridBagConstraints gbc,
-      final int rowY,
-      final String label,
-      final javax.swing.JComponent field) {
-    gbc.gridy = rowY;
-    gbc.gridx = 0;
-    gbc.weightx = 0;
-    gbc.fill = GridBagConstraints.NONE;
-    panel.add(rowLabel(label), gbc);
-    gbc.gridx = 1;
-    gbc.weightx = 1;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    panel.add(field, gbc);
-    return rowY + 1;
+  private static JComponent editorSection(final String title) {
+    final JLabel label = new JLabel(title);
+    label.setFont(label.getFont().deriveFont(Font.BOLD));
+    label.setAlignmentX(Component.LEFT_ALIGNMENT);
+    label.setBorder(BorderFactory.createEmptyBorder(10, 0, 2, 0));
+    return label;
+  }
+
+  private static JComponent editorRow(final String label, final JComponent field) {
+    final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+    row.setOpaque(false);
+    row.setAlignmentX(Component.LEFT_ALIGNMENT);
+    if (!label.isEmpty()) {
+      row.add(rowLabel(label));
+    }
+    row.add(field);
+    return row;
+  }
+
+  private static boolean isAllAsciiDigits(final String s) {
+    if (s == null || s.isEmpty()) {
+      return false;
+    }
+    for (int i = 0; i < s.length(); i++) {
+      if (s.charAt(i) < '0' || s.charAt(i) > '9') {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static javax.swing.event.DocumentListener onTextChange(final Runnable action) {

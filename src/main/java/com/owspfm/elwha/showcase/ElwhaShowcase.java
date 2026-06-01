@@ -2751,8 +2751,6 @@ public final class ElwhaShowcase {
     return tabs;
   }
 
-  private static final String BADGE_DEFAULT_CONTENT = "3";
-
   // Builds the Workbench's badge host for the chosen anchor mode: an ElwhaIconButton for
   // ICON_CORNER
   // (an IconBearing host), or a fixed-width "favorites" icon + label row for TRAILING_EDGE (the M3
@@ -2796,233 +2794,91 @@ public final class ElwhaShowcase {
   private static JComponent buildBadgeWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    // Variant selector: a two-segment ElwhaButtonGroup (mandatory single-select) instead of a
-    // combo. No clean MaterialIcons mapping for "small dot" vs "large pill" — text-only segments
-    // are clearer than overloading an unrelated icon. Order matches the ElwhaBadge.Variant enum.
-    final ElwhaButtonGroup variantGroup =
-        new ElwhaButtonGroup(ButtonGroupVariant.CONNECTED)
-            .setColorStyle(ButtonGroupColorStyle.FILLED)
-            .setSelectionMode(SelectionMode.REQUIRED)
-            .add("Small", "Large");
-    variantGroup.setSelectedIndex(1);
-    final JTextField contentField = new JTextField(BADGE_DEFAULT_CONTENT, 8);
-
-    // Lib-native stepper buttons: ElwhaIconButton at XS (24 dp) using the M3 icon set —
-    // remove / add / cached (refresh). setFocusable(false) keeps focus on the content field so
-    // each click doesn't shift focus to the next button (Swing's default click-takes-focus
-    // behavior was disorienting on a stepper that lives next to its input).
-    final int stepperIconPx = IconButtonSize.XS.iconPx();
-    final ElwhaIconButton decrementButton =
-        new ElwhaIconButton(MaterialIcons.remove(stepperIconPx)).setButtonSize(IconButtonSize.XS);
-    final ElwhaIconButton incrementButton =
-        new ElwhaIconButton(MaterialIcons.add(stepperIconPx)).setButtonSize(IconButtonSize.XS);
-    final ElwhaIconButton contentResetButton =
-        new ElwhaIconButton(MaterialIcons.cached(stepperIconPx)).setButtonSize(IconButtonSize.XS);
-    decrementButton.setToolTipText("Decrement count (only enabled when content is a numeric > 0)");
-    incrementButton.setToolTipText("Increment count (only enabled when content is numeric)");
-    contentResetButton.setToolTipText(
-        "Reset content to default (\"" + BADGE_DEFAULT_CONTENT + "\")");
-    decrementButton.setFocusable(false);
-    incrementButton.setFocusable(false);
-    contentResetButton.setFocusable(false);
-    final JPanel stepperRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-    stepperRow.add(decrementButton);
-    stepperRow.add(incrementButton);
-    stepperRow.add(contentResetButton);
-
-    final JComboBox<ColorRole> containerColorBox = new JComboBox<>(ColorRole.values());
-    containerColorBox.setSelectedItem(ColorRole.ERROR);
-    final JComboBox<ColorRole> labelColorBox = new JComboBox<>(ColorRole.values());
-    labelColorBox.setSelectedItem(ColorRole.ON_ERROR);
-    final JLabel colorGuidance =
-        new JLabel(
-            "<html><i>M3 strongly prefers Error / On&nbsp;error.</i></html>",
-            MaterialIcons.info(14),
-            javax.swing.SwingConstants.LEADING);
-    colorGuidance.setToolTipText(
-        "<html>M3 doesn't strictly forbid other color roles, but every Badge example in the spec"
-            + " uses Error / On&nbsp;error for visibility against navigation surfaces.<br>"
-            + "Pick a different pair only when the consumer has a clear contrast story and"
-            + " accessible defaults — see design doc §6.</html>");
-
-    final JTextField a11yOverrideField = new JTextField("", 16);
-    // Outlined ElwhaButton for the a11y-override clear action — matches the lib's M3 styling
-    // rather than the default Swing JButton chrome.
-    final ElwhaButton clearOverrideButton = ElwhaButton.outlinedButton("Reset");
+    // Host-specific controls the shared editor does NOT own (they're the Workbench's demo concerns,
+    // not the badge's own axes): the anchor mode + RTL that drive which host composition is staged,
+    // and the live host-accessible-name inspector that proves the push-model a11y splice.
     final JCheckBox rtlBox = new JCheckBox("RTL");
     final JComboBox<ElwhaBadgeAnchor.AnchorMode> anchorModeBox =
         new JComboBox<>(ElwhaBadgeAnchor.AnchorMode.values());
     final JLabel a11yInspector = new JLabel("(detached)");
 
+    // The Workbench owns the host + its live anchor attachment; the shared editor drives the badge
+    // through this slot. set(...) (re)stages a fresh host for the current anchor/RTL mode, detaches
+    // any prior badge, and re-anchors the new one — the badge editor stays oblivious to anchoring.
+    final java.util.concurrent.atomic.AtomicReference<ElwhaBadgeAnchor.Attachment> liveAttachment =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    final java.util.concurrent.atomic.AtomicReference<ElwhaBadge> liveBadge =
+        new java.util.concurrent.atomic.AtomicReference<>();
+
+    final BadgePlaygroundPanels.BadgeSlot slot =
+        new BadgePlaygroundPanels.BadgeSlot() {
+          @Override
+          public ElwhaBadge get() {
+            return liveBadge.get();
+          }
+
+          @Override
+          public void set(final ElwhaBadge badge) {
+            final ElwhaBadgeAnchor.Attachment prior = liveAttachment.getAndSet(null);
+            if (prior != null) {
+              ElwhaBadgeAnchor.detach(prior);
+            }
+            liveBadge.set(badge);
+            final boolean trailingEdge =
+                anchorModeBox.getSelectedItem() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE;
+            final JComponent host =
+                buildBadgeHost(trailingEdge, rtlBox.isSelected(), a11yInspector);
+            workbench.setStage(host);
+            if (badge != null) {
+              liveAttachment.set(
+                  trailingEdge
+                      ? ElwhaBadgeAnchor.attachTrailingEdge(host, badge)
+                      : ElwhaBadgeAnchor.attach((com.owspfm.elwha.badge.IconBearing) host, badge));
+            }
+            a11yInspector.setText("\"" + host.getAccessibleContext().getAccessibleName() + "\"");
+          }
+        };
+
+    final JPanel badgeEditor =
+        BadgePlaygroundPanels.buildBadgeEditor(
+            slot, () -> workbench.setCode(renderBadgeCode(slot)));
+
+    // Re-stage the host (and thus re-anchor the current badge) when the host-owned anchor/RTL
+    // change.
+    anchorModeBox.addActionListener(event -> slot.set(liveBadge.get()));
+    rtlBox.addActionListener(event -> slot.set(liveBadge.get()));
+
     final WorkbenchControls controls = workbench.controls();
-    controls.addSection("Badge");
-    controls.addControl("Variant", variantGroup);
-    controls.addControl("Content", contentField);
-    controls.addControl("", stepperRow);
-    controls.addSection("Color");
-    controls.addControl("", colorGuidance);
-    controls.addControl("Container", containerColorBox);
-    controls.addControl("Label", labelColorBox);
-    controls.addSection("Accessibility");
-    controls.addControl("Override", a11yOverrideField);
-    controls.addControl("", clearOverrideButton);
-    controls.addControl("host.name:", a11yInspector);
+    controls.addControl("", badgeEditor);
     controls.addSection("Layout");
     controls.addControl("Anchor", anchorModeBox);
     controls.addControl("", rtlBox);
+    controls.addControl("host.name:", a11yInspector);
 
-    final java.util.concurrent.atomic.AtomicReference<ElwhaBadgeAnchor.Attachment> liveAttachment =
-        new java.util.concurrent.atomic.AtomicReference<>();
-
-    final Runnable apply =
-        () -> {
-          final ElwhaBadgeAnchor.Attachment prior = liveAttachment.getAndSet(null);
-          if (prior != null) {
-            ElwhaBadgeAnchor.detach(prior);
-          }
-
-          final ElwhaBadge.Variant variant =
-              variantGroup.getSelectedIndex() == 0
-                  ? ElwhaBadge.Variant.SMALL
-                  : ElwhaBadge.Variant.LARGE;
-          final ColorRole containerColor = (ColorRole) containerColorBox.getSelectedItem();
-          final ColorRole labelColor = (ColorRole) labelColorBox.getSelectedItem();
-          final String contentText = contentField.getText() == null ? "" : contentField.getText();
-          final String overrideText =
-              a11yOverrideField.getText() == null ? "" : a11yOverrideField.getText();
-
-          final boolean isLarge = variant == ElwhaBadge.Variant.LARGE;
-          contentField.setEnabled(isLarge);
-          labelColorBox.setEnabled(isLarge);
-          // Numeric stepper buttons only make sense on integer content. Reset always available
-          // on Large since it just rewrites the field to the seed. Decrement gates additionally
-          // on > 0 so users can't drive the count negative — setContent(int) would throw anyway.
-          final boolean numericContent = isAllAsciiDigits(contentText);
-          final int parsedCount = numericContent ? Integer.parseInt(contentText) : -1;
-          decrementButton.setEnabled(isLarge && numericContent && parsedCount > 0);
-          incrementButton.setEnabled(isLarge && numericContent);
-          contentResetButton.setEnabled(isLarge);
-
-          final boolean trailingEdge =
-              anchorModeBox.getSelectedItem() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE;
-          final JComponent host = buildBadgeHost(trailingEdge, rtlBox.isSelected(), a11yInspector);
-
-          final ElwhaBadge badge;
-          final String resolvedContent = contentText.isEmpty() ? "3" : contentText;
-          if (variant == ElwhaBadge.Variant.SMALL) {
-            badge = ElwhaBadge.small();
-          } else {
-            badge = ElwhaBadge.large(resolvedContent);
-            badge.withLabelColor(labelColor);
-          }
-          badge.withContainerColor(containerColor);
-          if (!overrideText.isEmpty()) {
-            badge.withAccessibilityText(overrideText);
-          }
-
-          workbench.setStage(host);
-          liveAttachment.set(
-              trailingEdge
-                  ? ElwhaBadgeAnchor.attachTrailingEdge(host, badge)
-                  : ElwhaBadgeAnchor.attach((com.owspfm.elwha.badge.IconBearing) host, badge));
-          a11yInspector.setText("\"" + host.getAccessibleContext().getAccessibleName() + "\"");
-          workbench.setCode(
-              renderBadgeCode(variant, resolvedContent, containerColor, labelColor, overrideText));
-        };
-
-    clearOverrideButton.addActionListener(
-        event -> {
-          a11yOverrideField.setText("");
-          apply.run();
-        });
-    decrementButton.addActionListener(
-        event -> {
-          final String text = contentField.getText();
-          if (!isAllAsciiDigits(text)) {
-            return;
-          }
-          final int next = Math.max(0, Integer.parseInt(text) - 1);
-          contentField.setText(Integer.toString(next));
-        });
-    incrementButton.addActionListener(
-        event -> {
-          final String text = contentField.getText();
-          if (!isAllAsciiDigits(text)) {
-            return;
-          }
-          // Cap raw value at 1000 so increment-from-999 lands on the M3 "999+" overflow without
-          // letting the field accumulate arbitrarily large numbers the badge will collapse anyway.
-          final int next = Math.min(1000, Integer.parseInt(text) + 1);
-          contentField.setText(Integer.toString(next));
-        });
-    contentResetButton.addActionListener(event -> contentField.setText(BADGE_DEFAULT_CONTENT));
-    variantGroup.addSelectionListener(group -> apply.run());
-    containerColorBox.addActionListener(event -> apply.run());
-    labelColorBox.addActionListener(event -> apply.run());
-    rtlBox.addActionListener(event -> apply.run());
-    anchorModeBox.addActionListener(event -> apply.run());
-
-    final javax.swing.event.DocumentListener docListener =
-        new javax.swing.event.DocumentListener() {
-          @Override
-          public void insertUpdate(final javax.swing.event.DocumentEvent e) {
-            apply.run();
-          }
-
-          @Override
-          public void removeUpdate(final javax.swing.event.DocumentEvent e) {
-            apply.run();
-          }
-
-          @Override
-          public void changedUpdate(final javax.swing.event.DocumentEvent e) {
-            apply.run();
-          }
-        };
-    contentField.getDocument().addDocumentListener(docListener);
-    a11yOverrideField.getDocument().addDocumentListener(docListener);
-
-    apply.run();
     return workbench;
   }
 
-  private static String renderBadgeCode(
-      final ElwhaBadge.Variant variant,
-      final String content,
-      final ColorRole containerColor,
-      final ColorRole labelColor,
-      final String accessibilityOverride) {
+  private static String renderBadgeCode(final BadgePlaygroundPanels.BadgeSlot slot) {
+    final ElwhaBadge badge = slot.get();
+    if (badge == null) {
+      return "// no badge attached";
+    }
+    final boolean small = badge.getVariant() == ElwhaBadge.Variant.SMALL;
     final StringBuilder code = new StringBuilder(240);
     code.append("ElwhaBadge badge = ElwhaBadge.");
-    if (variant == ElwhaBadge.Variant.SMALL) {
-      code.append("small()");
-    } else {
-      code.append("large(\"").append(content).append("\")");
+    code.append(small ? "small()" : "large(\"" + badge.getContent() + "\")");
+    if (badge.getContainerColor() != ColorRole.ERROR) {
+      code.append("\n    .withContainerColor(ColorRole.")
+          .append(badge.getContainerColor().name())
+          .append(")");
     }
-    if (containerColor != ColorRole.ERROR) {
-      code.append("\n    .withContainerColor(ColorRole.").append(containerColor.name()).append(")");
-    }
-    if (variant == ElwhaBadge.Variant.LARGE && labelColor != ColorRole.ON_ERROR) {
-      code.append("\n    .withLabelColor(ColorRole.").append(labelColor.name()).append(")");
-    }
-    if (!accessibilityOverride.isEmpty()) {
-      code.append("\n    .withAccessibilityText(\"").append(accessibilityOverride).append("\")");
+    if (!small && badge.getLabelColor() != ColorRole.ON_ERROR) {
+      code.append("\n    .withLabelColor(ColorRole.")
+          .append(badge.getLabelColor().name())
+          .append(")");
     }
     code.append(";\nElwhaBadgeAnchor.attach(host, badge);");
     return code.toString();
-  }
-
-  private static boolean isAllAsciiDigits(final String s) {
-    if (s == null || s.isEmpty()) {
-      return false;
-    }
-    for (int i = 0; i < s.length(); i++) {
-      final char c = s.charAt(i);
-      if (c < '0' || c > '9') {
-        return false;
-      }
-    }
-    return true;
   }
 
   // ------------------------------------------------------------- Nav rail destination
