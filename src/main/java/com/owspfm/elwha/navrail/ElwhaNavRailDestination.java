@@ -104,7 +104,7 @@ import javax.swing.Timer;
  * {@code ElwhaNavigationRail} — they are not part of the destination's public surface.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ElwhaNavRailDestination extends JComponent implements IconBearing {
@@ -141,6 +141,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
 
   private ElwhaBadge badge;
   private ElwhaBadgeAnchor.Attachment badgeAttachment;
+  private ElwhaNavigationRail.Variant badgeAnchoredVariant;
 
   private Point rippleOrigin;
   private float rippleProgress = 1f;
@@ -269,19 +270,27 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   }
 
   /**
-   * Anchors a badge to this destination's icon. Passing {@code null} detaches any current badge.
-   * Setting a new non-null badge while one is already attached cleanly detaches the prior one
-   * first.
+   * Anchors a badge to this destination. Passing {@code null} detaches any current badge. Setting a
+   * new non-null badge while one is already attached cleanly detaches the prior one first.
    *
-   * <p>The badge is positioned by {@link ElwhaBadgeAnchor} using {@link #getIconBounds()} —
-   * upper-right of the icon glyph by default. Accessibility content from the badge splices into
-   * this destination's accessible name via the anchor's push-model (see {@code ElwhaBadgeAnchor}).
+   * <p>Placement follows the rail variant, per M3's "Favorites 84" pattern:
    *
-   * <p>In Expanded variant the badge tracks the icon's new position (left-anchored, vertically
-   * centered) automatically because the anchor reads {@link #getIconBounds()} every frame.
+   * <ul>
+   *   <li><strong>Collapsed</strong> — {@link ElwhaBadgeAnchor.AnchorMode#ICON_CORNER}: the badge
+   *       rides the upper-trailing corner of the icon glyph (read from {@link #getIconBounds()}).
+   *   <li><strong>Expanded</strong> — {@link ElwhaBadgeAnchor.AnchorMode#TRAILING_EDGE}: once the
+   *       icon is followed by a label, the badge moves to the trailing edge of the row, vertically
+   *       centered — not the icon corner.
+   * </ul>
+   *
+   * <p>The placement re-pins automatically when the rail toggles Collapsed&nbsp;↔&nbsp;Expanded:
+   * the mode swap fires once the morph settles, so a badge tracks the lerping icon (Collapsed mode)
+   * or the shrinking/growing row (Expanded mode) mid-animation and lands in the correct mode at
+   * rest. Accessibility content from the badge splices into this destination's accessible name via
+   * the anchor's push-model (see {@code ElwhaBadgeAnchor}), re-applied across the re-pin.
    *
    * @param badge the badge to anchor, or {@code null} to clear
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
   public void setBadge(final ElwhaBadge badge) {
@@ -293,9 +302,40 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
       badgeAttachment = null;
     }
     this.badge = badge;
+    badgeAnchoredVariant = null;
     if (badge != null) {
-      badgeAttachment = ElwhaBadgeAnchor.attach(this, badge);
+      attachBadgeForVariant();
     }
+  }
+
+  // The anchor mode that matches a rail variant: Collapsed pins the badge to the icon corner;
+  // Expanded moves it to the row's trailing edge (M3 "Favorites 84").
+  private static ElwhaBadgeAnchor.AnchorMode anchorModeFor(final ElwhaNavigationRail.Variant v) {
+    return v == ElwhaNavigationRail.Variant.EXPANDED
+        ? ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE
+        : ElwhaBadgeAnchor.AnchorMode.ICON_CORNER;
+  }
+
+  // Attaches the current badge in the anchor mode for the current host variant, recording which
+  // variant it was anchored for so a later variant change knows whether to re-pin.
+  private void attachBadgeForVariant() {
+    badgeAttachment = ElwhaBadgeAnchor.attach(this, badge, anchorModeFor(hostVariant));
+    badgeAnchoredVariant = hostVariant;
+  }
+
+  // Re-pins an already-attached badge into the anchor mode for the current (settled) host variant.
+  // No-op when no badge is attached or it is already anchored for this variant — so it is safe to
+  // call on every variant push and only does the detach/re-attach on an actual Collapsed↔Expanded
+  // switch (not on every morph tick).
+  private void reanchorBadgeForVariant() {
+    if (badge == null || badgeAnchoredVariant == hostVariant) {
+      return;
+    }
+    if (badgeAttachment != null) {
+      ElwhaBadgeAnchor.detach(badgeAttachment);
+      badgeAttachment = null;
+    }
+    attachBadgeForVariant();
   }
 
   /**
@@ -349,6 +389,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     this.hostVariant = v;
     this.morphing = false;
     this.morphProgress = 0f;
+    reanchorBadgeForVariant();
     revalidate();
     repaint();
   }
@@ -388,6 +429,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     } else {
       this.morphing = true;
     }
+    reanchorBadgeForVariant();
     revalidate();
     repaint();
   }
