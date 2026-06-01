@@ -16,6 +16,8 @@ import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -46,8 +48,17 @@ import javax.swing.UIManager;
  * #setCode(String)} whenever a control changes. The surface segment is supplied by the scaffold —
  * builders never wire it.
  *
+ * <p><strong>Extra facets.</strong> A composed component (e.g. a navigation rail carrying a badge)
+ * can expose an embedded sub-component's own editor as an additional switcher segment via {@link
+ * #addFacet(String, JComponent)}. Extra facets land <em>between</em> the {@code Component} and
+ * {@code Surface} bookends — Component is always first (it is the thing), Surface is always last
+ * (it is the stage it sits on) — so a rail-with-badge reads {@code Component | Badge | Surface}.
+ * Each facet owns its own code text through the returned {@link Facet} handle; the code view tracks
+ * the active segment. The {@code Surface} segment stays scaffold-special (it reconfigures the
+ * stage) and is not a {@link Facet}.
+ *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ComponentWorkbench extends JPanel {
@@ -61,17 +72,22 @@ public final class ComponentWorkbench extends JPanel {
   // them flush at chosen MEDIUM (220 px).
   private static final int STAGE_FIT_MARGIN = 128;
 
+  private static final String COMPONENT_SEGMENT = "Component";
+  private static final String SURFACE_SEGMENT = "Surface";
+
   private final JPanel stageHost;
   private final ElwhaSurface stageSurface;
   private final SurfaceControlPanel surfacePanel;
   private final WorkbenchControls componentControls;
   private final JPanel controlsCards;
+  private final JPanel switcherBar;
   private final CodeView codeView;
+  private final List<Facet> facets = new ArrayList<>();
 
   private JComponent liveComponent;
   private String componentCode = "";
   private String surfaceCode = "";
-  private boolean surfaceSegmentActive;
+  private String activeSegment = COMPONENT_SEGMENT;
 
   /**
    * Builds an empty workbench — call {@link #setStage}, {@link #controls}, and {@link #setCode} to
@@ -111,8 +127,8 @@ public final class ComponentWorkbench extends JPanel {
     stageSurface.setLayout(new GridBagLayout());
 
     controlsCards = new JPanel(new CardLayout());
-    controlsCards.add(componentControls, "Component");
-    controlsCards.add(surfaceControls, "Surface");
+    controlsCards.add(componentControls, COMPONENT_SEGMENT);
+    controlsCards.add(surfaceControls, SURFACE_SEGMENT);
 
     final JScrollPane controlsScroll =
         new JScrollPane(
@@ -122,11 +138,19 @@ public final class ComponentWorkbench extends JPanel {
     controlsScroll.getVerticalScrollBar().setUnitIncrement(16);
     controlsScroll.setBorder(null);
 
+    switcherBar = new JPanel(new BorderLayout());
+    switcherBar.setBorder(
+        BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(
+                0, 0, 1, 0, UIManager.getColor("Component.borderColor")),
+            BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+    rebuildSwitcher();
+
     final JPanel controlsRegion = new JPanel(new BorderLayout());
     controlsRegion.setPreferredSize(new Dimension(CONTROLS_WIDTH, 0));
     controlsRegion.setBorder(
         BorderFactory.createMatteBorder(0, 1, 0, 0, UIManager.getColor("Component.borderColor")));
-    controlsRegion.add(buildSwitcher(), BorderLayout.NORTH);
+    controlsRegion.add(switcherBar, BorderLayout.NORTH);
     controlsRegion.add(controlsScroll, BorderLayout.CENTER);
 
     codeView = new CodeView();
@@ -184,50 +208,127 @@ public final class ComponentWorkbench extends JPanel {
    */
   public void setCode(final String code) {
     componentCode = code;
-    if (!surfaceSegmentActive) {
+    if (COMPONENT_SEGMENT.equals(activeSegment)) {
       codeView.setCode(code);
     }
   }
 
-  // The Component | Surface switcher — an ElwhaButtonGroup connected REQUIRED group, dogfooding the
-  // library's own M3 segmented-control component. REQUIRED auto-seeds the first ("Component")
-  // segment, matching the controls column's default card.
-  private JComponent buildSwitcher() {
+  /**
+   * Adds an extra switcher facet between the {@code Component} and {@code Surface} bookends — a
+   * named segment that swaps the controls column to {@code controls} when selected. Use for a
+   * composed component's embedded sub-component editor (e.g. a navigation rail's badge). Facets
+   * appear in insertion order between the bookends.
+   *
+   * @param name the segment label, also the facet's code-tracking key (must be unique among facets)
+   * @param controls the controls panel shown when this facet is active
+   * @return a handle for pushing this facet's equivalent-Java code via {@link
+   *     Facet#setCode(String)}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public Facet addFacet(final String name, final JComponent controls) {
+    final Facet facet = new Facet(name);
+    facets.add(facet);
+    controlsCards.add(controls, name);
+    rebuildSwitcher();
+    return facet;
+  }
+
+  /**
+   * A handle to an extra switcher facet added via {@link ComponentWorkbench#addFacet(String,
+   * JComponent)}. Carries the facet's equivalent-Java code, shown in the code view whenever the
+   * facet is the active segment.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public final class Facet {
+    private final String name;
+    private String code = "";
+
+    private Facet(final String name) {
+      this.name = name;
+    }
+
+    /**
+     * Updates this facet's equivalent-Java code. Shown immediately if this facet is the active
+     * switcher segment.
+     *
+     * @param code the code text to show
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public void setCode(final String code) {
+      this.code = code;
+      if (name.equals(activeSegment)) {
+        codeView.setCode(code);
+      }
+    }
+  }
+
+  // The Component | <facets…> | Surface switcher — an ElwhaButtonGroup connected REQUIRED group,
+  // dogfooding the library's own M3 segmented-control component. REQUIRED auto-seeds the first
+  // ("Component") segment, matching the controls column's default card. Rebuilt whenever a facet is
+  // added; the bookends carry house-style icons, builder-supplied facets are text-only.
+  private void rebuildSwitcher() {
     final int iconPx = ButtonSize.XS.iconSizePx();
     final ElwhaButtonGroup switcher =
         ElwhaButtonGroup.connected()
             .setSelectionMode(SelectionMode.REQUIRED)
             .setButtonSize(ButtonSize.XS)
             .setResizeMode(ResizeMode.FIXED)
-            .setColorStyle(ButtonGroupColorStyle.OUTLINED)
-            .add(
-                new ElwhaButton("Component")
-                    .setIcons(MaterialIcons.widgets(iconPx), MaterialIcons.widgetsFilled(iconPx)))
-            .add(
-                new ElwhaButton("Surface")
-                    .setIcons(MaterialIcons.layers(iconPx), MaterialIcons.layersFilled(iconPx)));
-    switcher.addSelectionListener(group -> showSegment(group.getSelectedIndex() == 1));
+            .setColorStyle(ButtonGroupColorStyle.OUTLINED);
 
-    final JPanel bar = new JPanel(new BorderLayout());
-    bar.setBorder(
-        BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(
-                0, 0, 1, 0, UIManager.getColor("Component.borderColor")),
-            BorderFactory.createEmptyBorder(8, 8, 8, 8)));
-    bar.add(switcher, BorderLayout.WEST);
-    return bar;
+    final List<String> names = new ArrayList<>();
+    switcher.add(
+        new ElwhaButton(COMPONENT_SEGMENT)
+            .setIcons(MaterialIcons.widgets(iconPx), MaterialIcons.widgetsFilled(iconPx)));
+    names.add(COMPONENT_SEGMENT);
+    for (final Facet facet : facets) {
+      switcher.add(new ElwhaButton(facet.name));
+      names.add(facet.name);
+    }
+    switcher.add(
+        new ElwhaButton(SURFACE_SEGMENT)
+            .setIcons(MaterialIcons.layers(iconPx), MaterialIcons.layersFilled(iconPx)));
+    names.add(SURFACE_SEGMENT);
+
+    final int activeIndex = Math.max(0, names.indexOf(activeSegment));
+    switcher.setSelectedIndex(activeIndex);
+    switcher.addSelectionListener(group -> showSegment(names.get(group.getSelectedIndex())));
+
+    switcherBar.removeAll();
+    switcherBar.add(switcher, BorderLayout.WEST);
+    switcherBar.revalidate();
+    switcherBar.repaint();
   }
 
-  private void showSegment(final boolean surface) {
-    surfaceSegmentActive = surface;
-    ((CardLayout) controlsCards.getLayout()).show(controlsCards, surface ? "Surface" : "Component");
-    codeView.setCode(surface ? surfaceCode : componentCode);
+  private void showSegment(final String name) {
+    activeSegment = name;
+    ((CardLayout) controlsCards.getLayout()).show(controlsCards, name);
+    codeView.setCode(codeFor(name));
+  }
+
+  private String codeFor(final String name) {
+    if (COMPONENT_SEGMENT.equals(name)) {
+      return componentCode;
+    }
+    if (SURFACE_SEGMENT.equals(name)) {
+      return surfaceCode;
+    }
+    for (final Facet facet : facets) {
+      if (facet.name.equals(name)) {
+        return facet.code;
+      }
+    }
+    return "";
   }
 
   private void onSurfaceChanged() {
     surfaceCode = surfacePanel.code();
     mountStage();
-    if (surfaceSegmentActive) {
+    if (SURFACE_SEGMENT.equals(activeSegment)) {
       codeView.setCode(surfaceCode);
     }
   }
