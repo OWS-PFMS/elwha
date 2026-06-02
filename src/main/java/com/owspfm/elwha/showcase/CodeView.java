@@ -19,7 +19,7 @@ import javax.swing.JTextArea;
  * workbench can drive it. The "Copy" button puts the current text on the system clipboard.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class CodeView extends JPanel {
@@ -40,7 +40,7 @@ public final class CodeView extends JPanel {
    * Builds a code view with a custom heading.
    *
    * @param title the heading text shown above the code area
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
   public CodeView(final String title) {
@@ -69,7 +69,12 @@ public final class CodeView extends JPanel {
     header.add(copy, BorderLayout.EAST);
 
     add(header, BorderLayout.NORTH);
-    add(new JScrollPane(area), BorderLayout.CENTER);
+
+    final JScrollPane codeScroll = new JScrollPane(area);
+    // Inner pane: a code-view scroll is not a page scroll, so it must not drive the floating FAB's
+    // scroll-shrink. Tag it the way ComponentWorkbench tags its stage and controls panes (#310).
+    codeScroll.putClientProperty(ComponentWorkbench.FAB_SCROLL_IGNORE, Boolean.TRUE);
+    add(codeScroll, BorderLayout.CENTER);
   }
 
   /**

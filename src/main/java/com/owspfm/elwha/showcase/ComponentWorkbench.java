@@ -78,10 +78,13 @@ public final class ComponentWorkbench extends JPanel {
   private static final String COMPONENT_SEGMENT = "Component";
   private static final String SURFACE_SEGMENT = "Surface";
 
-  // Client-property marker on the stage's scroll pane. The Showcase's floating-FAB scroll-shrink
-  // dogfood (#274) targets the first scroll pane it finds in the active page; the stage scroll
-  // (added for #179) would shadow the page/controls scroll it actually means to track, so the
-  // FAB search skips any pane carrying this flag.
+  // Client-property marker on a Workbench inner scroll pane. The Showcase's floating-FAB
+  // scroll-shrink dogfood (#274) drives the FAB from the first scroll pane it finds in the active
+  // page, but only a genuine page-level scroll should do that. A Workbench's own inner panes are
+  // not page scrolls: the stage scroll (#179), the controls column, and the code view each carry
+  // this flag so the FAB search skips them. With all three tagged, a Workbench card exposes no
+  // eligible pane, so the floating FAB stays Extended and inert rather than shrinking when an inner
+  // pane scrolls (#310).
   static final String FAB_SCROLL_IGNORE = "Showcase.fabScrollIgnore";
 
   private final StageHost stageHost;
@@ -102,7 +105,7 @@ public final class ComponentWorkbench extends JPanel {
    * Builds an empty workbench — call {@link #setStage}, {@link #controls}, and {@link #setCode} to
    * fill it.
    *
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
   public ComponentWorkbench() {
@@ -146,6 +149,7 @@ public final class ComponentWorkbench extends JPanel {
             JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
     controlsScroll.getVerticalScrollBar().setUnitIncrement(16);
     controlsScroll.setBorder(null);
+    controlsScroll.putClientProperty(FAB_SCROLL_IGNORE, Boolean.TRUE);
 
     switcherBar = new JPanel(new BorderLayout());
     switcherBar.setBorder(
