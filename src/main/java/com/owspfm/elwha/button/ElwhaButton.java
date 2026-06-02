@@ -1327,6 +1327,30 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
    * @version v0.3.0
    * @since v0.3.0
    */
+  /**
+   * Runs one full press-in → press-out shape + width morph cycle programmatically — the same motion
+   * a pointer press produces — but <em>unconditionally</em>, deliberately ignoring the {@link
+   * ButtonInteractionMode#SELECTABLE} press-morph suppression that {@code firesPressMorph()}
+   * applies to live pointer / keyboard presses (a SELECTABLE button suppresses the press morph so
+   * the select-flip owns the shape signal; design doc §5). This is a workbench / test hook for
+   * exercising the press morph in isolation — notably on a SELECTABLE button, where a real press
+   * would show no morph — and fires no action and no selection change. Only the shape + width morph
+   * is driven; the press color overlay ({@code StateLayer.PRESSED}) is untouched.
+   *
+   * <p>Reduced motion and the duration multiplier are honored automatically (both live on the
+   * shared {@link MorphAnimator}); under reduced motion the press-in and press-out snap. The press
+   * is held for {@link MorphAnimator#SHORT3_MS} so the press-in fully renders before it reverses.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void triggerPressAnimation() {
+    pressMorph.start();
+    final Timer release = new Timer(MorphAnimator.SHORT3_MS, e -> pressMorph.reverse());
+    release.setRepeats(false);
+    release.start();
+  }
+
   public void startWidthBorrow(final float factor) {
     final float clamped = Math.max(-1f, Math.min(1f, factor));
     if (clamped == 0f) {
