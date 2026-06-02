@@ -84,6 +84,27 @@ When a leaf widget exposes a clickable, two-state affordance on one slot, the op
 
 The display-only mode is named `setTrailingIndicator`, **not** `setTrailingIcon` — `setTrailingIcon` already denotes the single-state button, and its three-arg `(Icon, tooltip, onClick)` signature makes that interactivity explicit. The leading slot has no single-state button, so its display-only setter keeps the plain name `setLeadingIcon`. The resulting `setLeadingIcon` vs `setTrailingIndicator` naming asymmetry is deliberate: the trailing slot carries one extra mode and needs three distinct nouns (*indicator* / *button* / *affordance*) where the leading slot needs two. Decision recorded under [#164](https://github.com/OWS-PFMS/elwha/issues/164).
 
+## 8. Shadow reserve — one contract, container/leaf mechanism may differ
+
+Every shadowed (elevated) primitive reserves space around its visible body for the M3 key+ambient shadow halo, so the shadow never clips against the component bounds. The **contract** for that reserve is uniform across all of them; the **mechanism** is allowed to differ by role (§6 leaf vs container).
+
+**One accessor — `getShadowInsets()`.** Every shadowed primitive exposes its halo reserve through a single public getter (`Insets getShadowInsets()`), declared by the `ShadowBearing` interface. Placement helpers (e.g. `ElwhaFabAnchor`) back the halo out of bounds by depending on `ShadowBearing`, never on a concrete primitive type. Do **not** invent a per-component name (`shadowReserve()`, a private accessor, etc.) — that is the drift this rule exists to prevent.
+
+**Where the reserve lives — by role:**
+
+| Role | Reserve home | Body placement |
+|---|---|---|
+| **Container** (`ElwhaSurface` family, e.g. `ElwhaCard`) | `getInsets()` returns the shadow reserve; preferred size includes it via `super` | layout flows children inside the insets |
+| **Leaf** (`JComponent` widgets, e.g. `ElwhaButton`, `ElwhaFab`) | reserve baked into `getPreferredSize()` (the parent reserves room for the halo) | `paintComponent` translates the body by the reserve and centers it manually |
+
+Both roles honor the **same paint convention**: translate the graphics origin by the reserve, then call `ShadowPainter.paint` against the body rect. This divergence is sanctioned for the same reason as §6 — a container that lays out real children gets insets-flow for free; a self-painting leaf does not, and forcing the container's `JPanel`/insets machinery onto a leaf would drag in baggage it doesn't need.
+
+**`getMaximumSize` rule (the hard one).** A leaf that bakes its halo into `getPreferredSize()` must **never** override `getMaximumSize()` to equal `getPreferredSize()`. Doing so disrupts the shadow render — a dark concentration at one corner ([#199](https://github.com/OWS-PFMS/elwha/issues/199); the empirical fix was removing the override, mechanism investigated in [#200](https://github.com/OWS-PFMS/elwha/issues/200)). If a real stretch constraint is ever needed, return `(Integer.MAX_VALUE, Integer.MAX_VALUE)` the way `ElwhaCard` does — never `= preferred`. A leaf with **no** halo (e.g. `ElwhaIconButton`) may carry `max = preferred` safely; the trap is specific to halo-in-preferred primitives.
+
+**Reserve elevation.** Size the reserve for the worst-case elevation the primitive can actually paint, not its resting level: `ElwhaCard` reserves for `MAX_ELEVATION` (transient hover/drag bumps never clip), `ElwhaFab` for its `HOVER_ELEVATION` bump, `ElwhaButton` for its variant's elevation (zero when the variant is flat). Document the chosen worst-case in the reserve accessor's javadoc.
+
+**Apply when:** adding any new elevated/shadowed primitive. Implement `ShadowBearing`, pick the reserve home by role, honor the `ShadowPainter` translate convention, and obey the `getMaximumSize` rule. Contract-alignment of the existing primitives onto `ShadowBearing` is tracked in [#313](https://github.com/OWS-PFMS/elwha/issues/313).
+
 ---
 
 ## Cross-reference
