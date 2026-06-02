@@ -319,10 +319,15 @@ public final class FoundationsPanels {
     update.run();
     iconUpdaters.add(update);
 
+    // Select on mousePressed, not mouseClicked: on macOS the synthesized MOUSE_CLICKED is
+    // intermittently dropped under rapid successive clicks (press + release are still delivered,
+    // only
+    // the derived click is lost), so selecting on the click made tiles need 2-3 tries. mousePressed
+    // always fires, so the selection lands on the first press every time.
     tile.addMouseListener(
         new java.awt.event.MouseAdapter() {
           @Override
-          public void mouseClicked(final java.awt.event.MouseEvent event) {
+          public void mousePressed(final java.awt.event.MouseEvent event) {
             selection.select(
                 () -> {
                   selected[0] = false;
