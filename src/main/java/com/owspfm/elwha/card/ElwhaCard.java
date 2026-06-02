@@ -904,7 +904,7 @@ public class ElwhaCard extends ElwhaSurface {
    * subsequent paint with different state uses the resting defaults.
    *
    * @param g the graphics context
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.2.0
    */
   @Override
@@ -914,17 +914,14 @@ public class ElwhaCard extends ElwhaSurface {
     // children in paintChildren — see suppressRestingBorder and paintRestingOutlinedBorder (#157).
     suppressRestingBorder = variant == CardVariant.OUTLINED;
     try {
+      // super.paintComponent paints the fill + border + state-layer overlay (via the
+      // paintSurfaceOverlay hook) for the common inset path, and only the shadow when the chassis
+      // folds those into the child clip buffer (edge-bleed media — see paintChildren). Either way
+      // the flags above are read while the fill/border are painted.
       super.paintComponent(g);
     } finally {
       paintingDisabled = false;
       suppressRestingBorder = false;
-    }
-    final Graphics2D g2 = (Graphics2D) g.create();
-    try {
-      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      paintStateLayerOverlay(g2);
-    } finally {
-      g2.dispose();
     }
   }
 
@@ -1013,12 +1010,24 @@ public class ElwhaCard extends ElwhaSurface {
    * there's no double-stacking.
    *
    * @param g the graphics context
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.2.0
    */
   @Override
   protected void paintChildren(final Graphics g) {
-    super.paintChildren(g);
+    // The chassis fill + state-layer overlay are folded into super.paintChildren's clip buffer when
+    // an edge-bleed media child forces the corner clip (#163); set the same per-paint flags the
+    // common path sets around super.paintComponent so the buffer fill sees the disabled role swap
+    // (PL-9) and the OUTLINED resting-border suppression while it reads
+    // getSurfaceRole/getBorderRole.
+    paintingDisabled = !isEnabled();
+    suppressRestingBorder = variant == CardVariant.OUTLINED;
+    try {
+      super.paintChildren(g);
+    } finally {
+      paintingDisabled = false;
+      suppressRestingBorder = false;
+    }
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -1057,9 +1066,22 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
-   * Hover / pressed / dragged state-layer overlay — on-surface tint at variant-agnostic opacity.
+   * Hover / pressed / dragged state-layer overlay — on-surface tint at variant-agnostic opacity,
+   * painted between the chassis fill and the children via the {@link ElwhaSurface} hook. The hook
+   * positions the graphics at the body origin, so it paints in body-local coordinates and lands
+   * correctly whether the fill was painted directly (inset path) or folded into the child clip
+   * buffer (edge-bleed media — #163).
+   *
+   * @param g2 the body-local graphics context
+   * @param bodyW the visible body width in pixels
+   * @param bodyH the visible body height in pixels
+   * @param arc the corner radius in pixels
+   * @version v0.4.0
+   * @since v0.2.0
    */
-  private void paintStateLayerOverlay(final Graphics2D g2) {
+  @Override
+  protected void paintSurfaceOverlay(
+      final Graphics2D g2, final int bodyW, final int bodyH, final int arc) {
     if (!isEnabled() || !actionable) {
       return;
     }
@@ -1076,9 +1098,7 @@ public class ElwhaCard extends ElwhaSurface {
     final Color tint = ColorRole.ON_SURFACE.resolve();
     g2.setComposite(AlphaComposite.SrcOver.derive(layer.opacity()));
     g2.setColor(tint);
-    final java.awt.Rectangle b = bodyBounds();
-    final int arc = getShape().px();
-    g2.fill(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc));
+    g2.fill(new RoundRectangle2D.Float(0f, 0f, bodyW, bodyH, arc, arc));
   }
 
   /**

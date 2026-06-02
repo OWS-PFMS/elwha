@@ -275,6 +275,16 @@ public class ElwhaSurface extends JPanel {
   }
 
   /**
+   * Whether this paint folds the body fill / overlay / border into the child clip buffer rather
+   * than painting them directly in {@link #paintComponent}. True exactly when the clip runs — it
+   * needs a corner-reaching child to be worthwhile — so a childless clip-enabled surface still gets
+   * its fill from {@link #paintComponent}, never silently dropping it.
+   */
+  private boolean foldsBodyIntoClipBuffer() {
+    return clipsChildrenToCorners() && getComponentCount() > 0;
+  }
+
+  /**
    * Sets the M3 elevation level (0..{@link #MAX_ELEVATION}). Level 0 disables the shadow entirely;
    * levels 1..5 paint the M3 key+ambient shadow stack via {@link ShadowPainter#paint}. The chassis
    * reserves space around the visible body to accommodate the shadow halo — see {@link
@@ -336,8 +346,15 @@ public class ElwhaSurface extends JPanel {
    * Paints the surface — shadow into the reserved insets, then round-rect fill + optional border
    * stroke (delegated to {@link SurfacePainter}) over the visible body.
    *
+   * <p>When {@link #clipsChildrenToCorners()} resolves {@code true} the fill, state-layer overlay,
+   * and border are <em>not</em> painted here — they are folded into the child clip buffer in {@link
+   * #paintChildren} so the chassis fill shares the children's single antialiased corner cut,
+   * instead of the fill and an opaque edge-to-edge child antialiasing their corners in two separate
+   * passes (the #163 corner fringe). Only the shadow, which sits behind everything, is painted here
+   * in that case.
+   *
    * @param g the graphics context
-   * @version v0.2.0
+   * @version v0.4.0
    * @since v0.1.0
    */
   @Override
@@ -362,17 +379,38 @@ public class ElwhaSurface extends JPanel {
           shadow.dispose();
         }
       }
-      final Graphics2D body = (Graphics2D) g2.create(bodyX, bodyY, bodyW, bodyH);
-      try {
-        SurfacePainter.paint(
-            body, bodyW, bodyH, arc, getSurfaceRole(), null, getBorderRole(), getBorderWidth());
-      } finally {
-        body.dispose();
+      if (!foldsBodyIntoClipBuffer() && bodyW > 0 && bodyH > 0) {
+        final Graphics2D body = (Graphics2D) g2.create(bodyX, bodyY, bodyW, bodyH);
+        try {
+          SurfacePainter.paint(
+              body, bodyW, bodyH, arc, getSurfaceRole(), null, getBorderRole(), getBorderWidth());
+          paintSurfaceOverlay(body, bodyW, bodyH, arc);
+        } finally {
+          body.dispose();
+        }
       }
     } finally {
       g2.dispose();
     }
   }
+
+  /**
+   * Hook for subclasses to paint a surface-level overlay between the chassis fill and the children
+   * — the M3 hover / pressed / dragged state-layer tint belongs here. The graphics is positioned at
+   * the body origin (paint in body-local coordinates {@code (0,0)..(bodyW,bodyH)}), and the call is
+   * invoked from whichever path painted the fill: directly over the fill in {@link #paintComponent}
+   * for the common case, or inside the child clip buffer (under the children, sharing their corner
+   * cut) when {@link #clipsChildrenToCorners()} is active. Default does nothing.
+   *
+   * @param g the body-local graphics context (already antialiased)
+   * @param bodyW the visible body width in pixels
+   * @param bodyH the visible body height in pixels
+   * @param arc the corner radius in pixels
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected void paintSurfaceOverlay(
+      final Graphics2D g, final int bodyW, final int bodyH, final int arc) {}
 
   /**
    * Renders the children through a soft (antialiased) rounded-corner clip so content that fills its
@@ -400,7 +438,7 @@ public class ElwhaSurface extends JPanel {
    */
   @Override
   protected void paintChildren(final Graphics g) {
-    if (!clipsChildrenToCorners() || getComponentCount() == 0) {
+    if (!foldsBodyIntoClipBuffer()) {
       super.paintChildren(g);
       return;
     }
@@ -428,15 +466,52 @@ public class ElwhaSurface extends JPanel {
     try {
       bg.scale(scaleX, scaleY);
       bg.translate(-bodyX, -bodyY);
+
+      // Fold the chassis fill + state-layer overlay into this buffer, beneath the children, so they
+      // share the single antialiased corner cut applied below — an opaque edge-to-edge child no
+      // longer antialiases its corner against a separately-AA'd fill (the #163 fringe). The fill is
+      // a plain rectangle here; the corner curve comes solely from the one Clear mask, so fill and
+      // children get the identical AA edge.
+      final Graphics2D bodyG = (Graphics2D) bg.create();
+      try {
+        bodyG.translate(bodyX, bodyY);
+        bodyG.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        final ColorRole fillRole = getSurfaceRole();
+        if (fillRole != null) {
+          bodyG.setColor(fillRole.resolve());
+          bodyG.fillRect(0, 0, bodyW, bodyH);
+        }
+        paintSurfaceOverlay(bodyG, bodyW, bodyH, arc);
+      } finally {
+        bodyG.dispose();
+      }
+
       super.paintChildren(bg);
       // Erase the four corner-overflow regions — the chassis rectangle minus its rounded body — so
-      // an opaque edge-to-edge child is cut to the chassis curve. Clear-compositing an antialiased
-      // fill soft-erases; a plain Graphics2D.clip would hard-erase and stair-step the corner
-      // (#157). bodyShape is the single source of the curve geometry (chassis fill / stroke use it
-      // too) so the cut aligns exactly — per #106.
+      // the folded fill and an opaque edge-to-edge child are cut to the chassis curve together.
+      // Clear-compositing an antialiased fill soft-erases; a plain Graphics2D.clip would hard-erase
+      // and stair-step the corner (#157). bodyShape is the single source of the curve geometry
+      // (chassis fill / stroke use it too) so the cut aligns exactly — per #106.
       bg.setComposite(AlphaComposite.Clear);
       bg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       bg.fill(cornerOverflow(bodyX, bodyY, bodyW, bodyH, arc));
+
+      // Border last — inside the kept region, after the corner cut. Its inset stroke tracks the
+      // same
+      // curve, so it rides the single AA edge too. Suppressed (null role) for an OUTLINED card,
+      // which repaints its outline above the children.
+      final ColorRole borderRoleNow = getBorderRole();
+      if (borderRoleNow != null && getBorderWidth() > 0) {
+        bg.setComposite(AlphaComposite.SrcOver);
+        final Graphics2D borderG = (Graphics2D) bg.create();
+        try {
+          borderG.translate(bodyX, bodyY);
+          SurfacePainter.paint(
+              borderG, bodyW, bodyH, arc, null, null, borderRoleNow, getBorderWidth());
+        } finally {
+          borderG.dispose();
+        }
+      }
     } finally {
       bg.dispose();
     }
