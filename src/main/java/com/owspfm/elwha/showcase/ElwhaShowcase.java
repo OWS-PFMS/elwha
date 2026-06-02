@@ -1075,6 +1075,8 @@ public final class ElwhaShowcase {
     final JSpinner bottomLeftSpinner = new JSpinner(new SpinnerNumberModel(12, 0, 60, 2));
     final JCheckBox selectedBox = new JCheckBox("Selected");
     final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    final JButton triggerPressButton = new JButton("Trigger press");
+    final JButton triggerSelectButton = new JButton("Trigger select");
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Button");
@@ -1096,7 +1098,14 @@ public final class ElwhaShowcase {
     controls.addControl("", selectedBox);
     controls.addControl("", enabledBox);
     installMorphControls(controls);
+    // Trigger the press / select morph on the live stage button programmatically — the press
+    // trigger fires even on a SELECTABLE button (where a real pointer press suppresses the morph),
+    // so the §5 press shape + width motion stays observable here (#183).
+    controls.addSection("Triggers");
+    controls.addControl("", triggerPressButton);
+    controls.addControl("", triggerSelectButton);
 
+    final ElwhaButton[] stage = new ElwhaButton[1];
     final Runnable apply =
         () -> {
           final ButtonVariant variant = (ButtonVariant) variantBox.getSelectedItem();
@@ -1147,6 +1156,7 @@ public final class ElwhaShowcase {
           }
           button.setCornerRadii(cornerRadii);
           button.setEnabled(enabled);
+          stage[0] = button;
           workbench.setStage(button);
           workbench.setCode(
               renderButtonCode(
@@ -1175,6 +1185,18 @@ public final class ElwhaShowcase {
     bottomLeftSpinner.addChangeListener(event -> apply.run());
     selectedBox.addActionListener(event -> apply.run());
     enabledBox.addActionListener(event -> apply.run());
+    triggerPressButton.addActionListener(
+        event -> {
+          if (stage[0] != null) {
+            stage[0].triggerPressAnimation();
+          }
+        });
+    triggerSelectButton.addActionListener(
+        event -> {
+          if (stage[0] != null) {
+            stage[0].setSelected(!stage[0].isSelected());
+          }
+        });
     apply.run();
     return workbench;
   }
