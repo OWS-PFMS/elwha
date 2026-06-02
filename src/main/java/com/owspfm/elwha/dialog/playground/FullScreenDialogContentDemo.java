@@ -11,7 +11,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -40,7 +39,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class FullScreenDialogContentDemo {
@@ -67,7 +66,7 @@ public final class FullScreenDialogContentDemo {
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     frame.setLayout(new BorderLayout());
 
-    final JButton open = new JButton("Open full-screen dialog");
+    final ElwhaButton open = ElwhaButton.filledButton("Open full-screen dialog");
     open.addActionListener(e -> openDialog());
 
     final JPanel center = new JPanel(new BorderLayout(0, 12));

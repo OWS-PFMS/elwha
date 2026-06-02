@@ -8,7 +8,6 @@ import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -35,7 +34,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class DialogActionRowDemo {
@@ -129,8 +128,8 @@ public final class DialogActionRowDemo {
     lastNote = "—";
   }
 
-  private static JButton button(final String text, final Runnable onClick) {
-    final JButton b = new JButton(text);
+  private static ElwhaButton button(final String text, final Runnable onClick) {
+    final ElwhaButton b = ElwhaButton.filledTonalButton(text);
     b.addActionListener(e -> onClick.run());
     return b;
   }

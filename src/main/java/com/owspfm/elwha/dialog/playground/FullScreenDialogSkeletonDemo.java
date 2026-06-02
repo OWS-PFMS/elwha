@@ -1,5 +1,6 @@
 package com.owspfm.elwha.dialog.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.dialog.ElwhaFullScreenDialog;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -7,7 +8,6 @@ import com.owspfm.elwha.theme.Mode;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -35,7 +35,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class FullScreenDialogSkeletonDemo {
@@ -63,10 +63,10 @@ public final class FullScreenDialogSkeletonDemo {
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     frame.setLayout(new BorderLayout());
 
-    final JButton open = new JButton("Open full-screen dialog");
+    final ElwhaButton open = ElwhaButton.filledButton("Open full-screen dialog");
     open.addActionListener(e -> openDialog());
 
-    final JButton bg = new JButton("Background button");
+    final ElwhaButton bg = ElwhaButton.filledTonalButton("Background button");
     bg.addActionListener(
         e -> {
           backgroundClicks++;

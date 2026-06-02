@@ -9,7 +9,6 @@ import com.owspfm.elwha.theme.Mode;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -44,7 +43,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class DialogRippleSuppressionDemo {
@@ -71,10 +70,10 @@ public final class DialogRippleSuppressionDemo {
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     frame.setLayout(new BorderLayout());
 
-    final JButton basic = new JButton("Open basic dialog");
+    final ElwhaButton basic = ElwhaButton.filledTonalButton("Open basic dialog");
     basic.addActionListener(e -> openBasic());
 
-    final JButton fullScreen = new JButton("Open full-screen dialog");
+    final ElwhaButton fullScreen = ElwhaButton.filledTonalButton("Open full-screen dialog");
     fullScreen.addActionListener(e -> openFullScreen());
 
     final JPanel center = new JPanel(new GridLayout(0, 1, 0, 12));
