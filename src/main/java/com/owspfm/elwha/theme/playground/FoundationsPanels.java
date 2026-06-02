@@ -241,7 +241,20 @@ public final class FoundationsPanels {
     final JPanel cell = new JPanel();
     cell.setLayout(new BoxLayout(cell, BoxLayout.Y_AXIS));
 
-    final JLabel icon = new JLabel();
+    // The glyph is transparent to mouse hit-testing (contains() -> false) so the centered JLabel,
+    // which fills the middle of the tile, doesn't swallow clicks aimed at the icon: Swing delivers
+    // a
+    // click to the deepest component at the point, and a listener-less child would otherwise eat
+    // every center click, leaving only the thin padding ring clickable. With the glyph transparent,
+    // the ElwhaSurface tile below is the sole hit target for the whole tile, so its selection
+    // listener fires no matter where on the tile the user clicks.
+    final JLabel icon =
+        new JLabel() {
+          @Override
+          public boolean contains(final int x, final int y) {
+            return false;
+          }
+        };
     icon.setHorizontalAlignment(SwingConstants.CENTER);
 
     // Each glyph sits on an elevated ElwhaSurface tile — dogfooding the token-driven "Paper"
@@ -306,10 +319,15 @@ public final class FoundationsPanels {
     update.run();
     iconUpdaters.add(update);
 
+    // Select on mousePressed, not mouseClicked: on macOS the synthesized MOUSE_CLICKED is
+    // intermittently dropped under rapid successive clicks (press + release are still delivered,
+    // only
+    // the derived click is lost), so selecting on the click made tiles need 2-3 tries. mousePressed
+    // always fires, so the selection lands on the first press every time.
     tile.addMouseListener(
         new java.awt.event.MouseAdapter() {
           @Override
-          public void mouseClicked(final java.awt.event.MouseEvent event) {
+          public void mousePressed(final java.awt.event.MouseEvent event) {
             selection.select(
                 () -> {
                   selected[0] = false;
