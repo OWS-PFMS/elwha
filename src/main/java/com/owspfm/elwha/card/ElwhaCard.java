@@ -83,7 +83,7 @@ import javax.swing.Timer;
  * cannot configure those independently. See spec §12.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.2.0
  */
 public class ElwhaCard extends ElwhaSurface {
@@ -964,6 +964,39 @@ public class ElwhaCard extends ElwhaSurface {
   @Override
   public ColorRole getBorderRole() {
     return suppressRestingBorder ? null : super.getBorderRole();
+  }
+
+  /**
+   * Forces the chassis rounded-corner child clip on whenever an edge-bleed {@link ElwhaCardMedia}
+   * is the first or last visible child — the one case where a card hosts an opaque cover that
+   * reaches the chassis corners and would otherwise overhang them with a square edge (#157). Every
+   * other card (inset content only) inherits the default and skips the offscreen clip buffer
+   * entirely, so a ripple-animating non-media card doesn't allocate per frame (#272).
+   *
+   * @return {@code true} when an edge-bleed media child requires the corner clip
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  protected boolean clipsChildrenToCorners() {
+    return super.clipsChildrenToCorners() || hasEdgeBleedMedia();
+  }
+
+  private boolean hasEdgeBleedMedia() {
+    final int count = getComponentCount();
+    Component firstVisible = null;
+    Component lastVisible = null;
+    for (int i = 0; i < count; i++) {
+      final Component c = getComponent(i);
+      if (!c.isVisible()) {
+        continue;
+      }
+      if (firstVisible == null) {
+        firstVisible = c;
+      }
+      lastVisible = c;
+    }
+    return firstVisible instanceof ElwhaCardMedia || lastVisible instanceof ElwhaCardMedia;
   }
 
   /**

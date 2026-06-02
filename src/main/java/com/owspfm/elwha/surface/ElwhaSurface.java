@@ -56,7 +56,7 @@ import javax.swing.JPanel;
  * docs/research/elwha-surface-design.md}.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.1.0
  */
 public class ElwhaSurface extends JPanel {
@@ -71,6 +71,18 @@ public class ElwhaSurface extends JPanel {
   private ShapeScale shape = ShapeScale.MD;
   private ColorRole borderRole;
   private int borderWidth = 1;
+  private boolean clipChildrenToCorners;
+
+  // Reused across paints so the rounded-corner child clip doesn't reallocate a device-resolution
+  // buffer (or rebuild the corner-overflow Area) every frame — only the genuinely-clipping path
+  // touches these, and only when the device size or body geometry actually changes (#272).
+  private java.lang.ref.SoftReference<BufferedImage> clipBufferCache;
+  private Area cornerOverflowCache;
+  private int cornerOverflowX = Integer.MIN_VALUE;
+  private int cornerOverflowY = Integer.MIN_VALUE;
+  private int cornerOverflowW = -1;
+  private int cornerOverflowH = -1;
+  private int cornerOverflowArc = -1;
 
   /**
    * The M3 elevation level used to size the chassis shadow reserve and drive the painted shadow.
@@ -207,6 +219,62 @@ public class ElwhaSurface extends JPanel {
   }
 
   /**
+   * Opts this surface into the antialiased rounded-corner child clip. When {@code true}, children
+   * are composited through the chassis's curved corner so an opaque edge-to-edge child (e.g. an
+   * {@code ElwhaCardMedia} cover) conforms to the round-rect outline instead of overhanging it with
+   * a square corner (#157). When {@code false} (the default) children paint directly with no
+   * offscreen buffer — the right, cheap choice for the common case where every child is inset from
+   * the corners (plain surfaces, dialogs, non-media cards), since the clip then has nothing to do
+   * and would only burn an allocation per paint (#272).
+   *
+   * <p>Subclasses that intrinsically host a corner-reaching opaque child may force the clip on
+   * regardless of this flag — {@code ElwhaCard} enables it automatically whenever an edge-bleed
+   * {@code ElwhaCardMedia} is its first or last visible child, so card consumers never set this.
+   *
+   * @param clip {@code true} to clip children to the rounded corners; {@code false} to paint them
+   *     directly
+   * @return {@code this} for fluent chaining
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaSurface setClipChildrenToCorners(final boolean clip) {
+    if (clip == this.clipChildrenToCorners) {
+      return this;
+    }
+    this.clipChildrenToCorners = clip;
+    repaint();
+    return this;
+  }
+
+  /**
+   * Returns whether this surface clips its children to the rounded corners — the consumer-set flag
+   * only; a subclass that forces the clip on for intrinsic corner-reaching content does not change
+   * this value.
+   *
+   * @return {@code true} if the child corner clip is enabled
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean getClipChildrenToCorners() {
+    return clipChildrenToCorners;
+  }
+
+  /**
+   * Paint-time resolver for whether the rounded-corner child clip runs — mirrors {@link
+   * #currentElevationForPaint()}. Defaults to the consumer-set {@link #getClipChildrenToCorners()}
+   * flag; subclasses with intrinsic corner-reaching content (an {@code ElwhaCard} hosting
+   * edge-bleed media) override to force it on without disturbing the public flag.
+   *
+   * @return {@code true} if children should be composited through the rounded-corner clip this
+   *     paint
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected boolean clipsChildrenToCorners() {
+    return clipChildrenToCorners;
+  }
+
+  /**
    * Sets the M3 elevation level (0..{@link #MAX_ELEVATION}). Level 0 disables the shadow entirely;
    * levels 1..5 paint the M3 key+ambient shadow stack via {@link ShadowPainter#paint}. The chassis
    * reserves space around the visible body to accommodate the shadow halo — see {@link
@@ -318,13 +386,22 @@ public class ElwhaSurface extends JPanel {
    * the mask carries the AA so every child's corner curve matches the chassis exactly. The buffer
    * is sized to the {@code Graphics}' device resolution so children stay crisp on a HiDPI display.
    *
+   * <p>The offscreen buffer runs only when {@link #clipsChildrenToCorners()} resolves {@code true}
+   * — i.e. the surface actually hosts a corner-reaching opaque child. Every other surface (inset
+   * children, dialogs, non-media cards) takes the direct {@code super.paintChildren} path with no
+   * allocation, since the clip would have nothing to cut there (#272). When the buffer does run,
+   * the device-resolution image and the corner-overflow {@link Area} are cached and reused across
+   * paints — re-created only when the device size or body geometry changes — so an animating child
+   * (a card ripple) doesn't churn an allocation per frame.
+   *
    * @param g the graphics context
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.2.0
    */
   @Override
   protected void paintChildren(final Graphics g) {
-    if (getComponentCount() == 0) {
+    if (!clipsChildrenToCorners() || getComponentCount() == 0) {
+      super.paintChildren(g);
       return;
     }
     final Insets s = getInsets();
@@ -346,7 +423,7 @@ public class ElwhaSurface extends JPanel {
     final int deviceW = Math.max(1, (int) Math.ceil(bodyW * scaleX));
     final int deviceH = Math.max(1, (int) Math.ceil(bodyH * scaleY));
 
-    final BufferedImage buffer = new BufferedImage(deviceW, deviceH, BufferedImage.TYPE_INT_ARGB);
+    final BufferedImage buffer = acquireClipBuffer(deviceW, deviceH);
     final Graphics2D bg = buffer.createGraphics();
     try {
       bg.scale(scaleX, scaleY);
@@ -357,15 +434,9 @@ public class ElwhaSurface extends JPanel {
       // fill soft-erases; a plain Graphics2D.clip would hard-erase and stair-step the corner
       // (#157). bodyShape is the single source of the curve geometry (chassis fill / stroke use it
       // too) so the cut aligns exactly — per #106.
-      final RoundRectangle2D.Float body = SurfacePainter.bodyShape(bodyW, bodyH, arc);
-      final Area overflow = new Area(new Rectangle2D.Float(bodyX, bodyY, bodyW, bodyH));
-      overflow.subtract(
-          new Area(
-              new RoundRectangle2D.Float(
-                  bodyX, bodyY, body.width, body.height, body.arcwidth, body.archeight)));
       bg.setComposite(AlphaComposite.Clear);
       bg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      bg.fill(overflow);
+      bg.fill(cornerOverflow(bodyX, bodyY, bodyW, bodyH, arc));
     } finally {
       bg.dispose();
     }
@@ -382,5 +453,59 @@ public class ElwhaSurface extends JPanel {
     } finally {
       blit.dispose();
     }
+  }
+
+  /**
+   * Returns a cleared device-resolution ARGB buffer of the requested size, reusing the cached image
+   * when its dimensions are unchanged (the common animating-child case) so the clip path doesn't
+   * allocate per paint. A reused buffer is cleared to fully transparent first, since it still holds
+   * the previous frame's pixels (#272).
+   */
+  private BufferedImage acquireClipBuffer(final int deviceW, final int deviceH) {
+    BufferedImage buffer = clipBufferCache != null ? clipBufferCache.get() : null;
+    if (buffer == null || buffer.getWidth() != deviceW || buffer.getHeight() != deviceH) {
+      buffer = new BufferedImage(deviceW, deviceH, BufferedImage.TYPE_INT_ARGB);
+      clipBufferCache = new java.lang.ref.SoftReference<>(buffer);
+      return buffer;
+    }
+    final Graphics2D clear = buffer.createGraphics();
+    try {
+      clear.setComposite(AlphaComposite.Clear);
+      clear.fillRect(0, 0, deviceW, deviceH);
+    } finally {
+      clear.dispose();
+    }
+    return buffer;
+  }
+
+  /**
+   * Returns the corner-overflow region — the body rectangle minus its rounded body shape — reusing
+   * the cached {@link Area} when the body geometry is unchanged, so the {@link Area} subtract math
+   * isn't rebuilt per paint (#272). {@link SurfacePainter#bodyShape} is the single source of the
+   * curve geometry so the cut aligns with the chassis fill and stroke exactly.
+   */
+  private Area cornerOverflow(
+      final int bodyX, final int bodyY, final int bodyW, final int bodyH, final int arc) {
+    if (cornerOverflowCache != null
+        && bodyX == cornerOverflowX
+        && bodyY == cornerOverflowY
+        && bodyW == cornerOverflowW
+        && bodyH == cornerOverflowH
+        && arc == cornerOverflowArc) {
+      return cornerOverflowCache;
+    }
+    final RoundRectangle2D.Float body = SurfacePainter.bodyShape(bodyW, bodyH, arc);
+    final Area overflow = new Area(new Rectangle2D.Float(bodyX, bodyY, bodyW, bodyH));
+    overflow.subtract(
+        new Area(
+            new RoundRectangle2D.Float(
+                bodyX, bodyY, body.width, body.height, body.arcwidth, body.archeight)));
+    cornerOverflowCache = overflow;
+    cornerOverflowX = bodyX;
+    cornerOverflowY = bodyY;
+    cornerOverflowW = bodyW;
+    cornerOverflowH = bodyH;
+    cornerOverflowArc = arc;
+    return overflow;
   }
 }
