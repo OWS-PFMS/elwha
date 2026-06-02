@@ -1,5 +1,6 @@
 package com.owspfm.elwha.dialog.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.dialog.DismissCause;
 import com.owspfm.elwha.dialog.ElwhaDialog;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -9,7 +10,6 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -36,7 +36,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class DialogModalityDemo {
@@ -67,7 +67,7 @@ public final class DialogModalityDemo {
     final JCheckBox scrimDismiss = new JCheckBox("scrim-dismissible", true);
     final JCheckBox escDismiss = new JCheckBox("esc-dismissible", true);
 
-    final JButton bg = new JButton("Background button");
+    final ElwhaButton bg = ElwhaButton.filledTonalButton("Background button");
     bg.addActionListener(
         e -> {
           backgroundClicks++;
@@ -75,7 +75,7 @@ public final class DialogModalityDemo {
         });
     final JTextField field = new JTextField("type here when no dialog is open", 28);
 
-    final JButton open = new JButton("Open dialog");
+    final ElwhaButton open = ElwhaButton.filledButton("Open dialog");
     open.addActionListener(e -> openDialog(scrimDismiss.isSelected(), escDismiss.isSelected()));
 
     final JPanel center = new JPanel(new GridLayout(0, 1, 0, 12));

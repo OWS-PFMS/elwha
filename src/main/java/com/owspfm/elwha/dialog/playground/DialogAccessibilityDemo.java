@@ -8,7 +8,6 @@ import com.owspfm.elwha.theme.Mode;
 import java.awt.ComponentOrientation;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -36,7 +35,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class DialogAccessibilityDemo {
@@ -61,14 +60,15 @@ public final class DialogAccessibilityDemo {
   private void launch() {
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-    final JButton ltr = new JButton("Open dialog (LTR) — focus trap + restore");
+    final ElwhaButton ltr = ElwhaButton.filledButton("Open dialog (LTR) — focus trap + restore");
     ltr.addActionListener(e -> openDialog(ltr));
 
-    final JButton rtl = new JButton("Open dialog (RTL) — mirrored layout");
+    final ElwhaButton rtl = ElwhaButton.filledButton("Open dialog (RTL) — mirrored layout");
     rtl.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
     rtl.addActionListener(e -> openDialog(rtl));
 
-    final JButton background = new JButton("Background button (must be unreachable while open)");
+    final ElwhaButton background =
+        ElwhaButton.filledTonalButton("Background button (must be unreachable while open)");
 
     final JPanel buttons = new JPanel(new GridLayout(0, 1, 0, 12));
     buttons.setBorder(BorderFactory.createEmptyBorder(40, 56, 40, 56));

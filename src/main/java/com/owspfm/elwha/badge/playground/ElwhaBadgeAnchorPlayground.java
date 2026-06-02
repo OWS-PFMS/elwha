@@ -2,6 +2,7 @@ package com.owspfm.elwha.badge.playground;
 
 import com.owspfm.elwha.badge.ElwhaBadge;
 import com.owspfm.elwha.badge.ElwhaBadgeAnchor;
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.Config;
@@ -15,7 +16,6 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
-import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -42,7 +42,7 @@ import javax.swing.event.DocumentListener;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ElwhaBadgeAnchorPlayground {
@@ -153,7 +153,7 @@ public final class ElwhaBadgeAnchorPlayground {
           storedLabel.setText("stored: \"" + badge.getContent() + "\"");
         });
 
-    final JButton detachButton = new JButton("Detach");
+    final ElwhaButton detachButton = ElwhaButton.filledTonalButton("Detach");
     detachButton.addActionListener(
         e -> {
           if (attachment != null) {
@@ -161,7 +161,7 @@ public final class ElwhaBadgeAnchorPlayground {
             attachment = null;
           }
         });
-    final JButton attachButton = new JButton("Attach");
+    final ElwhaButton attachButton = ElwhaButton.filledTonalButton("Attach");
     attachButton.addActionListener(
         e -> {
           if (attachment == null) {

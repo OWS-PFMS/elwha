@@ -1,5 +1,7 @@
 package com.owspfm.elwha.theme.playground;
 
+import com.owspfm.elwha.button.ButtonVariant;
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.button.playground.ButtonPlaygroundPanels;
 import com.owspfm.elwha.card.playground.CursorReferencePanel;
 import com.owspfm.elwha.card.playground.ElwhaCardListShowcase;
@@ -88,7 +90,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
  * -Dexec.mainClass="com.owspfm.elwha.theme.playground.ThemePlayground"}
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.4.0
  * @since v0.1.0
  */
 public final class ThemePlayground {
@@ -334,7 +336,7 @@ public final class ThemePlayground {
 
   private JComponent buildButtonsRow() {
     JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-    JButton normal = new JButton("Button");
+    ElwhaButton normal = ElwhaButton.filledTonalButton("Button");
     // Becomes the frame's default button in buildAndShow() — the genuine FlatLaf mechanism for
     // the emphasis-button look, rather than a client property.
     defaultButton = new JButton("Default");
@@ -349,14 +351,17 @@ public final class ThemePlayground {
   private JComponent buildIconButtonsRow() {
     JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
 
-    JButton bordered = new JButton(MaterialIcons.edit());
+    ElwhaButton bordered =
+        new ElwhaButton(null, MaterialIcons.edit()).setVariant(ButtonVariant.FILLED_TONAL);
     bordered.setToolTipText("Bordered icon button");
 
-    JButton borderless = new JButton(MaterialIcons.delete());
+    ElwhaButton borderless =
+        new ElwhaButton(null, MaterialIcons.delete()).setVariant(ButtonVariant.FILLED_TONAL);
     borderless.putClientProperty("JButton.buttonType", "borderless");
     borderless.setToolTipText("Borderless icon button (toolbar style)");
 
-    JButton iconText = new JButton("Add", MaterialIcons.add());
+    ElwhaButton iconText =
+        new ElwhaButton("Add", MaterialIcons.add()).setVariant(ButtonVariant.FILLED_TONAL);
     iconText.setToolTipText("Icon + text button");
 
     JToggleButton iconToggle = new JToggleButton(MaterialIcons.visibility());
@@ -368,7 +373,8 @@ public final class ThemePlayground {
     // standard for icon buttons). setRequestFocusEnabled(false) keeps the click from moving
     // focus to the button — the idiomatic toolbar-button behavior, and the visible cue is
     // the icon swap alone (no lingering focus ring).
-    JButton pinToggle = new JButton(MaterialIcons.pushPin());
+    ElwhaButton pinToggle =
+        new ElwhaButton(null, MaterialIcons.pushPin()).setVariant(ButtonVariant.FILLED_TONAL);
     pinToggle.putClientProperty("JButton.buttonType", "borderless");
     pinToggle.setRequestFocusEnabled(false);
     pinToggle.setToolTipText("Click to toggle pin (icon swaps, focus does not move)");

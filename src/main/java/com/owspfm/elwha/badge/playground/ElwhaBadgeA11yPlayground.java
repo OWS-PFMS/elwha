@@ -2,6 +2,7 @@ package com.owspfm.elwha.badge.playground;
 
 import com.owspfm.elwha.badge.ElwhaBadge;
 import com.owspfm.elwha.badge.ElwhaBadgeAnchor;
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.Config;
@@ -16,7 +17,6 @@ import java.awt.Insets;
 import javax.accessibility.AccessibleContext;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
-import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -51,7 +51,7 @@ import javax.swing.event.DocumentListener;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ElwhaBadgeA11yPlayground {
@@ -144,7 +144,7 @@ public final class ElwhaBadgeA11yPlayground {
 
     final JTextField contentField = new JTextField("3", 8);
     final JTextField overrideField = new JTextField("", 16);
-    final JButton clearOverride = new JButton("Clear");
+    final ElwhaButton clearOverride = ElwhaButton.filledTonalButton("Clear");
 
     contentField
         .getDocument()
@@ -225,7 +225,7 @@ public final class ElwhaBadgeA11yPlayground {
           contentField.setEnabled(true);
         });
 
-    final JButton detachButton = new JButton("Detach");
+    final ElwhaButton detachButton = ElwhaButton.filledTonalButton("Detach");
     detachButton.addActionListener(
         e -> {
           if (attachment != null) {
@@ -233,7 +233,7 @@ public final class ElwhaBadgeA11yPlayground {
             attachment = null;
           }
         });
-    final JButton attachButton = new JButton("Attach");
+    final ElwhaButton attachButton = ElwhaButton.filledTonalButton("Attach");
     attachButton.addActionListener(
         e -> {
           if (attachment == null) {

@@ -1,5 +1,6 @@
 package com.owspfm.elwha.theme.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.Easing;
@@ -16,7 +17,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -40,7 +40,7 @@ import javax.swing.SwingUtilities;
  * -Dexec.mainClass="com.owspfm.elwha.theme.playground.ShapeMorphPlayground"}.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ShapeMorphPlayground {
@@ -113,7 +113,7 @@ public final class ShapeMorphPlayground {
     reducedBox.addActionListener(e -> MorphAnimator.setReducedMotion(reducedBox.isSelected()));
     toolbar.add(reducedBox);
 
-    final JButton toggle = new JButton("Toggle morph");
+    final ElwhaButton toggle = ElwhaButton.filledTonalButton("Toggle morph");
     toggle.addActionListener(e -> canvas.toggle());
     toolbar.add(toggle);
 

@@ -12,7 +12,6 @@ import java.awt.GridLayout;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -39,7 +38,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class DialogDismissDemo {
@@ -122,8 +121,8 @@ public final class DialogDismissDemo {
     return body;
   }
 
-  private static JButton button(final String text, final Runnable onClick) {
-    final JButton b = new JButton(text);
+  private static ElwhaButton button(final String text, final Runnable onClick) {
+    final ElwhaButton b = ElwhaButton.filledTonalButton(text);
     b.addActionListener(e -> onClick.run());
     return b;
   }
