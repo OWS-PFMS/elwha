@@ -1075,8 +1075,10 @@ public final class ElwhaShowcase {
     final JSpinner bottomLeftSpinner = new JSpinner(new SpinnerNumberModel(12, 0, 60, 2));
     final JCheckBox selectedBox = new JCheckBox("Selected");
     final JCheckBox enabledBox = new JCheckBox("Enabled", true);
-    final JButton triggerPressButton = new JButton("Trigger press");
-    final JButton triggerSelectButton = new JButton("Trigger select");
+    final ElwhaButton triggerPressButton =
+        new ElwhaButton("Trigger press").setVariant(ButtonVariant.FILLED_TONAL);
+    final ElwhaButton triggerSelectButton =
+        new ElwhaButton("Trigger select").setVariant(ButtonVariant.FILLED_TONAL);
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Button");
