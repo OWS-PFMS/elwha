@@ -7,6 +7,7 @@ import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
+import com.owspfm.elwha.theme.ShadowBearing;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.SurfacePainter;
@@ -76,10 +77,10 @@ import javax.swing.Timer;
  * overlay all share the active style's on-container color.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
-public final class ElwhaFab extends JComponent {
+public final class ElwhaFab extends JComponent implements ShadowBearing {
 
   /**
    * Three sizes that scale across both Standard and Extended forms per M3 Expressive (May 2025).
@@ -1263,9 +1264,10 @@ public final class ElwhaFab extends JComponent {
    *
    * @return a copy of the reserved halo insets (never {@code null}); mutating the returned instance
    *     does not affect the FAB
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
+  @Override
   public Insets getShadowInsets() {
     return (Insets) SHADOW_RESERVE.clone();
   }

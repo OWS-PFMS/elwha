@@ -7,6 +7,7 @@ import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
+import com.owspfm.elwha.theme.ShadowBearing;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeMorphPainter;
 import com.owspfm.elwha.theme.StateLayer;
@@ -102,7 +103,7 @@ import javax.swing.Timer;
  * @version v0.4.0
  * @since v0.2.0
  */
-public class ElwhaButton extends JComponent {
+public class ElwhaButton extends JComponent implements ShadowBearing {
 
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
@@ -974,7 +975,23 @@ public class ElwhaButton extends JComponent {
     return variant == ButtonVariant.ELEVATED && isEnabled() ? 1 : 0;
   }
 
-  private Insets shadowReserve() {
+  /**
+   * Returns the shadow-halo insets this button reserves around its visible body. {@link
+   * #getPreferredSize()} pads the body by these insets on every edge so the elevation shadow never
+   * clips against the component bounds. The reserve is sized for this button's variant elevation:
+   * {@link ButtonVariant#ELEVATED} (when enabled) reserves for level-1 elevation, and every flat /
+   * non-elevated variant returns zero-width insets {@code (0, 0, 0, 0)} — no halo. Placement
+   * consumers read this through the {@link ShadowBearing} contract to back the halo out of the
+   * bounds when pinning the visible body to a spec margin, rather than recomputing {@link
+   * ShadowPainter#shadowInsets(int)} themselves.
+   *
+   * @return a fresh copy of the reserved halo insets (never {@code null}); zero-width for a flat
+   *     variant. Mutating the returned instance does not affect the button
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  public Insets getShadowInsets() {
     final int e = elevationLevel();
     return e > 0 ? ShadowPainter.shadowInsets(e) : new Insets(0, 0, 0, 0);
   }
@@ -996,7 +1013,7 @@ public class ElwhaButton extends JComponent {
   // stretch a segment to fill its share of the row and have the surface fill it.
   private int effectiveBodyWidth() {
     if (cornerRadii != null) {
-      final Insets s = shadowReserve();
+      final Insets s = getShadowInsets();
       return Math.max(1, getWidth() - s.left - s.right);
     }
     return bodyWidthPx();
@@ -1133,12 +1150,12 @@ public class ElwhaButton extends JComponent {
 
   /**
    * Returns the body origin in component-local coordinates — the top-left of the visible round-rect
-   * body. The body is centered inside the {@code component - shadowReserve} rect on each axis, so
+   * body. The body is centered inside the {@code component - shadowInsets} rect on each axis, so
    * when the a11y target inflation grows the cross axis beyond the body's natural height the body
    * sits visually centered with the inflated padding split above and below.
    */
   private Point bodyOrigin() {
-    final Insets s = shadowReserve();
+    final Insets s = getShadowInsets();
     final int insetW = getWidth() - s.left - s.right;
     final int insetH = getHeight() - s.top - s.bottom;
     final int bodyW = effectiveBodyWidth();
@@ -1154,7 +1171,7 @@ public class ElwhaButton extends JComponent {
    * on the body. WCAG 2.5.5 — 48 dp minimum touch target on XS / S.
    */
   private boolean containsClickPoint(final Point componentPoint) {
-    final Insets s = shadowReserve();
+    final Insets s = getShadowInsets();
     final int hitW = getWidth() - s.left - s.right;
     final int hitH = getHeight() - s.top - s.bottom;
     final int x = componentPoint.x - s.left;
@@ -1632,7 +1649,7 @@ public class ElwhaButton extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
-    final Insets s = shadowReserve();
+    final Insets s = getShadowInsets();
     final int rawW = bodyWidthPx() + s.left + s.right;
     final int rawH = buttonSize.containerHeightPx() + s.top + s.bottom;
     // §9 a11y target inflation — XS (32 dp) and S (40 dp) sit below the 48 dp WCAG touch target.

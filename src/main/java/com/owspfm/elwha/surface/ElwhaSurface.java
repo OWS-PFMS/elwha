@@ -1,6 +1,7 @@
 package com.owspfm.elwha.surface;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.ShadowBearing;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SurfacePainter;
@@ -59,7 +60,7 @@ import javax.swing.JPanel;
  * @version v0.4.0
  * @since v0.1.0
  */
-public class ElwhaSurface extends JPanel {
+public class ElwhaSurface extends JPanel implements ShadowBearing {
 
   /**
    * Maximum supported M3 elevation level, matching {@code ElevationTokens.Level5} (12 dp). Levels
@@ -340,6 +341,28 @@ public class ElwhaSurface extends JPanel {
   @Override
   public Insets getInsets() {
     return ShadowPainter.shadowInsets(elevation);
+  }
+
+  /**
+   * Returns this surface's shadow-halo reserve — the per-edge space it pads around its visible body
+   * for the M3 elevation shadow. For the {@code ElwhaSurface} family the reserve <em>is</em> the
+   * chassis insets ({@link #getInsets()} returns exactly {@code
+   * ShadowPainter.shadowInsets(elevation)} — nothing else), so this delegates to the virtual {@link
+   * #getInsets()} and returns a fresh copy. Subclasses that override {@code getInsets()} (e.g.
+   * {@code ElwhaCard}, which reserves for {@link #MAX_ELEVATION} so transient hover / drag lifts
+   * never clip) inherit the correct worst-case reserve through that delegation with no override of
+   * their own. A defensive copy is returned so a placement consumer reading this through {@link
+   * ShadowBearing} cannot mutate the surface's geometry.
+   *
+   * @return a fresh copy of the reserved halo insets (never {@code null}); mutating the returned
+   *     instance does not affect the surface
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  public Insets getShadowInsets() {
+    final Insets insets = getInsets();
+    return new Insets(insets.top, insets.left, insets.bottom, insets.right);
   }
 
   /**

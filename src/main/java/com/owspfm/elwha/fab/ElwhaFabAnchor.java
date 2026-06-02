@@ -35,8 +35,9 @@ import javax.swing.event.ChangeListener;
  *
  * <p><strong>Spec-correct margin.</strong> The inset is measured to the FAB's <em>visible body</em>
  * edge, not its bounds. {@link ElwhaFab#getPreferredSize()} reserves a shadow-halo border around
- * the body; the anchor compensates for that halo (via {@link ShadowPainter#shadowInsets(int)}) so
- * the body sits exactly {@code inset} dp from the edge. The naive §15 recipe pins the
+ * the body (sized via {@link ShadowPainter#shadowInsets(int)}); the anchor reads that halo through
+ * the {@link com.owspfm.elwha.theme.ShadowBearing#getShadowInsets()} contract and compensates for
+ * it so the body sits exactly {@code inset} dp from the edge. The naive §15 recipe pins the
  * halo-inclusive bounds at the inset and so leaves the body at {@code inset + halo} — this
  * primitive corrects it.
  *
@@ -63,7 +64,7 @@ import javax.swing.event.ChangeListener;
  * §4.4), and multi-FAB placement (FAB Menu, #185) are out of scope.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ElwhaFabAnchor extends JLayeredPane {
