@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - **`ElwhaSurface.setClipChildrenToCorners(boolean)` / `getClipChildrenToCorners()`** ([#272](https://github.com/OWS-PFMS/elwha/issues/272)) — opt a surface into the antialiased rounded-corner child clip. Default off; `ElwhaCard` auto-enables it whenever an edge-bleed `ElwhaCardMedia` is its first or last visible child, so card consumers never set it.
+- **`ElwhaButton.triggerPressAnimation()`** ([#183](https://github.com/OWS-PFMS/elwha/issues/183)) — runs one full press-in → press-out shape + width morph cycle programmatically, the same motion a pointer press produces but **unconditionally**: it deliberately ignores the `SELECTABLE` press-morph suppression that live pointer/keyboard presses apply (so the select-flip owns the shape signal), making the press morph observable even on a SELECTABLE button. A workbench/test hook — it fires no action and no selection change, and leaves the press color overlay untouched; reduced motion and the duration multiplier are honored automatically. The Elwha Showcase **Button** workbench gains a **Triggers** section with **Trigger press** (drives this) and **Trigger select** (`setSelected(!isSelected())`) so both morphs can be exercised without a live click.
 
 ### Changed
 
