@@ -507,7 +507,9 @@ frame.setContentPane(new ElwhaFabAnchor(content, fab));   // BOTTOM_TRAILING, 16
 
 **Under the hood (manual recipe).** The recipe below is what the anchor does internally — documented for the case where you're floating a FAB on an *existing* layered pane (as the navigation rail does on the frame's own pane) rather than wrapping a content region. Every consumer of the manual path assembles the same four pieces:
 
-1. **Z-order — `JLayeredPane`.** Every `JFrame` already has one (`frame.getLayeredPane()`). Add the FAB to `JLayeredPane.PALETTE_LAYER` (or higher); the content pane is on `FRAME_CONTENT_LAYER` and paints below. The FAB now floats above whatever the content does — scrolling, repaint, tab swap, anything.
+1. **Z-order — `JLayeredPane`.** Every `JFrame` already has one (`frame.getLayeredPane()`). Add the FAB to `ElwhaLayers.OVERLAY_LAYER` (190 — `MODAL_LAYER - 10`, the Elwha-owned overlay band; [#221](https://github.com/OWS-PFMS/elwha/issues/221)); the content pane is on `FRAME_CONTENT_LAYER` and paints below, while Elwha dialogs on `MODAL_LAYER` (200) and Swing popups stay above. The FAB now floats above whatever the content does — scrolling, repaint, tab swap, anything. Use `OVERLAY_LAYER` rather than the public `PALETTE_LAYER` (100) so the FAB doesn't collide, add-order-dependently, with consumer-owned floating UI on that layer.
+
+   **Exemption: the `ElwhaFabAnchor` *wrapper* is not subject to this convention.** `OVERLAY_LAYER` governs only mounts on a *shared* layered pane (this root-pane recipe, and the badge anchor). `ElwhaFabAnchor` owns a **private** `JLayeredPane` and correctly keeps content on `DEFAULT_LAYER` and the FAB on `PALETTE_LAYER` inside its own pane, where no consumer UI competes — leave that as-is.
 
 2. **Position — bottom-trailing corner, 16 dp inset.** The layered pane has no layout manager, so the FAB needs explicit bounds. Set them from `getPreferredSize()` plus the M3 16 dp inset.
 
@@ -520,7 +522,7 @@ final ElwhaFab fab =
     ElwhaFab.extended(MaterialIcons.editFilled(ElwhaFab.Size.SMALL.iconPx()), "Compose");
 
 final JLayeredPane layeredPane = frame.getLayeredPane();
-layeredPane.add(fab, JLayeredPane.PALETTE_LAYER);
+layeredPane.add(fab, ElwhaLayers.OVERLAY_LAYER);
 
 final Runnable position = () -> {
   final Dimension pref = fab.getPreferredSize();

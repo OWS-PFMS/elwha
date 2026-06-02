@@ -1,5 +1,6 @@
 package com.owspfm.elwha.badge;
 
+import com.owspfm.elwha.theme.ElwhaLayers;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -31,7 +32,13 @@ import javax.swing.SwingUtilities;
  *
  * <p><strong>Z-order.</strong> The badge is added to the host's nearest {@link JLayeredPane}
  * ancestor (the root pane's layered pane in the common JFrame/JDialog case) at {@link
- * JLayeredPane#PALETTE_LAYER}. That floats it above ordinary content but below modal dialogs.
+ * com.owspfm.elwha.theme.ElwhaLayers#OVERLAY_LAYER} (190 — {@code MODAL_LAYER - 10}), the
+ * Elwha-owned overlay band that floats above ordinary content and below Elwha dialogs ({@link
+ * JLayeredPane#MODAL_LAYER}) and Swing popups. Using the dedicated overlay band rather than the
+ * public {@link JLayeredPane#PALETTE_LAYER} keeps the badge from colliding, add-order-dependently,
+ * with consumer-owned floating UI that lives on {@code PALETTE_LAYER} ([#221]). Consumers with an
+ * exotic stack can pin an explicit layer via the layer-override {@code attach(...)} overloads; the
+ * pinned layer survives ancestor-change re-attach.
  *
  * <p><strong>Bounds geometry.</strong> The badge's bottom-leading corner is pinned a variant-
  * dependent offset from the icon's top-trailing corner — Small 6 × 6 dp, Large 14 × 12 dp (design
@@ -64,7 +71,7 @@ import javax.swing.SwingUtilities;
  * accessible action — AT users address the badge by navigating to the host destination.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ElwhaBadgeAnchor {
@@ -131,7 +138,7 @@ public final class ElwhaBadgeAnchor {
    * @return an attachment handle that can be passed to {@link #detach(Attachment)}
    * @throws NullPointerException if either argument is {@code null}
    * @throws IllegalArgumentException if {@code host} is not a {@link JComponent}
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
   public static Attachment attach(final IconBearing host, final ElwhaBadge badge) {
@@ -153,18 +160,45 @@ public final class ElwhaBadgeAnchor {
    * @return an attachment handle that can be passed to {@link #detach(Attachment)}
    * @throws NullPointerException if any argument is {@code null}
    * @throws IllegalArgumentException if {@code host} is not a {@link JComponent}
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
   public static Attachment attach(
       final IconBearing host, final ElwhaBadge badge, final AnchorMode mode) {
+    return attach(host, badge, mode, ElwhaLayers.OVERLAY_LAYER);
+  }
+
+  /**
+   * Attaches the given badge to an {@link IconBearing} host at the requested {@link AnchorMode},
+   * pinning the badge to an explicit {@link JLayeredPane} layer instead of the default {@link
+   * com.owspfm.elwha.theme.ElwhaLayers#OVERLAY_LAYER}. This is the escape hatch for consumers with
+   * an exotic z-stack who need the badge on a specific layer relative to their own overlays; prefer
+   * the {@link #attach(IconBearing, ElwhaBadge, AnchorMode)} overload (which uses the documented
+   * Elwha overlay band) unless you have a concrete reason. The pinned layer survives
+   * ancestor-change re-attach. The host must also be a {@link JComponent}. If the host already has
+   * an anchored badge, the prior attachment is detached first.
+   *
+   * @param host the host component; must implement {@link IconBearing} and be a {@link JComponent}
+   * @param badge the badge to anchor
+   * @param mode the placement mode
+   * @param layer the {@link JLayeredPane} layer the badge is added at (e.g. {@link
+   *     com.owspfm.elwha.theme.ElwhaLayers#OVERLAY_LAYER} or a Swing layer constant)
+   * @return an attachment handle that can be passed to {@link #detach(Attachment)}
+   * @throws NullPointerException if any argument is {@code null}
+   * @throws IllegalArgumentException if {@code host} is not a {@link JComponent}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static Attachment attach(
+      final IconBearing host, final ElwhaBadge badge, final AnchorMode mode, final Integer layer) {
     Objects.requireNonNull(host, "host");
     Objects.requireNonNull(badge, "badge");
     Objects.requireNonNull(mode, "mode");
+    Objects.requireNonNull(layer, "layer");
     if (!(host instanceof JComponent jc)) {
       throw new IllegalArgumentException("IconBearing host must be a JComponent");
     }
-    return doAttach(jc, host::getIconBounds, badge, mode);
+    return doAttach(jc, host::getIconBounds, badge, mode, layer);
   }
 
   /**
@@ -177,7 +211,7 @@ public final class ElwhaBadgeAnchor {
    * @param badge the badge to anchor
    * @return an attachment handle that can be passed to {@link #detach(Attachment)}
    * @throws NullPointerException if any argument is {@code null}
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
   public static Attachment attach(
@@ -186,7 +220,7 @@ public final class ElwhaBadgeAnchor {
     Objects.requireNonNull(iconBounds, "iconBounds");
     Objects.requireNonNull(badge, "badge");
     final Rectangle frozen = new Rectangle(iconBounds);
-    return doAttach(host, () -> frozen, badge, AnchorMode.ICON_CORNER);
+    return doAttach(host, () -> frozen, badge, AnchorMode.ICON_CORNER, ElwhaLayers.OVERLAY_LAYER);
   }
 
   /**
@@ -201,13 +235,14 @@ public final class ElwhaBadgeAnchor {
    * @param badge the badge to anchor (a Large badge per the M3 pattern, though not enforced)
    * @return an attachment handle that can be passed to {@link #detach(Attachment)}
    * @throws NullPointerException if either argument is {@code null}
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
   public static Attachment attachTrailingEdge(final JComponent host, final ElwhaBadge badge) {
     Objects.requireNonNull(host, "host");
     Objects.requireNonNull(badge, "badge");
-    return doAttach(host, Rectangle::new, badge, AnchorMode.TRAILING_EDGE);
+    return doAttach(
+        host, Rectangle::new, badge, AnchorMode.TRAILING_EDGE, ElwhaLayers.OVERLAY_LAYER);
   }
 
   /**
@@ -228,12 +263,13 @@ public final class ElwhaBadgeAnchor {
       final JComponent host,
       final Supplier<Rectangle> iconBoundsSupplier,
       final ElwhaBadge badge,
-      final AnchorMode mode) {
+      final AnchorMode mode,
+      final Integer layer) {
     final Attachment prior = (Attachment) host.getClientProperty(HOST_ATTACHMENT_KEY);
     if (prior != null) {
       prior.detach();
     }
-    final Attachment attachment = new Attachment(host, iconBoundsSupplier, badge, mode);
+    final Attachment attachment = new Attachment(host, iconBoundsSupplier, badge, mode, layer);
     host.putClientProperty(HOST_ATTACHMENT_KEY, attachment);
     attachment.install();
     return attachment;
@@ -254,6 +290,10 @@ public final class ElwhaBadgeAnchor {
     private final Supplier<Rectangle> iconBoundsSupplier;
     private final ElwhaBadge badge;
     private final AnchorMode mode;
+
+    // The JLayeredPane layer the badge is added at. Stored (rather than hardcoded at the add site)
+    // so an explicit per-attach override survives ancestor-change re-attach (#221).
+    private final Integer layer;
 
     private JLayeredPane layeredPane;
     private boolean detached;
@@ -337,11 +377,13 @@ public final class ElwhaBadgeAnchor {
         final JComponent host,
         final Supplier<Rectangle> iconBoundsSupplier,
         final ElwhaBadge badge,
-        final AnchorMode mode) {
+        final AnchorMode mode,
+        final Integer layer) {
       this.host = host;
       this.iconBoundsSupplier = iconBoundsSupplier;
       this.badge = badge;
       this.mode = mode;
+      this.layer = layer;
     }
 
     private void install() {
@@ -405,7 +447,7 @@ public final class ElwhaBadgeAnchor {
       layeredPane = next;
       if (layeredPane != null) {
         syncBadgeVisibility();
-        layeredPane.add(badge, JLayeredPane.PALETTE_LAYER);
+        layeredPane.add(badge, layer);
         refresh();
       }
     }
