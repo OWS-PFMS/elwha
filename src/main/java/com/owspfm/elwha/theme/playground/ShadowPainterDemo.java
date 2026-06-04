@@ -1,5 +1,6 @@
 package com.owspfm.elwha.theme.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -15,7 +16,6 @@ import java.awt.GridLayout;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -36,7 +36,7 @@ import javax.swing.SwingUtilities;
  * -Dexec.mainClass="com.owspfm.elwha.theme.playground.ShadowPainterDemo"}.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.4.0
  * @since v0.2.0
  */
 public final class ShadowPainterDemo {
@@ -75,7 +75,7 @@ public final class ShadowPainterDemo {
                 gallery.repaint();
               });
           controls.add(arcBox);
-          final JButton bench = new JButton("Run perf microbench");
+          final ElwhaButton bench = ElwhaButton.filledTonalButton("Run perf microbench");
           final JTextArea benchOut = new JTextArea(7, 70);
           benchOut.setEditable(false);
           benchOut.setLineWrap(false);

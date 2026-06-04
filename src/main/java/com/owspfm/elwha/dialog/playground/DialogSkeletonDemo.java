@@ -1,5 +1,6 @@
 package com.owspfm.elwha.dialog.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.dialog.ElwhaDialog;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -7,7 +8,6 @@ import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
@@ -32,7 +32,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class DialogSkeletonDemo {
@@ -103,8 +103,8 @@ public final class DialogSkeletonDemo {
         .show(frame);
   }
 
-  private static JButton button(final String text, final Runnable onClick) {
-    final JButton b = new JButton(text);
+  private static ElwhaButton button(final String text, final Runnable onClick) {
+    final ElwhaButton b = ElwhaButton.filledTonalButton(text);
     b.addActionListener(e -> onClick.run());
     return b;
   }

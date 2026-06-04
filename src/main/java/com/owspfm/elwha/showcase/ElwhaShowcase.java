@@ -88,7 +88,6 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -1859,7 +1858,7 @@ public final class ElwhaShowcase {
     final JCheckBox hoveredBox = new JCheckBox("Hovered");
     final JCheckBox pressedBox = new JCheckBox("Pressed");
     final JCheckBox enabledBox = new JCheckBox("Enabled", true);
-    final JButton morphButton = new JButton("Toggle Standard ↔ Extended");
+    final ElwhaButton morphButton = ElwhaButton.filledTonalButton("Toggle Standard ↔ Extended");
 
     // Holder for the live FAB so the morph button can drive morphTo(...) on whatever stage
     // instance the apply runnable last mounted, even though that runnable rebuilds on every

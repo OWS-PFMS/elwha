@@ -2,6 +2,7 @@ package com.owspfm.elwha.theme.playground;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.button.ButtonSize;
+import com.owspfm.elwha.button.ButtonVariant;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
 import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
@@ -33,7 +34,6 @@ import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.Icon;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -546,8 +546,8 @@ public final class FoundationsPanels {
 
   private static JComponent buildButtonsRow() {
     final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-    final JButton normal = new JButton("Button");
-    final JButton emphasis = new JButton("Default");
+    final ElwhaButton normal = ElwhaButton.filledTonalButton("Button");
+    final ElwhaButton emphasis = ElwhaButton.filledTonalButton("Default");
     final JToggleButton toggle = new JToggleButton("Toggle");
     toggle.setSelected(true);
     row.add(normal);
@@ -559,21 +559,25 @@ public final class FoundationsPanels {
   private static JComponent buildIconButtonsRow() {
     final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
 
-    final JButton bordered = new JButton(MaterialIcons.edit());
+    final ElwhaButton bordered =
+        new ElwhaButton(null, MaterialIcons.edit()).setVariant(ButtonVariant.FILLED_TONAL);
     bordered.setToolTipText("Bordered icon button");
 
-    final JButton borderless = new JButton(MaterialIcons.delete());
+    final ElwhaButton borderless =
+        new ElwhaButton(null, MaterialIcons.delete()).setVariant(ButtonVariant.FILLED_TONAL);
     borderless.putClientProperty("JButton.buttonType", "borderless");
     borderless.setToolTipText("Borderless icon button (toolbar style)");
 
-    final JButton iconText = new JButton("Add", MaterialIcons.add());
+    final ElwhaButton iconText =
+        new ElwhaButton("Add", MaterialIcons.add()).setVariant(ButtonVariant.FILLED_TONAL);
     iconText.setToolTipText("Icon + text button");
 
     final JToggleButton iconToggle = new JToggleButton(MaterialIcons.visibility());
     iconToggle.setSelected(true);
     iconToggle.setToolTipText("Icon toggle button");
 
-    final JButton pinToggle = new JButton(MaterialIcons.pushPin());
+    final ElwhaButton pinToggle =
+        new ElwhaButton(null, MaterialIcons.pushPin()).setVariant(ButtonVariant.FILLED_TONAL);
     pinToggle.putClientProperty("JButton.buttonType", "borderless");
     pinToggle.setRequestFocusEnabled(false);
     pinToggle.setToolTipText("Click to toggle pin (icon swaps, focus does not move)");

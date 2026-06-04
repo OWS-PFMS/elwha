@@ -1,5 +1,6 @@
 package com.owspfm.elwha.fab.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.Config;
@@ -14,7 +15,6 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
-import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -37,7 +37,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ElwhaFabMorphPlayground {
@@ -108,7 +108,7 @@ public final class ElwhaFabMorphPlayground {
       grid.add(fab, gc);
 
       gc.gridx = 2;
-      final JButton toggle = new JButton(currentLabel(fab));
+      final ElwhaButton toggle = ElwhaButton.filledTonalButton(currentLabel(fab));
       toggle.addActionListener(
           e -> {
             final ElwhaFab.Form target =
@@ -135,7 +135,7 @@ public final class ElwhaFabMorphPlayground {
 
   private JPanel buildControlBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
-    final JButton toggleAll = new JButton("Toggle all");
+    final ElwhaButton toggleAll = ElwhaButton.filledTonalButton("Toggle all");
     toggleAll.addActionListener(
         e -> {
           for (ElwhaFab fab : fabs) {

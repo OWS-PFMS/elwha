@@ -1,5 +1,6 @@
 package com.owspfm.elwha.chip.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
@@ -21,7 +22,6 @@ import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -42,7 +42,7 @@ import javax.swing.UIManager;
  * interaction surface stay in lockstep across both entry points.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.1.0
  */
 public final class ChipPlaygroundPanels {
@@ -459,39 +459,39 @@ public final class ChipPlaygroundPanels {
 
     private JPanel buildFooter() {
       final JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-      final JButton addBtn =
-          new JButton(
-              new AbstractAction("Add chip") {
-                private int counter;
+      final ElwhaButton addBtn = ElwhaButton.filledTonalButton("Add chip");
+      addBtn.addActionListener(
+          new AbstractAction() {
+            private int counter;
 
-                @Override
-                public void actionPerformed(final ActionEvent e) {
-                  model.add("New " + (++counter));
-                }
-              });
+            @Override
+            public void actionPerformed(final ActionEvent e) {
+              model.add("New " + (++counter));
+            }
+          });
       p.add(addBtn);
 
-      final JButton clearBtn =
-          new JButton(
-              new AbstractAction("Clear all") {
-                @Override
-                public void actionPerformed(final ActionEvent e) {
-                  model.clear();
-                }
-              });
+      final ElwhaButton clearBtn = ElwhaButton.filledTonalButton("Clear all");
+      clearBtn.addActionListener(
+          new AbstractAction() {
+            @Override
+            public void actionPerformed(final ActionEvent e) {
+              model.clear();
+            }
+          });
       p.add(clearBtn);
 
-      final JButton repopulate =
-          new JButton(
-              new AbstractAction("Reset items") {
-                @Override
-                public void actionPerformed(final ActionEvent e) {
-                  model.clear();
-                  for (String s : SAMPLE_ITEMS) {
-                    model.add(s);
-                  }
-                }
-              });
+      final ElwhaButton repopulate = ElwhaButton.filledTonalButton("Reset items");
+      repopulate.addActionListener(
+          new AbstractAction() {
+            @Override
+            public void actionPerformed(final ActionEvent e) {
+              model.clear();
+              for (String s : SAMPLE_ITEMS) {
+                model.add(s);
+              }
+            }
+          });
       p.add(repopulate);
       return p;
     }

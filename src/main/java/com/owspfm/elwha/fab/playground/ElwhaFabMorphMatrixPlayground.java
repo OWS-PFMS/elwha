@@ -1,5 +1,6 @@
 package com.owspfm.elwha.fab.playground;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.Config;
@@ -17,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
-import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -44,14 +44,14 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ElwhaFabMorphMatrixPlayground {
 
   private final JFrame frame = new JFrame("ElwhaFab — S7 morph matrix (#193)");
   private final List<ElwhaFab> fabs = new ArrayList<>();
-  private final List<JButton> rowToggles = new ArrayList<>();
+  private final List<ElwhaButton> rowToggles = new ArrayList<>();
   private JPanel matrixHost;
   private ComponentOrientation orientation = ComponentOrientation.LEFT_TO_RIGHT;
 
@@ -135,7 +135,7 @@ public final class ElwhaFabMorphMatrixPlayground {
 
       gc.gridy = gridRow;
       gc.gridx = sizes.length + 1;
-      final JButton rowToggle = new JButton("Toggle row");
+      final ElwhaButton rowToggle = ElwhaButton.filledTonalButton("Toggle row");
       rowToggle.addActionListener(
           e -> {
             // Capture the row's fabs by gridRow — fabs are appended in column order, row by row.
@@ -164,7 +164,7 @@ public final class ElwhaFabMorphMatrixPlayground {
   private JPanel buildControlBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
 
-    final JButton toggleAll = new JButton("Toggle all");
+    final ElwhaButton toggleAll = ElwhaButton.filledTonalButton("Toggle all");
     toggleAll.addActionListener(
         e -> {
           for (ElwhaFab fab : fabs) {

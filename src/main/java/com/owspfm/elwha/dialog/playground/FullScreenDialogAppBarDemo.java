@@ -9,7 +9,6 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -37,7 +36,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class FullScreenDialogAppBarDemo {
@@ -67,7 +66,7 @@ public final class FullScreenDialogAppBarDemo {
     final JCheckBox withConfirm = new JCheckBox("confirm action", true);
     final JCheckBox withDivider = new JCheckBox("divider", true);
 
-    final JButton open = new JButton("Open full-screen dialog");
+    final ElwhaButton open = ElwhaButton.filledButton("Open full-screen dialog");
     open.addActionListener(e -> openDialog(withConfirm.isSelected(), withDivider.isSelected()));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
