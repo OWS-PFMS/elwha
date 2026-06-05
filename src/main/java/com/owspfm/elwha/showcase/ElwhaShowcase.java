@@ -717,6 +717,13 @@ public final class ElwhaShowcase {
                 + " actions.",
             AREA_COMPONENTS,
             buildDialogComponent()));
+    register(
+        new LeafEntry(
+            "Text Field",
+            "M3 text field — Filled / Outlined, floating label, icons / affixes, supporting +"
+                + " error text.",
+            AREA_COMPONENTS,
+            TextFieldShowcasePanels.buildComponent()));
 
     register(
         new LeafEntry(
