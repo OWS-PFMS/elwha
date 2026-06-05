@@ -46,6 +46,10 @@ import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.menu.ElwhaMenu;
+import com.owspfm.elwha.menu.ElwhaMenuItem;
+import com.owspfm.elwha.menu.Layout;
+import com.owspfm.elwha.menu.Separator;
 import com.owspfm.elwha.navrail.ElwhaNavRailDestination;
 import com.owspfm.elwha.navrail.ElwhaNavigationRail;
 import com.owspfm.elwha.navrail.playground.NavRailDestinationPlaygroundPanels;
@@ -717,6 +721,13 @@ public final class ElwhaShowcase {
                 + " actions.",
             AREA_COMPONENTS,
             buildDialogComponent()));
+    register(
+        new LeafEntry(
+            "Menu",
+            "M3 Menu — anchored light-dismiss popover with ElwhaMenuItem rows, grouping, and"
+                + " keyboard navigation.",
+            AREA_COMPONENTS,
+            buildMenuComponent()));
 
     register(
         new LeafEntry(
@@ -3344,6 +3355,108 @@ public final class ElwhaShowcase {
     WITH_ICON,
     DESTRUCTIVE,
     SCROLLABLE
+  }
+
+  // ------------------------------------------------------------------ Menu (#298)
+
+  private static JComponent buildMenuComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", buildMenuWorkbench());
+    tabs.addTab("Gallery", scroll(gallerySection("Standard", buildMenuGallery())));
+    return tabs;
+  }
+
+  // A Workbench of live trigger buttons that open a menu configured by the surrounding controls
+  // (layout + separator). Dogfoods Elwha controls — the triggers are an ElwhaIconButton overflow
+  // and an ElwhaButton, both SELECTABLE so they show the pressed-while-open affordance.
+  private static JComponent buildMenuWorkbench() {
+    final JComboBox<Layout> layout = new JComboBox<>(Layout.values());
+    final JComboBox<Separator> separator = new JComboBox<>(Separator.values());
+    final JLabel status = new JLabel("Open a menu — it anchors to the trigger and light-dismisses.");
+
+    final ElwhaIconButton overflow =
+        new ElwhaIconButton(MaterialIcons.moreVert(IconButtonSize.M.iconPx()))
+            .setInteractionMode(IconButtonInteractionMode.SELECTABLE);
+    final ElwhaButton actions =
+        ElwhaButton.outlinedButton("Actions")
+            .setInteractionMode(ButtonInteractionMode.SELECTABLE);
+
+    overflow.addActionListener(e -> buildWorkbenchMenu(layout, separator, status).open(overflow));
+    actions.addActionListener(e -> buildWorkbenchMenu(layout, separator, status).open(actions));
+
+    final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
+    controls.add(new JLabel("Layout:"));
+    controls.add(layout);
+    controls.add(new JLabel("Separator:"));
+    controls.add(separator);
+    controls.add(new JLabel("Color: Standard (Vibrant → S5)"));
+
+    final JPanel triggers = new JPanel(new FlowLayout(FlowLayout.CENTER, 24, 24));
+    triggers.setBorder(BorderFactory.createEmptyBorder(48, 24, 16, 24));
+    triggers.add(overflow);
+    triggers.add(actions);
+
+    final JPanel south = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
+    south.add(status);
+
+    final JPanel panel = new JPanel(new BorderLayout());
+    panel.add(controls, BorderLayout.NORTH);
+    panel.add(triggers, BorderLayout.CENTER);
+    panel.add(south, BorderLayout.SOUTH);
+    return panel;
+  }
+
+  private static ElwhaMenu buildWorkbenchMenu(
+      final JComboBox<Layout> layout, final JComboBox<Separator> separator, final JLabel status) {
+    final ElwhaMenu.Builder b = ElwhaMenu.builder();
+    b.layout((Layout) layout.getSelectedItem());
+    b.separator((Separator) separator.getSelectedItem());
+    final ElwhaMenuItem rename = ElwhaMenuItem.of(MaterialIcons.edit(20), "Rename");
+    rename.addActionListener(e -> status.setText("Activated: Rename"));
+    final ElwhaMenuItem duplicate = ElwhaMenuItem.of(MaterialIcons.add(20), "Duplicate");
+    duplicate.addActionListener(e -> status.setText("Activated: Duplicate"));
+    final ElwhaMenuItem share = ElwhaMenuItem.of(MaterialIcons.star(20), "Add to favorites");
+    share.addActionListener(e -> status.setText("Activated: Favorites"));
+    b.addItem(rename).addItem(duplicate).addItem(share);
+    if (layout.getSelectedItem() == Layout.GROUPED) {
+      b.addGroup();
+      final ElwhaMenuItem delete = ElwhaMenuItem.of(MaterialIcons.delete(20), "Delete");
+      delete.addActionListener(e -> status.setText("Activated: Delete"));
+      final ElwhaMenuItem settings = ElwhaMenuItem.of(MaterialIcons.palette(20), "Settings");
+      settings.setTrailingText("⌘,");
+      b.addItem(delete).addItem(settings);
+    }
+    return b.onClose(cause -> status.setText("Closed: " + cause)).build();
+  }
+
+  // Static, non-modal menu snapshots via renderPreview() — flat and the two grouped treatments.
+  private static JComponent buildMenuGallery() {
+    final JPanel column = new JPanel();
+    column.setOpaque(false);
+    column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+    column.setBorder(BorderFactory.createEmptyBorder(8, 20, 24, 20));
+    addPreview(column, sampleMenu(Layout.STANDARD, Separator.GAP).renderPreview());
+    addPreview(column, sampleMenu(Layout.GROUPED, Separator.GAP).renderPreview());
+    addPreview(column, sampleMenu(Layout.GROUPED, Separator.DIVIDER).renderPreview());
+    final JLabel vibrantStub = new JLabel("Vibrant color style — arrives with S5.");
+    vibrantStub.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+    addPreview(column, vibrantStub);
+    return column;
+  }
+
+  private static ElwhaMenu sampleMenu(final Layout layout, final Separator separator) {
+    final ElwhaMenu.Builder b = ElwhaMenu.builder().layout(layout).separator(separator);
+    b.addItem(ElwhaMenuItem.of(MaterialIcons.edit(20), "Rename"));
+    final ElwhaMenuItem copy = ElwhaMenuItem.of(MaterialIcons.add(20), "Duplicate");
+    copy.setTrailingText("⌘D");
+    b.addItem(copy);
+    b.addItem(ElwhaMenuItem.of(MaterialIcons.star(20), "Favorite"));
+    if (layout == Layout.GROUPED) {
+      b.addGroup();
+      b.addItem(ElwhaMenuItem.of(MaterialIcons.delete(20), "Delete"));
+      b.addItem(ElwhaMenuItem.of(MaterialIcons.palette(20), "Settings"));
+    }
+    return b.build();
   }
 
   private static JComponent buildDialogWorkbench() {

@@ -153,6 +153,24 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   }
 
   /**
+   * Renders the menu's surface — container + items — as a standalone, non-modal component for a
+   * <em>static preview</em> (a Showcase gallery tile, documentation). There is no overlay mount,
+   * light-dismiss, focus management, or entrance motion, and no item carries the roving focus ring.
+   * Not a substitute for {@link #open(Component)}, which presents the menu for real. Each call
+   * returns a fresh component.
+   *
+   * @return a non-modal render of the menu surface
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public JComponent renderPreview() {
+    final JComponent preview = createSurface();
+    this.focusedIndex = -1;
+    pushFocusedState();
+    return preview;
+  }
+
+  /**
    * The menu's items in display order, flattened across groups.
    *
    * @return an unmodifiable view of every item
@@ -313,14 +331,15 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     wrap.setOpaque(false);
     wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
     wrap.add(Box.createVerticalStrut(CONTENT_PAD_PX));
-    final JComponent line =
-        new JComponent() {
+    final JPanel line =
+        new JPanel() {
           @Override
           protected void paintComponent(final Graphics g) {
             g.setColor(ColorRole.OUTLINE_VARIANT.resolve());
             g.fillRect(DIVIDER_INSET_X_PX, 0, getWidth() - 2 * DIVIDER_INSET_X_PX, getHeight());
           }
         };
+    line.setOpaque(false);
     line.setPreferredSize(new Dimension(contentWidth, DIVIDER_THICKNESS_PX));
     line.setMaximumSize(new Dimension(Integer.MAX_VALUE, DIVIDER_THICKNESS_PX));
     line.setAlignmentX(Component.LEFT_ALIGNMENT);
