@@ -60,7 +60,7 @@ public final class TextFieldS4SlotsSmoke {
     paints("prefix-suffix", affixes);
 
     final ElwhaTextField supporting = ElwhaTextField.outlined("L");
-    final int bare = ElwhaTextField.filled("L").getPreferredSize().height;
+    final int bare = supporting.getPreferredSize().height;
     supporting.setSupportingText("helper");
     check(
         "supporting-text row is pre-reserved (height stable)",

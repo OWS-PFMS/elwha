@@ -733,7 +733,16 @@ public class ElwhaTextField extends JComponent {
   @Override
   public Dimension getPreferredSize() {
     final int supportingRow = SUPPORTING_TOP_PAD + lineHeight(TypeRole.BODY_SMALL);
-    return new Dimension(DEFAULT_WIDTH, CONTAINER_HEIGHT + supportingRow);
+    return new Dimension(DEFAULT_WIDTH, containerTop() + CONTAINER_HEIGHT + supportingRow);
+  }
+
+  /**
+   * The vertical offset of the container box. The outlined variant reserves a band above the stroke
+   * so the floated label can straddle the top edge (the M3 notch sits on the stroke, not below it);
+   * the filled label floats inside its fill, so the filled container is flush to the top.
+   */
+  private int containerTop() {
+    return variant == Variant.OUTLINED ? lineHeight(TypeRole.BODY_SMALL) / 2 : 0;
   }
 
   @Override
@@ -741,10 +750,12 @@ public class ElwhaTextField extends JComponent {
     final int w = getWidth();
     final boolean ltr = getComponentOrientation().isLeftToRight();
 
+    final int top = containerTop();
+
     if (trailingButton != null) {
       final int btnW = trailingButton.getPreferredSize().width;
       final int btnH = trailingButton.getPreferredSize().height;
-      final int btnY = (CONTAINER_HEIGHT - btnH) / 2;
+      final int btnY = top + (CONTAINER_HEIGHT - btnH) / 2;
       // Centre the button's glyph where a 24dp icon would sit (PAD_LR_ICON + 12 from the edge).
       final int glyphCenterFromEdge = PAD_LR_ICON + ICON_GLYPH / 2;
       final int btnX = ltr ? w - glyphCenterFromEdge - btnW / 2 : glyphCenterFromEdge - btnW / 2;
@@ -761,7 +772,10 @@ public class ElwhaTextField extends JComponent {
     final int editorH = Math.min(fm.getHeight(), CONTAINER_HEIGHT - 2 * PAD_TOP_BOTTOM);
     final boolean labelled = !label.isEmpty();
     final int editorY =
-        labelled ? CONTAINER_HEIGHT - PAD_TOP_BOTTOM - editorH : (CONTAINER_HEIGHT - editorH) / 2;
+        top
+            + (labelled
+                ? CONTAINER_HEIGHT - PAD_TOP_BOTTOM - editorH
+                : (CONTAINER_HEIGHT - editorH) / 2);
     editor.setBounds(textLeft, editorY, Math.max(0, textRight - textLeft), editorH);
   }
 
@@ -797,7 +811,7 @@ public class ElwhaTextField extends JComponent {
     final Icon trailingSlot = showAutoErrorIcon() ? themedErrorIcon() : trailingIcon;
     final Icon leftSlot = ltr ? leadingIcon : trailingSlot;
     final Icon rightSlot = ltr ? trailingSlot : leadingIcon;
-    final int iconY = (CONTAINER_HEIGHT - ICON_GLYPH) / 2;
+    final int iconY = containerTop() + (CONTAINER_HEIGHT - ICON_GLYPH) / 2;
     if (leftSlot != null) {
       paintIcon(g2, leftSlot, PAD_LR_ICON, iconY);
     }
@@ -856,7 +870,8 @@ public class ElwhaTextField extends JComponent {
     g2.setFont(TypeRole.BODY_SMALL.resolve());
     g2.setColor(supportingColor());
     final int y =
-        CONTAINER_HEIGHT
+        containerTop()
+            + CONTAINER_HEIGHT
             + SUPPORTING_TOP_PAD
             + getFontMetrics(TypeRole.BODY_SMALL.resolve()).getAscent();
     g2.drawString(support, PAD_LR_NO_ICON, y);
@@ -891,10 +906,11 @@ public class ElwhaTextField extends JComponent {
    */
   private Path2D outlinedPath(final int w, final int arc, final int stroke) {
     final float inset = stroke / 2f;
+    final float top = containerTop();
     final float x0 = inset;
-    final float y0 = inset;
+    final float y0 = top + inset;
     final float x1 = w - inset;
-    final float y1 = CONTAINER_HEIGHT - inset;
+    final float y1 = top + CONTAINER_HEIGHT - inset;
     final float r = arc;
 
     float gapStart = 0f;
@@ -941,7 +957,13 @@ public class ElwhaTextField extends JComponent {
     g2.setFont(font);
 
     final float restBaseline = restingLabelBaseline();
-    final float floatBaseline = PAD_TOP_BOTTOM + g2.getFontMetrics().getAscent();
+    final java.awt.FontMetrics ffm = g2.getFontMetrics();
+    final float floatBaseline =
+        variant == Variant.OUTLINED
+            // Centre the floated label on the top stroke (it straddles the notch).
+            ? containerTop() + (ffm.getAscent() - ffm.getDescent()) / 2f
+            // Filled floats inside the fill, near its top.
+            : PAD_TOP_BOTTOM + ffm.getAscent();
     final float y = restBaseline + (floatBaseline - restBaseline) * t;
 
     final String text = displayLabel();
@@ -958,7 +980,7 @@ public class ElwhaTextField extends JComponent {
   private float restingLabelBaseline() {
     final int ascent = getFontMetrics(TypeRole.BODY_LARGE.resolve()).getAscent();
     final int descent = getFontMetrics(TypeRole.BODY_LARGE.resolve()).getDescent();
-    return (CONTAINER_HEIGHT + ascent - descent) / 2f;
+    return containerTop() + (CONTAINER_HEIGHT + ascent - descent) / 2f;
   }
 
   // ---- State -> color resolution (full table in S3) -------------------------
