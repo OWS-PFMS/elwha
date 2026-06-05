@@ -769,15 +769,27 @@ public class ElwhaTextField extends JComponent {
     final int textLeft = leftContentEdge() + (ltr ? prefixW : suffixW);
     final int textRight = w - rightContentEdge() - (ltr ? suffixW : prefixW);
 
-    final int editorH = Math.min(fm.getHeight(), CONTAINER_HEIGHT - 2 * PAD_TOP_BOTTOM);
-    // The input is vertically centered in the container (M3): the floated label rises clear above
-    // it, and the resting label sits at the same baseline it occupies when empty.
-    final int editorY = top + (CONTAINER_HEIGHT - editorH) / 2;
-    editor.setBounds(textLeft, editorY, Math.max(0, textRight - textLeft), editorH);
+    editor.setBounds(textLeft, editorTopY(), Math.max(0, textRight - textLeft), editorHeight());
   }
 
   private int lineHeight(final TypeRole role) {
     return getFontMetrics(role.resolve()).getHeight();
+  }
+
+  private int editorHeight() {
+    return Math.min(lineHeight(TypeRole.BODY_LARGE), CONTAINER_HEIGHT - 2 * PAD_TOP_BOTTOM);
+  }
+
+  /**
+   * The editor's top edge — variant-specific. The filled label floats <i>inside</i> the top of the
+   * fill, so the input sits in the lower portion (bottom-padded) to clear it; the outlined label
+   * straddles the top stroke <i>above</i> the container, so the input is vertically centered.
+   */
+  private int editorTopY() {
+    final int h = editorHeight();
+    return variant == Variant.FILLED
+        ? CONTAINER_HEIGHT - PAD_TOP_BOTTOM - h
+        : containerTop() + (CONTAINER_HEIGHT - h) / 2;
   }
 
   // ---- Paint ----------------------------------------------------------------
@@ -973,11 +985,9 @@ public class ElwhaTextField extends JComponent {
     g2.drawString(text, x, Math.round(y));
   }
 
-  /** The baseline at which the resting (centered) label sits — aligned with the editor's text. */
+  /** The resting label baseline — the input's baseline, so the float lifts cleanly off the text. */
   private float restingLabelBaseline() {
-    final int ascent = getFontMetrics(TypeRole.BODY_LARGE.resolve()).getAscent();
-    final int descent = getFontMetrics(TypeRole.BODY_LARGE.resolve()).getDescent();
-    return containerTop() + (CONTAINER_HEIGHT + ascent - descent) / 2f;
+    return editorTopY() + getFontMetrics(TypeRole.BODY_LARGE.resolve()).getAscent();
   }
 
   // ---- State -> color resolution (full table in S3) -------------------------
