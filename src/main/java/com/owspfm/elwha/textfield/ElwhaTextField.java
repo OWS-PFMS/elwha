@@ -18,7 +18,6 @@ import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
-import java.awt.geom.RoundRectangle2D;
 import javax.accessibility.AccessibleContext;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
@@ -73,6 +72,7 @@ public class ElwhaTextField extends JComponent {
   static final int PAD_TOP_BOTTOM = SpaceScale.SM.px(); // 8
   static final int PAD_LR_NO_ICON = SpaceScale.LG.px(); // 16
   static final int SUPPORTING_TOP_PAD = SpaceScale.XS.px(); // 4
+  static final int LABEL_NOTCH_PAD = SpaceScale.XS.px(); // 4 (outlined label-notch gap)
   static final int RESTING_STROKE = 1;
   static final int FOCUS_STROKE = 3; // Expressive bump (design §4; resting 1dp)
   static final int DEFAULT_WIDTH = 245; // M3 default layout width
@@ -151,6 +151,7 @@ public class ElwhaTextField extends JComponent {
     editor.setOpaque(false);
     editor.setForeground(ColorRole.ON_SURFACE.resolve());
     editor.setFont(TypeRole.BODY_LARGE.resolve());
+    updateCaretColor();
     editor
         .getDocument()
         .addDocumentListener(
@@ -364,6 +365,7 @@ public class ElwhaTextField extends JComponent {
       return;
     }
     this.error = error;
+    updateCaretColor();
     if (error) {
       fireAccessibleAlert();
     }
@@ -412,6 +414,11 @@ public class ElwhaTextField extends JComponent {
 
   private void syncAccessibleName() {
     editor.getAccessibleContext().setAccessibleName(label);
+  }
+
+  /** Caret follows the active stroke: error&#8594;{@code error}, otherwise {@code primary}. */
+  private void updateCaretColor() {
+    editor.setCaretColor((error ? ColorRole.ERROR : ColorRole.PRIMARY).resolve());
   }
 
   /**
@@ -485,13 +492,49 @@ public class ElwhaTextField extends JComponent {
 
   private void paintOutlinedChrome(final Graphics2D g2, final int w, final int arc) {
     final int stroke = focused ? FOCUS_STROKE : RESTING_STROKE;
-    final float inset = stroke / 2f;
-    final RoundRectangle2D outline =
-        new RoundRectangle2D.Float(
-            inset, inset, w - stroke, CONTAINER_HEIGHT - stroke, arc * 2f, arc * 2f);
     g2.setColor(indicatorColor());
     g2.setStroke(new java.awt.BasicStroke(stroke));
-    g2.draw(outline);
+    g2.draw(outlinedPath(w, arc, stroke));
+  }
+
+  /**
+   * Builds the outlined container stroke as a rounded rectangle, with a gap punched in the top edge
+   * for the floated label (the M3 label-notch). The notch opens during the second half of the float
+   * so the gap only appears once the label has risen onto the stroke.
+   */
+  private Path2D outlinedPath(final int w, final int arc, final int stroke) {
+    final float inset = stroke / 2f;
+    final float x0 = inset;
+    final float y0 = inset;
+    final float x1 = w - inset;
+    final float y1 = CONTAINER_HEIGHT - inset;
+    final float r = arc;
+
+    float gapStart = 0f;
+    float gapEnd = 0f;
+    final float floatProgress = Easing.EMPHASIZED.ease(labelMorph.progress());
+    if (!label.isEmpty() && floatProgress > 0.5f) {
+      final Font floated = TypeRole.BODY_SMALL.resolve();
+      final int labelW = getFontMetrics(floated).stringWidth(label);
+      gapStart = PAD_LR_NO_ICON - LABEL_NOTCH_PAD;
+      gapEnd = PAD_LR_NO_ICON + labelW + LABEL_NOTCH_PAD;
+    }
+
+    final Path2D path = new Path2D.Float();
+    path.moveTo(x0 + r, y0);
+    if (gapEnd > gapStart) {
+      path.lineTo(Math.max(x0 + r, gapStart), y0);
+      path.moveTo(Math.min(x1 - r, gapEnd), y0);
+    }
+    path.lineTo(x1 - r, y0);
+    path.quadTo(x1, y0, x1, y0 + r);
+    path.lineTo(x1, y1 - r);
+    path.quadTo(x1, y1, x1 - r, y1);
+    path.lineTo(x0 + r, y1);
+    path.quadTo(x0, y1, x0, y1 - r);
+    path.lineTo(x0, y0 + r);
+    path.quadTo(x0, y0, x0 + r, y0);
+    return path;
   }
 
   /**
@@ -546,17 +589,18 @@ public class ElwhaTextField extends JComponent {
       return alpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
     }
     if (error) {
-      return ColorRole.ERROR.resolve();
+      // Error beats focus; error+hover deepens via the hover layer over error (research §T5).
+      return hovered
+          ? StateLayer.HOVER.over(ColorRole.ERROR.resolve(), ColorRole.ON_SURFACE)
+          : ColorRole.ERROR.resolve();
     }
     if (focused) {
       return ColorRole.PRIMARY.resolve();
     }
-    final ColorRole resting =
-        variant == Variant.FILLED ? ColorRole.ON_SURFACE_VARIANT : ColorRole.OUTLINE;
     if (hovered) {
       return ColorRole.ON_SURFACE.resolve();
     }
-    return resting.resolve();
+    return (variant == Variant.FILLED ? ColorRole.ON_SURFACE_VARIANT : ColorRole.OUTLINE).resolve();
   }
 
   private Color labelColor() {
@@ -564,7 +608,9 @@ public class ElwhaTextField extends JComponent {
       return alpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
     }
     if (error) {
-      return ColorRole.ERROR.resolve();
+      return hovered
+          ? StateLayer.HOVER.over(ColorRole.ERROR.resolve(), ColorRole.ON_SURFACE)
+          : ColorRole.ERROR.resolve();
     }
     if (focused) {
       return ColorRole.PRIMARY.resolve();
