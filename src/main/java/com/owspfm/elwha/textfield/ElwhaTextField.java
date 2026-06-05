@@ -770,12 +770,9 @@ public class ElwhaTextField extends JComponent {
     final int textRight = w - rightContentEdge() - (ltr ? suffixW : prefixW);
 
     final int editorH = Math.min(fm.getHeight(), CONTAINER_HEIGHT - 2 * PAD_TOP_BOTTOM);
-    final boolean labelled = !label.isEmpty();
-    final int editorY =
-        top
-            + (labelled
-                ? CONTAINER_HEIGHT - PAD_TOP_BOTTOM - editorH
-                : (CONTAINER_HEIGHT - editorH) / 2);
+    // The input is vertically centered in the container (M3): the floated label rises clear above
+    // it, and the resting label sits at the same baseline it occupies when empty.
+    final int editorY = top + (CONTAINER_HEIGHT - editorH) / 2;
     editor.setBounds(textLeft, editorY, Math.max(0, textRight - textLeft), editorH);
   }
 
