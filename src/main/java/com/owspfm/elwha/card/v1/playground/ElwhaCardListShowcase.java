@@ -8,6 +8,7 @@ import com.owspfm.elwha.card.v1.list.DefaultCardListModel;
 import com.owspfm.elwha.card.v1.list.ElwhaCardList;
 import com.owspfm.elwha.card.v1.list.ReorderHandle;
 import com.owspfm.elwha.list.ElwhaListOrientation;
+import com.owspfm.elwha.slider.ElwhaSlider;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
@@ -31,7 +32,6 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JSlider;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -55,7 +55,7 @@ import javax.swing.event.DocumentListener;
  * </ul>
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.4.0
  * @since v0.2.0
  */
 public final class ElwhaCardListShowcase extends JPanel {
@@ -70,11 +70,11 @@ public final class ElwhaCardListShowcase extends JPanel {
   private final Random random = new Random(42);
 
   private JComboBox<ElwhaListOrientation> orientationBox;
-  private JSlider columnsSlider;
+  private ElwhaSlider columnsSlider;
   private JLabel columnsLabel;
-  private JSlider gapSlider;
+  private ElwhaSlider gapSlider;
   private JLabel gapLabel;
-  private JSlider paddingSlider;
+  private ElwhaSlider paddingSlider;
   private JLabel paddingLabel;
   private JComboBox<CardSelectionMode> selectionBox;
   private JCheckBox reorderableBox;
@@ -84,7 +84,7 @@ public final class ElwhaCardListShowcase extends JPanel {
   private JCheckBox emptyBox;
   private JCheckBox loadingBox;
   private JCheckBox animateBox;
-  private JSlider animationSlider;
+  private ElwhaSlider animationSlider;
   private JLabel animationLabel;
 
   /** Builds the showcase panel and seeds the model with sample items. */
@@ -277,7 +277,7 @@ public final class ElwhaCardListShowcase extends JPanel {
   }
 
   private JPanel buildColumnsControl() {
-    columnsSlider = new JSlider(1, 5, 2);
+    columnsSlider = new ElwhaSlider(1, 5, 2);
     columnsLabel = new JLabel("2");
     columnsLabel.setPreferredSize(new Dimension(28, 16));
     columnsSlider.addChangeListener(
@@ -292,7 +292,7 @@ public final class ElwhaCardListShowcase extends JPanel {
   }
 
   private JPanel buildGapControl() {
-    gapSlider = new JSlider(0, 32, 8);
+    gapSlider = new ElwhaSlider(0, 32, 8);
     gapLabel = new JLabel("8");
     gapLabel.setPreferredSize(new Dimension(28, 16));
     gapSlider.addChangeListener(
@@ -307,7 +307,7 @@ public final class ElwhaCardListShowcase extends JPanel {
   }
 
   private JPanel buildPaddingControl() {
-    paddingSlider = new JSlider(0, 32, 8);
+    paddingSlider = new ElwhaSlider(0, 32, 8);
     paddingLabel = new JLabel("8");
     paddingLabel.setPreferredSize(new Dimension(28, 16));
     paddingSlider.addChangeListener(
@@ -394,7 +394,7 @@ public final class ElwhaCardListShowcase extends JPanel {
   }
 
   private JPanel buildAnimationSlider() {
-    animationSlider = new JSlider(50, 800, 180);
+    animationSlider = new ElwhaSlider(50, 800, 180);
     animationLabel = new JLabel("180 ms");
     animationLabel.setPreferredSize(new Dimension(60, 16));
     animationSlider.addChangeListener(

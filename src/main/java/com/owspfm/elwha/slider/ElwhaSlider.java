@@ -518,6 +518,41 @@ public class ElwhaSlider extends JComponent {
     repaint();
   }
 
+  /**
+   * Forces the hover state on or off for static rendering (gallery / documentation previews), as on
+   * {@code ElwhaButton} / {@code ElwhaFab}. Live mouse hover overrides this. Hover does not narrow
+   * the handle (M3 §TS-summary: hover keeps the resting width).
+   *
+   * @param hovered {@code true} to paint the hover state layer
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setHovered(final boolean hovered) {
+    if (this.hovered == hovered) {
+      return;
+    }
+    this.hovered = hovered;
+    repaint();
+  }
+
+  /**
+   * Forces the pressed state on or off for static rendering (gallery / documentation previews), as
+   * on {@code ElwhaButton} / {@code ElwhaFab}. Pressed narrows the handle and reveals the value
+   * bubble; live interaction also plays the ripple.
+   *
+   * @param pressed {@code true} to paint the pressed state
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setPressed(final boolean pressed) {
+    if (this.pressed == pressed) {
+      return;
+    }
+    this.pressed = pressed;
+    updateInteractionAnimator();
+    repaint();
+  }
+
   // -------------------------------------------------------------------- sizing
 
   private int bubbleReserveHeight() {
@@ -724,6 +759,13 @@ public class ElwhaSlider extends JComponent {
       }
       if (hovered) {
         s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.HOVER.opacity()));
+        s.setColor(tint);
+        s.fill(halo);
+      }
+      // Pressed feedback is primarily the ripple; a faint static layer keeps the pressed state
+      // legible in still renders (gallery cells, reduced motion, between ripple frames).
+      if (pressed) {
+        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.PRESSED.opacity()));
         s.setColor(tint);
         s.fill(halo);
       }

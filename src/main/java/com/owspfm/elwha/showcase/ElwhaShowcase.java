@@ -717,6 +717,12 @@ public final class ElwhaShowcase {
                 + " actions.",
             AREA_COMPONENTS,
             buildDialogComponent()));
+    register(
+        new LeafEntry(
+            "Slider",
+            "M3 Expressive slider — split track, pill handle, stops, value bubble (standard XS).",
+            AREA_COMPONENTS,
+            buildSliderComponent()));
 
     register(
         new LeafEntry(
@@ -1827,6 +1833,18 @@ public final class ElwhaShowcase {
     MaterialIcons.IconPair pair(final int size) {
       return MaterialIcons.pair(baseName, size);
     }
+  }
+
+  // ------------------------------------------------------------- Slider
+
+  private static JComponent buildSliderComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", SliderShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(gallerySection("States & configurations", SliderShowcasePanels.buildGallery()))));
+    return tabs;
   }
 
   // ------------------------------------------------------------- FAB
