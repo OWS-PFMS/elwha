@@ -1,12 +1,15 @@
 package com.owspfm.elwha.textfield;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -75,14 +78,22 @@ public class ElwhaTextField extends JComponent {
   static final int DEFAULT_WIDTH = 245; // M3 default layout width
   static final int MAX_WIDTH = 488; // M3 maximum width
 
+  private static final String FLATLAF_PLACEHOLDER_KEY = "JTextField.placeholderText";
+
   private Variant variant;
   private final JTextField editor = new JTextField();
 
   private String label = "";
+  private String placeholder = "";
 
   private boolean hovered;
   private boolean focused;
   private boolean error;
+
+  /** 0 = resting (centered, BODY_LARGE); 1 = floated (top, BODY_SMALL). */
+  private final MorphAnimator labelMorph = new MorphAnimator(this, MorphAnimator.SHORT3_MS);
+
+  private boolean labelFloated;
 
   /** Creates a {@link Variant#FILLED} field with no label. */
   public ElwhaTextField() {
@@ -146,17 +157,17 @@ public class ElwhaTextField extends JComponent {
             new DocumentListener() {
               @Override
               public void insertUpdate(final DocumentEvent e) {
-                repaint();
+                onTextChanged();
               }
 
               @Override
               public void removeUpdate(final DocumentEvent e) {
-                repaint();
+                onTextChanged();
               }
 
               @Override
               public void changedUpdate(final DocumentEvent e) {
-                repaint();
+                onTextChanged();
               }
             });
   }
@@ -167,12 +178,16 @@ public class ElwhaTextField extends JComponent {
           @Override
           public void focusGained(final FocusEvent e) {
             focused = true;
+            updateLabelFloat();
+            updatePlaceholder();
             repaint();
           }
 
           @Override
           public void focusLost(final FocusEvent e) {
             focused = false;
+            updateLabelFloat();
+            updatePlaceholder();
             repaint();
           }
         });
@@ -215,6 +230,36 @@ public class ElwhaTextField extends JComponent {
         });
   }
 
+  private void onTextChanged() {
+    updateLabelFloat();
+    updatePlaceholder();
+    repaint();
+  }
+
+  /** Drives the float animator toward floated (focused or populated) or resting. */
+  private void updateLabelFloat() {
+    final boolean shouldFloat = !label.isEmpty() && (focused || !editor.getText().isEmpty());
+    if (shouldFloat == labelFloated) {
+      return;
+    }
+    labelFloated = shouldFloat;
+    if (shouldFloat) {
+      labelMorph.start();
+    } else {
+      labelMorph.reverse();
+    }
+  }
+
+  /**
+   * Toggles FlatLaf's native placeholder so it shows only when the editor is empty and the label is
+   * out of the way (focused, populated-but-empty is impossible, or label-less).
+   */
+  private void updatePlaceholder() {
+    final boolean show =
+        !placeholder.isEmpty() && editor.getText().isEmpty() && (focused || label.isEmpty());
+    editor.putClientProperty(FLATLAF_PLACEHOLDER_KEY, show ? placeholder : null);
+  }
+
   // ---- Public API -----------------------------------------------------------
 
   /**
@@ -253,6 +298,8 @@ public class ElwhaTextField extends JComponent {
   public void setLabel(final String label) {
     this.label = label == null ? "" : label;
     syncAccessibleName();
+    updateLabelFloat();
+    updatePlaceholder();
     revalidate();
     repaint();
   }
@@ -273,6 +320,27 @@ public class ElwhaTextField extends JComponent {
    */
   public void setText(final String text) {
     editor.setText(text);
+    onTextChanged();
+  }
+
+  /**
+   * Returns the placeholder hint shown in the empty (and focused, when labelled) field.
+   *
+   * @return the placeholder text
+   */
+  public String getPlaceholder() {
+    return placeholder;
+  }
+
+  /**
+   * Sets the placeholder hint. The placeholder is shown in {@code on-surface-variant} while the
+   * editor is empty and either focused or label-less (so it never collides with a resting label).
+   *
+   * @param placeholder the placeholder text
+   */
+  public void setPlaceholder(final String placeholder) {
+    this.placeholder = placeholder == null ? "" : placeholder;
+    updatePlaceholder();
     repaint();
   }
 
@@ -426,24 +494,35 @@ public class ElwhaTextField extends JComponent {
     g2.draw(outline);
   }
 
-  /** The label-float mechanism (S1: snap to floated when focused or populated; S2 animates). */
+  /**
+   * Paints the floating label, interpolating size (BODY_LARGE&#8594;BODY_SMALL) and baseline
+   * (centered&#8594;top) by the eased float progress. Reduced motion makes the animator snap, so
+   * the label jumps between the two end states with no interpolation.
+   */
   private void paintLabel(final Graphics2D g2) {
     if (label.isEmpty()) {
       return;
     }
-    final boolean floated = focused || !editor.getText().isEmpty();
-    final TypeRole role = floated ? TypeRole.BODY_SMALL : TypeRole.BODY_LARGE;
-    g2.setFont(role.resolve());
+    final float t = Easing.EMPHASIZED.ease(labelMorph.progress());
+
+    final float restPt = TypeRole.BODY_LARGE.pt();
+    final float floatPt = TypeRole.BODY_SMALL.pt();
+    final Font font = TypeRole.BODY_LARGE.resolve().deriveFont(restPt + (floatPt - restPt) * t);
+    g2.setFont(font);
+
+    final float restBaseline = restingLabelBaseline();
+    final float floatBaseline = PAD_TOP_BOTTOM + g2.getFontMetrics().getAscent();
+    final float y = restBaseline + (floatBaseline - restBaseline) * t;
+
     g2.setColor(labelColor());
-    final int x = PAD_LR_NO_ICON;
-    final int y =
-        floated
-            ? PAD_TOP_BOTTOM + g2.getFontMetrics().getAscent()
-            : (CONTAINER_HEIGHT
-                    + g2.getFontMetrics().getAscent()
-                    - g2.getFontMetrics().getDescent())
-                / 2;
-    g2.drawString(label, x, y);
+    g2.drawString(label, PAD_LR_NO_ICON, Math.round(y));
+  }
+
+  /** The baseline at which the resting (centered) label sits — aligned with the editor's text. */
+  private float restingLabelBaseline() {
+    final int ascent = getFontMetrics(TypeRole.BODY_LARGE.resolve()).getAscent();
+    final int descent = getFontMetrics(TypeRole.BODY_LARGE.resolve()).getDescent();
+    return (CONTAINER_HEIGHT + ascent - descent) / 2f;
   }
 
   // ---- State -> color resolution (full table in S3) -------------------------
