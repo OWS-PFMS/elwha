@@ -14,15 +14,24 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
+import javax.accessibility.AccessibleValue;
+import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
 import javax.swing.BoundedRangeModel;
 import javax.swing.DefaultBoundedRangeModel;
+import javax.swing.InputMap;
 import javax.swing.JComponent;
+import javax.swing.KeyStroke;
 import javax.swing.Timer;
 import javax.swing.event.ChangeListener;
 
@@ -126,6 +135,11 @@ public class ElwhaSlider extends JComponent {
   private boolean hovered;
   private boolean pressed;
   private boolean valueIndicatorEnabled;
+  private boolean spaceDown;
+
+  private int unitIncrement = 1;
+  private Integer blockIncrement;
+  private String label;
 
   private final MorphAnimator interactionAnimator = new MorphAnimator(this, HANDLE_MORPH_MS);
 
@@ -173,6 +187,7 @@ public class ElwhaSlider extends JComponent {
     setOpaque(false);
     setFocusable(true);
     initInteraction();
+    initKeyboard();
   }
 
   // ------------------------------------------------------------------ value API
@@ -322,6 +337,81 @@ public class ElwhaSlider extends JComponent {
     repaint();
   }
 
+  /**
+   * Returns the value change applied by a single arrow keypress.
+   *
+   * @return the unit increment
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public int getUnitIncrement() {
+    return unitIncrement;
+  }
+
+  /**
+   * Sets the value change applied by a single arrow keypress (default {@code 1}). In stops mode the
+   * arrows step by one stop regardless (story #345).
+   *
+   * @param increment the unit increment; clamped to {@code >= 1}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setUnitIncrement(final int increment) {
+    this.unitIncrement = Math.max(1, increment);
+  }
+
+  /**
+   * Returns the value change applied by Space+Arrow / Page keys — the block increment. Defaults to
+   * one tenth of the range (at least {@code 1}) when never set explicitly.
+   *
+   * @return the block increment
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public int getBlockIncrement() {
+    if (blockIncrement != null) {
+      return blockIncrement;
+    }
+    return Math.max(1, (model.getMaximum() - model.getMinimum()) / 10);
+  }
+
+  /**
+   * Sets the value change applied by Space+Arrow / Page keys.
+   *
+   * @param increment the block increment; clamped to {@code >= 1}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setBlockIncrement(final int increment) {
+    this.blockIncrement = Math.max(1, increment);
+  }
+
+  /**
+   * Returns the slider's accessible label, or {@code null} if none was set via {@link
+   * #setLabel(String)}.
+   *
+   * @return the accessible label text, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getLabel() {
+    return label;
+  }
+
+  /**
+   * Sets the slider's accessible name — the adjacent UI label a screen reader reads before the role
+   * and value (research §X #50). Alternatively, associate a {@link javax.swing.JLabel} via {@link
+   * javax.swing.JLabel#setLabelFor} and the name is derived from it automatically; an explicit
+   * value here takes precedence.
+   *
+   * @param label the accessible label, or {@code null} to clear
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setLabel(final String label) {
+    this.label = label;
+  }
+
   // -------------------------------------------------------------------- sizing
 
   private int bubbleReserveHeight() {
@@ -364,7 +454,9 @@ public class ElwhaSlider extends JComponent {
     return getWidth() - travelInset();
   }
 
-  /** The fraction {@code [0, 1]} the current value sits along the range. */
+  /**
+   * The fraction {@code [0, 1]} the current value sits along the range (value-space, not pixels).
+   */
   private float valueFraction() {
     final int range = model.getMaximum() - model.getMinimum();
     if (range <= 0) {
@@ -373,21 +465,31 @@ public class ElwhaSlider extends JComponent {
     return (model.getValue() - model.getMinimum()) / (float) range;
   }
 
-  /** The handle's center x for the current value (left-to-right fill). */
+  /** The pixel-space fraction, mirrored under a right-to-left component orientation. */
+  private float pixelFraction() {
+    return getComponentOrientation().isLeftToRight() ? valueFraction() : 1f - valueFraction();
+  }
+
+  /** The handle's center x for the current value; fill direction honors RTL. */
   int handleCenterX() {
     final int start = trackStartX();
     final int end = trackEndX();
-    return Math.round(start + valueFraction() * (end - start));
+    return Math.round(start + pixelFraction() * (end - start));
   }
 
-  /** Inverse of {@link #handleCenterX()} — the value at a given x, clamped into range. */
+  /**
+   * Inverse of {@link #handleCenterX()} — the value at a given x, clamped into range; RTL-aware.
+   */
   int valueForX(final int x) {
     final int start = trackStartX();
     final int end = trackEndX();
     if (end <= start) {
       return model.getMinimum();
     }
-    final float fraction = clampF((x - start) / (float) (end - start));
+    float fraction = clampF((x - start) / (float) (end - start));
+    if (!getComponentOrientation().isLeftToRight()) {
+      fraction = 1f - fraction;
+    }
     final int range = model.getMaximum() - model.getMinimum();
     return model.getMinimum() + Math.round(fraction * range);
   }
@@ -429,21 +531,25 @@ public class ElwhaSlider extends JComponent {
   private void paintTrack(final Graphics2D g2, final int cx) {
     final int trackTop = trackTopY();
     final int half = HANDLE_WIDTH_PX / 2;
-    final int activeRight = cx - half - HANDLE_TRACK_GAP_PX;
-    final int inactiveLeft = cx + half + HANDLE_TRACK_GAP_PX;
+    final int leftWidth = cx - half - HANDLE_TRACK_GAP_PX;
+    final int rightStart = cx + half + HANDLE_TRACK_GAP_PX;
     final int rightEnd = getWidth();
+    // The active segment grows from the origin end: LTR origin is the left edge, RTL the right —
+    // so the left geometric segment is active in LTR, inactive in RTL (only the color swaps; the
+    // geometry is identical). Outer (far) corners full-round, handle-facing inner corners squared.
+    final boolean leftIsActive = getComponentOrientation().isLeftToRight();
 
-    if (activeRight > 0) {
-      g2.setColor(trackColor(true));
-      g2.fill(trackSegment(0, trackTop, activeRight, TRACK_OUTER_CORNER_PX, TRACK_INNER_CORNER_PX));
+    if (leftWidth > 0) {
+      g2.setColor(trackColor(leftIsActive));
+      g2.fill(trackSegment(0, trackTop, leftWidth, TRACK_OUTER_CORNER_PX, TRACK_INNER_CORNER_PX));
     }
-    if (inactiveLeft < rightEnd) {
-      g2.setColor(trackColor(false));
+    if (rightStart < rightEnd) {
+      g2.setColor(trackColor(!leftIsActive));
       g2.fill(
           trackSegment(
-              inactiveLeft,
+              rightStart,
               trackTop,
-              rightEnd - inactiveLeft,
+              rightEnd - rightStart,
               TRACK_INNER_CORNER_PX,
               TRACK_OUTER_CORNER_PX));
     }
@@ -746,6 +852,150 @@ public class ElwhaSlider extends JComponent {
     }
     interactionAnimator.stop();
     super.removeNotify();
+  }
+
+  // ------------------------------------------------------------------ keyboard
+
+  private void initKeyboard() {
+    final InputMap im = getInputMap(WHEN_FOCUSED);
+    final ActionMap am = getActionMap();
+
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), "elwhaSlider.left");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), "elwhaSlider.right");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), "elwhaSlider.decrease");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), "elwhaSlider.increase");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_DOWN, 0), "elwhaSlider.blockDown");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_UP, 0), "elwhaSlider.blockUp");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0), "elwhaSlider.min");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0), "elwhaSlider.max");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, false), "elwhaSlider.spaceDown");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, true), "elwhaSlider.spaceUp");
+
+    // Horizontal arrows mirror under RTL; vertical arrows do not. Space held promotes arrows to the
+    // block increment (research §X #49 "Space & Arrows"); Page keys are the always-block
+    // equivalent.
+    am.put("elwhaSlider.left", step(() -> ltr() ? -stepAmount() : stepAmount()));
+    am.put("elwhaSlider.right", step(() -> ltr() ? stepAmount() : -stepAmount()));
+    am.put("elwhaSlider.increase", step(this::stepAmount));
+    am.put("elwhaSlider.decrease", step(() -> -stepAmount()));
+    am.put("elwhaSlider.blockUp", step(this::getBlockIncrement));
+    am.put("elwhaSlider.blockDown", step(() -> -getBlockIncrement()));
+    am.put("elwhaSlider.min", jumpTo(model.getMinimum(), true));
+    am.put("elwhaSlider.max", jumpTo(model.getMaximum(), false));
+    am.put("elwhaSlider.spaceDown", spaceState(true));
+    am.put("elwhaSlider.spaceUp", spaceState(false));
+  }
+
+  private boolean ltr() {
+    return getComponentOrientation().isLeftToRight();
+  }
+
+  /** The current arrow step — block while Space is held, otherwise the unit increment. */
+  private int stepAmount() {
+    return spaceDown ? getBlockIncrement() : effectiveUnitIncrement();
+  }
+
+  /**
+   * The unit increment used by a single arrow; stops mode (story #345) overrides this to one stop.
+   */
+  int effectiveUnitIncrement() {
+    return unitIncrement;
+  }
+
+  private AbstractAction step(final java.util.function.IntSupplier delta) {
+    return new AbstractAction() {
+      @Override
+      public void actionPerformed(final ActionEvent e) {
+        if (isEnabled()) {
+          setValue(ElwhaSlider.this.getValue() + delta.getAsInt());
+        }
+      }
+    };
+  }
+
+  private AbstractAction jumpTo(final int target, final boolean toMin) {
+    return new AbstractAction() {
+      @Override
+      public void actionPerformed(final ActionEvent e) {
+        if (isEnabled()) {
+          setValue(toMin ? model.getMinimum() : model.getMaximum());
+        }
+      }
+    };
+  }
+
+  private AbstractAction spaceState(final boolean down) {
+    return new AbstractAction() {
+      @Override
+      public void actionPerformed(final ActionEvent e) {
+        spaceDown = down;
+      }
+    };
+  }
+
+  // ------------------------------------------------------------- accessibility
+
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaSlider();
+    }
+    return accessibleContext;
+  }
+
+  /**
+   * Accessible context for the slider — reports {@link AccessibleRole#SLIDER}, exposes {@link
+   * AccessibleValue} (current / min / max), and uses the {@link ElwhaSlider#setLabel(String) label}
+   * (falling back to an associated {@code labelFor} {@link javax.swing.JLabel}) as the accessible
+   * name so a screen reader announces label &rarr; role &rarr; value (research §X #50).
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected class AccessibleElwhaSlider extends AccessibleJComponent implements AccessibleValue {
+
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.SLIDER;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      if (label != null && !label.isEmpty()) {
+        return label;
+      }
+      return super.getAccessibleName();
+    }
+
+    @Override
+    public AccessibleValue getAccessibleValue() {
+      return this;
+    }
+
+    @Override
+    public Number getCurrentAccessibleValue() {
+      return model.getValue();
+    }
+
+    @Override
+    public boolean setCurrentAccessibleValue(final Number n) {
+      if (n == null) {
+        return false;
+      }
+      setValue(n.intValue());
+      return true;
+    }
+
+    @Override
+    public Number getMinimumAccessibleValue() {
+      return model.getMinimum();
+    }
+
+    @Override
+    public Number getMaximumAccessibleValue() {
+      return model.getMaximum();
+    }
   }
 
   // -------------------------------------------------------------------- helpers
