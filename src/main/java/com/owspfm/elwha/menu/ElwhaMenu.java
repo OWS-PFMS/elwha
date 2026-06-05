@@ -1,5 +1,7 @@
 package com.owspfm.elwha.menu;
 
+import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
@@ -10,17 +12,22 @@ import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 
@@ -50,6 +57,14 @@ import javax.swing.SwingUtilities;
  *
  * <p>Selection ({@code SelectionMode}) and the {@code VIBRANT} color style are later phases; Phase 1
  * menus are action menus that close on item activation.
+ *
+ * <p><strong>Trigger pressed-while-open.</strong> Per M3 the trigger shows a pressed/active state
+ * while its menu is open and is restored after. Elwha delivers this for triggers that expose a
+ * selected state — a {@code SELECTABLE} {@link ElwhaButton} or {@link ElwhaIconButton} (the M3
+ * icon-button / split-button overflow trigger): the menu latches it selected on open and restores
+ * its prior state on close. A plain {@code CLICKABLE} push-button has no held-visual affordance in
+ * the lib today, so the menu leaves such a trigger visually unchanged (still satisfying "unchanged
+ * after select").
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.4.0
@@ -88,7 +103,15 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
   // Live state — non-null while shown.
   private List<JComponent> groupPanels;
+  private List<ElwhaMenuItem> itemOrder;
+  private MenuSurface menuSurface;
+  private int focusedIndex = -1;
   private boolean scrollable;
+
+  // The trigger and its prior selected state, so the menu can show it active while open and restore
+  // it on close ("pressed while open, unchanged after").
+  private Component trigger;
+  private Boolean triggerPriorSelected;
 
   private ElwhaMenu(final Builder b) {
     super(b.onClose);
@@ -124,6 +147,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
    * @since v0.4.0
    */
   public void open(final Component anchor) {
+    this.trigger = anchor;
+    setTriggerActive(true);
     show(anchor);
   }
 
@@ -182,12 +207,32 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
 
     final boolean gapCards = layout == Layout.GROUPED && separator == Separator.GAP && !scrollable;
-    return new MenuSurface(content, gapCards);
+    this.menuSurface = new MenuSurface(content, gapCards);
+
+    this.itemOrder = flatten();
+    this.focusedIndex = itemOrder.isEmpty() ? -1 : 0;
+    pushFocusedState();
+    return menuSurface;
   }
 
   @Override
   protected void clearTransientState() {
     groupPanels = null;
+    itemOrder = null;
+    menuSurface = null;
+    focusedIndex = -1;
+  }
+
+  @Override
+  protected Component initialFocusTarget() {
+    return menuSurface;
+  }
+
+  @Override
+  protected void afterClose(final MenuDismissCause cause) {
+    setTriggerActive(false);
+    trigger = null;
+    triggerPriorSelected = null;
   }
 
   private int resolveContentWidth() {
@@ -291,6 +336,127 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     return "Menu";
   }
 
+  // ------------------------------------------------ keyboard + roving focus
+
+  // Esc is bound by the host base; this adds the in-menu navigation. The menu surface is the single
+  // focus owner (items are non-focusable, §X) and carries a roving "focused" index whose ring is
+  // painted on the active item.
+  @Override
+  protected void installKeyBindings() {
+    super.installKeyBindings();
+    final InputMap im = menuSurface.getInputMap(JComponent.WHEN_FOCUSED);
+    bind(im, KeyEvent.VK_DOWN, "menu.next", () -> moveFocus(1));
+    bind(im, KeyEvent.VK_UP, "menu.prev", () -> moveFocus(-1));
+    bind(im, KeyEvent.VK_HOME, "menu.first", () -> setFocusedIndex(0));
+    bind(im, KeyEvent.VK_END, "menu.last", () -> setFocusedIndex(itemOrder.size() - 1));
+    bind(im, KeyEvent.VK_ENTER, "menu.activate", this::activateFocused);
+    bind(im, KeyEvent.VK_SPACE, "menu.activateSpace", this::activateFocused);
+    menuSurface.addKeyListener(
+        new KeyAdapter() {
+          @Override
+          public void keyTyped(final KeyEvent e) {
+            final char c = e.getKeyChar();
+            if (Character.isLetterOrDigit(c)) {
+              typeAhead(c);
+            }
+          }
+        });
+  }
+
+  private void bind(final InputMap im, final int keyCode, final String name, final Runnable body) {
+    im.put(KeyStroke.getKeyStroke(keyCode, 0), name);
+    menuSurface.getActionMap().put(name, action(body));
+  }
+
+  int focusedIndex() {
+    return focusedIndex;
+  }
+
+  JComponent focusComponent() {
+    return menuSurface;
+  }
+
+  void moveFocus(final int delta) {
+    if (itemOrder == null || itemOrder.isEmpty()) {
+      return;
+    }
+    final int n = itemOrder.size();
+    final int start = focusedIndex < 0 ? 0 : focusedIndex;
+    setFocusedIndex(((start + delta) % n + n) % n);
+  }
+
+  void setFocusedIndex(final int index) {
+    if (itemOrder == null || itemOrder.isEmpty()) {
+      return;
+    }
+    this.focusedIndex = Math.max(0, Math.min(index, itemOrder.size() - 1));
+    pushFocusedState();
+  }
+
+  private void pushFocusedState() {
+    if (itemOrder == null) {
+      return;
+    }
+    for (int i = 0; i < itemOrder.size(); i++) {
+      itemOrder.get(i).setFocused(i == focusedIndex);
+    }
+    if (focusedIndex >= 0 && focusedIndex < itemOrder.size()) {
+      final ElwhaMenuItem item = itemOrder.get(focusedIndex);
+      if (item.getWidth() > 0 && item.getHeight() > 0) {
+        item.scrollRectToVisible(new Rectangle(0, 0, item.getWidth(), item.getHeight()));
+      }
+    }
+  }
+
+  void activateFocused() {
+    if (itemOrder == null || focusedIndex < 0 || focusedIndex >= itemOrder.size()) {
+      return;
+    }
+    itemOrder.get(focusedIndex).activate(0);
+  }
+
+  void typeAhead(final char c) {
+    if (itemOrder == null || itemOrder.isEmpty()) {
+      return;
+    }
+    final String target = String.valueOf(Character.toLowerCase(c));
+    final int n = itemOrder.size();
+    final int start = focusedIndex < 0 ? 0 : focusedIndex;
+    for (int k = 1; k <= n; k++) {
+      final int i = (start + k) % n;
+      final String label = itemOrder.get(i).getLabel();
+      if (label != null && label.toLowerCase(Locale.ROOT).startsWith(target)) {
+        setFocusedIndex(i);
+        return;
+      }
+    }
+  }
+
+  // Best-effort "trigger shows pressed while open, unchanged after" (§U): give an Elwha button
+  // trigger its selected affordance while the menu is open and restore its prior state on close.
+  // Other anchor types are left untouched (the menu never mutates a trigger it can't restore).
+  private void setTriggerActive(final boolean active) {
+    if (trigger instanceof ElwhaButton b) {
+      if (active) {
+        if (triggerPriorSelected == null) {
+          triggerPriorSelected = b.isSelected();
+        }
+        b.setSelected(true);
+      } else if (triggerPriorSelected != null) {
+        b.setSelected(triggerPriorSelected);
+      }
+    } else if (trigger instanceof ElwhaIconButton ib) {
+      if (active) {
+        if (triggerPriorSelected == null) {
+          triggerPriorSelected = ib.isSelected();
+        }
+        ib.setSelected(true);
+      } else if (triggerPriorSelected != null) {
+        ib.setSelected(triggerPriorSelected);
+      }
+    }
+  }
+
   // The painted menu surface: drop shadow + SURFACE_CONTAINER_LOW container (one slab, or per-group
   // rounded cards in GAP mode), with the item column inset by the shadow reserve + content padding.
   private final class MenuSurface extends JPanel {
@@ -301,6 +467,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       super(new java.awt.BorderLayout());
       this.gapCards = gapCards;
       setOpaque(false);
+      setFocusable(true);
+      setFocusTraversalKeysEnabled(false);
       final Insets shadow = ShadowPainter.shadowInsets(ELEVATION);
       final int pad = gapCards ? 0 : CONTENT_PAD_PX;
       setBorder(
@@ -308,6 +476,20 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
               shadow.top + pad, shadow.left + pad, shadow.bottom + pad, shadow.right + pad));
       add(content, java.awt.BorderLayout.CENTER);
       getAccessibleContext().setAccessibleName("Menu");
+    }
+
+    @Override
+    public javax.accessibility.AccessibleContext getAccessibleContext() {
+      if (accessibleContext == null) {
+        accessibleContext =
+            new AccessibleJPanel() {
+              @Override
+              public javax.accessibility.AccessibleRole getAccessibleRole() {
+                return javax.accessibility.AccessibleRole.POPUP_MENU;
+              }
+            };
+      }
+      return accessibleContext;
     }
 
     @Override

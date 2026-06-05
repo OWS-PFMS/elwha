@@ -119,10 +119,19 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
 
   @Override
   protected final void onClosed() {
+    afterClose(lastCause);
     if (onClose != null) {
       onClose.accept(lastCause);
     }
   }
+
+  /**
+   * Subclass hook fired during teardown, before the consumer's {@code onClose} — restores any
+   * trigger state the menu set on open. Default no-op.
+   *
+   * @param cause the dismiss cause
+   */
+  protected void afterClose(final MenuDismissCause cause) {}
 
   // ------------------------------------------------------- anchored placement
 
