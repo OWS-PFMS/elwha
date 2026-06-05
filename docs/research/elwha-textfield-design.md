@@ -111,3 +111,9 @@ A text field **is** an embeddable surface (no overlay), so it fits the standard 
 - The exact **decorator boundary** (`JComponent`+embedded editor vs `JPanel`+`BorderLayout`) and the **error→alert** mechanism — S1 proves both.
 - **Focus-stroke 3dp** (Expressive) — eye-confirm against the M3 render in S3.
 - Whether the filled fill composes `ElwhaSurface` or paints direct (lean direct).
+
+### S1 spike outcome (2026-06-05, #333) — LOCKED
+- **Decorator boundary = `ElwhaTextField extends JComponent` with a `null` layout hosting an embedded `JTextField`** (the editor is the only child; the label and chrome paint around it, future interactive slots attach as children). The `JComponent`+embedded-editor path laid out and painted across every variant×state without fighting layout — the documented `JPanel`+`BorderLayout` fallback was **not** needed. Focus stays on the editor: focus/blur is tracked via a `FocusListener` on the editor, hover via `MouseListener`s on both the field and the editor, and a mouse-press anywhere on the field calls `editor.requestFocusInWindow()`.
+- **error→"alert" mechanism = fire an `AccessibleContext.ACCESSIBLE_DESCRIPTION_PROPERTY` change on the embedded editor** (the focusable node AT lands on). Proven by a headless `AccessibleContext` listener in `TextFieldS1SpikeSmoke`; S5 composes the full "supporting text, then error" message.
+- **Filled fill painted direct** (a top-rounded `Path2D`, no `ElwhaSurface`, no shadow) — confirmed adequate; **focus stroke 3dp / resting 1dp** carried forward to S3 for the eye-confirm.
+- The chrome occupies the top `CONTAINER_HEIGHT` (56px) band; the supporting-text row height is reserved below it from S1 so error↔supporting swaps never shift layout.
