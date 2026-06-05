@@ -926,10 +926,12 @@ public class ElwhaTextField extends JComponent {
     float gapEnd = 0f;
     final float floatProgress = Easing.EMPHASIZED.ease(labelMorph.progress());
     if (!label.isEmpty() && floatProgress > 0.5f) {
-      final Font floated = TypeRole.BODY_SMALL.resolve();
-      final int labelW = getFontMetrics(floated).stringWidth(label);
-      gapStart = PAD_LR_NO_ICON - LABEL_NOTCH_PAD;
-      gapEnd = PAD_LR_NO_ICON + labelW + LABEL_NOTCH_PAD;
+      // The notch must wrap the floated label where it actually paints — past the leading icon
+      // (leftContentEdge) and mirrored under RTL.
+      final int labelX = floatedLabelX();
+      final int labelW = floatedLabelWidth();
+      gapStart = labelX - LABEL_NOTCH_PAD;
+      gapEnd = labelX + labelW + LABEL_NOTCH_PAD;
     }
 
     final Path2D path = new Path2D.Float();
@@ -988,6 +990,18 @@ public class ElwhaTextField extends JComponent {
   /** The resting label baseline — the input's baseline, so the float lifts cleanly off the text. */
   private float restingLabelBaseline() {
     return editorTopY() + getFontMetrics(TypeRole.BODY_LARGE.resolve()).getAscent();
+  }
+
+  /** Width of the floated label (BODY_SMALL, including the required asterisk). */
+  private int floatedLabelWidth() {
+    return getFontMetrics(TypeRole.BODY_SMALL.resolve()).stringWidth(displayLabel());
+  }
+
+  /** Leading edge of the floated label — past the leading icon, mirrored under RTL. */
+  private int floatedLabelX() {
+    return getComponentOrientation().isLeftToRight()
+        ? leftContentEdge()
+        : getWidth() - rightContentEdge() - floatedLabelWidth();
   }
 
   // ---- State -> color resolution (full table in S3) -------------------------
