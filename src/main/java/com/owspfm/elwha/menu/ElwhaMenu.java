@@ -55,8 +55,8 @@ import javax.swing.SwingUtilities;
  * Container is {@code SURFACE_CONTAINER_LOW} at Level&nbsp;3 elevation, {@link ShapeScale#MD}
  * corners.
  *
- * <p>Selection ({@code SelectionMode}) and the {@code VIBRANT} color style are later phases; Phase 1
- * menus are action menus that close on item activation.
+ * <p>Selection ({@code SelectionMode}) and the {@code VIBRANT} color style are later phases; Phase
+ * 1 menus are action menus that close on item activation.
  *
  * <p><strong>Trigger pressed-while-open.</strong> Per M3 the trigger shows a pressed/active state
  * while its menu is open and is restored after. Elwha delivers this for triggers that expose a
@@ -592,8 +592,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
 
     /**
-     * Starts a new group. Only meaningful under {@link Layout#GROUPED}; setting it also switches the
-     * layout to {@code GROUPED}.
+     * Starts a new group. Only meaningful under {@link Layout#GROUPED}; setting it also switches
+     * the layout to {@code GROUPED}.
      *
      * @return this builder
      * @version v0.4.0

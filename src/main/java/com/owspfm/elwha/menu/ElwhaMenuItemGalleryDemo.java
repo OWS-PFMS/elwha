@@ -20,8 +20,8 @@ import javax.swing.SwingUtilities;
  * Visual gallery demo for epic #298 S2 — a static matrix of {@link ElwhaMenuItem} primitives
  * exercising every slot and state (leading icon, supporting text, trailing text/icon, badge,
  * swappable slot, selected fill + checkmark, focused ring, disabled dim) on a {@code
- * SURFACE_CONTAINER_LOW} panel. The items are not yet assembled into an {@code ElwhaMenu} (S3) — this
- * isolates the primitive. Throwaway per-story smoke artifact.
+ * SURFACE_CONTAINER_LOW} panel. The items are not yet assembled into an {@code ElwhaMenu} (S3) —
+ * this isolates the primitive. Throwaway per-story smoke artifact.
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.4.0
@@ -95,7 +95,8 @@ public final class ElwhaMenuItemGalleryDemo {
     frame.setVisible(true);
   }
 
-  // Stretch each item to the widest preferred width so the column aligns, capped to a menu-ish width.
+  // Stretch each item to the widest preferred width so the column aligns, capped to a menu-ish
+  // width.
   private static JComponent item(final ElwhaMenuItem mi) {
     mi.setAlignmentX(Component.LEFT_ALIGNMENT);
     final Dimension pref = mi.getPreferredSize();

@@ -19,8 +19,8 @@ import javax.swing.JLabel;
  * matrix. Asserts:
  *
  * <ul>
- *   <li>every slot combination meets the {@value ElwhaMenuItem#MIN_TARGET_PX} dp minimum interactive
- *       target;
+ *   <li>every slot combination meets the {@value ElwhaMenuItem#MIN_TARGET_PX} dp minimum
+ *       interactive target;
  *   <li>the item is not independently focusable (the parent menu owns roving focus, §X);
  *   <li>a disabled item is inert — {@code activate()} fires no action listeners;
  *   <li>a11y reports {@link AccessibleRole#MENU_ITEM}, the label as the accessible name, and {@link
@@ -87,7 +87,8 @@ public final class MenuItemSmoke {
               pref.height >= ElwhaMenuItem.MIN_TARGET_PX,
               "'" + item.getLabel() + "' meets 48dp target, got " + pref.height);
       checks++;
-      failures += check(!item.isFocusable(), "'" + item.getLabel() + "' is not independently focusable");
+      failures +=
+          check(!item.isFocusable(), "'" + item.getLabel() + "' is not independently focusable");
       checks++;
       failures += check(paints(item, pref), "'" + item.getLabel() + "' paints without throwing");
       checks++;
@@ -96,8 +97,10 @@ public final class MenuItemSmoke {
     // --- focus ring state paints ---
     final ElwhaMenuItem focusable = ElwhaMenuItem.of("Focused");
     focusable.setFocused(true);
-    failures += check(focusable.isFocused() && paints(focusable, focusable.getPreferredSize()),
-        "focused item paints its ring");
+    failures +=
+        check(
+            focusable.isFocused() && paints(focusable, focusable.getPreferredSize()),
+            "focused item paints its ring");
     checks++;
 
     // --- a11y ---

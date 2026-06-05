@@ -45,14 +45,14 @@ import javax.swing.Timer;
  * swappable slot") — display-only; per the spec a slot must not host a second interactive control.
  *
  * <p><strong>Tokens</strong> (research §I, zero new): {@value #MIN_TARGET_PX} dp min interactive
- * target around a {@value #VISUAL_HEIGHT_PX} dp visual row, {@value #INSET_X_PX} dp leading/trailing
- * insets, {@value #INSET_Y_PX} dp top/bottom, {@value #BETWEEN_PX} dp between icon and label,
- * {@value #ICON_SIZE_PX} dp icons. Label {@link TypeRole#LABEL_LARGE}, supporting {@link
+ * target around a {@value #VISUAL_HEIGHT_PX} dp visual row, {@value #INSET_X_PX} dp
+ * leading/trailing insets, {@value #INSET_Y_PX} dp top/bottom, {@value #BETWEEN_PX} dp between icon
+ * and label, {@value #ICON_SIZE_PX} dp icons. Label {@link TypeRole#LABEL_LARGE}, supporting {@link
  * TypeRole#BODY_SMALL}, trailing {@link TypeRole#LABEL_LARGE}.
  *
- * <p><strong>States</strong> (research §L): Enabled / Disabled (38% dim, focusable-but-inert via the
- * container's roving focus) / Hovered ({@code ON_SURFACE} state layer) / Focused (3 dp inset {@code
- * SECONDARY} ring) / Pressed (ripple). Selected = {@code TERTIARY_CONTAINER} fill + a {@code
+ * <p><strong>States</strong> (research §L): Enabled / Disabled (38% dim, focusable-but-inert via
+ * the container's roving focus) / Hovered ({@code ON_SURFACE} state layer) / Focused (3 dp inset
+ * {@code SECONDARY} ring) / Pressed (ripple). Selected = {@code TERTIARY_CONTAINER} fill + a {@code
  * ON_TERTIARY_CONTAINER} ✓ checkmark (Standard color), a 3:1 + non-color cue per a11y (§X).
  *
  * <p><strong>Focus model.</strong> The item is <em>not</em> independently focusable — the parent
@@ -241,8 +241,8 @@ public final class ElwhaMenuItem extends JComponent {
   }
 
   /**
-   * Sets the optional trailing text — typically a keyboard shortcut such as {@code ⌘C} (M3 "trailing
-   * supporting text" / keyboard command).
+   * Sets the optional trailing text — typically a keyboard shortcut such as {@code ⌘C} (M3
+   * "trailing supporting text" / keyboard command).
    *
    * @param text the trailing text, or {@code null} to clear
    * @version v0.4.0
@@ -497,8 +497,8 @@ public final class ElwhaMenuItem extends JComponent {
       trailingEdge -= ICON_SIZE_PX + BETWEEN_PX;
     }
     if (trailingText != null) {
-      trailingEdge -= getFontMetrics(TypeRole.LABEL_LARGE.resolve()).stringWidth(trailingText)
-          + BETWEEN_PX;
+      trailingEdge -=
+          getFontMetrics(TypeRole.LABEL_LARGE.resolve()).stringWidth(trailingText) + BETWEEN_PX;
     }
     if (badge != null) {
       final Dimension bp = badge.getPreferredSize();
@@ -510,7 +510,11 @@ public final class ElwhaMenuItem extends JComponent {
       final Dimension sp = slot.getPreferredSize();
       final int sw = Math.max(0, trailingEdge - leadingEdge);
       final int sx = rtl ? getWidth() - leadingEdge - sw : leadingEdge;
-      placeChild(slot, sx, (getHeight() - Math.min(sp.height, getHeight())) / 2, sw,
+      placeChild(
+          slot,
+          sx,
+          (getHeight() - Math.min(sp.height, getHeight())) / 2,
+          sw,
           Math.min(sp.height, getHeight()));
     }
     // Painted slots (icons/text) are positioned in paintComponent; child components handled above.
@@ -657,8 +661,8 @@ public final class ElwhaMenuItem extends JComponent {
     if (trailingText != null) {
       final FontMetrics fm = g2.getFontMetrics(TypeRole.LABEL_LARGE.resolve());
       final int tw = fm.stringWidth(trailingText);
-      final int x = rtl ? INSET_X_PX + (trailingIcon != null ? ICON_SIZE_PX + BETWEEN_PX : 0)
-          : edge - tw;
+      final int x =
+          rtl ? INSET_X_PX + (trailingIcon != null ? ICON_SIZE_PX + BETWEEN_PX : 0) : edge - tw;
       final int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
       paintWithAlpha(
           g2,
@@ -816,8 +820,9 @@ public final class ElwhaMenuItem extends JComponent {
   }
 
   /**
-   * Accessible context for a menu item: {@link AccessibleRole#MENU_ITEM}, accessible name = the item
-   * label (the leading icon is decorative, §X), and {@link AccessibleState#SELECTED} when selected.
+   * Accessible context for a menu item: {@link AccessibleRole#MENU_ITEM}, accessible name = the
+   * item label (the leading icon is decorative, §X), and {@link AccessibleState#SELECTED} when
+   * selected.
    *
    * @author Charles Bryan (cfb3@uw.edu)
    * @version v0.4.0

@@ -22,9 +22,9 @@ import javax.swing.JLayeredPane;
  *
  * <p><strong>Modality mechanism.</strong> The dialog is an overlay installed on {@code
  * SwingUtilities.getRootPane(parent).getLayeredPane()} at {@link JLayeredPane#MODAL_LAYER} rather
- * than a separate {@link java.awt.Window}: a subclass-supplied backdrop beneath the surface (a scrim
- * for the Basic Dialog; nothing for the frame-filling Full-screen Dialog) plus the surface on top.
- * Input is blocked by the backdrop's event-consumer and/or the surface physically covering the
+ * than a separate {@link java.awt.Window}: a subclass-supplied backdrop beneath the surface (a
+ * scrim for the Basic Dialog; nothing for the frame-filling Full-screen Dialog) plus the surface on
+ * top. Input is blocked by the backdrop's event-consumer and/or the surface physically covering the
  * content, backed by the base's keyboard focus trap. Reuses the {@code ElwhaFabAnchor} (#205)
  * layered-pane glue.
  *
@@ -108,8 +108,8 @@ abstract class AbstractElwhaDialog extends AbstractElwhaOverlay {
   }
 
   /**
-   * The preferred initial-focus target; {@code null} falls through to the first focusable descendant
-   * of the surface, then to the surface itself.
+   * The preferred initial-focus target; {@code null} falls through to the first focusable
+   * descendant of the surface, then to the surface itself.
    *
    * @return the preferred focus target, or {@code null}
    */

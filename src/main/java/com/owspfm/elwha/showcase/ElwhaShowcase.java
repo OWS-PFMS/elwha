@@ -3372,14 +3372,14 @@ public final class ElwhaShowcase {
   private static JComponent buildMenuWorkbench() {
     final JComboBox<Layout> layout = new JComboBox<>(Layout.values());
     final JComboBox<Separator> separator = new JComboBox<>(Separator.values());
-    final JLabel status = new JLabel("Open a menu — it anchors to the trigger and light-dismisses.");
+    final JLabel status =
+        new JLabel("Open a menu — it anchors to the trigger and light-dismisses.");
 
     final ElwhaIconButton overflow =
         new ElwhaIconButton(MaterialIcons.moreVert(IconButtonSize.M.iconPx()))
             .setInteractionMode(IconButtonInteractionMode.SELECTABLE);
     final ElwhaButton actions =
-        ElwhaButton.outlinedButton("Actions")
-            .setInteractionMode(ButtonInteractionMode.SELECTABLE);
+        ElwhaButton.outlinedButton("Actions").setInteractionMode(ButtonInteractionMode.SELECTABLE);
 
     overflow.addActionListener(e -> buildWorkbenchMenu(layout, separator, status).open(overflow));
     actions.addActionListener(e -> buildWorkbenchMenu(layout, separator, status).open(actions));

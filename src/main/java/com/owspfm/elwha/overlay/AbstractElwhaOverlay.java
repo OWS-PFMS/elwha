@@ -48,11 +48,11 @@ import javax.swing.SwingUtilities;
  * it. Library consumers must not depend on this type — its signature and semantics can change
  * without a deprecation cycle, mirroring {@code ShadowPainter} / {@code RipplePainter}.
  *
- * <p><strong>Dismiss policy.</strong> When {@link #lightDismiss()} is {@code false} (modal), a focus
- * escape to the inert background is <em>pulled back</em> into the surface (the trap) and there is no
- * outside-click teardown — the subclass-supplied backdrop blocks input. When {@link #lightDismiss()}
- * is {@code true} (menu/popover), a focus escape or a mouse press outside the surface
- * <em>dismisses</em> the overlay, and no backdrop is required.
+ * <p><strong>Dismiss policy.</strong> When {@link #lightDismiss()} is {@code false} (modal), a
+ * focus escape to the inert background is <em>pulled back</em> into the surface (the trap) and
+ * there is no outside-click teardown — the subclass-supplied backdrop blocks input. When {@link
+ * #lightDismiss()} is {@code true} (menu/popover), a focus escape or a mouse press outside the
+ * surface <em>dismisses</em> the overlay, and no backdrop is required.
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.4.0
@@ -109,8 +109,8 @@ public abstract class AbstractElwhaOverlay {
   // -------------------------------------------------- abstract anatomy hooks
 
   /**
-   * Creates and fully populates the overlay surface. Called once per {@link #show(Component)}, after
-   * the host is resolved (so {@link #layeredPane} is available for width-dependent layout).
+   * Creates and fully populates the overlay surface. Called once per {@link #show(Component)},
+   * after the host is resolved (so {@link #layeredPane} is available for width-dependent layout).
    *
    * @return the populated surface to attach to the layered pane
    */
@@ -169,8 +169,8 @@ public abstract class AbstractElwhaOverlay {
   /**
    * Whether focus should be restored to the {@code show(parent)} owner when the overlay closes.
    * Default {@code true}. A light-dismiss overlay closed <em>because</em> focus moved elsewhere (a
-   * Tab-away or a click into other content) overrides this to {@code false} so the teardown does not
-   * yank focus back from where the user just put it.
+   * Tab-away or a click into other content) overrides this to {@code false} so the teardown does
+   * not yank focus back from where the user just put it.
    *
    * @return {@code true} (default) to restore focus on close
    */
@@ -200,8 +200,8 @@ public abstract class AbstractElwhaOverlay {
   }
 
   /**
-   * The preferred initial-focus target; {@code null} falls through to the first focusable descendant
-   * of the surface, then to the surface itself.
+   * The preferred initial-focus target; {@code null} falls through to the first focusable
+   * descendant of the surface, then to the surface itself.
    *
    * @return the preferred focus target, or {@code null}
    */
@@ -211,8 +211,8 @@ public abstract class AbstractElwhaOverlay {
 
   /**
    * Reaction to focus escaping the surface to the inert background (still inside the host window).
-   * Default — the modal trap — pulls focus back to the surface. A light-dismiss overlay overrides to
-   * begin closing.
+   * Default — the modal trap — pulls focus back to the surface. A light-dismiss overlay overrides
+   * to begin closing.
    */
   protected void onFocusEscaped() {
     focusInitial();
@@ -347,7 +347,8 @@ public abstract class AbstractElwhaOverlay {
     }
   }
 
-  // Per-tick motion update: ease the linear progress, repaint a present backdrop (the surface is the
+  // Per-tick motion update: ease the linear progress, repaint a present backdrop (the surface is
+  // the
   // animator's own repaint host), and finish teardown once the exit has fully collapsed.
   private void onMotionTick() {
     if (entrance == null) {
@@ -472,7 +473,8 @@ public abstract class AbstractElwhaOverlay {
         .addAWTEventListener(outsidePressListener, AWTEvent.MOUSE_EVENT_MASK);
   }
 
-  // Initial / recovered focus: the subclass's preferred target, else the first focusable descendant,
+  // Initial / recovered focus: the subclass's preferred target, else the first focusable
+  // descendant,
   // else the surface itself — never the inert background.
   private void focusInitial() {
     if (surface == null) {

@@ -112,7 +112,8 @@ public final class MenuHostSmoke {
     final Rectangle rightTrigger = new Rectangle(540, 40, 80, 24);
     final Rectangle shifted =
         AbstractElwhaMenuOverlay.placeAnchored(rightTrigger, pref, 600, 400, false);
-    failures += check(shifted.x + shifted.width <= 600, "shifts left off the right edge: " + shifted);
+    failures +=
+        check(shifted.x + shifted.width <= 600, "shifts left off the right edge: " + shifted);
     checks++;
 
     // RTL trailing-aligns the menu's right edge to the trigger's right edge (room to the left).
@@ -174,13 +175,15 @@ public final class MenuHostSmoke {
           boolean mounted = false;
           int layer = -1;
           for (final java.awt.Component c : lp.getComponents()) {
-            if (c instanceof JComponent && "Spike menu".equals(c.getAccessibleContext().getAccessibleName())) {
+            if (c instanceof JComponent
+                && "Spike menu".equals(c.getAccessibleContext().getAccessibleName())) {
               mounted = true;
               layer = JLayeredPane.getLayer((JComponent) c);
             }
           }
           fail[0] += check(mounted, "live menu mounted on the layered pane");
-          fail[0] += check(layer == JLayeredPane.POPUP_LAYER, "mounted at POPUP_LAYER, got " + layer);
+          fail[0] +=
+              check(layer == JLayeredPane.POPUP_LAYER, "mounted at POPUP_LAYER, got " + layer);
 
           menu.close(MenuDismissCause.PROGRAMMATIC);
           // Reduced-motion snaps teardown synchronously; otherwise flush the exit on this tick.

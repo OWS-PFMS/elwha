@@ -43,11 +43,14 @@ public final class MenuShowcaseSmoke {
     checks++;
 
     if (component instanceof JTabbedPane tabs) {
-      failures += check(tabs.getTabCount() == 2, "leaf has Workbench + Gallery tabs, got "
-          + tabs.getTabCount());
+      failures +=
+          check(
+              tabs.getTabCount() == 2,
+              "leaf has Workbench + Gallery tabs, got " + tabs.getTabCount());
       checks++;
       final int popupMenus = countPopupMenus(tabs);
-      failures += check(popupMenus >= 3, "Gallery rendered >= 3 menu surfaces, found " + popupMenus);
+      failures +=
+          check(popupMenus >= 3, "Gallery rendered >= 3 menu surfaces, found " + popupMenus);
       checks++;
     }
 

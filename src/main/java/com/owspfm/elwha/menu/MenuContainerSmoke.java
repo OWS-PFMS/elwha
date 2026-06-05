@@ -123,7 +123,8 @@ public final class MenuContainerSmoke {
           fail[0] += check(findScroll(shortSurface) == null, "short menu does not scroll");
           shortMenu.close(MenuDismissCause.PROGRAMMATIC);
 
-          // A tall grouped+gap menu in a short window must scroll AND force dividers (no gap strut).
+          // A tall grouped+gap menu in a short window must scroll AND force dividers (no gap
+          // strut).
           final ElwhaMenu.Builder tall = ElwhaMenu.builder().separator(Separator.GAP);
           for (int i = 0; i < 20; i++) {
             tall.addItem(item("Item " + i));
@@ -134,7 +135,8 @@ public final class MenuContainerSmoke {
           final ElwhaMenu tallMenu = tall.build();
           tallMenu.open(trigger);
           final Component tallSurface = topSurface(lp);
-          fail[0] += check(findScroll(tallSurface) != null, "tall menu scrolls (persistent scrollbar)");
+          fail[0] +=
+              check(findScroll(tallSurface) != null, "tall menu scrolls (persistent scrollbar)");
           tallMenu.close(MenuDismissCause.PROGRAMMATIC);
 
           frame.dispose();

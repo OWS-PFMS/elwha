@@ -31,7 +31,8 @@ import javax.swing.SwingUtilities;
  * before the real {@code ElwhaMenu} container lands in S3:
  *
  * <ul>
- *   <li><strong>Center</strong> — opens below the trigger; click outside / Esc / Tab-away dismisses.
+ *   <li><strong>Center</strong> — opens below the trigger; click outside / Esc / Tab-away
+ *       dismisses.
  *   <li><strong>Near bottom edge</strong> — the menu flips above to avoid clipping.
  *   <li><strong>Near right edge</strong> — the menu shifts left to stay in the window.
  *   <li><strong>From inside a dialog</strong> — opens above the dialog (POPUP_LAYER over

@@ -80,9 +80,9 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
   }
 
   /**
-   * Whether a close with the given cause restores focus to the trigger. Intentional closes
-   * (Escape, selection, programmatic) restore; a focus-loss or outside-press close does not —
-   * focus already moved where the user wanted it. Pure function so the policy is testable.
+   * Whether a close with the given cause restores focus to the trigger. Intentional closes (Escape,
+   * selection, programmatic) restore; a focus-loss or outside-press close does not — focus already
+   * moved where the user wanted it. Pure function so the policy is testable.
    *
    * @param cause the dismiss cause
    * @return {@code true} to restore focus to the trigger
@@ -156,10 +156,10 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
   }
 
   /**
-   * Computes the menu surface bounds anchored to a trigger: leading-aligned below it, flipping above
-   * when the surface would clip the bottom edge (and there is room above), and shifted horizontally
-   * to stay inside the {@code paneWidth × paneHeight} viewport. A pure function of its inputs so the
-   * placement geometry is testable without a realized window.
+   * Computes the menu surface bounds anchored to a trigger: leading-aligned below it, flipping
+   * above when the surface would clip the bottom edge (and there is room above), and shifted
+   * horizontally to stay inside the {@code paneWidth × paneHeight} viewport. A pure function of its
+   * inputs so the placement geometry is testable without a realized window.
    *
    * @param anchor the trigger bounds in pane coordinates
    * @param pref the surface's preferred size

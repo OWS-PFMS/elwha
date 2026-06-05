@@ -15,15 +15,16 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 /**
- * Visual demo for epic #298 S4 — keyboard navigation, roving focus, and light dismiss. Open the menu
- * from the trigger, then drive it with the keyboard:
+ * Visual demo for epic #298 S4 — keyboard navigation, roving focus, and light dismiss. Open the
+ * menu from the trigger, then drive it with the keyboard:
  *
  * <ul>
  *   <li><strong>Up / Down</strong> move the focus ring (wrapping); <strong>Home / End</strong> jump
  *       to first / last.
  *   <li><strong>Letters</strong> type-ahead to the next matching item.
  *   <li><strong>Enter / Space</strong> activate the focused item (and close).
- *   <li><strong>Esc</strong>, an outside click, or Tab-away dismisses; focus returns to the trigger.
+ *   <li><strong>Esc</strong>, an outside click, or Tab-away dismisses; focus returns to the
+ *       trigger.
  * </ul>
  *
  * The {@code SELECTABLE} trigger shows its pressed-while-open state and is restored after. A status
@@ -62,8 +63,7 @@ public final class ElwhaMenuKeyboardDemo {
     content.add(status, BorderLayout.NORTH);
 
     final ElwhaButton trigger =
-        ElwhaButton.outlinedButton("Actions")
-            .setInteractionMode(ButtonInteractionMode.SELECTABLE);
+        ElwhaButton.outlinedButton("Actions").setInteractionMode(ButtonInteractionMode.SELECTABLE);
     trigger.addActionListener(e -> buildMenu(status).open(trigger));
 
     final JPanel center = new JPanel();

@@ -109,18 +109,25 @@ public final class MenuKeyboardSmoke {
     fail[0] += check(checks, menu.focusedIndex() == items.size() - 1, "End → last");
 
     menu.typeAhead('c');
-    fail[0] += check(checks, "Cherry".equals(items.get(menu.focusedIndex()).getLabel()),
-        "type-ahead 'c' → Cherry");
+    fail[0] +=
+        check(
+            checks,
+            "Cherry".equals(items.get(menu.focusedIndex()).getLabel()),
+            "type-ahead 'c' → Cherry");
     menu.typeAhead('b');
-    fail[0] += check(checks, "Banana".equals(items.get(menu.focusedIndex()).getLabel()),
-        "type-ahead 'b' → Banana");
+    fail[0] +=
+        check(
+            checks,
+            "Banana".equals(items.get(menu.focusedIndex()).getLabel()),
+            "type-ahead 'b' → Banana");
 
     // Synthetic key event routed through the surface bindings (best-effort; informational).
     final JComponent surface = menu.focusComponent();
     surface.requestFocusInWindow();
     final int before = menu.focusedIndex();
     final KeyEvent down =
-        new KeyEvent(surface, KeyEvent.KEY_PRESSED, 0L, 0, KeyEvent.VK_DOWN, KeyEvent.CHAR_UNDEFINED);
+        new KeyEvent(
+            surface, KeyEvent.KEY_PRESSED, 0L, 0, KeyEvent.VK_DOWN, KeyEvent.CHAR_UNDEFINED);
     surface.dispatchEvent(down);
     System.out.println(
         "  info  synthetic VK_DOWN: focusedIndex " + before + " -> " + menu.focusedIndex());
@@ -129,7 +136,8 @@ public final class MenuKeyboardSmoke {
     menu.setFocusedIndex(0);
     menu.activateFocused();
     fail[0] += check(checks, activated[0] == 1, "Enter activates focused item's action");
-    fail[0] += check(checks, cause[0] == MenuDismissCause.SELECTION, "activation closes with SELECTION");
+    fail[0] +=
+        check(checks, cause[0] == MenuDismissCause.SELECTION, "activation closes with SELECTION");
     fail[0] += check(checks, !trigger.isSelected(), "trigger restored to unselected after close");
 
     // Disabled item is inert on activation.
