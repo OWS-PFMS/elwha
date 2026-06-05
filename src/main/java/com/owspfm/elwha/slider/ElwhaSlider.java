@@ -136,10 +136,13 @@ public class ElwhaSlider extends JComponent {
   private boolean pressed;
   private boolean valueIndicatorEnabled;
   private boolean spaceDown;
+  private boolean endStopsVisible = true;
 
   private int unitIncrement = 1;
+  private int stopStep;
   private Integer blockIncrement;
   private String label;
+  private java.util.function.IntFunction<String> valueFormatter;
 
   private final MorphAnimator interactionAnimator = new MorphAnimator(this, HANDLE_MORPH_MS);
 
@@ -211,7 +214,18 @@ public class ElwhaSlider extends JComponent {
    * @since v0.4.0
    */
   public void setValue(final int value) {
-    model.setValue(clamp(value, model.getMinimum(), model.getMaximum()));
+    final int snapped = isStopsEnabled() ? snap(value) : value;
+    model.setValue(clamp(snapped, model.getMinimum(), model.getMaximum()));
+  }
+
+  /** Rounds a value to the nearest stop (measured from the minimum), clamped into range. */
+  private int snap(final int value) {
+    if (stopStep <= 0) {
+      return value;
+    }
+    final int min = model.getMinimum();
+    final int steps = Math.round((value - min) / (float) stopStep);
+    return clamp(min + steps * stopStep, min, model.getMaximum());
   }
 
   /**
@@ -412,6 +426,98 @@ public class ElwhaSlider extends JComponent {
     this.label = label;
   }
 
+  /**
+   * Returns the stops step — the snap increment between adjacent stop indicators, or {@code 0} when
+   * the slider is continuous.
+   *
+   * @return the stops step, or {@code 0} if continuous
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public int getStops() {
+    return stopStep;
+  }
+
+  /**
+   * Returns whether the slider is in <strong>stops</strong> mode (M3's renamed "discrete"): the
+   * handle snaps to the nearest stop and stop-indicator dots are painted.
+   *
+   * @return {@code true} if stops are enabled
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isStopsEnabled() {
+    return stopStep > 0;
+  }
+
+  /**
+   * Enables <strong>stops</strong> mode with the given step (M3's renamed "discrete"
+   * configuration). The handle snaps to the nearest multiple of {@code step} (measured from the
+   * minimum), arrows advance by one stop, and a stop-indicator dot is painted at every stop. Pass
+   * {@code 0} (or a negative value) to return to continuous mode.
+   *
+   * <p><strong>Don't over-crowd</strong> (research §GD3): too many stops are visually noisy and
+   * hard to land on. Prefer a step that yields a readable handful of stops across the range; for a
+   * fine scale, leave the slider continuous and rely on the value indicator instead.
+   *
+   * @param step the snap increment; {@code <= 0} disables stops
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setStops(final int step) {
+    final int next = Math.max(0, step);
+    if (this.stopStep == next) {
+      return;
+    }
+    this.stopStep = next;
+    if (next > 0) {
+      setValue(snap(model.getValue()));
+    }
+    repaint();
+  }
+
+  /**
+   * Returns whether end-stop indicators are painted.
+   *
+   * @return {@code true} if end stops are shown
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isEndStopsVisible() {
+    return endStopsVisible;
+  }
+
+  /**
+   * Sets whether an end-stop indicator is painted at the trailing (inactive) end of the track.
+   * Defaults to {@code true}: the end stop guarantees the inactive track end meets the M3 &ge;3:1
+   * contrast requirement against the background (research §X #48 / §GD3). Suppress it only when the
+   * track already meets 3:1 on its own.
+   *
+   * @param visible {@code true} to paint the end stop
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setEndStopsVisible(final boolean visible) {
+    if (this.endStopsVisible == visible) {
+      return;
+    }
+    this.endStopsVisible = visible;
+    repaint();
+  }
+
+  /**
+   * Sets the formatter that renders the value-indicator bubble text. Defaults to the raw integer.
+   * Use it to add a unit or map the value to a label (e.g. {@code v -> v + "%"}).
+   *
+   * @param formatter the value-to-text formatter, or {@code null} to reset to the raw integer
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setValueFormatter(final java.util.function.IntFunction<String> formatter) {
+    this.valueFormatter = formatter;
+    repaint();
+  }
+
   // -------------------------------------------------------------------- sizing
 
   private int bubbleReserveHeight() {
@@ -519,6 +625,7 @@ public class ElwhaSlider extends JComponent {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       final int cx = handleCenterX();
       paintTrack(g2, cx);
+      paintStops(g2, cx);
       paintStateLayer(g2, cx);
       paintRipple(g2, cx);
       paintHandle(g2, cx);
@@ -553,6 +660,53 @@ public class ElwhaSlider extends JComponent {
               TRACK_INNER_CORNER_PX,
               TRACK_OUTER_CORNER_PX));
     }
+  }
+
+  /** The handle-center x that the given value maps to (RTL-aware), without moving the model. */
+  int xForValue(final int value) {
+    final int range = model.getMaximum() - model.getMinimum();
+    final float frac = range <= 0 ? 0f : (value - model.getMinimum()) / (float) range;
+    final float pixelFrac = getComponentOrientation().isLeftToRight() ? frac : 1f - frac;
+    return Math.round(trackStartX() + pixelFrac * (trackEndX() - trackStartX()));
+  }
+
+  private void paintStops(final Graphics2D g2, final int cx) {
+    if (isStopsEnabled()) {
+      final int min = model.getMinimum();
+      final int max = model.getMaximum();
+      for (int v = min; v <= max; v += stopStep) {
+        paintStopDot(g2, cx, xForValue(v), v <= model.getValue());
+      }
+      if (endStopsVisible && (max - min) % stopStep != 0) {
+        paintStopDot(g2, cx, xForValue(max), false);
+      }
+    } else if (endStopsVisible && model.getValue() < model.getMaximum()) {
+      // Continuous mode: a single end stop at the trailing inactive end guarantees ≥3:1 contrast.
+      paintStopDot(g2, cx, xForValue(model.getMaximum()), false);
+    }
+  }
+
+  private void paintStopDot(
+      final Graphics2D g2, final int cx, final int x, final boolean onActiveTrack) {
+    final int skip = HANDLE_TRACK_GAP_PX + HANDLE_WIDTH_PX / 2 + STOP_INDICATOR_SIZE_PX;
+    if (Math.abs(x - cx) < skip) {
+      return;
+    }
+    final int cy = trackTopY() + TRACK_HEIGHT_PX / 2;
+    final float r = STOP_INDICATOR_SIZE_PX / 2f;
+    g2.setColor(stopColor(onActiveTrack));
+    g2.fill(
+        new java.awt.geom.Ellipse2D.Float(
+            x - r, cy - r, STOP_INDICATOR_SIZE_PX, STOP_INDICATOR_SIZE_PX));
+  }
+
+  private Color stopColor(final boolean onActiveTrack) {
+    if (!isEnabled()) {
+      return onActiveTrack
+          ? ColorRole.SURFACE.resolve()
+          : withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
+    }
+    return (onActiveTrack ? ColorRole.ON_PRIMARY : ColorRole.ON_SECONDARY_CONTAINER).resolve();
   }
 
   private void paintStateLayer(final Graphics2D g2, final int cx) {
@@ -650,8 +804,14 @@ public class ElwhaSlider extends JComponent {
     }
   }
 
-  /** The text shown in the value bubble. Default is the raw value; a formatter hook lands in S4. */
+  /** The text shown in the value bubble — the {@code valueFormatter} output, or the raw value. */
   String valueText() {
+    if (valueFormatter != null) {
+      final String text = valueFormatter.apply(model.getValue());
+      if (text != null) {
+        return text;
+      }
+    }
     return Integer.toString(model.getValue());
   }
 
@@ -899,7 +1059,7 @@ public class ElwhaSlider extends JComponent {
    * The unit increment used by a single arrow; stops mode (story #345) overrides this to one stop.
    */
   int effectiveUnitIncrement() {
-    return unitIncrement;
+    return isStopsEnabled() ? stopStep : unitIncrement;
   }
 
   private AbstractAction step(final java.util.function.IntSupplier delta) {
