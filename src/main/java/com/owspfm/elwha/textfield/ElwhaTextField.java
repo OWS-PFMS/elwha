@@ -1,6 +1,8 @@
 package com.owspfm.elwha.textfield;
 
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
+import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.MorphAnimator;
@@ -98,6 +100,7 @@ public class ElwhaTextField extends JComponent {
   private String prefix = "";
   private String suffix = "";
   private String supportingText = "";
+  private String errorText = "";
 
   private Icon leadingIcon;
   private Icon trailingIcon;
@@ -571,9 +574,38 @@ public class ElwhaTextField extends JComponent {
     }
     this.error = error;
     updateCaretColor();
+    syncAccessibleName();
     if (error) {
       fireAccessibleAlert();
     }
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns the error text that replaces the supporting line while errored.
+   *
+   * @return the error text
+   */
+  public String getErrorText() {
+    return errorText;
+  }
+
+  /**
+   * Sets the error text. While the field is {@linkplain #setError(boolean) errored}, this
+   * <b>replaces</b> the supporting line (the row height is reserved, so there is no layout shift)
+   * and — when the consumer has set no trailing icon — auto-shows the non-color error icon in the
+   * trailing slot. It also feeds the accessibility alert (supporting text first, then error).
+   *
+   * @param errorText the error text
+   */
+  public void setErrorText(final String errorText) {
+    this.errorText = errorText == null ? "" : errorText;
+    syncAccessibleName();
+    if (error) {
+      fireAccessibleAlert();
+    }
+    revalidate();
     repaint();
   }
 
@@ -622,12 +654,31 @@ public class ElwhaTextField extends JComponent {
     if (required && !noAsterisk) {
       name.append(" *");
     }
-    if (!supportingText.isEmpty()) {
-      name.append(name.length() > 0 ? ", " : "").append(supportingText);
+    final String support = displayedSupporting();
+    if (!support.isEmpty()) {
+      name.append(name.length() > 0 ? ", " : "").append(support);
     }
     final AccessibleContext ctx = editor.getAccessibleContext();
     ctx.setAccessibleName(name.toString());
-    ctx.setAccessibleDescription(supportingText.isEmpty() ? null : supportingText);
+    ctx.setAccessibleDescription(accessibleDescription());
+  }
+
+  /** The supporting line as shown: error text replaces supporting text while errored. */
+  private String displayedSupporting() {
+    return error && !errorText.isEmpty() ? errorText : supportingText;
+  }
+
+  /** A11y description: supporting text first, then error text (research §X). */
+  private String accessibleDescription() {
+    if (error && !errorText.isEmpty()) {
+      return supportingText.isEmpty() ? errorText : supportingText + ", " + errorText;
+    }
+    return supportingText.isEmpty() ? null : supportingText;
+  }
+
+  /** Whether the non-color error icon should auto-fill the trailing slot. */
+  private boolean showAutoErrorIcon() {
+    return error && isEnabled() && trailingIcon == null && trailingButton == null;
   }
 
   /** The label as painted, with the required asterisk appended when shown. */
@@ -636,7 +687,7 @@ public class ElwhaTextField extends JComponent {
   }
 
   private boolean hasTrailing() {
-    return trailingIcon != null || trailingButton != null;
+    return trailingIcon != null || trailingButton != null || showAutoErrorIcon();
   }
 
   /** Distance from the left edge to the text region (icon slot if a leading slot sits left). */
@@ -667,10 +718,14 @@ public class ElwhaTextField extends JComponent {
    */
   private void fireAccessibleAlert() {
     final AccessibleContext ctx = editor.getAccessibleContext();
-    final String old = ctx.getAccessibleDescription();
-    final String announcement = error ? "Error" : null;
-    ctx.setAccessibleDescription(announcement);
-    ctx.firePropertyChange(AccessibleContext.ACCESSIBLE_DESCRIPTION_PROPERTY, old, announcement);
+    final String announcement =
+        !errorText.isEmpty()
+            ? (supportingText.isEmpty() ? errorText : supportingText + ", " + errorText)
+            : "Error";
+    // Fire from a cleared value so AT re-announces even when the text is unchanged.
+    ctx.setAccessibleDescription(null);
+    ctx.firePropertyChange(AccessibleContext.ACCESSIBLE_DESCRIPTION_PROPERTY, null, announcement);
+    ctx.setAccessibleDescription(accessibleDescription());
   }
 
   // ---- Layout ---------------------------------------------------------------
@@ -739,8 +794,9 @@ public class ElwhaTextField extends JComponent {
 
   private void paintIcons(final Graphics2D g2, final int w) {
     final boolean ltr = getComponentOrientation().isLeftToRight();
-    final Icon leftSlot = ltr ? leadingIcon : trailingIcon;
-    final Icon rightSlot = ltr ? trailingIcon : leadingIcon;
+    final Icon trailingSlot = showAutoErrorIcon() ? themedErrorIcon() : trailingIcon;
+    final Icon leftSlot = ltr ? leadingIcon : trailingSlot;
+    final Icon rightSlot = ltr ? trailingSlot : leadingIcon;
     final int iconY = (CONTAINER_HEIGHT - ICON_GLYPH) / 2;
     if (leftSlot != null) {
       paintIcon(g2, leftSlot, PAD_LR_ICON, iconY);
@@ -748,6 +804,13 @@ public class ElwhaTextField extends JComponent {
     if (rightSlot != null) {
       paintIcon(g2, rightSlot, w - PAD_LR_ICON - ICON_GLYPH, iconY);
     }
+  }
+
+  /** The auto error glyph, tinted to the {@code error} role (the non-color cue). */
+  private Icon themedErrorIcon() {
+    final FlatSVGIcon icon = MaterialIcons.error(ICON_GLYPH);
+    icon.setColorFilter(new FlatSVGIcon.ColorFilter(c -> ColorRole.ERROR.resolve()));
+    return icon;
   }
 
   private void paintIcon(final Graphics2D g2, final Icon icon, final int x, final int y) {
@@ -786,7 +849,8 @@ public class ElwhaTextField extends JComponent {
   }
 
   private void paintSupportingText(final Graphics2D g2) {
-    if (supportingText.isEmpty()) {
+    final String support = displayedSupporting();
+    if (support.isEmpty()) {
       return;
     }
     g2.setFont(TypeRole.BODY_SMALL.resolve());
@@ -795,7 +859,7 @@ public class ElwhaTextField extends JComponent {
         CONTAINER_HEIGHT
             + SUPPORTING_TOP_PAD
             + getFontMetrics(TypeRole.BODY_SMALL.resolve()).getAscent();
-    g2.drawString(supportingText, PAD_LR_NO_ICON, y);
+    g2.drawString(support, PAD_LR_NO_ICON, y);
   }
 
   private int textWidth(final String text) {

@@ -44,7 +44,7 @@ import javax.swing.UIManager;
  * components.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.1.0
  */
 public final class MaterialIcons {
@@ -431,6 +431,30 @@ public final class MaterialIcons {
    */
   public static FlatSVGIcon close(final int size) {
     return load("close", size);
+  }
+
+  /**
+   * Error glyph — a circled exclamation. M3's non-color error cue for the text-field trailing slot
+   * (paired with the error color so low-vision users get a sensory signal beyond hue).
+   *
+   * @return the icon at {@link #DEFAULT_SIZE}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static FlatSVGIcon error() {
+    return error(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #error()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static FlatSVGIcon error(final int size) {
+    return load("error", size);
   }
 
   /** Eye / visibility glyph (outline). */
