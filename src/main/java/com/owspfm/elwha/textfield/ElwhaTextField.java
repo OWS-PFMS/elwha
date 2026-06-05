@@ -1,5 +1,6 @@
 package com.owspfm.elwha.textfield;
 
+import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.MorphAnimator;
@@ -10,6 +11,7 @@ import com.owspfm.elwha.theme.TypeRole;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -20,6 +22,7 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 import javax.accessibility.AccessibleContext;
 import javax.swing.BorderFactory;
+import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
@@ -71,12 +74,19 @@ public class ElwhaTextField extends JComponent {
   static final int CONTAINER_HEIGHT = 56;
   static final int PAD_TOP_BOTTOM = SpaceScale.SM.px(); // 8
   static final int PAD_LR_NO_ICON = SpaceScale.LG.px(); // 16
+  static final int PAD_LR_ICON =
+      SpaceScale.MD.px(); // 12 (edge-to-icon when an icon slot is present)
+  static final int ICON_TEXT_GAP = SpaceScale.LG.px(); // 16 (icon-to-text)
+  static final int ICON_GLYPH = 24; // painted glyph size (touch target is the 56dp field)
   static final int SUPPORTING_TOP_PAD = SpaceScale.XS.px(); // 4
   static final int LABEL_NOTCH_PAD = SpaceScale.XS.px(); // 4 (outlined label-notch gap)
   static final int RESTING_STROKE = 1;
   static final int FOCUS_STROKE = 3; // Expressive bump (design §4; resting 1dp)
   static final int DEFAULT_WIDTH = 245; // M3 default layout width
   static final int MAX_WIDTH = 488; // M3 maximum width
+
+  /** Distance from a field edge to the text region when that side carries an icon slot. */
+  static final int ICON_SLOT = PAD_LR_ICON + ICON_GLYPH + ICON_TEXT_GAP; // 52
 
   private static final String FLATLAF_PLACEHOLDER_KEY = "JTextField.placeholderText";
 
@@ -85,6 +95,16 @@ public class ElwhaTextField extends JComponent {
 
   private String label = "";
   private String placeholder = "";
+  private String prefix = "";
+  private String suffix = "";
+  private String supportingText = "";
+
+  private Icon leadingIcon;
+  private Icon trailingIcon;
+  private ElwhaIconButton trailingButton;
+
+  private boolean required;
+  private boolean noAsterisk;
 
   private boolean hovered;
   private boolean focused;
@@ -346,6 +366,191 @@ public class ElwhaTextField extends JComponent {
   }
 
   /**
+   * Returns the leading (in-field) icon.
+   *
+   * @return the leading icon, or {@code null} if none
+   */
+  public Icon getLeadingIcon() {
+    return leadingIcon;
+  }
+
+  /**
+   * Sets the leading in-field icon (a {@code MaterialIcons} 24dp glyph). The leading slot is for
+   * in-field affordances; decorative form-row icons belong in the consumer's layout, not here.
+   *
+   * @param icon the leading icon, or {@code null} to clear
+   */
+  public void setLeadingIcon(final Icon icon) {
+    this.leadingIcon = icon;
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns the static trailing icon.
+   *
+   * @return the trailing icon, or {@code null} if none (or an interactive trailing button is set)
+   */
+  public Icon getTrailingIcon() {
+    return trailingIcon;
+  }
+
+  /**
+   * Sets a static (non-interactive) trailing icon — e.g. a decorative or error glyph. Clears any
+   * interactive {@linkplain #setTrailingIconButton(ElwhaIconButton) trailing button}. For a
+   * clickable affordance (clear / show-password), use {@link #setTrailingIconButton} instead so the
+   * field inherits Button accessibility for free.
+   *
+   * @param icon the trailing icon, or {@code null} to clear
+   */
+  public void setTrailingIcon(final Icon icon) {
+    if (trailingButton != null) {
+      remove(trailingButton);
+      trailingButton = null;
+    }
+    this.trailingIcon = icon;
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns the interactive trailing icon button.
+   *
+   * @return the trailing button, or {@code null} if none
+   */
+  public ElwhaIconButton getTrailingIconButton() {
+    return trailingButton;
+  }
+
+  /**
+   * Sets an interactive trailing icon button (clear / show-password / picker launch). The button is
+   * hosted as a real child so it brings free {@code AccessibleRole.PUSH_BUTTON} semantics; it
+   * replaces any static {@linkplain #setTrailingIcon(Icon) trailing icon}.
+   *
+   * @param button the trailing icon button, or {@code null} to clear
+   */
+  public void setTrailingIconButton(final ElwhaIconButton button) {
+    if (trailingButton != null) {
+      remove(trailingButton);
+    }
+    this.trailingIcon = null;
+    this.trailingButton = button;
+    if (button != null) {
+      add(button);
+    }
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns the inline prefix affix.
+   *
+   * @return the prefix text
+   */
+  public String getPrefixText() {
+    return prefix;
+  }
+
+  /**
+   * Sets the inline prefix affix shown immediately before the input ({@code on-surface-variant}),
+   * e.g. a currency symbol.
+   *
+   * @param prefix the prefix text
+   */
+  public void setPrefixText(final String prefix) {
+    this.prefix = prefix == null ? "" : prefix;
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns the inline suffix affix.
+   *
+   * @return the suffix text
+   */
+  public String getSuffixText() {
+    return suffix;
+  }
+
+  /**
+   * Sets the inline suffix affix shown immediately after the input ({@code on-surface-variant}),
+   * e.g. a unit.
+   *
+   * @param suffix the suffix text
+   */
+  public void setSuffixText(final String suffix) {
+    this.suffix = suffix == null ? "" : suffix;
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns the supporting text shown below the field.
+   *
+   * @return the supporting text
+   */
+  public String getSupportingText() {
+    return supportingText;
+  }
+
+  /**
+   * Sets the supporting text shown below the field ({@code BODY_SMALL}, {@code
+   * on-surface-variant}). Its row height is always reserved so an error-text swap never shifts
+   * layout.
+   *
+   * @param supportingText the supporting text
+   */
+  public void setSupportingText(final String supportingText) {
+    this.supportingText = supportingText == null ? "" : supportingText;
+    syncAccessibleName();
+    repaint();
+  }
+
+  /**
+   * Returns whether the field is marked required.
+   *
+   * @return {@code true} if required
+   */
+  public boolean isRequired() {
+    return required;
+  }
+
+  /**
+   * Marks the field required — appends an asterisk to the label (unless {@linkplain
+   * #setNoAsterisk(boolean) suppressed}) and includes it in the accessible name. Elwha enforces no
+   * validation; {@code required} is the visual + a11y cue only.
+   *
+   * @param required {@code true} to mark required
+   */
+  public void setRequired(final boolean required) {
+    this.required = required;
+    syncAccessibleName();
+    repaint();
+  }
+
+  /**
+   * Returns whether the required asterisk glyph is suppressed.
+   *
+   * @return {@code true} if the asterisk is hidden
+   */
+  public boolean isNoAsterisk() {
+    return noAsterisk;
+  }
+
+  /**
+   * Suppresses the required asterisk glyph while keeping the field {@linkplain #setRequired
+   * required} (M3 {@code no-asterisk}) — for forms that indicate required fields with a single note
+   * instead.
+   *
+   * @param noAsterisk {@code true} to hide the asterisk
+   */
+  public void setNoAsterisk(final boolean noAsterisk) {
+    this.noAsterisk = noAsterisk;
+    syncAccessibleName();
+    repaint();
+  }
+
+  /**
    * Returns whether the field is in the error state.
    *
    * @return {@code true} if errored
@@ -413,7 +618,39 @@ public class ElwhaTextField extends JComponent {
   // ---- Accessibility (design §8; the error->alert is the one Swing gap) ------
 
   private void syncAccessibleName() {
-    editor.getAccessibleContext().setAccessibleName(label);
+    final StringBuilder name = new StringBuilder(label);
+    if (required && !noAsterisk) {
+      name.append(" *");
+    }
+    if (!supportingText.isEmpty()) {
+      name.append(name.length() > 0 ? ", " : "").append(supportingText);
+    }
+    final AccessibleContext ctx = editor.getAccessibleContext();
+    ctx.setAccessibleName(name.toString());
+    ctx.setAccessibleDescription(supportingText.isEmpty() ? null : supportingText);
+  }
+
+  /** The label as painted, with the required asterisk appended when shown. */
+  private String displayLabel() {
+    return required && !noAsterisk ? label + " *" : label;
+  }
+
+  private boolean hasTrailing() {
+    return trailingIcon != null || trailingButton != null;
+  }
+
+  /** Distance from the left edge to the text region (icon slot if a leading slot sits left). */
+  private int leftContentEdge() {
+    final boolean ltr = getComponentOrientation().isLeftToRight();
+    final boolean iconLeft = ltr ? leadingIcon != null : hasTrailing();
+    return iconLeft ? ICON_SLOT : PAD_LR_NO_ICON;
+  }
+
+  /** Distance from the right edge to the text region (icon slot if a trailing slot sits right). */
+  private int rightContentEdge() {
+    final boolean ltr = getComponentOrientation().isLeftToRight();
+    final boolean iconRight = ltr ? hasTrailing() : leadingIcon != null;
+    return iconRight ? ICON_SLOT : PAD_LR_NO_ICON;
   }
 
   /** Caret follows the active stroke: error&#8594;{@code error}, otherwise {@code primary}. */
@@ -446,13 +683,31 @@ public class ElwhaTextField extends JComponent {
 
   @Override
   public void doLayout() {
-    final int pad = PAD_LR_NO_ICON;
-    final int editorH =
-        Math.min(lineHeight(TypeRole.BODY_LARGE), CONTAINER_HEIGHT - 2 * PAD_TOP_BOTTOM);
+    final int w = getWidth();
+    final boolean ltr = getComponentOrientation().isLeftToRight();
+
+    if (trailingButton != null) {
+      final int btnW = trailingButton.getPreferredSize().width;
+      final int btnH = trailingButton.getPreferredSize().height;
+      final int btnY = (CONTAINER_HEIGHT - btnH) / 2;
+      // Centre the button's glyph where a 24dp icon would sit (PAD_LR_ICON + 12 from the edge).
+      final int glyphCenterFromEdge = PAD_LR_ICON + ICON_GLYPH / 2;
+      final int btnX = ltr ? w - glyphCenterFromEdge - btnW / 2 : glyphCenterFromEdge - btnW / 2;
+      trailingButton.setBounds(btnX, btnY, btnW, btnH);
+    }
+
+    final FontMetrics fm = getFontMetrics(TypeRole.BODY_LARGE.resolve());
+    final int prefixW = prefix.isEmpty() ? 0 : fm.stringWidth(prefix) + ICON_TEXT_GAP / 2;
+    final int suffixW = suffix.isEmpty() ? 0 : fm.stringWidth(suffix) + ICON_TEXT_GAP / 2;
+
+    final int textLeft = leftContentEdge() + (ltr ? prefixW : suffixW);
+    final int textRight = w - rightContentEdge() - (ltr ? suffixW : prefixW);
+
+    final int editorH = Math.min(fm.getHeight(), CONTAINER_HEIGHT - 2 * PAD_TOP_BOTTOM);
     final boolean labelled = !label.isEmpty();
     final int editorY =
         labelled ? CONTAINER_HEIGHT - PAD_TOP_BOTTOM - editorH : (CONTAINER_HEIGHT - editorH) / 2;
-    editor.setBounds(pad, editorY, Math.max(0, getWidth() - 2 * pad), editorH);
+    editor.setBounds(textLeft, editorY, Math.max(0, textRight - textLeft), editorH);
   }
 
   private int lineHeight(final TypeRole role) {
@@ -473,10 +728,78 @@ public class ElwhaTextField extends JComponent {
       } else {
         paintOutlinedChrome(g2, w, arc);
       }
+      paintIcons(g2, w);
+      paintAffixes(g2);
       paintLabel(g2);
+      paintSupportingText(g2);
     } finally {
       g2.dispose();
     }
+  }
+
+  private void paintIcons(final Graphics2D g2, final int w) {
+    final boolean ltr = getComponentOrientation().isLeftToRight();
+    final Icon leftSlot = ltr ? leadingIcon : trailingIcon;
+    final Icon rightSlot = ltr ? trailingIcon : leadingIcon;
+    final int iconY = (CONTAINER_HEIGHT - ICON_GLYPH) / 2;
+    if (leftSlot != null) {
+      paintIcon(g2, leftSlot, PAD_LR_ICON, iconY);
+    }
+    if (rightSlot != null) {
+      paintIcon(g2, rightSlot, w - PAD_LR_ICON - ICON_GLYPH, iconY);
+    }
+  }
+
+  private void paintIcon(final Graphics2D g2, final Icon icon, final int x, final int y) {
+    if (!isEnabled()) {
+      final java.awt.Composite old = g2.getComposite();
+      g2.setComposite(
+          java.awt.AlphaComposite.getInstance(
+              java.awt.AlphaComposite.SRC_OVER, StateLayer.disabledContentOpacity()));
+      icon.paintIcon(this, g2, x, y);
+      g2.setComposite(old);
+    } else {
+      icon.paintIcon(this, g2, x, y);
+    }
+  }
+
+  private void paintAffixes(final Graphics2D g2) {
+    if (prefix.isEmpty() && suffix.isEmpty()) {
+      return;
+    }
+    final boolean affixVisible = label.isEmpty() || labelMorph.progress() > 0.5f;
+    if (!affixVisible) {
+      return;
+    }
+    g2.setFont(TypeRole.BODY_LARGE.resolve());
+    g2.setColor(affixColor());
+    final int baseline = editor.getY() + getFontMetrics(TypeRole.BODY_LARGE.resolve()).getAscent();
+    final boolean ltr = getComponentOrientation().isLeftToRight();
+    if (!prefix.isEmpty()) {
+      final int x = ltr ? leftContentEdge() : getWidth() - rightContentEdge() - textWidth(prefix);
+      g2.drawString(prefix, x, baseline);
+    }
+    if (!suffix.isEmpty()) {
+      final int x = ltr ? getWidth() - rightContentEdge() - textWidth(suffix) : leftContentEdge();
+      g2.drawString(suffix, x, baseline);
+    }
+  }
+
+  private void paintSupportingText(final Graphics2D g2) {
+    if (supportingText.isEmpty()) {
+      return;
+    }
+    g2.setFont(TypeRole.BODY_SMALL.resolve());
+    g2.setColor(supportingColor());
+    final int y =
+        CONTAINER_HEIGHT
+            + SUPPORTING_TOP_PAD
+            + getFontMetrics(TypeRole.BODY_SMALL.resolve()).getAscent();
+    g2.drawString(supportingText, PAD_LR_NO_ICON, y);
+  }
+
+  private int textWidth(final String text) {
+    return getFontMetrics(TypeRole.BODY_LARGE.resolve()).stringWidth(text);
   }
 
   private void paintFilledChrome(final Graphics2D g2, final int w, final int arc) {
@@ -557,8 +880,14 @@ public class ElwhaTextField extends JComponent {
     final float floatBaseline = PAD_TOP_BOTTOM + g2.getFontMetrics().getAscent();
     final float y = restBaseline + (floatBaseline - restBaseline) * t;
 
+    final String text = displayLabel();
+    final boolean ltr = getComponentOrientation().isLeftToRight();
+    final int x =
+        ltr
+            ? leftContentEdge()
+            : getWidth() - rightContentEdge() - g2.getFontMetrics().stringWidth(text);
     g2.setColor(labelColor());
-    g2.drawString(label, PAD_LR_NO_ICON, Math.round(y));
+    g2.drawString(text, x, Math.round(y));
   }
 
   /** The baseline at which the resting (centered) label sits — aligned with the editor's text. */
@@ -614,6 +943,23 @@ public class ElwhaTextField extends JComponent {
     }
     if (focused) {
       return ColorRole.PRIMARY.resolve();
+    }
+    return ColorRole.ON_SURFACE_VARIANT.resolve();
+  }
+
+  private Color affixColor() {
+    if (!isEnabled()) {
+      return alpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
+    }
+    return ColorRole.ON_SURFACE_VARIANT.resolve();
+  }
+
+  private Color supportingColor() {
+    if (!isEnabled()) {
+      return alpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
+    }
+    if (error) {
+      return ColorRole.ERROR.resolve();
     }
     return ColorRole.ON_SURFACE_VARIANT.resolve();
   }
