@@ -51,6 +51,7 @@ import com.owspfm.elwha.navrail.ElwhaNavigationRail;
 import com.owspfm.elwha.navrail.playground.NavRailDestinationPlaygroundPanels;
 import com.owspfm.elwha.navrail.playground.NavigationRailPlaygroundPanels;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -99,7 +100,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
-import javax.swing.JTextField;
 import javax.swing.Scrollable;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
@@ -1392,7 +1392,8 @@ public final class ElwhaShowcase {
   private static JComponent buildChipWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JTextField textField = new JTextField("Chip", 14);
+    final ElwhaTextField textField = ElwhaTextField.outlined("");
+    textField.setText("Chip");
     final JComboBox<ChipVariant> variantBox = new JComboBox<>(ChipVariant.values());
     final JComboBox<ChipInteractionMode> modeBox = new JComboBox<>(ChipInteractionMode.values());
     modeBox.setSelectedItem(ChipInteractionMode.SELECTABLE);
@@ -1515,7 +1516,7 @@ public final class ElwhaShowcase {
                   enabled));
         };
 
-    textField.getDocument().addDocumentListener(new SimpleDocumentListener(apply));
+    textField.getEditor().getDocument().addDocumentListener(new SimpleDocumentListener(apply));
     variantBox.addActionListener(event -> apply.run());
     modeBox.addActionListener(event -> apply.run());
     surfaceBox.addActionListener(event -> apply.run());
@@ -1861,7 +1862,8 @@ public final class ElwhaShowcase {
     colorBox.setSelectedItem(ElwhaFab.Color.PRIMARY_CONTAINER);
     final JComboBox<FabIconChoice> iconBox = new JComboBox<>(FabIconChoice.values());
     iconBox.setSelectedItem(FabIconChoice.ADD);
-    final JTextField labelField = new JTextField("Compose", 14);
+    final ElwhaTextField labelField = ElwhaTextField.outlined("");
+    labelField.setText("Compose");
     final JCheckBox hoveredBox = new JCheckBox("Hovered");
     final JCheckBox pressedBox = new JCheckBox("Pressed");
     final JCheckBox enabledBox = new JCheckBox("Enabled", true);
@@ -1947,26 +1949,7 @@ public final class ElwhaShowcase {
     sizeBox.addActionListener(event -> apply.run());
     colorBox.addActionListener(event -> apply.run());
     iconBox.addActionListener(event -> apply.run());
-    labelField.addActionListener(event -> apply.run());
-    labelField
-        .getDocument()
-        .addDocumentListener(
-            new javax.swing.event.DocumentListener() {
-              @Override
-              public void insertUpdate(final javax.swing.event.DocumentEvent e) {
-                apply.run();
-              }
-
-              @Override
-              public void removeUpdate(final javax.swing.event.DocumentEvent e) {
-                apply.run();
-              }
-
-              @Override
-              public void changedUpdate(final javax.swing.event.DocumentEvent e) {
-                apply.run();
-              }
-            });
+    labelField.getEditor().getDocument().addDocumentListener(new SimpleDocumentListener(apply));
     hoveredBox.addActionListener(event -> apply.run());
     pressedBox.addActionListener(event -> apply.run());
     enabledBox.addActionListener(event -> apply.run());
@@ -3536,14 +3519,11 @@ public final class ElwhaShowcase {
     form.setOpaque(false);
     form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
     for (final String label : new String[] {"Title", "Location", "Start", "End", "Notes"}) {
-      final JLabel caption = new JLabel(label);
-      caption.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
-      caption.setAlignmentX(Component.LEFT_ALIGNMENT);
-      final JTextField field = new JTextField(18);
+      // Dogfood: the field's floating label replaces the hand-rolled adjacent JLabel — the exact
+      // M3 "forms and dialogs" use case.
+      final ElwhaTextField field = ElwhaTextField.outlined(label);
       field.setAlignmentX(Component.LEFT_ALIGNMENT);
-      field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
-      form.add(caption);
-      form.add(Box.createVerticalStrut(4));
+      field.setMaximumSize(new Dimension(Integer.MAX_VALUE, field.getPreferredSize().height));
       form.add(field);
       form.add(Box.createVerticalStrut(16));
     }
