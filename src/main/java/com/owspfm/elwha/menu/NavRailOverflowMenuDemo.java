@@ -50,6 +50,7 @@ public final class NavRailOverflowMenuDemo {
     frame.setLocationRelativeTo(null);
 
     final ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
+    rail.getAccessibleContext().setAccessibleName("Primary navigation");
     rail.setMenuButton(new ElwhaIconButton(MaterialIcons.menu()));
     rail.setPrimary(
         List.of(

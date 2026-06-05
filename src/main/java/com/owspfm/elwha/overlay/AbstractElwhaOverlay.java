@@ -16,6 +16,8 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeListener;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Objects;
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
@@ -62,6 +64,11 @@ public abstract class AbstractElwhaOverlay {
 
   /** Entrance / exit duration — M3 medium2 (300 ms). */
   protected static final int MOTION_MS = MorphAnimator.MEDIUM2_MS;
+
+  // Every currently-shown overlay, in show order. Only the topmost (highest overlayLayer(), ties
+  // broken by most-recently-shown) reacts to a focus escape — so a modal dialog's focus trap
+  // suspends while a menu sits above it at POPUP_LAYER, instead of the two fighting over focus.
+  private static final Deque<AbstractElwhaOverlay> OPEN = new ArrayDeque<>();
 
   // Live overlay state — non-null only while shown.
 
@@ -290,6 +297,8 @@ public abstract class AbstractElwhaOverlay {
           }
         };
     layeredPane.addComponentListener(relayoutListener);
+    OPEN.remove(this);
+    OPEN.addLast(this);
     installFocusListener();
     if (lightDismiss()) {
       installOutsidePressListener();
@@ -347,6 +356,25 @@ public abstract class AbstractElwhaOverlay {
     }
   }
 
+  /**
+   * Closes the overlay immediately, skipping the exit animation. Used when a new overlay supersedes
+   * this one and a lingering fade would read as two overlays on screen at once. A no-op if not
+   * shown; idempotent if an animated exit is already mid-flight.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected final void closeNow() {
+    if (layeredPane == null) {
+      return;
+    }
+    closing = true;
+    if (entrance != null) {
+      entrance.stop();
+    }
+    performTeardown();
+  }
+
   // Per-tick motion update: ease the linear progress, repaint a present backdrop (the surface is
   // the
   // animator's own repaint host), and finish teardown once the exit has fully collapsed.
@@ -372,6 +400,7 @@ public abstract class AbstractElwhaOverlay {
     if (entrance != null) {
       entrance.stop();
     }
+    OPEN.remove(this);
     if (focusListener != null) {
       KeyboardFocusManager.getCurrentKeyboardFocusManager()
           .removePropertyChangeListener("focusOwner", focusListener);
@@ -444,10 +473,27 @@ public abstract class AbstractElwhaOverlay {
           if (SwingUtilities.getWindowAncestor(owner) != hostWindow) {
             return;
           }
+          // Only the topmost overlay reacts: a modal dialog's trap stays quiet while a menu sits
+          // above it (POPUP_LAYER), so the two don't fight over focus and thrash (#298 F1).
+          if (!isTopmost()) {
+            return;
+          }
           onFocusEscaped();
         };
     KeyboardFocusManager.getCurrentKeyboardFocusManager()
         .addPropertyChangeListener("focusOwner", focusListener);
+  }
+
+  // The topmost open overlay is the one with the greatest overlayLayer(); ties (e.g. stacked
+  // dialogs on MODAL_LAYER) are broken by show order — the most recently shown wins.
+  private boolean isTopmost() {
+    AbstractElwhaOverlay top = null;
+    for (final AbstractElwhaOverlay o : OPEN) {
+      if (top == null || o.overlayLayer() >= top.overlayLayer()) {
+        top = o;
+      }
+    }
+    return top == this;
   }
 
   // Light-dismiss outside-click: a passive AWT listener (cannot consume the event) that closes the

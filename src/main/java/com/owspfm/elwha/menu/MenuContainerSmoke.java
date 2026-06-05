@@ -139,9 +139,31 @@ public final class MenuContainerSmoke {
               check(findScroll(tallSurface) != null, "tall menu scrolls (persistent scrollbar)");
           tallMenu.close(MenuDismissCause.PROGRAMMATIC);
 
+          // F4: opening a second menu synchronously dismisses the first — never two at once.
+          final ElwhaMenu menuA =
+              ElwhaMenu.builder().addItem(item("A1")).addItem(item("A2")).build();
+          final ElwhaMenu menuB =
+              ElwhaMenu.builder().addItem(item("B1")).addItem(item("B2")).build();
+          menuA.open(trigger);
+          menuB.open(trigger);
+          fail[0] += check(countMenus(lp) == 1, "opening a 2nd menu leaves exactly 1 mounted (F4)");
+          menuB.close(MenuDismissCause.PROGRAMMATIC);
+
           frame.dispose();
         });
     return fail[0];
+  }
+
+  private static int countMenus(final JLayeredPane lp) {
+    int n = 0;
+    for (final Component c : lp.getComponents()) {
+      if (c instanceof javax.swing.JComponent jc
+          && jc.getAccessibleContext() != null
+          && "Menu".equals(jc.getAccessibleContext().getAccessibleName())) {
+        n++;
+      }
+    }
+    return n;
   }
 
   private static Component topSurface(final JLayeredPane lp) {

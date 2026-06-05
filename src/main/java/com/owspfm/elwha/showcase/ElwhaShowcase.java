@@ -75,6 +75,8 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Rectangle;
@@ -3367,22 +3369,21 @@ public final class ElwhaShowcase {
   }
 
   // A Workbench of live trigger buttons that open a menu configured by the surrounding controls
-  // (layout + separator). Dogfoods Elwha controls — the triggers are an ElwhaIconButton overflow
-  // and an ElwhaButton, both SELECTABLE so they show the pressed-while-open affordance.
+  // (layout + separator). Triggers sit at the four corners + center so the anchored placement is
+  // demonstrable — a bottom trigger flips the menu up, a right trigger shifts it left, etc.
+  // Dogfoods Elwha controls — the center overflow is a SELECTABLE ElwhaIconButton (pressed while
+  // open), corner triggers are SELECTABLE ElwhaButtons.
   private static JComponent buildMenuWorkbench() {
     final JComboBox<Layout> layout = new JComboBox<>(Layout.values());
     final JComboBox<Separator> separator = new JComboBox<>(Separator.values());
     final JLabel status =
-        new JLabel("Open a menu — it anchors to the trigger and light-dismisses.");
+        new JLabel(
+            "Open a menu from any trigger — note how edge triggers flip / shift to stay in view.");
 
     final ElwhaIconButton overflow =
         new ElwhaIconButton(MaterialIcons.moreVert(IconButtonSize.M.iconPx()))
             .setInteractionMode(IconButtonInteractionMode.SELECTABLE);
-    final ElwhaButton actions =
-        ElwhaButton.outlinedButton("Actions").setInteractionMode(ButtonInteractionMode.SELECTABLE);
-
     overflow.addActionListener(e -> buildWorkbenchMenu(layout, separator, status).open(overflow));
-    actions.addActionListener(e -> buildWorkbenchMenu(layout, separator, status).open(actions));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
     controls.add(new JLabel("Layout:"));
@@ -3391,10 +3392,23 @@ public final class ElwhaShowcase {
     controls.add(separator);
     controls.add(new JLabel("Color: Standard (Vibrant → S5)"));
 
-    final JPanel triggers = new JPanel(new FlowLayout(FlowLayout.CENTER, 24, 24));
-    triggers.setBorder(BorderFactory.createEmptyBorder(48, 24, 16, 24));
-    triggers.add(overflow);
-    triggers.add(actions);
+    final JPanel triggers = new JPanel(new GridBagLayout());
+    triggers.setBorder(BorderFactory.createEmptyBorder(16, 24, 16, 24));
+    addMenuTrigger(
+        triggers, "Top-left", 0, 0, GridBagConstraints.NORTHWEST, layout, separator, status);
+    addMenuTrigger(
+        triggers, "Top-right", 2, 0, GridBagConstraints.NORTHEAST, layout, separator, status);
+    final GridBagConstraints center = new GridBagConstraints();
+    center.gridx = 1;
+    center.gridy = 1;
+    center.weightx = 1;
+    center.weighty = 1;
+    center.anchor = GridBagConstraints.CENTER;
+    triggers.add(overflow, center);
+    addMenuTrigger(
+        triggers, "Bottom-left", 0, 2, GridBagConstraints.SOUTHWEST, layout, separator, status);
+    addMenuTrigger(
+        triggers, "Bottom-right", 2, 2, GridBagConstraints.SOUTHEAST, layout, separator, status);
 
     final JPanel south = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
     south.add(status);
@@ -3404,6 +3418,27 @@ public final class ElwhaShowcase {
     panel.add(triggers, BorderLayout.CENTER);
     panel.add(south, BorderLayout.SOUTH);
     return panel;
+  }
+
+  private static void addMenuTrigger(
+      final JPanel host,
+      final String label,
+      final int gx,
+      final int gy,
+      final int anchor,
+      final JComboBox<Layout> layout,
+      final JComboBox<Separator> separator,
+      final JLabel status) {
+    final ElwhaButton trigger =
+        ElwhaButton.outlinedButton(label).setInteractionMode(ButtonInteractionMode.SELECTABLE);
+    trigger.addActionListener(e -> buildWorkbenchMenu(layout, separator, status).open(trigger));
+    final GridBagConstraints gc = new GridBagConstraints();
+    gc.gridx = gx;
+    gc.gridy = gy;
+    gc.weightx = 1;
+    gc.weighty = 1;
+    gc.anchor = anchor;
+    host.add(trigger, gc);
   }
 
   private static ElwhaMenu buildWorkbenchMenu(

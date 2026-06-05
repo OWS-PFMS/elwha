@@ -93,12 +93,17 @@ public final class MenuKeyboardSmoke {
 
     menu.open(trigger);
 
-    fail[0] += check(checks, menu.focusedIndex() == 0, "initial focus on first item");
-    fail[0] += check(checks, items.get(0).isFocused(), "first item paints focused");
+    fail[0] += check(checks, menu.focusedIndex() == 0, "initial roving index on first item");
+    fail[0] +=
+        check(checks, !items.get(0).isFocused(), "no focus ring on pointer/programmatic open (F2)");
     fail[0] += check(checks, trigger.isSelected(), "trigger shows selected while open");
 
     menu.moveFocus(1);
-    fail[0] += check(checks, menu.focusedIndex() == 1 && items.get(1).isFocused(), "Down → item 1");
+    fail[0] +=
+        check(
+            checks,
+            menu.focusedIndex() == 1 && items.get(1).isFocused(),
+            "Down → item 1 (ring armed by keyboard)");
     menu.moveFocus(-1);
     fail[0] += check(checks, menu.focusedIndex() == 0, "Up → item 0");
     menu.moveFocus(-1);

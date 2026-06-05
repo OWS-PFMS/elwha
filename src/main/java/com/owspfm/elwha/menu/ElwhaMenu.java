@@ -81,8 +81,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   /** Padding inside the container around the item column (single-slab modes). */
   static final int CONTENT_PAD_PX = 4;
 
-  /** Transparent gap between groups in {@link Separator#GAP} mode. */
-  static final int GROUP_GAP_PX = 6;
+  /** Transparent gap between groups in {@link Separator#GAP} mode (research §I, 2 dp token). */
+  static final int GROUP_GAP_PX = 3;
 
   /** Min / max container content width in dp. */
   static final int MIN_WIDTH_PX = 160;
@@ -106,6 +106,9 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   private List<ElwhaMenuItem> itemOrder;
   private MenuSurface menuSurface;
   private int focusedIndex = -1;
+  // The roving focus ring is keyboard-visible (M3 focus-visible): the index tracks always, but the
+  // ring paints only after keyboard navigation, not on a pointer-opened menu.
+  private boolean keyboardFocusVisible;
   private boolean scrollable;
 
   // The trigger and its prior selected state, so the menu can show it active while open and restore
@@ -148,6 +151,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
    */
   public void open(final Component anchor) {
     this.trigger = anchor;
+    trackAsOpenMenu();
     setTriggerActive(true);
     show(anchor);
   }
@@ -229,6 +233,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
     this.itemOrder = flatten();
     this.focusedIndex = itemOrder.isEmpty() ? -1 : 0;
+    this.keyboardFocusVisible = false;
     pushFocusedState();
     return menuSurface;
   }
@@ -408,6 +413,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     if (itemOrder == null || itemOrder.isEmpty()) {
       return;
     }
+    // Reached only from keyboard navigation (Up/Down/Home/End/type-ahead) — arm the focus ring.
+    this.keyboardFocusVisible = true;
     this.focusedIndex = Math.max(0, Math.min(index, itemOrder.size() - 1));
     pushFocusedState();
   }
@@ -417,7 +424,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       return;
     }
     for (int i = 0; i < itemOrder.size(); i++) {
-      itemOrder.get(i).setFocused(i == focusedIndex);
+      itemOrder.get(i).setFocused(keyboardFocusVisible && i == focusedIndex);
     }
     if (focusedIndex >= 0 && focusedIndex < itemOrder.size()) {
       final ElwhaMenuItem item = itemOrder.get(focusedIndex);
