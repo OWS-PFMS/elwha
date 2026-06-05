@@ -1,0 +1,476 @@
+package com.owspfm.elwha.menu;
+
+import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.ShadowPainter;
+import com.owspfm.elwha.theme.ShapeScale;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.geom.RoundRectangle2D;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JComponent;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingUtilities;
+
+/**
+ * The M3 Expressive <strong>vertical menu</strong> — a temporary, light-dismissed surface anchored
+ * to a trigger that lists {@link ElwhaMenuItem} primitives. Built on the shared overlay host (epic
+ * #298 S1): mounts at {@link javax.swing.JLayeredPane#POPUP_LAYER} above dialogs, dismisses on
+ * outside-press / focus-loss / Escape, and restores focus to the trigger on an intentional close.
+ *
+ * <p><strong>Usage.</strong>
+ *
+ * <pre>{@code
+ * ElwhaMenu menu = ElwhaMenu.builder()
+ *     .addItem(ElwhaMenuItem.of(MaterialIcons.edit(20), "Edit"))
+ *     .addItem(ElwhaMenuItem.of(MaterialIcons.delete(20), "Delete"))
+ *     .onClose(cause -> ...)
+ *     .build();
+ * trigger.addActionListener(e -> menu.open(trigger));
+ * }</pre>
+ *
+ * <p><strong>Configuration</strong> (Phase 1): {@link ColorStyle#STANDARD} color; {@link
+ * Layout#STANDARD} (flat) or {@link Layout#GROUPED} with {@link Separator#GAP} (expressive rounded
+ * cards) or {@link Separator#DIVIDER} (subtle line). A menu taller than the window scrolls with a
+ * persistent scrollbar and is forced to {@code DIVIDER} (M3 forbids gaps in a scrollable menu).
+ * Container is {@code SURFACE_CONTAINER_LOW} at Level&nbsp;3 elevation, {@link ShapeScale#MD}
+ * corners.
+ *
+ * <p>Selection ({@code SelectionMode}) and the {@code VIBRANT} color style are later phases; Phase 1
+ * menus are action menus that close on item activation.
+ *
+ * @author Charles Bryan (cfb3@uw.edu)
+ * @version v0.4.0
+ * @since v0.4.0
+ */
+public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
+
+  /** M3 menu container elevation — Level 3 (research §I). */
+  static final int ELEVATION = 3;
+
+  /** Container corner radius in dp (research §I shape). */
+  static final int CONTAINER_ARC_PX = ShapeScale.MD.px();
+
+  /** Padding inside the container around the item column (single-slab modes). */
+  static final int CONTENT_PAD_PX = 4;
+
+  /** Transparent gap between groups in {@link Separator#GAP} mode. */
+  static final int GROUP_GAP_PX = 6;
+
+  /** Min / max container content width in dp. */
+  static final int MIN_WIDTH_PX = 160;
+
+  static final int MAX_WIDTH_PX = 320;
+
+  /** Margin reserved from the window edges when deciding whether the menu must scroll. */
+  static final int VIEWPORT_MARGIN_PX = 16;
+
+  private static final int DIVIDER_THICKNESS_PX = 1;
+  private static final int DIVIDER_INSET_X_PX = 0;
+  private static final int SCROLLBAR_WIDTH_PX = 14;
+
+  private final List<List<ElwhaMenuItem>> groups;
+  private final Layout layout;
+  private final ColorStyle colorStyle;
+  private Separator separator;
+
+  // Live state — non-null while shown.
+  private List<JComponent> groupPanels;
+  private boolean scrollable;
+
+  private ElwhaMenu(final Builder b) {
+    super(b.onClose);
+    this.groups = b.groups;
+    this.layout = b.layout;
+    this.separator = b.separator;
+    this.colorStyle = b.colorStyle;
+    for (final List<ElwhaMenuItem> group : groups) {
+      for (final ElwhaMenuItem item : group) {
+        item.setColorStyle(colorStyle);
+        item.addActionListener(e -> close(MenuDismissCause.SELECTION));
+      }
+    }
+  }
+
+  /**
+   * Starts a new fluent builder.
+   *
+   * @return a fresh {@link Builder}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  /**
+   * Opens the menu anchored to {@code anchor} (typically the trigger that fired it). Equivalent to
+   * the host {@code show(anchor)}; the M3-named entry point. Returns immediately.
+   *
+   * @param anchor the trigger component to anchor and restore focus to
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void open(final Component anchor) {
+    show(anchor);
+  }
+
+  /**
+   * The menu's items in display order, flattened across groups.
+   *
+   * @return an unmodifiable view of every item
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public List<ElwhaMenuItem> getItems() {
+    final List<ElwhaMenuItem> flat = new ArrayList<>();
+    for (final List<ElwhaMenuItem> group : groups) {
+      flat.addAll(group);
+    }
+    return List.copyOf(flat);
+  }
+
+  // ---------------------------------------------------------- surface
+
+  @Override
+  protected JComponent createSurface() {
+    final int contentWidth = resolveContentWidth();
+    final int columnHeight = totalColumnHeight(contentWidth);
+
+    final int available =
+        (layeredPane != null ? layeredPane.getHeight() : Integer.MAX_VALUE)
+            - 2 * VIEWPORT_MARGIN_PX;
+    final Insets shadow = ShadowPainter.shadowInsets(ELEVATION);
+    final int chromeV = 2 * (shadow.top + CONTENT_PAD_PX);
+    this.scrollable = columnHeight + chromeV > available;
+    if (scrollable && separator == Separator.GAP) {
+      // M3: gaps are unsupported in a scrollable menu — force the subtle divider.
+      this.separator = Separator.DIVIDER;
+    }
+
+    this.groupPanels = new ArrayList<>();
+    final JComponent column = buildColumn(contentWidth);
+
+    final JComponent content;
+    if (scrollable) {
+      final JScrollPane scroll =
+          new JScrollPane(
+              column,
+              ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
+              ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+      scroll.setOpaque(false);
+      scroll.getViewport().setOpaque(false);
+      scroll.setBorder(BorderFactory.createEmptyBorder());
+      scroll.getVerticalScrollBar().setUnitIncrement(16);
+      final int bodyH = Math.max(ElwhaMenuItem.MIN_TARGET_PX, available - chromeV);
+      scroll.setPreferredSize(new Dimension(contentWidth + SCROLLBAR_WIDTH_PX, bodyH));
+      content = scroll;
+    } else {
+      content = column;
+    }
+
+    final boolean gapCards = layout == Layout.GROUPED && separator == Separator.GAP && !scrollable;
+    return new MenuSurface(content, gapCards);
+  }
+
+  @Override
+  protected void clearTransientState() {
+    groupPanels = null;
+  }
+
+  private int resolveContentWidth() {
+    int max = 0;
+    for (final List<ElwhaMenuItem> group : groups) {
+      for (final ElwhaMenuItem item : group) {
+        max = Math.max(max, item.getPreferredSize().width);
+      }
+    }
+    return Math.max(MIN_WIDTH_PX, Math.min(MAX_WIDTH_PX, max));
+  }
+
+  private int totalColumnHeight(final int contentWidth) {
+    int h = 0;
+    boolean first = true;
+    for (final List<ElwhaMenuItem> group : groups) {
+      if (!first) {
+        h += layout == Layout.GROUPED ? separatorGapHeight() : 0;
+      }
+      first = false;
+      for (final ElwhaMenuItem item : group) {
+        h += item.getPreferredSize().height;
+      }
+    }
+    return h;
+  }
+
+  private int separatorGapHeight() {
+    return separator == Separator.GAP ? GROUP_GAP_PX : DIVIDER_THICKNESS_PX + 2 * CONTENT_PAD_PX;
+  }
+
+  // Builds the vertical item column from group panels, inserting gap/divider separators between
+  // groups (GROUPED). STANDARD collapses to a single flat group.
+  private JComponent buildColumn(final int contentWidth) {
+    final JPanel column = new JPanel();
+    column.setOpaque(false);
+    column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+
+    final List<List<ElwhaMenuItem>> effective =
+        layout == Layout.STANDARD ? List.of(flatten()) : groups;
+
+    boolean first = true;
+    for (final List<ElwhaMenuItem> group : effective) {
+      if (!first && layout == Layout.GROUPED) {
+        column.add(separatorComponent(contentWidth));
+      }
+      first = false;
+      final JPanel groupPanel = new JPanel();
+      groupPanel.setOpaque(false);
+      groupPanel.setLayout(new BoxLayout(groupPanel, BoxLayout.Y_AXIS));
+      groupPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+      for (final ElwhaMenuItem item : group) {
+        item.setAlignmentX(Component.LEFT_ALIGNMENT);
+        groupPanel.add(item);
+      }
+      groupPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+      column.add(groupPanel);
+      groupPanels.add(groupPanel);
+    }
+    column.setPreferredSize(new Dimension(contentWidth, totalColumnHeight(contentWidth)));
+    column.setMaximumSize(new Dimension(contentWidth, Integer.MAX_VALUE));
+    return column;
+  }
+
+  private List<ElwhaMenuItem> flatten() {
+    final List<ElwhaMenuItem> flat = new ArrayList<>();
+    for (final List<ElwhaMenuItem> group : groups) {
+      flat.addAll(group);
+    }
+    return flat;
+  }
+
+  private Component separatorComponent(final int contentWidth) {
+    if (separator == Separator.GAP) {
+      return Box.createVerticalStrut(GROUP_GAP_PX);
+    }
+    final JPanel wrap = new JPanel();
+    wrap.setOpaque(false);
+    wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
+    wrap.add(Box.createVerticalStrut(CONTENT_PAD_PX));
+    final JComponent line =
+        new JComponent() {
+          @Override
+          protected void paintComponent(final Graphics g) {
+            g.setColor(ColorRole.OUTLINE_VARIANT.resolve());
+            g.fillRect(DIVIDER_INSET_X_PX, 0, getWidth() - 2 * DIVIDER_INSET_X_PX, getHeight());
+          }
+        };
+    line.setPreferredSize(new Dimension(contentWidth, DIVIDER_THICKNESS_PX));
+    line.setMaximumSize(new Dimension(Integer.MAX_VALUE, DIVIDER_THICKNESS_PX));
+    line.setAlignmentX(Component.LEFT_ALIGNMENT);
+    wrap.add(line);
+    wrap.add(Box.createVerticalStrut(CONTENT_PAD_PX));
+    wrap.setAlignmentX(Component.LEFT_ALIGNMENT);
+    wrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, separatorGapHeight()));
+    return wrap;
+  }
+
+  @Override
+  protected String accessibleName() {
+    return "Menu";
+  }
+
+  // The painted menu surface: drop shadow + SURFACE_CONTAINER_LOW container (one slab, or per-group
+  // rounded cards in GAP mode), with the item column inset by the shadow reserve + content padding.
+  private final class MenuSurface extends JPanel {
+
+    private final boolean gapCards;
+
+    MenuSurface(final JComponent content, final boolean gapCards) {
+      super(new java.awt.BorderLayout());
+      this.gapCards = gapCards;
+      setOpaque(false);
+      final Insets shadow = ShadowPainter.shadowInsets(ELEVATION);
+      final int pad = gapCards ? 0 : CONTENT_PAD_PX;
+      setBorder(
+          BorderFactory.createEmptyBorder(
+              shadow.top + pad, shadow.left + pad, shadow.bottom + pad, shadow.right + pad));
+      add(content, java.awt.BorderLayout.CENTER);
+      getAccessibleContext().setAccessibleName("Menu");
+    }
+
+    @Override
+    protected void paintComponent(final Graphics g) {
+      final Graphics2D g2 = (Graphics2D) g.create();
+      try {
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        final Insets shadow = ShadowPainter.shadowInsets(ELEVATION);
+        final int bx = shadow.left;
+        final int by = shadow.top;
+        final int bw = getWidth() - shadow.left - shadow.right;
+        final int bh = getHeight() - shadow.top - shadow.bottom;
+
+        final Graphics2D sg = (Graphics2D) g2.create();
+        sg.translate(bx, by);
+        ShadowPainter.paint(sg, bw, bh, CONTAINER_ARC_PX * 2, ELEVATION);
+        sg.dispose();
+
+        g2.setColor(ColorRole.SURFACE_CONTAINER_LOW.resolve());
+        if (gapCards) {
+          paintGroupCards(g2, bx, bw);
+        } else {
+          g2.fill(
+              new RoundRectangle2D.Float(
+                  bx, by, bw, bh, CONTAINER_ARC_PX * 2f, CONTAINER_ARC_PX * 2f));
+        }
+      } finally {
+        g2.dispose();
+      }
+    }
+
+    private void paintGroupCards(final Graphics2D g2, final int bx, final int bw) {
+      if (groupPanels == null) {
+        return;
+      }
+      for (final JComponent gp : groupPanels) {
+        if (gp.getParent() == null) {
+          continue;
+        }
+        final Rectangle r = SwingUtilities.convertRectangle(gp.getParent(), gp.getBounds(), this);
+        g2.fill(
+            new RoundRectangle2D.Float(
+                bx, r.y, bw, r.height, CONTAINER_ARC_PX * 2f, CONTAINER_ARC_PX * 2f));
+      }
+    }
+  }
+
+  // ------------------------------------------------------------ builder
+
+  /**
+   * Fluent builder for {@link ElwhaMenu}. Add items with {@link #addItem(ElwhaMenuItem)}; start a
+   * new group ({@link Layout#GROUPED}) with {@link #addGroup()}.
+   *
+   * @author Charles Bryan (cfb3@uw.edu)
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static final class Builder {
+
+    private final List<List<ElwhaMenuItem>> groups = new ArrayList<>();
+    private Layout layout = Layout.STANDARD;
+    private Separator separator = Separator.GAP;
+    private ColorStyle colorStyle = ColorStyle.STANDARD;
+    private Consumer<MenuDismissCause> onClose;
+
+    private Builder() {
+      groups.add(new ArrayList<>());
+    }
+
+    /**
+     * Appends an item to the current group.
+     *
+     * @param item the item; required
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public Builder addItem(final ElwhaMenuItem item) {
+      groups.get(groups.size() - 1).add(Objects.requireNonNull(item, "item"));
+      return this;
+    }
+
+    /**
+     * Starts a new group. Only meaningful under {@link Layout#GROUPED}; setting it also switches the
+     * layout to {@code GROUPED}.
+     *
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public Builder addGroup() {
+      this.layout = Layout.GROUPED;
+      groups.add(new ArrayList<>());
+      return this;
+    }
+
+    /**
+     * Sets the layout (default {@link Layout#STANDARD}).
+     *
+     * @param layout the layout
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public Builder layout(final Layout layout) {
+      this.layout = Objects.requireNonNull(layout, "layout");
+      return this;
+    }
+
+    /**
+     * Sets the group separator style (default {@link Separator#GAP}); only applies under {@link
+     * Layout#GROUPED}.
+     *
+     * @param separator the separator style
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public Builder separator(final Separator separator) {
+      this.separator = Objects.requireNonNull(separator, "separator");
+      return this;
+    }
+
+    /**
+     * Sets the color style (Phase 1: {@link ColorStyle#STANDARD}).
+     *
+     * @param colorStyle the color style
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public Builder colorStyle(final ColorStyle colorStyle) {
+      this.colorStyle = Objects.requireNonNull(colorStyle, "colorStyle");
+      return this;
+    }
+
+    /**
+     * Sets the close hook, fired after teardown with the {@link MenuDismissCause}.
+     *
+     * @param onClose the close callback, or {@code null}
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public Builder onClose(final Consumer<MenuDismissCause> onClose) {
+      this.onClose = onClose;
+      return this;
+    }
+
+    /**
+     * Builds the menu.
+     *
+     * @return a new {@link ElwhaMenu}
+     * @throws IllegalStateException if no items were added
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public ElwhaMenu build() {
+      groups.removeIf(List::isEmpty);
+      if (groups.isEmpty()) {
+        throw new IllegalStateException("menu has no items");
+      }
+      return new ElwhaMenu(this);
+    }
+  }
+}
