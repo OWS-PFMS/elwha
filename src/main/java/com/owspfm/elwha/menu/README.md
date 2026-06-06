@@ -93,11 +93,18 @@ Initial focus is the first item; focus restores to the trigger on an intentional
 (Esc / selection / programmatic) but **not** on a focus-loss / outside-press close. Disabled items
 can be focused but not activated.
 
-## Color (`ColorStyle.STANDARD`)
+## Color (`ColorStyle`)
 
-Container `SURFACE_CONTAINER_LOW`, Level-3 shadow, `ShapeScale.MD` corners. Label `ON_SURFACE`;
-leading icon / supporting / trailing `ON_SURFACE_VARIANT`; selected `TERTIARY_CONTAINER` /
-`ON_TERTIARY_CONTAINER`. Light and dark use the same roles, so dark mode is free via `ElwhaTheme`.
+Two schemes, both with a Level-3 shadow and `ShapeScale.MD` corners; light and dark use the same
+roles, so dark mode is free via `ElwhaTheme`.
+
+- **`STANDARD`** (default, surface-based, lower emphasis): container `SURFACE_CONTAINER_LOW`; label
+  `ON_SURFACE`; leading icon / supporting / trailing `ON_SURFACE_VARIANT`; selected
+  `TERTIARY_CONTAINER` / `ON_TERTIARY_CONTAINER`.
+- **`VIBRANT`** (tertiary-tinted, higher emphasis — *use sparingly*): the whole surface tints
+  `TERTIARY_CONTAINER` with `ON_TERTIARY_CONTAINER` content (label / icons / trailing / supporting /
+  state layer); the selected item jumps to the bold `TERTIARY` fill with `ON_TERTIARY` content
+  (including the ✓ checkmark), so selection stands out from container-tone to full-tone.
 
 ## Trigger
 
@@ -122,12 +129,13 @@ family, #325) in light-dismiss + anchored mode. The menu has no scrim; it tops d
 | Leading icon / label / supporting text / trailing text / trailing icon / badge / slot | `ElwhaMenuItem` slots |
 | Standard / Grouped | `Layout.STANDARD` / `Layout.GROUPED` |
 | Gap / Divider | `Separator.GAP` / `Separator.DIVIDER` |
-| Standard color | `ColorStyle.STANDARD` |
+| Standard / Vibrant color | `ColorStyle.STANDARD` / `ColorStyle.VIBRANT` |
 
 ## Showcase
 
 The Elwha Showcase → Components → **Menu** leaf: a Workbench of live triggers configured by
-Layout / Separator controls, and a Gallery of static `renderPreview()` snapshots.
+Layout / Separator / Color controls, and a Gallery of static `renderPreview()` snapshots (Standard
+and Vibrant).
 ```bash
 mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"
 ```

@@ -3,6 +3,7 @@ package com.owspfm.elwha.menu;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -46,15 +47,16 @@ import javax.swing.SwingUtilities;
  * trigger.addActionListener(e -> menu.open(trigger));
  * }</pre>
  *
- * <p><strong>Configuration</strong> (Phase 1): {@link ColorStyle#STANDARD} color; {@link
- * Layout#STANDARD} (flat) or {@link Layout#GROUPED} with {@link Separator#GAP} (expressive rounded
- * cards) or {@link Separator#DIVIDER} (subtle line). A menu taller than the window scrolls with a
- * persistent scrollbar and is forced to {@code DIVIDER} (M3 forbids gaps in a scrollable menu).
- * Container is {@code SURFACE_CONTAINER_LOW} at Level&nbsp;3 elevation, {@link ShapeScale#MD}
- * corners.
+ * <p><strong>Configuration:</strong> {@link ColorStyle#STANDARD} (surface) or {@link
+ * ColorStyle#VIBRANT} (tertiary-tinted) color; {@link Layout#STANDARD} (flat) or {@link
+ * Layout#GROUPED} with {@link Separator#GAP} (expressive rounded cards) or {@link
+ * Separator#DIVIDER} (subtle line). A menu taller than the window scrolls with a persistent
+ * scrollbar and is forced to {@code DIVIDER} (M3 forbids gaps in a scrollable menu). The container
+ * tints {@code SURFACE_CONTAINER_LOW} (Standard) or {@code TERTIARY_CONTAINER} (Vibrant) at
+ * Level&nbsp;3 elevation, {@link ShapeScale#MD} corners.
  *
- * <p>Selection ({@code SelectionMode}) and the {@code VIBRANT} color style are later phases; Phase
- * 1 menus are action menus that close on item activation.
+ * <p>Selection ({@code SelectionMode}) is a later phase; today's menus are action menus that close
+ * on item activation.
  *
  * <p><strong>Trigger.</strong> The menu never mutates its trigger — it opens and closes without
  * touching the trigger's state, so the trigger is "unchanged after select" by construction. M3's
@@ -447,8 +449,17 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
   }
 
-  // The painted menu surface: drop shadow + SURFACE_CONTAINER_LOW container (one slab, or per-group
-  // rounded cards in GAP mode), with the item column inset by the shadow reserve + content padding.
+  // Container tint by color style: Standard = SURFACE_CONTAINER_LOW, Vibrant = TERTIARY_CONTAINER
+  // (research §K row 4). Items resolve their own content/selected roles off the same style.
+  private Color containerColor() {
+    return (colorStyle == ColorStyle.VIBRANT
+            ? ColorRole.TERTIARY_CONTAINER
+            : ColorRole.SURFACE_CONTAINER_LOW)
+        .resolve();
+  }
+
+  // The painted menu surface: drop shadow + tinted container (one slab, or per-group rounded cards
+  // in GAP mode), with the item column inset by the shadow reserve + content padding.
   private final class MenuSurface extends JPanel {
 
     private final boolean gapCards;
@@ -503,7 +514,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
           sg.translate(bx, by);
           ShadowPainter.paint(sg, bw, bh, CONTAINER_ARC_PX * 2, ELEVATION);
           sg.dispose();
-          g2.setColor(ColorRole.SURFACE_CONTAINER_LOW.resolve());
+          g2.setColor(containerColor());
           g2.fill(
               new RoundRectangle2D.Float(
                   bx, by, bw, bh, CONTAINER_ARC_PX * 2f, CONTAINER_ARC_PX * 2f));
@@ -530,7 +541,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
         sg.dispose();
       }
       // Pass 2: every card's fill.
-      g2.setColor(ColorRole.SURFACE_CONTAINER_LOW.resolve());
+      g2.setColor(containerColor());
       for (final JComponent gp : groupPanels) {
         if (gp.getParent() == null) {
           continue;
@@ -620,7 +631,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
 
     /**
-     * Sets the color style (Phase 1: {@link ColorStyle#STANDARD}).
+     * Sets the color style — {@link ColorStyle#STANDARD} (default, surface) or {@link
+     * ColorStyle#VIBRANT} (tertiary-tinted, higher emphasis).
      *
      * @param colorStyle the color style
      * @return this builder

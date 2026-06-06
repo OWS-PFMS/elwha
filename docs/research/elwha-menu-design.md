@@ -135,3 +135,21 @@ The §2 `RECOMMENDED` extraction was prototyped and **adopted** — no fallback 
   visual `MenuHostSpikeDemo` (below/flip/shift triggers + open-over-a-live-`ElwhaDialog`).
 - **Carried to S3:** `placeAnchored` is the placement seam S3 refines (left/right flip is still
   TODO — S1 ships vertical flip + horizontal shift, sufficient for the "minimal flip" acceptance).
+
+## §15. S5 outcome (2026-06-06, #355) — Vibrant ships per §5/§K, no deviation
+
+- **`ColorStyle.VIBRANT`** added (the Phase-1-deferred constant; a source/binary-compatible enum
+  add). The container and item color logic became `(colorStyle, selected)`-aware off the **research
+  §K** role tables — no role substitutions, no new tokens. Standard is byte-for-byte unchanged.
+- **Container** (`ElwhaMenu.containerColor()`): Standard `SURFACE_CONTAINER_LOW` / Vibrant
+  `TERTIARY_CONTAINER`, applied to both the slab and the per-group GAP cards.
+- **Item** (`ElwhaMenuItem`): Vibrant non-selected content/icons/trailing/supporting/state-layer →
+  `ON_TERTIARY_CONTAINER`; selected fill → bold `TERTIARY` with `ON_TERTIARY` content (incl. the ✓
+  checkmark, themed live through the existing `iconColor()` color filter). The focus ring stays
+  `SECONDARY` in both styles (a focus-visible affordance, outside the §K anatomy table).
+- **Proven** by `MenuVibrantSmoke` (10 headless checks — a render-and-count role matrix asserting
+  Standard fills `SURFACE_CONTAINER_LOW` and never the bold `TERTIARY`, Vibrant fills
+  `TERTIARY_CONTAINER` + the bold `TERTIARY` selection and never `SURFACE_CONTAINER_LOW`, light +
+  dark) and the visual `ElwhaMenuVibrantDemo` (Standard vs Vibrant columns, live + preview, one
+  selected item). Showcase Menu leaf gains a Color control + a Vibrant gallery section.
+- **Phase 3 — S6 `SelectionMode` SINGLE/MULTI** (§6/§U) files when this lands.

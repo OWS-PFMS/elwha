@@ -46,6 +46,7 @@ import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.menu.ColorStyle;
 import com.owspfm.elwha.menu.ElwhaMenu;
 import com.owspfm.elwha.menu.ElwhaMenuItem;
 import com.owspfm.elwha.menu.Layout;
@@ -3372,7 +3373,12 @@ public final class ElwhaShowcase {
   private static JComponent buildMenuComponent() {
     final JTabbedPane tabs = new JTabbedPane();
     tabs.addTab("Workbench", buildMenuWorkbench());
-    tabs.addTab("Gallery", scroll(gallerySection("Standard", buildMenuGallery())));
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("Standard", buildMenuGallery(ColorStyle.STANDARD)),
+                gallerySection("Vibrant", buildMenuGallery(ColorStyle.VIBRANT)))));
     return tabs;
   }
 
@@ -3384,27 +3390,46 @@ public final class ElwhaShowcase {
   private static JComponent buildMenuWorkbench() {
     final JComboBox<Layout> layout = new JComboBox<>(Layout.values());
     final JComboBox<Separator> separator = new JComboBox<>(Separator.values());
+    final JComboBox<ColorStyle> colorStyle = new JComboBox<>(ColorStyle.values());
     final JLabel status =
         new JLabel(
             "Open a menu from any trigger — note how edge triggers flip / shift to stay in view.");
 
     final ElwhaIconButton overflow =
         new ElwhaIconButton(MaterialIcons.moreVert(IconButtonSize.M.iconPx()));
-    overflow.addActionListener(e -> buildWorkbenchMenu(layout, separator, status).open(overflow));
+    overflow.addActionListener(
+        e -> buildWorkbenchMenu(layout, separator, colorStyle, status).open(overflow));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
     controls.add(new JLabel("Layout:"));
     controls.add(layout);
     controls.add(new JLabel("Separator:"));
     controls.add(separator);
-    controls.add(new JLabel("Color: Standard (Vibrant → S5)"));
+    controls.add(new JLabel("Color:"));
+    controls.add(colorStyle);
 
     final JPanel triggers = new JPanel(new GridBagLayout());
     triggers.setBorder(BorderFactory.createEmptyBorder(16, 24, 16, 24));
     addMenuTrigger(
-        triggers, "Top-left", 0, 0, GridBagConstraints.NORTHWEST, layout, separator, status);
+        triggers,
+        "Top-left",
+        0,
+        0,
+        GridBagConstraints.NORTHWEST,
+        layout,
+        separator,
+        colorStyle,
+        status);
     addMenuTrigger(
-        triggers, "Top-right", 2, 0, GridBagConstraints.NORTHEAST, layout, separator, status);
+        triggers,
+        "Top-right",
+        2,
+        0,
+        GridBagConstraints.NORTHEAST,
+        layout,
+        separator,
+        colorStyle,
+        status);
     final GridBagConstraints center = new GridBagConstraints();
     center.gridx = 1;
     center.gridy = 1;
@@ -3413,9 +3438,25 @@ public final class ElwhaShowcase {
     center.anchor = GridBagConstraints.CENTER;
     triggers.add(overflow, center);
     addMenuTrigger(
-        triggers, "Bottom-left", 0, 2, GridBagConstraints.SOUTHWEST, layout, separator, status);
+        triggers,
+        "Bottom-left",
+        0,
+        2,
+        GridBagConstraints.SOUTHWEST,
+        layout,
+        separator,
+        colorStyle,
+        status);
     addMenuTrigger(
-        triggers, "Bottom-right", 2, 2, GridBagConstraints.SOUTHEAST, layout, separator, status);
+        triggers,
+        "Bottom-right",
+        2,
+        2,
+        GridBagConstraints.SOUTHEAST,
+        layout,
+        separator,
+        colorStyle,
+        status);
 
     final JPanel south = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
     south.add(status);
@@ -3435,9 +3476,11 @@ public final class ElwhaShowcase {
       final int anchor,
       final JComboBox<Layout> layout,
       final JComboBox<Separator> separator,
+      final JComboBox<ColorStyle> colorStyle,
       final JLabel status) {
     final ElwhaButton trigger = ElwhaButton.outlinedButton(label);
-    trigger.addActionListener(e -> buildWorkbenchMenu(layout, separator, status).open(trigger));
+    trigger.addActionListener(
+        e -> buildWorkbenchMenu(layout, separator, colorStyle, status).open(trigger));
     final GridBagConstraints gc = new GridBagConstraints();
     gc.gridx = gx;
     gc.gridy = gy;
@@ -3448,10 +3491,14 @@ public final class ElwhaShowcase {
   }
 
   private static ElwhaMenu buildWorkbenchMenu(
-      final JComboBox<Layout> layout, final JComboBox<Separator> separator, final JLabel status) {
+      final JComboBox<Layout> layout,
+      final JComboBox<Separator> separator,
+      final JComboBox<ColorStyle> colorStyle,
+      final JLabel status) {
     final ElwhaMenu.Builder b = ElwhaMenu.builder();
     b.layout((Layout) layout.getSelectedItem());
     b.separator((Separator) separator.getSelectedItem());
+    b.colorStyle((ColorStyle) colorStyle.getSelectedItem());
     final ElwhaMenuItem rename = ElwhaMenuItem.of(MaterialIcons.edit(20), "Rename");
     rename.addActionListener(e -> status.setText("Activated: Rename"));
     final ElwhaMenuItem duplicate = ElwhaMenuItem.of(MaterialIcons.add(20), "Duplicate");
@@ -3470,28 +3517,32 @@ public final class ElwhaShowcase {
     return b.onClose(cause -> status.setText("Closed: " + cause)).build();
   }
 
-  // Static, non-modal menu snapshots via renderPreview() — flat and the two grouped treatments.
-  private static JComponent buildMenuGallery() {
+  // Static, non-modal menu snapshots via renderPreview() — flat and the two grouped treatments,
+  // rendered in the requested color style (Standard surface vs Vibrant tertiary-tinted).
+  private static JComponent buildMenuGallery(final ColorStyle colorStyle) {
     final JPanel column = new JPanel();
     column.setOpaque(false);
     column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
     column.setBorder(BorderFactory.createEmptyBorder(8, 20, 24, 20));
-    addPreview(column, sampleMenu(Layout.STANDARD, Separator.GAP).renderPreview());
-    addPreview(column, sampleMenu(Layout.GROUPED, Separator.GAP).renderPreview());
-    addPreview(column, sampleMenu(Layout.GROUPED, Separator.DIVIDER).renderPreview());
-    final JLabel vibrantStub = new JLabel("Vibrant color style — arrives with S5.");
-    vibrantStub.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
-    addPreview(column, vibrantStub);
+    addPreview(column, sampleMenu(Layout.STANDARD, Separator.GAP, colorStyle).renderPreview());
+    addPreview(column, sampleMenu(Layout.GROUPED, Separator.GAP, colorStyle).renderPreview());
+    addPreview(column, sampleMenu(Layout.GROUPED, Separator.DIVIDER, colorStyle).renderPreview());
     return column;
   }
 
-  private static ElwhaMenu sampleMenu(final Layout layout, final Separator separator) {
-    final ElwhaMenu.Builder b = ElwhaMenu.builder().layout(layout).separator(separator);
+  private static ElwhaMenu sampleMenu(
+      final Layout layout, final Separator separator, final ColorStyle colorStyle) {
+    final ElwhaMenu.Builder b =
+        ElwhaMenu.builder().layout(layout).separator(separator).colorStyle(colorStyle);
     b.addItem(ElwhaMenuItem.of(MaterialIcons.edit(20), "Rename"));
     final ElwhaMenuItem copy = ElwhaMenuItem.of(MaterialIcons.add(20), "Duplicate");
     copy.setTrailingText("⌘D");
     b.addItem(copy);
-    b.addItem(ElwhaMenuItem.of(MaterialIcons.star(20), "Favorite"));
+    // One selected item so the snapshot shows the selected fill — TERTIARY_CONTAINER (Standard) vs
+    // the bold TERTIARY jump (Vibrant) — with its ✓ checkmark in place of the leading icon.
+    final ElwhaMenuItem favorite = ElwhaMenuItem.of(MaterialIcons.star(20), "Favorite");
+    favorite.setSelected(true);
+    b.addItem(favorite);
     if (layout == Layout.GROUPED) {
       b.addGroup();
       b.addItem(ElwhaMenuItem.of(MaterialIcons.delete(20), "Delete"));
