@@ -73,8 +73,11 @@ import javax.swing.SwingUtilities;
  */
 public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
-  /** M3 menu container elevation — Level 3 (research §I). */
-  static final int ELEVATION = 3;
+  /**
+   * M3 menu container elevation. Research §I sanctions Level 2–3 ("swatch (Level 2–3)"); Level 2 is
+   * used so the drop shadow reads as a light lift rather than a heavy band under the surface.
+   */
+  static final int ELEVATION = 2;
 
   /** Container corner radius in dp (research §I shape). */
   static final int CONTAINER_ARC_PX = ShapeScale.MD.px();

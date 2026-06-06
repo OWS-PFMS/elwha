@@ -91,9 +91,13 @@ public final class MenuHostSpikeDemo {
       items.setBorder(
           BorderFactory.createEmptyBorder(
               pad.top + 8, pad.left + 8, pad.bottom + 8, pad.right + 8));
-      items.add(ElwhaButton.textButton("First action"));
-      items.add(ElwhaButton.textButton("Second action"));
-      items.add(ElwhaButton.textButton("Third action"));
+      // The placeholder buttons close the host on click, so the spike also demonstrates
+      // activation-dismiss (the real ElwhaMenu wires this on its ElwhaMenuItems).
+      for (final String label : new String[] {"First action", "Second action", "Third action"}) {
+        final ElwhaButton b = ElwhaButton.textButton(label);
+        b.addActionListener(e -> close(MenuDismissCause.SELECTION));
+        items.add(b);
+      }
       surfacePanel.add(items, BorderLayout.CENTER);
       surfacePanel.setPreferredSize(
           new Dimension(220 + pad.left + pad.right, 150 + pad.top + pad.bottom));
