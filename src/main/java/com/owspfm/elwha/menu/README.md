@@ -27,11 +27,12 @@ ElwhaMenu menu = ElwhaMenu.builder()
     .onClose(cause -> System.out.println("closed: " + cause))
     .build();
 
-// A SELECTABLE trigger shows pressed-while-open and is restored after.
-ElwhaIconButton overflow = new ElwhaIconButton(MaterialIcons.moreVert(24))
-    .setInteractionMode(IconButtonInteractionMode.SELECTABLE);
+ElwhaIconButton overflow = new ElwhaIconButton(MaterialIcons.moreVert(24));
 overflow.addActionListener(e -> menu.open(overflow));
 ```
+
+Opening a menu by clicking another trigger light-dismisses the current one on that same press, so
+only one menu is ever open — no bookkeeping needed.
 
 `open(anchor)` anchors the menu below the trigger, leading-aligned, and flips above / shifts
 horizontally to stay inside the host window. The menu mounts at `JLayeredPane.POPUP_LAYER` (300), so a
@@ -98,12 +99,13 @@ Container `SURFACE_CONTAINER_LOW`, Level-3 shadow, `ShapeScale.MD` corners. Labe
 leading icon / supporting / trailing `ON_SURFACE_VARIANT`; selected `TERTIARY_CONTAINER` /
 `ON_TERTIARY_CONTAINER`. Light and dark use the same roles, so dark mode is free via `ElwhaTheme`.
 
-## Trigger pressed-while-open
+## Trigger
 
-Per M3 the trigger shows a pressed state while its menu is open, restored after. Elwha delivers this
-for triggers that expose a selected state — a `SELECTABLE` `ElwhaButton` / `ElwhaIconButton` (the
-icon-button / split-button overflow case). A plain `CLICKABLE` push-button has no held-visual API in
-the lib today, so the menu leaves such a trigger visually unchanged (still "unchanged after select").
+The menu **never mutates its trigger** — it opens and closes without touching the trigger's state.
+M3's "trigger shows a pressed state while the menu is open" affordance is intentionally not faked via
+the trigger's `selected` state (that corrupts a `SELECTABLE` toggle button, which already flips its
+own selection on click). A faithful transient held-visual needs a dedicated button API the lib
+doesn't have yet — a known gap, deferred to a future enhancement.
 
 ## Host & z-band
 

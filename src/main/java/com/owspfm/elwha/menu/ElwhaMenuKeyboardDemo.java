@@ -1,6 +1,5 @@
 package com.owspfm.elwha.menu;
 
-import com.owspfm.elwha.button.ButtonInteractionMode;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
@@ -27,8 +26,8 @@ import javax.swing.SwingUtilities;
  *       trigger.
  * </ul>
  *
- * The {@code SELECTABLE} trigger shows its pressed-while-open state and is restored after. A status
- * line reports each activation and the dismiss cause.
+ * Opening another menu light-dismisses the current one. A status line reports each activation and
+ * the dismiss cause.
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.4.0
@@ -62,8 +61,7 @@ public final class ElwhaMenuKeyboardDemo {
     status.setForeground(ColorRole.ON_SURFACE.resolve());
     content.add(status, BorderLayout.NORTH);
 
-    final ElwhaButton trigger =
-        ElwhaButton.outlinedButton("Actions").setInteractionMode(ButtonInteractionMode.SELECTABLE);
+    final ElwhaButton trigger = ElwhaButton.outlinedButton("Actions");
     trigger.addActionListener(e -> buildMenu(status).open(trigger));
 
     final JPanel center = new JPanel();

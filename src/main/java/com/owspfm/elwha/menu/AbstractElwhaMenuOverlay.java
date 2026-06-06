@@ -42,10 +42,6 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
   /** Gap between the trigger's edge and the menu surface (M3 anchored offset). */
   static final int ANCHOR_GAP_PX = 4;
 
-  // At most one menu is open at a time (M3: menus are singular popovers). Opening a menu
-  // synchronously dismisses any other open one so the prior never lingers through its exit fade.
-  private static AbstractElwhaMenuOverlay openMenu;
-
   private final Consumer<MenuDismissCause> onClose;
   private MenuDismissCause lastCause;
 
@@ -121,40 +117,12 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
     beginClose();
   }
 
-  /**
-   * Registers this menu as the single open menu, synchronously dismissing any other open one.
-   * Called by {@link ElwhaMenu#open} just before the host {@code show}.
-   */
-  protected final void trackAsOpenMenu() {
-    final AbstractElwhaMenuOverlay prior = openMenu;
-    openMenu = this;
-    if (prior != null && prior != this && prior.isShowing()) {
-      // SUPERSEDED (not PROGRAMMATIC): the prior menu must NOT restore focus to its trigger, or
-      // that
-      // restore steals focus from this just-opening menu and spuriously fires its focus-loss close.
-      prior.lastCause = MenuDismissCause.SUPERSEDED;
-      prior.closeNow();
-    }
-  }
-
   @Override
   protected final void onClosed() {
-    if (openMenu == this) {
-      openMenu = null;
-    }
-    afterClose(lastCause);
     if (onClose != null) {
       onClose.accept(lastCause);
     }
   }
-
-  /**
-   * Subclass hook fired during teardown, before the consumer's {@code onClose} — restores any
-   * trigger state the menu set on open. Default no-op.
-   *
-   * @param cause the dismiss cause
-   */
-  protected void afterClose(final MenuDismissCause cause) {}
 
   // ------------------------------------------------------- anchored placement
 

@@ -361,25 +361,6 @@ public abstract class AbstractElwhaOverlay {
     }
   }
 
-  /**
-   * Closes the overlay immediately, skipping the exit animation. Used when a new overlay supersedes
-   * this one and a lingering fade would read as two overlays on screen at once. A no-op if not
-   * shown; idempotent if an animated exit is already mid-flight.
-   *
-   * @version v0.4.0
-   * @since v0.4.0
-   */
-  protected final void closeNow() {
-    if (layeredPane == null) {
-      return;
-    }
-    closing = true;
-    if (entrance != null) {
-      entrance.stop();
-    }
-    performTeardown();
-  }
-
   // Per-tick motion update: ease the linear progress, repaint a present backdrop (the surface is
   // the
   // animator's own repaint host), and finish teardown once the exit has fully collapsed.

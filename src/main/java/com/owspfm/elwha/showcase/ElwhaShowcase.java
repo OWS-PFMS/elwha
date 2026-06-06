@@ -3371,8 +3371,8 @@ public final class ElwhaShowcase {
   // A Workbench of live trigger buttons that open a menu configured by the surrounding controls
   // (layout + separator). Triggers sit at the four corners + center so the anchored placement is
   // demonstrable — a bottom trigger flips the menu up, a right trigger shifts it left, etc.
-  // Dogfoods Elwha controls — the center overflow is a SELECTABLE ElwhaIconButton (pressed while
-  // open), corner triggers are SELECTABLE ElwhaButtons.
+  // Triggers are plain (CLICKABLE) — a menu opens on a momentary click; clicking another trigger
+  // light-dismisses the current menu and opens the new one.
   private static JComponent buildMenuWorkbench() {
     final JComboBox<Layout> layout = new JComboBox<>(Layout.values());
     final JComboBox<Separator> separator = new JComboBox<>(Separator.values());
@@ -3381,8 +3381,7 @@ public final class ElwhaShowcase {
             "Open a menu from any trigger — note how edge triggers flip / shift to stay in view.");
 
     final ElwhaIconButton overflow =
-        new ElwhaIconButton(MaterialIcons.moreVert(IconButtonSize.M.iconPx()))
-            .setInteractionMode(IconButtonInteractionMode.SELECTABLE);
+        new ElwhaIconButton(MaterialIcons.moreVert(IconButtonSize.M.iconPx()));
     overflow.addActionListener(e -> buildWorkbenchMenu(layout, separator, status).open(overflow));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
@@ -3429,8 +3428,7 @@ public final class ElwhaShowcase {
       final JComboBox<Layout> layout,
       final JComboBox<Separator> separator,
       final JLabel status) {
-    final ElwhaButton trigger =
-        ElwhaButton.outlinedButton(label).setInteractionMode(ButtonInteractionMode.SELECTABLE);
+    final ElwhaButton trigger = ElwhaButton.outlinedButton(label);
     trigger.addActionListener(e -> buildWorkbenchMenu(layout, separator, status).open(trigger));
     final GridBagConstraints gc = new GridBagConstraints();
     gc.gridx = gx;

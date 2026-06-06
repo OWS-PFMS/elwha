@@ -1,6 +1,5 @@
 package com.owspfm.elwha.menu;
 
-import com.owspfm.elwha.button.ButtonInteractionMode;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -62,11 +61,7 @@ public final class MenuKeyboardSmoke {
 
   private static void run(final int[] fail, final int[] checks) {
     final JFrame frame = new JFrame("s4");
-    // A SELECTABLE trigger to verify the pressed-while-open affordance (the M3 icon-button / split-
-    // button overflow case). A plain CLICKABLE push-button has no held-visual API in the lib today,
-    // so the menu leaves such triggers visually unchanged — see ElwhaMenu Javadoc.
-    final ElwhaButton trigger =
-        ElwhaButton.outlinedButton("Open").setInteractionMode(ButtonInteractionMode.SELECTABLE);
+    final ElwhaButton trigger = ElwhaButton.outlinedButton("Open");
     final JPanel content = new JPanel();
     content.add(trigger);
     frame.setContentPane(content);
@@ -96,7 +91,6 @@ public final class MenuKeyboardSmoke {
     fail[0] += check(checks, menu.focusedIndex() == 0, "initial roving index on first item");
     fail[0] +=
         check(checks, !items.get(0).isFocused(), "no focus ring on pointer/programmatic open (F2)");
-    fail[0] += check(checks, trigger.isSelected(), "trigger shows selected while open");
 
     menu.moveFocus(1);
     fail[0] +=
@@ -143,7 +137,6 @@ public final class MenuKeyboardSmoke {
     fail[0] += check(checks, activated[0] == 1, "Enter activates focused item's action");
     fail[0] +=
         check(checks, cause[0] == MenuDismissCause.SELECTION, "activation closes with SELECTION");
-    fail[0] += check(checks, !trigger.isSelected(), "trigger restored to unselected after close");
 
     // Disabled item is inert on activation.
     final int[] disabledFired = {0};

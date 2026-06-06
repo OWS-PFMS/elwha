@@ -1,6 +1,5 @@
 package com.owspfm.elwha.menu;
 
-import com.owspfm.elwha.button.ButtonInteractionMode;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -37,6 +36,7 @@ public final class MenuDismissDiag {
   private static ElwhaButton trigger;
   private static ElwhaButton trigger2;
   private static int failures;
+  private static final MenuDismissCause[] SWITCH_CAUSE = {null};
 
   public static void main(final String[] args) throws Exception {
     if (GraphicsEnvironment.isHeadless()) {
@@ -50,10 +50,20 @@ public final class MenuDismissDiag {
     SwingUtilities.invokeAndWait(
         () -> {
           frame = new JFrame("dismiss-diag");
-          trigger =
-              ElwhaButton.outlinedButton("T1").setInteractionMode(ButtonInteractionMode.SELECTABLE);
-          trigger2 =
-              ElwhaButton.outlinedButton("T2").setInteractionMode(ButtonInteractionMode.SELECTABLE);
+          trigger = ElwhaButton.outlinedButton("T1");
+          trigger2 = ElwhaButton.outlinedButton("T2");
+          // T2 opens a fresh menu on click, so the "switch" probe can Robot-click it and let the
+          // current menu light-dismiss naturally (an outside press), the real-world flow.
+          trigger2.addActionListener(
+              e -> {
+                SWITCH_CAUSE[0] = null;
+                ElwhaMenu.builder()
+                    .addItem(ElwhaMenuItem.of("B1"))
+                    .addItem(ElwhaMenuItem.of("B2"))
+                    .onClose(c -> SWITCH_CAUSE[0] = c)
+                    .build()
+                    .open(trigger2);
+              });
           final JPanel content = new JPanel();
           content.add(trigger);
           content.add(trigger2);
@@ -73,7 +83,7 @@ public final class MenuDismissDiag {
       System.out.println("=== cycle " + cycle + " ===");
       probeOutsideClick(robot, cycle);
       probeItemClick(robot, cycle);
-      probeF4ThenOutside(robot, cycle);
+      probeSwitch(robot, cycle);
     }
     System.out.println();
     System.out.println(failures == 0 ? "PASS" : "FAIL — " + failures + " menu(s) stayed mounted");
@@ -119,17 +129,24 @@ public final class MenuDismissDiag {
     expectClosed("item-click (fired=" + fired[0] + ")", c[0]);
   }
 
-  private static void probeF4ThenOutside(final Robot robot, final int cycle) throws Exception {
+  // Switch: menu A open (from T1), then a real click on T2 opens menu B — A must light-dismiss on
+  // that same press so exactly one menu remains, and B must still dismiss on a later outside click.
+  private static void probeSwitch(final Robot robot, final int cycle) throws Exception {
     final ElwhaMenu a = twoItemMenu(new MenuDismissCause[] {null});
-    final MenuDismissCause[] cb = {null};
-    final ElwhaMenu b = twoItemMenu(cb);
     SwingUtilities.invokeAndWait(() -> a.open(trigger));
     pump();
-    SwingUtilities.invokeAndWait(() -> b.open(trigger2)); // F4 force-closes A
-    pump();
+    final Point t2 = centerOnScreen(trigger2);
+    clickScreen(robot, t2.x, t2.y); // opens B (T2 listener), light-dismisses A
+    settle();
+    final int after = countMounted();
+    if (after != 1) {
+      failures++;
+    }
+    System.out.println(
+        "  " + (after == 1 ? "ok   " : "FAIL ") + "switch leaves 1 menu, got " + after);
     clickScreen(robot, frame.getLocationOnScreen().x + 20, frame.getLocationOnScreen().y + 420);
     settle();
-    expectClosed("F4-then-outside", cb[0]);
+    expectClosed("switch-then-outside", SWITCH_CAUSE[0]);
   }
 
   private static ElwhaMenu twoItemMenu(final MenuDismissCause[] cause) {
@@ -155,15 +172,20 @@ public final class MenuDismissDiag {
   }
 
   private static boolean mounted() {
+    return countMounted() > 0;
+  }
+
+  private static int countMounted() {
     final JLayeredPane lp = frame.getRootPane().getLayeredPane();
+    int n = 0;
     for (final Component c : lp.getComponents()) {
       if (c instanceof javax.swing.JComponent jc
           && jc.getAccessibleContext() != null
           && "Menu".equals(jc.getAccessibleContext().getAccessibleName())) {
-        return true;
+        n++;
       }
     }
-    return false;
+    return n;
   }
 
   private static void settle() throws Exception {

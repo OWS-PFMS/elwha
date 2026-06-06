@@ -1,7 +1,5 @@
 package com.owspfm.elwha.menu;
 
-import com.owspfm.elwha.button.ElwhaButton;
-import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
@@ -58,13 +56,16 @@ import javax.swing.SwingUtilities;
  * <p>Selection ({@code SelectionMode}) and the {@code VIBRANT} color style are later phases; Phase
  * 1 menus are action menus that close on item activation.
  *
- * <p><strong>Trigger pressed-while-open.</strong> Per M3 the trigger shows a pressed/active state
- * while its menu is open and is restored after. Elwha delivers this for triggers that expose a
- * selected state — a {@code SELECTABLE} {@link ElwhaButton} or {@link ElwhaIconButton} (the M3
- * icon-button / split-button overflow trigger): the menu latches it selected on open and restores
- * its prior state on close. A plain {@code CLICKABLE} push-button has no held-visual affordance in
- * the lib today, so the menu leaves such a trigger visually unchanged (still satisfying "unchanged
- * after select").
+ * <p><strong>Trigger.</strong> The menu never mutates its trigger — it opens and closes without
+ * touching the trigger's state, so the trigger is "unchanged after select" by construction. M3's
+ * "trigger shows a pressed state while the menu is open" affordance is intentionally <em>not</em>
+ * faked via the trigger's selected state (that corrupts a {@code SELECTABLE} toggle button, which
+ * already flips its own selection on click); a faithful transient held-visual needs a dedicated
+ * button API the lib doesn't have yet — a future enhancement, tracked as a known gap.
+ *
+ * <p><strong>One at a time.</strong> Menus are singular popovers: opening a menu by clicking
+ * another trigger is a press outside the current menu, so the current menu light-dismisses on that
+ * same click while the new one opens — no explicit bookkeeping, no focus hand-off churn.
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.4.0
@@ -111,11 +112,6 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   private boolean keyboardFocusVisible;
   private boolean scrollable;
 
-  // The trigger and its prior selected state, so the menu can show it active while open and restore
-  // it on close ("pressed while open, unchanged after").
-  private Component trigger;
-  private Boolean triggerPriorSelected;
-
   private ElwhaMenu(final Builder b) {
     super(b.onClose);
     this.groups = b.groups;
@@ -150,9 +146,6 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
    * @since v0.4.0
    */
   public void open(final Component anchor) {
-    this.trigger = anchor;
-    trackAsOpenMenu();
-    setTriggerActive(true);
     show(anchor);
   }
 
@@ -249,13 +242,6 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   @Override
   protected Component initialFocusTarget() {
     return menuSurface;
-  }
-
-  @Override
-  protected void afterClose(final MenuDismissCause cause) {
-    setTriggerActive(false);
-    trigger = null;
-    triggerPriorSelected = null;
   }
 
   private int resolveContentWidth() {
@@ -454,31 +440,6 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       if (label != null && label.toLowerCase(Locale.ROOT).startsWith(target)) {
         setFocusedIndex(i);
         return;
-      }
-    }
-  }
-
-  // Best-effort "trigger shows pressed while open, unchanged after" (§U): give an Elwha button
-  // trigger its selected affordance while the menu is open and restore its prior state on close.
-  // Other anchor types are left untouched (the menu never mutates a trigger it can't restore).
-  private void setTriggerActive(final boolean active) {
-    if (trigger instanceof ElwhaButton b) {
-      if (active) {
-        if (triggerPriorSelected == null) {
-          triggerPriorSelected = b.isSelected();
-        }
-        b.setSelected(true);
-      } else if (triggerPriorSelected != null) {
-        b.setSelected(triggerPriorSelected);
-      }
-    } else if (trigger instanceof ElwhaIconButton ib) {
-      if (active) {
-        if (triggerPriorSelected == null) {
-          triggerPriorSelected = ib.isSelected();
-        }
-        ib.setSelected(true);
-      } else if (triggerPriorSelected != null) {
-        ib.setSelected(triggerPriorSelected);
       }
     }
   }
