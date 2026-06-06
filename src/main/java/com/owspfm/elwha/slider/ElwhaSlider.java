@@ -33,7 +33,9 @@ import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 import javax.swing.Timer;
+import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.EventListenerList;
 
 /**
  * The Elwha Material 3 <strong>Expressive slider</strong> — a token-themed range input painting M3
@@ -53,8 +55,10 @@ import javax.swing.event.ChangeListener;
  * track from the leading edge to the handle; {@link Variant#CENTERED} fills from a fixed
  * {@linkplain #getOrigin() origin} (range midpoint, or zero when {@code 0} is in range) outward to
  * the handle in either direction — for a positive/negative range with the default in the middle.
- * The {@code RANGE} variant and the size / orientation axes are later V1 phases; the geometry
- * constants below are the XS preset (M3's only off-Android code preset; research §M / §Cfg).
+ * {@link Variant#RANGE} adds a second handle and fills the active track <em>between</em> the two,
+ * selecting a {@code [lower, upper]} sub-span (build one with {@link #range(int, int, int, int)}).
+ * The size / orientation axes are later V1 phases; the geometry constants below are the XS preset
+ * (M3's only off-Android code preset; research §M / §Cfg).
  *
  * <p><strong>Interaction & motion (research §S / §TS / §B).</strong> Drag the handle or click the
  * track to jump; the value updates live and a {@link ChangeListener} fires on every change with
@@ -99,7 +103,28 @@ public class ElwhaSlider extends JComponent {
      * inactive track on both outer sides. For a positive/negative range with the default in the
      * middle.
      */
-    CENTERED
+    CENTERED,
+    /**
+     * Two handles select a {@code [lower, upper]} sub-span: the active track fills <em>between</em>
+     * the two handles, with inactive track on both outer sides. Backed by the {@linkplain
+     * ElwhaSlider#getLowerValue() lower} / {@linkplain ElwhaSlider#getUpperValue() upper} values
+     * over the same {@code [min, max]}; build one with {@link ElwhaSlider#range(int, int, int, int)}.
+     */
+    RANGE
+  }
+
+  /**
+   * Which of a {@link Variant#RANGE} slider's two handles a per-handle operation targets.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public enum Handle {
+    /** The lower-value (leading) handle. */
+    LOWER,
+    /** The upper-value (trailing) handle. */
+    UPPER
   }
 
   // --- XS geometry preset (dp == px at 100% scale; research §M / §T) ---
@@ -151,7 +176,13 @@ public class ElwhaSlider extends JComponent {
   private static final float VALUE_BUBBLE_LABEL_PT = 14f;
 
   private final BoundedRangeModel model;
-  private final ChangeListener modelListener = e -> repaint();
+  private final EventListenerList listenerList = new EventListenerList();
+  private final ChangeEvent changeEvent = new ChangeEvent(this);
+  private final ChangeListener modelListener =
+      e -> {
+        repaint();
+        fireStateChanged();
+      };
 
   private boolean hovered;
   private boolean pressed;
@@ -160,6 +191,9 @@ public class ElwhaSlider extends JComponent {
   private boolean endStopsVisible = true;
   private Variant variant = Variant.STANDARD;
   private Integer originOverride;
+
+  private int lowerValue;
+  private int upperValue;
 
   private int unitIncrement = 1;
   private int stopStep;
@@ -210,10 +244,33 @@ public class ElwhaSlider extends JComponent {
     }
     this.model = model;
     this.model.addChangeListener(modelListener);
+    this.lowerValue = model.getMinimum();
+    this.upperValue = model.getMaximum();
     setOpaque(false);
     setFocusable(true);
     initInteraction();
     initKeyboard();
+  }
+
+  /**
+   * Creates a {@link Variant#RANGE} slider over {@code [min, max]} with the two handles at {@code
+   * lower} / {@code upper}. The values are clamped into {@code [min, max]} and to each other ({@code
+   * lower <= upper}).
+   *
+   * @param min the range lower bound
+   * @param max the range upper bound
+   * @param lower the initial lower-handle value
+   * @param upper the initial upper-handle value
+   * @return a new range slider
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static ElwhaSlider range(final int min, final int max, final int lower, final int upper) {
+    final ElwhaSlider slider = new ElwhaSlider(min, max, clamp(lower, min, max));
+    slider.variant = Variant.RANGE;
+    slider.lowerValue = clamp(lower, min, max);
+    slider.upperValue = clamp(upper, min, max);
+    return slider;
   }
 
   // ------------------------------------------------------------------ value API
@@ -306,6 +363,72 @@ public class ElwhaSlider extends JComponent {
     return model;
   }
 
+  // ------------------------------------------------------------ range value API
+
+  /**
+   * Returns the {@link Variant#RANGE} lower-handle value, clamped into {@code [min, max]} and never
+   * above the {@linkplain #getUpperValue() upper} value. Meaningful only for the range variant.
+   *
+   * @return the lower-handle value
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public int getLowerValue() {
+    return clamp(lowerValue, getMinimum(), getMaximum());
+  }
+
+  /**
+   * Returns the {@link Variant#RANGE} upper-handle value, clamped into {@code [min, max]} and never
+   * below the {@linkplain #getLowerValue() lower} value. Meaningful only for the range variant.
+   *
+   * @return the upper-handle value
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public int getUpperValue() {
+    return clamp(upperValue, getLowerValue(), getMaximum());
+  }
+
+  /**
+   * Sets the {@link Variant#RANGE} lower-handle value. Snapped to the nearest stop in stops mode,
+   * then clamped into {@code [min, upper]} so the lower handle never crosses the upper one. Fires a
+   * {@link ChangeListener} when the value changes.
+   *
+   * @param value the new lower-handle value
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setLowerValue(final int value) {
+    final int snapped = isStopsEnabled() ? snap(value) : value;
+    final int next = clamp(snapped, getMinimum(), getUpperValue());
+    if (next == lowerValue) {
+      return;
+    }
+    lowerValue = next;
+    fireStateChanged();
+    repaint();
+  }
+
+  /**
+   * Sets the {@link Variant#RANGE} upper-handle value. Snapped to the nearest stop in stops mode,
+   * then clamped into {@code [lower, max]} so the upper handle never crosses the lower one. Fires a
+   * {@link ChangeListener} when the value changes.
+   *
+   * @param value the new upper-handle value
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setUpperValue(final int value) {
+    final int snapped = isStopsEnabled() ? snap(value) : value;
+    final int next = clamp(snapped, getLowerValue(), getMaximum());
+    if (next == upperValue) {
+      return;
+    }
+    upperValue = next;
+    fireStateChanged();
+    repaint();
+  }
+
   /**
    * Reports whether the value is mid-adjustment — {@code true} from the start of a drag (or
    * click-to-jump press) until release. Mirrors {@code JSlider.getValueIsAdjusting()}: a {@link
@@ -321,14 +444,15 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Adds a {@link ChangeListener} notified on every value change, including live changes mid-drag.
-   * Delegates to the backing model.
+   * Fires for single-variant value changes (via the backing model) and for {@link Variant#RANGE}
+   * lower/upper changes alike.
    *
    * @param listener the listener to add
    * @version v0.4.0
    * @since v0.4.0
    */
   public void addChangeListener(final ChangeListener listener) {
-    model.addChangeListener(listener);
+    listenerList.add(ChangeListener.class, listener);
   }
 
   /**
@@ -339,7 +463,15 @@ public class ElwhaSlider extends JComponent {
    * @since v0.4.0
    */
   public void removeChangeListener(final ChangeListener listener) {
-    model.removeChangeListener(listener);
+    listenerList.remove(ChangeListener.class, listener);
+  }
+
+  /** Notifies registered {@link ChangeListener}s; shared across single and range value changes. */
+  private void fireStateChanged() {
+    final ChangeListener[] listeners = listenerList.getListeners(ChangeListener.class);
+    for (final ChangeListener listener : listeners) {
+      listener.stateChanged(changeEvent);
+    }
   }
 
   // -------------------------------------------------------------- configuration
@@ -541,7 +673,9 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Sets the fill variant. {@link Variant#STANDARD} (the default) fills from the leading edge;
-   * {@link Variant#CENTERED} fills from the {@linkplain #getOrigin() origin} outward to the handle.
+   * {@link Variant#CENTERED} fills from the {@linkplain #getOrigin() origin} outward to the handle;
+   * {@link Variant#RANGE} fills between two handles (use {@link #range(int, int, int, int)} or set
+   * the {@linkplain #setLowerValue(int) lower} / {@linkplain #setUpperValue(int) upper} values).
    * Switching variants does not change the value; all interaction, keyboard, value-bubble, stops
    * and disabled behavior is shared across variants.
    *
@@ -755,6 +889,10 @@ public class ElwhaSlider extends JComponent {
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      if (variant == Variant.RANGE) {
+        paintRange(g2);
+        return;
+      }
       final int cx = handleCenterX();
       paintTrack(g2, cx);
       paintStops(g2, cx);
@@ -862,6 +1000,99 @@ public class ElwhaSlider extends JComponent {
     }
   }
 
+  /** The lower handle's center x for the current lower value (RTL-aware). */
+  int lowerHandleCenterX() {
+    return xForValue(getLowerValue());
+  }
+
+  /** The upper handle's center x for the current upper value (RTL-aware). */
+  int upperHandleCenterX() {
+    return xForValue(getUpperValue());
+  }
+
+  /**
+   * Paints the {@link Variant#RANGE} variant: the active ({@link ColorRole#PRIMARY}) track fills
+   * <em>between</em> the two handles, inactive ({@link ColorRole#SECONDARY_CONTAINER}) track flanks
+   * both outer sides, stop / end-stop dots paint over the inactive ends, and both pill handles are
+   * drawn. All x positions come from {@link #xForValue(int)} and are already RTL-mirrored, so the
+   * lower handle may sit to the <em>right</em> of the upper under a right-to-left orientation; this
+   * method works in pixel space (left/right = min/max of the two handle centers) so no orientation
+   * special-casing is needed.
+   */
+  private void paintRange(final Graphics2D g2) {
+    final int loX = lowerHandleCenterX();
+    final int hiX = upperHandleCenterX();
+    final int leftX = Math.min(loX, hiX);
+    final int rightX = Math.max(loX, hiX);
+    paintRangeTrack(g2, leftX, rightX);
+    paintRangeStops(g2, loX, hiX);
+    paintHandleAt(g2, loX, HANDLE_WIDTH_PX);
+    paintHandleAt(g2, hiX, HANDLE_WIDTH_PX);
+  }
+
+  /**
+   * Paints the range track: inactive outer-left {@code [0, leftX-gap]}, active middle between the
+   * handle gaps, inactive outer-right {@code [rightX+gap, width]}. {@code leftX} / {@code rightX}
+   * are the pixel-space handle centers (already ordered low&rarr;high).
+   */
+  private void paintRangeTrack(final Graphics2D g2, final int leftX, final int rightX) {
+    final int trackTop = trackTopY();
+    final int half = HANDLE_WIDTH_PX / 2;
+    final int width = getWidth();
+    final int leftEnd = leftX - half - HANDLE_TRACK_GAP_PX;
+    final int midStart = leftX + half + HANDLE_TRACK_GAP_PX;
+    final int midEnd = rightX - half - HANDLE_TRACK_GAP_PX;
+    final int rightStart = rightX + half + HANDLE_TRACK_GAP_PX;
+
+    if (leftEnd > 0) {
+      g2.setColor(trackColor(false));
+      g2.fill(trackSegment(0, trackTop, leftEnd, TRACK_OUTER_CORNER_PX, TRACK_INNER_CORNER_PX));
+    }
+    if (midEnd > midStart) {
+      g2.setColor(trackColor(true));
+      g2.fill(
+          trackSegment(
+              midStart, trackTop, midEnd - midStart, TRACK_INNER_CORNER_PX, TRACK_INNER_CORNER_PX));
+    }
+    if (rightStart < width) {
+      g2.setColor(trackColor(false));
+      g2.fill(
+          trackSegment(
+              rightStart, trackTop, width - rightStart, TRACK_INNER_CORNER_PX,
+              TRACK_OUTER_CORNER_PX));
+    }
+  }
+
+  /**
+   * Paints stop / end-stop dots for the range variant — interior dots colored active only between
+   * the two handles ({@link #stopOnActive(int)}), both-end contrast end stops in continuous mode
+   * (mirroring the centered both-end rule), skipping any dot under either handle.
+   */
+  private void paintRangeStops(final Graphics2D g2, final int loX, final int hiX) {
+    final int min = model.getMinimum();
+    final int max = model.getMaximum();
+    if (isStopsEnabled()) {
+      for (int v = min; v <= max; v += stopStep) {
+        paintRangeStopDot(g2, loX, hiX, xForValue(v), stopOnActive(v));
+      }
+      if (endStopsVisible && (max - min) % stopStep != 0) {
+        paintRangeStopDot(g2, loX, hiX, xForValue(max), stopOnActive(max));
+      }
+    } else if (endStopsVisible) {
+      paintRangeStopDot(g2, loX, hiX, xForValue(min), stopOnActive(min));
+      paintRangeStopDot(g2, loX, hiX, xForValue(max), stopOnActive(max));
+    }
+  }
+
+  private void paintRangeStopDot(
+      final Graphics2D g2, final int loX, final int hiX, final int x, final boolean onActiveTrack) {
+    final int skip = HANDLE_TRACK_GAP_PX + HANDLE_WIDTH_PX / 2 + STOP_INDICATOR_SIZE_PX;
+    if (Math.abs(x - loX) < skip || Math.abs(x - hiX) < skip) {
+      return;
+    }
+    drawStopDot(g2, x, onActiveTrack);
+  }
+
   /** The handle-center x that the given value maps to (RTL-aware), without moving the model. */
   int xForValue(final int value) {
     final int range = model.getMaximum() - model.getMinimum();
@@ -887,6 +1118,9 @@ public class ElwhaSlider extends JComponent {
 
   /** Whether a stop at value {@code v} sits on the active fill — variant-aware. */
   private boolean stopOnActive(final int v) {
+    if (variant == Variant.RANGE) {
+      return getLowerValue() <= v && v <= getUpperValue();
+    }
     if (variant == Variant.CENTERED) {
       final int origin = getOrigin();
       final int lo = Math.min(origin, model.getValue());
@@ -918,6 +1152,11 @@ public class ElwhaSlider extends JComponent {
     if (Math.abs(x - cx) < skip) {
       return;
     }
+    drawStopDot(g2, x, onActiveTrack);
+  }
+
+  /** Draws a single stop-indicator dot centered on the track at the given x. */
+  private void drawStopDot(final Graphics2D g2, final int x, final boolean onActiveTrack) {
     final int cy = trackTopY() + TRACK_HEIGHT_PX / 2;
     final float r = STOP_INDICATOR_SIZE_PX / 2f;
     g2.setColor(stopColor(onActiveTrack));
@@ -988,8 +1227,12 @@ public class ElwhaSlider extends JComponent {
   }
 
   private void paintHandle(final Graphics2D g2, final int cx) {
+    paintHandleAt(g2, cx, currentHandleWidth());
+  }
+
+  /** Paints a single pill handle centered at {@code cx} with the given width. */
+  private void paintHandleAt(final Graphics2D g2, final int cx, final float width) {
     final int handleTop = handleTopY();
-    final float width = currentHandleWidth();
     final float x = cx - width / 2f;
     g2.setColor(handleColor());
     g2.fill(new RoundRectangle2D.Float(x, handleTop, width, HANDLE_HEIGHT_PX, width, width));
