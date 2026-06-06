@@ -108,3 +108,30 @@ Menus are transient popovers, not embeddable surfaces — so the Showcase leaf m
 ## §13. Open for the S1 spike / Phase 0 sign-off
 - §2 host extraction boundary (shared base vs standalone fallback) — the one genuine unknown; spike resolves it.
 - Q4 (research §E) — relationship to FAB Menu #185: does ElwhaMenu become the content host a future FAB Menu composes? **Defer** — note as a forward dependency; doesn't affect V1.
+
+## §14. S1 spike outcome (2026-06-05, #325) — **the extraction lands; host LOCKED**
+
+The §2 `RECOMMENDED` extraction was prototyped and **adopted** — no fallback needed. Shape as built:
+
+- **`com.owspfm.elwha.overlay.AbstractElwhaOverlay`** (new package; `public` to cross the package
+  boundary, documented library-internal like `ShadowPainter`/`RipplePainter`). Owns the shared
+  lifecycle: layered-pane mount at a subclass-chosen `overlayLayer()`, `MorphAnimator`
+  entrance/exit, relayout-on-resize, the focus listener, the re-entry-guarded teardown, and the
+  `firstFocusable`/`action` helpers. Two strategy axes via overridable hooks: **dismiss policy**
+  (`lightDismiss()` → false=modal-trap / true=light-dismiss; `onFocusEscaped()`, `onOutsidePress()`)
+  and **placement** (the abstract `layoutSurface(w, h)`). The cause/`onClose` reporting stays in the
+  subclass (`onClosed()` hook), so `DismissCause` never leaked out of `dialog/`.
+- **`AbstractElwhaDialog`** is now a thin modal subclass (`extends AbstractElwhaOverlay`): pins
+  `MODAL_LAYER` + scrim + focus-trap, keeps its `DismissCause` plumbing. `ElwhaDialog` /
+  `ElwhaFullScreenDialog` are **unchanged** (same abstract hooks, same `dismiss(...)` surface) — the
+  refactor is non-breaking.
+- **`menu/AbstractElwhaMenuOverlay`** (package-private) is the light-dismiss + anchored host
+  `ElwhaMenu` (S3) extends: `POPUP_LAYER` (300, tops dialogs/overlays), light dismiss (outside-press
+  / focus-loss / Esc), and the anchored placement (`placeAnchored` — leading-aligned below, flips
+  above on bottom-clip, shifts on right-clip, RTL trailing-align). Focus restores to the trigger
+  only on intentional close (Esc/selection/programmatic), not on focus-loss/outside-press. Public
+  `MenuDismissCause` carries the close reason.
+- **Proven** by `MenuHostSmoke` (9 headless checks + a windowed mount/POPUP_LAYER proof) and the
+  visual `MenuHostSpikeDemo` (below/flip/shift triggers + open-over-a-live-`ElwhaDialog`).
+- **Carried to S3:** `placeAnchored` is the placement seam S3 refines (left/right flip is still
+  TODO — S1 ships vertical flip + horizontal shift, sufficient for the "minimal flip" acceptance).
