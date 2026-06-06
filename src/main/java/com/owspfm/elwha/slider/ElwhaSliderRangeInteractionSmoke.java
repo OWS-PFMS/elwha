@@ -38,11 +38,14 @@ public final class ElwhaSliderRangeInteractionSmoke {
 
     // --- nearest-handle pick ---
     final ElwhaSlider pick = range(0, 100, 30, 70);
-    check("pick nearest = LOWER near the lower handle",
+    check(
+        "pick nearest = LOWER near the lower handle",
         pick.pickHandle(pick.xForValue(28)) == ElwhaSlider.Handle.LOWER);
-    check("pick nearest = UPPER near the upper handle",
+    check(
+        "pick nearest = UPPER near the upper handle",
         pick.pickHandle(pick.xForValue(72)) == ElwhaSlider.Handle.UPPER);
-    check("midpoint ties toward LOWER below, UPPER above",
+    check(
+        "midpoint ties toward LOWER below, UPPER above",
         pick.pickHandle(pick.xForValue(40)) == ElwhaSlider.Handle.LOWER
             && pick.pickHandle(pick.xForValue(60)) == ElwhaSlider.Handle.UPPER);
 
@@ -112,9 +115,11 @@ public final class ElwhaSliderRangeInteractionSmoke {
     final ElwhaSlider rtl = range(0, 100, 30, 70);
     rtl.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
     rtl.setSize(W, ElwhaSlider.HANDLE_HEIGHT_PX);
-    check("RTL: lower handle still picked at its (mirrored) x",
+    check(
+        "RTL: lower handle still picked at its (mirrored) x",
         rtl.pickHandle(rtl.xForValue(30)) == ElwhaSlider.Handle.LOWER);
-    check("RTL: upper handle still picked at its (mirrored) x",
+    check(
+        "RTL: upper handle still picked at its (mirrored) x",
         rtl.pickHandle(rtl.xForValue(70)) == ElwhaSlider.Handle.UPPER);
 
     System.out.println(

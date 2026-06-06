@@ -13,9 +13,9 @@ import java.awt.image.BufferedImage;
  * two-value API ({@code range(...)} factory, lower/upper clamping to {@code [min, max]} and to each
  * other) and proves from offscreen renders that (a) the active {@link ColorRole#PRIMARY} fill spans
  * <em>only between</em> the two handles, with {@link ColorRole#SECONDARY_CONTAINER} inactive track
- * on both outer sides, (b) <em>both</em> pill handles render (a PRIMARY column high above the track,
- * where the centered active track does not reach), and (c) stop dots are active only between the
- * handles. No display required.
+ * on both outer sides, (b) <em>both</em> pill handles render (a PRIMARY column high above the
+ * track, where the centered active track does not reach), and (c) stop dots are active only between
+ * the handles. No display required.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -64,14 +64,11 @@ public final class ElwhaSliderRangeChromeSmoke {
     // --- Chrome: active fill only between the handles ---
     final BufferedImage img = render(ElwhaSlider.range(0, 100, 30, 70));
     check(
-        "active PRIMARY between the handles (value 50)",
-        isPrimary(img, valueX(W, 0, 100, 50), CY));
+        "active PRIMARY between the handles (value 50)", isPrimary(img, valueX(W, 0, 100, 50), CY));
     check(
-        "inactive on the outer-left side (value 15)",
-        isSecondary(img, valueX(W, 0, 100, 15), CY));
+        "inactive on the outer-left side (value 15)", isSecondary(img, valueX(W, 0, 100, 15), CY));
     check(
-        "inactive on the outer-right side (value 85)",
-        isSecondary(img, valueX(W, 0, 100, 85), CY));
+        "inactive on the outer-right side (value 85)", isSecondary(img, valueX(W, 0, 100, 85), CY));
 
     // --- Both handles render: PRIMARY column above the centered track band ---
     check(
@@ -92,8 +89,7 @@ public final class ElwhaSliderRangeChromeSmoke {
         "interior stop active between the handles (value 50)",
         isActiveDot(dots, valueX(W, 0, 100, 50)));
     check(
-        "stop outside the span is inactive (value 10)",
-        isInactiveDot(dots, valueX(W, 0, 100, 10)));
+        "stop outside the span is inactive (value 10)", isInactiveDot(dots, valueX(W, 0, 100, 10)));
 
     System.out.println(
         "ElwhaSliderRangeChromeSmoke: OK (range API + between-handle fill + two handles + stops)");

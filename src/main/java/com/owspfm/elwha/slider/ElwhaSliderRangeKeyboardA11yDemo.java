@@ -20,8 +20,8 @@ import javax.swing.WindowConstants;
  * two-thumb accessibility, and the one-at-a-time value bubble. <strong>Tab</strong> moves into the
  * lower handle, Tab again to the upper, Tab out (Shift+Tab reverses); arrows nudge the focused
  * handle, Home/End jump it to its no-cross bound, and only the focused/dragged handle shows a value
- * bubble (it follows focus). A screen reader sees two {@code AccessibleValue} children named "Lower"
- * / "Upper". The percent-format toggle dogfoods {@link ElwhaButton}.
+ * bubble (it follows focus). A screen reader sees two {@code AccessibleValue} children named
+ * "Lower" / "Upper". The percent-format toggle dogfoods {@link ElwhaButton}.
  *
  * @author Charles Bryan
  * @version v0.4.0

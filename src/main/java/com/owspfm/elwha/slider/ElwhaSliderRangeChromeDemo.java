@@ -16,11 +16,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 /**
- * Phase-3 / S1 playground (story #359) — exercises the {@link ElwhaSlider.Variant#RANGE} chrome: two
- * pill handles selecting a {@code [lower, upper]} sub-span, the active {@code PRIMARY} track filling
- * <em>between</em> the handles with inactive track on both outer sides, and stop / both-end contrast
- * dots. Interaction (drag / no-cross clamp) lands in #360, so these sliders are shown statically with
- * preset spans; the disabled toggle dogfoods {@link ElwhaButton}.
+ * Phase-3 / S1 playground (story #359) — exercises the {@link ElwhaSlider.Variant#RANGE} chrome:
+ * two pill handles selecting a {@code [lower, upper]} sub-span, the active {@code PRIMARY} track
+ * filling <em>between</em> the handles with inactive track on both outer sides, and stop / both-end
+ * contrast dots. Interaction (drag / no-cross clamp) lands in #360, so these sliders are shown
+ * statically with preset spans; the disabled toggle dogfoods {@link ElwhaButton}.
  *
  * @author Charles Bryan
  * @version v0.4.0

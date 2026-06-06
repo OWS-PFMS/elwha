@@ -20,8 +20,8 @@ import javax.swing.WindowConstants;
  * press near a handle to grab the nearest one, drag it (it stops at the other handle under the
  * no-cross clamp), click the track to jump the nearest handle, and watch the active handle narrow
  * (4&rarr;2&nbsp;dp) with a press ripple while the other handle stays at rest. Stops mode snaps the
- * moving handle. A live read-out reflects each slider's {@code [lower, upper]} span; the reset button
- * dogfoods {@link ElwhaButton}.
+ * moving handle. A live read-out reflects each slider's {@code [lower, upper]} span; the reset
+ * button dogfoods {@link ElwhaButton}.
  *
  * @author Charles Bryan
  * @version v0.4.0

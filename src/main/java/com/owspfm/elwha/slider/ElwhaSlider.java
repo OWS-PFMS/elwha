@@ -109,7 +109,8 @@ public class ElwhaSlider extends JComponent {
      * Two handles select a {@code [lower, upper]} sub-span: the active track fills <em>between</em>
      * the two handles, with inactive track on both outer sides. Backed by the {@linkplain
      * ElwhaSlider#getLowerValue() lower} / {@linkplain ElwhaSlider#getUpperValue() upper} values
-     * over the same {@code [min, max]}; build one with {@link ElwhaSlider#range(int, int, int, int)}.
+     * over the same {@code [min, max]}; build one with {@link ElwhaSlider#range(int, int, int,
+     * int)}.
      */
     RANGE
   }
@@ -260,8 +261,8 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Creates a {@link Variant#RANGE} slider over {@code [min, max]} with the two handles at {@code
-   * lower} / {@code upper}. The values are clamped into {@code [min, max]} and to each other ({@code
-   * lower <= upper}).
+   * lower} / {@code upper}. The values are clamped into {@code [min, max]} and to each other
+   * ({@code lower <= upper}).
    *
    * @param min the range lower bound
    * @param max the range upper bound
@@ -704,8 +705,8 @@ public class ElwhaSlider extends JComponent {
   /**
    * In {@link Variant#RANGE} the two pill handles are the keyboard tab stops and the {@link
    * AccessibleValue} children: attach the click-through focus proxies and make the slider itself a
-   * non-tab-stop with traversal keys re-enabled on the children. Any other variant detaches them and
-   * restores the slider as the single focus target.
+   * non-tab-stop with traversal keys re-enabled on the children. Any other variant detaches them
+   * and restores the slider as the single focus target.
    */
   private void applyRangeFocusModel() {
     final boolean range = variant == Variant.RANGE;
@@ -1043,24 +1044,26 @@ public class ElwhaSlider extends JComponent {
   }
 
   /**
-   * Picks the range handle nearest the given x (value-space distance, orientation-agnostic). On a tie
-   * — including a collapsed span — the choice keeps the gesture monotonic: a position at or below the
-   * lower value grabs the lower handle, otherwise the upper.
+   * Picks the range handle nearest the given x (value-space distance, orientation-agnostic). On a
+   * tie — including a collapsed span — the choice keeps the gesture monotonic: a position at or
+   * below the lower value grabs the lower handle, otherwise the upper.
    */
   Handle pickHandle(final int x) {
-    final int vClick = valueForX(x);
-    final int dl = Math.abs(vClick - getLowerValue());
-    final int du = Math.abs(vClick - getUpperValue());
+    final int clickValue = valueForX(x);
+    final int dl = Math.abs(clickValue - getLowerValue());
+    final int du = Math.abs(clickValue - getUpperValue());
     if (dl < du) {
       return Handle.LOWER;
     }
     if (du < dl) {
       return Handle.UPPER;
     }
-    return vClick <= getLowerValue() ? Handle.LOWER : Handle.UPPER;
+    return clickValue <= getLowerValue() ? Handle.LOWER : Handle.UPPER;
   }
 
-  /** Sets the {@linkplain #activeHandle active} handle's value (snap + no-cross clamp via setters). */
+  /**
+   * Sets the {@linkplain #activeHandle active} handle's value (snap + no-cross clamp via setters).
+   */
   private void setActiveHandleValue(final int value) {
     if (activeHandle == Handle.UPPER) {
       setUpperValue(value);
@@ -1224,7 +1227,10 @@ public class ElwhaSlider extends JComponent {
       g2.setColor(trackColor(false));
       g2.fill(
           trackSegment(
-              rightStart, trackTop, width - rightStart, TRACK_INNER_CORNER_PX,
+              rightStart,
+              trackTop,
+              width - rightStart,
+              TRACK_INNER_CORNER_PX,
               TRACK_OUTER_CORNER_PX));
     }
   }
@@ -1460,7 +1466,9 @@ public class ElwhaSlider extends JComponent {
     return Integer.toString(model.getValue());
   }
 
-  /** The value-bubble text for a range handle — the {@code valueFormatter} output, or the raw value. */
+  /**
+   * The value-bubble text for a range handle — the {@code valueFormatter} output, or the raw value.
+   */
   String rangeValueText(final Handle handle) {
     final int value = handleValue(handle);
     if (valueFormatter != null) {
@@ -1774,7 +1782,8 @@ public class ElwhaSlider extends JComponent {
           return;
         }
         if (variant == Variant.RANGE) {
-          setHandleValue(focusedHandle, toMin ? handleMin(focusedHandle) : handleMax(focusedHandle));
+          setHandleValue(
+              focusedHandle, toMin ? handleMin(focusedHandle) : handleMax(focusedHandle));
         } else {
           setValue(toMin ? model.getMinimum() : model.getMaximum());
         }

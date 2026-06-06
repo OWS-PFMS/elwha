@@ -43,12 +43,15 @@ public final class ElwhaSliderRangeKeyboardA11ySmoke {
     // --- two-foci structure: handles are the tab stops, the slider itself is not ---
     final ElwhaSlider single = new ElwhaSlider(0, 100, 0);
     check("single variant: slider is focusable", single.isFocusable());
-    check("single variant: no accessible children",
+    check(
+        "single variant: no accessible children",
         single.getAccessibleContext().getAccessibleChildrenCount() == 0);
 
     final ElwhaSlider rangeSlider = ElwhaSlider.range(0, 100, 30, 70);
     check("range variant: slider itself is not a tab stop", !rangeSlider.isFocusable());
-    check("range variant: two focusable children (the handles)", focusableChildCount(rangeSlider) == 2);
+    check(
+        "range variant: two focusable children (the handles)",
+        focusableChildCount(rangeSlider) == 2);
 
     // --- accessibility: two AccessibleValue children, correct names + no-cross bounds ---
     rangeSlider.setLabel("Price");
@@ -65,9 +68,11 @@ public final class ElwhaSliderRangeKeyboardA11ySmoke {
     final AccessibleValue uv = upper.getAccessibleValue();
     check("lower current = 30", lv.getCurrentAccessibleValue().intValue() == 30);
     check("lower min = slider min (0)", lv.getMinimumAccessibleValue().intValue() == 0);
-    check("lower max = upper value (70, no-cross)", lv.getMaximumAccessibleValue().intValue() == 70);
+    check(
+        "lower max = upper value (70, no-cross)", lv.getMaximumAccessibleValue().intValue() == 70);
     check("upper current = 70", uv.getCurrentAccessibleValue().intValue() == 70);
-    check("upper min = lower value (30, no-cross)", uv.getMinimumAccessibleValue().intValue() == 30);
+    check(
+        "upper min = lower value (30, no-cross)", uv.getMinimumAccessibleValue().intValue() == 30);
     check("upper max = slider max (100)", uv.getMaximumAccessibleValue().intValue() == 100);
 
     // --- per-handle arrow keys move the focused handle only ---
@@ -102,10 +107,12 @@ public final class ElwhaSliderRangeKeyboardA11ySmoke {
     bubble.setSize(W, ElwhaSlider.HANDLE_HEIGHT_PX);
     bubble.addNotify();
     pressRelease(bubble, bubble.xForValue(70));
-    check("press near upper makes UPPER the active (bubble) handle",
+    check(
+        "press near upper makes UPPER the active (bubble) handle",
         bubble.activeHandle == ElwhaSlider.Handle.UPPER);
     pressRelease(bubble, bubble.xForValue(30));
-    check("press near lower moves the single bubble to LOWER",
+    check(
+        "press near lower moves the single bubble to LOWER",
         bubble.activeHandle == ElwhaSlider.Handle.LOWER);
 
     System.out.println(
@@ -147,7 +154,16 @@ public final class ElwhaSliderRangeKeyboardA11ySmoke {
             MouseEvent.BUTTON1);
     final MouseEvent release =
         new MouseEvent(
-            slider, MouseEvent.MOUSE_RELEASED, System.nanoTime(), 0, x, y, x, y, 1, false,
+            slider,
+            MouseEvent.MOUSE_RELEASED,
+            System.nanoTime(),
+            0,
+            x,
+            y,
+            x,
+            y,
+            1,
+            false,
             MouseEvent.BUTTON1);
     for (final var l : slider.getMouseListeners()) {
       l.mousePressed(press);
