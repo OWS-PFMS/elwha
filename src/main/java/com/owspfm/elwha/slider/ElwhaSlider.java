@@ -49,10 +49,12 @@ import javax.swing.event.ChangeListener;
  * a {@code JSlider} concept — so a unified custom component keeps single and range on one paint /
  * interaction codebase.
  *
- * <p><strong>Phase-1 surface (this story arc).</strong> The {@code STANDARD} variant, horizontal,
- * {@code XS} size, continuous (later: {@code stops}), with an optional value indicator. Variant /
- * size / orientation axes are later V1 phases — the geometry constants below are the XS preset
- * (M3's only off-Android code preset; research §M / §Cfg).
+ * <p><strong>Variants (design doc §1 / §11).</strong> {@link Variant#STANDARD} fills the active
+ * track from the leading edge to the handle; {@link Variant#CENTERED} fills from a fixed
+ * {@linkplain #getOrigin() origin} (range midpoint, or zero when {@code 0} is in range) outward to
+ * the handle in either direction — for a positive/negative range with the default in the middle.
+ * The {@code RANGE} variant and the size / orientation axes are later V1 phases; the geometry
+ * constants below are the XS preset (M3's only off-Android code preset; research §M / §Cfg).
  *
  * <p><strong>Interaction & motion (research §S / §TS / §B).</strong> Drag the handle or click the
  * track to jump; the value updates live and a {@link ChangeListener} fires on every change with
@@ -80,6 +82,24 @@ import javax.swing.event.ChangeListener;
  * @since v0.4.0
  */
 public class ElwhaSlider extends JComponent {
+
+  /**
+   * How the active track fills relative to the handle.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public enum Variant {
+    /** The active track fills from the leading edge to the handle (the default). */
+    STANDARD,
+    /**
+     * The active track fills from a fixed {@linkplain ElwhaSlider#getOrigin() origin} outward to the
+     * handle — leftward when the value is below the origin, rightward when above — leaving inactive
+     * track on both outer sides. For a positive/negative range with the default in the middle.
+     */
+    CENTERED
+  }
 
   // --- XS geometry preset (dp == px at 100% scale; research §M / §T) ---
 
@@ -137,6 +157,8 @@ public class ElwhaSlider extends JComponent {
   private boolean valueIndicatorEnabled;
   private boolean spaceDown;
   private boolean endStopsVisible = true;
+  private Variant variant = Variant.STANDARD;
+  private Integer originOverride;
 
   private int unitIncrement = 1;
   private int stopStep;
@@ -506,6 +528,80 @@ public class ElwhaSlider extends JComponent {
   }
 
   /**
+   * Returns the fill variant.
+   *
+   * @return the current {@link Variant}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public Variant getVariant() {
+    return variant;
+  }
+
+  /**
+   * Sets the fill variant. {@link Variant#STANDARD} (the default) fills from the leading edge;
+   * {@link Variant#CENTERED} fills from the {@linkplain #getOrigin() origin} outward to the handle.
+   * Switching variants does not change the value; all interaction, keyboard, value-bubble, stops and
+   * disabled behavior is shared across variants.
+   *
+   * @param variant the variant; never {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setVariant(final Variant variant) {
+    if (variant == null) {
+      throw new IllegalArgumentException("variant");
+    }
+    if (this.variant == variant) {
+      return;
+    }
+    this.variant = variant;
+    repaint();
+  }
+
+  /**
+   * Returns the fill origin — the value the {@link Variant#CENTERED} active track grows out of. When
+   * no origin has been {@linkplain #setOrigin(int) set} the default is {@code 0} if {@code 0} lies in
+   * {@code [min, max]}, otherwise the range midpoint {@code (min + max) / 2}; the value is clamped
+   * into the current range. The origin has no visual effect on the {@link Variant#STANDARD} variant,
+   * which always fills from the leading edge.
+   *
+   * @return the resolved fill origin, clamped into {@code [min, max]}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public int getOrigin() {
+    if (originOverride != null) {
+      return clamp(originOverride, getMinimum(), getMaximum());
+    }
+    return defaultOrigin();
+  }
+
+  /**
+   * Sets the fill origin for the {@link Variant#CENTERED} variant — the value its active track grows
+   * out of. Pass a value inside {@code [min, max]}; it is clamped on read. Has no visual effect on
+   * {@link Variant#STANDARD}.
+   *
+   * @param origin the fill origin value
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setOrigin(final int origin) {
+    this.originOverride = origin;
+    repaint();
+  }
+
+  /** The default origin when none is set: zero if in range, else the range midpoint. */
+  private int defaultOrigin() {
+    final int min = getMinimum();
+    final int max = getMaximum();
+    if (min <= 0 && 0 <= max) {
+      return 0;
+    }
+    return min + (max - min) / 2;
+  }
+
+  /**
    * Sets the formatter that renders the value-indicator bubble text. Defaults to the raw integer.
    * Use it to add a unit or map the value to a label (e.g. {@code v -> v + "%"}).
    *
@@ -671,6 +767,10 @@ public class ElwhaSlider extends JComponent {
   }
 
   private void paintTrack(final Graphics2D g2, final int cx) {
+    if (variant == Variant.CENTERED) {
+      paintCenteredTrack(g2, cx);
+      return;
+    }
     final int trackTop = trackTopY();
     final int half = HANDLE_WIDTH_PX / 2;
     final int leftWidth = cx - half - HANDLE_TRACK_GAP_PX;
@@ -697,6 +797,70 @@ public class ElwhaSlider extends JComponent {
     }
   }
 
+  /**
+   * Paints the centered-variant track: the two geometric segments on either side of the handle gap
+   * are each split in color at the {@linkplain #getOrigin() origin} pixel, so the active (PRIMARY)
+   * fill spans only from the origin to the handle and inactive track occupies both outer sides. All
+   * positions are pixel-space and already RTL-mirrored ({@link #handleCenterX()} / {@link
+   * #xForValue(int)}), so no orientation special-casing is needed here.
+   */
+  private void paintCenteredTrack(final Graphics2D g2, final int cx) {
+    final int trackTop = trackTopY();
+    final int half = HANDLE_WIDTH_PX / 2;
+    final int leftEnd = cx - half - HANDLE_TRACK_GAP_PX;
+    final int rightStart = cx + half + HANDLE_TRACK_GAP_PX;
+    final int width = getWidth();
+    final int originX = clamp(xForValue(getOrigin()), 0, width);
+
+    if (leftEnd > 0) {
+      paintCenteredSegment(
+          g2, trackTop, 0, leftEnd, originX, TRACK_OUTER_CORNER_PX, TRACK_INNER_CORNER_PX, true);
+    }
+    if (rightStart < width) {
+      paintCenteredSegment(
+          g2,
+          trackTop,
+          rightStart,
+          width,
+          originX,
+          TRACK_INNER_CORNER_PX,
+          TRACK_OUTER_CORNER_PX,
+          false);
+    }
+  }
+
+  /**
+   * Paints one geometric track segment {@code [x0, x1]} for the centered variant, split at {@code
+   * originX} into an active piece (the side toward the handle) and an inactive piece (the far side of
+   * the origin). {@code leftOfHandle} marks which side of the handle gap this segment sits on, which
+   * is the side whose origin-facing piece is active. The origin junction edges are squared so the two
+   * colors butt seamlessly; the outer ends keep their passed radii.
+   */
+  private void paintCenteredSegment(
+      final Graphics2D g2,
+      final int trackTop,
+      final int x0,
+      final int x1,
+      final int originX,
+      final int outerLeftCorner,
+      final int outerRightCorner,
+      final boolean leftOfHandle) {
+    if (x1 <= x0) {
+      return;
+    }
+    final int split = clamp(originX, x0, x1);
+    if (split > x0) {
+      final int rightCorner = (split < x1) ? 0 : outerRightCorner;
+      g2.setColor(trackColor(!leftOfHandle));
+      g2.fill(trackSegment(x0, trackTop, split - x0, outerLeftCorner, rightCorner));
+    }
+    if (split < x1) {
+      final int leftCorner = (split > x0) ? 0 : outerLeftCorner;
+      g2.setColor(trackColor(leftOfHandle));
+      g2.fill(trackSegment(split, trackTop, x1 - split, leftCorner, outerRightCorner));
+    }
+  }
+
   /** The handle-center x that the given value maps to (RTL-aware), without moving the model. */
   int xForValue(final int value) {
     final int range = model.getMaximum() - model.getMinimum();
@@ -710,14 +874,40 @@ public class ElwhaSlider extends JComponent {
       final int min = model.getMinimum();
       final int max = model.getMaximum();
       for (int v = min; v <= max; v += stopStep) {
-        paintStopDot(g2, cx, xForValue(v), v <= model.getValue());
+        paintStopDot(g2, cx, xForValue(v), stopOnActive(v));
       }
       if (endStopsVisible && (max - min) % stopStep != 0) {
-        paintStopDot(g2, cx, xForValue(max), false);
+        paintStopDot(g2, cx, xForValue(max), stopOnActive(max));
       }
-    } else if (endStopsVisible && model.getValue() < model.getMaximum()) {
-      // Continuous mode: a single end stop at the trailing inactive end guarantees ≥3:1 contrast.
-      paintStopDot(g2, cx, xForValue(model.getMaximum()), false);
+    } else if (endStopsVisible) {
+      paintContinuousEndStops(g2, cx);
+    }
+  }
+
+  /** Whether a stop at value {@code v} sits on the active fill — variant-aware. */
+  private boolean stopOnActive(final int v) {
+    if (variant == Variant.CENTERED) {
+      final int origin = getOrigin();
+      final int lo = Math.min(origin, model.getValue());
+      final int hi = Math.max(origin, model.getValue());
+      return lo <= v && v <= hi;
+    }
+    return v <= model.getValue();
+  }
+
+  /**
+   * Continuous-mode end stops guaranteeing the inactive track meets &ge;3:1 contrast (research §X
+   * #48). Standard shows a single stop at the trailing end; centered shows one at <em>both</em> outer
+   * ends, since inactive track flanks the origin on both sides (research §V2).
+   */
+  private void paintContinuousEndStops(final Graphics2D g2, final int cx) {
+    final int min = model.getMinimum();
+    final int max = model.getMaximum();
+    if (variant == Variant.CENTERED) {
+      paintStopDot(g2, cx, xForValue(min), stopOnActive(min));
+      paintStopDot(g2, cx, xForValue(max), stopOnActive(max));
+    } else if (model.getValue() < max) {
+      paintStopDot(g2, cx, xForValue(max), false);
     }
   }
 
