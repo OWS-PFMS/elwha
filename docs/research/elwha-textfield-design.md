@@ -117,3 +117,12 @@ A text field **is** an embeddable surface (no overlay), so it fits the standard 
 - **error→"alert" mechanism = fire an `AccessibleContext.ACCESSIBLE_DESCRIPTION_PROPERTY` change on the embedded editor** (the focusable node AT lands on). Proven by a headless `AccessibleContext` listener in `TextFieldS1SpikeSmoke`; S5 composes the full "supporting text, then error" message.
 - **Filled fill painted direct** (a top-rounded `Path2D`, no `ElwhaSurface`, no shadow) — confirmed adequate; **focus stroke 3dp / resting 1dp** carried forward to S3 for the eye-confirm.
 - The chrome occupies the top `CONTAINER_HEIGHT` (56px) band; the supporting-text row height is reserved below it from S1 so error↔supporting swaps never shift layout.
+
+### S6 build outcome (Phase 2, #353 — 2026-06-06)
+
+The multi-line build stayed **inside the locked S1 decorator boundary** — no new host, no `JPanel` fallback. As built:
+
+- **Typed `InputMode` enum** (`SINGLE_LINE` / `MULTI_LINE` / `TEXT_AREA`) is the API, not a `setMultiline(boolean)` — it names the research §GD trichotomy directly and matches the `Variant` doctrine. `setRows(int)` sizes `TEXT_AREA`; `isMultiline()` is the convenience predicate.
+- **One editor reference, swapped in place.** `SINGLE_LINE` → `JTextField`; the multi-line modes → a wrapping `JTextArea`, hosted bare for `MULTI_LINE` (auto-grow) and inside a borderless transparent `JScrollPane` for `TEXT_AREA` (fixed rows, internal scroll). The swap preserves text + enabled/editable and re-syncs the accessible name. `getEditor()` widened `JTextField` → `JTextComponent` (CHANGELOG break).
+- **Geometry generalized:** the fixed `CONTAINER_HEIGHT` became a computed `containerHeight()`. Multi-line reserves a `multiTopInset()` (filled = a floated-label row inside the fill; outlined = top padding, label on the stroke above), top-anchors the editor + icons + trailing button to the first line, and grows the box downward — auto-grow follows the wrapped content height (measured at the laid-out width, `revalidate()` on text change), text-area opens at `rows × lineHeight`. The outlined label-notch and the supporting/error row track the taller box. Zero new tokens.
+- The `JTextArea` restores default Tab traversal (Tab moves focus, Enter newlines) so it reads as a form field, not a code editor.
