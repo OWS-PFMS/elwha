@@ -102,6 +102,8 @@ public final class ElwhaMenuItem extends JComponent {
 
   private boolean selected;
   private boolean focused;
+  private boolean reserveLeading;
+  private boolean checkable;
   private ColorStyle colorStyle = ColorStyle.STANDARD;
 
   private boolean hovered;
@@ -360,6 +362,27 @@ public final class ElwhaMenuItem extends JComponent {
     repaint();
   }
 
+  // Pushed by the container when a SelectionMode is active: reserve the leading check-column on
+  // every
+  // item (even unselected ones) so toggling a MULTI item's selection never shifts the label.
+  // Without
+  // it, an item with no leading icon would widen by one icon + gap the first time it's selected.
+  void setReserveLeadingColumn(final boolean reserve) {
+    if (this.reserveLeading == reserve) {
+      return;
+    }
+    this.reserveLeading = reserve;
+    revalidate();
+    repaint();
+  }
+
+  // Pushed by the container in MULTI mode so the item reports AccessibleState.CHECKED
+  // (checkbox-like)
+  // alongside SELECTED; SINGLE leaves this false (radio-like, SELECTED only).
+  void setCheckable(final boolean checkable) {
+    this.checkable = checkable;
+  }
+
   // The container's roving focus drives this — a disabled item can still be the focused item.
   void setFocused(final boolean focused) {
     if (this.focused == focused) {
@@ -423,7 +446,7 @@ public final class ElwhaMenuItem extends JComponent {
   // ------------------------------------------------------------ sizing
 
   private boolean hasLeadingColumn() {
-    return leadingIcon != null || selected;
+    return leadingIcon != null || selected || reserveLeading;
   }
 
   @Override
@@ -844,8 +867,9 @@ public final class ElwhaMenuItem extends JComponent {
 
   /**
    * Accessible context for a menu item: {@link AccessibleRole#MENU_ITEM}, accessible name = the
-   * item label (the leading icon is decorative, §X), and {@link AccessibleState#SELECTED} when
-   * selected.
+   * item label (the leading icon is decorative, §X), {@link AccessibleState#SELECTED} when
+   * selected, and additionally {@link AccessibleState#CHECKED} when the parent menu is in {@link
+   * SelectionMode#MULTI} (checkbox-like) — so the ✓ is never the only selection signal.
    *
    * @author Charles Bryan (cfb3@uw.edu)
    * @version v0.4.0
@@ -872,6 +896,9 @@ public final class ElwhaMenuItem extends JComponent {
       final AccessibleStateSet states = super.getAccessibleStateSet();
       if (selected) {
         states.add(AccessibleState.SELECTED);
+        if (checkable) {
+          states.add(AccessibleState.CHECKED);
+        }
       }
       if (focused) {
         states.add(AccessibleState.FOCUSED);
