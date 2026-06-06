@@ -340,8 +340,9 @@ public final class ElwhaMenuItem extends JComponent {
   }
 
   /**
-   * Sets the selected state — {@code TERTIARY_CONTAINER} fill + a ✓ checkmark (Standard). Push-only
-   * from the parent {@link ElwhaMenu} when a {@code SelectionMode} is active.
+   * Sets the selected state — a tinted fill + a ✓ checkmark ({@code TERTIARY_CONTAINER} / {@code
+   * ON_TERTIARY_CONTAINER} under Standard, bold {@code TERTIARY} / {@code ON_TERTIARY} under
+   * Vibrant). Push-only from the parent {@link ElwhaMenu} when a {@code SelectionMode} is active.
    *
    * @param selected the new selected state
    * @version v0.4.0
@@ -372,7 +373,7 @@ public final class ElwhaMenuItem extends JComponent {
     return focused;
   }
 
-  // Pushed by the container; Phase 1 has only STANDARD.
+  // Pushed by the container; STANDARD (surface) or VIBRANT (tertiary-tinted), research §K.
   void setColorStyle(final ColorStyle style) {
     this.colorStyle = Objects.requireNonNull(style, "style");
     applyIconColorFilter(leadingIcon);
@@ -558,7 +559,7 @@ public final class ElwhaMenuItem extends JComponent {
       return;
     }
     final Rectangle b = visualBounds();
-    g2.setColor(ColorRole.TERTIARY_CONTAINER.resolve());
+    g2.setColor((vibrant() ? ColorRole.TERTIARY : ColorRole.TERTIARY_CONTAINER).resolve());
     g2.fill(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, ARC_PX * 2f, ARC_PX * 2f));
   }
 
@@ -717,16 +718,35 @@ public final class ElwhaMenuItem extends JComponent {
     }
   }
 
+  // Content color "on" the selected fill: Standard selects TERTIARY_CONTAINER (→ ON_TERTIARY_-
+  // CONTAINER), Vibrant selects the bold TERTIARY fill (→ ON_TERTIARY). Research §K rows 8 / 11.
+  private boolean vibrant() {
+    return colorStyle == ColorStyle.VIBRANT;
+  }
+
+  private Color onSelectedFill() {
+    return (vibrant() ? ColorRole.ON_TERTIARY : ColorRole.ON_TERTIARY_CONTAINER).resolve();
+  }
+
   private Color iconColor() {
-    return (selected ? ColorRole.ON_TERTIARY_CONTAINER : ColorRole.ON_SURFACE_VARIANT).resolve();
+    if (selected) {
+      return onSelectedFill();
+    }
+    return (vibrant() ? ColorRole.ON_TERTIARY_CONTAINER : ColorRole.ON_SURFACE_VARIANT).resolve();
   }
 
   private Color labelColor() {
-    return (selected ? ColorRole.ON_TERTIARY_CONTAINER : ColorRole.ON_SURFACE).resolve();
+    if (selected) {
+      return onSelectedFill();
+    }
+    return (vibrant() ? ColorRole.ON_TERTIARY_CONTAINER : ColorRole.ON_SURFACE).resolve();
   }
 
   private Color supportingColor() {
-    return (selected ? ColorRole.ON_TERTIARY_CONTAINER : ColorRole.ON_SURFACE_VARIANT).resolve();
+    if (selected) {
+      return onSelectedFill();
+    }
+    return (vibrant() ? ColorRole.ON_TERTIARY_CONTAINER : ColorRole.ON_SURFACE_VARIANT).resolve();
   }
 
   private Color trailingTextColor() {
@@ -734,7 +754,10 @@ public final class ElwhaMenuItem extends JComponent {
   }
 
   private Color stateLayerColor() {
-    return (selected ? ColorRole.ON_TERTIARY_CONTAINER : ColorRole.ON_SURFACE).resolve();
+    if (selected) {
+      return onSelectedFill();
+    }
+    return (vibrant() ? ColorRole.ON_TERTIARY_CONTAINER : ColorRole.ON_SURFACE).resolve();
   }
 
   // ------------------------------------------------------- interaction
