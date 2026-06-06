@@ -16,6 +16,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.KeyboardFocusManager;
 import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -26,22 +27,28 @@ import javax.accessibility.AccessibleContext;
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.JTextComponent;
 
 /**
- * A token-native M3 text-field primitive: a labeled, token-themed single-line input with two chrome
- * variants ({@link Variant#FILLED} / {@link Variant#OUTLINED}), a floating label, supporting/error
- * text, and icon / prefix-suffix slots.
+ * A token-native M3 text-field primitive: a labeled, token-themed input with two chrome variants
+ * ({@link Variant#FILLED} / {@link Variant#OUTLINED}), a floating label, supporting/error text, and
+ * icon / prefix-suffix slots. Holds a single line by default and switches to multi-line auto-grow
+ * or a fixed-height text area via {@link #setInputMode(InputMode)}.
  *
  * <p><b>Architecture (the load-bearing decision, design §2).</b> {@code ElwhaTextField} is a {@code
- * JComponent} <i>decorator</i> over an embedded {@link javax.swing.JTextField}: the wrapped editor
- * owns the caret, selection, IME, copy/paste, undo, editing keys, Tab traversal, and the {@code
- * AccessibleJTextComponent} surface — all of which Swing provides for free and which a from-scratch
- * editor would have to re-derive. Elwha owns the chrome paint (filled fill + active indicator, or
- * outlined stroke), the floating label, the typed slots, the token mapping, and the one Swing
- * accessibility gap — the error&#8594;"alert" announcement.
+ * JComponent} <i>decorator</i> over an embedded {@link javax.swing.text.JTextComponent} — a {@link
+ * javax.swing.JTextField} for the single-line mode, a {@link javax.swing.JTextArea} for the
+ * multi-line / text-area modes: the wrapped editor owns the caret, selection, IME, copy/paste,
+ * undo, editing keys, Tab traversal, and the {@code AccessibleJTextComponent} surface — all of
+ * which Swing provides for free and which a from-scratch editor would have to re-derive. Elwha owns
+ * the chrome paint (filled fill + active indicator, or outlined stroke), the floating label, the
+ * typed slots, the token mapping, and the one Swing accessibility gap — the error&#8594;"alert"
+ * announcement.
  *
  * <p>Decisions and the deliberate M3 mappings: {@code docs/research/elwha-textfield-design.md} and
  * its companion {@code elwha-textfield-research.md}.
@@ -72,6 +79,34 @@ public class ElwhaTextField extends JComponent {
     OUTLINED
   }
 
+  /**
+   * The editor mode — the M3 input-text trichotomy (research §GD). A style-orthogonal axis: every
+   * mode works with both {@link Variant}s and carries the same label / slots / error chrome.
+   *
+   * @since v0.4.0
+   */
+  public enum InputMode {
+    /**
+     * One line; the text scrolls horizontally past the right edge. The default, backed by a {@link
+     * javax.swing.JTextField}. Not suitable for long responses — use {@link #MULTI_LINE} or {@link
+     * #TEXT_AREA}.
+     */
+    SINGLE_LINE,
+    /**
+     * Auto-grow multi-line: the field starts one line tall and grows as lines are added, shifting
+     * the surrounding layout down. Backed by a wrapping {@link javax.swing.JTextArea}. Good for
+     * compact layouts where long input is occasional.
+     */
+    MULTI_LINE,
+    /**
+     * Fixed-height text area: the field opens at its {@linkplain #setRows(int) row count} and
+     * scrolls its content internally rather than growing. Backed by a {@link javax.swing.JTextArea}
+     * in a {@link javax.swing.JScrollPane}. A larger initial size signals that long responses are
+     * welcome.
+     */
+    TEXT_AREA
+  }
+
   // M3 measurements (design §5 / research §M). dp == px in this code; FlatLaf scales the Graphics.
   static final int CONTAINER_HEIGHT = 56;
   static final int PAD_TOP_BOTTOM = SpaceScale.SM.px(); // 8
@@ -86,6 +121,7 @@ public class ElwhaTextField extends JComponent {
   static final int FOCUS_STROKE = 3; // Expressive bump (design §4; resting 1dp)
   static final int DEFAULT_WIDTH = 245; // M3 default layout width
   static final int MAX_WIDTH = 488; // M3 maximum width
+  static final int DEFAULT_ROWS = 3; // initial rows for the fixed text-area mode
 
   /** Distance from a field edge to the text region when that side carries an icon slot. */
   static final int ICON_SLOT = PAD_LR_ICON + ICON_GLYPH + ICON_TEXT_GAP; // 52
@@ -93,7 +129,15 @@ public class ElwhaTextField extends JComponent {
   private static final String FLATLAF_PLACEHOLDER_KEY = "JTextField.placeholderText";
 
   private Variant variant;
-  private final JTextField editor = new JTextField();
+
+  private InputMode inputMode = InputMode.SINGLE_LINE;
+  private int rows = DEFAULT_ROWS;
+
+  /** The active editor — a {@link JTextField} (single-line) or {@link JTextArea} (multi-line). */
+  private JTextComponent editor;
+
+  /** The child actually added to the decorator — the editor, or its {@link JScrollPane} host. */
+  private JComponent editorHost;
 
   private String label = "";
   private String placeholder = "";
@@ -141,10 +185,13 @@ public class ElwhaTextField extends JComponent {
   public ElwhaTextField(final Variant variant, final String label) {
     this.variant = variant == null ? Variant.FILLED : variant;
     this.label = label == null ? "" : label;
-    initEditor();
-    initInteraction();
+    this.editor = createEditor(inputMode);
+    this.editorHost = editor;
+    configureEditorStyle(editor);
+    wireEditor(editor);
+    installDecoratorMouse();
     setLayout(null);
-    add(editor);
+    add(editorHost);
     setOpaque(false);
     syncAccessibleName();
   }
@@ -169,14 +216,36 @@ public class ElwhaTextField extends JComponent {
     return new ElwhaTextField(Variant.OUTLINED, label);
   }
 
-  private void initEditor() {
-    editor.setBorder(BorderFactory.createEmptyBorder());
-    editor.setOpaque(false);
-    editor.setForeground(ColorRole.ON_SURFACE.resolve());
-    editor.setFont(TypeRole.BODY_LARGE.resolve());
-    updateCaretColor();
-    editor
-        .getDocument()
+  /**
+   * Builds the editor for a mode: a {@link JTextField} for single-line, a wrapping {@link
+   * JTextArea} otherwise. The text area restores the default Tab traversal keys so Tab moves focus
+   * (newlines via Enter) the way a form field — not a code editor — should behave.
+   */
+  private JTextComponent createEditor(final InputMode mode) {
+    if (mode == InputMode.SINGLE_LINE) {
+      return new JTextField();
+    }
+    final JTextArea area = new JTextArea();
+    area.setLineWrap(true);
+    area.setWrapStyleWord(true);
+    area.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, null);
+    area.setFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, null);
+    if (mode == InputMode.TEXT_AREA) {
+      area.setRows(rows);
+    }
+    return area;
+  }
+
+  private void configureEditorStyle(final JTextComponent ed) {
+    ed.setBorder(BorderFactory.createEmptyBorder());
+    ed.setOpaque(false);
+    ed.setForeground(ColorRole.ON_SURFACE.resolve());
+    ed.setFont(TypeRole.BODY_LARGE.resolve());
+    ed.setCaretColor((error ? ColorRole.ERROR : ColorRole.PRIMARY).resolve());
+  }
+
+  private void wireEditor(final JTextComponent ed) {
+    ed.getDocument()
         .addDocumentListener(
             new DocumentListener() {
               @Override
@@ -194,10 +263,7 @@ public class ElwhaTextField extends JComponent {
                 onTextChanged();
               }
             });
-  }
-
-  private void initInteraction() {
-    editor.addFocusListener(
+    ed.addFocusListener(
         new FocusAdapter() {
           @Override
           public void focusGained(final FocusEvent e) {
@@ -215,8 +281,24 @@ public class ElwhaTextField extends JComponent {
             repaint();
           }
         });
+    ed.addMouseListener(
+        new MouseAdapter() {
+          @Override
+          public void mouseEntered(final MouseEvent e) {
+            hovered = true;
+            repaint();
+          }
 
-    final MouseAdapter ma =
+          @Override
+          public void mouseExited(final MouseEvent e) {
+            hovered = false;
+            repaint();
+          }
+        });
+  }
+
+  private void installDecoratorMouse() {
+    addMouseListener(
         new MouseAdapter() {
           @Override
           public void mouseEntered(final MouseEvent e) {
@@ -236,27 +318,52 @@ public class ElwhaTextField extends JComponent {
               editor.requestFocusInWindow();
             }
           }
-        };
-    addMouseListener(ma);
-    editor.addMouseListener(
-        new MouseAdapter() {
-          @Override
-          public void mouseEntered(final MouseEvent e) {
-            hovered = true;
-            repaint();
-          }
-
-          @Override
-          public void mouseExited(final MouseEvent e) {
-            hovered = false;
-            repaint();
-          }
         });
+  }
+
+  /**
+   * Rebuilds the embedded editor for the current {@link #inputMode}, preserving the text and the
+   * enabled / editable state, and re-hosts it (a bare editor, or a {@link JScrollPane} for the
+   * fixed text-area mode).
+   */
+  private void rebuildEditor() {
+    final String text = editor.getText();
+    final boolean enabled = editor.isEnabled();
+    final boolean editable = editor.isEditable();
+    remove(editorHost);
+
+    editor = createEditor(inputMode);
+    configureEditorStyle(editor);
+    wireEditor(editor);
+    editor.setText(text);
+    editor.setEnabled(enabled);
+    editor.setEditable(editable);
+
+    if (inputMode == InputMode.TEXT_AREA) {
+      final JScrollPane scroll = new JScrollPane(editor);
+      scroll.setBorder(BorderFactory.createEmptyBorder());
+      scroll.setOpaque(false);
+      scroll.getViewport().setOpaque(false);
+      scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+      editorHost = scroll;
+    } else {
+      editorHost = editor;
+    }
+    add(editorHost);
+
+    syncAccessibleName();
+    updatePlaceholder();
+    updateLabelFloat();
+    revalidate();
+    repaint();
   }
 
   private void onTextChanged() {
     updateLabelFloat();
     updatePlaceholder();
+    if (inputMode == InputMode.MULTI_LINE) {
+      revalidate(); // auto-grow: the container follows the content height
+    }
     repaint();
   }
 
@@ -302,6 +409,71 @@ public class ElwhaTextField extends JComponent {
    */
   public void setVariant(final Variant variant) {
     this.variant = variant == null ? Variant.FILLED : variant;
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns the editor mode.
+   *
+   * @return the input mode
+   */
+  public InputMode getInputMode() {
+    return inputMode;
+  }
+
+  /**
+   * Sets the editor mode, swapping the embedded editor in place. Switching to {@link
+   * InputMode#MULTI_LINE} or {@link InputMode#TEXT_AREA} replaces the single-line {@link
+   * JTextField} with a wrapping {@link JTextArea} (preserving the current text and the enabled /
+   * read-only state); switching back restores a {@link JTextField}. The label top-anchors and the
+   * container height follows the content (auto-grow) or the {@linkplain #setRows(int) row count}
+   * (text area).
+   *
+   * @param inputMode the input mode (a {@code null} is treated as {@link InputMode#SINGLE_LINE})
+   */
+  public void setInputMode(final InputMode inputMode) {
+    final InputMode next = inputMode == null ? InputMode.SINGLE_LINE : inputMode;
+    if (next == this.inputMode) {
+      return;
+    }
+    this.inputMode = next;
+    rebuildEditor();
+  }
+
+  /**
+   * Returns whether the field is in a multi-line mode ({@link InputMode#MULTI_LINE} or {@link
+   * InputMode#TEXT_AREA}).
+   *
+   * @return {@code true} if not single-line
+   */
+  public boolean isMultiline() {
+    return inputMode != InputMode.SINGLE_LINE;
+  }
+
+  /**
+   * Returns the fixed text-area row count.
+   *
+   * @return the row count
+   */
+  public int getRows() {
+    return rows;
+  }
+
+  /**
+   * Sets the initial row count for {@link InputMode#TEXT_AREA} — the opening height before the
+   * field scrolls internally. Ignored visually in the other modes (single-line is one line;
+   * multi-line auto-grows from one line), but retained so it applies if the field later switches to
+   * a text area.
+   *
+   * @param rows the row count (clamped to at least 1)
+   */
+  public void setRows(final int rows) {
+    this.rows = Math.max(1, rows);
+    if (inputMode == InputMode.TEXT_AREA && editor instanceof JTextArea area) {
+      area.setRows(this.rows);
+    }
+    revalidate();
     repaint();
   }
 
@@ -611,11 +783,14 @@ public class ElwhaTextField extends JComponent {
 
   /**
    * Returns the embedded editor. Exposed so consumers can attach document/input listeners and read
-   * the {@code AccessibleJTextComponent} surface; the chrome remains Elwha-owned.
+   * the {@code AccessibleJTextComponent} surface; the chrome remains Elwha-owned. The concrete type
+   * tracks the {@linkplain #getInputMode() mode} — a {@link JTextField} for single-line, a {@link
+   * JTextArea} for the multi-line / text-area modes — so the editor reference is invalidated by a
+   * {@link #setInputMode(InputMode)} swap; re-fetch it after changing modes.
    *
-   * @return the wrapped {@link JTextField}
+   * @return the wrapped editor ({@link JTextField} or {@link JTextArea})
    */
-  public JTextField getEditor() {
+  public JTextComponent getEditor() {
     return editor;
   }
 
@@ -733,7 +908,31 @@ public class ElwhaTextField extends JComponent {
   @Override
   public Dimension getPreferredSize() {
     final int supportingRow = SUPPORTING_TOP_PAD + lineHeight(TypeRole.BODY_SMALL);
-    return new Dimension(DEFAULT_WIDTH, containerTop() + CONTAINER_HEIGHT + supportingRow);
+    return new Dimension(DEFAULT_WIDTH, containerTop() + containerHeight() + supportingRow);
+  }
+
+  /**
+   * The container box height. The single-line field is the fixed 56dp target; the multi-line modes
+   * grow downward — auto-grow follows the wrapped content height, the text area opens at its row
+   * count — so the chrome, supporting row, and overall preferred size all track the taller box.
+   */
+  private int containerHeight() {
+    if (!isMultiline()) {
+      return CONTAINER_HEIGHT;
+    }
+    return multiTopInset() + editorContentHeight() + PAD_TOP_BOTTOM;
+  }
+
+  /**
+   * The top inset inside a multi-line container, before the editor: the filled variant reserves a
+   * floated-label row at the top of the fill (so the label has somewhere to land without
+   * overlapping the text); the outlined variant carries the label on the stroke above the box, so
+   * the editor starts at the top interior padding.
+   */
+  private int multiTopInset() {
+    return variant == Variant.FILLED
+        ? PAD_TOP_BOTTOM + lineHeight(TypeRole.BODY_SMALL)
+        : PAD_TOP_BOTTOM;
   }
 
   /**
@@ -755,7 +954,10 @@ public class ElwhaTextField extends JComponent {
     if (trailingButton != null) {
       final int btnW = trailingButton.getPreferredSize().width;
       final int btnH = trailingButton.getPreferredSize().height;
-      final int btnY = top + (CONTAINER_HEIGHT - btnH) / 2;
+      // Centre in the first-line band when multi-line (top-aligned), else in the whole box.
+      final int bandTop = isMultiline() ? editorTopY() : top;
+      final int bandH = isMultiline() ? lineHeight(TypeRole.BODY_LARGE) : CONTAINER_HEIGHT;
+      final int btnY = bandTop + (bandH - btnH) / 2;
       // Centre the button's glyph where a 24dp icon would sit (PAD_LR_ICON + 12 from the edge).
       final int glyphCenterFromEdge = PAD_LR_ICON + ICON_GLYPH / 2;
       final int btnX = ltr ? w - glyphCenterFromEdge - btnW / 2 : glyphCenterFromEdge - btnW / 2;
@@ -769,7 +971,8 @@ public class ElwhaTextField extends JComponent {
     final int textLeft = leftContentEdge() + (ltr ? prefixW : suffixW);
     final int textRight = w - rightContentEdge() - (ltr ? suffixW : prefixW);
 
-    editor.setBounds(textLeft, editorTopY(), Math.max(0, textRight - textLeft), editorHeight());
+    editorHost.setBounds(
+        textLeft, editorTopY(), Math.max(0, textRight - textLeft), editorContentHeight());
   }
 
   private int lineHeight(final TypeRole role) {
@@ -781,11 +984,47 @@ public class ElwhaTextField extends JComponent {
   }
 
   /**
-   * The editor's top edge — variant-specific. The filled label floats <i>inside</i> the top of the
-   * fill, so the input sits in the lower portion (bottom-padded) to clear it; the outlined label
-   * straddles the top stroke <i>above</i> the container, so the input is vertically centered.
+   * The laid-out height of the editor host. Single-line is one text line; the text area opens at
+   * its row count; auto-grow follows the wrapped content (always at least one line).
+   */
+  private int editorContentHeight() {
+    switch (inputMode) {
+      case TEXT_AREA:
+        return rows * lineHeight(TypeRole.BODY_LARGE);
+      case MULTI_LINE:
+        return autoGrowHeight();
+      case SINGLE_LINE:
+      default:
+        return editorHeight();
+    }
+  }
+
+  /** The wrapped content height of the auto-grow area at the current available width. */
+  private int autoGrowHeight() {
+    final int line = lineHeight(TypeRole.BODY_LARGE);
+    if (!(editor instanceof JTextArea area)) {
+      return line;
+    }
+    area.setSize(Math.max(1, availableEditorWidth()), Short.MAX_VALUE);
+    return Math.max(line, area.getPreferredSize().height);
+  }
+
+  /** Editor-region width used to measure auto-grow wrapping (falls back to the default width). */
+  private int availableEditorWidth() {
+    final int w = getWidth() > 0 ? getWidth() : DEFAULT_WIDTH;
+    return w - leftContentEdge() - rightContentEdge();
+  }
+
+  /**
+   * The editor's top edge. Single-line: the filled label floats <i>inside</i> the top of the fill
+   * so the input sits in the lower portion to clear it, while the outlined label straddles the top
+   * stroke so the input is vertically centered. Multi-line: the input top-anchors just below the
+   * floated-label band, and the box grows downward from there.
    */
   private int editorTopY() {
+    if (isMultiline()) {
+      return containerTop() + multiTopInset();
+    }
     final int h = editorHeight();
     return variant == Variant.FILLED
         ? CONTAINER_HEIGHT - PAD_TOP_BOTTOM - h
@@ -820,7 +1059,11 @@ public class ElwhaTextField extends JComponent {
     final Icon trailingSlot = showAutoErrorIcon() ? themedErrorIcon() : trailingIcon;
     final Icon leftSlot = ltr ? leadingIcon : trailingSlot;
     final Icon rightSlot = ltr ? trailingSlot : leadingIcon;
-    final int iconY = containerTop() + (CONTAINER_HEIGHT - ICON_GLYPH) / 2;
+    // Centre in the first-line band when multi-line (top-aligned), else in the whole box.
+    final int iconY =
+        isMultiline()
+            ? editorTopY() + (lineHeight(TypeRole.BODY_LARGE) - ICON_GLYPH) / 2
+            : containerTop() + (CONTAINER_HEIGHT - ICON_GLYPH) / 2;
     if (leftSlot != null) {
       paintIcon(g2, leftSlot, PAD_LR_ICON, iconY);
     }
@@ -880,7 +1123,7 @@ public class ElwhaTextField extends JComponent {
     g2.setColor(supportingColor());
     final int y =
         containerTop()
-            + CONTAINER_HEIGHT
+            + containerHeight()
             + SUPPORTING_TOP_PAD
             + getFontMetrics(TypeRole.BODY_SMALL.resolve()).getAscent();
     g2.drawString(support, PAD_LR_NO_ICON, y);
@@ -891,14 +1134,15 @@ public class ElwhaTextField extends JComponent {
   }
 
   private void paintFilledChrome(final Graphics2D g2, final int w, final int arc) {
+    final int h = containerHeight();
     final Color fill = containerFill();
     if (fill != null) {
       g2.setColor(fill);
-      g2.fill(topRoundedRect(w, CONTAINER_HEIGHT, arc));
+      g2.fill(topRoundedRect(w, h, arc));
     }
     final int stroke = focused ? FOCUS_STROKE : RESTING_STROKE;
     g2.setColor(indicatorColor());
-    g2.fillRect(0, CONTAINER_HEIGHT - stroke, w, stroke);
+    g2.fillRect(0, h - stroke, w, stroke);
   }
 
   private void paintOutlinedChrome(final Graphics2D g2, final int w, final int arc) {
@@ -919,7 +1163,7 @@ public class ElwhaTextField extends JComponent {
     final float x0 = inset;
     final float y0 = top + inset;
     final float x1 = w - inset;
-    final float y1 = top + CONTAINER_HEIGHT - inset;
+    final float y1 = top + containerHeight() - inset;
     final float r = arc;
 
     float gapStart = 0f;

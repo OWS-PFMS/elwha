@@ -639,6 +639,9 @@ public final class FoundationsPanels {
   }
 
   private static JComponent buildTextRow() {
+    // Intentionally raw Swing (not ElwhaTextField): this row demonstrates how the token foundation
+    // themes native JTextField / JTextArea — swapping in the Elwha primitive would defeat its
+    // point.
     final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
     final JTextField field = new JTextField("Text field", 14);
     final JTextArea area = new JTextArea("Multi-line\ntext area\nfor longer input", 3, 18);

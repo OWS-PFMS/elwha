@@ -12,6 +12,7 @@ import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.textfield.ElwhaTextField;
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -53,7 +54,8 @@ final class TextFieldShowcasePanels {
         scroll(
             stack(
                 gallerySection("Variants × states", buildStateMatrix()),
-                gallerySection("Slots & affixes", buildSlotsGallery()))));
+                gallerySection("Slots & affixes", buildSlotsGallery()),
+                gallerySection("Multi-line & text area", buildMultilineGallery()))));
     return tabs;
   }
 
@@ -84,6 +86,31 @@ final class TextFieldShowcasePanels {
     final ElwhaButton enabledToggle = toggle("Enabled");
     enabledToggle.setSelected(true);
 
+    final ElwhaButtonGroup modeGroup =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS);
+    modeGroup.add(new ElwhaButton("Single"));
+    modeGroup.add(new ElwhaButton("Multi-line"));
+    modeGroup.add(new ElwhaButton("Text area"));
+    modeGroup.setSelectedIndex(0);
+
+    final int[] rows = {3};
+    final JLabel rowsValue = new JLabel(String.valueOf(rows[0]));
+    final ElwhaIconButton rowsDown =
+        new ElwhaIconButton(MaterialIcons.remove())
+            .setVariant(IconButtonVariant.STANDARD)
+            .setButtonSize(IconButtonSize.S);
+    final ElwhaIconButton rowsUp =
+        new ElwhaIconButton(MaterialIcons.add())
+            .setVariant(IconButtonVariant.STANDARD)
+            .setButtonSize(IconButtonSize.S);
+    final JPanel rowsStepper = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+    rowsStepper.setOpaque(false);
+    rowsStepper.add(rowsDown);
+    rowsStepper.add(rowsValue);
+    rowsStepper.add(rowsUp);
+
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Content");
     controls.addControl("Variant", variantGroup);
@@ -93,6 +120,9 @@ final class TextFieldShowcasePanels {
     controls.addControl("Prefix", prefixCtl);
     controls.addControl("Suffix", suffixCtl);
     controls.addControl("Supporting text", supportingCtl);
+    controls.addSection("Editor");
+    controls.addControl("Input mode", modeGroup);
+    controls.addControl("Text-area rows", rowsStepper);
     controls.addSection("Slots");
     controls.addControl("", leadingToggle);
     controls.addControl("", trailingToggle);
@@ -103,19 +133,30 @@ final class TextFieldShowcasePanels {
     controls.addControl("", readOnlyToggle);
     controls.addControl("", enabledToggle);
 
+    // The stage field is rebuilt from the controls on every change; carry whatever the user typed
+    // into the live field across the rebuild so a variant / mode / rows / toggle change never wipes
+    // it (the "Prefill text" control still wins when set).
+    final ElwhaTextField[] live = {null};
+
     final Runnable apply =
         () -> {
           final ElwhaTextField.Variant variant =
               variantGroup.getSelectedIndex() == 0
                   ? ElwhaTextField.Variant.FILLED
                   : ElwhaTextField.Variant.OUTLINED;
+          final String carried = live[0] == null ? "" : live[0].getText();
           final ElwhaTextField field = new ElwhaTextField(variant, labelCtl.getText());
+          final ElwhaTextField.InputMode mode =
+              ElwhaTextField.InputMode.values()[modeGroup.getSelectedIndex()];
+          field.setInputMode(mode);
+          field.setRows(rows[0]);
           field.setPlaceholder(placeholderCtl.getText());
           field.setPrefixText(prefixCtl.getText());
           field.setSuffixText(suffixCtl.getText());
           field.setSupportingText(supportingCtl.getText());
-          if (!prefillCtl.getText().isEmpty()) {
-            field.setText(prefillCtl.getText());
+          final String text = prefillCtl.getText().isEmpty() ? carried : prefillCtl.getText();
+          if (!text.isEmpty()) {
+            field.setText(text);
           }
           if (leadingToggle.isSelected()) {
             field.setLeadingIcon(MaterialIcons.info());
@@ -135,10 +176,13 @@ final class TextFieldShowcasePanels {
           }
           field.setReadOnly(readOnlyToggle.isSelected());
           field.setEnabled(enabledToggle.isSelected());
+          live[0] = field;
           workbench.setStage(field);
           workbench.setCode(
               renderCode(
                   variant,
+                  mode,
+                  rows[0],
                   labelCtl.getText(),
                   placeholderCtl.getText(),
                   prefixCtl.getText(),
@@ -154,6 +198,19 @@ final class TextFieldShowcasePanels {
         };
 
     variantGroup.addSelectionListener(group -> apply.run());
+    modeGroup.addSelectionListener(group -> apply.run());
+    rowsDown.addActionListener(
+        event -> {
+          rows[0] = Math.max(1, rows[0] - 1);
+          rowsValue.setText(String.valueOf(rows[0]));
+          apply.run();
+        });
+    rowsUp.addActionListener(
+        event -> {
+          rows[0] = rows[0] + 1;
+          rowsValue.setText(String.valueOf(rows[0]));
+          apply.run();
+        });
     for (final ElwhaTextField ctl :
         new ElwhaTextField[] {
           labelCtl, placeholderCtl, prefillCtl, prefixCtl, suffixCtl, supportingCtl, errorTextCtl
@@ -172,6 +229,8 @@ final class TextFieldShowcasePanels {
 
   private static String renderCode(
       final ElwhaTextField.Variant variant,
+      final ElwhaTextField.InputMode mode,
+      final int rows,
       final String label,
       final String placeholder,
       final String prefix,
@@ -190,6 +249,14 @@ final class TextFieldShowcasePanels {
         .append("(\"")
         .append(label)
         .append("\");");
+    if (mode != ElwhaTextField.InputMode.SINGLE_LINE) {
+      code.append("\nfield.setInputMode(ElwhaTextField.InputMode.")
+          .append(mode.name())
+          .append(");");
+    }
+    if (mode == ElwhaTextField.InputMode.TEXT_AREA) {
+      code.append("\nfield.setRows(").append(rows).append(");");
+    }
     if (!placeholder.isEmpty()) {
       code.append("\nfield.setPlaceholder(\"").append(placeholder).append("\");");
     }
@@ -338,6 +405,34 @@ final class TextFieldShowcasePanels {
     gbc.gridx = 1;
     grid.add(field, gbc);
     gbc.gridy++;
+  }
+
+  private static JComponent buildMultilineGallery() {
+    final JPanel grid = new JPanel(new GridBagLayout());
+    grid.setBorder(BorderFactory.createEmptyBorder(12, 20, 20, 20));
+    final GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(8, 12, 8, 12);
+    gbc.anchor = GridBagConstraints.NORTHWEST;
+    gbc.gridy = 0;
+
+    final ElwhaTextField autoGrow = ElwhaTextField.outlined("Notes (auto-grow)");
+    autoGrow.setInputMode(ElwhaTextField.InputMode.MULTI_LINE);
+    autoGrow.setText(
+        "Multi-line grows with content,\nshifting the layout down\nas lines are added.");
+    autoGrow.setSupportingText("Grows as you type");
+
+    final ElwhaTextField textArea = ElwhaTextField.filled("Bio (text area)");
+    textArea.setInputMode(ElwhaTextField.InputMode.TEXT_AREA);
+    textArea.setRows(3);
+    textArea.setText(
+        "A fixed three-row text area that\n"
+            + "scrolls its content internally\n"
+            + "rather than growing the field\n"
+            + "when the text overflows.");
+
+    slotsRow(grid, gbc, "Multi-line (auto-grow)", autoGrow);
+    slotsRow(grid, gbc, "Text area (fixed rows)", textArea);
+    return grid;
   }
 
   // ---- Helpers --------------------------------------------------------------
