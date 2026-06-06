@@ -22,6 +22,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
+import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
 import javax.accessibility.AccessibleValue;
@@ -194,8 +195,11 @@ public class ElwhaSlider extends JComponent {
 
   private int lowerValue;
   private int upperValue;
-  private Handle activeHandle = Handle.LOWER;
+  Handle activeHandle = Handle.LOWER;
+  Handle focusedHandle = Handle.LOWER;
   private Handle hoveredHandle;
+  private final RangeHandle lowerFocus = new RangeHandle(Handle.LOWER);
+  private final RangeHandle upperFocus = new RangeHandle(Handle.UPPER);
 
   private int unitIncrement = 1;
   private int stopStep;
@@ -269,9 +273,9 @@ public class ElwhaSlider extends JComponent {
    */
   public static ElwhaSlider range(final int min, final int max, final int lower, final int upper) {
     final ElwhaSlider slider = new ElwhaSlider(min, max, clamp(lower, min, max));
-    slider.variant = Variant.RANGE;
     slider.lowerValue = clamp(lower, min, max);
     slider.upperValue = clamp(upper, min, max);
+    slider.setVariant(Variant.RANGE);
     return slider;
   }
 
@@ -693,7 +697,28 @@ public class ElwhaSlider extends JComponent {
       return;
     }
     this.variant = variant;
+    applyRangeFocusModel();
     repaint();
+  }
+
+  /**
+   * In {@link Variant#RANGE} the two pill handles are the keyboard tab stops and the {@link
+   * AccessibleValue} children: attach the click-through focus proxies and make the slider itself a
+   * non-tab-stop with traversal keys re-enabled on the children. Any other variant detaches them and
+   * restores the slider as the single focus target.
+   */
+  private void applyRangeFocusModel() {
+    final boolean range = variant == Variant.RANGE;
+    final boolean attached = lowerFocus.getParent() == this;
+    if (range && !attached) {
+      add(lowerFocus);
+      add(upperFocus);
+    } else if (!range && attached) {
+      remove(lowerFocus);
+      remove(upperFocus);
+    }
+    setFocusable(!range);
+    revalidate();
   }
 
   /**
@@ -1049,6 +1074,66 @@ public class ElwhaSlider extends JComponent {
     return handle == activeHandle ? currentHandleWidth() : HANDLE_WIDTH_PX;
   }
 
+  /** The current value of the given range handle. */
+  private int handleValue(final Handle handle) {
+    return handle == Handle.UPPER ? getUpperValue() : getLowerValue();
+  }
+
+  /** Sets the given range handle's value (snap + no-cross clamp via the public setters). */
+  private void setHandleValue(final Handle handle, final int value) {
+    if (handle == Handle.UPPER) {
+      setUpperValue(value);
+    } else {
+      setLowerValue(value);
+    }
+  }
+
+  /** The lower bound a handle may take under the no-cross clamp (Home target). */
+  private int handleMin(final Handle handle) {
+    return handle == Handle.UPPER ? getLowerValue() : getMinimum();
+  }
+
+  /** The upper bound a handle may take under the no-cross clamp (End target). */
+  private int handleMax(final Handle handle) {
+    return handle == Handle.UPPER ? getMaximum() : getUpperValue();
+  }
+
+  /** The click-through focus proxy for the given handle. */
+  private RangeHandle childFor(final Handle handle) {
+    return handle == Handle.UPPER ? upperFocus : lowerFocus;
+  }
+
+  /** Whether either range handle currently owns the keyboard focus. */
+  private boolean isRangeFocused() {
+    return lowerFocus.isFocusOwner() || upperFocus.isFocusOwner();
+  }
+
+  /** Whether the given range handle's focus proxy owns the keyboard focus. */
+  private boolean childHasFocus(final Handle handle) {
+    return childFor(handle).isFocusOwner();
+  }
+
+  @Override
+  public void doLayout() {
+    super.doLayout();
+    if (variant == Variant.RANGE) {
+      positionHandleFocus(lowerFocus, lowerHandleCenterX());
+      positionHandleFocus(upperFocus, upperHandleCenterX());
+    }
+  }
+
+  /** Sizes/positions a focus proxy over its handle halo (focus-ring + screen-reader bounds). */
+  private void positionHandleFocus(final RangeHandle child, final int cx) {
+    final int x = cx - HANDLE_HALO_WIDTH_PX / 2;
+    final int y = handleTopY();
+    if (child.getX() != x
+        || child.getY() != y
+        || child.getWidth() != HANDLE_HALO_WIDTH_PX
+        || child.getHeight() != HANDLE_HEIGHT_PX) {
+      child.setBounds(x, y, HANDLE_HALO_WIDTH_PX, HANDLE_HEIGHT_PX);
+    }
+  }
+
   /**
    * Paints the {@link Variant#RANGE} variant: the active ({@link ColorRole#PRIMARY}) track fills
    * <em>between</em> the two handles, inactive ({@link ColorRole#SECONDARY_CONTAINER}) track flanks
@@ -1061,6 +1146,8 @@ public class ElwhaSlider extends JComponent {
   private void paintRange(final Graphics2D g2) {
     final int loX = lowerHandleCenterX();
     final int hiX = upperHandleCenterX();
+    positionHandleFocus(lowerFocus, loX);
+    positionHandleFocus(upperFocus, hiX);
     final int leftX = Math.min(loX, hiX);
     final int rightX = Math.max(loX, hiX);
     paintRangeTrack(g2, leftX, rightX);
@@ -1070,6 +1157,10 @@ public class ElwhaSlider extends JComponent {
     paintRipple(g2, activeHandleCenterX());
     paintHandleAt(g2, loX, rangeHandleWidth(Handle.LOWER));
     paintHandleAt(g2, hiX, rangeHandleWidth(Handle.UPPER));
+    // One value bubble at a time (M3): only the active (focused / dragged) handle shows one.
+    if (valueIndicatorEnabled) {
+      paintValueBubbleAt(g2, activeHandleCenterX(), rangeValueText(activeHandle));
+    }
   }
 
   /**
@@ -1085,7 +1176,7 @@ public class ElwhaSlider extends JComponent {
     try {
       final RoundRectangle2D.Float halo = handleHalo(cx);
       final Color tint = ColorRole.PRIMARY.resolve();
-      if (isFocusOwner() && handle == activeHandle) {
+      if (childHasFocus(handle)) {
         s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.FOCUS.opacity()));
         s.setColor(tint);
         s.fill(halo);
@@ -1314,6 +1405,10 @@ public class ElwhaSlider extends JComponent {
   }
 
   private void paintValueBubble(final Graphics2D g2, final int cx) {
+    paintValueBubbleAt(g2, cx, valueText());
+  }
+
+  private void paintValueBubbleAt(final Graphics2D g2, final int cx, final String text) {
     if (!valueIndicatorEnabled) {
       return;
     }
@@ -1344,7 +1439,6 @@ public class ElwhaSlider extends JComponent {
       b.setColor(ColorRole.INVERSE_ON_SURFACE.resolve());
       b.setFont(getFont().deriveFont(Font.PLAIN, VALUE_BUBBLE_LABEL_PT));
       final FontMetrics fm = b.getFontMetrics();
-      final String text = valueText();
       final int bodyHeight = VALUE_BUBBLE_HEIGHT_PX - VALUE_BUBBLE_NUB_HEIGHT_PX;
       final int bodyTop = nubTipY - VALUE_BUBBLE_HEIGHT_PX;
       final int tx = Math.round(bubbleCenterX - fm.stringWidth(text) / 2f);
@@ -1364,6 +1458,18 @@ public class ElwhaSlider extends JComponent {
       }
     }
     return Integer.toString(model.getValue());
+  }
+
+  /** The value-bubble text for a range handle — the {@code valueFormatter} output, or the raw value. */
+  String rangeValueText(final Handle handle) {
+    final int value = handleValue(handle);
+    if (valueFormatter != null) {
+      final String text = valueFormatter.apply(value);
+      if (text != null) {
+        return text;
+      }
+    }
+    return Integer.toString(value);
   }
 
   /**
@@ -1485,6 +1591,7 @@ public class ElwhaSlider extends JComponent {
             model.setValueIsAdjusting(true);
             if (variant == Variant.RANGE) {
               activeHandle = pickHandle(e.getX());
+              childFor(activeHandle).requestFocusInWindow();
               setActiveHandleValue(valueForX(e.getX()));
               startRipple(new Point(activeHandleCenterX(), handleCenterY()));
             } else {
@@ -1549,7 +1656,8 @@ public class ElwhaSlider extends JComponent {
 
   /** Drives the handle-narrow + value-bubble appearance toward active (focus or press) or rest. */
   private void updateInteractionAnimator() {
-    if (pressed || isFocusOwner()) {
+    final boolean focused = variant == Variant.RANGE ? isRangeFocused() : isFocusOwner();
+    if (pressed || focused) {
       interactionAnimator.start();
     } else {
       interactionAnimator.reverse();
@@ -1591,19 +1699,12 @@ public class ElwhaSlider extends JComponent {
   // ------------------------------------------------------------------ keyboard
 
   private void initKeyboard() {
-    final InputMap im = getInputMap(WHEN_FOCUSED);
+    // WHEN_FOCUSED drives the single-variant slider (the slider is the focus owner); the ancestor
+    // map drives the range variant, where a per-handle focus child owns focus and key events bubble
+    // up to these same shared actions, which then target the focused handle.
+    installKeys(getInputMap(WHEN_FOCUSED));
+    installKeys(getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT));
     final ActionMap am = getActionMap();
-
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), "elwhaSlider.left");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), "elwhaSlider.right");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), "elwhaSlider.decrease");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), "elwhaSlider.increase");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_DOWN, 0), "elwhaSlider.blockDown");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_UP, 0), "elwhaSlider.blockUp");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0), "elwhaSlider.min");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0), "elwhaSlider.max");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, false), "elwhaSlider.spaceDown");
-    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, true), "elwhaSlider.spaceUp");
 
     // Horizontal arrows mirror under RTL; vertical arrows do not. Space held promotes arrows to the
     // block increment (research §X #49 "Space & Arrows"); Page keys are the always-block
@@ -1614,10 +1715,23 @@ public class ElwhaSlider extends JComponent {
     am.put("elwhaSlider.decrease", step(() -> -stepAmount()));
     am.put("elwhaSlider.blockUp", step(this::getBlockIncrement));
     am.put("elwhaSlider.blockDown", step(() -> -getBlockIncrement()));
-    am.put("elwhaSlider.min", jumpTo(model.getMinimum(), true));
-    am.put("elwhaSlider.max", jumpTo(model.getMaximum(), false));
+    am.put("elwhaSlider.min", jumpTo(true));
+    am.put("elwhaSlider.max", jumpTo(false));
     am.put("elwhaSlider.spaceDown", spaceState(true));
     am.put("elwhaSlider.spaceUp", spaceState(false));
+  }
+
+  private static void installKeys(final InputMap im) {
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), "elwhaSlider.left");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), "elwhaSlider.right");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), "elwhaSlider.decrease");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), "elwhaSlider.increase");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_DOWN, 0), "elwhaSlider.blockDown");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_UP, 0), "elwhaSlider.blockUp");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0), "elwhaSlider.min");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0), "elwhaSlider.max");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, false), "elwhaSlider.spaceDown");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, true), "elwhaSlider.spaceUp");
   }
 
   private boolean ltr() {
@@ -1640,18 +1754,28 @@ public class ElwhaSlider extends JComponent {
     return new AbstractAction() {
       @Override
       public void actionPerformed(final ActionEvent e) {
-        if (isEnabled()) {
+        if (!isEnabled()) {
+          return;
+        }
+        if (variant == Variant.RANGE) {
+          setHandleValue(focusedHandle, handleValue(focusedHandle) + delta.getAsInt());
+        } else {
           setValue(ElwhaSlider.this.getValue() + delta.getAsInt());
         }
       }
     };
   }
 
-  private AbstractAction jumpTo(final int target, final boolean toMin) {
+  private AbstractAction jumpTo(final boolean toMin) {
     return new AbstractAction() {
       @Override
       public void actionPerformed(final ActionEvent e) {
-        if (isEnabled()) {
+        if (!isEnabled()) {
+          return;
+        }
+        if (variant == Variant.RANGE) {
+          setHandleValue(focusedHandle, toMin ? handleMin(focusedHandle) : handleMax(focusedHandle));
+        } else {
           setValue(toMin ? model.getMinimum() : model.getMaximum());
         }
       }
@@ -1703,6 +1827,24 @@ public class ElwhaSlider extends JComponent {
     }
 
     @Override
+    public int getAccessibleChildrenCount() {
+      return variant == Variant.RANGE ? 2 : 0;
+    }
+
+    @Override
+    public Accessible getAccessibleChild(final int i) {
+      if (variant == Variant.RANGE) {
+        if (i == 0) {
+          return lowerFocus;
+        }
+        if (i == 1) {
+          return upperFocus;
+        }
+      }
+      return null;
+    }
+
+    @Override
     public AccessibleValue getAccessibleValue() {
       return this;
     }
@@ -1729,6 +1871,101 @@ public class ElwhaSlider extends JComponent {
     @Override
     public Number getMaximumAccessibleValue() {
       return model.getMaximum();
+    }
+  }
+
+  /**
+   * A zero-paint, click-through focusable proxy for one {@link Variant#RANGE} handle. It is the
+   * keyboard tab stop and the {@link AccessibleValue} accessible child for its handle, while {@link
+   * ElwhaSlider} paints the handle, focus ring, and value bubble. {@link #contains(int, int)}
+   * returns {@code false} so the proxy never intercepts mouse events — the slider's own listener
+   * drives press / drag and focuses the proxy programmatically.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  private final class RangeHandle extends JComponent implements Accessible {
+
+    private final Handle handle;
+
+    RangeHandle(final Handle handle) {
+      this.handle = handle;
+      setOpaque(false);
+      setFocusable(true);
+      addFocusListener(
+          new FocusAdapter() {
+            @Override
+            public void focusGained(final FocusEvent e) {
+              focusedHandle = handle;
+              activeHandle = handle;
+              updateInteractionAnimator();
+              ElwhaSlider.this.repaint();
+            }
+
+            @Override
+            public void focusLost(final FocusEvent e) {
+              updateInteractionAnimator();
+              ElwhaSlider.this.repaint();
+            }
+          });
+    }
+
+    @Override
+    public boolean contains(final int x, final int y) {
+      return false;
+    }
+
+    @Override
+    public AccessibleContext getAccessibleContext() {
+      if (accessibleContext == null) {
+        accessibleContext = new AccessibleRangeHandle();
+      }
+      return accessibleContext;
+    }
+
+    /** Accessible node for one range handle: a slider with its own no-cross-clamped bounds. */
+    final class AccessibleRangeHandle extends AccessibleJComponent implements AccessibleValue {
+
+      @Override
+      public AccessibleRole getAccessibleRole() {
+        return AccessibleRole.SLIDER;
+      }
+
+      @Override
+      public String getAccessibleName() {
+        final String position = handle == Handle.LOWER ? "Lower" : "Upper";
+        return (label != null && !label.isEmpty()) ? label + " " + position : position;
+      }
+
+      @Override
+      public AccessibleValue getAccessibleValue() {
+        return this;
+      }
+
+      @Override
+      public Number getCurrentAccessibleValue() {
+        return handleValue(handle);
+      }
+
+      @Override
+      public boolean setCurrentAccessibleValue(final Number n) {
+        if (n == null) {
+          return false;
+        }
+        setHandleValue(handle, n.intValue());
+        return true;
+      }
+
+      @Override
+      public Number getMinimumAccessibleValue() {
+        return handleMin(handle);
+      }
+
+      @Override
+      public Number getMaximumAccessibleValue() {
+        return handleMax(handle);
+      }
     }
   }
 
