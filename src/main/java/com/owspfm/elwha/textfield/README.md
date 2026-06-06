@@ -1,6 +1,6 @@
 # ElwhaTextField
 
-A token-native M3 text-field primitive — a labeled, themed single-line input with two chrome variants, a floating-label animation, leading/trailing icon slots, inline prefix/suffix affixes, supporting/error text, and a required-asterisk cue.
+A token-native M3 text-field primitive — a labeled, themed input with two chrome variants, a floating-label animation, leading/trailing icon slots, inline prefix/suffix affixes, supporting/error text, and a required-asterisk cue. Holds a single line by default and switches to multi-line auto-grow or a fixed-height text area.
 
 `ElwhaTextField` styling resolves entirely from the [Elwha design tokens](../theme/) — no raw colors / insets / pixel values reach the public setter API. It mirrors the per-variant naming of the sibling [`ElwhaCard`](../card/README.md) / [`ElwhaChip`](../chip/README.md) primitives.
 
@@ -8,12 +8,12 @@ A token-native M3 text-field primitive — a labeled, themed single-line input w
 
 ## Architecture — a decorator, not a subclass
 
-Unlike `ElwhaButton extends JComponent` (where Elwha owns the whole paint), text input is genuinely hard to reimplement — caret, selection, IME/composition, copy/paste, undo, editing keys, Tab traversal, and the `AccessibleJTextComponent` surface all live in Swing's `JTextComponent`. So `ElwhaTextField extends JComponent` is a **decorator** over an embedded `javax.swing.JTextField`:
+Unlike `ElwhaButton extends JComponent` (where Elwha owns the whole paint), text input is genuinely hard to reimplement — caret, selection, IME/composition, copy/paste, undo, editing keys, Tab traversal, and the `AccessibleJTextComponent` surface all live in Swing's `JTextComponent`. So `ElwhaTextField extends JComponent` is a **decorator** over an embedded `JTextComponent` — a `javax.swing.JTextField` for the single-line mode, a `javax.swing.JTextArea` for the multi-line / text-area modes:
 
 - the **wrapped editor** owns the editing surface and its accessibility — all free from Swing;
 - **Elwha** owns the chrome paint (filled fill + active indicator, or outlined stroke with the label-notch), the floating label, the typed slots, the token mapping, and the one Swing accessibility gap — the error→"alert" announcement.
 
-The editor is reachable via [`getEditor()`](ElwhaTextField.java) for attaching document/input listeners; the chrome stays Elwha-owned.
+The editor is reachable via [`getEditor()`](ElwhaTextField.java) (typed `JTextComponent`) for attaching document/input listeners; the chrome stays Elwha-owned. A `setInputMode(...)` swap rebuilds the editor, so re-fetch it after changing modes.
 
 ---
 
@@ -31,9 +31,29 @@ if (!isValid(email.getText())) {
   email.setErrorText("Enter a valid email address");   // replaces the supporting line + auto error icon
 }
 
-// The editor is a real JTextField — listen to it directly:
+// The editor is a real JTextComponent — listen to it directly:
 email.getEditor().getDocument().addDocumentListener(myListener);
 ```
+
+---
+
+## Input modes (single-line · multi-line · text area)
+
+`setInputMode(InputMode)` covers the M3 input-text trichotomy; the editor swaps in place, preserving the text and the enabled / read-only state, and the label / icon slots top-anchor in the multi-line modes while the chrome grows to the taller box. Both variants and the full error / disabled / read-only chrome carry over.
+
+| Mode          | Editor                              | Behavior                                                                            |
+| ------------- | ----------------------------------- | ----------------------------------------------------------------------------------- |
+| `SINGLE_LINE` | `JTextField` (default)              | One line; text scrolls horizontally. Not for long responses.                        |
+| `MULTI_LINE`  | wrapping `JTextArea`                | **Auto-grow** — the field grows with the content and shifts the layout below it down. |
+| `TEXT_AREA`   | `JTextArea` in a `JScrollPane`      | **Fixed** at `setRows(int)` rows; scrolls its content internally. Signals long input is welcome. |
+
+```java
+ElwhaTextField notes = ElwhaTextField.outlined("Notes");
+notes.setInputMode(ElwhaTextField.InputMode.TEXT_AREA);
+notes.setRows(4);
+```
+
+The `JTextArea` restores default Tab traversal (Tab moves focus, Enter inserts a newline) so it behaves as a form field.
 
 ---
 
@@ -85,4 +105,4 @@ Accessibility is overwhelmingly satisfied by the wrapped editor (role `Textbox`,
 
 ## Scope
 
-Phase 1 ships the complete **single-line** field. Multi-line / text-area (`S6`) and the character counter + supporting-text visibility mode (`S7`) are later phases; select / exposed-dropdown, search, and formatted/numeric fields are documented follow-ups. Decisions: [`docs/research/elwha-textfield-design.md`](../../../../../../../docs/research/elwha-textfield-design.md).
+Phase 1 shipped the complete **single-line** field; Phase 2 (`S6`) adds **multi-line + text-area**. The character counter + supporting-text visibility mode (`S7`) is a later phase; select / exposed-dropdown, search, and formatted/numeric fields are documented follow-ups. Decisions: [`docs/research/elwha-textfield-design.md`](../../../../../../../docs/research/elwha-textfield-design.md).
