@@ -11,10 +11,11 @@ import java.awt.Container;
 import javax.swing.JComponent;
 
 /**
- * Headless guard for S5 (story #346). Builds the {@link SliderShowcasePanels} Workbench + Gallery
- * leaf surfaces and constructs the two dogfooded {@code card/v1/playground} panels, asserting they
- * build without a display and that the migrated controls are now {@link ElwhaSlider}s (zero raw
- * {@code JSlider} left in those panels).
+ * Headless guard for the Showcase Slider leaf (stories #346 / #351). Builds the {@link
+ * SliderShowcasePanels} Workbench + Gallery leaf surfaces and constructs the two dogfooded {@code
+ * card/v1/playground} panels, asserting they build without a display, that the gallery now spans
+ * the standard + centered 6×5 state matrix (with live {@code CENTERED} sliders), and that the
+ * migrated controls are now {@link ElwhaSlider}s (zero raw {@code JSlider} left in those panels).
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -42,8 +43,10 @@ public final class ElwhaSliderShowcaseSmoke {
 
     final JComponent gallery = SliderShowcasePanels.buildGallery();
     check("gallery builds", gallery != null);
-    // 3 configs × 5 states = 15 gallery sliders.
-    check("gallery is the 3×5 state matrix", countSliders(gallery) == 15);
+    // 6 configs (3 standard + 3 centered) × 5 states = 30 gallery sliders.
+    check("gallery is the 6×5 state matrix", countSliders(gallery) == 30);
+    // The 3 centered config rows × 5 states = 15 CENTERED sliders.
+    check("gallery includes the centered variant rows", countCentered(gallery) == 15);
 
     final LiveConfigPanel liveConfig = new LiveConfigPanel();
     check("LiveConfigPanel dogfood builds", liveConfig != null);
@@ -72,6 +75,17 @@ public final class ElwhaSliderShowcaseSmoke {
     if (root instanceof Container container) {
       for (final Component child : container.getComponents()) {
         count += countSliders(child);
+      }
+    }
+    return count;
+  }
+
+  private static int countCentered(final Component root) {
+    int count =
+        (root instanceof ElwhaSlider s && s.getVariant() == ElwhaSlider.Variant.CENTERED) ? 1 : 0;
+    if (root instanceof Container container) {
+      for (final Component child : container.getComponents()) {
+        count += countCentered(child);
       }
     }
     return count;
