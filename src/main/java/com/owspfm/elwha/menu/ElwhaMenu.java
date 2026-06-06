@@ -493,15 +493,17 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
         final int bw = getWidth() - shadow.left - shadow.right;
         final int bh = getHeight() - shadow.top - shadow.bottom;
 
-        final Graphics2D sg = (Graphics2D) g2.create();
-        sg.translate(bx, by);
-        ShadowPainter.paint(sg, bw, bh, CONTAINER_ARC_PX * 2, ELEVATION);
-        sg.dispose();
-
-        g2.setColor(ColorRole.SURFACE_CONTAINER_LOW.resolve());
         if (gapCards) {
+          // Each group is its own floating card: shadow + fill per card, so the transparent gap
+          // between cards shows only soft shadow falloff — never the dark interior a single
+          // full-bounds union shadow would leave bleeding through the gap.
           paintGroupCards(g2, bx, bw);
         } else {
+          final Graphics2D sg = (Graphics2D) g2.create();
+          sg.translate(bx, by);
+          ShadowPainter.paint(sg, bw, bh, CONTAINER_ARC_PX * 2, ELEVATION);
+          sg.dispose();
+          g2.setColor(ColorRole.SURFACE_CONTAINER_LOW.resolve());
           g2.fill(
               new RoundRectangle2D.Float(
                   bx, by, bw, bh, CONTAINER_ARC_PX * 2f, CONTAINER_ARC_PX * 2f));
@@ -515,6 +517,20 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       if (groupPanels == null) {
         return;
       }
+      // Pass 1: every card's shadow, before any fill, so a card's shadow can't darken an adjacent
+      // card's body — only the inter-card gap and the outer edges keep the shadow.
+      for (final JComponent gp : groupPanels) {
+        if (gp.getParent() == null) {
+          continue;
+        }
+        final Rectangle r = SwingUtilities.convertRectangle(gp.getParent(), gp.getBounds(), this);
+        final Graphics2D sg = (Graphics2D) g2.create();
+        sg.translate(bx, r.y);
+        ShadowPainter.paint(sg, bw, r.height, CONTAINER_ARC_PX * 2, ELEVATION);
+        sg.dispose();
+      }
+      // Pass 2: every card's fill.
+      g2.setColor(ColorRole.SURFACE_CONTAINER_LOW.resolve());
       for (final JComponent gp : groupPanels) {
         if (gp.getParent() == null) {
           continue;
