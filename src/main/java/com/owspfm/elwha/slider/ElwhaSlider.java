@@ -94,9 +94,10 @@ public class ElwhaSlider extends JComponent {
     /** The active track fills from the leading edge to the handle (the default). */
     STANDARD,
     /**
-     * The active track fills from a fixed {@linkplain ElwhaSlider#getOrigin() origin} outward to the
-     * handle — leftward when the value is below the origin, rightward when above — leaving inactive
-     * track on both outer sides. For a positive/negative range with the default in the middle.
+     * The active track fills from a fixed {@linkplain ElwhaSlider#getOrigin() origin} outward to
+     * the handle — leftward when the value is below the origin, rightward when above — leaving
+     * inactive track on both outer sides. For a positive/negative range with the default in the
+     * middle.
      */
     CENTERED
   }
@@ -541,8 +542,8 @@ public class ElwhaSlider extends JComponent {
   /**
    * Sets the fill variant. {@link Variant#STANDARD} (the default) fills from the leading edge;
    * {@link Variant#CENTERED} fills from the {@linkplain #getOrigin() origin} outward to the handle.
-   * Switching variants does not change the value; all interaction, keyboard, value-bubble, stops and
-   * disabled behavior is shared across variants.
+   * Switching variants does not change the value; all interaction, keyboard, value-bubble, stops
+   * and disabled behavior is shared across variants.
    *
    * @param variant the variant; never {@code null}
    * @version v0.4.0
@@ -560,11 +561,11 @@ public class ElwhaSlider extends JComponent {
   }
 
   /**
-   * Returns the fill origin — the value the {@link Variant#CENTERED} active track grows out of. When
-   * no origin has been {@linkplain #setOrigin(int) set} the default is {@code 0} if {@code 0} lies in
-   * {@code [min, max]}, otherwise the range midpoint {@code (min + max) / 2}; the value is clamped
-   * into the current range. The origin has no visual effect on the {@link Variant#STANDARD} variant,
-   * which always fills from the leading edge.
+   * Returns the fill origin — the value the {@link Variant#CENTERED} active track grows out of.
+   * When no origin has been {@linkplain #setOrigin(int) set} the default is {@code 0} if {@code 0}
+   * lies in {@code [min, max]}, otherwise the range midpoint {@code (min + max) / 2}; the value is
+   * clamped into the current range. The origin has no visual effect on the {@link Variant#STANDARD}
+   * variant, which always fills from the leading edge.
    *
    * @return the resolved fill origin, clamped into {@code [min, max]}
    * @version v0.4.0
@@ -578,9 +579,9 @@ public class ElwhaSlider extends JComponent {
   }
 
   /**
-   * Sets the fill origin for the {@link Variant#CENTERED} variant — the value its active track grows
-   * out of. Pass a value inside {@code [min, max]}; it is clamped on read. Has no visual effect on
-   * {@link Variant#STANDARD}.
+   * Sets the fill origin for the {@link Variant#CENTERED} variant — the value its active track
+   * grows out of. Pass a value inside {@code [min, max]}; it is clamped on read. Has no visual
+   * effect on {@link Variant#STANDARD}.
    *
    * @param origin the fill origin value
    * @version v0.4.0
@@ -831,10 +832,10 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Paints one geometric track segment {@code [x0, x1]} for the centered variant, split at {@code
-   * originX} into an active piece (the side toward the handle) and an inactive piece (the far side of
-   * the origin). {@code leftOfHandle} marks which side of the handle gap this segment sits on, which
-   * is the side whose origin-facing piece is active. The origin junction edges are squared so the two
-   * colors butt seamlessly; the outer ends keep their passed radii.
+   * originX} into an active piece (the side toward the handle) and an inactive piece (the far side
+   * of the origin). {@code leftOfHandle} marks which side of the handle gap this segment sits on,
+   * which is the side whose origin-facing piece is active. The origin junction edges are squared so
+   * the two colors butt seamlessly; the outer ends keep their passed radii.
    */
   private void paintCenteredSegment(
       final Graphics2D g2,
@@ -897,8 +898,8 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Continuous-mode end stops guaranteeing the inactive track meets &ge;3:1 contrast (research §X
-   * #48). Standard shows a single stop at the trailing end; centered shows one at <em>both</em> outer
-   * ends, since inactive track flanks the origin on both sides (research §V2).
+   * #48). Standard shows a single stop at the trailing end; centered shows one at <em>both</em>
+   * outer ends, since inactive track flanks the origin on both sides (research §V2).
    */
   private void paintContinuousEndStops(final Graphics2D g2, final int cx) {
     final int min = model.getMinimum();

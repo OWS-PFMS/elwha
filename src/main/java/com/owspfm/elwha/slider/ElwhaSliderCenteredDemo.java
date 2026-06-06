@@ -16,11 +16,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 /**
- * Phase-2 / S1 playground (story #351) — exercises the {@link ElwhaSlider.Variant#CENTERED} variant:
- * the active track fills out of the {@linkplain ElwhaSlider#getOrigin() origin} (range midpoint or
- * zero) toward the handle in either direction, with inactive track on both outer sides and stop dots
- * at both ends. Drag the centered sliders past and below the origin to watch the fill flip
- * direction; the mode toggle dogfoods {@link ElwhaButton}.
+ * Phase-2 / S1 playground (story #351) — exercises the {@link ElwhaSlider.Variant#CENTERED}
+ * variant: the active track fills out of the {@linkplain ElwhaSlider#getOrigin() origin} (range
+ * midpoint or zero) toward the handle in either direction, with inactive track on both outer sides
+ * and stop dots at both ends. Drag the centered sliders past and below the origin to watch the fill
+ * flip direction; the mode toggle dogfoods {@link ElwhaButton}.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -80,8 +80,7 @@ public final class ElwhaSliderCenteredDemo {
           final boolean centered = balance.getVariant() == ElwhaSlider.Variant.CENTERED;
           balance.setVariant(
               centered ? ElwhaSlider.Variant.STANDARD : ElwhaSlider.Variant.CENTERED);
-          variantToggle.setText(
-              "Make first slider: " + (centered ? "centered" : "standard"));
+          variantToggle.setText("Make first slider: " + (centered ? "centered" : "standard"));
         });
     final JPanel top = new JPanel(new FlowLayout(FlowLayout.LEADING));
     top.add(variantToggle);

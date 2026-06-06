@@ -17,11 +17,13 @@ import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 
 /**
- * The Elwha Showcase leaf surface for {@link ElwhaSlider} (story #346): a {@link
- * ComponentWorkbench} stage with the Phase-1 controls (stops on/off + step, value indicator on/off,
- * disabled — variant / orientation / size selectors are stubbed-disabled placeholders for later V1
- * phases) plus a state gallery matrix (enabled / hover / focused / pressed / disabled across the
- * continuous, stops, and value-bubble configurations).
+ * The Elwha Showcase leaf surface for {@link ElwhaSlider} (stories #346 / #351): a {@link
+ * ComponentWorkbench} stage with a live <strong>Variant</strong> selector (Standard / Centered,
+ * with an origin control when Centered) plus the stops on/off + step, value indicator on/off, end
+ * stops, and disabled controls (orientation / size selectors remain stubbed-disabled placeholders
+ * for later V1 phases). The state gallery matrix renders enabled / hover / focused / pressed /
+ * disabled across the continuous, stops, and value-bubble configurations for <em>both</em> the
+ * standard and centered variants.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -37,24 +39,27 @@ final class SliderShowcasePanels {
   static JComponent buildWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JComboBox<String> variantBox =
-        stubbedCombo("STANDARD", "Centered / Range land in later V1 phases.");
+    final JComboBox<ElwhaSlider.Variant> variantBox =
+        new JComboBox<>(
+            new ElwhaSlider.Variant[] {ElwhaSlider.Variant.STANDARD, ElwhaSlider.Variant.CENTERED});
     final JComboBox<String> orientationBox =
         stubbedCombo("Horizontal", "Vertical orientation lands in a later V1 phase.");
     final JComboBox<String> sizeBox = stubbedCombo("XS", "Sizes S–XL land in a later V1 phase.");
 
+    final JSpinner originSpinner = new JSpinner(new SpinnerNumberModel(50, 0, 100, 5));
     final JCheckBox stopsBox = new JCheckBox("Stops");
     final JSpinner stepSpinner = new JSpinner(new SpinnerNumberModel(10, 1, 50, 1));
     final JCheckBox valueIndicatorBox = new JCheckBox("Value indicator", true);
     final JCheckBox endStopsBox = new JCheckBox("End stops", true);
     final JCheckBox enabledBox = new JCheckBox("Enabled", true);
 
-    final ElwhaSlider slider = new ElwhaSlider(0, 100, 40);
+    final ElwhaSlider slider = new ElwhaSlider(0, 100, 70);
     slider.setLabel("Workbench slider");
 
     final WorkbenchControls controls = workbench.controls();
-    controls.addSection("Slider (Phase 1)");
+    controls.addSection("Slider");
     controls.addControl("Variant", variantBox);
+    controls.addControl("Origin", originSpinner);
     controls.addControl("Orientation", orientationBox);
     controls.addControl("Size", sizeBox);
     controls.addSection("Configuration");
@@ -67,9 +72,17 @@ final class SliderShowcasePanels {
 
     final Runnable apply =
         () -> {
+          final ElwhaSlider.Variant variant = (ElwhaSlider.Variant) variantBox.getSelectedItem();
+          final boolean centered = variant == ElwhaSlider.Variant.CENTERED;
+          final int origin = (Integer) originSpinner.getValue();
           final boolean stops = stopsBox.isSelected();
           final int step = (Integer) stepSpinner.getValue();
+          originSpinner.setEnabled(centered);
           stepSpinner.setEnabled(stops);
+          slider.setVariant(variant);
+          if (centered) {
+            slider.setOrigin(origin);
+          }
           slider.setStops(stops ? step : 0);
           slider.setValueIndicatorEnabled(valueIndicatorBox.isSelected());
           slider.setEndStopsVisible(endStopsBox.isSelected());
@@ -77,6 +90,8 @@ final class SliderShowcasePanels {
           workbench.setStage(stage(slider));
           workbench.setCode(
               renderCode(
+                  variant,
+                  origin,
                   stops,
                   step,
                   valueIndicatorBox.isSelected(),
@@ -84,6 +99,8 @@ final class SliderShowcasePanels {
                   enabledBox.isSelected()));
         };
 
+    variantBox.addActionListener(e -> apply.run());
+    originSpinner.addChangeListener(e -> apply.run());
     stopsBox.addActionListener(e -> apply.run());
     stepSpinner.addChangeListener(e -> apply.run());
     valueIndicatorBox.addActionListener(e -> apply.run());
@@ -96,7 +113,9 @@ final class SliderShowcasePanels {
   /** Builds the state × configuration gallery matrix. */
   static JComponent buildGallery() {
     final String[] columns = {"Enabled", "Hover", "Focused (Tab to)", "Pressed", "Disabled"};
-    final String[] rows = {"Continuous", "Stops (10)", "Value bubble"};
+    final String[] rows = {
+      "Continuous", "Stops (10)", "Value bubble", "Centered", "Centered stops", "Centered bubble"
+    };
 
     final JPanel matrix = new JPanel(new GridBagLayout());
     matrix.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
@@ -129,13 +148,17 @@ final class SliderShowcasePanels {
   }
 
   private static JComponent galleryCell(final int row, final int col) {
-    final ElwhaSlider s = new ElwhaSlider(0, 100, 55);
+    final boolean centered = row >= 3;
+    final ElwhaSlider s = centered ? new ElwhaSlider(-50, 50, 25) : new ElwhaSlider(0, 100, 55);
     s.setLabel("Gallery slider");
+    if (centered) {
+      s.setVariant(ElwhaSlider.Variant.CENTERED);
+    }
     switch (row) {
-      case 1 -> s.setStops(10);
-      case 2 -> s.setValueIndicatorEnabled(true);
+      case 1, 4 -> s.setStops(centered ? 25 : 10);
+      case 2, 5 -> s.setValueIndicatorEnabled(true);
       default -> {
-        // Continuous, no value bubble.
+        // Continuous, no value bubble (rows 0 / 3).
       }
     }
     switch (col) {
@@ -184,13 +207,19 @@ final class SliderShowcasePanels {
   }
 
   private static String renderCode(
+      final ElwhaSlider.Variant variant,
+      final int origin,
       final boolean stops,
       final int step,
       final boolean valueIndicator,
       final boolean endStops,
       final boolean enabled) {
-    final StringBuilder code = new StringBuilder(200);
-    code.append("ElwhaSlider slider = new ElwhaSlider(0, 100, 40);\n");
+    final StringBuilder code = new StringBuilder(220);
+    code.append("ElwhaSlider slider = new ElwhaSlider(0, 100, 70);\n");
+    if (variant == ElwhaSlider.Variant.CENTERED) {
+      code.append("slider.setVariant(ElwhaSlider.Variant.CENTERED);\n");
+      code.append("slider.setOrigin(").append(origin).append(");\n");
+    }
     if (stops) {
       code.append("slider.setStops(").append(step).append(");\n");
     }
