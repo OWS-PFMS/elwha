@@ -194,6 +194,8 @@ public class ElwhaSlider extends JComponent {
 
   private int lowerValue;
   private int upperValue;
+  private Handle activeHandle = Handle.LOWER;
+  private Handle hoveredHandle;
 
   private int unitIncrement = 1;
   private int stopStep;
@@ -1010,6 +1012,43 @@ public class ElwhaSlider extends JComponent {
     return xForValue(getUpperValue());
   }
 
+  /** The center x of the currently {@linkplain #activeHandle active} range handle. */
+  private int activeHandleCenterX() {
+    return activeHandle == Handle.UPPER ? upperHandleCenterX() : lowerHandleCenterX();
+  }
+
+  /**
+   * Picks the range handle nearest the given x (value-space distance, orientation-agnostic). On a tie
+   * — including a collapsed span — the choice keeps the gesture monotonic: a position at or below the
+   * lower value grabs the lower handle, otherwise the upper.
+   */
+  Handle pickHandle(final int x) {
+    final int vClick = valueForX(x);
+    final int dl = Math.abs(vClick - getLowerValue());
+    final int du = Math.abs(vClick - getUpperValue());
+    if (dl < du) {
+      return Handle.LOWER;
+    }
+    if (du < dl) {
+      return Handle.UPPER;
+    }
+    return vClick <= getLowerValue() ? Handle.LOWER : Handle.UPPER;
+  }
+
+  /** Sets the {@linkplain #activeHandle active} handle's value (snap + no-cross clamp via setters). */
+  private void setActiveHandleValue(final int value) {
+    if (activeHandle == Handle.UPPER) {
+      setUpperValue(value);
+    } else {
+      setLowerValue(value);
+    }
+  }
+
+  /** The painted width of a range handle — morphed only for the active handle (focus/press). */
+  private float rangeHandleWidth(final Handle handle) {
+    return handle == activeHandle ? currentHandleWidth() : HANDLE_WIDTH_PX;
+  }
+
   /**
    * Paints the {@link Variant#RANGE} variant: the active ({@link ColorRole#PRIMARY}) track fills
    * <em>between</em> the two handles, inactive ({@link ColorRole#SECONDARY_CONTAINER}) track flanks
@@ -1026,8 +1065,44 @@ public class ElwhaSlider extends JComponent {
     final int rightX = Math.max(loX, hiX);
     paintRangeTrack(g2, leftX, rightX);
     paintRangeStops(g2, loX, hiX);
-    paintHandleAt(g2, loX, HANDLE_WIDTH_PX);
-    paintHandleAt(g2, hiX, HANDLE_WIDTH_PX);
+    paintRangeStateLayer(g2, Handle.LOWER, loX);
+    paintRangeStateLayer(g2, Handle.UPPER, hiX);
+    paintRipple(g2, activeHandleCenterX());
+    paintHandleAt(g2, loX, rangeHandleWidth(Handle.LOWER));
+    paintHandleAt(g2, hiX, rangeHandleWidth(Handle.UPPER));
+  }
+
+  /**
+   * Paints the hover / focus / press state-layer halo for one range handle, gated so only the
+   * relevant handle lights up: hover follows the {@linkplain #hoveredHandle pointer}, focus and
+   * press follow the {@linkplain #activeHandle active} handle.
+   */
+  private void paintRangeStateLayer(final Graphics2D g2, final Handle handle, final int cx) {
+    if (!isEnabled()) {
+      return;
+    }
+    final Graphics2D s = (Graphics2D) g2.create();
+    try {
+      final RoundRectangle2D.Float halo = handleHalo(cx);
+      final Color tint = ColorRole.PRIMARY.resolve();
+      if (isFocusOwner() && handle == activeHandle) {
+        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.FOCUS.opacity()));
+        s.setColor(tint);
+        s.fill(halo);
+      }
+      if (hovered && handle == hoveredHandle) {
+        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.HOVER.opacity()));
+        s.setColor(tint);
+        s.fill(halo);
+      }
+      if (pressed && handle == activeHandle) {
+        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.PRESSED.opacity()));
+        s.setColor(tint);
+        s.fill(halo);
+      }
+    } finally {
+      s.dispose();
+    }
   }
 
   /**
@@ -1383,7 +1458,20 @@ public class ElwhaSlider extends JComponent {
           @Override
           public void mouseExited(final MouseEvent e) {
             hovered = false;
+            hoveredHandle = null;
             repaint();
+          }
+
+          @Override
+          public void mouseMoved(final MouseEvent e) {
+            if (!isEnabled() || variant != Variant.RANGE) {
+              return;
+            }
+            final Handle next = pickHandle(e.getX());
+            if (next != hoveredHandle) {
+              hoveredHandle = next;
+              repaint();
+            }
           }
 
           @Override
@@ -1395,8 +1483,14 @@ public class ElwhaSlider extends JComponent {
             pressed = true;
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
             model.setValueIsAdjusting(true);
-            setValue(valueForX(e.getX()));
-            startRipple(new Point(handleCenterX(), handleCenterY()));
+            if (variant == Variant.RANGE) {
+              activeHandle = pickHandle(e.getX());
+              setActiveHandleValue(valueForX(e.getX()));
+              startRipple(new Point(activeHandleCenterX(), handleCenterY()));
+            } else {
+              setValue(valueForX(e.getX()));
+              startRipple(new Point(handleCenterX(), handleCenterY()));
+            }
             updateInteractionAnimator();
             repaint();
           }
@@ -1406,7 +1500,11 @@ public class ElwhaSlider extends JComponent {
             if (!isEnabled() || !pressed) {
               return;
             }
-            setValue(valueForX(e.getX()));
+            if (variant == Variant.RANGE) {
+              setActiveHandleValue(valueForX(e.getX()));
+            } else {
+              setValue(valueForX(e.getX()));
+            }
             repaint();
           }
 
