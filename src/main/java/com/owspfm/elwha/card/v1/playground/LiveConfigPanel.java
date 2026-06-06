@@ -3,6 +3,7 @@ package com.owspfm.elwha.card.v1.playground;
 import com.owspfm.elwha.card.v1.CardInteractionMode;
 import com.owspfm.elwha.card.v1.CardVariant;
 import com.owspfm.elwha.card.v1.ElwhaCard;
+import com.owspfm.elwha.slider.ElwhaSlider;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -23,7 +24,6 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JSlider;
 
 /**
  * Live-config side of the playground: a focus card on the left and a stack of widgets on the right
@@ -33,7 +33,7 @@ import javax.swing.JSlider;
  * with the latest snapshot — used to keep the snippet panel in sync.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.4.0
  * @since v0.2.0
  */
 public final class LiveConfigPanel extends JPanel {
@@ -136,7 +136,7 @@ public final class LiveConfigPanel extends JPanel {
         });
     addLabeledRow(panel, gbc, "Interaction mode", modeBox);
 
-    JSlider elevationSlider = newSlider(0, ElwhaCard.MAX_ELEVATION, elevation);
+    ElwhaSlider elevationSlider = newSlider(0, ElwhaCard.MAX_ELEVATION, elevation);
     elevationSlider.addChangeListener(
         e -> {
           elevation = elevationSlider.getValue();
@@ -144,7 +144,7 @@ public final class LiveConfigPanel extends JPanel {
         });
     addLabeledRow(panel, gbc, "Elevation", elevationSlider);
 
-    JSlider radiusSlider = newSlider(0, 36, cornerRadius);
+    ElwhaSlider radiusSlider = newSlider(0, 36, cornerRadius);
     radiusSlider.addChangeListener(
         e -> {
           cornerRadius = radiusSlider.getValue();
@@ -152,7 +152,7 @@ public final class LiveConfigPanel extends JPanel {
         });
     addLabeledRow(panel, gbc, "Corner radius", radiusSlider);
 
-    JSlider paddingSlider = newSlider(0, 48, padding);
+    ElwhaSlider paddingSlider = newSlider(0, 48, padding);
     paddingSlider.addChangeListener(
         e -> {
           padding = paddingSlider.getValue();
@@ -160,7 +160,7 @@ public final class LiveConfigPanel extends JPanel {
         });
     addLabeledRow(panel, gbc, "Padding", paddingSlider);
 
-    JSlider borderWidthSlider = newSlider(0, 6, borderWidth);
+    ElwhaSlider borderWidthSlider = newSlider(0, 6, borderWidth);
     borderWidthSlider.addChangeListener(
         e -> {
           borderWidth = borderWidthSlider.getValue();
@@ -236,11 +236,9 @@ public final class LiveConfigPanel extends JPanel {
     return scroll;
   }
 
-  private static JSlider newSlider(final int min, final int max, final int value) {
-    JSlider s = new JSlider(min, max, value);
-    s.setMajorTickSpacing(Math.max(1, (max - min) / 4));
-    s.setPaintTicks(true);
-    s.setPaintLabels(true);
+  private static ElwhaSlider newSlider(final int min, final int max, final int value) {
+    ElwhaSlider s = new ElwhaSlider(min, max, value);
+    s.setValueIndicatorEnabled(true);
     return s;
   }
 
