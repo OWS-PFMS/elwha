@@ -21,9 +21,9 @@ import javax.swing.SwingUtilities;
  * Windowed regression guard for finding F1 — a menu opened from inside a live {@link ElwhaDialog}
  * must light-dismiss. Opens a dialog, opens a menu from a body trigger, Robot-clicks outside the
  * menu, and asserts the menu tears down (exits non-zero if it lingers). Also logs the focus-owner
- * timeline so a future regression is diagnosable. The root cause was two overlapping focus listeners
- * (the dialog's modal trap + the menu's light-dismiss) fighting; fixed by having only the topmost
- * overlay react to focus escapes. Needs a display (Robot); skips headless.
+ * timeline so a future regression is diagnosable. The root cause was two overlapping focus
+ * listeners (the dialog's modal trap + the menu's light-dismiss) fighting; fixed by having only the
+ * topmost overlay react to focus escapes. Needs a display (Robot); skips headless.
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.4.0

@@ -50,5 +50,15 @@ public enum MenuDismissCause {
    * @version v0.4.0
    * @since v0.4.0
    */
-  PROGRAMMATIC
+  PROGRAMMATIC,
+
+  /**
+   * The menu was superseded — another menu opened and replaced it (at most one menu is open at a
+   * time). Focus is <em>not</em> restored to this menu's trigger on a supersede; the new menu owns
+   * it.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  SUPERSEDED
 }

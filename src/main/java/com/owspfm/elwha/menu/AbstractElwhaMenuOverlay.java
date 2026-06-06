@@ -129,7 +129,10 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
     final AbstractElwhaMenuOverlay prior = openMenu;
     openMenu = this;
     if (prior != null && prior != this && prior.isShowing()) {
-      prior.lastCause = MenuDismissCause.PROGRAMMATIC;
+      // SUPERSEDED (not PROGRAMMATIC): the prior menu must NOT restore focus to its trigger, or
+      // that
+      // restore steals focus from this just-opening menu and spuriously fires its focus-loss close.
+      prior.lastCause = MenuDismissCause.SUPERSEDED;
       prior.closeNow();
     }
   }

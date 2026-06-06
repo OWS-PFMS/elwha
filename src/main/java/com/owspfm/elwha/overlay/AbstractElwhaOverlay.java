@@ -349,7 +349,12 @@ public abstract class AbstractElwhaOverlay {
       return;
     }
     closing = true;
-    if (entrance != null) {
+    // Animate the exit only when there is entrance progress to collapse. Closing while the entrance
+    // is still at 0 (a dismiss within the first ~16 ms, before the animator's first tick) would
+    // make
+    // reverse() a no-op (progress already == target 0), so no tick ever fires and teardown never
+    // runs — the overlay would wedge open. Tear down directly in that case.
+    if (entrance != null && entrance.progress() > 0f) {
       entrance.reverse();
     } else {
       performTeardown();
