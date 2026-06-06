@@ -62,16 +62,16 @@ public final class TextFieldS7CounterSmoke {
       final ElwhaTextField under = new ElwhaTextField(v, "Name");
       under.setMaxLength(20);
       under.setText("abc");
-      final BufferedImage uImg = render(under);
-      check(v + " counter paints in the row's right edge", inkInCounterBand(uImg) > 0);
-      check(v + " under-limit counter is not error-colored", !counterIsError(uImg));
+      final BufferedImage underImg = render(under);
+      check(v + " counter paints in the row's right edge", inkInCounterBand(underImg) > 0);
+      check(v + " under-limit counter is not error-colored", !counterIsError(underImg));
 
       final ElwhaTextField over = new ElwhaTextField(v, "Name");
       over.setMaxLength(3);
       over.setText("abcdef"); // 6 > 3 — display only, input is NOT truncated
       check(v + " over-limit does not truncate input", "abcdef".equals(over.getText()));
-      final BufferedImage oImg = render(over);
-      check(v + " over-limit counter turns the error color", counterIsError(oImg));
+      final BufferedImage overImg = render(over);
+      check(v + " over-limit counter turns the error color", counterIsError(overImg));
     }
 
     // --- ON_FOCUS reserves height (zero layout shift) --------------------------

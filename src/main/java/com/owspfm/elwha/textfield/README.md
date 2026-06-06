@@ -79,7 +79,31 @@ Laid out to the M3 redlines (56dp height, 16/12dp L-R without/with icons, 16dp i
 - **Leading / trailing icon** — `setLeadingIcon(Icon)` / `setTrailingIcon(Icon)` (`MaterialIcons`, 24dp). An interactive trailing affordance (clear / show-password) is an `ElwhaIconButton` via `setTrailingIconButton(...)`, which brings free Button accessibility. Leading/trailing mirror under `ComponentOrientation` (RTL).
 - **Prefix / suffix** — `setPrefixText(...)` / `setSuffixText(...)`; inline fixed affixes in `on-surface-variant`.
 - **Supporting text** — `setSupportingText(...)` (`BODY_SMALL`, `on-surface-variant`); its row height is always reserved so an error swap never shifts layout.
+- **Character counter** — `setMaxLength(int)` shows a live `used/total` counter (`BODY_SMALL`) right-aligned in that same reserved row. See below.
 - **Required asterisk** — `setRequired(true)` appends `*` to the label and the accessible name; `setNoAsterisk(true)` suppresses the glyph while keeping the required a11y cue.
+
+---
+
+## Character counter & supporting visibility
+
+`setMaxLength(int)` (`-1` = none, the default) drives a live `used/total` character counter (for example `5/20`), right-aligned in the always-reserved supporting row — showing or hiding it never shifts layout.
+
+The counter is **display only**: in line with the visual-only validation doctrine it does **not** truncate input. When the count exceeds the limit the counter turns the `error` color as the over-limit cue, but the editor still accepts the characters — enforce a hard cap on your own `Document` if you need one. The live count feeds the accessible description (`"character count, N of M characters entered"`).
+
+`setSupportingTextVisibility(SupportingTextVisibility)` controls when the advisory supporting text **and** the counter show:
+
+| Mode       | Behavior                                                                                     |
+| ---------- | -------------------------------------------------------------------------------------------- |
+| `ALWAYS`   | Supporting text and counter are always visible. The default.                                 |
+| `ON_FOCUS` | They appear only while the field is focused; on blur the reserved row is blank-but-sized.     |
+
+Higher-priority content always shows regardless of the mode: **error text** and an **over-limit counter** are never hidden by `ON_FOCUS`.
+
+```java
+ElwhaTextField bio = ElwhaTextField.outlined("Bio");
+bio.setMaxLength(120);
+bio.setSupportingTextVisibility(ElwhaTextField.SupportingTextVisibility.ON_FOCUS);
+```
 
 ---
 
@@ -105,4 +129,4 @@ Accessibility is overwhelmingly satisfied by the wrapped editor (role `Textbox`,
 
 ## Scope
 
-Phase 1 shipped the complete **single-line** field; Phase 2 (`S6`) adds **multi-line + text-area**. The character counter + supporting-text visibility mode (`S7`) is a later phase; select / exposed-dropdown, search, and formatted/numeric fields are documented follow-ups. Decisions: [`docs/research/elwha-textfield-design.md`](../../../../../../../docs/research/elwha-textfield-design.md).
+V1 is **complete**: Phase 1 shipped the single-line field, Phase 2 (`S6`) added **multi-line + text-area**, and Phase 3 (`S7`) added the **character counter + supporting-text visibility mode**. Select / exposed-dropdown ([#331](https://github.com/OWS-PFMS/elwha/issues/331)), search, and formatted/numeric fields are documented follow-ups. Decisions: [`docs/research/elwha-textfield-design.md`](../../../../../../../docs/research/elwha-textfield-design.md).

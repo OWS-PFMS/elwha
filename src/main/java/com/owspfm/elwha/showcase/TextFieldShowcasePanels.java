@@ -55,7 +55,8 @@ final class TextFieldShowcasePanels {
             stack(
                 gallerySection("Variants × states", buildStateMatrix()),
                 gallerySection("Slots & affixes", buildSlotsGallery()),
-                gallerySection("Multi-line & text area", buildMultilineGallery()))));
+                gallerySection("Multi-line & text area", buildMultilineGallery()),
+                gallerySection("Counter & supporting visibility", buildCounterGallery()))));
     return tabs;
   }
 
@@ -111,6 +112,30 @@ final class TextFieldShowcasePanels {
     rowsStepper.add(rowsValue);
     rowsStepper.add(rowsUp);
 
+    final int[] maxLen = {-1};
+    final JLabel maxLenValue = new JLabel("off");
+    final ElwhaIconButton maxLenDown =
+        new ElwhaIconButton(MaterialIcons.remove())
+            .setVariant(IconButtonVariant.STANDARD)
+            .setButtonSize(IconButtonSize.S);
+    final ElwhaIconButton maxLenUp =
+        new ElwhaIconButton(MaterialIcons.add())
+            .setVariant(IconButtonVariant.STANDARD)
+            .setButtonSize(IconButtonSize.S);
+    final JPanel maxLenStepper = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+    maxLenStepper.setOpaque(false);
+    maxLenStepper.add(maxLenDown);
+    maxLenStepper.add(maxLenValue);
+    maxLenStepper.add(maxLenUp);
+
+    final ElwhaButtonGroup visibilityGroup =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS);
+    visibilityGroup.add(new ElwhaButton("Always"));
+    visibilityGroup.add(new ElwhaButton("On focus"));
+    visibilityGroup.setSelectedIndex(0);
+
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Content");
     controls.addControl("Variant", variantGroup);
@@ -123,6 +148,9 @@ final class TextFieldShowcasePanels {
     controls.addSection("Editor");
     controls.addControl("Input mode", modeGroup);
     controls.addControl("Text-area rows", rowsStepper);
+    controls.addSection("Counter & supporting");
+    controls.addControl("Max length", maxLenStepper);
+    controls.addControl("Visibility", visibilityGroup);
     controls.addSection("Slots");
     controls.addControl("", leadingToggle);
     controls.addControl("", trailingToggle);
@@ -154,6 +182,12 @@ final class TextFieldShowcasePanels {
           field.setPrefixText(prefixCtl.getText());
           field.setSuffixText(suffixCtl.getText());
           field.setSupportingText(supportingCtl.getText());
+          field.setMaxLength(maxLen[0]);
+          final ElwhaTextField.SupportingTextVisibility visibility =
+              visibilityGroup.getSelectedIndex() == 0
+                  ? ElwhaTextField.SupportingTextVisibility.ALWAYS
+                  : ElwhaTextField.SupportingTextVisibility.ON_FOCUS;
+          field.setSupportingTextVisibility(visibility);
           final String text = prefillCtl.getText().isEmpty() ? carried : prefillCtl.getText();
           if (!text.isEmpty()) {
             field.setText(text);
@@ -183,6 +217,8 @@ final class TextFieldShowcasePanels {
                   variant,
                   mode,
                   rows[0],
+                  maxLen[0],
+                  visibility,
                   labelCtl.getText(),
                   placeholderCtl.getText(),
                   prefixCtl.getText(),
@@ -211,6 +247,19 @@ final class TextFieldShowcasePanels {
           rowsValue.setText(String.valueOf(rows[0]));
           apply.run();
         });
+    maxLenDown.addActionListener(
+        event -> {
+          maxLen[0] = maxLen[0] <= 0 ? -1 : Math.max(0, maxLen[0] - 5);
+          maxLenValue.setText(maxLen[0] < 0 ? "off" : String.valueOf(maxLen[0]));
+          apply.run();
+        });
+    maxLenUp.addActionListener(
+        event -> {
+          maxLen[0] = Math.max(0, maxLen[0]) + 5;
+          maxLenValue.setText(String.valueOf(maxLen[0]));
+          apply.run();
+        });
+    visibilityGroup.addSelectionListener(group -> apply.run());
     for (final ElwhaTextField ctl :
         new ElwhaTextField[] {
           labelCtl, placeholderCtl, prefillCtl, prefixCtl, suffixCtl, supportingCtl, errorTextCtl
@@ -231,6 +280,8 @@ final class TextFieldShowcasePanels {
       final ElwhaTextField.Variant variant,
       final ElwhaTextField.InputMode mode,
       final int rows,
+      final int maxLength,
+      final ElwhaTextField.SupportingTextVisibility visibility,
       final String label,
       final String placeholder,
       final String prefix,
@@ -268,6 +319,14 @@ final class TextFieldShowcasePanels {
     }
     if (!supporting.isEmpty()) {
       code.append("\nfield.setSupportingText(\"").append(supporting).append("\");");
+    }
+    if (maxLength >= 0) {
+      code.append("\nfield.setMaxLength(").append(maxLength).append(");");
+    }
+    if (visibility == ElwhaTextField.SupportingTextVisibility.ON_FOCUS) {
+      code.append(
+          "\nfield.setSupportingTextVisibility("
+              + "ElwhaTextField.SupportingTextVisibility.ON_FOCUS);");
     }
     if (leading) {
       code.append("\nfield.setLeadingIcon(MaterialIcons.info());");
@@ -432,6 +491,33 @@ final class TextFieldShowcasePanels {
 
     slotsRow(grid, gbc, "Multi-line (auto-grow)", autoGrow);
     slotsRow(grid, gbc, "Text area (fixed rows)", textArea);
+    return grid;
+  }
+
+  private static JComponent buildCounterGallery() {
+    final JPanel grid = new JPanel(new GridBagLayout());
+    grid.setBorder(BorderFactory.createEmptyBorder(12, 20, 20, 20));
+    final GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(8, 12, 8, 12);
+    gbc.anchor = GridBagConstraints.NORTHWEST;
+    gbc.gridy = 0;
+
+    final ElwhaTextField underLimit = ElwhaTextField.outlined("Display name");
+    underLimit.setMaxLength(20);
+    underLimit.setText("Ada");
+    underLimit.setSupportingText("Shown on your profile");
+
+    final ElwhaTextField overLimit = ElwhaTextField.filled("Headline");
+    overLimit.setMaxLength(20);
+    overLimit.setText("This headline runs past the cap");
+
+    final ElwhaTextField onFocus = ElwhaTextField.outlined("Search");
+    onFocus.setSupportingText("Press Enter to search");
+    onFocus.setSupportingTextVisibility(ElwhaTextField.SupportingTextVisibility.ON_FOCUS);
+
+    slotsRow(grid, gbc, "Counter (under limit)", underLimit);
+    slotsRow(grid, gbc, "Counter (over limit → error)", overLimit);
+    slotsRow(grid, gbc, "Supporting ON_FOCUS (blank on blur)", onFocus);
     return grid;
   }
 
