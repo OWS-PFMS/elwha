@@ -133,12 +133,18 @@ final class TextFieldShowcasePanels {
     controls.addControl("", readOnlyToggle);
     controls.addControl("", enabledToggle);
 
+    // The stage field is rebuilt from the controls on every change; carry whatever the user typed
+    // into the live field across the rebuild so a variant / mode / rows / toggle change never wipes
+    // it (the "Prefill text" control still wins when set).
+    final ElwhaTextField[] live = {null};
+
     final Runnable apply =
         () -> {
           final ElwhaTextField.Variant variant =
               variantGroup.getSelectedIndex() == 0
                   ? ElwhaTextField.Variant.FILLED
                   : ElwhaTextField.Variant.OUTLINED;
+          final String carried = live[0] == null ? "" : live[0].getText();
           final ElwhaTextField field = new ElwhaTextField(variant, labelCtl.getText());
           final ElwhaTextField.InputMode mode =
               ElwhaTextField.InputMode.values()[modeGroup.getSelectedIndex()];
@@ -148,8 +154,9 @@ final class TextFieldShowcasePanels {
           field.setPrefixText(prefixCtl.getText());
           field.setSuffixText(suffixCtl.getText());
           field.setSupportingText(supportingCtl.getText());
-          if (!prefillCtl.getText().isEmpty()) {
-            field.setText(prefillCtl.getText());
+          final String text = prefillCtl.getText().isEmpty() ? carried : prefillCtl.getText();
+          if (!text.isEmpty()) {
+            field.setText(text);
           }
           if (leadingToggle.isSelected()) {
             field.setLeadingIcon(MaterialIcons.info());
@@ -169,6 +176,7 @@ final class TextFieldShowcasePanels {
           }
           field.setReadOnly(readOnlyToggle.isSelected());
           field.setEnabled(enabledToggle.isSelected());
+          live[0] = field;
           workbench.setStage(field);
           workbench.setCode(
               renderCode(
