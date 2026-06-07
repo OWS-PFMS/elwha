@@ -75,6 +75,7 @@ public class ElwhaSelectField<T> extends JComponent {
 
   private ElwhaMenu menu;
   private boolean expanded;
+  private boolean readOnly;
 
   /**
    * Creates a {@link ElwhaTextField.Variant#FILLED} select field with the given floating label.
@@ -216,6 +217,138 @@ public class ElwhaSelectField<T> extends JComponent {
     selectionListeners.remove(listener);
   }
 
+  // ---- Variant, state, and slot delegation (S4) -----------------------------
+  // The embedded field carries the variant (per the filled()/outlined() factories) and every state;
+  // the select field delegates to it. The trailing slot is OWNED by the select field (the arrow) —
+  // there is intentionally no setTrailingIcon passthrough, so a consumer cannot displace the arrow.
+
+  /**
+   * Returns the floating label.
+   *
+   * @return the label text
+   */
+  public String getLabel() {
+    return field.getLabel();
+  }
+
+  /**
+   * Sets the floating label (delegates to the embedded field).
+   *
+   * @param label the label text
+   */
+  public void setLabel(final String label) {
+    field.setLabel(label);
+  }
+
+  /**
+   * Sets the leading icon (delegates to the embedded field).
+   *
+   * @param icon the leading icon, or {@code null} to clear
+   */
+  public void setLeadingIcon(final Icon icon) {
+    field.setLeadingIcon(icon);
+  }
+
+  /**
+   * Returns the supporting text shown below the field.
+   *
+   * @return the supporting text
+   */
+  public String getSupportingText() {
+    return field.getSupportingText();
+  }
+
+  /**
+   * Sets the supporting text shown below the field (delegates to the embedded field).
+   *
+   * @param supportingText the supporting text
+   */
+  public void setSupportingText(final String supportingText) {
+    field.setSupportingText(supportingText);
+  }
+
+  /**
+   * Returns the placeholder shown when no option is selected.
+   *
+   * @return the placeholder text
+   */
+  public String getPlaceholder() {
+    return field.getPlaceholder();
+  }
+
+  /**
+   * Sets the placeholder shown when no option is selected (delegates to the embedded field).
+   *
+   * @param placeholder the placeholder text
+   */
+  public void setPlaceholder(final String placeholder) {
+    field.setPlaceholder(placeholder);
+  }
+
+  /**
+   * Whether the control is in the error state.
+   *
+   * @return {@code true} if errored
+   */
+  public boolean isError() {
+    return field.isError();
+  }
+
+  /**
+   * Sets the error state (delegates to the embedded field — error chrome + supporting-row swap).
+   *
+   * @param error {@code true} for the error state
+   */
+  public void setError(final boolean error) {
+    field.setError(error);
+  }
+
+  /**
+   * Returns the error text.
+   *
+   * @return the error text
+   */
+  public String getErrorText() {
+    return field.getErrorText();
+  }
+
+  /**
+   * Sets the error text shown in the supporting row while errored (delegates to the embedded
+   * field).
+   *
+   * @param errorText the error text
+   */
+  public void setErrorText(final String errorText) {
+    field.setErrorText(errorText);
+  }
+
+  /**
+   * Whether the select is read-only — its value is shown but cannot be changed (the menu will not
+   * open). Unlike {@linkplain #setEnabled(boolean) disabling}, the chrome stays normal (not
+   * dimmed). The embedded editor is non-typeable in either case (V1 is a pure select).
+   *
+   * @return {@code true} if read-only
+   */
+  public boolean isReadOnly() {
+    return readOnly;
+  }
+
+  /**
+   * Sets the read-only state. A read-only select shows its value but cannot be opened to change it.
+   *
+   * @param readOnly {@code true} for read-only
+   */
+  public void setReadOnly(final boolean readOnly) {
+    this.readOnly = readOnly;
+  }
+
+  @Override
+  public void setEnabled(final boolean enabled) {
+    super.setEnabled(enabled);
+    field.setEnabled(enabled);
+    arrow.setEnabled(enabled);
+  }
+
   /**
    * Whether the option menu is currently open (the combobox <em>expanded</em> state).
    *
@@ -253,7 +386,7 @@ public class ElwhaSelectField<T> extends JComponent {
   }
 
   private void open() {
-    if (options.isEmpty()) {
+    if (options.isEmpty() || readOnly || !isEnabled()) {
       return;
     }
     applyExpandedState(true);
