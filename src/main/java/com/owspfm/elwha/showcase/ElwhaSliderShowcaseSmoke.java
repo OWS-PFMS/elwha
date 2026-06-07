@@ -14,8 +14,9 @@ import javax.swing.JComponent;
  * Headless guard for the Showcase Slider leaf (stories #346 / #351). Builds the {@link
  * SliderShowcasePanels} Workbench + Gallery leaf surfaces and constructs the two dogfooded {@code
  * card/v1/playground} panels, asserting they build without a display, that the gallery now spans
- * the standard + centered 6×5 state matrix (with live {@code CENTERED} sliders), and that the
- * migrated controls are now {@link ElwhaSlider}s (zero raw {@code JSlider} left in those panels).
+ * the standard + centered + range 9×5 state matrix (with live {@code CENTERED} and {@code RANGE}
+ * sliders), and that the migrated controls are now {@link ElwhaSlider}s (zero raw {@code JSlider}
+ * left in those panels).
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -43,10 +44,14 @@ public final class ElwhaSliderShowcaseSmoke {
 
     final JComponent gallery = SliderShowcasePanels.buildGallery();
     check("gallery builds", gallery != null);
-    // 6 configs (3 standard + 3 centered) × 5 states = 30 gallery sliders.
-    check("gallery is the 6×5 state matrix", countSliders(gallery) == 30);
+    // 9 configs (3 standard + 3 centered + 3 range) × 5 states = 45 gallery sliders.
+    check("gallery is the 9×5 state matrix", countSliders(gallery) == 45);
     // The 3 centered config rows × 5 states = 15 CENTERED sliders.
     check("gallery includes the centered variant rows", countCentered(gallery) == 15);
+    // The 3 range config rows × 5 states = 15 RANGE sliders.
+    check(
+        "gallery includes the range variant rows",
+        countVariant(gallery, ElwhaSlider.Variant.RANGE) == 15);
 
     final LiveConfigPanel liveConfig = new LiveConfigPanel();
     check("LiveConfigPanel dogfood builds", liveConfig != null);
@@ -81,11 +86,14 @@ public final class ElwhaSliderShowcaseSmoke {
   }
 
   private static int countCentered(final Component root) {
-    int count =
-        (root instanceof ElwhaSlider s && s.getVariant() == ElwhaSlider.Variant.CENTERED) ? 1 : 0;
+    return countVariant(root, ElwhaSlider.Variant.CENTERED);
+  }
+
+  private static int countVariant(final Component root, final ElwhaSlider.Variant variant) {
+    int count = (root instanceof ElwhaSlider s && s.getVariant() == variant) ? 1 : 0;
     if (root instanceof Container container) {
       for (final Component child : container.getComponents()) {
-        count += countCentered(child);
+        count += countVariant(child, variant);
       }
     }
     return count;
