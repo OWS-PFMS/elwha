@@ -1,7 +1,11 @@
 package com.owspfm.elwha.menu;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.CornerRadii;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.ShadowPainter;
+import com.owspfm.elwha.theme.ShapeMorphPainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import java.awt.Color;
 import java.awt.Component;
@@ -125,6 +129,12 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   // the parent itself closes.
   private ElwhaMenu openChildMenu;
   private ElwhaSubMenuItem openerSubItem;
+  // Active-state shape morph (epic #322 S3): the container corner radius interpolates between the
+  // chain-role rest shapes — a focused submenu rounds more (LG), an ancestor squares off (SM), a
+  // standalone root stays MD. shapeMorph drives progress from shapeFromRadius to shapeToRadius.
+  private MorphAnimator shapeMorph;
+  private int shapeFromRadius = CONTAINER_ARC_PX;
+  private int shapeToRadius = CONTAINER_ARC_PX;
   private int focusedIndex = -1;
   // The roving focus ring is keyboard-visible (M3 focus-visible): the index tracks always, but the
   // ring paints only after keyboard navigation, not on a pointer-opened menu.
@@ -199,6 +209,59 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     return menuSurface != null ? menuSurface.getBounds() : null;
   }
 
+  // ----------------------------------------- active-state shape morph (S3)
+
+  // The rest container radius for this menu's current role in the overlay chain: a squared-off
+  // ancestor (has an open child), a rounded focused submenu (has a parent), or the MD rest of a
+  // standalone root — the M3 "focused rounds more, unfocused squares off" dynamic.
+  private int roleRadius() {
+    if (chainChildOverlay() != null) {
+      return ShapeScale.SM.px();
+    }
+    if (chainParentOverlay() != null) {
+      return ShapeScale.LG.px();
+    }
+    return CONTAINER_ARC_PX;
+  }
+
+  // The container corner radius at the current morph phase, interpolated by the shared
+  // ShapeMorphPainter (#176) — no bespoke animator.
+  int currentContainerRadius() {
+    if (shapeMorph == null) {
+      return shapeToRadius;
+    }
+    final CornerRadii radii =
+        ShapeMorphPainter.interpolate(
+            CornerRadii.uniform(shapeFromRadius),
+            CornerRadii.uniform(shapeToRadius),
+            shapeMorph.progress(),
+            Easing.EMPHASIZED);
+    return radii.topLeftPx();
+  }
+
+  // Animate the container toward its chain-role rest shape, called when this menu gains or loses a
+  // chain child (its focused/unfocused role flips). Reduced motion snaps synchronously.
+  void updateShapeForChainRole() {
+    if (menuSurface == null) {
+      return;
+    }
+    final int target = roleRadius();
+    final int current = currentContainerRadius();
+    if (current == target) {
+      shapeFromRadius = target;
+      shapeToRadius = target;
+      return;
+    }
+    shapeFromRadius = current;
+    shapeToRadius = target;
+    if (shapeMorph == null) {
+      shapeMorph = new MorphAnimator(menuSurface, MorphAnimator.MEDIUM2_MS);
+      shapeMorph.addProgressListener(menuSurface::repaint);
+    }
+    shapeMorph.snapTo(0f);
+    shapeMorph.start();
+  }
+
   // Maps an item activation (mouse click or the container's Enter/Space routing) to the configured
   // SelectionMode: NONE fires-and-closes (action menu); SINGLE selects one then closes; MULTI
   // toggles and stays open. A submenu trigger never selects/closes — it opens its nested menu
@@ -247,6 +310,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     opener.setExpanded(true);
     sub.inheritColorStyle(colorStyle);
     sub.showInChain(opener, this);
+    // This menu just became an ancestor (gained an open child) — square off as its child rounds up.
+    updateShapeForChainRole();
   }
 
   @Override
@@ -260,6 +325,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
     openChildMenu = null;
     openerSubItem = null;
+    // No longer an ancestor — morph back toward the focused (submenu) or rest (root) shape.
+    updateShapeForChainRole();
   }
 
   private void fireSelectionChange(final ElwhaMenuItem item) {
@@ -396,6 +463,13 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     final boolean gapCards = layout == Layout.GROUPED && separator == Separator.GAP && !scrollable;
     this.menuSurface = new MenuSurface(content, gapCards);
 
+    // A fresh surface adopts its chain-role rest shape immediately (a submenu enters already
+    // rounded
+    // to LG, a root at MD) — the morph only animates later role flips, not the entrance.
+    this.shapeMorph = null;
+    this.shapeFromRadius = roleRadius();
+    this.shapeToRadius = shapeFromRadius;
+
     this.itemOrder = flatten();
     this.focusedIndex = itemOrder.isEmpty() ? -1 : 0;
     this.keyboardFocusVisible = false;
@@ -408,6 +482,10 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     groupPanels = null;
     itemOrder = null;
     menuSurface = null;
+    if (shapeMorph != null) {
+      shapeMorph.stop();
+      shapeMorph = null;
+    }
     focusedIndex = -1;
   }
 
@@ -694,28 +772,29 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
         final int by = shadow.top;
         final int bw = getWidth() - shadow.left - shadow.right;
         final int bh = getHeight() - shadow.top - shadow.bottom;
+        // The container corner radius is morph-driven (S3): the shadow silhouette and the body fill
+        // both use the same arc (= radius × 2) so they stay in agreement through the morph.
+        final int arc = currentContainerRadius() * 2;
 
         if (gapCards) {
           // Each group is its own floating card: shadow + fill per card, so the transparent gap
           // between cards shows only soft shadow falloff — never the dark interior a single
           // full-bounds union shadow would leave bleeding through the gap.
-          paintGroupCards(g2, bx, bw);
+          paintGroupCards(g2, bx, bw, arc);
         } else {
           final Graphics2D sg = (Graphics2D) g2.create();
           sg.translate(bx, by);
-          ShadowPainter.paint(sg, bw, bh, CONTAINER_ARC_PX * 2, ELEVATION);
+          ShadowPainter.paint(sg, bw, bh, arc, ELEVATION);
           sg.dispose();
           g2.setColor(containerColor());
-          g2.fill(
-              new RoundRectangle2D.Float(
-                  bx, by, bw, bh, CONTAINER_ARC_PX * 2f, CONTAINER_ARC_PX * 2f));
+          g2.fill(new RoundRectangle2D.Float(bx, by, bw, bh, arc, arc));
         }
       } finally {
         g2.dispose();
       }
     }
 
-    private void paintGroupCards(final Graphics2D g2, final int bx, final int bw) {
+    private void paintGroupCards(final Graphics2D g2, final int bx, final int bw, final int arc) {
       if (groupPanels == null) {
         return;
       }
@@ -728,7 +807,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
         final Rectangle r = SwingUtilities.convertRectangle(gp.getParent(), gp.getBounds(), this);
         final Graphics2D sg = (Graphics2D) g2.create();
         sg.translate(bx, r.y);
-        ShadowPainter.paint(sg, bw, r.height, CONTAINER_ARC_PX * 2, ELEVATION);
+        ShadowPainter.paint(sg, bw, r.height, arc, ELEVATION);
         sg.dispose();
       }
       // Pass 2: every card's fill.
@@ -738,9 +817,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
           continue;
         }
         final Rectangle r = SwingUtilities.convertRectangle(gp.getParent(), gp.getBounds(), this);
-        g2.fill(
-            new RoundRectangle2D.Float(
-                bx, r.y, bw, r.height, CONTAINER_ARC_PX * 2f, CONTAINER_ARC_PX * 2f));
+        g2.fill(new RoundRectangle2D.Float(bx, r.y, bw, r.height, arc, arc));
       }
     }
   }
