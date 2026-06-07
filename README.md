@@ -144,7 +144,7 @@ Built on top of the token foundation; depend only on Swing + FlatLaf.
 | **`ElwhaSurface`** | A token-native rounded surface primitive — a `JPanel` subclass that paints a role-filled, round-rect, optionally outlined background through the shared `SurfacePainter`. Elwha's equivalent of Material's *Paper*; the foundation `ElwhaCard` V2 (#253) will compose for its background paint. Four typed setters: `surfaceRole` / `shape` / `borderRole` / `borderWidth`. |
 | **`ElwhaIconButton`** | A token-native M3 icon-button primitive with four emphasis variants (`FILLED` / `FILLED_TONAL` / `OUTLINED` / `STANDARD`), `CLICKABLE` / `SELECTABLE` interaction modes, a declarative `setIcons(resting, selected)` toggle pattern, and the five M3 sizes via `IconButtonSize` (`XS` / `S` / `M` / `L` / `XL`). Drops into `JToolBar` directly. |
 | **`IconButtonGroup`** | Mutually-exclusive selection across a set of `ElwhaIconButton`s — the toolbar "radio" pattern Swing's `ButtonGroup` provides for `AbstractButton`s. Non-mandatory (deselect-allowed) and mandatory (one always selected) modes. |
-| **`ElwhaSlider`** | The M3 Expressive slider — a token-themed range input over a `BoundedRangeModel`, painting the split active / inactive track with the rounded-end gap, a tall pill handle that narrows on focus/press, optional **stops** (snap-to-step with stop indicators + a contrast end stop), and an optional value-indicator bubble. `Variant.STANDARD` fills from the leading edge; `Variant.CENTERED` fills from a settable **origin** outward to the handle (positive/negative range, default in the middle). Full keyboard (arrows / Space+arrows / Home·End), the `slider` accessibility role + `AccessibleValue`, and RTL mirroring. **Phases 1–2** ship the standard + centered, horizontal, XS slider (#340). |
+| **`ElwhaSlider`** | The M3 Expressive slider — a token-themed range input over a `BoundedRangeModel`, painting the split active / inactive track with the rounded-end gap, a tall pill handle that narrows on focus/press, optional **stops** (snap-to-step with stop indicators + a contrast end stop), and an optional value-indicator bubble. `Variant.STANDARD` fills from the leading edge; `Variant.CENTERED` fills from a settable **origin** outward to the handle (positive/negative range, default in the middle); `Variant.RANGE` adds a second handle and fills **between** the two, selecting a `[lower, upper]` span. Full keyboard (arrows / Space+arrows / Home·End — per-handle with two foci in range), the `slider` accessibility role + `AccessibleValue` (one child per range handle), and RTL mirroring. **Phases 1–3** ship the standard + centered + range, horizontal, XS slider (#340). |
 | **`ElwhaList<T>`** | The cross-cutting list contract implemented by both list containers — orientation, gap, padding, empty / loading state, filter, sort. |
 | **`MaterialIcons`** | Helper that loads bundled Material Symbols (Rounded / weight 400 / 20-dp optical-size axis, rendered at 24 px by default with sized overloads) via `FlatSVGIcon`, theme-coloured via the shared `Label.foreground` filter. Includes `MaterialIcons.pair(name)` returning an outline / fill `IconPair` for the canonical M3 toggle-icon-swap pattern. Bundled outline/fill pairs: `push_pin`, `anchor`, `favorite`, `star`, `info`, `help`, `delete`, `edit`, `visibility`. |
 
@@ -163,15 +163,21 @@ quality.setStops(20);    // stops mode: snap to 0/20/40/60/80/100, painted stop 
 ElwhaSlider balance = new ElwhaSlider(-50, 50, 0);
 balance.setVariant(ElwhaSlider.Variant.CENTERED);   // active fill grows out of the origin
 // origin defaults to 0 here (0 is in range); set it explicitly with balance.setOrigin(int)
+
+ElwhaSlider priceRange = ElwhaSlider.range(0, 100, 30, 70);   // min, max, lower, upper
+priceRange.setValueIndicatorEnabled(true);   // only the active handle's bubble shows
+priceRange.addChangeListener(e -> apply(priceRange.getLowerValue(), priceRange.getUpperValue()));
 ```
 
 The value lives in the slider's `BoundedRangeModel`; `getValueIsAdjusting()` is true mid-drag, so a `ChangeListener` can distinguish live drag updates from the committed value.
 
 **Use `Variant.CENTERED`** when the value spans a positive/negative range with a meaningful midpoint (a balance / bias / pan control): the active track emanates from the origin and fills toward the handle in whichever direction the value moves, instead of always from the leading edge. The origin defaults to `0` when `0` is in range, otherwise the range midpoint; override it with `setOrigin(int)`.
 
-**Phase 1–2 surface:** the `STANDARD` **and** `CENTERED` variants, horizontal orientation, `XS` size, continuous **and** stops, with an optional value indicator. Later V1 phases add the range variant, vertical orientation, and the S–XL sizes + inset icon.
+**Use `Variant.RANGE`** when the user selects a *span* rather than a point (a price filter, a min/max threshold). Build it with `ElwhaSlider.range(min, max, lower, upper)`; the two handles can't cross (each clamps at the other's value). The two handles are independent keyboard tab stops (Tab moves into the lower, again to the upper, then out; Shift+Tab reverses) and separate `AccessibleValue` children; with the value indicator on, only the focused/dragged handle shows a bubble (M3 — never both at once).
 
-**Documented deferrals (not silently cut):** a vertical *range* slider is allowed but doc-warned (M3 cognitive-load guidance); an external value text field that two-way-syncs with the slider is a Showcase recipe composing `ElwhaTextField` (#286), not a built-in; density follows M3 (don't-apply-by-default) and is out of scope.
+**Phase 1–3 surface:** the `STANDARD`, `CENTERED`, **and** `RANGE` variants, horizontal orientation, `XS` size, continuous **and** stops, with an optional value indicator. Later V1 phases add the S–XL sizes + inset icon and vertical orientation.
+
+**Documented deferrals (not silently cut):** a **vertical range** slider is allowed but **doc-warned** — M3 cognitive-load guidance discourages combining the two-handle range with the harder-to-scan vertical orientation, so prefer a horizontal range or a vertical single slider; an external value text field that two-way-syncs with the slider is a Showcase recipe composing `ElwhaTextField` (#286), not a built-in; density follows M3 (don't-apply-by-default) and is out of scope.
 
 ## Playgrounds
 
