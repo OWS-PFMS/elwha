@@ -1,5 +1,6 @@
 package com.owspfm.elwha.slider;
 
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
@@ -14,6 +15,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
+import java.util.logging.Logger;
+import javax.swing.Icon;
 import java.awt.event.ActionEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -216,6 +219,8 @@ public class ElwhaSlider extends JComponent {
   /** Default preferred track length when the layout gives the slider its preferred size. */
   static final int DEFAULT_TRACK_LENGTH_PX = 240;
 
+  private static final Logger LOG = Logger.getLogger(ElwhaSlider.class.getName());
+
   private static final int VALUE_BUBBLE_NUB_HEIGHT_PX = 8;
   private static final int HANDLE_MORPH_MS = MorphAnimator.SHORT3_MS;
   private static final int RIPPLE_TOTAL_MS = 400;
@@ -240,6 +245,11 @@ public class ElwhaSlider extends JComponent {
   private Variant variant = Variant.STANDARD;
   private Size sizeVariant = Size.XS;
   private Integer originOverride;
+
+  private Icon insetIcon;
+  private FlatSVGIcon insetIconThemed;
+  private Color insetIconTint;
+  private boolean insetIconNoOpWarned;
 
   private int lowerValue;
   private int upperValue;
@@ -805,8 +815,70 @@ public class ElwhaSlider extends JComponent {
       return;
     }
     this.sizeVariant = size;
+    rebuildInsetIcon();
     revalidate();
     repaint();
+  }
+
+  /**
+   * Returns the optional inset icon painted inside the active track at the leading/origin end, or
+   * {@code null} if none is set. Renders only for the {@link Variant#STANDARD} variant at sizes
+   * {@link Size#M} and larger.
+   *
+   * @return the inset icon, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public Icon getInsetIcon() {
+    return insetIcon;
+  }
+
+  /**
+   * Sets the optional <strong>inset icon</strong> (M3 §An part&nbsp;6) painted inside the track at
+   * the leading/origin end — a glyph denoting what the slider controls (volume, brightness). Source
+   * it via {@link com.owspfm.elwha.icons.MaterialIcons} so it is auto-tinted for contrast and sized
+   * to the preset's icon dp (24 at {@link Size#M}/{@link Size#L}, 32 at {@link Size#XL}); a {@link
+   * FlatSVGIcon} is recolored to {@link ColorRole#ON_PRIMARY} on the active track and {@link
+   * ColorRole#ON_SECONDARY_CONTAINER} once it swaps to the inactive track, while a non-{@code
+   * FlatSVGIcon} is painted verbatim.
+   *
+   * <p><strong>Standard variant, sizes M/L/XL only</strong> (research §GD4 — a track below
+   * 40&nbsp;dp is too thin to inset a legible glyph). Setting an icon on {@link Size#XS}/{@link
+   * Size#S}, {@link Variant#CENTERED}, or {@link Variant#RANGE} is a documented no-op (it logs one
+   * advisory message and paints nothing). The icon sits at the leading end of the active fill and
+   * <strong>repositions into the inactive track</strong> when the value drops too low for the active
+   * fill to contain it (the M3 swap-at-zero affordance); the leading end and reposition direction
+   * both mirror under a right-to-left {@link java.awt.ComponentOrientation}.
+   *
+   * @param icon the inset icon, or {@code null} to clear
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setInsetIcon(final Icon icon) {
+    this.insetIcon = icon;
+    this.insetIconNoOpWarned = false;
+    rebuildInsetIcon();
+    repaint();
+  }
+
+  /**
+   * Caches a slot-sized, filter-bound copy of a {@link FlatSVGIcon} inset icon so paint never
+   * mutates the caller's shared glyph (the #197 shared-icon-filter hazard) nor re-derives per frame.
+   * Re-run whenever the icon or {@linkplain Size size} changes. Non-{@code FlatSVGIcon} icons are
+   * painted as-is, so there is nothing to cache.
+   */
+  private void rebuildInsetIcon() {
+    if (insetIcon instanceof FlatSVGIcon svg && sizeVariant.allowsInsetIcon()) {
+      final int px = sizeVariant.insetIconSize;
+      insetIconThemed =
+          (svg.getIconWidth() == px && svg.getIconHeight() == px)
+              ? new FlatSVGIcon(svg)
+              : svg.derive(px, px);
+      insetIconTint = null;
+    } else {
+      insetIconThemed = null;
+      insetIconTint = null;
+    }
   }
 
   /**
@@ -1019,12 +1091,14 @@ public class ElwhaSlider extends JComponent {
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      maybeWarnInsetIconNoOp();
       if (variant == Variant.RANGE) {
         paintRange(g2);
         return;
       }
       final int cx = handleCenterX();
       paintTrack(g2, cx);
+      paintInsetIcon(g2, cx);
       paintStops(g2, cx);
       paintStateLayer(g2, cx);
       paintRipple(g2, cx);
@@ -1513,6 +1587,91 @@ public class ElwhaSlider extends JComponent {
     final float x = cx - width / 2f;
     g2.setColor(handleColor());
     g2.fill(new RoundRectangle2D.Float(x, handleTop, width, handleHeight(), width, width));
+  }
+
+  /** Whether the inset icon should render: a non-null icon on a standard M/L/XL slider. */
+  private boolean insetIconApplies() {
+    return insetIcon != null && variant == Variant.STANDARD && sizeVariant.allowsInsetIcon();
+  }
+
+  /** Logs one advisory when an inset icon was set but the current variant/size won't render it. */
+  private void maybeWarnInsetIconNoOp() {
+    if (insetIcon != null && !insetIconApplies() && !insetIconNoOpWarned) {
+      insetIconNoOpWarned = true;
+      LOG.info(
+          "ElwhaSlider inset icon ignored: it renders only on the STANDARD variant at sizes M/L/XL"
+              + " (current variant="
+              + variant
+              + ", size="
+              + sizeVariant
+              + ").");
+    }
+  }
+
+  /**
+   * Paints the inset icon at the leading/origin end of the active fill, swapping it into the
+   * inactive track on the handle's trailing side when the value is too low for the active fill to
+   * contain it (M3 swap-at-zero, §GD4). All x math is pixel-space and RTL-mirrored via {@link
+   * #ltr()}.
+   */
+  private void paintInsetIcon(final Graphics2D g2, final int cx) {
+    if (!insetIconApplies()) {
+      return;
+    }
+    final int iconSize = sizeVariant.insetIconSize;
+    final int pad = iconSize / 2;
+    final int width = getWidth();
+    final int half = HANDLE_WIDTH_PX / 2;
+    final int iconY = trackTopY() + trackHeight() / 2 - iconSize / 2;
+    final boolean ltr = ltr();
+
+    final int leadingSlotX = ltr ? pad : width - pad - iconSize;
+    final int activeFillLength =
+        ltr ? cx - half - HANDLE_TRACK_GAP_PX : width - (cx + half + HANDLE_TRACK_GAP_PX);
+
+    final boolean onActive = activeFillLength >= pad + iconSize;
+    final int iconX;
+    if (onActive) {
+      iconX = leadingSlotX;
+    } else {
+      final int swapped =
+          ltr
+              ? cx + half + HANDLE_TRACK_GAP_PX + pad
+              : cx - half - HANDLE_TRACK_GAP_PX - pad - iconSize;
+      iconX = clamp(swapped, pad, Math.max(pad, width - pad - iconSize));
+    }
+    paintInsetGlyph(g2, iconX, iconY, onActive);
+  }
+
+  /** Paints the (possibly themed) inset glyph; a {@link FlatSVGIcon} is recolored for its track. */
+  private void paintInsetGlyph(
+      final Graphics2D g2, final int iconX, final int iconY, final boolean onActive) {
+    if (insetIconThemed != null) {
+      final Color tint = insetIconTintColor(onActive);
+      if (!tint.equals(insetIconTint)) {
+        insetIconTint = tint;
+        insetIconThemed.setColorFilter(new FlatSVGIcon.ColorFilter(c -> tint));
+      }
+      insetIconThemed.paintIcon(this, g2, iconX, iconY);
+      return;
+    }
+    final Graphics2D ig = (Graphics2D) g2.create();
+    try {
+      if (!isEnabled()) {
+        ig.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContentOpacity()));
+      }
+      insetIcon.paintIcon(this, ig, iconX, iconY);
+    } finally {
+      ig.dispose();
+    }
+  }
+
+  /** The inset-icon tint: ON_PRIMARY on the active track, ON_SECONDARY_CONTAINER once swapped. */
+  private Color insetIconTintColor(final boolean onActive) {
+    if (!isEnabled()) {
+      return withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
+    }
+    return (onActive ? ColorRole.ON_PRIMARY : ColorRole.ON_SECONDARY_CONTAINER).resolve();
   }
 
   private void paintValueBubble(final Graphics2D g2, final int cx) {
