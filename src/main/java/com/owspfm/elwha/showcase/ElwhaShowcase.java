@@ -3736,11 +3736,14 @@ public final class ElwhaShowcase {
     for (final String label : new String[] {"Title", "Location", "Start", "End", "Notes"}) {
       // Dogfood: the field's floating label replaces the hand-rolled adjacent JLabel — the exact
       // M3 "forms and dialogs" use case. "Notes" is a multi-line text area (the long-response field
-      // a form like this would always have), the Phase-2 multi-line dogfood.
+      // a form like this would always have), the Phase-2 multi-line dogfood; "Title" carries a
+      // character counter (the natural length-capped field), the Phase-3 counter dogfood.
       final ElwhaTextField field = ElwhaTextField.outlined(label);
       if ("Notes".equals(label)) {
         field.setInputMode(ElwhaTextField.InputMode.TEXT_AREA);
         field.setRows(3);
+      } else if ("Title".equals(label)) {
+        field.setMaxLength(60);
       }
       field.setAlignmentX(Component.LEFT_ALIGNMENT);
       field.setMaximumSize(new Dimension(Integer.MAX_VALUE, field.getPreferredSize().height));

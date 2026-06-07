@@ -107,6 +107,24 @@ public class ElwhaTextField extends JComponent {
     TEXT_AREA
   }
 
+  /**
+   * When the supporting text (and the {@linkplain #setMaxLength(int) character counter}) are shown
+   * below the field. The supporting row height is <b>always</b> reserved either way, so switching
+   * modes never shifts layout — only the row's <i>content</i> appears or hides.
+   *
+   * @since v0.4.0
+   */
+  public enum SupportingTextVisibility {
+    /** The supporting text and counter are always visible. The default. */
+    ALWAYS,
+    /**
+     * The supporting text and counter appear only while the field is focused; on blur the reserved
+     * row is blank. <b>Error text always shows</b> regardless of this mode (it is the
+     * higher-priority message), as does an <b>over-limit</b> counter.
+     */
+    ON_FOCUS
+  }
+
   // M3 measurements (design §5 / research §M). dp == px in this code; FlatLaf scales the Graphics.
   static final int CONTAINER_HEIGHT = 56;
   static final int PAD_TOP_BOTTOM = SpaceScale.SM.px(); // 8
@@ -116,6 +134,7 @@ public class ElwhaTextField extends JComponent {
   static final int ICON_TEXT_GAP = SpaceScale.LG.px(); // 16 (icon-to-text)
   static final int ICON_GLYPH = 24; // painted glyph size (touch target is the 56dp field)
   static final int SUPPORTING_TOP_PAD = SpaceScale.XS.px(); // 4
+  static final int COUNTER_GAP = SpaceScale.LG.px(); // 16 (supporting-text -> counter min gap)
   static final int LABEL_NOTCH_PAD = SpaceScale.XS.px(); // 4 (outlined label-notch gap)
   static final int RESTING_STROKE = 1;
   static final int FOCUS_STROKE = 3; // Expressive bump (design §4; resting 1dp)
@@ -145,6 +164,8 @@ public class ElwhaTextField extends JComponent {
   private String suffix = "";
   private String supportingText = "";
   private String errorText = "";
+  private int maxLength = -1;
+  private SupportingTextVisibility supportingTextVisibility = SupportingTextVisibility.ALWAYS;
 
   private Icon leadingIcon;
   private Icon trailingIcon;
@@ -361,6 +382,9 @@ public class ElwhaTextField extends JComponent {
   private void onTextChanged() {
     updateLabelFloat();
     updatePlaceholder();
+    if (maxLength >= 0) {
+      syncAccessibleName(); // keep the live "N of M" a11y count in step with the text
+    }
     if (inputMode == InputMode.MULTI_LINE) {
       revalidate(); // auto-grow: the container follows the content height
     }
@@ -682,6 +706,60 @@ public class ElwhaTextField extends JComponent {
   }
 
   /**
+   * Returns the character-count limit driving the counter, or {@code -1} when no counter is shown.
+   *
+   * @return the maximum length, or {@code -1} for none
+   */
+  public int getMaxLength() {
+    return maxLength;
+  }
+
+  /**
+   * Sets the character-count limit. A non-negative value shows a live {@code used/total} counter
+   * (for example {@code 5/20}) right-aligned in the reserved supporting row, {@code BODY_SMALL} /
+   * {@code on-surface-variant}; {@code -1} (the default) hides it. The counter shares the always-
+   * reserved supporting row, so showing or hiding it never shifts layout.
+   *
+   * <p><b>Display only — no truncation.</b> Consistent with the field's visual-only validation
+   * doctrine, the counter does not cap input: when the count exceeds {@code maxLength} the counter
+   * turns the {@code error} color as the over-limit cue, but the editor still accepts the
+   * characters. A consumer that needs a hard cap enforces it on its own {@code Document}.
+   *
+   * <p>The counter follows the {@linkplain #setSupportingTextVisibility visibility mode} like the
+   * supporting text, except an over-limit counter always shows (it is an error-priority signal).
+   *
+   * @param maxLength the limit, or {@code -1} for no counter
+   */
+  public void setMaxLength(final int maxLength) {
+    this.maxLength = maxLength;
+    syncAccessibleName();
+    repaint();
+  }
+
+  /**
+   * Returns the supporting-text visibility mode.
+   *
+   * @return the visibility mode
+   */
+  public SupportingTextVisibility getSupportingTextVisibility() {
+    return supportingTextVisibility;
+  }
+
+  /**
+   * Sets when the supporting text and {@linkplain #setMaxLength(int) counter} are shown — {@link
+   * SupportingTextVisibility#ALWAYS} (default) or {@link SupportingTextVisibility#ON_FOCUS}. The
+   * reserved row height is unchanged either way, so the toggle never shifts layout. Error text and
+   * an over-limit counter always show regardless of the mode.
+   *
+   * @param visibility the visibility mode
+   */
+  public void setSupportingTextVisibility(final SupportingTextVisibility visibility) {
+    this.supportingTextVisibility =
+        visibility == null ? SupportingTextVisibility.ALWAYS : visibility;
+    repaint();
+  }
+
+  /**
    * Returns whether the field is marked required.
    *
    * @return {@code true} if required
@@ -843,12 +921,31 @@ public class ElwhaTextField extends JComponent {
     return error && !errorText.isEmpty() ? errorText : supportingText;
   }
 
-  /** A11y description: supporting text first, then error text (research §X). */
+  /** A11y description: supporting text first, then error text, then the counter (research §X). */
   private String accessibleDescription() {
+    final StringBuilder out = new StringBuilder();
     if (error && !errorText.isEmpty()) {
-      return supportingText.isEmpty() ? errorText : supportingText + ", " + errorText;
+      out.append(supportingText.isEmpty() ? errorText : supportingText + ", " + errorText);
+    } else if (!supportingText.isEmpty()) {
+      out.append(supportingText);
     }
-    return supportingText.isEmpty() ? null : supportingText;
+    if (maxLength >= 0) {
+      if (out.length() > 0) {
+        out.append(", ");
+      }
+      out.append(counterA11y());
+    }
+    return out.length() == 0 ? null : out.toString();
+  }
+
+  /** A11y phrasing for the live character counter (research §X). */
+  private String counterA11y() {
+    return "character count, " + characterCount() + " of " + maxLength + " characters entered";
+  }
+
+  /** The editor's current character count (document length). */
+  private int characterCount() {
+    return editor.getDocument().getLength();
   }
 
   /** Whether the non-color error icon should auto-fill the trailing slot. */
@@ -1115,18 +1212,45 @@ public class ElwhaTextField extends JComponent {
   }
 
   private void paintSupportingText(final Graphics2D g2) {
-    final String support = displayedSupporting();
-    if (support.isEmpty()) {
-      return;
-    }
     g2.setFont(TypeRole.BODY_SMALL.resolve());
-    g2.setColor(supportingColor());
     final int y =
         containerTop()
             + containerHeight()
             + SUPPORTING_TOP_PAD
             + getFontMetrics(TypeRole.BODY_SMALL.resolve()).getAscent();
-    g2.drawString(support, PAD_LR_NO_ICON, y);
+
+    final String support = displayedSupporting();
+    final boolean errorShown = error && !errorText.isEmpty();
+    if (!support.isEmpty() && (errorShown || assistiveContentVisible())) {
+      g2.setColor(supportingColor());
+      g2.drawString(support, PAD_LR_NO_ICON, y);
+    }
+
+    paintCounter(g2, y);
+  }
+
+  /** Whether advisory supporting content (supporting text / counter) is currently revealed. */
+  private boolean assistiveContentVisible() {
+    return supportingTextVisibility == SupportingTextVisibility.ALWAYS || focused;
+  }
+
+  /**
+   * Paints the live {@code used/total} character counter, right-aligned in the supporting row. It
+   * follows the visibility mode like the supporting text, but an over-limit counter always shows.
+   */
+  private void paintCounter(final Graphics2D g2, final int baseline) {
+    if (maxLength < 0) {
+      return;
+    }
+    final int count = characterCount();
+    final boolean overLimit = count > maxLength && isEnabled();
+    if (!assistiveContentVisible() && !overLimit) {
+      return;
+    }
+    final String text = count + "/" + maxLength;
+    g2.setColor(overLimit ? ColorRole.ERROR.resolve() : supportingColor());
+    final int textW = getFontMetrics(TypeRole.BODY_SMALL.resolve()).stringWidth(text);
+    g2.drawString(text, getWidth() - PAD_LR_NO_ICON - textW, baseline);
   }
 
   private int textWidth(final String text) {
