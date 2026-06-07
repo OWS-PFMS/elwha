@@ -7,8 +7,16 @@ import com.owspfm.elwha.menu.ElwhaMenu;
 import com.owspfm.elwha.menu.ElwhaMenuItem;
 import com.owspfm.elwha.menu.SelectionMode;
 import com.owspfm.elwha.textfield.ElwhaTextField;
+import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.KeyboardFocusManager;
+import java.awt.RenderingHints;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -16,7 +24,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleState;
+import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.swing.SwingUtilities;
 
 /**
  * The M3 <strong>exposed dropdown menu</strong> (select field): a text field with a trailing
@@ -48,9 +60,12 @@ import javax.swing.JComponent;
 public class ElwhaSelectField<T> extends JComponent {
 
   private static final int ARROW_PX = 20;
+  private static final int ROTATE_MS = 180;
 
   private final ElwhaTextField field;
   private final ElwhaIconButton arrow;
+  private final RotatableIcon arrowIcon;
+  private final MorphAnimator arrowAnim;
   private final List<ElwhaMenuItem> items = new ArrayList<>();
   private final List<Consumer<T>> selectionListeners = new ArrayList<>();
 
@@ -82,16 +97,25 @@ public class ElwhaSelectField<T> extends JComponent {
         new ElwhaTextField(
             variant == null ? ElwhaTextField.Variant.FILLED : variant, label == null ? "" : label);
     this.field.setReadOnly(true);
-    this.arrow = new ElwhaIconButton(MaterialIcons.arrowDropDown(ARROW_PX));
+    this.arrowIcon = new RotatableIcon(MaterialIcons.arrowDropDown(ARROW_PX));
+    this.arrow = new ElwhaIconButton(arrowIcon);
     this.arrow.setButtonSize(IconButtonSize.S);
     this.field.setTrailingIconButton(arrow);
+    this.arrowAnim = new MorphAnimator(arrow, ROTATE_MS);
+    this.arrowAnim.addProgressListener(
+        () -> {
+          arrowIcon.setAngle(arrowAnim.progress() * 180f);
+          arrow.repaint();
+        });
 
     setLayout(new BorderLayout());
     setOpaque(false);
     add(field, BorderLayout.CENTER);
 
     arrow.addActionListener(e -> toggle());
+    updateArrowA11y(false);
     installFieldMouse();
+    installFieldKeyboard();
   }
 
   /**
@@ -232,14 +256,97 @@ public class ElwhaSelectField<T> extends JComponent {
     if (options.isEmpty()) {
       return;
     }
-    expanded = true;
-    arrow.setIcon(MaterialIcons.arrowDropUp(ARROW_PX));
+    applyExpandedState(true);
     optionsMenu().open(field);
   }
 
   private void handleClose() {
-    expanded = false;
-    arrow.setIcon(MaterialIcons.arrowDropDown(ARROW_PX));
+    applyExpandedState(false);
+  }
+
+  /**
+   * Drives the expanded/collapsed visuals + a11y: rotates the arrow (down ↔ up, reduced-motion →
+   * instant via the shared {@link MorphAnimator}) and flips the arrow's accessible name + fires the
+   * state-change announcement. The menu's own open/close is the caller's concern.
+   */
+  void applyExpandedState(final boolean expand) {
+    this.expanded = expand;
+    if (expand) {
+      arrowAnim.start();
+    } else {
+      arrowAnim.reverse();
+    }
+    updateArrowA11y(expand);
+  }
+
+  /** The arrow's current rotation in degrees — the smoke's reduced-motion-instant probe. */
+  float arrowAngle() {
+    return arrowIcon.angle();
+  }
+
+  private void updateArrowA11y(final boolean expand) {
+    final AccessibleContext ctx = arrow.getAccessibleContext();
+    ctx.setAccessibleName(expand ? "Close options" : "Open options");
+    ctx.firePropertyChange(
+        AccessibleContext.ACCESSIBLE_STATE_PROPERTY,
+        expand ? AccessibleState.COLLAPSED : AccessibleState.EXPANDED,
+        expand ? AccessibleState.EXPANDED : AccessibleState.COLLAPSED);
+  }
+
+  // Field-focused, menu-closed keyboard: Down / Up / Enter / Space / Alt+Down open the menu (which
+  // then owns navigation, Esc-close, and focus-return); a printable key opens and forwards itself
+  // to
+  // the menu's type-ahead. Once open, focus is on the menu surface, so these never double-fire.
+  private void installFieldKeyboard() {
+    field
+        .getEditor()
+        .addKeyListener(
+            new KeyAdapter() {
+              @Override
+              public void keyPressed(final KeyEvent e) {
+                if (expanded) {
+                  return;
+                }
+                switch (e.getKeyCode()) {
+                  case KeyEvent.VK_DOWN:
+                  case KeyEvent.VK_UP:
+                  case KeyEvent.VK_ENTER:
+                  case KeyEvent.VK_SPACE:
+                    open();
+                    e.consume();
+                    break;
+                  default:
+                    break;
+                }
+              }
+
+              @Override
+              public void keyTyped(final KeyEvent e) {
+                if (expanded) {
+                  return;
+                }
+                final char c = e.getKeyChar();
+                if (!Character.isLetterOrDigit(c)) {
+                  return;
+                }
+                open();
+                forwardTypeAhead(c);
+                e.consume();
+              }
+            });
+  }
+
+  /** Re-delivers the opening keystroke to the now-focused menu surface so type-ahead matches it. */
+  private void forwardTypeAhead(final char c) {
+    SwingUtilities.invokeLater(
+        () -> {
+          final Component owner =
+              KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+          if (owner != null) {
+            owner.dispatchEvent(
+                new KeyEvent(owner, KeyEvent.KEY_TYPED, 0L, 0, KeyEvent.VK_UNDEFINED, c));
+          }
+        });
   }
 
   /**
@@ -290,8 +397,8 @@ public class ElwhaSelectField<T> extends JComponent {
 
   /**
    * The built (and cached) option menu, rebuilt on demand after an options/display change. Visible
-   * for the headless smoke, which drives selection via {@link ElwhaMenuItem#activate(int)} without
-   * a window.
+   * for the headless smoke, which reads its items/marks while driving selection through {@link
+   * #selectIndex} (the popup itself needs a window).
    */
   ElwhaMenu optionsMenu() {
     if (menu == null) {
@@ -314,5 +421,52 @@ public class ElwhaSelectField<T> extends JComponent {
       builder.addItem(item);
     }
     this.menu = builder.build();
+  }
+
+  /**
+   * An {@link Icon} that paints a delegate rotated about its centre — the arrow's down ↔ up flip,
+   * driven by the {@link MorphAnimator}. The delegate is the themed dropdown-arrow glyph, so a 180°
+   * rotation reads as {@code arrow_drop_up}; reduced-motion lands at 0° / 180° instantly.
+   */
+  private static final class RotatableIcon implements Icon {
+
+    private final Icon delegate;
+    private float angleDeg;
+
+    RotatableIcon(final Icon delegate) {
+      this.delegate = delegate;
+    }
+
+    void setAngle(final float degrees) {
+      this.angleDeg = degrees;
+    }
+
+    float angle() {
+      return angleDeg;
+    }
+
+    @Override
+    public int getIconWidth() {
+      return delegate.getIconWidth();
+    }
+
+    @Override
+    public int getIconHeight() {
+      return delegate.getIconHeight();
+    }
+
+    @Override
+    public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
+      final Graphics2D g2 = (Graphics2D) g.create();
+      try {
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        final double cx = x + delegate.getIconWidth() / 2.0;
+        final double cy = y + delegate.getIconHeight() / 2.0;
+        g2.rotate(Math.toRadians(angleDeg), cx, cy);
+        delegate.paintIcon(c, g2, x, y);
+      } finally {
+        g2.dispose();
+      }
+    }
   }
 }
