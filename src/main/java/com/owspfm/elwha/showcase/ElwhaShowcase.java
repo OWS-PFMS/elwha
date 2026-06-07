@@ -744,6 +744,13 @@ public final class ElwhaShowcase {
             "M3 Expressive slider — split track, pill handle, stops, value bubble (standard XS).",
             AREA_COMPONENTS,
             buildSliderComponent()));
+    register(
+        new LeafEntry(
+            "Select Field",
+            "M3 exposed dropdown — a read-only ElwhaTextField + anchored ElwhaMenu of typed"
+                + " options, with single-select write-back.",
+            AREA_COMPONENTS,
+            SelectFieldShowcasePanels.buildComponent()));
 
     register(
         new LeafEntry(
