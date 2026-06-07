@@ -75,18 +75,15 @@ public final class ElwhaMenuSelectionDemo {
 
   private static JComponent noneColumn() {
     final JLabel status = status("Last action: —");
+    final ElwhaMenu menu =
+        ElwhaMenu.builder()
+            .selectionMode(SelectionMode.NONE)
+            .addItem(action("Rename", MaterialIcons.edit(20), status))
+            .addItem(action("Duplicate", MaterialIcons.add(20), status))
+            .addItem(action("Delete", MaterialIcons.delete(20), status))
+            .build();
     final ElwhaButton trigger = ElwhaButton.outlinedButton("Actions ⋯");
-    trigger.addActionListener(
-        e -> {
-          final ElwhaMenu menu =
-              ElwhaMenu.builder()
-                  .selectionMode(SelectionMode.NONE)
-                  .addItem(action("Rename", MaterialIcons.edit(20), status))
-                  .addItem(action("Duplicate", MaterialIcons.add(20), status))
-                  .addItem(action("Delete", MaterialIcons.delete(20), status))
-                  .build();
-          menu.open(trigger);
-        });
+    trigger.addActionListener(e -> menu.open(trigger));
     return column("NONE — action menu", "fires + closes; no selection", trigger, status);
   }
 
@@ -101,44 +98,41 @@ public final class ElwhaMenuSelectionDemo {
 
   private static JComponent singleColumn() {
     final JLabel status = status("View: List");
+    final ElwhaMenuItem list = ElwhaMenuItem.of(MaterialIcons.menu(20), "List");
+    final ElwhaMenuItem grid = ElwhaMenuItem.of(MaterialIcons.gridView(20), "Grid");
+    final ElwhaMenuItem gallery = ElwhaMenuItem.of(MaterialIcons.widgets(20), "Gallery");
+    list.setSelected(true);
+    // Build the menu once and reuse it so the pick persists: reopen and the chosen view is still
+    // checked. (A fresh menu per open would reset to "List" every time.)
+    final ElwhaMenu menu =
+        ElwhaMenu.builder()
+            .selectionMode(SelectionMode.SINGLE)
+            .onSelectionChange(item -> status.setText("View: " + item.getLabel()))
+            .addItem(list)
+            .addItem(grid)
+            .addItem(gallery)
+            .build();
     final ElwhaButton trigger = ElwhaButton.outlinedButton("View ▾");
-    trigger.addActionListener(
-        e -> {
-          final ElwhaMenuItem list = ElwhaMenuItem.of(MaterialIcons.menu(20), "List");
-          final ElwhaMenuItem grid = ElwhaMenuItem.of(MaterialIcons.gridView(20), "Grid");
-          final ElwhaMenuItem gallery = ElwhaMenuItem.of(MaterialIcons.widgets(20), "Gallery");
-          list.setSelected(true);
-          final ElwhaMenu menu =
-              ElwhaMenu.builder()
-                  .selectionMode(SelectionMode.SINGLE)
-                  .onSelectionChange(item -> status.setText("View: " + item.getLabel()))
-                  .addItem(list)
-                  .addItem(grid)
-                  .addItem(gallery)
-                  .build();
-          menu.open(trigger);
-        });
-    return column("SINGLE — one of N", "selects one, closes", trigger, status);
+    trigger.addActionListener(e -> menu.open(trigger));
+    return column("SINGLE — one of N", "selects one, closes; pick persists", trigger, status);
   }
 
   // --- MULTI: toggle columns, stays open -----------------------------------
 
   private static JComponent multiColumn() {
     final JLabel status = status("Columns: —");
+    // One instance, reused — the toggled set accumulates and persists across reopens.
+    final ElwhaMenu menu =
+        ElwhaMenu.builder()
+            .selectionMode(SelectionMode.MULTI)
+            .onSelectionChange(item -> status.setText("Columns: " + summary(item)))
+            .addItem(ElwhaMenuItem.of(MaterialIcons.star(20), "Name"))
+            .addItem(ElwhaMenuItem.of(MaterialIcons.autorenew(20), "Modified"))
+            .addItem(ElwhaMenuItem.of(MaterialIcons.layers(20), "Size"))
+            .build();
     final ElwhaButton trigger = ElwhaButton.outlinedButton("Columns ▾");
-    trigger.addActionListener(
-        e -> {
-          final ElwhaMenu menu =
-              ElwhaMenu.builder()
-                  .selectionMode(SelectionMode.MULTI)
-                  .onSelectionChange(item -> status.setText("Columns: " + summary(item)))
-                  .addItem(ElwhaMenuItem.of(MaterialIcons.star(20), "Name"))
-                  .addItem(ElwhaMenuItem.of(MaterialIcons.autorenew(20), "Modified"))
-                  .addItem(ElwhaMenuItem.of(MaterialIcons.layers(20), "Size"))
-                  .build();
-          menu.open(trigger);
-        });
-    return column("MULTI — toggle", "stays open until dismissed", trigger, status);
+    trigger.addActionListener(e -> menu.open(trigger));
+    return column("MULTI — toggle", "stays open; toggles persist", trigger, status);
   }
 
   private static String summary(final ElwhaMenuItem changed) {
