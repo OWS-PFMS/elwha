@@ -58,8 +58,10 @@ import javax.swing.event.EventListenerList;
  * the handle in either direction — for a positive/negative range with the default in the middle.
  * {@link Variant#RANGE} adds a second handle and fills the active track <em>between</em> the two,
  * selecting a {@code [lower, upper]} sub-span (build one with {@link #range(int, int, int, int)}).
- * The size / orientation axes are later V1 phases; the geometry constants below are the XS preset
- * (M3's only off-Android code preset; research §M / §Cfg).
+ * The {@linkplain Size size} axis ({@link #setSizeVariant(Size)}) scales the chrome across the M3
+ * {@code XS}&ndash;{@code XL} preset table; the orientation axis is a later V1 phase. The geometry
+ * constants below are the {@code XS} (default) preset (M3's only off-Android code preset; §M /
+ * §Cfg).
  *
  * <p><strong>Interaction & motion (research §S / §TS / §B).</strong> Drag the handle or click the
  * track to jump; the value updates live and a {@link ChangeListener} fires on every change with
@@ -129,7 +131,51 @@ public class ElwhaSlider extends JComponent {
     UPPER
   }
 
-  // --- XS geometry preset (dp == px at 100% scale; research §M / §T) ---
+  /**
+   * The slider's size preset — the M3 track-thickness scale {@code XS} &le; {@code S} &le; {@code M}
+   * &le; {@code L} &le; {@code XL} (research §M / §GD5). Each size scales the three geometry values
+   * the M3 measurements table varies — {@linkplain #trackHeight() track height}, {@linkplain
+   * #handleHeight() handle height}, and the {@linkplain #outerCorner() outer corner radius} — plus
+   * the {@linkplain #insetIconSize() inset-icon size}; the handle width, handle&harr;track gap, stop
+   * dot, inner corner, and value bubble are constant across sizes (M3 §M). {@code XS} is the default
+   * and M3's only off-Android code preset; larger sizes give a bigger touch target and more visual
+   * emphasis ({@code XL} for hero moments).
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public enum Size {
+    /** Extra-small — track 16, handle 44, corner 8; the default. No inset icon. */
+    XS(16, 44, 8, 0),
+    /** Small — track 24, handle 44, corner 8. No inset icon. */
+    S(24, 44, 8, 0),
+    /** Medium — track 40, handle 52, corner 12; inset icon 24 (the &ge;40&nbsp;dp floor). */
+    M(40, 52, 12, 24),
+    /** Large — track 56, handle 68, corner 16; inset icon 24. */
+    L(56, 68, 16, 24),
+    /** Extra-large — track 96, handle 108, corner 28; inset icon 32. For hero moments. */
+    XL(96, 108, 28, 32);
+
+    private final int trackHeight;
+    private final int handleHeight;
+    private final int outerCorner;
+    private final int insetIconSize;
+
+    Size(final int trackHeight, final int handleHeight, final int outerCorner, final int icon) {
+      this.trackHeight = trackHeight;
+      this.handleHeight = handleHeight;
+      this.outerCorner = outerCorner;
+      this.insetIconSize = icon;
+    }
+
+    /** Whether this size admits an inset icon (M/L/XL — a track &ge;&nbsp;40&nbsp;dp; research §GD4). */
+    boolean allowsInsetIcon() {
+      return insetIconSize > 0;
+    }
+  }
+
+  // --- XS geometry preset; the XS row of the {@link Size} table (dp == px at 100% scale; §M / §T) ---
 
   /** Track thickness (both active and inactive segments). */
   static final int TRACK_HEIGHT_PX = 16;
@@ -192,6 +238,7 @@ public class ElwhaSlider extends JComponent {
   private boolean spaceDown;
   private boolean endStopsVisible = true;
   private Variant variant = Variant.STANDARD;
+  private Size sizeVariant = Size.XS;
   private Integer originOverride;
 
   private int lowerValue;
@@ -723,6 +770,46 @@ public class ElwhaSlider extends JComponent {
   }
 
   /**
+   * Returns the slider's {@linkplain Size size} preset.
+   *
+   * <p><strong>Named {@code getSizeVariant} (not {@code getSize}) deliberately:</strong> {@link
+   * java.awt.Component} already defines {@code getSize()} / {@code setSize(int, int)} returning the
+   * pixel {@link Dimension}, so the M3 size axis is exposed under a distinct name rather than
+   * shadowing the {@code Component} contract.
+   *
+   * @return the current size preset (default {@link Size#XS})
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public Size getSizeVariant() {
+    return sizeVariant;
+  }
+
+  /**
+   * Sets the slider's {@linkplain Size size} preset — the M3 track-thickness scale that grows the
+   * track, handle, and outer corner together (research §M / §GD5). Defaults to {@link Size#XS}, the
+   * canonical M3 code preset; the Phase&nbsp;1&ndash;3 behavior is exactly the {@code XS} size.
+   * Switching size does not change the value; all variants, interaction, keyboard, stops, value
+   * bubble, and disabled behavior are shared across sizes. The optional {@linkplain
+   * #setInsetIcon(javax.swing.Icon) inset icon} requires {@link Size#M} or larger.
+   *
+   * @param size the size preset; never {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setSizeVariant(final Size size) {
+    if (size == null) {
+      throw new IllegalArgumentException("size");
+    }
+    if (this.sizeVariant == size) {
+      return;
+    }
+    this.sizeVariant = size;
+    revalidate();
+    repaint();
+  }
+
+  /**
    * Returns the fill origin — the value the {@link Variant#CENTERED} active track grows out of.
    * When no origin has been {@linkplain #setOrigin(int) set} the default is {@code 0} if {@code 0}
    * lies in {@code [min, max]}, otherwise the range midpoint {@code (min + max) / 2}; the value is
@@ -819,7 +906,7 @@ public class ElwhaSlider extends JComponent {
   }
 
   private int contentHeight() {
-    return bubbleReserveHeight() + HANDLE_HEIGHT_PX;
+    return bubbleReserveHeight() + handleHeight();
   }
 
   @Override
@@ -829,7 +916,7 @@ public class ElwhaSlider extends JComponent {
 
   @Override
   public Dimension getMinimumSize() {
-    return new Dimension(HANDLE_HEIGHT_PX, contentHeight());
+    return new Dimension(handleHeight(), contentHeight());
   }
 
   @Override
@@ -838,6 +925,21 @@ public class ElwhaSlider extends JComponent {
   }
 
   // ------------------------------------------------------------------ geometry
+
+  /** The current size preset's track thickness (both segments), per the M3 §M scale. */
+  private int trackHeight() {
+    return sizeVariant.trackHeight;
+  }
+
+  /** The current size preset's resting handle height, per the M3 §M scale. */
+  private int handleHeight() {
+    return sizeVariant.handleHeight;
+  }
+
+  /** The current size preset's outer (far-end) track corner radius, per the M3 §M scale. */
+  private int outerCorner() {
+    return sizeVariant.outerCorner;
+  }
 
   /** The half-width used for handle travel — the resting pill half-width, stable across morphs. */
   private static int travelInset() {
@@ -902,7 +1004,7 @@ public class ElwhaSlider extends JComponent {
 
   /** The y of the track bar's top — centered on the handle band. */
   private int trackTopY() {
-    return handleTopY() + (HANDLE_HEIGHT_PX - TRACK_HEIGHT_PX) / 2;
+    return handleTopY() + (handleHeight() - trackHeight()) / 2;
   }
 
   /** The current handle width, narrowed by the focus/press morph. */
@@ -948,9 +1050,10 @@ public class ElwhaSlider extends JComponent {
     // geometry is identical). Outer (far) corners full-round, handle-facing inner corners squared.
     final boolean leftIsActive = getComponentOrientation().isLeftToRight();
 
+    final int trackH = trackHeight();
     if (leftWidth > 0) {
       g2.setColor(trackColor(leftIsActive));
-      g2.fill(trackSegment(0, trackTop, leftWidth, TRACK_OUTER_CORNER_PX, TRACK_INNER_CORNER_PX));
+      g2.fill(trackSegment(0, trackTop, leftWidth, trackH, outerCorner(), TRACK_INNER_CORNER_PX));
     }
     if (rightStart < rightEnd) {
       g2.setColor(trackColor(!leftIsActive));
@@ -959,8 +1062,9 @@ public class ElwhaSlider extends JComponent {
               rightStart,
               trackTop,
               rightEnd - rightStart,
+              trackH,
               TRACK_INNER_CORNER_PX,
-              TRACK_OUTER_CORNER_PX));
+              outerCorner()));
     }
   }
 
@@ -981,18 +1085,11 @@ public class ElwhaSlider extends JComponent {
 
     if (leftEnd > 0) {
       paintCenteredSegment(
-          g2, trackTop, 0, leftEnd, originX, TRACK_OUTER_CORNER_PX, TRACK_INNER_CORNER_PX, true);
+          g2, trackTop, 0, leftEnd, originX, outerCorner(), TRACK_INNER_CORNER_PX, true);
     }
     if (rightStart < width) {
       paintCenteredSegment(
-          g2,
-          trackTop,
-          rightStart,
-          width,
-          originX,
-          TRACK_INNER_CORNER_PX,
-          TRACK_OUTER_CORNER_PX,
-          false);
+          g2, trackTop, rightStart, width, originX, TRACK_INNER_CORNER_PX, outerCorner(), false);
     }
   }
 
@@ -1016,15 +1113,16 @@ public class ElwhaSlider extends JComponent {
       return;
     }
     final int split = clamp(originX, x0, x1);
+    final int trackH = trackHeight();
     if (split > x0) {
       final int rightCorner = (split < x1) ? 0 : outerRightCorner;
       g2.setColor(trackColor(!leftOfHandle));
-      g2.fill(trackSegment(x0, trackTop, split - x0, outerLeftCorner, rightCorner));
+      g2.fill(trackSegment(x0, trackTop, split - x0, trackH, outerLeftCorner, rightCorner));
     }
     if (split < x1) {
       final int leftCorner = (split > x0) ? 0 : outerLeftCorner;
       g2.setColor(trackColor(leftOfHandle));
-      g2.fill(trackSegment(split, trackTop, x1 - split, leftCorner, outerRightCorner));
+      g2.fill(trackSegment(split, trackTop, x1 - split, trackH, leftCorner, outerRightCorner));
     }
   }
 
@@ -1132,8 +1230,8 @@ public class ElwhaSlider extends JComponent {
     if (child.getX() != x
         || child.getY() != y
         || child.getWidth() != HANDLE_HALO_WIDTH_PX
-        || child.getHeight() != HANDLE_HEIGHT_PX) {
-      child.setBounds(x, y, HANDLE_HALO_WIDTH_PX, HANDLE_HEIGHT_PX);
+        || child.getHeight() != handleHeight()) {
+      child.setBounds(x, y, HANDLE_HALO_WIDTH_PX, handleHeight());
     }
   }
 
@@ -1213,15 +1311,21 @@ public class ElwhaSlider extends JComponent {
     final int midEnd = rightX - half - HANDLE_TRACK_GAP_PX;
     final int rightStart = rightX + half + HANDLE_TRACK_GAP_PX;
 
+    final int trackH = trackHeight();
     if (leftEnd > 0) {
       g2.setColor(trackColor(false));
-      g2.fill(trackSegment(0, trackTop, leftEnd, TRACK_OUTER_CORNER_PX, TRACK_INNER_CORNER_PX));
+      g2.fill(trackSegment(0, trackTop, leftEnd, trackH, outerCorner(), TRACK_INNER_CORNER_PX));
     }
     if (midEnd > midStart) {
       g2.setColor(trackColor(true));
       g2.fill(
           trackSegment(
-              midStart, trackTop, midEnd - midStart, TRACK_INNER_CORNER_PX, TRACK_INNER_CORNER_PX));
+              midStart,
+              trackTop,
+              midEnd - midStart,
+              trackH,
+              TRACK_INNER_CORNER_PX,
+              TRACK_INNER_CORNER_PX));
     }
     if (rightStart < width) {
       g2.setColor(trackColor(false));
@@ -1230,8 +1334,9 @@ public class ElwhaSlider extends JComponent {
               rightStart,
               trackTop,
               width - rightStart,
+              trackH,
               TRACK_INNER_CORNER_PX,
-              TRACK_OUTER_CORNER_PX));
+              outerCorner()));
     }
   }
 
@@ -1329,7 +1434,7 @@ public class ElwhaSlider extends JComponent {
 
   /** Draws a single stop-indicator dot centered on the track at the given x. */
   private void drawStopDot(final Graphics2D g2, final int x, final boolean onActiveTrack) {
-    final int cy = trackTopY() + TRACK_HEIGHT_PX / 2;
+    final int cy = trackTopY() + trackHeight() / 2;
     final float r = STOP_INDICATOR_SIZE_PX / 2f;
     g2.setColor(stopColor(onActiveTrack));
     g2.fill(
@@ -1407,7 +1512,7 @@ public class ElwhaSlider extends JComponent {
     final int handleTop = handleTopY();
     final float x = cx - width / 2f;
     g2.setColor(handleColor());
-    g2.fill(new RoundRectangle2D.Float(x, handleTop, width, HANDLE_HEIGHT_PX, width, width));
+    g2.fill(new RoundRectangle2D.Float(x, handleTop, width, handleHeight(), width, width));
   }
 
   private void paintValueBubble(final Graphics2D g2, final int cx) {
@@ -1510,16 +1615,21 @@ public class ElwhaSlider extends JComponent {
         x,
         handleTop,
         HANDLE_HALO_WIDTH_PX,
-        HANDLE_HEIGHT_PX,
+        handleHeight(),
         HANDLE_HALO_WIDTH_PX,
         HANDLE_HALO_WIDTH_PX);
   }
 
   /** A horizontal track segment with independent left/right corner radii (top == bottom). */
   static Path2D.Float trackSegment(
-      final int x, final int y, final int width, final int leftRadius, final int rightRadius) {
+      final int x,
+      final int y,
+      final int width,
+      final int height,
+      final int leftRadius,
+      final int rightRadius) {
     final float w = width;
-    final float h = TRACK_HEIGHT_PX;
+    final float h = height;
     final float lr = Math.min(leftRadius, Math.min(w / 2f, h / 2f));
     final float rr = Math.min(rightRadius, Math.min(w / 2f, h / 2f));
     final Path2D.Float p = new Path2D.Float();
@@ -1659,7 +1769,7 @@ public class ElwhaSlider extends JComponent {
   }
 
   private int handleCenterY() {
-    return handleTopY() + HANDLE_HEIGHT_PX / 2;
+    return handleTopY() + handleHeight() / 2;
   }
 
   /** Drives the handle-narrow + value-bubble appearance toward active (focus or press) or rest. */
