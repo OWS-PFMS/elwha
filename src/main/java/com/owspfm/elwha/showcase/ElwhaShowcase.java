@@ -3397,10 +3397,18 @@ public final class ElwhaShowcase {
         new JLabel(
             "Open a menu from any trigger — note how edge triggers flip / shift to stay in view.");
 
+    // Each open rebuilds a fresh menu so it reflects the live combos, but selection is persistent
+    // state — so the chosen item labels are remembered here and re-applied on every rebuild (reopen
+    // and the pick is still checked). Changing the selection mode resets it.
+    final java.util.Set<String> selectedLabels = new java.util.LinkedHashSet<>();
+    selection.addItemListener(e -> selectedLabels.clear());
+
     final ElwhaIconButton overflow =
         new ElwhaIconButton(MaterialIcons.moreVert(IconButtonSize.M.iconPx()));
     overflow.addActionListener(
-        e -> buildWorkbenchMenu(layout, separator, colorStyle, selection, status).open(overflow));
+        e ->
+            buildWorkbenchMenu(layout, separator, colorStyle, selection, selectedLabels, status)
+                .open(overflow));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
     controls.add(new JLabel("Layout:"));
@@ -3424,6 +3432,7 @@ public final class ElwhaShowcase {
         separator,
         colorStyle,
         selection,
+        selectedLabels,
         status);
     addMenuTrigger(
         triggers,
@@ -3435,6 +3444,7 @@ public final class ElwhaShowcase {
         separator,
         colorStyle,
         selection,
+        selectedLabels,
         status);
     final GridBagConstraints center = new GridBagConstraints();
     center.gridx = 1;
@@ -3453,6 +3463,7 @@ public final class ElwhaShowcase {
         separator,
         colorStyle,
         selection,
+        selectedLabels,
         status);
     addMenuTrigger(
         triggers,
@@ -3464,6 +3475,7 @@ public final class ElwhaShowcase {
         separator,
         colorStyle,
         selection,
+        selectedLabels,
         status);
 
     final JPanel south = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
@@ -3486,10 +3498,13 @@ public final class ElwhaShowcase {
       final JComboBox<Separator> separator,
       final JComboBox<ColorStyle> colorStyle,
       final JComboBox<com.owspfm.elwha.menu.SelectionMode> selection,
+      final java.util.Set<String> selectedLabels,
       final JLabel status) {
     final ElwhaButton trigger = ElwhaButton.outlinedButton(label);
     trigger.addActionListener(
-        e -> buildWorkbenchMenu(layout, separator, colorStyle, selection, status).open(trigger));
+        e ->
+            buildWorkbenchMenu(layout, separator, colorStyle, selection, selectedLabels, status)
+                .open(trigger));
     final GridBagConstraints gc = new GridBagConstraints();
     gc.gridx = gx;
     gc.gridy = gy;
@@ -3504,6 +3519,7 @@ public final class ElwhaShowcase {
       final JComboBox<Separator> separator,
       final JComboBox<ColorStyle> colorStyle,
       final JComboBox<com.owspfm.elwha.menu.SelectionMode> selection,
+      final java.util.Set<String> selectedLabels,
       final JLabel status) {
     final com.owspfm.elwha.menu.SelectionMode mode =
         (com.owspfm.elwha.menu.SelectionMode) selection.getSelectedItem();
@@ -3512,11 +3528,17 @@ public final class ElwhaShowcase {
     b.separator((Separator) separator.getSelectedItem());
     b.colorStyle((ColorStyle) colorStyle.getSelectedItem());
     b.selectionMode(mode);
+    final ElwhaMenu[] holder = new ElwhaMenu[1];
     if (mode != com.owspfm.elwha.menu.SelectionMode.NONE) {
       b.onSelectionChange(
-          item ->
-              status.setText(
-                  (item.isSelected() ? "Selected: " : "Deselected: ") + item.getLabel()));
+          item -> {
+            // Persist the pick so the next (rebuilt) menu re-checks it.
+            selectedLabels.clear();
+            for (final ElwhaMenuItem it : holder[0].getSelectedItems()) {
+              selectedLabels.add(it.getLabel());
+            }
+            status.setText((item.isSelected() ? "Selected: " : "Deselected: ") + item.getLabel());
+          });
     }
     final ElwhaMenuItem rename = ElwhaMenuItem.of(MaterialIcons.edit(20), "Rename");
     rename.addActionListener(e -> status.setText("Activated: Rename"));
@@ -3533,7 +3555,15 @@ public final class ElwhaShowcase {
       settings.setTrailingText("⌘,");
       b.addItem(delete).addItem(settings);
     }
-    return b.onClose(cause -> status.setText("Closed: " + cause)).build();
+    final ElwhaMenu menu = b.onClose(cause -> status.setText("Closed: " + cause)).build();
+    holder[0] = menu;
+    // Re-apply the persisted selection so reopening shows the prior pick still checked.
+    if (mode != com.owspfm.elwha.menu.SelectionMode.NONE) {
+      for (final ElwhaMenuItem item : menu.getItems()) {
+        item.setSelected(selectedLabels.contains(item.getLabel()));
+      }
+    }
+    return menu;
   }
 
   // Static, non-modal menu snapshots via renderPreview() — flat and the two grouped treatments,
