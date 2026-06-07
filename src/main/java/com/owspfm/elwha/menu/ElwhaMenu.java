@@ -117,6 +117,11 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   private List<JComponent> groupPanels;
   private List<ElwhaMenuItem> itemOrder;
   private MenuSurface menuSurface;
+  // The open child submenu and the item that opened it (epic #322): a parent menu holds at most one
+  // open submenu; opening a different one closes the prior, and the chain host tears this down when
+  // the parent itself closes.
+  private ElwhaMenu openChildMenu;
+  private ElwhaSubMenuItem openerSubItem;
   private int focusedIndex = -1;
   // The roving focus ring is keyboard-visible (M3 focus-visible): the index tracks always, but the
   // ring paints only after keyboard navigation, not on a pointer-opened menu.
@@ -146,16 +151,23 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
   // Maps an item activation (mouse click or the container's Enter/Space routing) to the configured
   // SelectionMode: NONE fires-and-closes (action menu); SINGLE selects one then closes; MULTI
-  // toggles and stays open. The item's own listeners (the consumer's) have already fired by now.
+  // toggles and stays open. A submenu trigger never selects/closes — it opens its nested menu
+  // (chain host, epic #322). A selection closes the whole chain, not just the leaf, so picking an
+  // action item from inside a submenu dismisses every open level. The item's own listeners (the
+  // consumer's) have already fired by now.
   private void onItemActivated(final ElwhaMenuItem item) {
+    if (item instanceof ElwhaSubMenuItem sub) {
+      openSubMenuFor(sub);
+      return;
+    }
     switch (selectionMode) {
-      case NONE -> close(MenuDismissCause.SELECTION);
+      case NONE -> closeChain(MenuDismissCause.SELECTION);
       case SINGLE -> {
         for (final ElwhaMenuItem other : flatten()) {
           other.setSelected(other == item);
         }
         fireSelectionChange(item);
-        close(MenuDismissCause.SELECTION);
+        closeChain(MenuDismissCause.SELECTION);
       }
       case MULTI -> {
         item.setSelected(!item.isSelected());
@@ -163,6 +175,40 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       }
       default -> throw new AssertionError(selectionMode);
     }
+  }
+
+  // Opens (or re-targets) the submenu owned by a trigger item, as a child overlay of this menu. Any
+  // other submenu already open under this level is closed first — one open submenu per level. The
+  // opener is marked expanded; the chain host restores focus to it when the submenu closes
+  // (onChainChildClosed).
+  private void openSubMenuFor(final ElwhaSubMenuItem opener) {
+    final ElwhaMenu sub = opener.getSubMenu();
+    if (openChildMenu == sub && sub.isShowing()) {
+      return;
+    }
+    if (openChildMenu != null && openChildMenu != sub) {
+      openChildMenu.close(MenuDismissCause.PROGRAMMATIC);
+    }
+    if (openerSubItem != null && openerSubItem != opener) {
+      openerSubItem.setExpanded(false);
+    }
+    this.openChildMenu = sub;
+    this.openerSubItem = opener;
+    opener.setExpanded(true);
+    sub.showInChain(opener, this);
+  }
+
+  @Override
+  protected void onChainChildClosed() {
+    if (openerSubItem != null) {
+      openerSubItem.setExpanded(false);
+      final int idx = itemOrder != null ? itemOrder.indexOf(openerSubItem) : -1;
+      if (idx >= 0) {
+        setFocusedIndex(idx);
+      }
+    }
+    openChildMenu = null;
+    openerSubItem = null;
   }
 
   private void fireSelectionChange(final ElwhaMenuItem item) {
@@ -436,6 +482,10 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     bind(im, KeyEvent.VK_END, "menu.last", () -> setFocusedIndex(itemOrder.size() - 1));
     bind(im, KeyEvent.VK_ENTER, "menu.activate", this::activateFocused);
     bind(im, KeyEvent.VK_SPACE, "menu.activateSpace", this::activateFocused);
+    // Submenu chain (epic #322): Right opens the focused item's submenu (if it has one) and moves
+    // focus into it; Left closes this level back to its opener when this menu is itself a submenu.
+    bind(im, KeyEvent.VK_RIGHT, "menu.openSub", this::openFocusedSubMenu);
+    bind(im, KeyEvent.VK_LEFT, "menu.closeSub", this::closeIfSubMenu);
     menuSurface.addKeyListener(
         new KeyAdapter() {
           @Override
@@ -500,6 +550,26 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       return;
     }
     itemOrder.get(focusedIndex).activate(0);
+  }
+
+  // Right-arrow: open the focused item's submenu (a no-op on a non-submenu item). Routes through
+  // the
+  // same activation path as click so opening is identical regardless of input source.
+  private void openFocusedSubMenu() {
+    if (itemOrder == null || focusedIndex < 0 || focusedIndex >= itemOrder.size()) {
+      return;
+    }
+    if (itemOrder.get(focusedIndex) instanceof ElwhaSubMenuItem sub) {
+      openSubMenuFor(sub);
+    }
+  }
+
+  // Left-arrow: when this menu is itself an open submenu, close this level back to its opener; the
+  // chain host restores focus to the opener item. A no-op on a root menu (V1 left Left unbound).
+  private void closeIfSubMenu() {
+    if (chainParentOverlay() != null) {
+      close(MenuDismissCause.ESCAPE);
+    }
   }
 
   void typeAhead(final char c) {

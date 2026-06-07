@@ -60,11 +60,15 @@ import javax.swing.Timer;
  * disabled item can still be focused but not activated, per §X). Selection, color style, and the
  * focused flag are all push-only from the container.
  *
+ * <p><strong>Subclassing.</strong> The type is {@code sealed}, permitting only {@link
+ * ElwhaSubMenuItem} — the one sanctioned sibling (a menu item that hosts a nested {@link
+ * ElwhaMenu}; design §3, research §Q′). It is otherwise closed to extension.
+ *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.4.0
  * @since v0.4.0
  */
-public final class ElwhaMenuItem extends JComponent {
+public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
 
   /** Visual row height in dp (research §I). */
   static final int VISUAL_HEIGHT_PX = 44;

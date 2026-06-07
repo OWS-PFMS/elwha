@@ -93,13 +93,31 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
         || cause == MenuDismissCause.PROGRAMMATIC;
   }
 
-  // Esc is a host-level dismiss (S4 layers item navigation on top). Bound WHEN_IN_FOCUSED_WINDOW so
-  // it fires regardless of which item holds focus.
+  // Esc is a host-level dismiss (the menu layers item navigation on top). Bound WHEN_FOCUSED on the
+  // surface (the menu's single focus owner) rather than WHEN_IN_FOCUSED_WINDOW so that, in a
+  // submenu
+  // chain, Esc is owned by the focused (leaf) level only — closing one level at a time — instead of
+  // an ambiguous window-wide binding that could collapse the wrong level.
   @Override
   protected void installKeyBindings() {
-    final InputMap im = surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+    final InputMap im = surface.getInputMap(JComponent.WHEN_FOCUSED);
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-menu-dismiss");
     surface.getActionMap().put("elwha-menu-dismiss", action(() -> close(MenuDismissCause.ESCAPE)));
+  }
+
+  /**
+   * Closes the entire overlay chain this menu belongs to — from the root, with {@code cause} — so a
+   * selection or a press outside every level dismisses all open levels at once. For a chainless
+   * menu this is exactly {@link #close(MenuDismissCause)}.
+   *
+   * @param cause why the chain is closing
+   */
+  protected final void closeChain(final MenuDismissCause cause) {
+    if (chainRootOverlay() instanceof AbstractElwhaMenuOverlay root) {
+      root.close(cause);
+    } else {
+      close(cause);
+    }
   }
 
   // ------------------------------------------------------- close / cause
