@@ -153,3 +153,29 @@ The §2 `RECOMMENDED` extraction was prototyped and **adopted** — no fallback 
   dark) and the visual `ElwhaMenuVibrantDemo` (Standard vs Vibrant columns, live + preview, one
   selected item). Showcase Menu leaf gains a Color control + a Vibrant gallery section.
 - **Phase 3 — S6 `SelectionMode` SINGLE/MULTI** (§6/§U) files when this lands.
+
+## §16. S6 outcome (2026-06-06, #365) — SelectionMode ships per §9, V1 feature-complete
+
+- **`SelectionMode{NONE, SINGLE, MULTI}`** added (the M3 nouns, §P / §9); `builder().selectionMode(...)`
+  default `NONE`. No deviation from §9, **zero new tokens** — the selected visual (fill + ✓) already
+  existed from Phases 1–2.
+- **Behavior** (`ElwhaMenu.onItemActivated`): `NONE` fires + closes (Phase-1 action menu, byte-for-byte
+  unchanged); `SINGLE` selects the activated item, deselects all others, and closes with
+  `MenuDismissCause.SELECTION` (focus restores to the trigger via the host's existing intentional-close
+  path); `MULTI` toggles the activated item's `selected` and stays open. Mouse and keyboard share the
+  path — the container's Enter/Space routing already funnels through `ElwhaMenuItem.activate(...)`.
+- **Read-back / observe:** `getSelectedItems()` + per-item `isSelected()` + `getSelectionMode()`;
+  `builder().onSelectionChange(Consumer<ElwhaMenuItem>)` fires per toggle (never in `NONE`). Initial
+  selection set by the consumer via the existing public `ElwhaMenuItem.setSelected(true)`.
+- **Layout stability (decision):** in a selection mode the container pushes
+  `ElwhaMenuItem.setReserveLeadingColumn(true)` onto **every** item (M3 checkable-menu behavior), so a
+  no-icon item reserves the check-column up front and toggling never reflows the row. `NONE` keeps the
+  tight Phase-1 layout.
+- **A11y:** selected items expose `AccessibleState.SELECTED`; `MULTI` items additionally expose
+  `CHECKED` (checkbox-like) via a pushed `setCheckable(true)` — so the ✓ is never the only signal.
+- **Proven** by `MenuSelectionSmoke` (14 headless checks — the NONE/SINGLE/MULTI behavior matrix +
+  auto-deselect + accumulate/toggle + change-callback counts + the SELECTED/CHECKED a11y split + the
+  check-column-reserve / no-reflow width invariants) and the visual `ElwhaMenuSelectionDemo` (three
+  live columns, one per mode). Showcase Menu Workbench gains a Selection control.
+- **V1 (#298) is feature-complete with this story** — its PR `Closes #298`. Submenus are the separate
+  **V2 epic #322**.

@@ -7,16 +7,15 @@ A temporary, light-dismissed **popover** anchored to a trigger that lists choice
 Design decisions: [`docs/research/elwha-menu-design.md`](../../../../../../../docs/research/elwha-menu-design.md).
 Full M3 spec capture: `docs/research/elwha-menu-research.md`.
 
-## What ships (Phase 1)
+## What ships (V1)
 
 Flat (non-nested) Expressive vertical menu · dedicated `ElwhaMenuItem` (+ swappable slot) · anchored
 overlay host with flip + light-dismiss (outside-click / Esc / focus-loss) · full keyboard + a11y ·
-`ColorStyle.STANDARD` · `Layout.STANDARD` **and** `GROUPED` (gap / divider) · default token theming +
-dark mode · a Showcase leaf.
+`ColorStyle.STANDARD` **and** `VIBRANT` · `Layout.STANDARD` **and** `GROUPED` (gap / divider) ·
+`SelectionMode.NONE` / `SINGLE` / `MULTI` · default token theming + dark mode · a Showcase leaf.
 
-**Later phases / out of scope:** submenus (V2, #322), the baseline square menu (#323), the
-`VIBRANT` color style (S5), `SelectionMode` SINGLE/MULTI (S6), exposed-dropdown / filtering, a
-right-click context-menu binding helper, density levels.
+**Out of scope (V2 / later epics):** submenus (V2, #322), the baseline square menu (#323),
+exposed-dropdown / filtering, a right-click context-menu binding helper, density levels.
 
 ## Quick start
 
@@ -86,7 +85,7 @@ non-focusable and carry a roving "focused" ring.
 | Up / Down | move focus (wraps) |
 | Home / End | first / last item |
 | letters / digits | type-ahead to the next matching item |
-| Enter / Space | activate the focused item (fires its action, closes) |
+| Enter / Space | activate the focused item (same as a click — fires / selects / toggles per the mode) |
 | Esc | close |
 
 Initial focus is the first item; focus restores to the trigger on an intentional close
@@ -105,6 +104,36 @@ roles, so dark mode is free via `ElwhaTheme`.
   `TERTIARY_CONTAINER` with `ON_TERTIARY_CONTAINER` content (label / icons / trailing / supporting /
   state layer); the selected item jumps to the bold `TERTIARY` fill with `ON_TERTIARY` content
   (including the ✓ checkmark), so selection stands out from container-tone to full-tone.
+
+## Selection (`SelectionMode`)
+
+By default a menu is an **action menu** — picking an item fires it and the menu closes, with no
+persistent selection. Set a `SelectionMode` to make it a list:
+
+```java
+ElwhaMenu view = ElwhaMenu.builder()
+    .selectionMode(SelectionMode.SINGLE)               // NONE (default) | SINGLE | MULTI
+    .onSelectionChange(item -> applyView(item.getLabel()))
+    .addItem(listItem)                                 // listItem.setSelected(true) for the initial pick
+    .addItem(gridItem)
+    .build();
+
+List<ElwhaMenuItem> picked = view.getSelectedItems();  // read selection back
+```
+
+- **`NONE`** (default) — action menu; fires and closes, no selection held.
+- **`SINGLE`** — one item at a time; selecting auto-deselects the prior and **closes** the menu
+  (a `SELECTION` close that restores focus to the trigger). Set the initial pick with
+  `item.setSelected(true)` before `build()`. Radio-like: the selected item reports
+  `AccessibleState.SELECTED`.
+- **`MULTI`** — toggles items; the menu **stays open** until dismissed (light-dismiss / Esc), so
+  several can be checked in one pass. Checkbox-like: each selected item reports `CHECKED` *and*
+  `SELECTED`.
+
+Mouse and keyboard (Enter / Space) drive selection identically. The selected visual is the
+`TERTIARY_CONTAINER` / Vibrant bold-`TERTIARY` fill + ✓ checkmark — so in a selection mode every item
+reserves the leading check-column and toggling never reflows the row. Read selection back with
+`getSelectedItems()` / `ElwhaMenuItem.isSelected()`, or observe it via `onSelectionChange`.
 
 ## Trigger
 

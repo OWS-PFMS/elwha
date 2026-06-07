@@ -55,8 +55,12 @@ import javax.swing.SwingUtilities;
  * tints {@code SURFACE_CONTAINER_LOW} (Standard) or {@code TERTIARY_CONTAINER} (Vibrant) at
  * Level&nbsp;3 elevation, {@link ShapeScale#MD} corners.
  *
- * <p>Selection ({@code SelectionMode}) is a later phase; today's menus are action menus that close
- * on item activation.
+ * <p><strong>Selection.</strong> {@link SelectionMode#NONE} (the default) is an action menu — items
+ * fire and the menu closes. {@link SelectionMode#SINGLE} selects one item at a time (auto-deselects
+ * the prior) and closes on select; {@link SelectionMode#MULTI} toggles items and stays open until
+ * dismissed. The selected item paints the {@code TERTIARY_CONTAINER} / Vibrant {@code TERTIARY}
+ * fill plus a ✓ checkmark; read selection back with {@link #getSelectedItems()} or observe it via
+ * {@link Builder#onSelectionChange(Consumer)}.
  *
  * <p><strong>Trigger.</strong> The menu never mutates its trigger — it opens and closes without
  * touching the trigger's state, so the trigger is "unchanged after select" by construction. M3's
@@ -105,6 +109,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   private final List<List<ElwhaMenuItem>> groups;
   private final Layout layout;
   private final ColorStyle colorStyle;
+  private final SelectionMode selectionMode;
+  private final Consumer<ElwhaMenuItem> onSelectionChange;
   private Separator separator;
 
   // Live state — non-null while shown.
@@ -123,11 +129,45 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     this.layout = b.layout;
     this.separator = b.separator;
     this.colorStyle = b.colorStyle;
+    this.selectionMode = b.selectionMode;
+    this.onSelectionChange = b.onSelectionChange;
+    final boolean selectable = selectionMode != SelectionMode.NONE;
     for (final List<ElwhaMenuItem> group : groups) {
       for (final ElwhaMenuItem item : group) {
         item.setColorStyle(colorStyle);
-        item.addActionListener(e -> close(MenuDismissCause.SELECTION));
+        // Reserve the check-column up front in a selection mode so toggling never shifts the label;
+        // MULTI items are checkbox-like (report CHECKED), SINGLE items radio-like (SELECTED only).
+        item.setReserveLeadingColumn(selectable);
+        item.setCheckable(selectionMode == SelectionMode.MULTI);
+        item.addActionListener(e -> onItemActivated(item));
       }
+    }
+  }
+
+  // Maps an item activation (mouse click or the container's Enter/Space routing) to the configured
+  // SelectionMode: NONE fires-and-closes (action menu); SINGLE selects one then closes; MULTI
+  // toggles and stays open. The item's own listeners (the consumer's) have already fired by now.
+  private void onItemActivated(final ElwhaMenuItem item) {
+    switch (selectionMode) {
+      case NONE -> close(MenuDismissCause.SELECTION);
+      case SINGLE -> {
+        for (final ElwhaMenuItem other : flatten()) {
+          other.setSelected(other == item);
+        }
+        fireSelectionChange(item);
+        close(MenuDismissCause.SELECTION);
+      }
+      case MULTI -> {
+        item.setSelected(!item.isSelected());
+        fireSelectionChange(item);
+      }
+      default -> throw new AssertionError(selectionMode);
+    }
+  }
+
+  private void fireSelectionChange(final ElwhaMenuItem item) {
+    if (onSelectionChange != null) {
+      onSelectionChange.accept(item);
     }
   }
 
@@ -185,6 +225,36 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       flat.addAll(group);
     }
     return List.copyOf(flat);
+  }
+
+  /**
+   * The selection mode this menu was built with (default {@link SelectionMode#NONE}).
+   *
+   * @return the selection mode
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public SelectionMode getSelectionMode() {
+    return selectionMode;
+  }
+
+  /**
+   * The currently selected items, in display order. Empty in {@link SelectionMode#NONE} (an action
+   * menu holds no persistent selection); at most one element in {@link SelectionMode#SINGLE}; any
+   * number in {@link SelectionMode#MULTI}.
+   *
+   * @return an unmodifiable snapshot of the selected items
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public List<ElwhaMenuItem> getSelectedItems() {
+    final List<ElwhaMenuItem> selected = new ArrayList<>();
+    for (final ElwhaMenuItem item : flatten()) {
+      if (item.isSelected()) {
+        selected.add(item);
+      }
+    }
+    return List.copyOf(selected);
   }
 
   // ---------------------------------------------------------- surface
@@ -570,6 +640,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     private Layout layout = Layout.STANDARD;
     private Separator separator = Separator.GAP;
     private ColorStyle colorStyle = ColorStyle.STANDARD;
+    private SelectionMode selectionMode = SelectionMode.NONE;
+    private Consumer<ElwhaMenuItem> onSelectionChange;
     private Consumer<MenuDismissCause> onClose;
 
     private Builder() {
@@ -641,6 +713,38 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
      */
     public Builder colorStyle(final ColorStyle colorStyle) {
       this.colorStyle = Objects.requireNonNull(colorStyle, "colorStyle");
+      return this;
+    }
+
+    /**
+     * Sets the selection mode (default {@link SelectionMode#NONE} — an action menu). {@link
+     * SelectionMode#SINGLE} selects one item and closes on select; {@link SelectionMode#MULTI}
+     * toggles items and stays open. Set an initial selection by calling {@link
+     * ElwhaMenuItem#setSelected(boolean)} on items before {@link #build()}.
+     *
+     * @param selectionMode the selection mode
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public Builder selectionMode(final SelectionMode selectionMode) {
+      this.selectionMode = Objects.requireNonNull(selectionMode, "selectionMode");
+      return this;
+    }
+
+    /**
+     * Sets a selection-change callback, invoked with the item whose selection just toggled (read
+     * the new state via {@link ElwhaMenuItem#isSelected()} or the menu's {@link
+     * #getSelectedItems()}). Fires only in {@link SelectionMode#SINGLE} / {@link
+     * SelectionMode#MULTI}; never in {@code NONE}.
+     *
+     * @param onSelectionChange the selection-change callback, or {@code null}
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public Builder onSelectionChange(final Consumer<ElwhaMenuItem> onSelectionChange) {
+      this.onSelectionChange = onSelectionChange;
       return this;
     }
 
