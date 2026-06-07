@@ -25,6 +25,7 @@ import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
 import javax.accessibility.AccessibleState;
@@ -861,6 +862,21 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
 
   // ----------------------------------------------------- accessibility
 
+  // Submenu-trigger a11y hooks (epic #322 S4): a plain item is neither expandable nor expanded and
+  // exposes no nested-menu child. ElwhaSubMenuItem overrides these so its trigger reports the M3
+  // aria-expanded analog and exposes its open submenu as an accessible child.
+  boolean isAccessibleExpandable() {
+    return false;
+  }
+
+  boolean isAccessibleExpanded() {
+    return false;
+  }
+
+  Accessible expandedAccessibleChild() {
+    return null;
+  }
+
   @Override
   public AccessibleContext getAccessibleContext() {
     if (accessibleContext == null) {
@@ -907,7 +923,29 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
       if (focused) {
         states.add(AccessibleState.FOCUSED);
       }
+      if (isAccessibleExpandable()) {
+        states.add(AccessibleState.EXPANDABLE);
+        if (isAccessibleExpanded()) {
+          states.add(AccessibleState.EXPANDED);
+        } else {
+          states.add(AccessibleState.COLLAPSED);
+        }
+      }
       return states;
+    }
+
+    @Override
+    public int getAccessibleChildrenCount() {
+      return expandedAccessibleChild() != null ? 1 : super.getAccessibleChildrenCount();
+    }
+
+    @Override
+    public Accessible getAccessibleChild(final int i) {
+      final Accessible child = expandedAccessibleChild();
+      if (child != null) {
+        return i == 0 ? child : null;
+      }
+      return super.getAccessibleChild(i);
     }
   }
 }

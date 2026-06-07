@@ -209,6 +209,12 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     return menuSurface != null ? menuSurface.getBounds() : null;
   }
 
+  // The mounted surface as an Accessible (a POPUP_MENU JPanel), or null when not shown — so an
+  // ElwhaSubMenuItem trigger can expose its open submenu as an accessible child (epic #322 S4).
+  javax.accessibility.Accessible surfaceAccessible() {
+    return menuSurface;
+  }
+
   // ----------------------------------------- active-state shape morph (S3)
 
   // The rest container radius for this menu's current role in the overlay chain: a squared-off

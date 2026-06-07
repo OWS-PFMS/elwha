@@ -1,12 +1,16 @@
 package com.owspfm.elwha.menu;
 
 import com.owspfm.elwha.icons.MaterialIcons;
+import java.awt.AWTEvent;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.event.AWTEventListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Objects;
+import javax.accessibility.Accessible;
 import javax.swing.Icon;
 import javax.swing.Timer;
 
@@ -48,6 +52,11 @@ public final class ElwhaSubMenuItem extends ElwhaMenuItem {
   private ElwhaMenu ownerMenu;
   private final Timer openTimer;
   private final Timer closeTimer;
+  // Installed while the submenu is open: a pointer-motion watch that arms the close debounce
+  // whenever
+  // the pointer is outside the whole chain and cancels it whenever the pointer is back over the
+  // opener or the submenu — robust across the opener↔submenu boundary (no child-exit flicker).
+  private AWTEventListener hoverWatch;
 
   /**
    * Constructs a submenu item with a label and no leading icon.
@@ -98,21 +107,29 @@ public final class ElwhaSubMenuItem extends ElwhaMenuItem {
     }
   }
 
-  // Hover-away dwell elapsed: only collapse if the pointer is neither over this opener nor anywhere
-  // in the open submenu chain — so crossing the opener↔submenu boundary doesn't flicker it shut.
+  // Hover-away dwell elapsed: collapse only if the pointer is still outside the whole chain (the
+  // motion watch already re-arms this when the pointer leaves and cancels it when it returns).
   private void requestCloseIfPointerAway() {
-    if (ownerMenu == null) {
-      return;
-    }
-    final Point screen =
-        MouseInfo.getPointerInfo() != null ? MouseInfo.getPointerInfo().getLocation() : null;
-    final boolean overOpener =
-        isShowing()
-            && screen != null
-            && new Rectangle(getLocationOnScreen(), getSize()).contains(screen);
-    if (!overOpener && !subMenu.isPointerInSubChain(screen)) {
+    if (ownerMenu != null && !pointerInChain(currentPointer())) {
       ownerMenu.requestCloseSubMenu(this);
     }
+  }
+
+  private Point currentPointer() {
+    return MouseInfo.getPointerInfo() != null ? MouseInfo.getPointerInfo().getLocation() : null;
+  }
+
+  // The pointer is "in the chain" when it is over this opener row or anywhere in the open submenu
+  // chain (the submenu and any deeper level) — checked in screen coordinates so child-component
+  // enter/exit transitions never register as leaving.
+  private boolean pointerInChain(final Point screen) {
+    if (screen == null) {
+      return false;
+    }
+    if (isShowing() && new Rectangle(getLocationOnScreen(), getSize()).contains(screen)) {
+      return true;
+    }
+    return subMenu.isPointerInSubChain(screen);
   }
 
   private void installHoverIntent() {
@@ -129,17 +146,44 @@ public final class ElwhaSubMenuItem extends ElwhaMenuItem {
           @Override
           public void mouseExited(final MouseEvent e) {
             openTimer.stop();
-            if (expanded) {
-              closeTimer.restart();
-            }
           }
         });
+  }
+
+  private void installHoverWatch() {
+    if (hoverWatch != null) {
+      return;
+    }
+    hoverWatch =
+        event -> {
+          if (!(event instanceof MouseEvent me)) {
+            return;
+          }
+          final int id = me.getID();
+          if (id != MouseEvent.MOUSE_MOVED && id != MouseEvent.MOUSE_DRAGGED) {
+            return;
+          }
+          if (pointerInChain(me.getLocationOnScreen())) {
+            closeTimer.stop();
+          } else if (!closeTimer.isRunning()) {
+            closeTimer.restart();
+          }
+        };
+    Toolkit.getDefaultToolkit().addAWTEventListener(hoverWatch, AWTEvent.MOUSE_MOTION_EVENT_MASK);
+  }
+
+  private void removeHoverWatch() {
+    if (hoverWatch != null) {
+      Toolkit.getDefaultToolkit().removeAWTEventListener(hoverWatch);
+      hoverWatch = null;
+    }
+    closeTimer.stop();
   }
 
   @Override
   public void removeNotify() {
     openTimer.stop();
-    closeTimer.stop();
+    removeHoverWatch();
     super.removeNotify();
   }
 
@@ -221,12 +265,35 @@ public final class ElwhaSubMenuItem extends ElwhaMenuItem {
   }
 
   // Pushed by the parent ElwhaMenu when this item's submenu opens / closes. Drives the active-state
-  // shape-morph (S3) and the EXPANDED accessibility state (S4); S1 only tracks the flag.
+  // shape-morph (S3), the EXPANDED accessibility state, and the hover-away watch (S4).
   void setExpanded(final boolean expanded) {
     if (this.expanded == expanded) {
       return;
     }
     this.expanded = expanded;
+    if (expanded) {
+      openTimer.stop();
+      installHoverWatch();
+    } else {
+      removeHoverWatch();
+    }
     repaint();
+  }
+
+  // ----------------------------------------------------- accessibility
+
+  @Override
+  boolean isAccessibleExpandable() {
+    return true;
+  }
+
+  @Override
+  boolean isAccessibleExpanded() {
+    return expanded;
+  }
+
+  @Override
+  Accessible expandedAccessibleChild() {
+    return expanded ? subMenu.surfaceAccessible() : null;
   }
 }
