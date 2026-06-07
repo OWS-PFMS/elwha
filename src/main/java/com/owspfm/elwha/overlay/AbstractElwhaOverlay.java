@@ -7,6 +7,7 @@ import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Container;
 import java.awt.KeyboardFocusManager;
+import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.AWTEventListener;
@@ -387,6 +388,27 @@ public abstract class AbstractElwhaOverlay {
    * overrides this to re-arm focus on the opener item and clear the opener's expanded state.
    */
   protected void onChainChildClosed() {}
+
+  /**
+   * Whether the given screen point lands on this overlay's surface or any of its open descendants
+   * in the chain — the hover-intent test that keeps a submenu open while the pointer crosses into
+   * it (or into a deeper level). Safe to call when not shown (returns {@code false}).
+   *
+   * @param screenPoint a point in screen coordinates
+   * @return {@code true} if the point is over this overlay or a descendant's surface
+   */
+  protected final boolean chainContainsScreenPoint(final Point screenPoint) {
+    for (AbstractElwhaOverlay level = this; level != null; level = level.chainChild) {
+      final JComponent s = level.surface;
+      if (s != null && s.isShowing()) {
+        final Point origin = s.getLocationOnScreen();
+        if (new java.awt.Rectangle(origin, s.getSize()).contains(screenPoint)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 
   /**
    * Whether the overlay is currently mid-teardown — the re-entry guard so a dismiss triggered from

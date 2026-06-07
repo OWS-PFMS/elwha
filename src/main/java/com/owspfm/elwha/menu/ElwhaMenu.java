@@ -108,7 +108,10 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
   private final List<List<ElwhaMenuItem>> groups;
   private final Layout layout;
-  private final ColorStyle colorStyle;
+  // Mutable so a submenu can inherit its parent's color style at open time when the consumer didn't
+  // pin one explicitly (colorStyleExplicit). The container tint and the items both read it.
+  private ColorStyle colorStyle;
+  private final boolean colorStyleExplicit;
   private final SelectionMode selectionMode;
   private final Consumer<ElwhaMenuItem> onSelectionChange;
   private Separator separator;
@@ -134,6 +137,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     this.layout = b.layout;
     this.separator = b.separator;
     this.colorStyle = b.colorStyle;
+    this.colorStyleExplicit = b.colorStyleExplicit;
     this.selectionMode = b.selectionMode;
     this.onSelectionChange = b.onSelectionChange;
     final boolean selectable = selectionMode != SelectionMode.NONE;
@@ -145,8 +149,54 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
         item.setReserveLeadingColumn(selectable);
         item.setCheckable(selectionMode == SelectionMode.MULTI);
         item.addActionListener(e -> onItemActivated(item));
+        if (item instanceof ElwhaSubMenuItem sub) {
+          sub.attachOwner(this);
+        }
       }
     }
+  }
+
+  // A submenu opens to the side of its opener item, not below a trigger (chain host §6).
+  @Override
+  protected boolean sideAnchored() {
+    return chainParentOverlay() != null;
+  }
+
+  // Adopt the parent menu's color style when this submenu's was left at the STANDARD default
+  // (consumer didn't pin one), so a Vibrant chain stays Vibrant unless a nested menu overrides it.
+  void inheritColorStyle(final ColorStyle parentStyle) {
+    if (colorStyleExplicit || colorStyle == parentStyle) {
+      return;
+    }
+    this.colorStyle = parentStyle;
+    for (final ElwhaMenuItem item : flatten()) {
+      item.setColorStyle(parentStyle);
+    }
+  }
+
+  // Hover-intent / keyboard entry points from an ElwhaSubMenuItem (epic #322 S2). Open is
+  // idempotent
+  // (already-open is a no-op); close collapses just this opener's submenu level.
+  void requestOpenSubMenu(final ElwhaSubMenuItem opener) {
+    if (isShowing()) {
+      openSubMenuFor(opener);
+    }
+  }
+
+  void requestCloseSubMenu(final ElwhaSubMenuItem opener) {
+    if (openerSubItem == opener && openChildMenu != null) {
+      openChildMenu.close(MenuDismissCause.PROGRAMMATIC);
+    }
+  }
+
+  boolean isPointerInSubChain(final java.awt.Point screenPoint) {
+    return screenPoint != null && chainContainsScreenPoint(screenPoint);
+  }
+
+  // The mounted surface bounds in layered-pane coordinates, or null when not shown — for placement
+  // guards to assert side-anchoring without reaching into the host.
+  Rectangle surfaceBounds() {
+    return menuSurface != null ? menuSurface.getBounds() : null;
   }
 
   // Maps an item activation (mouse click or the container's Enter/Space routing) to the configured
@@ -195,6 +245,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     this.openChildMenu = sub;
     this.openerSubItem = opener;
     opener.setExpanded(true);
+    sub.inheritColorStyle(colorStyle);
     sub.showInChain(opener, this);
   }
 
@@ -710,6 +761,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     private Layout layout = Layout.STANDARD;
     private Separator separator = Separator.GAP;
     private ColorStyle colorStyle = ColorStyle.STANDARD;
+    private boolean colorStyleExplicit;
     private SelectionMode selectionMode = SelectionMode.NONE;
     private Consumer<ElwhaMenuItem> onSelectionChange;
     private Consumer<MenuDismissCause> onClose;
@@ -783,6 +835,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
      */
     public Builder colorStyle(final ColorStyle colorStyle) {
       this.colorStyle = Objects.requireNonNull(colorStyle, "colorStyle");
+      this.colorStyleExplicit = true;
       return this;
     }
 

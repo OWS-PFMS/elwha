@@ -674,6 +674,30 @@ public final class MaterialIcons {
   }
 
   /**
+   * Rightward chevron — the M3 submenu "has a nested menu" affordance, the trailing caret of an
+   * {@link com.owspfm.elwha.menu.ElwhaSubMenuItem}.
+   *
+   * @return the {@code chevron_right} glyph at {@link #DEFAULT_SIZE}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static FlatSVGIcon chevronRight() {
+    return chevronRight(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #chevronRight()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static FlatSVGIcon chevronRight(final int size) {
+    return load("chevron_right", size);
+  }
+
+  /**
    * Hamburger menu glyph — three horizontal lines. M3's canonical menu / drawer affordance, and the
    * menu-button glyph used in the Navigation Rail Collapsed variant (Phase 2 of epic #159).
    *
