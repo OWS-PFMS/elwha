@@ -56,7 +56,9 @@ public final class ElwhaSliderInsetIconSmoke {
     final int leadGlyph = glyphPixels(hi, 12, 36, hiH / 2 - 8, hiH / 2 + 8, primary);
     final int trailAtHigh = glyphPixels(hi, 200, 224, hiH / 2 - 8, hiH / 2 + 8, inactive);
     check("inset glyph renders in the active-track leading slot at a high value", leadGlyph > 12);
-    check("inset glyph is leading-only at a high value (none on the trailing side)", trailAtHigh <= 6);
+    check(
+        "inset glyph is leading-only at a high value (none on the trailing side)",
+        trailAtHigh <= 6);
 
     // --- low value: glyph swaps to the inactive (SECONDARY_CONTAINER) trailing side ---
     final BufferedImage lo = renderL(4);

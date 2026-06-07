@@ -11,11 +11,11 @@ import java.awt.image.BufferedImage;
 /**
  * Headless geometry guard for the Phase-4 / S1 {@link ElwhaSlider.Size} scale (story #369). Asserts
  * that (a) the handle-height ladder matches the M3 §M table exactly ({@code 44/44/52/68/108}), (b)
- * the track / handle geometry grows <em>monotonically</em> from {@code XS} to {@code XL} both in the
- * reported {@linkplain ElwhaSlider#getPreferredSize() preferred size} and in the actually-painted
- * track thickness, and (c) the {@code XS} preset is byte-for-byte unchanged from the pre-Phase-4
- * constants ({@link ElwhaSlider#HANDLE_HEIGHT_PX} / {@link ElwhaSlider#TRACK_HEIGHT_PX}). Runs in
- * CI's headless JVM.
+ * the track / handle geometry grows <em>monotonically</em> from {@code XS} to {@code XL} both in
+ * the reported {@linkplain ElwhaSlider#getPreferredSize() preferred size} and in the
+ * actually-painted track thickness, and (c) the {@code XS} preset is byte-for-byte unchanged from
+ * the pre-Phase-4 constants ({@link ElwhaSlider#HANDLE_HEIGHT_PX} / {@link
+ * ElwhaSlider#TRACK_HEIGHT_PX}). Runs in CI's headless JVM.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -86,7 +86,8 @@ public final class ElwhaSliderSizeGeometrySmoke {
         xs.getPreferredSize().height == ElwhaSlider.HANDLE_HEIGHT_PX);
     check("default size is XS", new ElwhaSlider().getSizeVariant() == ElwhaSlider.Size.XS);
 
-    System.out.println("ElwhaSliderSizeGeometrySmoke: OK (ladder + monotonic growth + XS unchanged)");
+    System.out.println(
+        "ElwhaSliderSizeGeometrySmoke: OK (ladder + monotonic growth + XS unchanged)");
   }
 
   /**

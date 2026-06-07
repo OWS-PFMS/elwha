@@ -15,8 +15,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
-import java.util.logging.Logger;
-import javax.swing.Icon;
 import java.awt.event.ActionEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -25,6 +23,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
+import java.util.logging.Logger;
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
@@ -33,6 +32,7 @@ import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.BoundedRangeModel;
 import javax.swing.DefaultBoundedRangeModel;
+import javax.swing.Icon;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
@@ -135,14 +135,14 @@ public class ElwhaSlider extends JComponent {
   }
 
   /**
-   * The slider's size preset — the M3 track-thickness scale {@code XS} &le; {@code S} &le; {@code M}
-   * &le; {@code L} &le; {@code XL} (research §M / §GD5). Each size scales the three geometry values
-   * the M3 measurements table varies — {@linkplain #trackHeight() track height}, {@linkplain
+   * The slider's size preset — the M3 track-thickness scale {@code XS} &le; {@code S} &le; {@code
+   * M} &le; {@code L} &le; {@code XL} (research §M / §GD5). Each size scales the three geometry
+   * values the M3 measurements table varies — {@linkplain #trackHeight() track height}, {@linkplain
    * #handleHeight() handle height}, and the {@linkplain #outerCorner() outer corner radius} — plus
-   * the {@linkplain #insetIconSize() inset-icon size}; the handle width, handle&harr;track gap, stop
-   * dot, inner corner, and value bubble are constant across sizes (M3 §M). {@code XS} is the default
-   * and M3's only off-Android code preset; larger sizes give a bigger touch target and more visual
-   * emphasis ({@code XL} for hero moments).
+   * the {@linkplain #insetIconSize() inset-icon size}; the handle width, handle&harr;track gap,
+   * stop dot, inner corner, and value bubble are constant across sizes (M3 §M). {@code XS} is the
+   * default and M3's only off-Android code preset; larger sizes give a bigger touch target and more
+   * visual emphasis ({@code XL} for hero moments).
    *
    * @author Charles Bryan
    * @version v0.4.0
@@ -172,13 +172,17 @@ public class ElwhaSlider extends JComponent {
       this.insetIconSize = icon;
     }
 
-    /** Whether this size admits an inset icon (M/L/XL — a track &ge;&nbsp;40&nbsp;dp; research §GD4). */
+    /**
+     * Whether this size admits an inset icon (M/L/XL — a track &ge;&nbsp;40&nbsp;dp; research
+     * §GD4).
+     */
     boolean allowsInsetIcon() {
       return insetIconSize > 0;
     }
   }
 
-  // --- XS geometry preset; the XS row of the {@link Size} table (dp == px at 100% scale; §M / §T) ---
+  // --- XS geometry preset; the XS row of the {@link Size} table (dp == px at 100% scale; §M / §T)
+  // ---
 
   /** Track thickness (both active and inactive segments). */
   static final int TRACK_HEIGHT_PX = 16;
@@ -846,9 +850,9 @@ public class ElwhaSlider extends JComponent {
    * 40&nbsp;dp is too thin to inset a legible glyph). Setting an icon on {@link Size#XS}/{@link
    * Size#S}, {@link Variant#CENTERED}, or {@link Variant#RANGE} is a documented no-op (it logs one
    * advisory message and paints nothing). The icon sits at the leading end of the active fill and
-   * <strong>repositions into the inactive track</strong> when the value drops too low for the active
-   * fill to contain it (the M3 swap-at-zero affordance); the leading end and reposition direction
-   * both mirror under a right-to-left {@link java.awt.ComponentOrientation}.
+   * <strong>repositions into the inactive track</strong> when the value drops too low for the
+   * active fill to contain it (the M3 swap-at-zero affordance); the leading end and reposition
+   * direction both mirror under a right-to-left {@link java.awt.ComponentOrientation}.
    *
    * @param icon the inset icon, or {@code null} to clear
    * @version v0.4.0
@@ -863,9 +867,9 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Caches a slot-sized, filter-bound copy of a {@link FlatSVGIcon} inset icon so paint never
-   * mutates the caller's shared glyph (the #197 shared-icon-filter hazard) nor re-derives per frame.
-   * Re-run whenever the icon or {@linkplain Size size} changes. Non-{@code FlatSVGIcon} icons are
-   * painted as-is, so there is nothing to cache.
+   * mutates the caller's shared glyph (the #197 shared-icon-filter hazard) nor re-derives per
+   * frame. Re-run whenever the icon or {@linkplain Size size} changes. Non-{@code FlatSVGIcon}
+   * icons are painted as-is, so there is nothing to cache.
    */
   private void rebuildInsetIcon() {
     if (insetIcon instanceof FlatSVGIcon svg && sizeVariant.allowsInsetIcon()) {
