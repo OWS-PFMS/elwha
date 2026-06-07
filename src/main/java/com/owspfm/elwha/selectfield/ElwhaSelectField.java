@@ -13,6 +13,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.swing.JComponent;
 
@@ -50,6 +52,7 @@ public class ElwhaSelectField<T> extends JComponent {
   private final ElwhaTextField field;
   private final ElwhaIconButton arrow;
   private final List<ElwhaMenuItem> items = new ArrayList<>();
+  private final List<Consumer<T>> selectionListeners = new ArrayList<>();
 
   private List<T> options = List.of();
   private Function<T, String> display = String::valueOf;
@@ -147,6 +150,49 @@ public class ElwhaSelectField<T> extends JComponent {
   }
 
   /**
+   * Selects the given option value programmatically: writes its display text into the field and
+   * marks the matching menu item {@code selected} (single-select — the others clear). Passing
+   * {@code null} clears the selection (empty field, the floating label rests). A value that is not
+   * among the current {@linkplain #setOptions options} is ignored — a select is constrained to its
+   * options. Fires the {@linkplain #addSelectionChangeListener selection-change listeners} only
+   * when the value actually changes.
+   *
+   * @param value the option to select, or {@code null} to clear
+   */
+  public void setSelectedValue(final T value) {
+    if (value == null) {
+      applySelection(-1, null);
+      return;
+    }
+    final int index = options.indexOf(value);
+    if (index >= 0) {
+      applySelection(index, value);
+    }
+  }
+
+  /**
+   * Registers a listener notified with the new value whenever the selection changes (via a menu
+   * pick or {@link #setSelectedValue}). Not fired for a no-op set to the current value.
+   *
+   * @param listener the change listener; {@code null} is ignored
+   */
+  public void addSelectionChangeListener(final Consumer<T> listener) {
+    if (listener != null) {
+      selectionListeners.add(listener);
+    }
+  }
+
+  /**
+   * Removes a previously {@linkplain #addSelectionChangeListener registered} selection-change
+   * listener.
+   *
+   * @param listener the listener to remove
+   */
+  public void removeSelectionChangeListener(final Consumer<T> listener) {
+    selectionListeners.remove(listener);
+  }
+
+  /**
    * Whether the option menu is currently open (the combobox <em>expanded</em> state).
    *
    * @return {@code true} while the menu is showing
@@ -196,24 +242,42 @@ public class ElwhaSelectField<T> extends JComponent {
     arrow.setIcon(MaterialIcons.arrowDropDown(ARROW_PX));
   }
 
-  private void applyValue(final T value) {
+  /**
+   * The single selection seam: every selection route (a menu pick, {@link #setSelectedValue}, the
+   * smoke's {@link #selectIndex}) funnels here. Updates the menu's {@code selected} marks
+   * (single-select — clears the others), writes the display text to the field, and fires the change
+   * listeners only when the value actually changed.
+   */
+  private void applySelection(final int index, final T value) {
+    final boolean changed = !Objects.equals(this.selectedValue, value);
     this.selectedValue = value;
+    optionsMenu();
+    for (int i = 0; i < items.size(); i++) {
+      items.get(i).setSelected(i == index);
+    }
     field.setText(value == null ? "" : display.apply(value));
+    if (changed) {
+      fireSelectionChange();
+    }
   }
 
-  /** Write-back for a real menu pick — the menu has already updated its {@code selected} marks. */
+  private void fireSelectionChange() {
+    for (final Consumer<T> listener : new ArrayList<>(selectionListeners)) {
+      listener.accept(selectedValue);
+    }
+  }
+
+  /** Write-back for a real menu pick — routed through the shared selection seam. */
   private void commit(final ElwhaMenuItem item) {
     final int index = items.indexOf(item);
     if (index >= 0) {
-      applyValue(options.get(index));
+      applySelection(index, options.get(index));
     }
   }
 
   /**
-   * Selects the option at {@code index} programmatically: updates the menu's {@code selected} marks
-   * (single-select — clears the others) and writes the value back to the field. The shared internal
-   * selection seam the headless smoke drives in lieu of a real popup pick; the public typed-value
-   * API ({@code setSelectedValue}) lands in S2 (#375) on top of it.
+   * Selects the option at {@code index}, the shared selection seam the headless smoke drives in
+   * lieu of a real popup pick (the public {@link #setSelectedValue} is the consumer-facing route).
    *
    * @param index the option index, ignored if out of range
    */
@@ -221,11 +285,7 @@ public class ElwhaSelectField<T> extends JComponent {
     if (index < 0 || index >= options.size()) {
       return;
     }
-    optionsMenu();
-    for (int i = 0; i < items.size(); i++) {
-      items.get(i).setSelected(i == index);
-    }
-    applyValue(options.get(index));
+    applySelection(index, options.get(index));
   }
 
   /**
