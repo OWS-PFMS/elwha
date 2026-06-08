@@ -1236,7 +1236,9 @@ public class ElwhaSlider extends JComponent {
         }
       }
       if (vertical() && variant != Variant.RANGE) {
-        paintValueBubbleVertical(g2, handleCenterX(), valueText());
+        final int cx = handleCenterX();
+        paintInsetIconVertical(g2, cx);
+        paintValueBubbleVertical(g2, cx, valueText());
       }
     } finally {
       g2.dispose();
@@ -1447,15 +1449,29 @@ public class ElwhaSlider extends JComponent {
     }
   }
 
-  /** Sizes/positions a focus proxy over its handle halo (focus-ring + screen-reader bounds). */
+  /**
+   * Sizes/positions a focus proxy over its handle halo (focus-ring + screen-reader bounds). {@code
+   * cx} is the handle's long-axis center; for the vertical orientation it is mapped to device space
+   * (device-y = {@code height − cx}) with the halo/handle extents transposed.
+   */
   private void positionHandleFocus(final RangeHandle child, final int cx) {
-    final int x = cx - HANDLE_HALO_WIDTH_PX / 2;
-    final int y = handleTopY();
-    if (child.getX() != x
-        || child.getY() != y
-        || child.getWidth() != HANDLE_HALO_WIDTH_PX
-        || child.getHeight() != handleHeight()) {
-      child.setBounds(x, y, HANDLE_HALO_WIDTH_PX, handleHeight());
+    final int x;
+    final int y;
+    final int w;
+    final int h;
+    if (vertical()) {
+      x = handleTopY();
+      y = getHeight() - cx - HANDLE_HALO_WIDTH_PX / 2;
+      w = handleHeight();
+      h = HANDLE_HALO_WIDTH_PX;
+    } else {
+      x = cx - HANDLE_HALO_WIDTH_PX / 2;
+      y = handleTopY();
+      w = HANDLE_HALO_WIDTH_PX;
+      h = handleHeight();
+    }
+    if (child.getX() != x || child.getY() != y || child.getWidth() != w || child.getHeight() != h) {
+      child.setBounds(x, y, w, h);
     }
   }
 
@@ -1762,7 +1778,7 @@ public class ElwhaSlider extends JComponent {
    * Paints the inset icon at the leading/origin end of the active fill, swapping it into the
    * inactive track on the handle's trailing side when the value is too low for the active fill to
    * contain it (M3 swap-at-zero, §GD4). All x math is pixel-space and RTL-mirrored via {@link
-   * #ltr()}.
+   * #mirror()}. The vertical orientation uses {@link #paintInsetIconVertical(Graphics2D, int)}.
    */
   private void paintInsetIcon(final Graphics2D g2, final int cx) {
     if (!insetIconApplies()) {
@@ -1790,6 +1806,31 @@ public class ElwhaSlider extends JComponent {
               : cx - half - HANDLE_TRACK_GAP_PX - pad - iconSize;
       iconX = clamp(swapped, pad, Math.max(pad, width - pad - iconSize));
     }
+    paintInsetGlyph(g2, iconX, iconY, onActive);
+  }
+
+  /**
+   * Paints the inset glyph upright at the <strong>top (max) end</strong> of a vertical track — the
+   * M3 bulb-at-top pattern (research §123 / §A). Unlike the horizontal leading-end icon, the
+   * vertical icon stays pinned at the top: its tint follows whichever segment currently covers it,
+   * swapping {@link ColorRole#ON_SECONDARY_CONTAINER} &rarr; {@link ColorRole#ON_PRIMARY} once the
+   * bottom-up active fill rises far enough to reach it. Painted in device space (upright).
+   */
+  private void paintInsetIconVertical(final Graphics2D g2, final int cx) {
+    if (!insetIconApplies()) {
+      return;
+    }
+    final int iconSize = sizeVariant.insetIconSize;
+    final int pad = iconSize / 2;
+    final int half = HANDLE_WIDTH_PX / 2;
+    // Device-x: centered on the track's cross axis (logical-y maps to device-x under the rotation).
+    final int iconX = trackTopY() + trackHeight() / 2 - iconSize / 2;
+    // Device-y: pinned near the top (max) end, the icon's near edge a pad below the top.
+    final int iconY = pad;
+    // The active fill rises from the bottom to the handle; it covers the top icon slot once its top
+    // (logical-x cx-half-gap) passes the icon's lower edge (longExtent - pad - iconSize).
+    final int activeFillTop = cx - half - HANDLE_TRACK_GAP_PX;
+    final boolean onActive = activeFillTop >= longExtent() - pad - iconSize;
     paintInsetGlyph(g2, iconX, iconY, onActive);
   }
 
@@ -2068,7 +2109,7 @@ public class ElwhaSlider extends JComponent {
             if (!isEnabled() || variant != Variant.RANGE) {
               return;
             }
-            final Handle next = pickHandle(e.getX());
+            final Handle next = pickHandle(longCoord(e));
             if (next != hoveredHandle) {
               hoveredHandle = next;
               repaint();
@@ -2084,13 +2125,14 @@ public class ElwhaSlider extends JComponent {
             pressed = true;
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
             model.setValueIsAdjusting(true);
+            final int pos = longCoord(e);
             if (variant == Variant.RANGE) {
-              activeHandle = pickHandle(e.getX());
+              activeHandle = pickHandle(pos);
               childFor(activeHandle).requestFocusInWindow();
-              setActiveHandleValue(valueForX(e.getX()));
+              setActiveHandleValue(valueForX(pos));
               startRipple(new Point(activeHandleCenterX(), handleCenterY()));
             } else {
-              setValue(valueForX(e.getX()));
+              setValue(valueForX(pos));
               startRipple(new Point(handleCenterX(), handleCenterY()));
             }
             updateInteractionAnimator();
@@ -2103,9 +2145,9 @@ public class ElwhaSlider extends JComponent {
               return;
             }
             if (variant == Variant.RANGE) {
-              setActiveHandleValue(valueForX(e.getX()));
+              setActiveHandleValue(valueForX(longCoord(e)));
             } else {
-              setValue(valueForX(e.getX()));
+              setValue(valueForX(longCoord(e)));
             }
             repaint();
           }
@@ -2147,6 +2189,15 @@ public class ElwhaSlider extends JComponent {
 
   private int handleCenterY() {
     return handleTopY() + handleHeight() / 2;
+  }
+
+  /**
+   * Maps a mouse event to the long-axis position {@link #valueForX(int)} / {@link #pickHandle(int)}
+   * expect: the literal {@code x} when horizontal, or {@code height − y} when vertical (so the
+   * bottom of the component is the minimum end and the top is the maximum).
+   */
+  private int longCoord(final MouseEvent e) {
+    return vertical() ? getHeight() - e.getY() : e.getX();
   }
 
   /** Drives the handle-narrow + value-bubble appearance toward active (focus or press) or rest. */
@@ -2201,11 +2252,13 @@ public class ElwhaSlider extends JComponent {
     installKeys(getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT));
     final ActionMap am = getActionMap();
 
-    // Horizontal arrows mirror under RTL; vertical arrows do not. Space held promotes arrows to the
-    // block increment (research §X #49 "Space & Arrows"); Page keys are the always-block
-    // equivalent.
-    am.put("elwhaSlider.left", step(() -> ltr() ? -stepAmount() : stepAmount()));
-    am.put("elwhaSlider.right", step(() -> ltr() ? stepAmount() : -stepAmount()));
+    // Up/Down always increase/decrease the value — the primary axis for a vertical slider. Left/
+    // Right also adjust: they mirror under a horizontal RTL orientation but never for vertical
+    // (which fills bottom-up regardless). Space held promotes arrows to the block increment
+    // (research
+    // §X #49 "Space & Arrows"); Page keys are the always-block equivalent.
+    am.put("elwhaSlider.left", step(() -> mirror() ? stepAmount() : -stepAmount()));
+    am.put("elwhaSlider.right", step(() -> mirror() ? -stepAmount() : stepAmount()));
     am.put("elwhaSlider.increase", step(this::stepAmount));
     am.put("elwhaSlider.decrease", step(() -> -stepAmount()));
     am.put("elwhaSlider.blockUp", step(this::getBlockIncrement));
@@ -2227,10 +2280,6 @@ public class ElwhaSlider extends JComponent {
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0), "elwhaSlider.max");
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, false), "elwhaSlider.spaceDown");
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, true), "elwhaSlider.spaceUp");
-  }
-
-  private boolean ltr() {
-    return getComponentOrientation().isLeftToRight();
   }
 
   /** The current arrow step — block while Space is held, otherwise the unit increment. */
