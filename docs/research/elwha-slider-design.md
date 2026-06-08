@@ -105,6 +105,10 @@ All phases are **V1 (epic #340)**; hand off at phase boundaries ([[feedback_phas
 - **Phase 4 — Sizes** (`Size` enum S–XL) **+ inset icon** (M/L/XL, repositioning, swap-at-zero) — coupled (inset icon needs ≥40dp track).
 - **Phase 5 — Vertical orientation** (standard/centered; range stays doc-warned).
 
+### Phase 5 / S1 outcome — vertical transpose (locked 2026-06-07)
+
+`Orientation { HORIZONTAL, VERTICAL }` + `getOrientation()`/`setOrientation()`, default `HORIZONTAL` (Phase 1–4 behavior byte-identical). The transpose is implemented by **rotating the chrome Graphics −90°** (`translate(0, height); rotate(-π/2)`) so the existing horizontal track / stop / handle / state-layer / ripple paint code is reused **verbatim** through logical long/short-extent accessors (`longExtent()`/`shortExtent()`) — a vertical pill handle, stop dots, and ripple are all rotation-correct. Only the two **upright overlays** (value bubble; the S2 inset glyph) are painted in native device space so their text/glyph stay upright. Vertical never RTL-mirrors (`mirror()` gates on horizontal-only); `getPreferredSize()` swaps the long/short axes. Fill grows bottom-up (min at the bottom). This keeps the single + centered + range families on one paint codebase across both orientations with no geometry fork. The vertical inset icon (S2) pins at the **top/max** end (the M3 bulb-at-top pattern, research §123) with a coverage-tint swap, rather than relocating like the horizontal leading-end icon.
+
 ## §12. Open for the S1 spike
 
 - Whether to borrow `JSlider` internally for the **single** case (vs fully hand-wired) — default unified custom; spike confirms.
