@@ -674,6 +674,55 @@ public final class MaterialIcons {
   }
 
   /**
+   * Downward filled-triangle dropdown arrow — the M3 exposed-dropdown (select-field) trailing
+   * affordance, signifying a field that opens a nested selection menu. Pairs with {@link
+   * #arrowDropUp()} as the collapsed ↔ expanded cue.
+   *
+   * @return the icon at {@link #DEFAULT_SIZE}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static FlatSVGIcon arrowDropDown() {
+    return arrowDropDown(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #arrowDropDown()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static FlatSVGIcon arrowDropDown(final int size) {
+    return load("arrow_drop_down", size);
+  }
+
+  /**
+   * Upward filled-triangle dropdown arrow — the expanded-state cue for the M3 exposed-dropdown
+   * (select-field) trailing affordance. Pairs with {@link #arrowDropDown()} (the menu is open).
+   *
+   * @return the icon at {@link #DEFAULT_SIZE}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static FlatSVGIcon arrowDropUp() {
+    return arrowDropUp(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #arrowDropUp()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static FlatSVGIcon arrowDropUp(final int size) {
+    return load("arrow_drop_up", size);
+  }
+
+  /**
    * Hamburger menu glyph — three horizontal lines. M3's canonical menu / drawer affordance, and the
    * menu-button glyph used in the Navigation Rail Collapsed variant (Phase 2 of epic #159).
    *

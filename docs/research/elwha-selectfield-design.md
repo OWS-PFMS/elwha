@@ -99,3 +99,26 @@ A select field **is** an embeddable surface (the popup aside), so it fits the st
 - The **menu lifecycle** — build-per-open vs cache-and-rebuild-on-options-change (lean: rebuild on options change; preserves `selected` marks cheaply). S1 decides.
 - The **arrow mechanism** — rotate-in-the-trailing-button vs paint-in-the-select-field (lean: the trailing `ElwhaIconButton`, swapping `arrow_drop_down`↔`arrow_drop_up`). S1 confirms.
 - **Name** — `ElwhaSelectField` (recommended) vs `ElwhaDropdownField` / `ElwhaExposedDropdown`. Confirm at sign-off.
+
+## S1 spike outcome (Phase 1, #374 — 2026-06-07) — architecture LOCKED
+
+The §2 composition is proven and locked. `ElwhaSelectField<T> extends JComponent` owns a read-only `ElwhaTextField` (added `BorderLayout.CENTER`, so `getPreferredSize` delegates to the field) and a trailing-slot `ElwhaIconButton` carrying the dropdown arrow; it builds an `ElwhaMenu` (`SelectionMode.SINGLE`, the field as anchor) for the options. No subclassing, no `selectMode` flag. The §12 questions resolved:
+
+1. **Name = `ElwhaSelectField`** (confirmed) — package `com.owspfm.elwha.selectfield`.
+2. **Menu lifecycle = cache-and-rebuild-on-options-change** (the lean). The built menu is cached; `setOptions` / `setDisplayFunction` null it so the next open rebuilds. Picking via the menu's `SelectionMode.SINGLE` keeps the `selected` mark on the cached items across reopens — no rebuild on a plain pick.
+3. **Arrow = the trailing `ElwhaIconButton`, glyph-swap** `arrow_drop_down` ↔ `arrow_drop_up` (the lean). Rotation + reduced-motion is **S3** (#376); S1 ships the swap. Sized `IconButtonSize.S` (32 dp container, 20 dp glyph) in the field's trailing slot.
+4. **New assets (sanctioned by §4):** bundled `arrow_drop_down.svg` + `arrow_drop_up.svg` Material Symbols + `MaterialIcons.arrowDropDown()` / `arrowDropUp()` accessors. **Zero new theme tokens** (held).
+
+**Toggle-reopen guard (finding).** The shared overlay's outside-press listener treats the trigger (field + arrow) as *outside* the surface, so pressing the trigger while open begins a light-dismiss. An `expanded` flag — set on open, cleared in the menu's `onClose` (which fires after the animated teardown, so it stays `true` through the dismissing click) — makes the same click read as a close, not a re-toggle. The whole field body and the arrow both toggle (a `mousePressed` on the field + its editor, plus the arrow's action).
+
+**Menu width-tracking (deferred, not cut).** `ElwhaMenu`/`Builder` exposes no width hook today, so the popup opens at its intrinsic content width rather than matching the field (design §5). Not forced in S1; revisit in S4 (arrow/affordance polish) or as a small `ElwhaMenu` enhancement if the visual gap warrants — recorded here rather than silently dropped.
+
+**Headless testability (finding).** `ElwhaMenuItem.activate(int)` is package-private to `menu`, and the popup needs a window — so the round-trip is driven headlessly through a package-private `ElwhaSelectField.selectIndex(int)` (the shared selection seam; S2's public `setSelectedValue` builds on it). Window-dependent behavior (anchor/flip/light-dismiss/focus-return/arrow flip) is exercised by the interactive `SelectFieldS1SpikeDemo`.
+
+## Phase 1 complete (#374–#378 — 2026-06-07) — non-editable select shipped
+
+All five stories built on one stacked branch: S1 skeleton (#374) → S2 typed value model + listeners (#375) → S3 combobox keyboard + expanded/collapsed a11y + arrow rotation (#376) → S4 variant delegation + state propagation + owned trailing slot (#377) → S5 Showcase leaf + docs (#378). Five fresh demos + five headless guards (66 checks total). Zero new theme tokens held; the only new assets are the two arrow glyphs + their `MaterialIcons` accessors.
+
+**Dogfood pass (S5) — documented skip.** The story asked to swap a genuine Showcase/playground `JComboBox`/hand-rolled select onto `ElwhaSelectField`. None is a natural fit, so it is **skipped, not forced** (per the story's explicit allowance): the prominent labeled select in the Showcase is the **toolbar palette picker**, but it is load-bearing chrome with a custom `ListCellRenderer`, a dynamic tier-switch `setModel`, and a `pickerAdjusting` re-entry guard, and it sits in a compact toolbar where an `ElwhaSelectField`'s floating-label + reserved-supporting-row anatomy (~56 dp) would break the toolbar height. The remaining Showcase combos are dense control-panel enum pickers in tight control columns — the same form-field-too-tall mismatch. The Select Field leaf's own Workbench instead dogfoods Elwha controls (button-group variant picker, `SELECTABLE` toggles, icon-button steppers, text-field inputs). The editable-combo Phase 2 (a toolbar-friendly filter-as-you-type form) is the natural future home for a real swap.
+
+**Later phases (progressive filing):** Phase 2 (editable / filter-as-you-type combo) and Phase 3 (multi-select + summary display) are filed when Phase 1 lands. Epic #331 stays open until the final V1 phase ships.
