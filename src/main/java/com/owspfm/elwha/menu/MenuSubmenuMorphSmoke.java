@@ -51,7 +51,7 @@ public final class MenuSubmenuMorphSmoke {
 
     if (!headless) {
       failures += windowedMorphProof(sm, md, lg);
-      checks += 6;
+      checks += 7;
     } else {
       System.out.println("  skip (headless) windowed shape-morph proof");
     }
@@ -77,11 +77,8 @@ public final class MenuSubmenuMorphSmoke {
           frame.setLocationRelativeTo(null);
           frame.setVisible(true);
 
-          final ElwhaMenu deepMenu =
-              ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Leaf A")).build();
-          final ElwhaSubMenuItem deep = ElwhaSubMenuItem.of("More", deepMenu);
           final ElwhaMenu shareMenu =
-              ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Email")).addItem(deep).build();
+              ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Email")).build();
           final ElwhaSubMenuItem share = ElwhaSubMenuItem.of("Share", shareMenu);
           final ElwhaMenu rootMenu =
               ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Rename")).addItem(share).build();
@@ -89,28 +86,41 @@ public final class MenuSubmenuMorphSmoke {
           rootMenu.open(anchor);
           frame.getRootPane().getLayeredPane().validate();
           fail[0] += check(rootMenu.currentContainerRadius() == md, "standalone root is MD");
+          rootMenu.setMorphActive(true);
+          fail[0] +=
+              check(
+                  rootMenu.currentContainerRadius() == md,
+                  "a standalone menu ignores active state (stays MD)");
 
           share.activate(0);
-          fail[0] +=
-              check(
-                  rootMenu.currentContainerRadius() == sm,
-                  "root squares off to SM as a submenu opens");
-          fail[0] +=
-              check(shareMenu.currentContainerRadius() == lg, "focused submenu rounds up to LG");
-
-          deep.activate(0);
-          fail[0] +=
-              check(
-                  shareMenu.currentContainerRadius() == sm,
-                  "mid submenu squares off when it gains a child");
-          fail[0] +=
-              check(deepMenu.currentContainerRadius() == lg, "deepest focused submenu is LG");
-
-          deepMenu.close(MenuDismissCause.ESCAPE);
+          // The active level rounds up; the other squares off — and it reverses, the operator's
+          // "submenu rounds on enter, squares on exit; the containing menu morphs opposite".
+          shareMenu.setMorphActive(true);
+          rootMenu.setMorphActive(false);
           fail[0] +=
               check(
                   shareMenu.currentContainerRadius() == lg,
-                  "mid submenu rounds back to LG when its child closes");
+                  "active (hovered) submenu rounds to LG");
+          fail[0] +=
+              check(rootMenu.currentContainerRadius() == sm, "the containing menu squares to SM");
+
+          shareMenu.setMorphActive(false);
+          rootMenu.setMorphActive(true);
+          fail[0] +=
+              check(
+                  shareMenu.currentContainerRadius() == sm,
+                  "submenu squares back when the pointer leaves it");
+          fail[0] +=
+              check(
+                  rootMenu.currentContainerRadius() == lg,
+                  "the containing menu rounds up opposite");
+
+          // Closing the submenu collapses the chain — the lone root returns to the MD rest.
+          shareMenu.close(MenuDismissCause.ESCAPE);
+          fail[0] +=
+              check(
+                  rootMenu.currentContainerRadius() == md,
+                  "the root returns to MD once the chain collapses");
 
           frame.dispose();
         });

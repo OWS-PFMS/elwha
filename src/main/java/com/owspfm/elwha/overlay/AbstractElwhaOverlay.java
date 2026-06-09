@@ -383,6 +383,21 @@ public abstract class AbstractElwhaOverlay {
   }
 
   /**
+   * Every overlay in this overlay's chain, ordered root → leaf (a single-element list when not part
+   * of a chain). Lets a subclass walk the whole chain without cross-package protected access to the
+   * per-link accessors.
+   *
+   * @return the chain overlays, root first
+   */
+  protected final java.util.List<AbstractElwhaOverlay> chainOverlays() {
+    final java.util.List<AbstractElwhaOverlay> out = new java.util.ArrayList<>();
+    for (AbstractElwhaOverlay o = chainRootOverlay(); o != null; o = o.chainChild) {
+      out.add(o);
+    }
+    return out;
+  }
+
+  /**
    * Notification to a parent overlay that its chain child closed <em>on its own</em> (a back
    * key/Escape/leaf focus loss), not as part of this parent's own teardown. Default no-op; a menu
    * overrides this to re-arm focus on the opener item and clear the opener's expanded state.
@@ -499,6 +514,14 @@ public abstract class AbstractElwhaOverlay {
     layeredPane.removeComponentListener(relayoutListener);
     if (backdrop != null) {
       layeredPane.remove(backdrop);
+    }
+    // Chain child closing on its own (parent stays open): move focus to the parent surface BEFORE
+    // removing this surface, so the removal doesn't bounce focus to the host frame — which the
+    // now-topmost parent would read as a focus escape and dismiss itself, cascading the whole chain
+    // shut (epic #322). The whole-chain cascade nulls chainParent first, so this only fires when a
+    // single level collapses under a still-open parent.
+    if (chainParent != null && chainParent.surface != null && restoreFocusOnClose()) {
+      chainParent.surface.requestFocusInWindow();
     }
     layeredPane.remove(surface);
     layeredPane.revalidate();
