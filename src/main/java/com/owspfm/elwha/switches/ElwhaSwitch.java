@@ -1,16 +1,30 @@
 package com.owspfm.elwha.switches;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
+import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
+import javax.swing.AbstractAction;
 import javax.swing.JComponent;
+import javax.swing.KeyStroke;
+import javax.swing.Timer;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.EventListenerList;
@@ -47,6 +61,16 @@ import javax.swing.event.EventListenerList;
  * bounds. The M3 48&nbsp;dp touch target is guidance for touch contexts, not painted geometry — the
  * component's whole bounds are interactive.
  *
+ * <p><strong>Interaction (research §B / §S).</strong> Click anywhere to toggle, drag the handle
+ * past the track midpoint to commit a state, or toggle from the keyboard with Space (press shows
+ * the pressed treatment, release commits — Swing button semantics; Enter is deliberately unbound).
+ * Hover paints {@link StateLayer#HOVER} (0.08) and focus {@link StateLayer#FOCUS} (0.10) on the
+ * {@value #STATE_LAYER_SIZE_PX} dp circle riding the handle; a press grows the handle to {@value
+ * #HANDLE_PRESSED_PX} dp, paints {@link StateLayer#PRESSED}, and shows a {@link RipplePainter}
+ * ripple bounded to the same circle. User-gesture commits fire the registered {@link
+ * ActionListener}s <em>and</em> {@link ChangeListener}s; programmatic {@code setSelected} fires
+ * only the latter.
+ *
  * <p><strong>Labelling.</strong> A switch never labels itself — M3 requires an adjacent label
  * naming what it toggles, and the accessible name must always be set: call {@code setLabel(String)}
  * or associate a {@link javax.swing.JLabel} via {@link javax.swing.JLabel#setLabelFor} (the a11y
@@ -75,16 +99,34 @@ public class ElwhaSwitch extends JComponent {
   /** Handle diameter while selected. */
   static final int HANDLE_SELECTED_PX = 24;
 
+  /** Handle diameter while pressed or mid-drag — on either side of the toggle. */
+  static final int HANDLE_PRESSED_PX = 28;
+
   /** Diameter of the hover/focus/press state layer riding the handle. */
   static final int STATE_LAYER_SIZE_PX = 40;
 
   /** The state layer's overhang past the track box, per side. */
   static final int HALO_OVERHANG_PX = (STATE_LAYER_SIZE_PX - TRACK_HEIGHT_PX) / 2;
 
+  /** Pointer travel from the press point before a press becomes a drag (design §12). */
+  static final int DRAG_THRESHOLD_PX = 4;
+
+  private static final int RIPPLE_TOTAL_MS = 400;
+  private static final int RIPPLE_TICK_MS = 16;
+
   private final EventListenerList listenerList = new EventListenerList();
   private final ChangeEvent changeEvent = new ChangeEvent(this);
 
   private boolean selected;
+  private boolean hovered;
+  private boolean pressed;
+  private boolean dragging;
+  private int pressX;
+  private float dragFraction;
+
+  private Point rippleOrigin;
+  private float rippleProgress = 1f;
+  private Timer rippleTimer;
 
   /**
    * Creates an unselected switch.
@@ -107,6 +149,8 @@ public class ElwhaSwitch extends JComponent {
     this.selected = selected;
     setOpaque(false);
     setFocusable(true);
+    initInteraction();
+    initKeyboard();
   }
 
   // ------------------------------------------------------------------ selection
@@ -172,6 +216,78 @@ public class ElwhaSwitch extends JComponent {
     }
   }
 
+  /**
+   * Adds an {@link ActionListener} notified when the <em>user</em> toggles the switch — a click, a
+   * Space release, or a drag commit that changed the state. Programmatic {@link
+   * #setSelected(boolean)} writes never fire it (material-web parity: {@code change} fires on user
+   * interaction only). The event's action command is {@code "selected"} or {@code "deselected"},
+   * reflecting the state just committed.
+   *
+   * @param listener the listener to add
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void addActionListener(final ActionListener listener) {
+    listenerList.add(ActionListener.class, listener);
+  }
+
+  /**
+   * Removes a previously added {@link ActionListener}.
+   *
+   * @param listener the listener to remove
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void removeActionListener(final ActionListener listener) {
+    listenerList.remove(ActionListener.class, listener);
+  }
+
+  /** Notifies registered {@link ActionListener}s of a user-gesture toggle. */
+  private void fireActionPerformed() {
+    final ActionEvent event =
+        new ActionEvent(this, ActionEvent.ACTION_PERFORMED, selected ? "selected" : "deselected");
+    for (final ActionListener listener : listenerList.getListeners(ActionListener.class)) {
+      listener.actionPerformed(event);
+    }
+  }
+
+  /** Commits a user-gesture toggle: state change first, then the action event. */
+  private void commitUserToggle(final boolean next) {
+    final boolean changed = next != selected;
+    setSelected(next);
+    if (changed) {
+      fireActionPerformed();
+    }
+  }
+
+  // -------------------------------------------------------------- gallery hooks
+
+  /**
+   * Forces the hover treatment on or off — for static gallery rendering only (a parallel to the
+   * slider's hook); real hover tracking is automatic.
+   *
+   * @param hovered whether to paint the hover state layer
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setHovered(final boolean hovered) {
+    this.hovered = hovered;
+    repaint();
+  }
+
+  /**
+   * Forces the pressed treatment on or off — for static gallery rendering only (a parallel to the
+   * slider's hook); real press tracking is automatic.
+   *
+   * @param pressed whether to paint the pressed treatment (grown handle + pressed layer)
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setPressed(final boolean pressed) {
+    this.pressed = pressed;
+    repaint();
+  }
+
   // -------------------------------------------------------------------- sizing
 
   @Override
@@ -197,10 +313,20 @@ public class ElwhaSwitch extends JComponent {
     return (getHeight() - TRACK_HEIGHT_PX) / 2;
   }
 
-  /** The handle center's resting x for the current selection state. */
+  /** The handle center's x at the unselected (start) end of its travel. */
+  private int travelStartX() {
+    return trackX() + TRACK_HEIGHT_PX / 2;
+  }
+
+  /** The handle center's x at the selected (end) end of its travel. */
+  private int travelEndX() {
+    return trackX() + TRACK_WIDTH_PX - TRACK_HEIGHT_PX / 2;
+  }
+
+  /** The handle center's x — the resting end for the state, or the scrub position mid-drag. */
   int handleCenterX() {
-    final int inset = TRACK_HEIGHT_PX / 2;
-    return selected ? trackX() + TRACK_WIDTH_PX - inset : trackX() + inset;
+    final float fraction = dragging ? dragFraction : (selected ? 1f : 0f);
+    return Math.round(travelStartX() + fraction * (travelEndX() - travelStartX()));
   }
 
   /** The handle center's y — the track's vertical center. */
@@ -208,8 +334,21 @@ public class ElwhaSwitch extends JComponent {
     return trackY() + TRACK_HEIGHT_PX / 2;
   }
 
-  /** The handle diameter for the current state. */
+  /** Maps a pointer x to a travel fraction {@code [0, 1]} along the handle run. */
+  private float fractionForX(final int x) {
+    final int start = travelStartX();
+    final int end = travelEndX();
+    if (end <= start) {
+      return 0f;
+    }
+    return clampF((x - start) / (float) (end - start));
+  }
+
+  /** The handle diameter for the current state — pressed and drag grow to the press size. */
   private float handleDiameter() {
+    if (pressed || dragging) {
+      return HANDLE_PRESSED_PX;
+    }
     return selected ? HANDLE_SELECTED_PX : HANDLE_UNSELECTED_PX;
   }
 
@@ -221,9 +360,77 @@ public class ElwhaSwitch extends JComponent {
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       paintTrack(g2);
+      paintStateLayer(g2);
+      paintRipple(g2);
       paintHandle(g2);
     } finally {
       g2.dispose();
+    }
+  }
+
+  /** The {@value #STATE_LAYER_SIZE_PX} dp interaction circle concentric with the handle. */
+  private Ellipse2D.Float stateLayerCircle() {
+    final float r = STATE_LAYER_SIZE_PX / 2f;
+    return new Ellipse2D.Float(
+        handleCenterX() - r, handleCenterY() - r, STATE_LAYER_SIZE_PX, STATE_LAYER_SIZE_PX);
+  }
+
+  /** The state-layer tint role for the current selection state (research §T). */
+  private Color stateLayerTint() {
+    return (selected ? ColorRole.PRIMARY : ColorRole.ON_SURFACE).resolve();
+  }
+
+  /** Paints the static hover/focus/pressed layers on the circle riding the handle. */
+  private void paintStateLayer(final Graphics2D g2) {
+    if (!isEnabled()) {
+      return;
+    }
+    final Graphics2D s = (Graphics2D) g2.create();
+    try {
+      final Ellipse2D.Float halo = stateLayerCircle();
+      final Color tint = stateLayerTint();
+      if (isFocusOwner()) {
+        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.FOCUS.opacity()));
+        s.setColor(tint);
+        s.fill(halo);
+      }
+      if (hovered) {
+        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.HOVER.opacity()));
+        s.setColor(tint);
+        s.fill(halo);
+      }
+      // Pressed feedback is primarily the ripple; a faint static layer keeps the pressed state
+      // legible in still renders (gallery cells, reduced motion, between ripple frames).
+      if (pressed || dragging) {
+        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.PRESSED.opacity()));
+        s.setColor(tint);
+        s.fill(halo);
+      }
+    } finally {
+      s.dispose();
+    }
+  }
+
+  /** Paints the press ripple, bounded to the state-layer circle (material-web's md-ripple). */
+  private void paintRipple(final Graphics2D g2) {
+    if (rippleOrigin == null || rippleProgress >= 1f || !isEnabled()) {
+      return;
+    }
+    final Ellipse2D.Float halo = stateLayerCircle();
+    final Graphics2D r = (Graphics2D) g2.create();
+    try {
+      r.translate(halo.x, halo.y);
+      final Point local = new Point(rippleOrigin.x - (int) halo.x, rippleOrigin.y - (int) halo.y);
+      RipplePainter.paint(
+          r,
+          STATE_LAYER_SIZE_PX,
+          STATE_LAYER_SIZE_PX,
+          local,
+          rippleProgress,
+          STATE_LAYER_SIZE_PX,
+          stateLayerTint());
+    } finally {
+      r.dispose();
     }
   }
 
@@ -295,10 +502,12 @@ public class ElwhaSwitch extends JComponent {
   }
 
   /**
-   * The handle fill, honoring the disabled treatment — including the spec's asymmetry: the disabled
-   * <em>selected</em> handle is opaque {@link ColorRole#SURFACE} (a solid "hole" punched in the 12%
-   * track), while the disabled unselected handle is {@link ColorRole#ON_SURFACE} at the 0.38
-   * content opacity (research §T ⚠).
+   * The handle fill, honoring the per-state roles and the disabled treatment — including the spec's
+   * asymmetry: the disabled <em>selected</em> handle is opaque {@link ColorRole#SURFACE} (a solid
+   * "hole" punched in the 12% track), while the disabled unselected handle is {@link
+   * ColorRole#ON_SURFACE} at the 0.38 content opacity (research §T ⚠). Hover/focus/press shift the
+   * enabled handle to {@link ColorRole#PRIMARY_CONTAINER} (selected) / {@link
+   * ColorRole#ON_SURFACE_VARIANT} (unselected).
    */
   private Color handleColor() {
     if (!isEnabled()) {
@@ -306,7 +515,165 @@ public class ElwhaSwitch extends JComponent {
           ? ColorRole.SURFACE.resolve()
           : withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
     }
-    return selected ? ColorRole.ON_PRIMARY.resolve() : ColorRole.OUTLINE.resolve();
+    final boolean active = hovered || pressed || dragging || isFocusOwner();
+    if (selected) {
+      return (active ? ColorRole.PRIMARY_CONTAINER : ColorRole.ON_PRIMARY).resolve();
+    }
+    return (active ? ColorRole.ON_SURFACE_VARIANT : ColorRole.OUTLINE).resolve();
+  }
+
+  // ---------------------------------------------------------------- interaction
+
+  private void initInteraction() {
+    final MouseAdapter ma =
+        new MouseAdapter() {
+          @Override
+          public void mouseEntered(final MouseEvent e) {
+            if (!isEnabled()) {
+              return;
+            }
+            hovered = true;
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            repaint();
+          }
+
+          @Override
+          public void mouseExited(final MouseEvent e) {
+            hovered = false;
+            repaint();
+          }
+
+          @Override
+          public void mousePressed(final MouseEvent e) {
+            if (!isEnabled() || e.getButton() != MouseEvent.BUTTON1) {
+              return;
+            }
+            requestFocusInWindow();
+            pressed = true;
+            pressX = e.getX();
+            dragFraction = selected ? 1f : 0f;
+            startRipple(new Point(handleCenterX(), handleCenterY()));
+            repaint();
+          }
+
+          @Override
+          public void mouseDragged(final MouseEvent e) {
+            if (!isEnabled() || !pressed) {
+              return;
+            }
+            if (!dragging && Math.abs(e.getX() - pressX) >= DRAG_THRESHOLD_PX) {
+              dragging = true;
+            }
+            if (dragging) {
+              dragFraction = fractionForX(e.getX());
+              repaint();
+            }
+          }
+
+          @Override
+          public void mouseReleased(final MouseEvent e) {
+            if (!pressed) {
+              return;
+            }
+            final boolean wasDragging = dragging;
+            final float fraction = dragFraction;
+            pressed = false;
+            dragging = false;
+            if (!isEnabled()) {
+              repaint();
+              return;
+            }
+            if (wasDragging) {
+              commitUserToggle(fraction >= 0.5f);
+            } else if (contains(e.getPoint())) {
+              commitUserToggle(!selected);
+            }
+            repaint();
+          }
+        };
+    addMouseListener(ma);
+    addMouseMotionListener(ma);
+
+    addFocusListener(
+        new FocusAdapter() {
+          @Override
+          public void focusGained(final FocusEvent e) {
+            repaint();
+          }
+
+          @Override
+          public void focusLost(final FocusEvent e) {
+            pressed = false;
+            dragging = false;
+            repaint();
+          }
+        });
+  }
+
+  private void initKeyboard() {
+    getInputMap(WHEN_FOCUSED)
+        .put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, false), "elwhaSwitch.press");
+    getInputMap(WHEN_FOCUSED)
+        .put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, true), "elwhaSwitch.release");
+    getActionMap()
+        .put(
+            "elwhaSwitch.press",
+            new AbstractAction() {
+              @Override
+              public void actionPerformed(final ActionEvent e) {
+                if (!ElwhaSwitch.this.isEnabled() || pressed) {
+                  return;
+                }
+                pressed = true;
+                startRipple(new Point(handleCenterX(), handleCenterY()));
+                repaint();
+              }
+            });
+    getActionMap()
+        .put(
+            "elwhaSwitch.release",
+            new AbstractAction() {
+              @Override
+              public void actionPerformed(final ActionEvent e) {
+                if (!ElwhaSwitch.this.isEnabled() || !pressed) {
+                  return;
+                }
+                pressed = false;
+                commitUserToggle(!selected);
+                repaint();
+              }
+            });
+  }
+
+  private void startRipple(final Point origin) {
+    rippleOrigin = origin;
+    rippleProgress = 0f;
+    if (rippleTimer != null && rippleTimer.isRunning()) {
+      rippleTimer.stop();
+    }
+    final long startNanos = System.nanoTime();
+    rippleTimer =
+        new Timer(
+            RIPPLE_TICK_MS,
+            e -> {
+              rippleProgress =
+                  Math.min(1f, (System.nanoTime() - startNanos) / (RIPPLE_TOTAL_MS * 1_000_000f));
+              repaint();
+              if (rippleProgress >= 1f) {
+                rippleTimer.stop();
+              }
+            });
+    rippleTimer.setRepeats(true);
+    rippleTimer.start();
+    repaint();
+  }
+
+  @Override
+  public void removeNotify() {
+    if (rippleTimer != null) {
+      rippleTimer.stop();
+    }
+    super.removeNotify();
   }
 
   // -------------------------------------------------------------------- helpers
