@@ -1,6 +1,8 @@
 package com.owspfm.elwha.switches;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
 import java.awt.AlphaComposite;
@@ -71,6 +73,18 @@ import javax.swing.event.EventListenerList;
  * ActionListener}s <em>and</em> {@link ChangeListener}s; programmatic {@code setSelected} fires
  * only the latter.
  *
+ * <p><strong>Motion (design §6 / research §Mo).</strong> A toggle slides the handle over {@value
+ * #SLIDE_MS}&nbsp;ms on material-web's overshoot bezier {@code (0.175, 0.885, 0.32, 1.275)} — the
+ * handle deliberately swings a couple of px past its rest point and settles (it stays inside the
+ * track). The handle diameter tweens through its own retargeting morph ({@value
+ * #SIZE_MORPH_MS}&nbsp;ms standard easing for selection changes, {@value #PRESS_MORPH_MS}&nbsp;ms
+ * linear for press grow/release), and the track/handle colors crossfade along the slide progress —
+ * an accepted deviation from M3's 67&nbsp;ms color snap so a scrubbed drag previews color
+ * continuously (design §6). A drag owns the handle position while in flight; release hands the
+ * position back to the slide tween with no jump. Programmatic {@code setSelected} animates only
+ * while the switch is displayable and enabled — otherwise it snaps — and {@link
+ * MorphAnimator#isReducedMotion() reduced motion} snaps everything globally.
+ *
  * <p><strong>Labelling.</strong> A switch never labels itself — M3 requires an adjacent label
  * naming what it toggles, and the accessible name must always be set: call {@code setLabel(String)}
  * or associate a {@link javax.swing.JLabel} via {@link javax.swing.JLabel#setLabelFor} (the a11y
@@ -111,11 +125,26 @@ public class ElwhaSwitch extends JComponent {
   /** Pointer travel from the press point before a press becomes a drag (design §12). */
   static final int DRAG_THRESHOLD_PX = 4;
 
+  /** Handle slide duration — {@code motion.duration.medium2} (research §Mo). */
+  static final int SLIDE_MS = MorphAnimator.MEDIUM2_MS;
+
+  /** Handle size-morph duration for selection-driven diameter changes (research §Mo). */
+  static final int SIZE_MORPH_MS = 250;
+
+  /** Handle size-morph duration for press grow / release shrink (research §Mo). */
+  static final int PRESS_MORPH_MS = 100;
+
   private static final int RIPPLE_TOTAL_MS = 400;
   private static final int RIPPLE_TICK_MS = 16;
 
+  // material-web's handle-slide margin curve — y2 > 1 gives the deliberate settle-past overshoot.
+  private static final Easing OVERSHOOT = Easing.cubicBezier(0.175f, 0.885f, 0.32f, 1.275f);
+
   private final EventListenerList listenerList = new EventListenerList();
   private final ChangeEvent changeEvent = new ChangeEvent(this);
+
+  private final RetargetTween slideTween;
+  private final RetargetTween sizeTween;
 
   private boolean selected;
   private boolean hovered;
@@ -147,6 +176,9 @@ public class ElwhaSwitch extends JComponent {
    */
   public ElwhaSwitch(final boolean selected) {
     this.selected = selected;
+    this.slideTween = new RetargetTween(SLIDE_MS, selected ? 1f : 0f);
+    this.sizeTween =
+        new RetargetTween(SIZE_MORPH_MS, selected ? HANDLE_SELECTED_PX : HANDLE_UNSELECTED_PX);
     setOpaque(false);
     setFocusable(true);
     initInteraction();
@@ -181,6 +213,7 @@ public class ElwhaSwitch extends JComponent {
       return;
     }
     this.selected = selected;
+    syncMotion(animateAllowed());
     fireStateChanged();
     repaint();
   }
@@ -285,6 +318,7 @@ public class ElwhaSwitch extends JComponent {
    */
   public void setPressed(final boolean pressed) {
     this.pressed = pressed;
+    syncMotion(false);
     repaint();
   }
 
@@ -323,9 +357,12 @@ public class ElwhaSwitch extends JComponent {
     return trackX() + TRACK_WIDTH_PX - TRACK_HEIGHT_PX / 2;
   }
 
-  /** The handle center's x — the resting end for the state, or the scrub position mid-drag. */
+  /**
+   * The handle center's x — the slide tween's position (deliberately unclamped: the overshoot
+   * swings past the rest point), or the scrub position mid-drag.
+   */
   int handleCenterX() {
-    final float fraction = dragging ? dragFraction : (selected ? 1f : 0f);
+    final float fraction = dragging ? dragFraction : slideTween.value();
     return Math.round(travelStartX() + fraction * (travelEndX() - travelStartX()));
   }
 
@@ -344,12 +381,35 @@ public class ElwhaSwitch extends JComponent {
     return clampF((x - start) / (float) (end - start));
   }
 
-  /** The handle diameter for the current state — pressed and drag grow to the press size. */
+  /** The handle diameter — the size tween's current value. */
   private float handleDiameter() {
-    if (pressed || dragging) {
-      return HANDLE_PRESSED_PX;
-    }
-    return selected ? HANDLE_SELECTED_PX : HANDLE_UNSELECTED_PX;
+    return sizeTween.value();
+  }
+
+  /** The color-crossfade progress {@code [0, 1]} — the slide position, overshoot clamped off. */
+  private float colorProgress() {
+    return clampF(dragging ? dragFraction : slideTween.value());
+  }
+
+  /**
+   * Retargets the slide + size tweens at the current state; snaps when animation is not allowed.
+   */
+  private void syncMotion(final boolean animate) {
+    slideTween.retarget(selected ? 1f : 0f, SLIDE_MS, OVERSHOOT, animate);
+    final boolean press = pressed || dragging;
+    final float diameter =
+        press ? HANDLE_PRESSED_PX : (selected ? HANDLE_SELECTED_PX : HANDLE_UNSELECTED_PX);
+    final boolean pressTransition = press || sizeTween.target() == HANDLE_PRESSED_PX;
+    sizeTween.retarget(
+        diameter,
+        pressTransition ? PRESS_MORPH_MS : SIZE_MORPH_MS,
+        pressTransition ? Easing.LINEAR : Easing.STANDARD,
+        animate);
+  }
+
+  /** Whether state changes may tween — never while undisplayable (first paint) or disabled. */
+  private boolean animateAllowed() {
+    return isDisplayable() && isEnabled();
   }
 
   // --------------------------------------------------------------------- paint
@@ -375,9 +435,9 @@ public class ElwhaSwitch extends JComponent {
         handleCenterX() - r, handleCenterY() - r, STATE_LAYER_SIZE_PX, STATE_LAYER_SIZE_PX);
   }
 
-  /** The state-layer tint role for the current selection state (research §T). */
+  /** The state-layer tint — crossfaded with the slide (research §T roles at the rest points). */
   private Color stateLayerTint() {
-    return (selected ? ColorRole.PRIMARY : ColorRole.ON_SURFACE).resolve();
+    return mixColor(ColorRole.ON_SURFACE.resolve(), ColorRole.PRIMARY.resolve(), colorProgress());
   }
 
   /** Paints the static hover/focus/pressed layers on the circle riding the handle. */
@@ -438,31 +498,48 @@ public class ElwhaSwitch extends JComponent {
    * Paints the track capsule. The unselected outline is a filled ring ({@link Area} subtraction,
    * not a stroke) so the ring and the interior tile exactly — no half-pixel seam and, in the
    * disabled treatment, no double-blended overlap between the two translucent fills (design §12).
+   * Mid-slide, the selected {@link ColorRole#PRIMARY} fill paints over the unselected chrome at the
+   * crossfade progress — the outline fades out as the fill fades in (design §6).
    */
   private void paintTrack(final Graphics2D g2) {
-    final RoundRectangle2D.Float outer =
-        new RoundRectangle2D.Float(
-            trackX(), trackY(), TRACK_WIDTH_PX, TRACK_HEIGHT_PX, TRACK_HEIGHT_PX, TRACK_HEIGHT_PX);
-    if (selected) {
-      g2.setColor(selectedTrackColor());
-      g2.fill(outer);
+    if (!isEnabled()) {
+      final float opacity = StateLayer.disabledContainerOpacity();
+      if (selected) {
+        g2.setColor(withAlpha(ColorRole.ON_SURFACE.resolve(), opacity));
+        g2.fill(trackCapsule(0));
+      } else {
+        g2.setColor(withAlpha(ColorRole.SURFACE_CONTAINER_HIGHEST.resolve(), opacity));
+        g2.fill(trackCapsule(TRACK_OUTLINE_PX));
+        g2.setColor(withAlpha(ColorRole.ON_SURFACE.resolve(), opacity));
+        g2.fill(trackRing());
+      }
       return;
     }
-    final int inset = TRACK_OUTLINE_PX;
-    final RoundRectangle2D.Float inner =
-        new RoundRectangle2D.Float(
-            trackX() + inset,
-            trackY() + inset,
-            TRACK_WIDTH_PX - 2 * inset,
-            TRACK_HEIGHT_PX - 2 * inset,
-            TRACK_HEIGHT_PX - 2 * inset,
-            TRACK_HEIGHT_PX - 2 * inset);
-    final Area ring = new Area(outer);
-    ring.subtract(new Area(inner));
-    g2.setColor(unselectedTrackFillColor());
-    g2.fill(inner);
-    g2.setColor(unselectedTrackOutlineColor());
-    g2.fill(ring);
+    final float p = colorProgress();
+    if (p < 1f) {
+      g2.setColor(ColorRole.SURFACE_CONTAINER_HIGHEST.resolve());
+      g2.fill(trackCapsule(TRACK_OUTLINE_PX));
+      g2.setColor(ColorRole.OUTLINE.resolve());
+      g2.fill(trackRing());
+    }
+    if (p > 0f) {
+      g2.setColor(withAlpha(ColorRole.PRIMARY.resolve(), p));
+      g2.fill(trackCapsule(0));
+    }
+  }
+
+  /** The track capsule, inset uniformly — {@code 0} is the full track outline. */
+  private RoundRectangle2D.Float trackCapsule(final int inset) {
+    final float arc = TRACK_HEIGHT_PX - 2f * inset;
+    return new RoundRectangle2D.Float(
+        trackX() + inset, trackY() + inset, TRACK_WIDTH_PX - 2f * inset, arc, arc, arc);
+  }
+
+  /** The unselected outline ring — outer capsule minus the outline-inset capsule. */
+  private Area trackRing() {
+    final Area ring = new Area(trackCapsule(0));
+    ring.subtract(new Area(trackCapsule(TRACK_OUTLINE_PX)));
+    return ring;
   }
 
   /** Paints the circular handle at its resting position for the current state. */
@@ -475,31 +552,6 @@ public class ElwhaSwitch extends JComponent {
   }
 
   // --------------------------------------------------------------------- color
-
-  /** The selected track fill, honoring the disabled treatment (research §T). */
-  private Color selectedTrackColor() {
-    if (!isEnabled()) {
-      return withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContainerOpacity());
-    }
-    return ColorRole.PRIMARY.resolve();
-  }
-
-  /** The unselected track interior fill, honoring the disabled treatment (research §T). */
-  private Color unselectedTrackFillColor() {
-    final Color base = ColorRole.SURFACE_CONTAINER_HIGHEST.resolve();
-    if (!isEnabled()) {
-      return withAlpha(base, StateLayer.disabledContainerOpacity());
-    }
-    return base;
-  }
-
-  /** The unselected track outline ring, honoring the disabled treatment (research §T). */
-  private Color unselectedTrackOutlineColor() {
-    if (!isEnabled()) {
-      return withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContainerOpacity());
-    }
-    return ColorRole.OUTLINE.resolve();
-  }
 
   /**
    * The handle fill, honoring the per-state roles and the disabled treatment — including the spec's
@@ -516,10 +568,11 @@ public class ElwhaSwitch extends JComponent {
           : withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
     }
     final boolean active = hovered || pressed || dragging || isFocusOwner();
-    if (selected) {
-      return (active ? ColorRole.PRIMARY_CONTAINER : ColorRole.ON_PRIMARY).resolve();
-    }
-    return (active ? ColorRole.ON_SURFACE_VARIANT : ColorRole.OUTLINE).resolve();
+    final Color unselectedRole =
+        (active ? ColorRole.ON_SURFACE_VARIANT : ColorRole.OUTLINE).resolve();
+    final Color selectedRole =
+        (active ? ColorRole.PRIMARY_CONTAINER : ColorRole.ON_PRIMARY).resolve();
+    return mixColor(unselectedRole, selectedRole, colorProgress());
   }
 
   // ---------------------------------------------------------------- interaction
@@ -553,6 +606,7 @@ public class ElwhaSwitch extends JComponent {
             pressX = e.getX();
             dragFraction = selected ? 1f : 0f;
             startRipple(new Point(handleCenterX(), handleCenterY()));
+            syncMotion(animateAllowed());
             repaint();
           }
 
@@ -577,9 +631,13 @@ public class ElwhaSwitch extends JComponent {
             }
             final boolean wasDragging = dragging;
             final float fraction = dragFraction;
+            if (wasDragging) {
+              slideTween.seed(fraction);
+            }
             pressed = false;
             dragging = false;
             if (!isEnabled()) {
+              syncMotion(false);
               repaint();
               return;
             }
@@ -588,6 +646,7 @@ public class ElwhaSwitch extends JComponent {
             } else if (contains(e.getPoint())) {
               commitUserToggle(!selected);
             }
+            syncMotion(animateAllowed());
             repaint();
           }
         };
@@ -603,8 +662,12 @@ public class ElwhaSwitch extends JComponent {
 
           @Override
           public void focusLost(final FocusEvent e) {
+            if (dragging) {
+              slideTween.seed(dragFraction);
+            }
             pressed = false;
             dragging = false;
+            syncMotion(animateAllowed());
             repaint();
           }
         });
@@ -626,6 +689,7 @@ public class ElwhaSwitch extends JComponent {
                 }
                 pressed = true;
                 startRipple(new Point(handleCenterX(), handleCenterY()));
+                syncMotion(animateAllowed());
                 repaint();
               }
             });
@@ -640,6 +704,7 @@ public class ElwhaSwitch extends JComponent {
                 }
                 pressed = false;
                 commitUserToggle(!selected);
+                syncMotion(animateAllowed());
                 repaint();
               }
             });
@@ -673,6 +738,8 @@ public class ElwhaSwitch extends JComponent {
     if (rippleTimer != null) {
       rippleTimer.stop();
     }
+    slideTween.finish();
+    sizeTween.finish();
     super.removeNotify();
   }
 
@@ -685,5 +752,82 @@ public class ElwhaSwitch extends JComponent {
 
   private static float clampF(final float v) {
     return Math.max(0f, Math.min(1f, v));
+  }
+
+  /** Opaque RGB lerp between two colors. */
+  private static Color mixColor(final Color a, final Color b, final float t) {
+    final float f = clampF(t);
+    return new Color(
+        Math.round(a.getRed() + (b.getRed() - a.getRed()) * f),
+        Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * f),
+        Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * f));
+  }
+
+  /**
+   * A retargeting tween over one float quantity — the CSS-transition model the research §Mo
+   * durations describe. Each {@link #retarget} captures the current value as the new starting point
+   * and re-runs the backing {@link MorphAnimator} {@code 0→1} through the given {@link Easing}, so
+   * a mid-flight direction change (deselect during the select slide, press during a release shrink)
+   * continues from wherever the value currently is instead of jumping.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  private final class RetargetTween {
+
+    private final MorphAnimator animator;
+    private float from;
+    private float to;
+    private Easing easing = Easing.LINEAR;
+
+    RetargetTween(final int durationMs, final float initial) {
+      this.animator = new MorphAnimator(ElwhaSwitch.this, durationMs);
+      this.from = initial;
+      this.to = initial;
+      this.animator.snapTo(1f);
+    }
+
+    float value() {
+      return from + (to - from) * easing.ease(animator.progress());
+    }
+
+    float target() {
+      return to;
+    }
+
+    void retarget(
+        final float target, final int durationMs, final Easing easing, final boolean animate) {
+      if (this.to == target) {
+        if (!animate) {
+          this.from = target;
+          animator.snapTo(1f);
+        }
+        return;
+      }
+      this.from = value();
+      this.to = target;
+      this.easing = easing;
+      animator.setDurationMs(durationMs);
+      if (animate) {
+        animator.snapTo(0f);
+        animator.start();
+      } else {
+        this.from = target;
+        animator.snapTo(1f);
+      }
+    }
+
+    /** Re-seats the tween at an externally-driven value (the drag handoff) without animating. */
+    void seed(final float value) {
+      this.from = value;
+      this.to = value;
+      animator.snapTo(1f);
+    }
+
+    /** Stops the timer and lands on the target — {@code removeNotify} cleanup. */
+    void finish() {
+      animator.immediateFinish();
+    }
   }
 }
