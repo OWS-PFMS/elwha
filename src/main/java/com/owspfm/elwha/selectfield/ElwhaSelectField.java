@@ -22,6 +22,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -53,12 +54,15 @@ import javax.swing.event.DocumentListener;
  * item is the only way to set the value. {@link #setEditable(boolean)} opts into the M3
  * <em>editable</em> exposed dropdown (Phase 2): the embedded field becomes typeable while the menu
  * keeps anchoring to the field, keyboard focus stays in the editor (the ARIA combobox pattern, via
- * the menu's {@code focusHome}), and picking an option still writes back. Multi-select (Phase 3) is
- * a later phase.
+ * the menu's {@code focusHome}), and picking an option still writes back. {@link
+ * #setMultiSelect(boolean)} opts into the multi-select (Phase 3): the menu toggles any number of
+ * options without closing and the field shows a summary of the selection. Editable and multi-select
+ * are mutually exclusive in V1 — enabling one disables the other.
  *
- * <p>Phase 1 ships across stories #374–#378 and Phase 2 across #391–#394; this class began at the
- * S1 skeleton (composition + menu round-trip + arrow toggle) and is extended in place by the later
- * stories (typed value API, keyboard + a11y, variant delegation, Showcase, editable combo).
+ * <p>Phase 1 ships across stories #374–#378, Phase 2 across #391–#394, and Phase 3 across
+ * #397–#400; this class began at the S1 skeleton (composition + menu round-trip + arrow toggle) and
+ * is extended in place by the later stories (typed value API, keyboard + a11y, variant delegation,
+ * Showcase, editable combo, multi-select).
  *
  * @param <T> the option value type
  * @author Charles Bryan
@@ -87,6 +91,8 @@ public class ElwhaSelectField<T> extends JComponent {
   private boolean readOnly;
   private boolean editable;
   private boolean freeTextAllowed;
+  private boolean multiSelect;
+  private final List<T> multiValues = new ArrayList<>();
   private String filterText = "";
   private String committedText = "";
   private boolean suppressFilter;
@@ -167,6 +173,9 @@ public class ElwhaSelectField<T> extends JComponent {
   public void setOptions(final List<T> options) {
     this.options = options == null ? List.of() : List.copyOf(options);
     this.menu = null;
+    if (multiSelect) {
+      reorderMultiValues();
+    }
   }
 
   /**
@@ -182,7 +191,10 @@ public class ElwhaSelectField<T> extends JComponent {
   }
 
   /**
-   * Returns the currently selected option value, or {@code null} if nothing is selected.
+   * Returns the currently selected option value, or {@code null} if nothing is selected. In a
+   * {@linkplain #setMultiSelect multi-select} this is the <em>first</em> selected value in option
+   * order (mirroring {@code JList.getSelectedValue}), or {@code null} when the selection is empty —
+   * read the whole selection via {@link #getSelectedValues()}.
    *
    * @return the selected value, or {@code null}
    */
@@ -196,11 +208,17 @@ public class ElwhaSelectField<T> extends JComponent {
    * {@code null} clears the selection (empty field, the floating label rests). A value that is not
    * among the current {@linkplain #setOptions options} is ignored — a select is constrained to its
    * options. Fires the {@linkplain #addSelectionChangeListener selection-change listeners} only
-   * when the value actually changes.
+   * when the value actually changes. In a {@linkplain #setMultiSelect multi-select} this delegates
+   * to {@link #setSelectedValues} with a one-element (or, for {@code null}, empty) collection — the
+   * value becomes the entire selection.
    *
    * @param value the option to select, or {@code null} to clear
    */
   public void setSelectedValue(final T value) {
+    if (multiSelect) {
+      setSelectedValues(value == null ? List.of() : List.of(value));
+      return;
+    }
     if (value == null) {
       applySelection(-1, null);
       return;
@@ -267,6 +285,9 @@ public class ElwhaSelectField<T> extends JComponent {
     if (this.editable == editable) {
       return;
     }
+    if (editable && multiSelect) {
+      setMultiSelect(false);
+    }
     this.editable = editable;
     if (expanded && menu != null) {
       menu.close();
@@ -299,6 +320,206 @@ public class ElwhaSelectField<T> extends JComponent {
   // read-only (read-only shows the value but does not allow changing it in either mode).
   private void syncEmbeddedReadOnly() {
     field.setReadOnly(!editable || readOnly);
+  }
+
+  // ---- Multi-select (Phase 3, #397) ------------------------------------------
+  // The opt-in lift of the single-selection constraint: the menu is built SelectionMode.MULTI
+  // (toggling never closes; Esc / light-dismiss do) and the value model becomes an option-ordered
+  // list — `multiValues` is canonical, kept pruned to the current options and in option order, with
+  // `selectedValue` tracking its first element so the single-value getter stays meaningful.
+  // Editable and multi are mutually exclusive in V1: enabling one disables the other.
+
+  /**
+   * Whether the select is a multi-select. Default {@code false}: the single select (or, when
+   * {@linkplain #setEditable editable}, the combo).
+   *
+   * @return {@code true} when the menu toggles multiple options
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isMultiSelect() {
+    return multiSelect;
+  }
+
+  /**
+   * Sets the multi-select mode. When {@code true}, the option menu toggles any number of options
+   * and <em>stays open</em> while toggling (Esc, a press outside, or the arrow close it), the field
+   * shows a summary of the selection, and the selection is read and written as an option-ordered
+   * list via {@link #getSelectedValues()} / {@link #setSelectedValues(Collection)}.
+   *
+   * <p><strong>Mode flips preserve what they can.</strong> Turning multi-select on seeds the
+   * selection with the current single value (when set); turning it off collapses the selection to
+   * its first value in option order (the rest clear). Neither flip fires change listeners — the
+   * {@linkplain #getSelectedValue() single value} is unchanged by either.
+   *
+   * <p><strong>Multi-select and the {@linkplain #setEditable editable} combo are mutually exclusive
+   * in V1</strong> (a filterable multi-select is a documented deferral, not silently cut — design
+   * doc §10): enabling multi-select on an editable combo first disables editable mode, and vice
+   * versa.
+   *
+   * @param multiSelect {@code true} for the multi-select
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setMultiSelect(final boolean multiSelect) {
+    if (this.multiSelect == multiSelect) {
+      return;
+    }
+    if (multiSelect && editable) {
+      setEditable(false);
+    }
+    if (expanded && menu != null) {
+      menu.close();
+    }
+    this.menu = null;
+    this.multiSelect = multiSelect;
+    if (multiSelect) {
+      multiValues.clear();
+      if (selectedValue != null) {
+        multiValues.add(selectedValue);
+      }
+      writeMultiSummary();
+    } else {
+      final T first = multiValues.isEmpty() ? null : multiValues.get(0);
+      multiValues.clear();
+      this.selectedValue = first;
+      writeFieldText(first == null ? "" : display.apply(first));
+      this.committedText = field.getText();
+    }
+  }
+
+  /**
+   * Returns the selected option values in <em>option order</em> (not toggle order). In the single
+   * select this is an empty or one-element list mirroring {@link #getSelectedValue()}; in a
+   * {@linkplain #setMultiSelect multi-select} it is the whole selection. Never {@code null}.
+   *
+   * @return an unmodifiable snapshot of the selected values, in option order
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public List<T> getSelectedValues() {
+    if (!multiSelect) {
+      return selectedValue == null ? List.of() : List.of(selectedValue);
+    }
+    return List.copyOf(multiValues);
+  }
+
+  /**
+   * Replaces the selection with the given values. Values not among the current {@linkplain
+   * #setOptions options} are ignored and duplicates collapse; the resulting selection is kept in
+   * option order regardless of the collection's order. {@code null} or an empty collection clears
+   * the selection. In the single select (multi off) this leniently applies the <em>first</em>
+   * recognized value as the single selection — one write path per mode, no exceptions.
+   *
+   * @param values the options to select, or {@code null} to clear
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setSelectedValues(final Collection<T> values) {
+    if (!multiSelect) {
+      if (values != null) {
+        for (final T value : values) {
+          if (options.contains(value)) {
+            setSelectedValue(value);
+            return;
+          }
+        }
+      }
+      setSelectedValue(null);
+      return;
+    }
+    multiValues.clear();
+    if (values != null) {
+      for (final T option : options) {
+        if (values.contains(option) && !multiValues.contains(option)) {
+          multiValues.add(option);
+        }
+      }
+    }
+    this.selectedValue = multiValues.isEmpty() ? null : multiValues.get(0);
+    syncMultiMarks();
+    writeMultiSummary();
+  }
+
+  // The MULTI menu's onSelectionChange: the item's selected flag has already flipped — mirror it
+  // into the value model and refresh the summary, leaving the menu open.
+  private void multiToggle(final ElwhaMenuItem item) {
+    final int index = items.indexOf(item);
+    if (index < 0) {
+      return;
+    }
+    final T value = options.get(index);
+    if (item.isSelected()) {
+      if (!multiValues.contains(value)) {
+        multiValues.add(value);
+      }
+    } else {
+      multiValues.remove(value);
+    }
+    reorderMultiValues();
+    writeMultiSummary();
+  }
+
+  // Re-derives multiValues in option order, pruning values no longer among the options, and keeps
+  // selectedValue on the first element — the model invariant every mutation funnels through.
+  private void reorderMultiValues() {
+    final List<T> ordered = new ArrayList<>();
+    for (final T option : options) {
+      if (multiValues.contains(option) && !ordered.contains(option)) {
+        ordered.add(option);
+      }
+    }
+    multiValues.clear();
+    multiValues.addAll(ordered);
+    this.selectedValue = multiValues.isEmpty() ? null : multiValues.get(0);
+  }
+
+  // Provisional Phase-3 S1 summary: the display strings joined in option order (the real summary
+  // format — overflow policy included — is S2, #398).
+  private void writeMultiSummary() {
+    final StringBuilder sb = new StringBuilder();
+    for (final T value : multiValues) {
+      if (sb.length() > 0) {
+        sb.append(", ");
+      }
+      sb.append(display.apply(value));
+    }
+    writeFieldText(sb.toString());
+  }
+
+  private void syncMultiMarks() {
+    if (menu == null) {
+      return;
+    }
+    for (int i = 0; i < items.size(); i++) {
+      items.get(i).setSelected(multiValues.contains(options.get(i)));
+    }
+  }
+
+  /**
+   * Toggles the option at {@code index} through the same path a real MULTI menu pick takes — the
+   * headless smoke's seam (the popup itself needs a window). A no-op outside multi-select mode or
+   * range.
+   *
+   * @param index the option index to toggle
+   */
+  void toggleIndex(final int index) {
+    if (!multiSelect || index < 0 || index >= options.size()) {
+      return;
+    }
+    optionsMenu();
+    final ElwhaMenuItem item = items.get(index);
+    item.setSelected(!item.isSelected());
+    multiToggle(item);
+  }
+
+  private void writeFieldText(final String text) {
+    this.suppressFilter = true;
+    try {
+      field.setText(text);
+    } finally {
+      this.suppressFilter = false;
+    }
   }
 
   // ---- Filter-as-you-type (Phase 2, #392) -----------------------------------
@@ -858,12 +1079,7 @@ public class ElwhaSelectField<T> extends JComponent {
     for (int i = 0; i < items.size(); i++) {
       items.get(i).setSelected(i == index);
     }
-    this.suppressFilter = true;
-    try {
-      field.setText(value == null ? "" : display.apply(value));
-    } finally {
-      this.suppressFilter = false;
-    }
+    writeFieldText(value == null ? "" : display.apply(value));
     this.committedText = field.getText();
     this.filterText = "";
     applyFilter();
@@ -915,15 +1131,15 @@ public class ElwhaSelectField<T> extends JComponent {
     items.clear();
     final ElwhaMenu.Builder builder =
         ElwhaMenu.builder()
-            .selectionMode(SelectionMode.SINGLE)
-            .onSelectionChange(this::commit)
+            .selectionMode(multiSelect ? SelectionMode.MULTI : SelectionMode.SINGLE)
+            .onSelectionChange(multiSelect ? this::multiToggle : this::commit)
             .onClose(cause -> handleClose());
     if (editable) {
       builder.focusHome(field.getEditor());
     }
     for (final T option : options) {
       final ElwhaMenuItem item = ElwhaMenuItem.of(display.apply(option));
-      item.setSelected(option.equals(selectedValue));
+      item.setSelected(multiSelect ? multiValues.contains(option) : option.equals(selectedValue));
       items.add(item);
       builder.addItem(item);
     }
