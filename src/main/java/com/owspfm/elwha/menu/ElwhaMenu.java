@@ -305,6 +305,70 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
   }
 
+  /**
+   * Moves the roving highlight (the M3 focused-item ring) by {@code delta}, wrapping — the
+   * keyboard-navigation surface for an owner whose focus lives outside the menu (a {@linkplain
+   * Builder#focusHome(Component) focus-home} combobox routes its editor's Down/Up here, since the
+   * menu surface never holds focus and its own bindings are inert). No-op while the menu is not
+   * showing.
+   *
+   * @param delta the steps to move (negative = up)
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void moveHighlight(final int delta) {
+    moveFocus(delta);
+  }
+
+  /**
+   * Activates the currently highlighted item — the Enter-commit surface for a focus-home owner.
+   * Selection-mode semantics apply exactly as for a real activation (a {@link SelectionMode#SINGLE}
+   * menu selects and closes). No-op while not showing, on an empty highlight, or on a disabled
+   * item.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void activateHighlighted() {
+    activateFocused();
+  }
+
+  /**
+   * The currently highlighted item, or {@code null} when the menu is not showing or nothing is
+   * highlighted. Lets a focus-home owner decide whether Enter should commit the highlight or fall
+   * back to its own commit semantics (e.g. the disabled "No matches" placeholder is highlighted but
+   * not committable).
+   *
+   * @return the highlighted item, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaMenuItem getHighlightedItem() {
+    if (itemOrder == null || focusedIndex < 0 || focusedIndex >= itemOrder.size()) {
+      return null;
+    }
+    return itemOrder.get(focusedIndex);
+  }
+
+  /**
+   * Moves the highlight to the given item (it must be currently visible). The combobox
+   * filter-priority surface — the select field highlights the first prefix match as the filter
+   * narrows. No-op while not showing or when the item is not in the visible order.
+   *
+   * @param item the item to highlight
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void highlight(final ElwhaMenuItem item) {
+    if (itemOrder == null) {
+      return;
+    }
+    final int index = itemOrder.indexOf(item);
+    if (index >= 0) {
+      setFocusedIndex(index);
+    }
+  }
+
   // Re-populates the live group panels with the now-visible items, recomputes the column (and
   // scroll viewport) preferred size, and re-runs the anchored placement — the open-menu half of
   // setVisibleItems. BoxLayout does not honor component visibility, so hidden items must leave
