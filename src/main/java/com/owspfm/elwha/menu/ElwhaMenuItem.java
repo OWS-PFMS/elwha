@@ -852,6 +852,13 @@ public final class ElwhaMenuItem extends JComponent {
     if (rippleTimer != null) {
       rippleTimer.stop();
     }
+    // Items are cached across menu opens, and teardown (or a setVisibleItems relayout) removes
+    // them without a mouseExited — reset the transient interaction chrome here or a stale hover
+    // fill / frozen mid-ripple frame repaints on the next open.
+    hovered = false;
+    pressed = false;
+    rippleOrigin = null;
+    rippleProgress = 1f;
     super.removeNotify();
   }
 

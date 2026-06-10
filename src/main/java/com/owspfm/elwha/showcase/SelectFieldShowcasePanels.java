@@ -33,8 +33,9 @@ import javax.swing.event.DocumentListener;
 /**
  * The Elwha Showcase leaf for {@link ElwhaSelectField} — a {@link ComponentWorkbench} stage with
  * live controls (variant, label, supporting / placeholder text, option count, error, read-only,
- * enabled) plus a live "selected value" readout, and a Gallery of the variant&#215;state matrix, a
- * long scrolling option list, and a pre-selected value.
+ * enabled, plus the Phase-2 editable / free-text policy toggles) and a live "selected value"
+ * readout, and a Gallery of the variant&#215;state matrix, a long scrolling option list, a
+ * pre-selected value, and the editable filter-as-you-type combo.
  *
  * <p>The controls dogfood Elwha components: the variant picker is an {@link ElwhaButtonGroup}, the
  * boolean toggles are {@code SELECTABLE} {@link ElwhaButton}s, the option-count stepper is a pair
@@ -60,7 +61,8 @@ final class SelectFieldShowcasePanels {
             stack(
                 gallerySection("Variants × states", buildStateMatrix()),
                 gallerySection("Long option list (scrolls)", buildLongListGallery()),
-                gallerySection("Pre-selected value", buildPreselectedGallery()))));
+                gallerySection("Pre-selected value", buildPreselectedGallery()),
+                gallerySection("Filtering (editable combo)", buildFilteringGallery()))));
     return tabs;
   }
 
@@ -100,6 +102,8 @@ final class SelectFieldShowcasePanels {
     final ElwhaButton readOnlyToggle = toggle("Read-only");
     final ElwhaButton enabledToggle = toggle("Enabled");
     enabledToggle.setSelected(true);
+    final ElwhaButton editableToggle = toggle("Editable");
+    final ElwhaButton freeTextToggle = toggle("Free text");
 
     final JLabel readout = new JLabel("Selected value: —");
 
@@ -115,6 +119,9 @@ final class SelectFieldShowcasePanels {
     controls.addControl("Error text", errorTextCtl);
     controls.addControl("", readOnlyToggle);
     controls.addControl("", enabledToggle);
+    controls.addSection("Editable combo");
+    controls.addControl("", editableToggle);
+    controls.addControl("", freeTextToggle);
     controls.addSection("Selection");
     controls.addControl("", readout);
 
@@ -140,11 +147,19 @@ final class SelectFieldShowcasePanels {
           }
           select.setReadOnly(readOnlyToggle.isSelected());
           select.setEnabled(enabledToggle.isSelected());
+          select.setEditable(editableToggle.isSelected());
+          select.setFreeTextAllowed(freeTextToggle.isSelected());
           if (carried != null && options.contains(carried)) {
             select.setSelectedValue(carried);
           }
           select.addSelectionChangeListener(
-              value -> readout.setText("Selected value: " + (value == null ? "—" : value)));
+              value ->
+                  readout.setText(
+                      value != null
+                          ? "Selected value: " + value
+                          : select.getText().isEmpty()
+                              ? "Selected value: —"
+                              : "Free text: \"" + select.getText() + "\""));
           readout.setText(
               "Selected value: "
                   + (select.getSelectedValue() == null ? "—" : select.getSelectedValue()));
@@ -161,7 +176,9 @@ final class SelectFieldShowcasePanels {
                   errorToggle.isSelected(),
                   errorTextCtl.getText(),
                   readOnlyToggle.isSelected(),
-                  enabledToggle.isSelected()));
+                  enabledToggle.isSelected(),
+                  editableToggle.isSelected(),
+                  freeTextToggle.isSelected()));
         };
 
     variantGroup.addSelectionListener(group -> apply.run());
@@ -181,7 +198,10 @@ final class SelectFieldShowcasePanels {
         new ElwhaTextField[] {labelCtl, supportingCtl, placeholderCtl, errorTextCtl}) {
       onChange(ctl, apply);
     }
-    for (final ElwhaButton tgl : new ElwhaButton[] {errorToggle, readOnlyToggle, enabledToggle}) {
+    for (final ElwhaButton tgl :
+        new ElwhaButton[] {
+          errorToggle, readOnlyToggle, enabledToggle, editableToggle, freeTextToggle
+        }) {
       tgl.addActionListener(event -> apply.run());
     }
     apply.run();
@@ -197,7 +217,9 @@ final class SelectFieldShowcasePanels {
       final boolean error,
       final String errorText,
       final boolean readOnly,
-      final boolean enabled) {
+      final boolean enabled,
+      final boolean editable,
+      final boolean freeText) {
     final StringBuilder code = new StringBuilder(420);
     code.append("ElwhaSelectField<String> select = ElwhaSelectField.")
         .append(variant == ElwhaTextField.Variant.FILLED ? "filled" : "outlined")
@@ -224,6 +246,12 @@ final class SelectFieldShowcasePanels {
     }
     if (!enabled) {
       code.append("select.setEnabled(false);\n");
+    }
+    if (editable) {
+      code.append("select.setEditable(true);\n");
+    }
+    if (freeText) {
+      code.append("select.setFreeTextAllowed(true);\n");
     }
     code.append("select.addSelectionChangeListener(value -> /* … */);");
     return code.toString();
@@ -346,6 +374,39 @@ final class SelectFieldShowcasePanels {
 
     galleryRow(grid, gbc, "Filled, pre-selected (Mars)", filled);
     galleryRow(grid, gbc, "Outlined, pre-selected (Jupiter)", outlined);
+    return grid;
+  }
+
+  private static JComponent buildFilteringGallery() {
+    final JPanel grid = new JPanel(new GridBagLayout());
+    grid.setBorder(BorderFactory.createEmptyBorder(12, 20, 20, 20));
+    final GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(8, 12, 8, 12);
+    gbc.anchor = GridBagConstraints.WEST;
+    gbc.gridy = 0;
+
+    final ElwhaSelectField<String> filtering = ElwhaSelectField.outlined("Fruit");
+    filtering.setOptions(
+        List.of(
+            "Apple",
+            "Apricot",
+            "Banana",
+            "Blueberry",
+            "Cherry",
+            "Cranberry",
+            "Elderberry",
+            "Mango"));
+    filtering.setEditable(true);
+    filtering.setSupportingText("Type to filter — try \"berry\"");
+
+    final ElwhaSelectField<String> freeText = ElwhaSelectField.outlined("Tag");
+    freeText.setOptions(List.of("bug", "feature", "docs", "ci"));
+    freeText.setEditable(true);
+    freeText.setFreeTextAllowed(true);
+    freeText.setSupportingText("Free text allowed — commit anything with Enter");
+
+    galleryRow(grid, gbc, "Editable combo (constrained)", filtering);
+    galleryRow(grid, gbc, "Editable combo, free text allowed", freeText);
     return grid;
   }
 

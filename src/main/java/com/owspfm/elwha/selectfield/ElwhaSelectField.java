@@ -15,12 +15,15 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.KeyboardFocusManager;
 import java.awt.RenderingHints;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -29,6 +32,8 @@ import javax.accessibility.AccessibleState;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 /**
  * The M3 <strong>exposed dropdown menu</strong> (select field): a text field with a trailing
@@ -43,14 +48,17 @@ import javax.swing.SwingUtilities;
  * API with menu/option concerns). The architecture is locked by the epic #331 S1 spike; see {@code
  * docs/research/elwha-selectfield-design.md} §2.
  *
- * <p><strong>V1 is the non-editable (pure) select.</strong> The embedded field is read-only — the
- * field and the trailing arrow are the open/close affordance, and picking a menu item is the only
- * way to set the value. The editable filter-as-you-type combo (Phase 2) and multi-select (Phase 3)
- * are later phases.
+ * <p><strong>The default is the non-editable (pure) select.</strong> The embedded field is
+ * read-only — the field and the trailing arrow are the open/close affordance, and picking a menu
+ * item is the only way to set the value. {@link #setEditable(boolean)} opts into the M3
+ * <em>editable</em> exposed dropdown (Phase 2): the embedded field becomes typeable while the menu
+ * keeps anchoring to the field, keyboard focus stays in the editor (the ARIA combobox pattern, via
+ * the menu's {@code focusHome}), and picking an option still writes back. Multi-select (Phase 3) is
+ * a later phase.
  *
- * <p>Phase 1 ships across stories #374–#378; this class begins at the S1 skeleton (composition +
- * menu round-trip + arrow toggle) and is extended in place by the later stories (typed value API,
- * keyboard + a11y, variant delegation, Showcase).
+ * <p>Phase 1 ships across stories #374–#378 and Phase 2 across #391–#394; this class began at the
+ * S1 skeleton (composition + menu round-trip + arrow toggle) and is extended in place by the later
+ * stories (typed value API, keyboard + a11y, variant delegation, Showcase, editable combo).
  *
  * @param <T> the option value type
  * @author Charles Bryan
@@ -74,8 +82,14 @@ public class ElwhaSelectField<T> extends JComponent {
   private T selectedValue;
 
   private ElwhaMenu menu;
+  private ElwhaMenuItem noMatchesItem;
   private boolean expanded;
   private boolean readOnly;
+  private boolean editable;
+  private boolean freeTextAllowed;
+  private String filterText = "";
+  private String committedText = "";
+  private boolean suppressFilter;
 
   /**
    * Creates a {@link ElwhaTextField.Variant#FILLED} select field with the given floating label.
@@ -117,6 +131,8 @@ public class ElwhaSelectField<T> extends JComponent {
     updateArrowA11y(false);
     installFieldMouse();
     installFieldKeyboard();
+    installFilterListener();
+    installCommitOnFocusLoss();
   }
 
   /**
@@ -215,6 +231,278 @@ public class ElwhaSelectField<T> extends JComponent {
    */
   public void removeSelectionChangeListener(final Consumer<T> listener) {
     selectionListeners.remove(listener);
+  }
+
+  // ---- Editable mode (Phase 2, #391) ----------------------------------------
+  // The M3 editable exposed dropdown: the embedded editor becomes typeable while the menu keeps
+  // anchoring to the field. Keyboard focus stays in the editor the whole time the menu is open —
+  // the menu is built with focusHome(editor), so opening never steals focus and presses/focus in
+  // the editor never light-dismiss. The arrow still toggles; typing or Down/Alt+Down opens.
+
+  /**
+   * Whether the select is editable — the M3 editable exposed dropdown (combobox). Default {@code
+   * false}: the pure select, whose field is read-only and whose body press toggles the menu.
+   *
+   * @return {@code true} when the embedded field is typeable
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isEditable() {
+    return editable;
+  }
+
+  /**
+   * Sets the editable mode. When {@code true}, the embedded field becomes typeable (free text is
+   * accepted), a press in the field places the caret instead of toggling the menu, and the menu —
+   * opened by the trailing arrow, typing, or Down/Alt+Down — leaves keyboard focus in the editor
+   * (the ARIA combobox pattern). When {@code false} (the default), the field is read-only and the
+   * whole field body is the open/close affordance. Flipping the mode closes an open menu and
+   * rebuilds it lazily on the next open.
+   *
+   * @param editable {@code true} for the editable combo
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setEditable(final boolean editable) {
+    if (this.editable == editable) {
+      return;
+    }
+    this.editable = editable;
+    if (expanded && menu != null) {
+      menu.close();
+    }
+    this.menu = null;
+    this.filterText = "";
+    this.committedText = field.getText();
+    field
+        .getEditor()
+        .getAccessibleContext()
+        .setAccessibleDescription(
+            editable ? "Editable combo box. Typing filters the options; Down opens them." : null);
+    syncEmbeddedReadOnly();
+  }
+
+  /**
+   * Returns the field's current text. In the pure select this is always the selected option's
+   * display string (or empty); in the {@linkplain #setEditable editable} combo it may be free text
+   * the user has typed that maps to no option.
+   *
+   * @return the field text
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getText() {
+    return field.getText();
+  }
+
+  // The embedded editor is typeable only in editable mode, and never while the select itself is
+  // read-only (read-only shows the value but does not allow changing it in either mode).
+  private void syncEmbeddedReadOnly() {
+    field.setReadOnly(!editable || readOnly);
+  }
+
+  // ---- Filter-as-you-type (Phase 2, #392) -----------------------------------
+  // Live typing (not programmatic write-backs — those are suppressed) becomes the filter text;
+  // the cached menu's items are shown/hidden in place via ElwhaMenu.setVisibleItems, so filtering
+  // never rebuilds the menu and composes with the rebuild-on-options-change lifecycle. A pick or
+  // setSelectedValue clears the filter, so the next open shows the full list again.
+
+  private void installFilterListener() {
+    field
+        .getEditor()
+        .getDocument()
+        .addDocumentListener(
+            new DocumentListener() {
+              @Override
+              public void insertUpdate(final DocumentEvent e) {
+                onEditorTextChanged();
+              }
+
+              @Override
+              public void removeUpdate(final DocumentEvent e) {
+                onEditorTextChanged();
+              }
+
+              @Override
+              public void changedUpdate(final DocumentEvent e) {
+                onEditorTextChanged();
+              }
+            });
+  }
+
+  private void onEditorTextChanged() {
+    if (!editable || suppressFilter) {
+      return;
+    }
+    this.filterText = field.getText();
+    applyFilter();
+  }
+
+  /**
+   * Pushes the current filter onto the cached menu: a case-insensitive match against each option's
+   * display string (a prefix match and a substring match both qualify), the empty filter showing
+   * everything. When nothing matches, the disabled "No matches" placeholder row is shown instead of
+   * a stale list. No-op while the menu is unbuilt — {@link #rebuildMenu()} re-applies the filter
+   * after building.
+   */
+  private void applyFilter() {
+    if (menu == null || !editable) {
+      return;
+    }
+    final List<ElwhaMenuItem> visible = new ArrayList<>();
+    final String filter = filterText.toLowerCase(Locale.ROOT);
+    for (int i = 0; i < items.size(); i++) {
+      if (filter.isEmpty()
+          || display.apply(options.get(i)).toLowerCase(Locale.ROOT).contains(filter)) {
+        visible.add(items.get(i));
+      }
+    }
+    if (visible.isEmpty() && noMatchesItem != null) {
+      visible.add(noMatchesItem);
+    }
+    menu.setVisibleItems(visible);
+    highlightPreferredMatch(visible, filter);
+  }
+
+  // The "prefix, then substring" priority surfaces as the highlight: the first prefix match gets
+  // the active-option ring while the menu is open; absent one, the first visible match does.
+  private void highlightPreferredMatch(final List<ElwhaMenuItem> visible, final String filter) {
+    if (filter.isEmpty() || visible.isEmpty() || visible.get(0) == noMatchesItem) {
+      return;
+    }
+    ElwhaMenuItem preferred = visible.get(0);
+    for (int i = 0; i < items.size(); i++) {
+      if (visible.contains(items.get(i))
+          && display.apply(options.get(i)).toLowerCase(Locale.ROOT).startsWith(filter)) {
+        preferred = items.get(i);
+        break;
+      }
+    }
+    menu.highlight(preferred);
+  }
+
+  // ---- Editable value model + commit semantics (Phase 2, #393) ---------------
+  // Commit points: Enter (the menu highlight when one is committable, else the field text),
+  // focus leaving the control, and a menu pick. Esc with the menu closed reverts to the last
+  // committed value; with it open, Esc just closes (the menu's own binding). The committed value
+  // is the single source of truth the field text resolves back to.
+
+  /**
+   * Whether free text — text that matches no option — may be committed in the {@linkplain
+   * #setEditable editable} combo. Default {@code false}: the combo is constrained to its options.
+   *
+   * @return {@code true} when free text commits
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isFreeTextAllowed() {
+    return freeTextAllowed;
+  }
+
+  /**
+   * Sets the free-text policy for the {@linkplain #setEditable editable} combo. When {@code false}
+   * (the default, constrained), committing text that is not an option reverts the field to the last
+   * committed value. When {@code true}, the free text is kept: the field shows it (read it via
+   * {@link #getText()}), {@link #getSelectedValue()} becomes {@code null} (free text maps to no
+   * option), the menu's {@code selected} marks clear, and the {@linkplain
+   * #addSelectionChangeListener selection-change listeners} fire (with {@code null}) when that
+   * cleared a previous selection. Text that matches an option case-insensitively always resolves to
+   * the option itself (canonicalizing the display), under either policy.
+   *
+   * @param freeTextAllowed {@code true} to allow committing free text
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setFreeTextAllowed(final boolean freeTextAllowed) {
+    this.freeTextAllowed = freeTextAllowed;
+  }
+
+  private void installCommitOnFocusLoss() {
+    field
+        .getEditor()
+        .addFocusListener(
+            new FocusAdapter() {
+              @Override
+              public void focusLost(final FocusEvent e) {
+                // Neither a temporary loss (window deactivation — typing resumes on return) nor
+                // a hop within the control (editor -> arrow) is a commit point.
+                if (!editable
+                    || e.isTemporary()
+                    || (e.getOppositeComponent() != null
+                        && SwingUtilities.isDescendingFrom(
+                            e.getOppositeComponent(), ElwhaSelectField.this))) {
+                  return;
+                }
+                resolveFieldText();
+              }
+            });
+  }
+
+  /**
+   * Resolves the field's current text into a committed value — the Enter / focus-loss seam (also
+   * the headless smoke's). Text matching an option case-insensitively selects that option
+   * (canonicalizing the display); otherwise the {@linkplain #setFreeTextAllowed free-text policy}
+   * decides between keeping the text and reverting to the last committed value.
+   */
+  void resolveFieldText() {
+    if (!editable) {
+      return;
+    }
+    final String text = field.getText();
+    for (int i = 0; i < options.size(); i++) {
+      if (display.apply(options.get(i)).equalsIgnoreCase(text)) {
+        applySelection(i, options.get(i));
+        return;
+      }
+    }
+    if (freeTextAllowed) {
+      commitFreeText(text);
+    } else {
+      revertToCommitted();
+    }
+  }
+
+  /** Reverts the field text to the last committed value — the Esc seam (menu closed). */
+  void revertToCommitted() {
+    if (!editable) {
+      return;
+    }
+    this.suppressFilter = true;
+    try {
+      field.setText(committedText);
+    } finally {
+      this.suppressFilter = false;
+    }
+    this.filterText = "";
+    applyFilter();
+  }
+
+  private void commitFreeText(final String text) {
+    final boolean changed = this.selectedValue != null;
+    this.selectedValue = null;
+    optionsMenu();
+    for (final ElwhaMenuItem item : items) {
+      item.setSelected(false);
+    }
+    this.committedText = text;
+    this.filterText = "";
+    applyFilter();
+    if (changed) {
+      fireSelectionChange();
+    }
+  }
+
+  // Enter while the menu is open: commit the highlight when it is committable; the "No matches"
+  // placeholder (or an empty highlight) falls back to the field-text commit.
+  private void commitFromMenu() {
+    final ElwhaMenu open = optionsMenu();
+    final ElwhaMenuItem highlighted = open.getHighlightedItem();
+    if (highlighted != null && highlighted.isEnabled()) {
+      open.activateHighlighted();
+      return;
+    }
+    open.close();
+    resolveFieldText();
   }
 
   // ---- Variant, state, and slot delegation (S4) -----------------------------
@@ -340,6 +628,7 @@ public class ElwhaSelectField<T> extends JComponent {
    */
   public void setReadOnly(final boolean readOnly) {
     this.readOnly = readOnly;
+    syncEmbeddedReadOnly();
   }
 
   @Override
@@ -368,6 +657,14 @@ public class ElwhaSelectField<T> extends JComponent {
         new MouseAdapter() {
           @Override
           public void mousePressed(final MouseEvent e) {
+            if (editable) {
+              // Editable combo: the editor owns presses (caret placement); a press on the field
+              // chrome just moves focus into the editor. Only the arrow toggles by pointer.
+              if (e.getComponent() == field) {
+                field.getEditor().requestFocusInWindow();
+              }
+              return;
+            }
             toggle();
           }
         };
@@ -410,6 +707,7 @@ public class ElwhaSelectField<T> extends JComponent {
       arrowAnim.reverse();
     }
     updateArrowA11y(expand);
+    updateEditorA11y(expand);
   }
 
   /** The arrow's current rotation in degrees — the smoke's reduced-motion-instant probe. */
@@ -426,6 +724,22 @@ public class ElwhaSelectField<T> extends JComponent {
         expand ? AccessibleState.EXPANDED : AccessibleState.COLLAPSED);
   }
 
+  // The aria-autocomplete approximation: the typeable editor itself announces the popup's
+  // expanded/collapsed flips (Swing has no combobox role for a text component), mirroring the
+  // arrow's state change. The option list keeps its MENU_ITEM roles + selected states.
+  private void updateEditorA11y(final boolean expand) {
+    if (!editable) {
+      return;
+    }
+    field
+        .getEditor()
+        .getAccessibleContext()
+        .firePropertyChange(
+            AccessibleContext.ACCESSIBLE_STATE_PROPERTY,
+            expand ? AccessibleState.COLLAPSED : AccessibleState.EXPANDED,
+            expand ? AccessibleState.EXPANDED : AccessibleState.COLLAPSED);
+  }
+
   // Field-focused, menu-closed keyboard: Down / Up / Enter / Space / Alt+Down open the menu (which
   // then owns navigation, Esc-close, and focus-return); a printable key opens and forwards itself
   // to
@@ -437,7 +751,50 @@ public class ElwhaSelectField<T> extends JComponent {
             new KeyAdapter() {
               @Override
               public void keyPressed(final KeyEvent e) {
+                if (editable && expanded) {
+                  // Focus stays in the editor while the menu is open, so the menu's own bindings
+                  // are inert — route the combobox navigation keys to it from here. Esc is left
+                  // for the menu surface's WHEN_IN_FOCUSED_WINDOW dismiss binding.
+                  switch (e.getKeyCode()) {
+                    case KeyEvent.VK_DOWN:
+                      optionsMenu().moveHighlight(1);
+                      e.consume();
+                      break;
+                    case KeyEvent.VK_UP:
+                      optionsMenu().moveHighlight(-1);
+                      e.consume();
+                      break;
+                    case KeyEvent.VK_ENTER:
+                      commitFromMenu();
+                      e.consume();
+                      break;
+                    default:
+                      break;
+                  }
+                  return;
+                }
                 if (expanded) {
+                  return;
+                }
+                if (editable) {
+                  // Enter commits the typed text, Esc reverts to the committed value, Down (incl.
+                  // Alt+Down, the ARIA combobox open gesture) opens. Space stays a text key.
+                  switch (e.getKeyCode()) {
+                    case KeyEvent.VK_DOWN:
+                      open();
+                      e.consume();
+                      break;
+                    case KeyEvent.VK_ENTER:
+                      resolveFieldText();
+                      e.consume();
+                      break;
+                    case KeyEvent.VK_ESCAPE:
+                      revertToCommitted();
+                      e.consume();
+                      break;
+                    default:
+                      break;
+                  }
                   return;
                 }
                 switch (e.getKeyCode()) {
@@ -460,6 +817,12 @@ public class ElwhaSelectField<T> extends JComponent {
                 }
                 final char c = e.getKeyChar();
                 if (!Character.isLetterOrDigit(c)) {
+                  return;
+                }
+                if (editable) {
+                  // Typing begins the combo interaction: open the menu but let the character land
+                  // in the editor (no consume, no type-ahead — focus stays in the editor).
+                  open();
                   return;
                 }
                 open();
@@ -495,7 +858,15 @@ public class ElwhaSelectField<T> extends JComponent {
     for (int i = 0; i < items.size(); i++) {
       items.get(i).setSelected(i == index);
     }
-    field.setText(value == null ? "" : display.apply(value));
+    this.suppressFilter = true;
+    try {
+      field.setText(value == null ? "" : display.apply(value));
+    } finally {
+      this.suppressFilter = false;
+    }
+    this.committedText = field.getText();
+    this.filterText = "";
+    applyFilter();
     if (changed) {
       fireSelectionChange();
     }
@@ -547,13 +918,27 @@ public class ElwhaSelectField<T> extends JComponent {
             .selectionMode(SelectionMode.SINGLE)
             .onSelectionChange(this::commit)
             .onClose(cause -> handleClose());
+    if (editable) {
+      builder.focusHome(field.getEditor());
+    }
     for (final T option : options) {
       final ElwhaMenuItem item = ElwhaMenuItem.of(display.apply(option));
       item.setSelected(option.equals(selectedValue));
       items.add(item);
       builder.addItem(item);
     }
+    if (editable) {
+      // The no-match state: a disabled placeholder row shown only when the filter empties the
+      // list. Deliberately not in `items`, so it can never map to an option index.
+      this.noMatchesItem = ElwhaMenuItem.of("No matches");
+      noMatchesItem.setEnabled(false);
+      noMatchesItem.setVisible(false);
+      builder.addItem(noMatchesItem);
+    } else {
+      this.noMatchesItem = null;
+    }
     this.menu = builder.build();
+    applyFilter();
   }
 
   /**
