@@ -528,8 +528,11 @@ public abstract class AbstractElwhaOverlay {
     if (surface == null) {
       return;
     }
+    // A preferred target that already owns focus is done — requestFocusInWindow() on the current
+    // owner can return false (the request is dropped as redundant), and falling through would
+    // hand focus to the surface, yanking it out of a focus-home editor mid-keystroke (#331 P2).
     final Component preferred = initialFocusTarget();
-    if (preferred != null && preferred.requestFocusInWindow()) {
+    if (preferred != null && (preferred.isFocusOwner() || preferred.requestFocusInWindow())) {
       return;
     }
     final Component first = firstFocusable(surface);

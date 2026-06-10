@@ -424,8 +424,10 @@ public class ElwhaSelectField<T> extends JComponent {
             new FocusAdapter() {
               @Override
               public void focusLost(final FocusEvent e) {
-                // Focus hopping within the control (editor -> arrow) is not a commit point.
+                // Neither a temporary loss (window deactivation — typing resumes on return) nor
+                // a hop within the control (editor -> arrow) is a commit point.
                 if (!editable
+                    || e.isTemporary()
                     || (e.getOppositeComponent() != null
                         && SwingUtilities.isDescendingFrom(
                             e.getOppositeComponent(), ElwhaSelectField.this))) {
