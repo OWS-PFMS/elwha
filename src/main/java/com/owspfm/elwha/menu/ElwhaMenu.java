@@ -15,6 +15,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -116,8 +117,13 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
   // Live state — non-null while shown.
   private List<JComponent> groupPanels;
+  private List<List<ElwhaMenuItem>> effectiveGroups;
   private List<ElwhaMenuItem> itemOrder;
   private MenuSurface menuSurface;
+  private JComponent column;
+  private JScrollPane scrollPane;
+  private int contentWidth;
+  private int scrollBodyH;
   private int focusedIndex = -1;
   // The roving focus ring is keyboard-visible (M3 focus-visible): the index tracks always, but the
   // ring paints only after keyboard navigation, not on a pointer-opened menu.
@@ -273,11 +279,69 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     return List.copyOf(selected);
   }
 
+  /**
+   * Live-filters the menu to the given items — the filter-as-you-type surface for the editable
+   * select field (#331 Phase 2 S2). Items not in {@code visible} are hidden (they keep their state
+   * — {@code selected} marks survive filtering); {@code null} restores every item. When the menu is
+   * currently open, the surface re-lays out in place: the item column rebuilds to the visible set,
+   * the anchored placement recomputes (the container shrinks/grows and may re-flip), and the roving
+   * focus resets to the first visible item. When closed, the visibility sticks and the next open
+   * builds the filtered column directly.
+   *
+   * <p>The filter is item-level: under {@link Layout#GROUPED}, group separators are not elided when
+   * a group filters down to nothing — callers filtering grouped menus should expect the separator
+   * chrome to remain.
+   *
+   * @param visible the items to show, or {@code null} to show all
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setVisibleItems(final Collection<ElwhaMenuItem> visible) {
+    for (final ElwhaMenuItem item : flatten()) {
+      item.setVisible(visible == null || visible.contains(item));
+    }
+    if (isShowing() && menuSurface != null) {
+      refreshOpenColumn();
+    }
+  }
+
+  // Re-populates the live group panels with the now-visible items, recomputes the column (and
+  // scroll viewport) preferred size, and re-runs the anchored placement — the open-menu half of
+  // setVisibleItems. BoxLayout does not honor component visibility, so hidden items must leave
+  // the containment hierarchy, not merely turn invisible.
+  private void refreshOpenColumn() {
+    for (int i = 0; i < groupPanels.size(); i++) {
+      final JComponent groupPanel = groupPanels.get(i);
+      groupPanel.removeAll();
+      for (final ElwhaMenuItem item : effectiveGroups.get(i)) {
+        if (item.isVisible()) {
+          groupPanel.add(item);
+        }
+      }
+    }
+    final int columnHeight = totalColumnHeight(contentWidth);
+    column.setPreferredSize(new Dimension(contentWidth, columnHeight));
+    if (scrollPane != null) {
+      scrollPane.setPreferredSize(
+          new Dimension(
+              contentWidth + SCROLLBAR_WIDTH_PX,
+              Math.min(scrollBodyH, Math.max(columnHeight, ElwhaMenuItem.MIN_TARGET_PX))));
+    }
+    this.itemOrder = flattenVisible();
+    this.focusedIndex = itemOrder.isEmpty() ? -1 : 0;
+    pushFocusedState();
+    column.revalidate();
+    relayout();
+    menuSurface.revalidate();
+    menuSurface.repaint();
+    layeredPane.repaint();
+  }
+
   // ---------------------------------------------------------- surface
 
   @Override
   protected JComponent createSurface() {
-    final int contentWidth = resolveContentWidth();
+    this.contentWidth = resolveContentWidth();
     final int columnHeight = totalColumnHeight(contentWidth);
 
     final int available =
@@ -285,14 +349,17 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
             - 2 * VIEWPORT_MARGIN_PX;
     final Insets shadow = ShadowPainter.shadowInsets(ELEVATION);
     final int chromeV = 2 * (shadow.top + CONTENT_PAD_PX);
-    this.scrollable = columnHeight + chromeV > available;
+    // The scroll decision uses the FULL item set, not the currently-visible one: a menu opened
+    // under a filter can have its filter cleared while open, and a non-scrollable column cannot
+    // grow a scrollbar after the fact.
+    this.scrollable = allColumnHeight(contentWidth) + chromeV > available;
     if (scrollable && separator == Separator.GAP) {
       // M3: gaps are unsupported in a scrollable menu — force the subtle divider.
       this.separator = Separator.DIVIDER;
     }
 
     this.groupPanels = new ArrayList<>();
-    final JComponent column = buildColumn(contentWidth);
+    this.column = buildColumn(contentWidth);
 
     final JComponent content;
     if (scrollable) {
@@ -305,17 +372,22 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       scroll.getViewport().setOpaque(false);
       scroll.setBorder(BorderFactory.createEmptyBorder());
       scroll.getVerticalScrollBar().setUnitIncrement(16);
-      final int bodyH = Math.max(ElwhaMenuItem.MIN_TARGET_PX, available - chromeV);
-      scroll.setPreferredSize(new Dimension(contentWidth + SCROLLBAR_WIDTH_PX, bodyH));
+      this.scrollBodyH = Math.max(ElwhaMenuItem.MIN_TARGET_PX, available - chromeV);
+      scroll.setPreferredSize(
+          new Dimension(
+              contentWidth + SCROLLBAR_WIDTH_PX,
+              Math.min(scrollBodyH, Math.max(columnHeight, ElwhaMenuItem.MIN_TARGET_PX))));
+      this.scrollPane = scroll;
       content = scroll;
     } else {
+      this.scrollPane = null;
       content = column;
     }
 
     final boolean gapCards = layout == Layout.GROUPED && separator == Separator.GAP && !scrollable;
     this.menuSurface = new MenuSurface(content, gapCards);
 
-    this.itemOrder = flatten();
+    this.itemOrder = flattenVisible();
     this.focusedIndex = itemOrder.isEmpty() ? -1 : 0;
     this.keyboardFocusVisible = false;
     pushFocusedState();
@@ -325,8 +397,11 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   @Override
   protected void clearTransientState() {
     groupPanels = null;
+    effectiveGroups = null;
     itemOrder = null;
     menuSurface = null;
+    column = null;
+    scrollPane = null;
     focusedIndex = -1;
   }
 
@@ -363,6 +438,23 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       }
       first = false;
       for (final ElwhaMenuItem item : group) {
+        if (item.isVisible()) {
+          h += item.getPreferredSize().height;
+        }
+      }
+    }
+    return h;
+  }
+
+  private int allColumnHeight(final int contentWidth) {
+    int h = 0;
+    boolean first = true;
+    for (final List<ElwhaMenuItem> group : groups) {
+      if (!first) {
+        h += layout == Layout.GROUPED ? separatorGapHeight() : 0;
+      }
+      first = false;
+      for (final ElwhaMenuItem item : group) {
         h += item.getPreferredSize().height;
       }
     }
@@ -376,17 +468,18 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   // Builds the vertical item column from group panels, inserting gap/divider separators between
   // groups (GROUPED). STANDARD collapses to a single flat group.
   private JComponent buildColumn(final int contentWidth) {
-    final JPanel column = new JPanel();
-    column.setOpaque(false);
-    column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+    final JPanel columnPanel = new JPanel();
+    columnPanel.setOpaque(false);
+    columnPanel.setLayout(new BoxLayout(columnPanel, BoxLayout.Y_AXIS));
 
     final List<List<ElwhaMenuItem>> effective =
         layout == Layout.STANDARD ? List.of(flatten()) : groups;
+    this.effectiveGroups = effective;
 
     boolean first = true;
     for (final List<ElwhaMenuItem> group : effective) {
       if (!first && layout == Layout.GROUPED) {
-        column.add(separatorComponent(contentWidth));
+        columnPanel.add(separatorComponent(contentWidth));
       }
       first = false;
       final JPanel groupPanel = new JPanel();
@@ -395,21 +488,37 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       groupPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
       for (final ElwhaMenuItem item : group) {
         item.setAlignmentX(Component.LEFT_ALIGNMENT);
-        groupPanel.add(item);
+        // BoxLayout allocates space for invisible components, so filtered-out items stay out of
+        // the containment hierarchy entirely (setVisibleItems re-populates on changes).
+        if (item.isVisible()) {
+          groupPanel.add(item);
+        }
       }
       groupPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-      column.add(groupPanel);
+      columnPanel.add(groupPanel);
       groupPanels.add(groupPanel);
     }
-    column.setPreferredSize(new Dimension(contentWidth, totalColumnHeight(contentWidth)));
-    column.setMaximumSize(new Dimension(contentWidth, Integer.MAX_VALUE));
-    return column;
+    columnPanel.setPreferredSize(new Dimension(contentWidth, totalColumnHeight(contentWidth)));
+    columnPanel.setMaximumSize(new Dimension(contentWidth, Integer.MAX_VALUE));
+    return columnPanel;
   }
 
   private List<ElwhaMenuItem> flatten() {
     final List<ElwhaMenuItem> flat = new ArrayList<>();
     for (final List<ElwhaMenuItem> group : groups) {
       flat.addAll(group);
+    }
+    return flat;
+  }
+
+  private List<ElwhaMenuItem> flattenVisible() {
+    final List<ElwhaMenuItem> flat = new ArrayList<>();
+    for (final List<ElwhaMenuItem> group : groups) {
+      for (final ElwhaMenuItem item : group) {
+        if (item.isVisible()) {
+          flat.add(item);
+        }
+      }
     }
     return flat;
   }

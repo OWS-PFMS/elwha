@@ -21,6 +21,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -29,6 +30,8 @@ import javax.accessibility.AccessibleState;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 /**
  * The M3 <strong>exposed dropdown menu</strong> (select field): a text field with a trailing
@@ -77,9 +80,12 @@ public class ElwhaSelectField<T> extends JComponent {
   private T selectedValue;
 
   private ElwhaMenu menu;
+  private ElwhaMenuItem noMatchesItem;
   private boolean expanded;
   private boolean readOnly;
   private boolean editable;
+  private String filterText = "";
+  private boolean suppressFilter;
 
   /**
    * Creates a {@link ElwhaTextField.Variant#FILLED} select field with the given floating label.
@@ -121,6 +127,7 @@ public class ElwhaSelectField<T> extends JComponent {
     updateArrowA11y(false);
     installFieldMouse();
     installFieldKeyboard();
+    installFilterListener();
   }
 
   /**
@@ -260,6 +267,7 @@ public class ElwhaSelectField<T> extends JComponent {
       menu.close();
     }
     this.menu = null;
+    this.filterText = "";
     syncEmbeddedReadOnly();
   }
 
@@ -280,6 +288,68 @@ public class ElwhaSelectField<T> extends JComponent {
   // read-only (read-only shows the value but does not allow changing it in either mode).
   private void syncEmbeddedReadOnly() {
     field.setReadOnly(!editable || readOnly);
+  }
+
+  // ---- Filter-as-you-type (Phase 2, #392) -----------------------------------
+  // Live typing (not programmatic write-backs — those are suppressed) becomes the filter text;
+  // the cached menu's items are shown/hidden in place via ElwhaMenu.setVisibleItems, so filtering
+  // never rebuilds the menu and composes with the rebuild-on-options-change lifecycle. A pick or
+  // setSelectedValue clears the filter, so the next open shows the full list again.
+
+  private void installFilterListener() {
+    field
+        .getEditor()
+        .getDocument()
+        .addDocumentListener(
+            new DocumentListener() {
+              @Override
+              public void insertUpdate(final DocumentEvent e) {
+                onEditorTextChanged();
+              }
+
+              @Override
+              public void removeUpdate(final DocumentEvent e) {
+                onEditorTextChanged();
+              }
+
+              @Override
+              public void changedUpdate(final DocumentEvent e) {
+                onEditorTextChanged();
+              }
+            });
+  }
+
+  private void onEditorTextChanged() {
+    if (!editable || suppressFilter) {
+      return;
+    }
+    this.filterText = field.getText();
+    applyFilter();
+  }
+
+  /**
+   * Pushes the current filter onto the cached menu: a case-insensitive match against each option's
+   * display string (a prefix match and a substring match both qualify), the empty filter showing
+   * everything. When nothing matches, the disabled "No matches" placeholder row is shown instead of
+   * a stale list. No-op while the menu is unbuilt — {@link #rebuildMenu()} re-applies the filter
+   * after building.
+   */
+  private void applyFilter() {
+    if (menu == null || !editable) {
+      return;
+    }
+    final List<ElwhaMenuItem> visible = new ArrayList<>();
+    final String filter = filterText.toLowerCase(Locale.ROOT);
+    for (int i = 0; i < items.size(); i++) {
+      if (filter.isEmpty()
+          || display.apply(options.get(i)).toLowerCase(Locale.ROOT).contains(filter)) {
+        visible.add(items.get(i));
+      }
+    }
+    if (visible.isEmpty() && noMatchesItem != null) {
+      visible.add(noMatchesItem);
+    }
+    menu.setVisibleItems(visible);
   }
 
   // ---- Variant, state, and slot delegation (S4) -----------------------------
@@ -584,7 +654,14 @@ public class ElwhaSelectField<T> extends JComponent {
     for (int i = 0; i < items.size(); i++) {
       items.get(i).setSelected(i == index);
     }
-    field.setText(value == null ? "" : display.apply(value));
+    this.suppressFilter = true;
+    try {
+      field.setText(value == null ? "" : display.apply(value));
+    } finally {
+      this.suppressFilter = false;
+    }
+    this.filterText = "";
+    applyFilter();
     if (changed) {
       fireSelectionChange();
     }
@@ -645,7 +722,18 @@ public class ElwhaSelectField<T> extends JComponent {
       items.add(item);
       builder.addItem(item);
     }
+    if (editable) {
+      // The no-match state: a disabled placeholder row shown only when the filter empties the
+      // list. Deliberately not in `items`, so it can never map to an option index.
+      this.noMatchesItem = ElwhaMenuItem.of("No matches");
+      noMatchesItem.setEnabled(false);
+      noMatchesItem.setVisible(false);
+      builder.addItem(noMatchesItem);
+    } else {
+      this.noMatchesItem = null;
+    }
     this.menu = builder.build();
+    applyFilter();
   }
 
   /**
