@@ -123,6 +123,14 @@ All five stories built on one stacked branch: S1 skeleton (#374) → S2 typed va
 
 **Later phases (progressive filing):** Phase 2 (editable / filter-as-you-type combo) and Phase 3 (multi-select + summary display) are filed when Phase 1 lands. Epic #331 stays open until the final V1 phase ships.
 
+## Phase 2 complete (#391–#394 — 2026-06-10) — editable combo shipped
+
+All four stories built on one stacked branch: S1 editable spike (#391) → S2 filter-as-you-type (#392, `ElwhaMenu.setVisibleItems` live in-place filter + the "No matches" placeholder) → S3 value model + keyboard + a11y (#393, free-text policy, Enter/Esc/focus-loss commit semantics, `moveHighlight`/`activateHighlighted` routing, editor-side combobox a11y) → S4 Showcase + docs (#394). Four fresh demos + four headless guards. Zero new theme tokens held; zero new assets (Phase 2 is pure behavior).
+
+**Dogfood pass (Phase 2 S4) — documented skip, again.** The story asked to revisit swapping the Showcase toolbar palette picker (`JComboBox`) now that an editable combo exists. Re-evaluated and **still skipped, not forced**: the Phase-1 blockers were never about typeability — they are (1) the picker's per-option **swatch icons** (custom `ListCellRenderer`); `ElwhaSelectField` has no per-option icon API (its display function is `Function<T,String>`), so the swap would silently drop the palette swatches or require inventing a per-option-icon API outside this story's scope; and (2) the form-field anatomy (floating label + reserved supporting row, ~56 dp) still breaks the compact toolbar height — editable mode does not change the chrome. The natural unlock is a future per-option leading-icon hook + a dense/toolbar density variant; until then the Showcase's Select Field leaf and the Phase-2 filtering gallery are the genuine in-repo dogfood sites.
+
+**Phase 3 (final V1 phase, files when Phase 2 lands):** multi-select — `SelectionMode.MULTI` + a summary display in the field; its PR `Closes #331`.
+
 ## Phase 2 S1 spike outcome (#391 — 2026-06-10) — editable architecture LOCKED
 
 `setEditable(boolean)` (default `false` = the shipped pure select) lifts the embedded field's read-only behind the opt-in; the select-level `setReadOnly` re-imposes it in either mode (`field.setReadOnly(!editable || readOnly)`). The coexistence questions the story asked to decide:

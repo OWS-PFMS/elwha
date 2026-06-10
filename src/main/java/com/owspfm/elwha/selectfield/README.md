@@ -13,7 +13,7 @@ It is **pure composition** of two shipped primitives — it paints nothing of it
 - **not a subclass** of `ElwhaTextField` — which would inherit a typing surface a pure select must suppress;
 - **not a `selectMode` flag** on the field — which would bloat the field's API with menu/option concerns and a generic `<T>` it doesn't want.
 
-The field stays a clean single-responsibility primitive; the select field is a clean composition. The embedded field is `setReadOnly(true)` (V1 is a non-editable select) and the trailing slot is **owned** by the select field's dropdown-arrow `ElwhaIconButton` — there is no `setTrailingIcon` passthrough, so a consumer cannot displace the arrow. **Zero new theme tokens**; the only new asset is the bundled `arrow_drop_down` / `arrow_drop_up` glyph (`MaterialIcons.arrowDropDown()` / `arrowDropUp()`).
+The field stays a clean single-responsibility primitive; the select field is a clean composition. The embedded field is `setReadOnly(true)` by default (the pure select; `setEditable(true)` lifts it — see below) and the trailing slot is **owned** by the select field's dropdown-arrow `ElwhaIconButton` — there is no `setTrailingIcon` passthrough, so a consumer cannot displace the arrow. **Zero new theme tokens**; the only new asset is the bundled `arrow_drop_down` / `arrow_drop_up` glyph (`MaterialIcons.arrowDropDown()` / `arrowDropUp()`).
 
 ---
 
@@ -59,9 +59,28 @@ Plus the **expanded vs collapsed** menu state: the arrow rotates down↔up as th
 
 ---
 
+## Editable mode — the filter-as-you-type combo (Phase 2)
+
+`setEditable(true)` opts into the M3 **editable exposed dropdown** (the ARIA combobox): the embedded field becomes typeable while the menu keeps anchoring to the field, and **keyboard focus stays in the editor the whole time the menu is open** (the menu is built with `ElwhaMenu.Builder.focusHome(editor)`, so opening never steals focus and presses/focus in the editor never light-dismiss).
+
+```java
+ElwhaSelectField<String> fruit = ElwhaSelectField.outlined("Fruit");
+fruit.setOptions(List.of("Apple", "Banana", "Blueberry", "Cherry"));
+fruit.setEditable(true);                 // typeable; typing opens + filters
+fruit.setFreeTextAllowed(true);          // optional: commit text that matches no option
+```
+
+- **Filtering.** Typing filters the open menu live — a case-insensitive match against each option's display string (prefix and substring both qualify); the first **prefix** match carries the active-option highlight. The empty filter shows everything; a no-match shows a disabled **"No matches"** row, never a stale list. Filtering hides/shows the cached menu's items in place (`ElwhaMenu.setVisibleItems`) — no rebuild thrash — and re-applies across the rebuild-on-options-change lifecycle.
+- **Commit semantics.** **Enter** commits the menu highlight when one is committable, else resolves the field text; text matching an option case-insensitively always resolves to the option (canonicalizing the display). **Esc** closes the open menu; pressed again (menu closed) it reverts to the last committed value. **Focus leaving the control** resolves the text the same way Enter does.
+- **Free-text policy.** Constrained by default: committing unknown text reverts. With `setFreeTextAllowed(true)` the text is kept — `getText()` reads it, `getSelectedValue()` becomes `null` (free text maps to no option), the menu's `selected` marks clear, and the change listener fires (with `null`) if that cleared a selection.
+- **Open gestures.** Typing a letter/digit opens; **Down / Alt+Down** opens; the arrow toggles. Enter/Space/Up are text keys and do **not** open. A press in the field places the caret (only the arrow toggles by pointer).
+- The pure select (`editable == false`, the default) is byte-for-byte the Phase-1 behavior.
+
+---
+
 ## Keyboard & accessibility
 
-The ARIA **combobox** pattern, approximated in Swing. With the field focused and the menu closed:
+The ARIA **combobox** pattern, approximated in Swing. With the field focused and the menu closed (pure select):
 
 | Key | Action |
 | --- | --- |
@@ -69,10 +88,22 @@ The ARIA **combobox** pattern, approximated in Swing. With the field focused and
 | a printable key | open and **type-ahead** to a matching option |
 | **Esc** | close and return focus to the field |
 
-Once open, the shipped `ElwhaMenu` keyboard map owns navigation; committing closes and refocuses the field. The interactive node for screen readers is the arrow `ElwhaIconButton` — its accessible name encodes the expanded/collapsed state and it fires an `ACCESSIBLE_STATE_PROPERTY` expand/collapse announcement on toggle (the one native-Swing gap, mirroring how `ElwhaTextField` engineers error→alert). Option items keep their `MENU_ITEM` roles + `selected` state.
+Once open, the shipped `ElwhaMenu` keyboard map owns navigation; committing closes and refocuses the field.
+
+In **editable** mode the editor keeps focus, so the keyboard routes differently:
+
+| Key | Menu closed | Menu open |
+| --- | --- | --- |
+| printable keys | type (a letter/digit also opens) | type — the live filter |
+| **Down / Alt+Down** | open | move the highlight down |
+| **Up** | — | move the highlight up |
+| **Enter** | resolve the field text | commit the highlight (or resolve the text) |
+| **Esc** | revert to the committed value | close the menu |
+
+The highlight navigation rides the menu's public combobox surface (`moveHighlight` / `activateHighlighted` / `getHighlightedItem` / `highlight`). The editable editor also announces the popup's expanded/collapsed flips on its own accessible context and carries an accessible description ("Editable combo box…") — the `aria-autocomplete` approximation. The interactive node for screen readers is the arrow `ElwhaIconButton` — its accessible name encodes the expanded/collapsed state and it fires an `ACCESSIBLE_STATE_PROPERTY` expand/collapse announcement on toggle (the one native-Swing gap, mirroring how `ElwhaTextField` engineers error→alert). Option items keep their `MENU_ITEM` roles + `selected` state.
 
 ---
 
 ## Scope
 
-V1 ships the **non-editable (pure) select** across Phase 1 (`S1`–`S5`). Documented later phases: **editable / filter-as-you-type combo** (Phase 2) and **multi-select** (`SelectionMode.MULTI` + summary display, Phase 3) — filed, not cut. Epic [#331](https://github.com/OWS-PFMS/elwha/issues/331).
+Phase 1 (`S1`–`S5`, #374–#378) shipped the **non-editable (pure) select**; Phase 2 (#391–#394) shipped the **editable / filter-as-you-type combo**. The remaining V1 phase is **multi-select** (`SelectionMode.MULTI` + summary display, Phase 3) — filed when Phase 2 lands, not cut. Epic [#331](https://github.com/OWS-PFMS/elwha/issues/331).
