@@ -235,6 +235,22 @@ public abstract class AbstractElwhaOverlay {
     beginClose();
   }
 
+  /**
+   * Whether a component counts as <em>inside</em> this overlay for the dismiss policy — consulted
+   * by both the focus-escape listener and the light-dismiss outside-press listener. The default is
+   * a descendant of the surface. A subclass hosting an external focus home (the editable-combobox
+   * pattern, where keyboard focus stays in the anchored field while the menu is open) widens this
+   * so focus changes and mouse presses there do not dismiss the overlay.
+   *
+   * @param c the focus owner or press target to classify
+   * @return {@code true} when {@code c} belongs to the overlay
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected boolean ownsFocus(final Component c) {
+    return surface != null && SwingUtilities.isDescendingFrom(c, surface);
+  }
+
   /** Hook for subclasses to null out their own live state during teardown. Default no-op. */
   protected void clearTransientState() {}
 
@@ -453,7 +469,7 @@ public abstract class AbstractElwhaOverlay {
             return;
           }
           final Component owner = (Component) next;
-          if (SwingUtilities.isDescendingFrom(owner, surface)) {
+          if (ownsFocus(owner)) {
             return;
           }
           if (SwingUtilities.getWindowAncestor(owner) != hostWindow) {
@@ -496,7 +512,7 @@ public abstract class AbstractElwhaOverlay {
             return;
           }
           final Object src = me.getSource();
-          if (src instanceof Component c && SwingUtilities.isDescendingFrom(c, surface)) {
+          if (src instanceof Component c && ownsFocus(c)) {
             return;
           }
           onOutsidePress();

@@ -111,6 +111,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   private final ColorStyle colorStyle;
   private final SelectionMode selectionMode;
   private final Consumer<ElwhaMenuItem> onSelectionChange;
+  private final Component focusHome;
   private Separator separator;
 
   // Live state — non-null while shown.
@@ -131,6 +132,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     this.colorStyle = b.colorStyle;
     this.selectionMode = b.selectionMode;
     this.onSelectionChange = b.onSelectionChange;
+    this.focusHome = b.focusHome;
     final boolean selectable = selectionMode != SelectionMode.NONE;
     for (final List<ElwhaMenuItem> group : groups) {
       for (final ElwhaMenuItem item : group) {
@@ -192,6 +194,20 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
    */
   public void open(final Component anchor) {
     show(anchor);
+  }
+
+  /**
+   * Closes the menu programmatically (a {@link MenuDismissCause#PROGRAMMATIC} dismiss — focus
+   * restores to the trigger). A no-op when the menu is not showing or already closing. The
+   * counterpart to {@link #open(Component)} for owners that manage the menu's lifecycle themselves,
+   * e.g. the select field's editable combo (#331 Phase 2), whose trailing arrow explicitly closes
+   * the open menu.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void close() {
+    close(MenuDismissCause.PROGRAMMATIC);
   }
 
   /**
@@ -316,7 +332,16 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
   @Override
   protected Component initialFocusTarget() {
-    return menuSurface;
+    return focusHome != null ? focusHome : menuSurface;
+  }
+
+  // With a focus home, the anchored field keeps keyboard focus while the menu is open (the
+  // editable-combobox pattern): focus changes and presses within its hierarchy must not read as
+  // an escape/outside-press, or every keystroke in the field would dismiss the menu.
+  @Override
+  protected boolean ownsFocus(final Component c) {
+    return super.ownsFocus(c)
+        || (focusHome != null && SwingUtilities.isDescendingFrom(c, focusHome));
   }
 
   private int resolveContentWidth() {
@@ -643,6 +668,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     private SelectionMode selectionMode = SelectionMode.NONE;
     private Consumer<ElwhaMenuItem> onSelectionChange;
     private Consumer<MenuDismissCause> onClose;
+    private Component focusHome;
 
     private Builder() {
       groups.add(new ArrayList<>());
@@ -745,6 +771,29 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
      */
     public Builder onSelectionChange(final Consumer<ElwhaMenuItem> onSelectionChange) {
       this.onSelectionChange = onSelectionChange;
+      return this;
+    }
+
+    /**
+     * Declares the focusable component that keeps keyboard focus while the menu is open — the ARIA
+     * editable-combobox pattern (#331 Phase 2), where the anchored field's editor stays typeable
+     * and the menu is a non-focused listbox beneath it. When set: opening the menu does not move
+     * focus onto the menu surface (initial focus goes to {@code focusHome} instead), and focus
+     * changes or mouse presses within {@code focusHome}'s hierarchy do not light-dismiss the menu.
+     * {@code null} (the default) keeps the standard menu behavior — focus moves into the menu on
+     * open.
+     *
+     * <p>With a focus home the menu surface never holds focus, so its own key bindings
+     * (Up/Down/Enter/Space/type-ahead) do not fire; the owner routes keyboard navigation
+     * explicitly.
+     *
+     * @param focusHome the component that retains focus, or {@code null} for the default
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public Builder focusHome(final Component focusHome) {
+      this.focusHome = focusHome;
       return this;
     }
 

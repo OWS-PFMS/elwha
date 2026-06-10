@@ -43,14 +43,17 @@ import javax.swing.SwingUtilities;
  * API with menu/option concerns). The architecture is locked by the epic #331 S1 spike; see {@code
  * docs/research/elwha-selectfield-design.md} §2.
  *
- * <p><strong>V1 is the non-editable (pure) select.</strong> The embedded field is read-only — the
- * field and the trailing arrow are the open/close affordance, and picking a menu item is the only
- * way to set the value. The editable filter-as-you-type combo (Phase 2) and multi-select (Phase 3)
- * are later phases.
+ * <p><strong>The default is the non-editable (pure) select.</strong> The embedded field is
+ * read-only — the field and the trailing arrow are the open/close affordance, and picking a menu
+ * item is the only way to set the value. {@link #setEditable(boolean)} opts into the M3
+ * <em>editable</em> exposed dropdown (Phase 2): the embedded field becomes typeable while the menu
+ * keeps anchoring to the field, keyboard focus stays in the editor (the ARIA combobox pattern, via
+ * the menu's {@code focusHome}), and picking an option still writes back. Multi-select (Phase 3) is
+ * a later phase.
  *
- * <p>Phase 1 ships across stories #374–#378; this class begins at the S1 skeleton (composition +
- * menu round-trip + arrow toggle) and is extended in place by the later stories (typed value API,
- * keyboard + a11y, variant delegation, Showcase).
+ * <p>Phase 1 ships across stories #374–#378 and Phase 2 across #391–#394; this class began at the
+ * S1 skeleton (composition + menu round-trip + arrow toggle) and is extended in place by the later
+ * stories (typed value API, keyboard + a11y, variant delegation, Showcase, editable combo).
  *
  * @param <T> the option value type
  * @author Charles Bryan
@@ -76,6 +79,7 @@ public class ElwhaSelectField<T> extends JComponent {
   private ElwhaMenu menu;
   private boolean expanded;
   private boolean readOnly;
+  private boolean editable;
 
   /**
    * Creates a {@link ElwhaTextField.Variant#FILLED} select field with the given floating label.
@@ -217,6 +221,67 @@ public class ElwhaSelectField<T> extends JComponent {
     selectionListeners.remove(listener);
   }
 
+  // ---- Editable mode (Phase 2, #391) ----------------------------------------
+  // The M3 editable exposed dropdown: the embedded editor becomes typeable while the menu keeps
+  // anchoring to the field. Keyboard focus stays in the editor the whole time the menu is open —
+  // the menu is built with focusHome(editor), so opening never steals focus and presses/focus in
+  // the editor never light-dismiss. The arrow still toggles; typing or Down/Alt+Down opens.
+
+  /**
+   * Whether the select is editable — the M3 editable exposed dropdown (combobox). Default {@code
+   * false}: the pure select, whose field is read-only and whose body press toggles the menu.
+   *
+   * @return {@code true} when the embedded field is typeable
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isEditable() {
+    return editable;
+  }
+
+  /**
+   * Sets the editable mode. When {@code true}, the embedded field becomes typeable (free text is
+   * accepted), a press in the field places the caret instead of toggling the menu, and the menu —
+   * opened by the trailing arrow, typing, or Down/Alt+Down — leaves keyboard focus in the editor
+   * (the ARIA combobox pattern). When {@code false} (the default), the field is read-only and the
+   * whole field body is the open/close affordance. Flipping the mode closes an open menu and
+   * rebuilds it lazily on the next open.
+   *
+   * @param editable {@code true} for the editable combo
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setEditable(final boolean editable) {
+    if (this.editable == editable) {
+      return;
+    }
+    this.editable = editable;
+    if (expanded && menu != null) {
+      menu.close();
+    }
+    this.menu = null;
+    syncEmbeddedReadOnly();
+  }
+
+  /**
+   * Returns the field's current text. In the pure select this is always the selected option's
+   * display string (or empty); in the {@linkplain #setEditable editable} combo it may be free text
+   * the user has typed that maps to no option.
+   *
+   * @return the field text
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getText() {
+    return field.getText();
+  }
+
+  // The embedded editor is typeable only in editable mode, and never while the select itself is
+  // read-only (read-only shows the value but does not allow changing it in either mode).
+  private void syncEmbeddedReadOnly() {
+    field.setReadOnly(!editable || readOnly);
+  }
+
   // ---- Variant, state, and slot delegation (S4) -----------------------------
   // The embedded field carries the variant (per the filled()/outlined() factories) and every state;
   // the select field delegates to it. The trailing slot is OWNED by the select field (the arrow) —
@@ -340,6 +405,7 @@ public class ElwhaSelectField<T> extends JComponent {
    */
   public void setReadOnly(final boolean readOnly) {
     this.readOnly = readOnly;
+    syncEmbeddedReadOnly();
   }
 
   @Override
@@ -368,6 +434,14 @@ public class ElwhaSelectField<T> extends JComponent {
         new MouseAdapter() {
           @Override
           public void mousePressed(final MouseEvent e) {
+            if (editable) {
+              // Editable combo: the editor owns presses (caret placement); a press on the field
+              // chrome just moves focus into the editor. Only the arrow toggles by pointer.
+              if (e.getComponent() == field) {
+                field.getEditor().requestFocusInWindow();
+              }
+              return;
+            }
             toggle();
           }
         };
@@ -440,6 +514,15 @@ public class ElwhaSelectField<T> extends JComponent {
                 if (expanded) {
                   return;
                 }
+                if (editable) {
+                  // Enter/Space are text keys in a typeable editor; only Down (incl. Alt+Down,
+                  // the ARIA combobox open gesture) opens.
+                  if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    open();
+                    e.consume();
+                  }
+                  return;
+                }
                 switch (e.getKeyCode()) {
                   case KeyEvent.VK_DOWN:
                   case KeyEvent.VK_UP:
@@ -460,6 +543,12 @@ public class ElwhaSelectField<T> extends JComponent {
                 }
                 final char c = e.getKeyChar();
                 if (!Character.isLetterOrDigit(c)) {
+                  return;
+                }
+                if (editable) {
+                  // Typing begins the combo interaction: open the menu but let the character land
+                  // in the editor (no consume, no type-ahead — focus stays in the editor).
+                  open();
                   return;
                 }
                 open();
@@ -547,6 +636,9 @@ public class ElwhaSelectField<T> extends JComponent {
             .selectionMode(SelectionMode.SINGLE)
             .onSelectionChange(this::commit)
             .onClose(cause -> handleClose());
+    if (editable) {
+      builder.focusHome(field.getEditor());
+    }
     for (final T option : options) {
       final ElwhaMenuItem item = ElwhaMenuItem.of(display.apply(option));
       item.setSelected(option.equals(selectedValue));
