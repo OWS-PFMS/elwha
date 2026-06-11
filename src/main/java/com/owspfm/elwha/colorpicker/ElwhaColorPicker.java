@@ -3,17 +3,11 @@ package com.owspfm.elwha.colorpicker;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.tabs.ElwhaTab;
 import com.owspfm.elwha.tabs.ElwhaTabs;
-import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
@@ -397,48 +391,7 @@ public class ElwhaColorPicker extends JComponent {
     return switch (mode) {
       case SWATCHES -> new SwatchesPane(this);
       case SPECTRUM -> new SpectrumPane(this);
-      case SLIDERS -> new PlaceholderPane(this, mode);
+      case SLIDERS -> new SlidersPane(this);
     };
-  }
-
-  /** S1 stand-in pane; each pane story replaces one {@link #createPane} arm. */
-  private static final class PlaceholderPane extends ColorPickerPane {
-
-    private final PickerMode mode;
-
-    PlaceholderPane(final ElwhaColorPicker picker, final PickerMode mode) {
-      super(picker);
-      this.mode = mode;
-    }
-
-    @Override
-    void syncFromPicker(final Color color) {
-      repaint();
-    }
-
-    @Override
-    public Dimension getPreferredSize() {
-      return new Dimension(PREFERRED_WIDTH, 220);
-    }
-
-    @Override
-    protected void paintComponent(final Graphics g) {
-      final Graphics2D g2 = (Graphics2D) g.create();
-      try {
-        g2.setRenderingHint(
-            RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        final Font font = TypeRole.BODY_MEDIUM.resolve();
-        final FontMetrics fm = g2.getFontMetrics(font);
-        g2.setFont(font);
-        g2.setColor(ColorRole.ON_SURFACE_VARIANT.resolve());
-        final String text = mode.label() + " pane";
-        g2.drawString(
-            text,
-            (getWidth() - fm.stringWidth(text)) / 2,
-            (getHeight() - fm.getHeight()) / 2 + fm.getAscent());
-      } finally {
-        g2.dispose();
-      }
-    }
   }
 }
