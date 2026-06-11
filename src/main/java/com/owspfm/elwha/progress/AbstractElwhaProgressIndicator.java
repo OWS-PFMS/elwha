@@ -3,6 +3,12 @@ package com.owspfm.elwha.progress;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
 import java.awt.event.HierarchyEvent;
+import javax.accessibility.Accessible;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
+import javax.accessibility.AccessibleState;
+import javax.accessibility.AccessibleStateSet;
+import javax.accessibility.AccessibleValue;
 import javax.swing.BoundedRangeModel;
 import javax.swing.DefaultBoundedRangeModel;
 import javax.swing.JComponent;
@@ -40,7 +46,7 @@ import javax.swing.event.ChangeListener;
  * @version v0.4.0
  * @since v0.4.0
  */
-public abstract class AbstractElwhaProgressIndicator extends JComponent {
+public abstract class AbstractElwhaProgressIndicator extends JComponent implements Accessible {
 
   /** The M3 default track / active-indicator thickness, px. */
   public static final int TRACK_THICKNESS_DEFAULT_PX = 4;
@@ -667,7 +673,142 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent {
         amplitudeFraction = amplitudeTargetNow();
       }
     }
+    if (accessibleContext != null && !indeterminate) {
+      accessibleContext.firePropertyChange(
+          AccessibleContext.ACCESSIBLE_VALUE_PROPERTY, null, model.getValue());
+    }
     repaint();
+  }
+
+  /**
+   * The accessible context — role {@link AccessibleRole#PROGRESS_BAR} with an {@link
+   * AccessibleValue} backed by the model; the value reads {@code null} while indeterminate (an
+   * indeterminate indicator has no meaningful progress to report). Name the activity via {@code
+   * getAccessibleContext().setAccessibleName("Download progress")}.
+   *
+   * @return the accessible context
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaProgressIndicator();
+    }
+    return accessibleContext;
+  }
+
+  /**
+   * The {@link AccessibleContext} implementation for progress indicators — mirrors {@code
+   * JProgressBar.AccessibleJProgressBar} (role, model-backed value, extent-aware maximum) except
+   * that the current value is withheld while {@linkplain #isIndeterminate() indeterminate}.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected class AccessibleElwhaProgressIndicator extends AccessibleJComponent
+      implements AccessibleValue {
+
+    /**
+     * Creates the context.
+     *
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    protected AccessibleElwhaProgressIndicator() {}
+
+    /**
+     * The role — {@link AccessibleRole#PROGRESS_BAR}.
+     *
+     * @return the role
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.PROGRESS_BAR;
+    }
+
+    /**
+     * Adds {@link AccessibleState#BUSY} while indeterminate.
+     *
+     * @return the state set
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    @Override
+    public AccessibleStateSet getAccessibleStateSet() {
+      final AccessibleStateSet states = super.getAccessibleStateSet();
+      if (isIndeterminate()) {
+        states.add(AccessibleState.BUSY);
+      }
+      return states;
+    }
+
+    /**
+     * This context is its own value model.
+     *
+     * @return {@code this}
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    @Override
+    public AccessibleValue getAccessibleValue() {
+      return this;
+    }
+
+    /**
+     * The model value — {@code null} while indeterminate.
+     *
+     * @return the current value, or {@code null}
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    @Override
+    public Number getCurrentAccessibleValue() {
+      return isIndeterminate() ? null : getModel().getValue();
+    }
+
+    /**
+     * Sets the model value.
+     *
+     * @param n the new value
+     * @return {@code true} when applied; {@code false} for {@code null}
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    @Override
+    public boolean setCurrentAccessibleValue(final Number n) {
+      if (n == null) {
+        return false;
+      }
+      setValue(n.intValue());
+      return true;
+    }
+
+    /**
+     * The model minimum.
+     *
+     * @return the minimum
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    @Override
+    public Number getMinimumAccessibleValue() {
+      return getModel().getMinimum();
+    }
+
+    /**
+     * The model maximum less the extent (the largest reachable value).
+     *
+     * @return the maximum
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    @Override
+    public Number getMaximumAccessibleValue() {
+      return getModel().getMaximum() - getModel().getExtent();
+    }
   }
 
   /**
