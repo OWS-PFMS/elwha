@@ -1,6 +1,8 @@
 package com.owspfm.elwha.tabs;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -62,10 +64,14 @@ public class ElwhaTabs extends JComponent {
   static final int PRIMARY_INDICATOR_HEIGHT_PX = 3;
   static final int PRIMARY_INDICATOR_CORNER_RADIUS_PX = 3;
   static final int SECONDARY_INDICATOR_HEIGHT_PX = 2;
+  static final int INDICATOR_SLIDE_MS = 250;
 
   private final TabsVariant variant;
   private final List<ElwhaTab> tabs = new ArrayList<>();
   private final List<ChangeListener> changeListeners = new ArrayList<>();
+
+  private final MorphAnimator slideAnimator = new MorphAnimator(this, INDICATOR_SLIDE_MS);
+  private Rectangle slideFromRect;
 
   private int activeTabIndex = -1;
 
@@ -327,9 +333,23 @@ public class ElwhaTabs extends JComponent {
     if (index == activeTabIndex) {
       return;
     }
+    // FLIP-style slide (research §I): freeze the indicator's current rect as the slide origin,
+    // then animate toward the (live) rest rect of the new active tab — recomputing the
+    // destination each paint self-corrects across mid-slide relayouts. Snap when there is no
+    // previous tab (initial auto-activation), the bar is not displayable, or it has no geometry
+    // yet; reduced motion snaps inside MorphAnimator.start().
+    final Rectangle from =
+        activeTabIndex >= 0 && isDisplayable() && getWidth() > 0 ? currentIndicatorRect() : null;
     activeTabIndex = index;
     for (int i = 0; i < tabs.size(); i++) {
       tabs.get(i).setActive(i == index);
+    }
+    slideFromRect = from;
+    if (from != null) {
+      slideAnimator.snapTo(0f);
+      slideAnimator.start();
+    } else {
+      slideAnimator.snapTo(1f);
     }
     if (!silent) {
       fireChange();
@@ -410,11 +430,10 @@ public class ElwhaTabs extends JComponent {
   }
 
   private void paintIndicator(final Graphics2D g2) {
-    final ElwhaTab active = getActiveTab();
-    if (active == null) {
+    final Rectangle rect = currentIndicatorRect();
+    if (rect == null) {
       return;
     }
-    final Rectangle rect = indicatorRestRect(active);
     g2.setColor(ColorRole.PRIMARY.resolve());
     if (variant == TabsVariant.PRIMARY) {
       // Top corners rounded, bottom square: fill a taller round-rect clipped to the indicator
@@ -430,6 +449,31 @@ public class ElwhaTabs extends JComponent {
     } else {
       g2.fill(rect);
     }
+  }
+
+  // The indicator rect as painted right now, in bar coordinates: the active tab's rest rect at
+  // rest, or the x+width interpolation (eased EMPHASIZED, design §6) from slideFromRect toward
+  // the live rest rect mid-slide.
+  Rectangle currentIndicatorRect() {
+    final ElwhaTab active = getActiveTab();
+    if (active == null) {
+      return null;
+    }
+    final Rectangle rest = indicatorRestRect(active);
+    if (slideFromRect == null || slideAnimator.progress() >= 1f) {
+      return rest;
+    }
+    final float t = Easing.EMPHASIZED.ease(slideAnimator.progress());
+    final int x = Math.round(slideFromRect.x + (rest.x - slideFromRect.x) * t);
+    final int w = Math.round(slideFromRect.width + (rest.width - slideFromRect.width) * t);
+    return new Rectangle(x, rest.y, w, rest.height);
+  }
+
+  @Override
+  public void removeNotify() {
+    slideAnimator.stop();
+    slideFromRect = null;
+    super.removeNotify();
   }
 
   // The indicator's at-rest rect for a tab, in bar coordinates: content-hugging for PRIMARY,
