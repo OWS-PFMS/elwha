@@ -2233,6 +2233,24 @@ public class ElwhaSlider extends JComponent {
     repaint();
   }
 
+  /**
+   * Enables or disables the slider, propagating the state to the {@link Variant#RANGE} focus-proxy
+   * children — a disabled component is skipped by focus traversal, so without the propagation a
+   * disabled range slider's two handle proxies stayed Tab-reachable and the keyboard could move its
+   * handles (#432). The single variant needs nothing extra: the slider itself is the focus stop.
+   *
+   * @param enabled whether the slider responds to input
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  public void setEnabled(final boolean enabled) {
+    super.setEnabled(enabled);
+    lowerFocus.setEnabled(enabled);
+    upperFocus.setEnabled(enabled);
+    repaint();
+  }
+
   @Override
   public void removeNotify() {
     if (rippleTimer != null) {
@@ -2298,7 +2316,9 @@ public class ElwhaSlider extends JComponent {
     return new AbstractAction() {
       @Override
       public void actionPerformed(final ActionEvent e) {
-        if (!isEnabled()) {
+        // ElwhaSlider.this-qualified: an unqualified isEnabled() binds to AbstractAction's own
+        // always-true flag, letting keyboard actions mutate a disabled slider (#432).
+        if (!ElwhaSlider.this.isEnabled()) {
           return;
         }
         if (variant == Variant.RANGE) {
@@ -2314,7 +2334,7 @@ public class ElwhaSlider extends JComponent {
     return new AbstractAction() {
       @Override
       public void actionPerformed(final ActionEvent e) {
-        if (!isEnabled()) {
+        if (!ElwhaSlider.this.isEnabled()) {
           return;
         }
         if (variant == Variant.RANGE) {

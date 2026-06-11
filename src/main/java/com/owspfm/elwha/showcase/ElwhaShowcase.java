@@ -49,6 +49,7 @@ import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.menu.ColorStyle;
 import com.owspfm.elwha.menu.ElwhaMenu;
 import com.owspfm.elwha.menu.ElwhaMenuItem;
+import com.owspfm.elwha.menu.ElwhaSubMenuItem;
 import com.owspfm.elwha.menu.Layout;
 import com.owspfm.elwha.menu.Separator;
 import com.owspfm.elwha.navrail.ElwhaNavRailDestination;
@@ -727,8 +728,8 @@ public final class ElwhaShowcase {
     register(
         new LeafEntry(
             "Menu",
-            "M3 Menu — anchored light-dismiss popover with ElwhaMenuItem rows, grouping, and"
-                + " keyboard navigation.",
+            "M3 Menu — anchored light-dismiss popover with ElwhaMenuItem rows, grouping, selection,"
+                + " keyboard navigation, and nested submenus.",
             AREA_COMPONENTS,
             buildMenuComponent()));
     register(
@@ -3591,7 +3592,9 @@ public final class ElwhaShowcase {
     duplicate.addActionListener(e -> status.setText("Activated: Duplicate"));
     final ElwhaMenuItem share = ElwhaMenuItem.of(MaterialIcons.star(20), "Add to favorites");
     share.addActionListener(e -> status.setText("Activated: Favorites"));
-    b.addItem(rename).addItem(duplicate).addItem(share);
+    // A nested submenu (V2): Share › Email / Copy link / Embed. The submenu opens to the side on
+    // hover / click / Right, inherits the menu's color style, and morphs the active-state corners.
+    b.addItem(rename).addItem(duplicate).addItem(buildShareSubMenuItem(status)).addItem(share);
     if (layout.getSelectedItem() == Layout.GROUPED) {
       b.addGroup();
       final ElwhaMenuItem delete = ElwhaMenuItem.of(MaterialIcons.delete(20), "Delete");
@@ -3611,6 +3614,20 @@ public final class ElwhaShowcase {
     return menu;
   }
 
+  // The V2 submenu sample for the Workbench: a "Share" trigger that opens a nested Email / Copy
+  // link / Embed menu to the side.
+  private static ElwhaSubMenuItem buildShareSubMenuItem(final JLabel status) {
+    final ElwhaMenuItem email = ElwhaMenuItem.of(MaterialIcons.add(20), "Email");
+    email.addActionListener(e -> status.setText("Activated: Share → Email"));
+    final ElwhaMenuItem copyLink = ElwhaMenuItem.of(MaterialIcons.anchor(20), "Copy link");
+    copyLink.addActionListener(e -> status.setText("Activated: Share → Copy link"));
+    final ElwhaMenuItem embed = ElwhaMenuItem.of(MaterialIcons.layers(20), "Embed");
+    embed.addActionListener(e -> status.setText("Activated: Share → Embed"));
+    final ElwhaMenu shareTargets =
+        ElwhaMenu.builder().addItem(email).addItem(copyLink).addItem(embed).build();
+    return ElwhaSubMenuItem.of(MaterialIcons.start(20), "Share", shareTargets);
+  }
+
   // Static, non-modal menu snapshots via renderPreview() — flat and the two grouped treatments,
   // rendered in the requested color style (Standard surface vs Vibrant tertiary-tinted).
   private static JComponent buildMenuGallery(final ColorStyle colorStyle) {
@@ -3621,7 +3638,49 @@ public final class ElwhaShowcase {
     addPreview(column, sampleMenu(Layout.STANDARD, Separator.GAP, colorStyle).renderPreview());
     addPreview(column, sampleMenu(Layout.GROUPED, Separator.GAP, colorStyle).renderPreview());
     addPreview(column, sampleMenu(Layout.GROUPED, Separator.DIVIDER, colorStyle).renderPreview());
+    addPreview(column, submenuSnapshot(colorStyle));
     return column;
+  }
+
+  // A static submenu-open snapshot (V2): the parent menu rendered with its "Share ›" caret beside
+  // the open submenu, top-aligned the way a live submenu side-anchors to its opener. The
+  // active-state corner morph (focused rounds up / unfocused squares off) is a live behavior — see
+  // the Workbench and MenuSubmenuMorphDemo; the static preview renders both at the rest shape.
+  private static JComponent submenuSnapshot(final ColorStyle colorStyle) {
+    final ElwhaMenu sub =
+        ElwhaMenu.builder()
+            .colorStyle(colorStyle)
+            .addItem(ElwhaMenuItem.of(MaterialIcons.add(20), "Email"))
+            .addItem(ElwhaMenuItem.of(MaterialIcons.anchor(20), "Copy link"))
+            .addItem(ElwhaMenuItem.of(MaterialIcons.layers(20), "Embed"))
+            .build();
+    final ElwhaSubMenuItem shareItem = ElwhaSubMenuItem.of(MaterialIcons.start(20), "Share", sub);
+    final ElwhaMenu parent =
+        ElwhaMenu.builder()
+            .colorStyle(colorStyle)
+            .addItem(ElwhaMenuItem.of(MaterialIcons.edit(20), "Rename"))
+            .addItem(shareItem)
+            .addItem(ElwhaMenuItem.of(MaterialIcons.delete(20), "Delete"))
+            .build();
+
+    final JPanel row = new JPanel();
+    row.setOpaque(false);
+    row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
+    final JComponent parentPrev = parent.renderPreview();
+    parentPrev.setAlignmentY(java.awt.Component.TOP_ALIGNMENT);
+    row.add(parentPrev);
+
+    final JPanel subWrap = new JPanel();
+    subWrap.setOpaque(false);
+    subWrap.setLayout(new BoxLayout(subWrap, BoxLayout.Y_AXIS));
+    subWrap.setAlignmentY(java.awt.Component.TOP_ALIGNMENT);
+    // Drop the submenu down ~one item row so its top sits beside the "Share" row of the parent.
+    subWrap.add(javax.swing.Box.createVerticalStrut(48));
+    final JComponent subPrev = sub.renderPreview();
+    subPrev.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+    subWrap.add(subPrev);
+    row.add(subWrap);
+    return row;
   }
 
   private static ElwhaMenu sampleMenu(
