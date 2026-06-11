@@ -74,8 +74,10 @@ import javax.swing.Timer;
  * states; {@link FlatSVGIcon}s are auto-tinted to the content color.
  *
  * <p><strong>Badges (anatomy item 2).</strong> {@link #setBadge(ElwhaBadge)} anchors via {@link
- * ElwhaBadgeAnchor} — {@code ICON_CORNER} on the icon when one exists, {@code TRAILING_EDGE} for
- * label-only tabs; this tab implements {@link IconBearing} for the anchor's geometry feed.
+ * ElwhaBadgeAnchor} with the nav-rail placement rule: {@code ICON_CORNER} while the icon is the
+ * visual anchor (stacked / icon-only), {@code TRAILING_EDGE} once a label sits beside the content
+ * (inline, secondary, label-only) — re-pinned automatically on form changes; this tab implements
+ * {@link IconBearing} for the anchor's geometry feed.
  *
  * <p><strong>Activation flows through the bar.</strong> {@link #isActive()} is read-only here;
  * {@link ElwhaTabs#setActiveTabIndex(int)} (or a user gesture on the tab) is the way a tab becomes
@@ -138,6 +140,7 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
 
   private ElwhaBadge badge;
   private ElwhaBadgeAnchor.Attachment badgeAttachment;
+  private ElwhaBadgeAnchor.AnchorMode badgeAnchoredMode;
 
   private Point rippleOrigin;
   private float rippleProgress = 1f;
@@ -285,6 +288,7 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
       return;
     }
     this.inlineIcon = inlineIcon;
+    reanchorBadgeForForm();
     revalidate();
     repaint();
   }
@@ -302,11 +306,16 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
 
   /**
    * Anchors a badge to this tab (M3 tab anatomy item 2). Passing {@code null} detaches any current
-   * badge; setting a new badge cleanly detaches the prior one first. Placement: {@link
-   * ElwhaBadgeAnchor.AnchorMode#ICON_CORNER} riding the icon's upper-trailing corner when this tab
-   * has an icon; {@link ElwhaBadgeAnchor.AnchorMode#TRAILING_EDGE} after the label for label-only
-   * tabs. Badge accessibility content splices into this tab's accessible name via the anchor's
-   * push-model.
+   * badge; setting a new badge cleanly detaches the prior one first.
+   *
+   * <p>Placement follows the nav-rail rule (the M3 "Favorites 84" pattern): {@link
+   * ElwhaBadgeAnchor.AnchorMode#ICON_CORNER} rides the icon's upper-trailing corner only while the
+   * icon is the tab's visual anchor — stacked icon-over-label and icon-only forms. The moment a
+   * label sits <em>beside</em> the content (inline primary, all secondary icon tabs, label-only
+   * tabs), the badge moves to {@link ElwhaBadgeAnchor.AnchorMode#TRAILING_EDGE} — pinning a count
+   * pill to the icon corner there would flatten the adjacent label. The mode re-pins automatically
+   * when the form changes ({@link #setInlineIcon(boolean)}, the bar restamping the variant). Badge
+   * accessibility content splices into this tab's accessible name via the anchor's push-model.
    *
    * @param badge the badge to anchor, or {@code null} to clear
    * @version v0.4.0
@@ -316,18 +325,46 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
     if (this.badge == badge) {
       return;
     }
+    detachBadge();
+    this.badge = badge;
+    if (badge != null) {
+      attachBadgeForForm();
+    }
+  }
+
+  // The nav-rail placement rule: icon corner while the icon is the visual anchor (stacked /
+  // icon-only); trailing edge once a label sits beside the content.
+  private ElwhaBadgeAnchor.AnchorMode anchorModeForForm() {
+    return hasIcon() && (isStacked() || !hasLabel())
+        ? ElwhaBadgeAnchor.AnchorMode.ICON_CORNER
+        : ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE;
+  }
+
+  private void attachBadgeForForm() {
+    badgeAnchoredMode = anchorModeForForm();
+    badgeAttachment = ElwhaBadgeAnchor.attach(this, badge, badgeAnchoredMode);
+  }
+
+  private void detachBadge() {
     if (badgeAttachment != null) {
       ElwhaBadgeAnchor.detach(badgeAttachment);
       badgeAttachment = null;
+      badgeAnchoredMode = null;
     }
-    this.badge = badge;
-    if (badge != null) {
-      final ElwhaBadgeAnchor.AnchorMode mode =
-          hasIcon()
-              ? ElwhaBadgeAnchor.AnchorMode.ICON_CORNER
-              : ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE;
-      badgeAttachment = ElwhaBadgeAnchor.attach(this, badge, mode);
+  }
+
+  // Re-pins an attached badge when a form change flips the anchor mode (mirrors the rail's
+  // reanchorBadgeForVariant) — no-op when no badge is attached or the mode already matches.
+  private void reanchorBadgeForForm() {
+    if (badge == null || badgeAnchoredMode == anchorModeForForm()) {
+      return;
     }
+    detachBadge();
+    attachBadgeForForm();
+  }
+
+  ElwhaBadgeAnchor.AnchorMode badgeAnchorMode() {
+    return badgeAnchoredMode;
   }
 
   /**
@@ -447,6 +484,7 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
       return;
     }
     this.variant = variant;
+    reanchorBadgeForForm();
     revalidate();
     repaint();
   }

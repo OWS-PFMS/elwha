@@ -1,6 +1,7 @@
 package com.owspfm.elwha.tabs;
 
 import com.owspfm.elwha.badge.ElwhaBadge;
+import com.owspfm.elwha.badge.ElwhaBadgeAnchor;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -183,15 +184,44 @@ public final class ElwhaTabsIconsSmoke {
         "IconBearing reports a 24px icon box",
         iconTab.getIconBounds().width == 24 && iconTab.getIconBounds().height == 24);
 
+    // The nav-rail placement rule: icon corner only while the icon is the visual anchor.
+    check(
+        "stacked icon+label anchors ICON_CORNER",
+        iconTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.ICON_CORNER);
+    iconTab.setInlineIcon(true);
+    check(
+        "inline icon+label re-pins to TRAILING_EDGE (the Favorites-84 rule)",
+        iconTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE);
+    iconTab.setInlineIcon(false);
+    check(
+        "back to stacked re-pins to ICON_CORNER",
+        iconTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.ICON_CORNER);
+
+    final ElwhaTabs secondaryBar = ElwhaTabs.secondary();
+    final ElwhaTab secondaryIconTab =
+        secondaryBar.addTab(ElwhaTab.of(MaterialIcons.symbol("favorite"), "Hotel"));
+    secondaryIconTab.setBadge(ElwhaBadge.large(3));
+    check(
+        "secondary icon tab (always inline) anchors TRAILING_EDGE",
+        secondaryIconTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE);
+
+    final ElwhaTab iconOnly = ElwhaTab.iconOnly(MaterialIcons.symbol("favorite"), "Favorites");
+    iconOnly.setBadge(ElwhaBadge.small());
+    check(
+        "icon-only tab anchors ICON_CORNER",
+        iconOnly.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.ICON_CORNER);
+
     final ElwhaBadge dot = ElwhaBadge.small();
     iconTab.setBadge(dot);
     check("re-badging swaps cleanly", iconTab.getBadge() == dot);
     iconTab.setBadge(null);
-    check("null detaches", iconTab.getBadge() == null);
+    check("null detaches", iconTab.getBadge() == null && iconTab.badgeAnchorMode() == null);
 
     final ElwhaTab labelTab = ElwhaTab.of("Updates");
     labelTab.setBadge(ElwhaBadge.small());
-    check("label-only tab accepts a trailing-edge badge", labelTab.getBadge() != null);
+    check(
+        "label-only tab anchors TRAILING_EDGE",
+        labelTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE);
     labelTab.setBadge(null);
     check("trailing-edge badge detaches", labelTab.getBadge() == null);
   }

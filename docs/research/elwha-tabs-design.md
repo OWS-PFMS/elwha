@@ -17,7 +17,7 @@
 7. **Indicator motion:** one container-level `MorphAnimator` (250ms, `Easing.EMPHASIZED`) interpolating the indicator rect (x + width together) from the previous tab to the new one; reduced-motion / not-displayable snap. §6.
 8. **Scrollable mode is hand-rolled** in the container (scroll offset + clip, no `JScrollPane`): wheel scrolls, activation/focus auto-scrolls with the 48px margin via a 300ms `STANDARD` tween. §7.
 9. **Keyboard = the material-web tablist contract:** roving tab stop, Left/Right wrap-around (RTL-aware), Home/End, Enter/Space activate, optional `autoActivate`, focus-leave restores the tab stop to the active tab. §7.
-10. **Badges day-one:** `ElwhaTab implements IconBearing`; `setBadge(ElwhaBadge)` mirrors `ElwhaNavRailDestination` (icon tabs anchor `ICON_CORNER`; label-only tabs `TRAILING_EDGE`). §3.
+10. **Badges day-one:** `ElwhaTab implements IconBearing`; `setBadge(ElwhaBadge)` mirrors `ElwhaNavRailDestination`'s placement rule — `ICON_CORNER` while the icon is the visual anchor (stacked / icon-only), `TRAILING_EDGE` once a label sits beside the content (inline, secondary, label-only — the "Favorites 84" rule), re-pinned on form changes. ⚠️ Corrected at smoke: the original "has icon ⇒ icon corner" mapping flattened inline labels. §3.
 11. **a11y:** bar = `AccessibleRole.PAGE_TAB_LIST` + `AccessibleSelection`; tab = `PAGE_TAB` + `AccessibleState.SELECTED` + one "click" `AccessibleAction`; icon-only tabs require `setAccessibleLabel`. RTL mirrors layout, arrows, indicator, and scroll math via `ComponentOrientation`. §8.
 12. **V1 = one phase, seven stories** (S1 spike/static → S2 interaction → S3 motion → S4 icons+badges → S5 scrollable → S6 keyboard/a11y/RTL → S7 Showcase). §11.
 
@@ -45,7 +45,7 @@
 
 - Static factories (component-api doctrine): `ElwhaTab.of(String label)`, `of(MaterialIcons.Symbol icon, String label)`, `of(Icon icon, String label)`, `iconOnly(MaterialIcons.Symbol icon, String accessibleLabel)`.
 - Content forms: label-only · icon+label (primary: **stacked** by default, `setInlineIcon(true)` for inline; secondary: always inline) · icon-only.
-- `setBadge(ElwhaBadge)` / `getBadge()` — anchors via `ElwhaBadgeAnchor` (`ICON_CORNER` when an icon exists, `TRAILING_EDGE` for label-only); `implements IconBearing.getIconBounds()` (label bounds stand in when no icon — S4 verifies the anchor math).
+- `setBadge(ElwhaBadge)` / `getBadge()` — anchors via `ElwhaBadgeAnchor` with the nav-rail placement rule: `ICON_CORNER` while the icon is the visual anchor (stacked / icon-only); `TRAILING_EDGE` once a label sits beside the content (inline primary, all secondary icon tabs, label-only) — pinning a count pill to the icon corner there flattens the adjacent label (caught at smoke). Re-pins automatically on `setInlineIcon`/variant restamps (mirrors `reanchorBadgeForVariant`). `implements IconBearing.getIconBounds()` (label bounds stand in when no icon).
 - `isActive()` — read-only public; activation flows through the bar (`setActive` is package-private, stamped by `ElwhaTabs`).
 - `addActionListener(ActionListener)` — fires on **user** activation of this tab (click / Space / Enter / auto-activate focus), never programmatic.
 - Variant + bar-derived config (variant, mode) are stamped by the container on add — a tab is meaningless outside a bar.
