@@ -33,9 +33,10 @@ import javax.swing.event.DocumentListener;
 /**
  * The Elwha Showcase leaf for {@link ElwhaSelectField} — a {@link ComponentWorkbench} stage with
  * live controls (variant, label, supporting / placeholder text, option count, error, read-only,
- * enabled, plus the Phase-2 editable / free-text policy toggles) and a live "selected value"
- * readout, and a Gallery of the variant&#215;state matrix, a long scrolling option list, a
- * pre-selected value, and the editable filter-as-you-type combo.
+ * enabled, the Phase-2 editable / free-text policy toggles, plus the Phase-3 multi-select toggle)
+ * and a live "selected value(s)" readout, and a Gallery of the variant&#215;state matrix, a long
+ * scrolling option list, a pre-selected value, the editable filter-as-you-type combo, and the
+ * multi-select summary display.
  *
  * <p>The controls dogfood Elwha components: the variant picker is an {@link ElwhaButtonGroup}, the
  * boolean toggles are {@code SELECTABLE} {@link ElwhaButton}s, the option-count stepper is a pair
@@ -62,7 +63,8 @@ final class SelectFieldShowcasePanels {
                 gallerySection("Variants × states", buildStateMatrix()),
                 gallerySection("Long option list (scrolls)", buildLongListGallery()),
                 gallerySection("Pre-selected value", buildPreselectedGallery()),
-                gallerySection("Filtering (editable combo)", buildFilteringGallery()))));
+                gallerySection("Filtering (editable combo)", buildFilteringGallery()),
+                gallerySection("Multi-select (summary display)", buildMultiSelectGallery()))));
     return tabs;
   }
 
@@ -104,6 +106,7 @@ final class SelectFieldShowcasePanels {
     enabledToggle.setSelected(true);
     final ElwhaButton editableToggle = toggle("Editable");
     final ElwhaButton freeTextToggle = toggle("Free text");
+    final ElwhaButton multiToggle = toggle("Multi-select");
 
     final JLabel readout = new JLabel("Selected value: —");
 
@@ -122,6 +125,8 @@ final class SelectFieldShowcasePanels {
     controls.addSection("Editable combo");
     controls.addControl("", editableToggle);
     controls.addControl("", freeTextToggle);
+    controls.addSection("Multi-select");
+    controls.addControl("", multiToggle);
     controls.addSection("Selection");
     controls.addControl("", readout);
 
@@ -134,7 +139,11 @@ final class SelectFieldShowcasePanels {
                   ? ElwhaTextField.Variant.FILLED
                   : ElwhaTextField.Variant.OUTLINED;
           final List<String> options = POOL.subList(0, count[0]);
-          final String carried = live[0] == null ? null : (String) live[0].getSelectedValue();
+          @SuppressWarnings("unchecked")
+          final List<String> carried =
+              live[0] == null
+                  ? List.of()
+                  : ((ElwhaSelectField<String>) live[0]).getSelectedValues();
 
           final ElwhaSelectField<String> select =
               new ElwhaSelectField<>(variant, labelCtl.getText());
@@ -149,9 +158,8 @@ final class SelectFieldShowcasePanels {
           select.setEnabled(enabledToggle.isSelected());
           select.setEditable(editableToggle.isSelected());
           select.setFreeTextAllowed(freeTextToggle.isSelected());
-          if (carried != null && options.contains(carried)) {
-            select.setSelectedValue(carried);
-          }
+          select.setMultiSelect(multiToggle.isSelected());
+          select.setSelectedValues(carried);
           select.addSelectionChangeListener(
               value ->
                   readout.setText(
@@ -160,9 +168,19 @@ final class SelectFieldShowcasePanels {
                           : select.getText().isEmpty()
                               ? "Selected value: —"
                               : "Free text: \"" + select.getText() + "\""));
+          select.addMultiSelectionChangeListener(
+              values ->
+                  readout.setText(
+                      values.isEmpty()
+                          ? "Selected values: —"
+                          : "Selected values: " + String.join(", ", values)));
           readout.setText(
-              "Selected value: "
-                  + (select.getSelectedValue() == null ? "—" : select.getSelectedValue()));
+              select.isMultiSelect()
+                  ? (select.getSelectedValues().isEmpty()
+                      ? "Selected values: —"
+                      : "Selected values: " + String.join(", ", select.getSelectedValues()))
+                  : "Selected value: "
+                      + (select.getSelectedValue() == null ? "—" : select.getSelectedValue()));
 
           live[0] = select;
           workbench.setStage(topAligned(select));
@@ -178,7 +196,8 @@ final class SelectFieldShowcasePanels {
                   readOnlyToggle.isSelected(),
                   enabledToggle.isSelected(),
                   editableToggle.isSelected(),
-                  freeTextToggle.isSelected()));
+                  freeTextToggle.isSelected(),
+                  multiToggle.isSelected()));
         };
 
     variantGroup.addSelectionListener(group -> apply.run());
@@ -198,12 +217,34 @@ final class SelectFieldShowcasePanels {
         new ElwhaTextField[] {labelCtl, supportingCtl, placeholderCtl, errorTextCtl}) {
       onChange(ctl, apply);
     }
-    for (final ElwhaButton tgl :
-        new ElwhaButton[] {
-          errorToggle, readOnlyToggle, enabledToggle, editableToggle, freeTextToggle
-        }) {
+    for (final ElwhaButton tgl : new ElwhaButton[] {errorToggle, readOnlyToggle, enabledToggle}) {
       tgl.addActionListener(event -> apply.run());
     }
+    // Editable and multi-select are mutually exclusive on the component (each setter forces the
+    // other off) — mirror that in the toggle chips so the controls never lie about the live state.
+    editableToggle.addActionListener(
+        event -> {
+          if (editableToggle.isSelected()) {
+            multiToggle.setSelected(false);
+          }
+          apply.run();
+        });
+    freeTextToggle.addActionListener(
+        event -> {
+          if (freeTextToggle.isSelected()) {
+            editableToggle.setSelected(true);
+            multiToggle.setSelected(false);
+          }
+          apply.run();
+        });
+    multiToggle.addActionListener(
+        event -> {
+          if (multiToggle.isSelected()) {
+            editableToggle.setSelected(false);
+            freeTextToggle.setSelected(false);
+          }
+          apply.run();
+        });
     apply.run();
     return workbench;
   }
@@ -219,7 +260,8 @@ final class SelectFieldShowcasePanels {
       final boolean readOnly,
       final boolean enabled,
       final boolean editable,
-      final boolean freeText) {
+      final boolean freeText,
+      final boolean multi) {
     final StringBuilder code = new StringBuilder(420);
     code.append("ElwhaSelectField<String> select = ElwhaSelectField.")
         .append(variant == ElwhaTextField.Variant.FILLED ? "filled" : "outlined")
@@ -253,7 +295,12 @@ final class SelectFieldShowcasePanels {
     if (freeText) {
       code.append("select.setFreeTextAllowed(true);\n");
     }
-    code.append("select.addSelectionChangeListener(value -> /* … */);");
+    if (multi) {
+      code.append("select.setMultiSelect(true);\n");
+      code.append("select.addMultiSelectionChangeListener(values -> /* … */);");
+    } else {
+      code.append("select.addSelectionChangeListener(value -> /* … */);");
+    }
     return code.toString();
   }
 
@@ -407,6 +454,33 @@ final class SelectFieldShowcasePanels {
 
     galleryRow(grid, gbc, "Editable combo (constrained)", filtering);
     galleryRow(grid, gbc, "Editable combo, free text allowed", freeText);
+    return grid;
+  }
+
+  private static JComponent buildMultiSelectGallery() {
+    final JPanel grid = new JPanel(new GridBagLayout());
+    grid.setBorder(BorderFactory.createEmptyBorder(12, 20, 20, 20));
+    final GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(8, 12, 8, 12);
+    gbc.anchor = GridBagConstraints.WEST;
+    gbc.gridy = 0;
+
+    final ElwhaSelectField<String> joined = ElwhaSelectField.outlined("Toppings");
+    joined.setOptions(
+        List.of("Mushroom", "Pepperoni", "Onion", "Olive", "Basil", "Pineapple", "Spinach"));
+    joined.setMultiSelect(true);
+    joined.setSelectedValues(List.of("Pepperoni", "Basil"));
+    joined.setSupportingText("Toggling keeps the menu open");
+
+    final ElwhaSelectField<String> overflow = ElwhaSelectField.filled("Weekdays");
+    overflow.setOptions(
+        List.of("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"));
+    overflow.setMultiSelect(true);
+    overflow.setSelectedValues(List.of("Monday", "Tuesday", "Thursday", "Friday", "Saturday"));
+    overflow.setSupportingText("Past the summary limit — the count form");
+
+    galleryRow(grid, gbc, "Pre-checked values (joined summary)", joined);
+    galleryRow(grid, gbc, "Wide selection (count form)", overflow);
     return grid;
   }
 

@@ -153,3 +153,20 @@ All four stories built on one stacked branch: S1 editable spike (#391) → S2 fi
 5. **Mode flips preserve what they can:** single→multi seeds the selection with the current single value; multi→single collapses to the first value in option order. Neither fires change listeners — `getSelectedValue()` is unchanged by either flip.
 6. **Provisional summary (S1):** display strings joined `", "` in option order, empty selection resting the floating label. The real summary format + overflow policy is S2 (#398).
 7. **Zero new theme tokens (held); zero new assets** — Phase 3 S1 is pure behavior over the shipped MULTI menu.
+
+## Phase 3 complete (#397–#400 — 2026-06-10) — multi-select shipped; V1 COMPLETE
+
+All four stories built on one stacked branch: S1 multi spike + value model (#397, `setMultiSelect` over the shipped `SelectionMode.MULTI`, option-ordered `getSelectedValues`/`setSelectedValues`, the editable exclusion) → S2 summary display (#398, join-up-to-`setSummaryLimit` then the `N selected` count form, per-toggle `addMultiSelectionChangeListener`) → S3 keyboard + a11y (#399, the shipped MULTI Enter/Space toggle-without-close + Esc focus-return locked in through the combo; CHECKED items, unchanged arrow announcements, summary on the accessible-text path) → S4 Showcase + docs (#400). Three fresh demos + four headless guards. **Zero new theme tokens held across all three phases; Phase 3 adds zero assets** (pure behavior over the #298 MULTI menu).
+
+**V1 completeness sweep (§10 re-asserted, nothing silently dropped):**
+- **Editable + multi-select combined** (filterable multi-select) — deferred by the Phase-3 S1 decision (mutually exclusive in V1, each setter forces the other off); future-owned.
+- **Async / remote option loading** — consumer-owned (`setOptions` is cheap and rebuild-on-change; a consumer loads then sets).
+- **Formatted / typed-value parsing** — consumer-owned via `setDisplayFunction` + their own `T`.
+- **Grouped / sectioned options** beyond the menu's `addGroup` — future-owned (the select field flattens; a grouped select would compose the menu's group API).
+- **`JComboBox` drop-in compatibility** — out by design; dedicated M3 primitive.
+- **Menu width-tracking** (Phase 1 S1 deferral) — still open as a possible `ElwhaMenu` enhancement; the visual gap has not warranted it through three phases.
+- **Anchored-menu height cap** — filed as [#396](https://github.com/OWS-PFMS/elwha/issues/396) (menu-side, operator-deferred).
+
+**Dogfood status (third look, unchanged conclusion):** the Showcase toolbar palette picker still needs per-option swatch icons + a toolbar-density anatomy before an `ElwhaSelectField` swap is honest; multi-select changes neither blocker. The Select Field leaf (Workbench + three gallery sections) is the genuine in-repo dogfood site.
+
+**Epic #331 closes with this phase's PR.** No follow-on epic; follow-ups live as individual issues (#396).
