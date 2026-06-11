@@ -47,7 +47,8 @@ final class SwatchesPane extends ColorPickerPane {
   private static final int GRID_ROW_PITCH = 34;
   private static final int STRIP_HEIGHT = 28;
   private static final int STRIP_GAP = 2;
-  private static final int RECENT_PITCH = 30;
+  private static final int RECENT_PITCH = 28;
+  private static final int RING_MARGIN = 4;
 
   private final HueGrid hueGrid;
   private final ShadeStrip shadeStrip;
@@ -411,7 +412,7 @@ final class SwatchesPane extends ColorPickerPane {
           if (matchesCurrent(base)) {
             g2.setColor(ColorRole.PRIMARY.resolve());
             g2.setStroke(new BasicStroke(2f));
-            g2.drawOval(x - 3, y - 3, CIRCLE_DIAMETER + 6, CIRCLE_DIAMETER + 6);
+            g2.drawOval(x - 2, y - 2, CIRCLE_DIAMETER + 4, CIRCLE_DIAMETER + 4);
             paintCheck(
                 g2,
                 new Rectangle(x + 5, y + 5, CIRCLE_DIAMETER - 10, CIRCLE_DIAMETER - 10),
@@ -438,12 +439,13 @@ final class SwatchesPane extends ColorPickerPane {
 
     @Override
     Rectangle cellRect(final int index) {
-      final int width = getWidth();
       final int position = ltr() ? index : count() - 1 - index;
-      final int segment = (width - (count() - 1) * STRIP_GAP) / count();
-      final int x = position * (segment + STRIP_GAP);
-      final int w = position == count() - 1 ? width - x : segment;
-      return new Rectangle(x, 0, w, STRIP_HEIGHT);
+      final int contentWidth = getWidth() - (count() - 1) * STRIP_GAP;
+      final int start =
+          Math.round(position * contentWidth / (float) count()) + position * STRIP_GAP;
+      final int end =
+          Math.round((position + 1) * contentWidth / (float) count()) + position * STRIP_GAP;
+      return new Rectangle(start, 0, end - start, STRIP_HEIGHT);
     }
 
     @Override
@@ -493,9 +495,8 @@ final class SwatchesPane extends ColorPickerPane {
           g2.setColor(stateLayered(base, i));
           g2.fillRect(cell.x, cell.y, cell.width, cell.height);
           if (matchesCurrent(base)) {
-            g2.setColor(ColorRole.PRIMARY.resolve());
-            g2.setStroke(new BasicStroke(2f));
-            g2.drawRect(cell.x + 1, cell.y + 1, cell.width - 3, cell.height - 3);
+            // Check only — a ring gets clipped by the strip's rounded end caps
+            // (smoke-iterate finding); the luminance check is the findable indicator.
             final int box = 14;
             paintCheck(
                 g2,
@@ -524,11 +525,14 @@ final class SwatchesPane extends ColorPickerPane {
 
     @Override
     Rectangle cellRect(final int index) {
-      final int top = labelHeight() + SpaceScale.SM.px();
+      final int top = labelHeight() + SpaceScale.SM.px() + RING_MARGIN;
       final int x =
           ltr()
-              ? index * RECENT_PITCH
-              : getWidth() - (index + 1) * RECENT_PITCH + (RECENT_PITCH - CIRCLE_DIAMETER);
+              ? RING_MARGIN + index * RECENT_PITCH
+              : getWidth()
+                  - RING_MARGIN
+                  - (index + 1) * RECENT_PITCH
+                  + (RECENT_PITCH - CIRCLE_DIAMETER);
       return new Rectangle(x, top, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
     }
 
@@ -558,7 +562,8 @@ final class SwatchesPane extends ColorPickerPane {
 
     @Override
     public Dimension getPreferredSize() {
-      return new Dimension(0, labelHeight() + SpaceScale.SM.px() + CIRCLE_DIAMETER);
+      return new Dimension(
+          0, labelHeight() + SpaceScale.SM.px() + CIRCLE_DIAMETER + 2 * RING_MARGIN);
     }
 
     @Override
