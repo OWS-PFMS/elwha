@@ -42,7 +42,7 @@ import javax.swing.event.EventListenerList;
  * <em>not</em> a styled {@code JRadioButton} and <em>not</em> a {@code ButtonUI} delegate: the
  * button UI's text/icon layout fights the icon-only anatomy, and {@code ButtonGroup} has no
  * vocabulary for the M3 group keyboard contract (selection-follows-focus arrows, roving tab stop)
- * that {@code ElwhaRadioGroup} carries.
+ * that {@link ElwhaRadioGroup} carries.
  *
  * <p><strong>Color (zero new tokens — research §Tokens).</strong> Unselected: ring {@link
  * ColorRole#ON_SURFACE_VARIANT}, shifting to {@link ColorRole#ON_SURFACE} under hover, focus, or
@@ -53,7 +53,7 @@ import javax.swing.event.EventListenerList;
  *
  * <p><strong>Interaction (research §B / §S).</strong> A click or Space <em>selects</em> — a user
  * gesture never deselects a radio ("clicking on a radio input always selects it"); deselection
- * happens programmatically or through an {@code ElwhaRadioGroup} sibling. Hover paints {@link
+ * happens programmatically or through an {@link ElwhaRadioGroup} sibling. Hover paints {@link
  * StateLayer#HOVER} (0.08) and focus {@link StateLayer#FOCUS} (0.10) on the {@value
  * #STATE_LAYER_SIZE_PX}&nbsp;dp circle in the state's tint ({@link ColorRole#ON_SURFACE}
  * unselected, {@link ColorRole#PRIMARY} selected). A press paints {@link StateLayer#PRESSED} plus a
@@ -126,6 +126,8 @@ public class ElwhaRadioButton extends JComponent {
   private boolean hovered;
   private boolean pressed;
 
+  private ElwhaRadioGroup group;
+
   private Point rippleOrigin;
   private float rippleProgress = 1f;
   private ColorRole rippleTintRole = ColorRole.PRIMARY;
@@ -189,8 +191,28 @@ public class ElwhaRadioButton extends JComponent {
     }
     this.selected = selected;
     syncMotion(animateAllowed());
+    if (group != null) {
+      group.memberSelectionChanged(this, selected);
+    }
     fireStateChanged();
     repaint();
+  }
+
+  /**
+   * Returns the {@link ElwhaRadioGroup} this radio belongs to, or {@code null} when ungrouped.
+   * Membership is managed through {@link ElwhaRadioGroup#add} / {@link ElwhaRadioGroup#remove}.
+   *
+   * @return the owning group, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaRadioGroup getGroup() {
+    return group;
+  }
+
+  /** Back-reference maintained by {@link ElwhaRadioGroup#add} / {@link ElwhaRadioGroup#remove}. */
+  void setGroup(final ElwhaRadioGroup group) {
+    this.group = group;
   }
 
   /**
