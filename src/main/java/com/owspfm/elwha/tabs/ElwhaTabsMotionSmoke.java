@@ -8,9 +8,9 @@ import java.awt.Rectangle;
 
 /**
  * S3 headless guard for the {@link ElwhaTabs} indicator slide (#428): snap semantics
- * (non-displayable, initial auto-activation, reduced motion), live mid-flight x+width
- * interpolation between unequal tabs, settle-at-rest, and the mid-slide retarget — driven
- * against a test subclass that reports itself displayable so the animator engages headlessly.
+ * (non-displayable, initial auto-activation, reduced motion), live mid-flight x+width interpolation
+ * between unequal tabs, settle-at-rest, and the mid-slide retarget — driven against a test subclass
+ * that reports itself displayable so the animator engages headlessly.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -62,11 +62,13 @@ public final class ElwhaTabsMotionSmoke {
 
   private static void checkSnapSemantics() {
     final ElwhaTabs bar = laidOut(new ElwhaTabs(TabsVariant.PRIMARY));
-    check("initial auto-activation rests on tab 0",
+    check(
+        "initial auto-activation rests on tab 0",
         bar.currentIndicatorRect().equals(bar.indicatorRestRect(bar.getTabAt(0))));
 
     bar.setActiveTabIndex(2);
-    check("non-displayable activation snaps to rest",
+    check(
+        "non-displayable activation snaps to rest",
         bar.currentIndicatorRect().equals(bar.indicatorRestRect(bar.getTabAt(2))));
   }
 
@@ -78,9 +80,9 @@ public final class ElwhaTabsMotionSmoke {
 
     bar.setActiveTabIndex(2);
     final Rectangle mid = sampleMidFlight(bar, from, to);
-    check("mid-flight x strictly between endpoints",
-        mid != null && between(mid.x, from.x, to.x));
-    check("mid-flight width strictly between endpoints",
+    check("mid-flight x strictly between endpoints", mid != null && between(mid.x, from.x, to.x));
+    check(
+        "mid-flight width strictly between endpoints",
         mid != null && between(mid.width, from.width, to.width));
 
     check("slide settles at the destination rest rect", awaitRest(bar, to));
@@ -106,7 +108,8 @@ public final class ElwhaTabsMotionSmoke {
     try {
       final ElwhaTabs bar = laidOut(new DisplayableTabs(TabsVariant.PRIMARY));
       bar.setActiveTabIndex(2);
-      check("reduced motion lands the indicator immediately",
+      check(
+          "reduced motion lands the indicator immediately",
           bar.currentIndicatorRect().equals(bar.indicatorRestRect(bar.getTabAt(2))));
     } finally {
       MorphAnimator.setReducedMotion(false);

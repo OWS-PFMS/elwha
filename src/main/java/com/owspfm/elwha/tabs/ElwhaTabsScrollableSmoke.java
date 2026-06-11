@@ -10,9 +10,8 @@ import java.awt.event.MouseWheelEvent;
 /**
  * S5 headless guard for {@link TabMode#SCROLLABLE} (#430): the 72/264 width clamps + ellipsized
  * spans, offset layout + clamping, wheel scrolling (and FIXED ignoring it), the snap scroll-to
- * formula with its 48&nbsp;px margin, the live 300&nbsp;ms tween (wheel cancels it),
- * activation auto-scroll, active-kept-visible across child mutations, and indicator/scroll
- * composition.
+ * formula with its 48&nbsp;px margin, the live 300&nbsp;ms tween (wheel cancels it), activation
+ * auto-scroll, active-kept-visible across child mutations, and indicator/scroll composition.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -77,9 +76,11 @@ public final class ElwhaTabsScrollableSmoke {
 
     check("tiny tab floors at 72", tiny.getWidth() == 72);
     check("huge tab caps at 264", huge.getWidth() == 264);
-    check("medium tab takes its preferred width",
+    check(
+        "medium tab takes its preferred width",
         medium.getWidth() == medium.getPreferredSize().width);
-    check("capped label ellipsizes within the padding box",
+    check(
+        "capped label ellipsizes within the padding box",
         huge.contentSpan().width <= 264 - 2 * ElwhaTab.H_PADDING_PX);
   }
 
@@ -94,7 +95,8 @@ public final class ElwhaTabsScrollableSmoke {
     final int maxOffset = bar.getScrollOffset();
     check("offset clamps to content", maxOffset > 0 && maxOffset < 99999);
     final ElwhaTab lastTab = bar.getTabAt(bar.getTabCount() - 1);
-    check("at max offset the last tab's trailing edge meets the bar edge",
+    check(
+        "at max offset the last tab's trailing edge meets the bar edge",
         lastTab.getX() + lastTab.getWidth() == BAR_WIDTH);
 
     bar.setScrollOffset(0);
@@ -106,9 +108,9 @@ public final class ElwhaTabsScrollableSmoke {
     final Rectangle indicatorAt0 = bar.currentIndicatorRect();
     bar.setScrollOffset(50);
     final Rectangle indicatorAt50 = bar.currentIndicatorRect();
-    check("indicator translates with the scroll offset",
-        indicatorAt50.x == indicatorAt0.x - 50
-            && indicatorAt50.width == indicatorAt0.width);
+    check(
+        "indicator translates with the scroll offset",
+        indicatorAt50.x == indicatorAt0.x - 50 && indicatorAt50.width == indicatorAt0.width);
     bar.setScrollOffset(0);
 
     final ElwhaTabs fixed = new ElwhaTabs(TabsVariant.PRIMARY);
@@ -124,17 +126,18 @@ public final class ElwhaTabsScrollableSmoke {
     final ElwhaTabs bar = scrollableBar(new ElwhaTabs(TabsVariant.PRIMARY));
     final ElwhaTab last = bar.getTabAt(bar.getTabCount() - 1);
     bar.scrollToTab(last);
-    check("snap scroll-to brings the last tab fully into view",
+    check(
+        "snap scroll-to brings the last tab fully into view",
         last.getX() >= 0 && last.getX() + last.getWidth() <= BAR_WIDTH);
-    check("snap scroll-to keeps the 48px margin where content allows",
-        last.getX() + last.getWidth() <= BAR_WIDTH - Math.min(48,
-            bar.getScrollOffset() == 0 ? 0 : 48)
+    check(
+        "snap scroll-to keeps the 48px margin where content allows",
+        last.getX() + last.getWidth()
+                <= BAR_WIDTH - Math.min(48, bar.getScrollOffset() == 0 ? 0 : 48)
             || last.getX() + last.getWidth() == BAR_WIDTH);
 
     final ElwhaTab first = bar.getTabAt(0);
     bar.scrollToTab(first);
-    check("snap scroll-to back to the first tab returns to offset 0",
-        bar.getScrollOffset() == 0);
+    check("snap scroll-to back to the first tab returns to offset 0", bar.getScrollOffset() == 0);
   }
 
   private static void checkLiveTweenAndCancel() throws Exception {
@@ -154,15 +157,16 @@ public final class ElwhaTabsScrollableSmoke {
     wheel(bar, -1);
     final int afterWheel = bar.getScrollOffset();
     Thread.sleep(120);
-    check("wheel cancels the in-flight tween",
-        afterWheel > 0 && bar.getScrollOffset() == afterWheel);
+    check(
+        "wheel cancels the in-flight tween", afterWheel > 0 && bar.getScrollOffset() == afterWheel);
   }
 
   private static void checkActivationAutoScroll() throws Exception {
     final ElwhaTabs bar = scrollableBar(new DisplayableTabs());
     final int lastIndex = bar.getTabCount() - 1;
     bar.setActiveTabIndex(lastIndex);
-    check("activation auto-scrolls the active tab into view",
+    check(
+        "activation auto-scrolls the active tab into view",
         awaitVisible(bar, bar.getTabAt(lastIndex)));
   }
 
@@ -171,15 +175,18 @@ public final class ElwhaTabsScrollableSmoke {
     final int lastIndex = bar.getTabCount() - 1;
     bar.setActiveTabIndex(lastIndex);
     final ElwhaTab active = bar.getTabAt(lastIndex);
-    check("setup: active tab visible at max scroll",
+    check(
+        "setup: active tab visible at max scroll",
         active.getX() >= 0 && active.getX() + active.getWidth() <= BAR_WIDTH);
 
     bar.removeTab(bar.getTabAt(0));
-    check("removing a leading tab keeps the active tab visible",
+    check(
+        "removing a leading tab keeps the active tab visible",
         active.getX() >= 0 && active.getX() + active.getWidth() <= BAR_WIDTH);
 
     bar.addTab("Appended");
-    check("appending keeps the active tab visible",
+    check(
+        "appending keeps the active tab visible",
         active.getX() >= 0 && active.getX() + active.getWidth() <= BAR_WIDTH);
   }
 

@@ -17,10 +17,10 @@ import javax.swing.SwingUtilities;
 /**
  * S5 visual smoke for {@link TabMode#SCROLLABLE} (#430): a 12-tab primary strip overflowing the
  * window — wheel over the bar to scroll (an in-flight scroll-to tween cancels), click off-screen
- * tabs via "activate first/last" to watch the 300&nbsp;ms scroll-to-tab with the 48&nbsp;px
- * margin compose with the indicator slide, a tab capped at 264&nbsp;px with an ellipsized label
- * and a 72&nbsp;px-floored tiny tab, add/remove buttons proving the active tab stays visible
- * across child mutations, and a secondary scrollable strip.
+ * tabs via "activate first/last" to watch the 300&nbsp;ms scroll-to-tab with the 48&nbsp;px margin
+ * compose with the indicator slide, a tab capped at 264&nbsp;px with an ellipsized label and a
+ * 72&nbsp;px-floored tiny tab, add/remove buttons proving the active tab stays visible across child
+ * mutations, and a secondary scrollable strip.
  *
  * @author Charles Bryan
  * @version v0.4.0

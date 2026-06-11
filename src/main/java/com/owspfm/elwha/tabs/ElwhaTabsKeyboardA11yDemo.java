@@ -20,9 +20,9 @@ import javax.swing.SwingUtilities;
  * S6 visual smoke for {@link ElwhaTabs} keyboard navigation, a11y, and RTL (#431). Tab from the
  * leading text field: focus enters the bar on the <em>active</em> tab (the roving stop) with the
  * keyboard-only focus ring (mouse clicks never ring); ←/→ wrap around, Home/End jump, Space/Enter
- * activate, and the focused tab auto-scrolls into view on the scrollable bar. Toggle
- * auto-activate to make focus moves select. Toggle RTL: tab order, arrow direction, inline icon
- * side, indicator, and scrolling all mirror. Tab again leaves the bar to the trailing field.
+ * activate, and the focused tab auto-scrolls into view on the scrollable bar. Toggle auto-activate
+ * to make focus moves select. Toggle RTL: tab order, arrow direction, inline icon side, indicator,
+ * and scrolling all mirror. Tab again leaves the bar to the trailing field.
  *
  * @author Charles Bryan
  * @version v0.4.0

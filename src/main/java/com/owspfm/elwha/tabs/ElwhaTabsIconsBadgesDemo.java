@@ -18,8 +18,8 @@ import javax.swing.SwingUtilities;
 /**
  * S4 visual smoke for {@link ElwhaTab} icons and badges (#429): primary stacked (64&nbsp;px bar),
  * the inline-icon toggle, secondary inline icons (48&nbsp;px stays), icon-only tabs, the fill-swap
- * on activation, a count badge riding an icon corner, a small-dot badge trailing a label-only
- * tab, and a mixed bar showing inline-height tabs bottom-aligning in a 64&nbsp;px bar.
+ * on activation, a count badge riding an icon corner, a small-dot badge trailing a label-only tab,
+ * and a mixed bar showing inline-height tabs bottom-aligning in a 64&nbsp;px bar.
  *
  * @author Charles Bryan
  * @version v0.4.0

@@ -41,8 +41,8 @@ import javax.swing.event.ChangeListener;
  * square spanning the full tab width for secondary tabs. Tabs paint only their own content.
  *
  * <p><strong>Selection is exactly-one-mandatory</strong> (the {@code SINGLE_MANDATORY} tab-strip
- * semantics): the first tab added auto-activates silently; removing the active tab re-activates
- * the first remaining tab; programmatic activation flows through {@link #setActiveTabIndex(int)} /
+ * semantics): the first tab added auto-activates silently; removing the active tab re-activates the
+ * first remaining tab; programmatic activation flows through {@link #setActiveTabIndex(int)} /
  * {@link #setActiveTab(ElwhaTab)}. {@link ChangeListener}s fire on <em>any</em> active-tab change
  * (programmatic included) — except the initial silent auto-activation, matching material-web.
  *
@@ -442,8 +442,8 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
   /**
    * Activates the tab at the given index. Fires {@link ChangeListener}s on an actual change;
-   * activating the already-active index is a no-op. Out-of-range indices are ignored
-   * (material-web parity).
+   * activating the already-active index is a no-op. Out-of-range indices are ignored (material-web
+   * parity).
    *
    * @param index the tab index to activate
    * @version v0.4.0
@@ -738,7 +738,8 @@ public class ElwhaTabs extends JComponent implements Accessible {
         .put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), ACTION_FOCUS_LEFT);
     tab.getInputMap(WHEN_FOCUSED)
         .put(KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0), ACTION_FOCUS_FIRST);
-    tab.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0), ACTION_FOCUS_LAST);
+    tab.getInputMap(WHEN_FOCUSED)
+        .put(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0), ACTION_FOCUS_LAST);
     tab.getActionMap().put(ACTION_FOCUS_RIGHT, arrowAction(true));
     tab.getActionMap().put(ACTION_FOCUS_LEFT, arrowAction(false));
     tab.getActionMap().put(ACTION_FOCUS_FIRST, edgeAction(true));
@@ -766,8 +767,7 @@ public class ElwhaTabs extends JComponent implements Accessible {
           return;
         }
         // RTL flips which arrow is "forwards" (research §I).
-        final boolean forward =
-            getComponentOrientation().isLeftToRight() ? rightKey : !rightKey;
+        final boolean forward = getComponentOrientation().isLeftToRight() ? rightKey : !rightKey;
         moveFocus(from, forward);
       }
     };

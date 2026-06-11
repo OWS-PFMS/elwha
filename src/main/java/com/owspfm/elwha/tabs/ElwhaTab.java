@@ -51,8 +51,8 @@ import javax.swing.Timer;
 /**
  * One tab of an M3 tab bar — the dedicated tab primitive hosted by {@link ElwhaTabs}. Paints its
  * own content (icon and/or label), state layers, and press ripple in the M3 {@code title-small}
- * type role with the variant's active/inactive content colors; the bar paints everything that
- * spans tabs (container fill, divider, the animated active indicator).
+ * type role with the variant's active/inactive content colors; the bar paints everything that spans
+ * tabs (container fill, divider, the animated active indicator).
  *
  * <p><strong>Content forms (design §3, research §A).</strong> Label-only · icon+label · icon-only:
  *
@@ -68,9 +68,9 @@ import javax.swing.Timer;
  *       always need one (research §A; surfaces as the accessible name with S6).
  * </ul>
  *
- * <p>The {@link MaterialIcons.Symbol} factories follow the house fill-swap: the fill-0 glyph
- * paints inactive, the fill-1 form paints active. Raw-{@link Icon} factories paint the one icon in
- * both states; {@link FlatSVGIcon}s are auto-tinted to the content color.
+ * <p>The {@link MaterialIcons.Symbol} factories follow the house fill-swap: the fill-0 glyph paints
+ * inactive, the fill-1 form paints active. Raw-{@link Icon} factories paint the one icon in both
+ * states; {@link FlatSVGIcon}s are auto-tinted to the content color.
  *
  * <p><strong>Badges (anatomy item 2).</strong> {@link #setBadge(ElwhaBadge)} anchors via {@link
  * ElwhaBadgeAnchor} — {@code ICON_CORNER} on the icon when one exists, {@code TRAILING_EDGE} for
@@ -81,9 +81,9 @@ import javax.swing.Timer;
  * active — M3's noun is <em>active</em> (material-web deprecates {@code selected} for tabs). A tab
  * is meaningless outside a bar: the bar stamps the {@link TabsVariant} and enabled state on add.
  *
- * <p><strong>State layers (design §4, research §T).</strong> Hover / focus / pressed paint over
- * the full tab rect at the {@link StateLayer} opacities. The tint is the active content color
- * family ({@code PRIMARY} for primary tabs, {@code ON_SURFACE} for secondary) when active, {@code
+ * <p><strong>State layers (design §4, research §T).</strong> Hover / focus / pressed paint over the
+ * full tab rect at the {@link StateLayer} opacities. The tint is the active content color family
+ * ({@code PRIMARY} for primary tabs, {@code ON_SURFACE} for secondary) when active, {@code
  * ON_SURFACE} when inactive — except the primary variant's inactive <em>pressed</em> layer, which
  * is {@code PRIMARY} (the press flashes the destination color; verbatim token sheet). Hovering,
  * pressing, or focusing an inactive tab also lifts its content color to {@code ON_SURFACE}. The
@@ -192,8 +192,8 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
 
   /**
    * Constructs an icon+label tab from an arbitrary {@link Icon} — the escape hatch for custom
-   * (non-Material) glyphs. The one icon paints in both states; {@link FlatSVGIcon}s are
-   * auto-tinted to the content color.
+   * (non-Material) glyphs. The one icon paints in both states; {@link FlatSVGIcon}s are auto-tinted
+   * to the content color.
    *
    * @param icon the icon; required
    * @param label the tab label; required
@@ -207,8 +207,8 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
   }
 
   /**
-   * Constructs an icon-only tab. Icon-only tabs always need an accessible label (research §A) —
-   * it becomes the tab's accessible name.
+   * Constructs an icon-only tab. Icon-only tabs always need an accessible label (research §A) — it
+   * becomes the tab's accessible name.
    *
    * @param icon the Material symbol handle; required
    * @param accessibleLabel the screen-reader name; required, never empty

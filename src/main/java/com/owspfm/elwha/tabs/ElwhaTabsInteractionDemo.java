@@ -18,11 +18,11 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
 /**
- * S2 visual smoke for {@link ElwhaTabs} interaction (#427): live click activation with an event
- * log separating bar {@code ChangeListener} events from per-tab {@code ActionListener} events
+ * S2 visual smoke for {@link ElwhaTabs} interaction (#427): live click activation with an event log
+ * separating bar {@code ChangeListener} events from per-tab {@code ActionListener} events
  * (programmatic activation logs change-only — verify in the log!), hover/press layers and ripple
- * under real pointer input, the primary inactive-pressed→PRIMARY layer quirk on a forced-state
- * row, and a whole-bar enabled switch.
+ * under real pointer input, the primary inactive-pressed→PRIMARY layer quirk on a forced-state row,
+ * and a whole-bar enabled switch.
  *
  * @author Charles Bryan
  * @version v0.4.0

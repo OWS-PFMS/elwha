@@ -147,14 +147,17 @@ public final class ElwhaTabsChromeSmoke {
 
     final Rectangle rest = primaryBar.indicatorRestRect(primaryBar.getActiveTab());
     final int cx = rest.x + rest.width / 2;
-    check("primary indicator hugs content (narrower than tab)" + tag,
+    check(
+        "primary indicator hugs content (narrower than tab)" + tag,
         rest.width < primaryBar.getTabAt(0).getWidth() - 2 * ElwhaTab.H_PADDING_PX + 1);
     check("primary indicator center is PRIMARY (y=45)" + tag, sample(p, cx, 45).equals(primary));
     check("primary indicator covers divider row" + tag, sample(p, cx, 47).equals(primary));
-    check("no indicator outside content span" + tag,
+    check(
+        "no indicator outside content span" + tag,
         sample(p, primaryBar.getTabAt(0).getX() + 4, 46).equals(surface)
             && sample(p, primaryBar.getTabAt(0).getX() + 4, 47).equals(divider));
-    check("no indicator under inactive tab" + tag,
+    check(
+        "no indicator under inactive tab" + tag,
         sample(p, primaryBar.getTabAt(1).getX() + primaryBar.getTabAt(1).getWidth() / 2, 46)
             .equals(surface));
 
@@ -167,13 +170,17 @@ public final class ElwhaTabsChromeSmoke {
     final BufferedImage s = render(secondaryBar);
 
     final ElwhaTab active = secondaryBar.getActiveTab();
-    check("secondary indicator spans full tab (leading edge)" + tag,
+    check(
+        "secondary indicator spans full tab (leading edge)" + tag,
         sample(s, active.getX() + 1, 46).equals(primary));
-    check("secondary indicator spans full tab (trailing edge)" + tag,
+    check(
+        "secondary indicator spans full tab (trailing edge)" + tag,
         sample(s, active.getX() + active.getWidth() - 2, 46).equals(primary));
-    check("secondary indicator is 2px (y=45 is SURFACE)" + tag,
+    check(
+        "secondary indicator is 2px (y=45 is SURFACE)" + tag,
         sample(s, active.getX() + active.getWidth() / 2, 45).equals(surface));
-    check("secondary divider beyond active tab" + tag,
+    check(
+        "secondary divider beyond active tab" + tag,
         sample(s, active.getX() + active.getWidth() + 5, 47).equals(divider));
   }
 

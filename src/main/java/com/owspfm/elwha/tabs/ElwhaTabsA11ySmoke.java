@@ -12,12 +12,12 @@ import javax.accessibility.AccessibleSelection;
 import javax.accessibility.AccessibleState;
 
 /**
- * S6 headless guard for {@link ElwhaTabs} accessibility, keyboard logic, and RTL (#431): the
- * {@code PAGE_TAB_LIST}/{@code PAGE_TAB} role pairing, SELECTED state + state-change events,
- * {@link AccessibleSelection} mandatory-one semantics, the "click" accessible action's
- * user-gesture behavior, accessible names (label / icon-only / override), the arrow/Home/End
- * action wiring incl. wrap-around + the RTL direction flip + the disabled guard (the #432
- * pattern), auto-activate, and RTL geometry mirroring for both layout modes and inline icons.
+ * S6 headless guard for {@link ElwhaTabs} accessibility, keyboard logic, and RTL (#431): the {@code
+ * PAGE_TAB_LIST}/{@code PAGE_TAB} role pairing, SELECTED state + state-change events, {@link
+ * AccessibleSelection} mandatory-one semantics, the "click" accessible action's user-gesture
+ * behavior, accessible names (label / icon-only / override), the arrow/Home/End action wiring incl.
+ * wrap-around + the RTL direction flip + the disabled guard (the #432 pattern), auto-activate, and
+ * RTL geometry mirroring for both layout modes and inline icons.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -56,16 +56,24 @@ public final class ElwhaTabsA11ySmoke {
 
   private static void checkRolesAndStates() {
     final ElwhaTabs bar = laidOutBar();
-    check("bar role is PAGE_TAB_LIST",
+    check(
+        "bar role is PAGE_TAB_LIST",
         bar.getAccessibleContext().getAccessibleRole() == AccessibleRole.PAGE_TAB_LIST);
-    check("tab role is PAGE_TAB",
+    check(
+        "tab role is PAGE_TAB",
         bar.getTabAt(0).getAccessibleContext().getAccessibleRole() == AccessibleRole.PAGE_TAB);
 
-    check("active tab carries SELECTED",
-        bar.getTabAt(0).getAccessibleContext().getAccessibleStateSet()
+    check(
+        "active tab carries SELECTED",
+        bar.getTabAt(0)
+            .getAccessibleContext()
+            .getAccessibleStateSet()
             .contains(AccessibleState.SELECTED));
-    check("inactive tab lacks SELECTED",
-        !bar.getTabAt(1).getAccessibleContext().getAccessibleStateSet()
+    check(
+        "inactive tab lacks SELECTED",
+        !bar.getTabAt(1)
+            .getAccessibleContext()
+            .getAccessibleStateSet()
             .contains(AccessibleState.SELECTED));
 
     final int[] stateEvents = {0};
@@ -83,13 +91,14 @@ public final class ElwhaTabsA11ySmoke {
 
   private static void checkAccessibleSelection() {
     final ElwhaTabs bar = laidOutBar();
-    final AccessibleSelection selection =
-        bar.getAccessibleContext().getAccessibleSelection();
+    final AccessibleSelection selection = bar.getAccessibleContext().getAccessibleSelection();
     check("bar exposes AccessibleSelection", selection != null);
     check("selection count is 1", selection.getAccessibleSelectionCount() == 1);
-    check("selected child is the active tab",
+    check(
+        "selected child is the active tab",
         selection.getAccessibleSelection(0) == bar.getActiveTab());
-    check("isAccessibleChildSelected tracks the index",
+    check(
+        "isAccessibleChildSelected tracks the index",
         selection.isAccessibleChildSelected(0) && !selection.isAccessibleChildSelected(1));
 
     final int[] changes = {0};
@@ -99,7 +108,8 @@ public final class ElwhaTabsA11ySmoke {
 
     selection.removeAccessibleSelection(2);
     selection.clearAccessibleSelection();
-    check("removal/clearing are no-ops (mandatory selection)",
+    check(
+        "removal/clearing are no-ops (mandatory selection)",
         bar.getActiveTabIndex() == 2 && selection.getAccessibleSelectionCount() == 1);
   }
 
@@ -110,15 +120,19 @@ public final class ElwhaTabsA11ySmoke {
     tab.addActionListener(e -> actions[0]++);
 
     final var action = tab.getAccessibleContext().getAccessibleAction();
-    check("tab exposes one accessible action", action != null
-        && action.getAccessibleActionCount() == 1
-        && "click".equals(action.getAccessibleActionDescription(0)));
+    check(
+        "tab exposes one accessible action",
+        action != null
+            && action.getAccessibleActionCount() == 1
+            && "click".equals(action.getAccessibleActionDescription(0)));
 
     check("doAccessibleAction activates", action.doAccessibleAction(0));
-    check("accessible action is a user gesture (fires ActionListener)",
+    check(
+        "accessible action is a user gesture (fires ActionListener)",
         bar.getActiveTabIndex() == 1 && actions[0] == 1);
 
-    check("doAccessibleAction on the active tab still reports performed",
+    check(
+        "doAccessibleAction on the active tab still reports performed",
         action.doAccessibleAction(0) && actions[0] == 1);
 
     bar.setEnabled(false);
@@ -127,18 +141,22 @@ public final class ElwhaTabsA11ySmoke {
 
   private static void checkAccessibleNames() {
     final ElwhaTab labeled = ElwhaTab.of("Photos");
-    check("label tab is named by its label",
+    check(
+        "label tab is named by its label",
         "Photos".equals(labeled.getAccessibleContext().getAccessibleName()));
 
     final ElwhaTab iconOnly = ElwhaTab.iconOnly(MaterialIcons.symbol("home"), "Home");
-    check("icon-only tab is named by its accessible label",
+    check(
+        "icon-only tab is named by its accessible label",
         "Home".equals(iconOnly.getAccessibleContext().getAccessibleName()));
 
     labeled.setAccessibleLabel("Media library");
-    check("setAccessibleLabel overrides the label",
+    check(
+        "setAccessibleLabel overrides the label",
         "Media library".equals(labeled.getAccessibleContext().getAccessibleName()));
     labeled.setAccessibleLabel(null);
-    check("clearing the override restores the label",
+    check(
+        "clearing the override restores the label",
         "Photos".equals(labeled.getAccessibleContext().getAccessibleName()));
   }
 
@@ -153,14 +171,16 @@ public final class ElwhaTabsA11ySmoke {
     bar.moveFocus(bar.getTabAt(0), true);
     check("auto-activate selects on focus move", bar.getActiveTabIndex() == 1 && changes[0] == 1);
     bar.moveFocus(bar.getTabAt(0), false);
-    check("backward move wraps to the last tab",
+    check(
+        "backward move wraps to the last tab",
         bar.getActiveTabIndex() == bar.getTabCount() - 1 && changes[0] == 2);
     bar.moveFocus(bar.getTabAt(bar.getTabCount() - 1), true);
     check("forward move wraps to the first tab", bar.getActiveTabIndex() == 0 && changes[0] == 3);
 
     bar.setAutoActivate(false);
     bar.moveFocus(bar.getTabAt(0), true);
-    check("without auto-activate, focus moves do not select",
+    check(
+        "without auto-activate, focus moves do not select",
         bar.getActiveTabIndex() == 0 && changes[0] == 3);
 
     final ElwhaTab first = bar.getTabAt(0);
@@ -184,7 +204,8 @@ public final class ElwhaTabsA11ySmoke {
         new ActionEvent(bar.getTabAt(before), ActionEvent.ACTION_PERFORMED, "right"));
     activateAction.actionPerformed(
         new ActionEvent(bar.getTabAt(1), ActionEvent.ACTION_PERFORMED, "activate"));
-    check("disabled bar ignores keyboard actions (the #432 guard)",
+    check(
+        "disabled bar ignores keyboard actions (the #432 guard)",
         bar.getActiveTabIndex() == before);
   }
 
@@ -192,11 +213,14 @@ public final class ElwhaTabsA11ySmoke {
     final ElwhaTabs fixed = laidOutBar();
     fixed.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
     fixed.doLayout();
-    check("RTL fixed layout puts tab 0 at the trailing (right) edge",
+    check(
+        "RTL fixed layout puts tab 0 at the trailing (right) edge",
         fixed.getTabAt(0).getX() + fixed.getTabAt(0).getWidth() == BAR_WIDTH);
-    check("RTL fixed layout puts the last tab leftmost", fixed.getTabAt(3).getX() == 0
-        || fixed.getTabAt(3).getX() == 1);
-    check("indicator follows the RTL active tab",
+    check(
+        "RTL fixed layout puts the last tab leftmost",
+        fixed.getTabAt(3).getX() == 0 || fixed.getTabAt(3).getX() == 1);
+    check(
+        "indicator follows the RTL active tab",
         fixed.currentIndicatorRect().x >= fixed.getActiveTab().getX());
 
     final ElwhaTabs scrollable = new ElwhaTabs(TabsVariant.PRIMARY);
@@ -208,12 +232,14 @@ public final class ElwhaTabsA11ySmoke {
     scrollable.setSize(300, 48);
     scrollable.doLayout();
     final ElwhaTab firstTab = scrollable.getTabAt(0);
-    check("RTL scrollable offset 0 right-aligns the first tab",
+    check(
+        "RTL scrollable offset 0 right-aligns the first tab",
         firstTab.getX() + firstTab.getWidth() == 300);
 
     final ElwhaTab last = scrollable.getTabAt(7);
     scrollable.scrollToTab(last);
-    check("RTL scroll-to brings the last tab into view from the left",
+    check(
+        "RTL scroll-to brings the last tab into view from the left",
         last.getX() >= 0 && last.getX() + last.getWidth() <= 300);
 
     final ElwhaTab iconTab = ElwhaTab.of(MaterialIcons.symbol("home"), "Travel");
@@ -222,7 +248,8 @@ public final class ElwhaTabsA11ySmoke {
     secondaryRtl.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
     secondaryRtl.setSize(300, 48);
     secondaryRtl.doLayout();
-    check("RTL inline icon sits on the leading (right) side of its label",
+    check(
+        "RTL inline icon sits on the leading (right) side of its label",
         iconTab.getIconBounds().x > iconTab.getWidth() / 2);
   }
 

@@ -19,8 +19,8 @@ import javax.swing.Timer;
  * S3 visual smoke for the {@link ElwhaTabs} indicator slide (#428): unequal-width tabs make the
  * 250&nbsp;ms emphasized x+width interpolation visible on both variants (the primary
  * content-hugging indicator stretches between label widths; the secondary full-width indicator
- * stretches between tab widths). Controls: auto-cycle, 5× slow motion, reduced motion (snaps),
- * and click anywhere mid-slide to watch the retarget pick up from the in-flight rect.
+ * stretches between tab widths). Controls: auto-cycle, 5× slow motion, reduced motion (snaps), and
+ * click anywhere mid-slide to watch the retarget pick up from the in-flight rect.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -56,8 +56,7 @@ public final class ElwhaTabsMotionDemo {
 
     final JPanel bars = new JPanel(new GridLayout(0, 1, 0, 18));
     bars.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
-    bars.add(titled("Primary — content-hugging indicator stretches between label widths",
-        primary));
+    bars.add(titled("Primary — content-hugging indicator stretches between label widths", primary));
     bars.add(titled("Secondary — full-width indicator stretches between tab widths", secondary));
 
     final Timer cycler =

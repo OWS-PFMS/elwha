@@ -101,33 +101,42 @@ public final class ElwhaTabsInteractionSmoke {
 
     inactive.setHovered(true);
     Color expected = StateLayer.HOVER.over(surface, ColorRole.ON_SURFACE);
-    check("inactive hover layer blends ON_SURFACE @ 0.08",
+    check(
+        "inactive hover layer blends ON_SURFACE @ 0.08",
         near(layerSample(primaryBar, inactive), expected));
-    check("hover lifts inactive content to ON_SURFACE",
-        rowHasColorNear(render(primaryBar), 24, ColorRole.ON_SURFACE.resolve(),
-            inactive.getX(), inactive.getX() + inactive.getWidth()));
+    check(
+        "hover lifts inactive content to ON_SURFACE",
+        rowHasColorNear(
+            render(primaryBar),
+            24,
+            ColorRole.ON_SURFACE.resolve(),
+            inactive.getX(),
+            inactive.getX() + inactive.getWidth()));
     inactive.setHovered(false);
 
     inactive.setPressed(true);
     expected = StateLayer.PRESSED.over(surface, ColorRole.PRIMARY);
-    check("primary inactive PRESSED layer tints PRIMARY (the quirk)",
+    check(
+        "primary inactive PRESSED layer tints PRIMARY (the quirk)",
         near(layerSample(primaryBar, inactive), expected));
     inactive.setPressed(false);
 
     final ElwhaTab active = primaryBar.getTabAt(0);
     active.setHovered(true);
     expected = StateLayer.HOVER.over(surface, ColorRole.PRIMARY);
-    check("active primary hover layer tints PRIMARY",
+    check(
+        "active primary hover layer tints PRIMARY",
         near(layerSample(primaryBar, active), expected));
     active.setHovered(false);
 
     final ElwhaTabs secondaryBar = laidOutBar(ElwhaTabs.secondary());
-    final ElwhaTab sInactive = secondaryBar.getTabAt(2);
-    sInactive.setPressed(true);
+    final ElwhaTab secondaryInactive = secondaryBar.getTabAt(2);
+    secondaryInactive.setPressed(true);
     expected = StateLayer.PRESSED.over(surface, ColorRole.ON_SURFACE);
-    check("secondary inactive pressed layer tints ON_SURFACE",
-        near(layerSample(secondaryBar, sInactive), expected));
-    sInactive.setPressed(false);
+    check(
+        "secondary inactive pressed layer tints ON_SURFACE",
+        near(layerSample(secondaryBar, secondaryInactive), expected));
+    secondaryInactive.setPressed(false);
 
     final ElwhaTabs disabledBar = laidOutBar(ElwhaTabs.primary());
     disabledBar.setEnabled(true);
@@ -135,11 +144,20 @@ public final class ElwhaTabsInteractionSmoke {
     disabledBar.setEnabled(false);
     final BufferedImage disabledRender = render(disabledBar);
     final ElwhaTab first = disabledBar.getTabAt(0);
-    check("disabled content never reaches full-strength color",
-        rowHasColorNear(enabledRender, 24, ColorRole.PRIMARY.resolve(),
-                first.getX(), first.getX() + first.getWidth())
-            && !rowHasColorNear(disabledRender, 24, ColorRole.PRIMARY.resolve(),
-                first.getX(), first.getX() + first.getWidth()));
+    check(
+        "disabled content never reaches full-strength color",
+        rowHasColorNear(
+                enabledRender,
+                24,
+                ColorRole.PRIMARY.resolve(),
+                first.getX(),
+                first.getX() + first.getWidth())
+            && !rowHasColorNear(
+                disabledRender,
+                24,
+                ColorRole.PRIMARY.resolve(),
+                first.getX(),
+                first.getX() + first.getWidth()));
   }
 
   // ----------------------------------------------------------------- helpers
@@ -166,8 +184,8 @@ public final class ElwhaTabsInteractionSmoke {
   }
 
   private static MouseEvent mouse(final ElwhaTab tab, final int id, final int x, final int y) {
-    return new MouseEvent(tab, id, System.currentTimeMillis(), 0, x, y, 1, false,
-        MouseEvent.BUTTON1);
+    return new MouseEvent(
+        tab, id, System.currentTimeMillis(), 0, x, y, 1, false, MouseEvent.BUTTON1);
   }
 
   // Samples a layer-only pixel inside the tab: near the leading edge, above the indicator band,
