@@ -2,6 +2,7 @@ package com.owspfm.elwha.tooltip;
 
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.overlay.AbstractElwhaOverlay;
+import com.owspfm.elwha.theme.ShadowBearing;
 import java.awt.AWTEvent;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -727,13 +728,26 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   }
 
   // The anchor's bounds in the layered pane's coordinate space; degrades to the pane's top-left
-  // when the anchor is detached, mirroring the menu host.
+  // when the anchor is detached, mirroring the menu host. A ShadowBearing anchor's halo reserve is
+  // backed out — the shadow is not visual anchor, and leaving it in reads as a too-wide gap
+  // (exactly the correction the engine already applies to the tooltip's own halo). Note the
+  // residual: placement measures from the component bounds — a component stretched by a fill
+  // layout beyond its preferred size anchors at its stretched edge, not its centered body.
   private Rectangle anchorBoundsInPane() {
     if (anchor == null || layeredPane == null || !anchor.isShowing()) {
       return new Rectangle(0, 0, 0, 0);
     }
     final Point origin = SwingUtilities.convertPoint(anchor, 0, 0, layeredPane);
-    return new Rectangle(origin.x, origin.y, anchor.getWidth(), anchor.getHeight());
+    final Rectangle bounds =
+        new Rectangle(origin.x, origin.y, anchor.getWidth(), anchor.getHeight());
+    if (anchor instanceof ShadowBearing bearing) {
+      final Insets halo = bearing.getShadowInsets();
+      bounds.x += halo.left;
+      bounds.y += halo.top;
+      bounds.width = Math.max(0, bounds.width - halo.left - halo.right);
+      bounds.height = Math.max(0, bounds.height - halo.top - halo.bottom);
+    }
+    return bounds;
   }
 
   // A rich action: the text-button label and the consumer's listener.

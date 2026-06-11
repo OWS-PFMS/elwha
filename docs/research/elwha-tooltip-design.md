@@ -82,7 +82,7 @@ No state layers on the surface (non-interactive container); the action buttons b
 | Defaults | plain `CENTER`; rich `END` (research §Open-3) |
 | RTL | `START`/`END` resolve through the anchor's `ComponentOrientation`; rich shadow insets participate in the box math (`ShadowBearing` doctrine) |
 
-Anchor bounds convert to pane coordinates via `SwingUtilities.convertRectangle`; `layoutSurface` re-derives placement on host resize. The surface's preferred size is content-driven (wrap math), never `getMaximumSize`-overridden (#199/#200 doctrine).
+Anchor bounds convert to pane coordinates via `SwingUtilities.convertRectangle`; `layoutSurface` re-derives placement on host resize. A **`ShadowBearing` anchor's halo reserve is backed out** of the anchor rect before placing — the shadow band is not visual anchor, and leaving it in reads as a too-wide gap (added at smoke; pinned in `TooltipPlainChromeSmoke`). Residual, accepted: placement measures from component bounds, so a component stretched by a fill layout beyond its preferred size anchors at its stretched edge, not its centered body — only the component knows its body rect (no public accessor today). The surface's preferred size is content-driven (wrap math), never `getMaximumSize`-overridden (#199/#200 doctrine).
 
 ## §6. States & motion
 

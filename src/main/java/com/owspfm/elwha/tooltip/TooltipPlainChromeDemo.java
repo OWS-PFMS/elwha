@@ -66,7 +66,12 @@ public final class TooltipPlainChromeDemo {
               : ElwhaTooltip.plain("Save to favorites");
       tooltips.add(tip);
       anchorButton.addActionListener(e -> tip.show(anchorButton));
-      grid.add(anchorButton);
+      // GridBagLayout centers the button at its preferred size — GridLayout would stretch it to
+      // the whole cell and the tooltip would hug the invisible cell edge, not the pill.
+      final JPanel cell = new JPanel(new java.awt.GridBagLayout());
+      cell.setOpaque(false);
+      cell.add(anchorButton);
+      grid.add(cell);
     }
 
     final ElwhaTextField field = ElwhaTextField.outlined("Focus me and type");

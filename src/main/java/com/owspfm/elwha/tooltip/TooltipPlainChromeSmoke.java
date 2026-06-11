@@ -234,20 +234,26 @@ public final class TooltipPlainChromeSmoke {
     final AtomicReference<JFrame> frameRef = new AtomicReference<>();
     final AtomicReference<JTextField> fieldRef = new AtomicReference<>();
     final AtomicReference<javax.swing.JButton> anchorRef = new AtomicReference<>();
+    final AtomicReference<com.owspfm.elwha.button.ElwhaButton> elevatedRef =
+        new AtomicReference<>();
     SwingUtilities.invokeAndWait(
         () -> {
           final JFrame frame = new JFrame("TooltipPlainChromeSmoke");
           final JTextField field = new JTextField("focus home", 16);
           final javax.swing.JButton anchorButton = new javax.swing.JButton("anchor");
+          final com.owspfm.elwha.button.ElwhaButton elevated =
+              com.owspfm.elwha.button.ElwhaButton.elevatedButton("elevated");
           // GridBagLayout centers the row vertically so the ABOVE preference has room and the
           // placement assertion is deterministic (a top-of-frame anchor legitimately flips).
           final javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.GridBagLayout());
           final javax.swing.JPanel row = new javax.swing.JPanel();
           row.add(field);
           row.add(anchorButton);
+          row.add(elevated);
           panel.add(row);
           frame.add(panel);
           frame.setSize(500, 300);
+          elevatedRef.set(elevated);
           frame.setLocationRelativeTo(null);
           frame.setVisible(true);
           field.requestFocusInWindow();
@@ -299,6 +305,35 @@ public final class TooltipPlainChromeSmoke {
           check(tip.isTooltipShowing(), "setText while showing keeps it shown");
 
           tip.dismiss();
+        });
+    Thread.sleep(100);
+
+    // A ShadowBearing anchor's halo reserve is backed out of placement: the 4px gap runs to the
+    // visual body top, not the component bounds (which include the shadow band).
+    final ElwhaTooltip haloTip = ElwhaTooltip.plain("halo-backed");
+    SwingUtilities.invokeAndWait(() -> haloTip.show(elevatedRef.get()));
+    Thread.sleep(100);
+    SwingUtilities.invokeAndWait(
+        () -> {
+          final JLayeredPane pane = frameRef.get().getRootPane().getLayeredPane();
+          Component mounted = null;
+          for (final Component c : pane.getComponentsInLayer(JLayeredPane.POPUP_LAYER)) {
+            if (c instanceof TooltipSurface) {
+              mounted = c;
+            }
+          }
+          final com.owspfm.elwha.button.ElwhaButton elevated = elevatedRef.get();
+          final Rectangle anchorInPane =
+              SwingUtilities.convertRectangle(elevated.getParent(), elevated.getBounds(), pane);
+          final int visualTop = anchorInPane.y + elevated.getShadowInsets().top;
+          check(
+              elevated.getShadowInsets().top > 0,
+              "elevated anchor actually reserves a shadow halo");
+          check(
+              mounted != null
+                  && mounted.getY() + mounted.getHeight() + ElwhaTooltip.ANCHOR_GAP_PX == visualTop,
+              "ShadowBearing anchor: the 4px gap is measured to the visual body");
+          haloTip.dismiss();
         });
     Thread.sleep(100);
 
