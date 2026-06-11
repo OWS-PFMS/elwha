@@ -103,9 +103,9 @@ public final class TooltipTriggerDemo {
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 12, 12));
     controls.add(field);
     controls.add(sendButton);
-    controls.add(new JLabel("Show delay:"));
+    controls.add(new JLabel("Show delay (ms):"));
     controls.add(showDelay);
-    controls.add(new JLabel("Hide delay:"));
+    controls.add(new JLabel("Hide linger (ms):"));
     controls.add(hideDelay);
     controls.add(detachToggle);
     controls.add(programmatic);

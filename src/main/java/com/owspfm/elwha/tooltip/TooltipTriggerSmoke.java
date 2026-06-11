@@ -161,6 +161,16 @@ public final class TooltipTriggerSmoke {
     Thread.sleep(400);
     check(tip.isTooltipShowing(), "re-entering the anchor cancels the pending linger");
 
+    // Tiny linger: even a 2ms delay resolves — the expiry self-re-arms until it reaches a
+    // verdict (regression: a fire that landed in-union used to kill the timer, stranding the
+    // tooltip open once the pointer left without further in-app events).
+    tip.setHideDelayMs(2);
+    postMouse(anchorRef.get(), MouseEvent.MOUSE_EXITED);
+    check(waitFor(() -> !tip.isTooltipShowing(), 1000), "a 2ms linger still dismisses");
+    tip.setHideDelayMs(120);
+    postMouse(anchorRef.get(), MouseEvent.MOUSE_ENTERED);
+    check(waitFor(tip::isTooltipShowing, 1500), "re-shown for the press check");
+
     // Press-to-dismiss.
     postMouse(anchorRef.get(), MouseEvent.MOUSE_PRESSED);
     check(waitFor(() -> !tip.isTooltipShowing(), 1000), "anchor press dismisses");

@@ -202,13 +202,21 @@ final class TooltipTrigger {
     }
   }
 
+  // Once armed, the linger stays alive until it reaches a verdict: a no-dismiss expiry RE-ARMS
+  // and polls again. Dying silently would strand the tooltip open whenever the pointer later
+  // leaves without an event this app can see — it fired mid-exit-burst while still in-union, or
+  // the pointer left the window entirely (no AWT motion events arrive from out there); polling
+  // MouseInfo needs no events at all.
   private void lingerExpired() {
-    if (keyboardFocusActive && anchor.isFocusOwner()) {
+    if (!shownByTrigger || !tooltip.isTooltipShowing()) {
       return;
     }
-    if (shownByTrigger && tooltip.isTooltipShowing() && !pointerInUnion()) {
+    final boolean sustainedByFocus = keyboardFocusActive && anchor.isFocusOwner();
+    if (!sustainedByFocus && !pointerInUnion()) {
       tooltip.dismiss();
+      return;
     }
+    armLinger();
   }
 
   private void armLinger() {
@@ -235,9 +243,11 @@ final class TooltipTrigger {
           if (!shownByTrigger || !tooltip.isTooltipShowing()) {
             return;
           }
-          if (inUnion(me.getLocationOnScreen())) {
-            hideTimer.stop();
-          } else if (!hideTimer.isRunning()) {
+          // Arm only — never stop. The expiry itself re-arms while the pointer sustains the show
+          // (anchor re-entry is the one reliable stop, handled by the anchor's own listener), so
+          // stopping here on an in-union event could strand a tooltip whose pointer then leaves
+          // eventlessly.
+          if (!inUnion(me.getLocationOnScreen()) && !hideTimer.isRunning()) {
             armLinger();
           }
         };
