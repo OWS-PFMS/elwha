@@ -14,16 +14,20 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 /**
- * The Elwha Showcase leaf surface for {@link ElwhaCheckbox} (story #414): a {@link
- * ComponentWorkbench} stage with a live tri-state selector, label text, error, and enabled controls
+ * The Elwha Showcase leaf surface for {@link ElwhaCheckbox} (story #414; truncation visibility
+ * #443): a {@link ComponentWorkbench} stage with a live tri-state selector, label text, a
+ * constrain-width pair (the stage honors preferred size, which grows with the label — the
+ * constraint is what makes the label's ellipsis truncation observable), error, and enabled controls
  * plus the generated-code view, and a state gallery matrix rendering enabled / hover / focused /
- * pressed / disabled across the plain, labeled, error, and indeterminate configurations. The
- * boolean workbench controls are themselves {@code ElwhaCheckbox}es and the label control is an
- * {@link ElwhaTextField} — the component dogfoods its own leaf.
+ * pressed / disabled across the plain, labeled, error, indeterminate, and truncating-label
+ * configurations. The boolean workbench controls are themselves {@code ElwhaCheckbox}es and the
+ * label control is an {@link ElwhaTextField} — the component dogfoods its own leaf.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -43,6 +47,10 @@ final class CheckboxShowcasePanels {
     final ElwhaCheckbox errorCtl = new ElwhaCheckbox("Error shown");
     final ElwhaCheckbox enabledCtl = new ElwhaCheckbox("Enabled");
     enabledCtl.setChecked(true);
+    // The stage honors getPreferredSize(), which grows with the label — so the label's ellipsis
+    // truncation is unobservable without an external constraint. This pair makes it observable.
+    final ElwhaCheckbox constrainCtl = new ElwhaCheckbox("Constrain width");
+    final JSpinner widthSpinner = new JSpinner(new SpinnerNumberModel(200, 96, 600, 20));
 
     final ElwhaCheckbox subject = new ElwhaCheckbox();
 
@@ -50,6 +58,8 @@ final class CheckboxShowcasePanels {
     controls.addSection("Checkbox");
     controls.addControl("State", stateBox);
     controls.addControl("Label", labelCtl);
+    controls.addControl("", constrainCtl);
+    controls.addControl("Width", widthSpinner);
     controls.addSection("State");
     controls.addControl("", errorCtl);
     controls.addControl("", enabledCtl);
@@ -58,12 +68,22 @@ final class CheckboxShowcasePanels {
         () -> {
           final CheckState state = (CheckState) stateBox.getSelectedItem();
           final String label = labelCtl.getText();
+          final boolean constrained = constrainCtl.isChecked();
+          final int width = (Integer) widthSpinner.getValue();
+          widthSpinner.setEnabled(constrained);
           subject.setCheckState(state);
           subject.setLabel(label);
           subject.setErrorShown(errorCtl.isChecked());
           subject.setEnabled(enabledCtl.isChecked());
+          subject.setPreferredSize(constrained ? new Dimension(width, 48) : null);
           workbench.setStage(stage(subject));
-          workbench.setCode(renderCode(state, label, errorCtl.isChecked(), enabledCtl.isChecked()));
+          workbench.setCode(
+              renderCode(
+                  state,
+                  label,
+                  errorCtl.isChecked(),
+                  enabledCtl.isChecked(),
+                  constrained ? width : -1));
         };
 
     // The live subject feeds the state selector back so a stage click keeps the rail honest.
@@ -71,6 +91,8 @@ final class CheckboxShowcasePanels {
 
     stateBox.addActionListener(e -> apply.run());
     onChange(labelCtl, apply);
+    constrainCtl.addActionListener(e -> apply.run());
+    widthSpinner.addChangeListener(e -> apply.run());
     errorCtl.addActionListener(e -> apply.run());
     enabledCtl.addActionListener(e -> apply.run());
     apply.run();
@@ -81,7 +103,13 @@ final class CheckboxShowcasePanels {
   static JComponent buildGallery() {
     final String[] columns = {"Enabled", "Hover", "Focused (Tab to)", "Pressed", "Disabled"};
     final String[] rows = {
-      "Unchecked", "Checked", "Indeterminate", "Labeled", "Error unchecked", "Error checked"
+      "Unchecked",
+      "Checked",
+      "Indeterminate",
+      "Labeled",
+      "Error unchecked",
+      "Error checked",
+      "Long label (truncates)"
     };
 
     final JPanel matrix = new JPanel(new GridBagLayout());
@@ -128,6 +156,7 @@ final class CheckboxShowcasePanels {
     final ElwhaCheckbox box =
         switch (row) {
           case 3 -> new ElwhaCheckbox("Labeled");
+          case 6 -> new ElwhaCheckbox("A label too long for its constrained width");
           default -> new ElwhaCheckbox();
         };
     switch (row) {
@@ -137,6 +166,11 @@ final class CheckboxShowcasePanels {
       case 5 -> {
         box.setChecked(true);
         box.setErrorShown(true);
+      }
+      case 6 -> {
+        box.setChecked(true);
+        // Pinned narrower than the label's natural width so the ellipsis renders statically.
+        box.setPreferredSize(new Dimension(170, 48));
       }
       default -> {
         // Unchecked.
@@ -167,7 +201,11 @@ final class CheckboxShowcasePanels {
   }
 
   private static String renderCode(
-      final CheckState state, final String label, final boolean error, final boolean enabled) {
+      final CheckState state,
+      final String label,
+      final boolean error,
+      final boolean enabled,
+      final int constrainedWidth) {
     final boolean labeled = label != null && !label.isBlank();
     final StringBuilder code = new StringBuilder(220);
     if (labeled) {
@@ -188,6 +226,12 @@ final class CheckboxShowcasePanels {
     }
     if (!enabled) {
       code.append("checkbox.setEnabled(false);\n");
+    }
+    if (constrainedWidth > 0) {
+      code.append("// Any layout that constrains the width truncates the label the same way.\n");
+      code.append("checkbox.setPreferredSize(new Dimension(")
+          .append(constrainedWidth)
+          .append(", 48));\n");
     }
     code.append("checkbox.addActionListener(e -> apply(checkbox.isChecked()));");
     return code.toString();

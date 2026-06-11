@@ -38,7 +38,7 @@ public final class CheckboxShowcaseSmoke {
     layout(gallery, "gallery");
 
     check("workbench has children", workbench.getComponentCount() > 0);
-    check("gallery has the 6x5 matrix + headers", gallery.getComponentCount() >= 36);
+    check("gallery has the 7x5 matrix + headers", gallery.getComponentCount() >= 42);
 
     System.out.println("CheckboxShowcaseSmoke: OK (workbench + gallery construct headless)");
   }
