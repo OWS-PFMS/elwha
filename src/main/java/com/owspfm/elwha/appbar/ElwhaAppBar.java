@@ -2,7 +2,11 @@ package com.owspfm.elwha.appbar;
 
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
+import com.owspfm.elwha.theme.ScrollSourceBinding;
 import com.owspfm.elwha.theme.TypeRole;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -15,6 +19,7 @@ import java.util.List;
 import java.util.Objects;
 import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.swing.JScrollPane;
 
 /**
  * The M3 Expressive app bar — the token-themed header for the top of an app shell: a leading
@@ -57,10 +62,17 @@ public class ElwhaAppBar extends JComponent {
   static final int SLOT_SIZE_PX = 48;
   static final int TITLE_INSET_PX = 16;
   static final int EXPANDED_MARGIN_PX = 16;
+  static final int LIFT_FADE_MS = 200;
 
   private final AppBarVariant variant;
   private final List<JComponent> trailingElements = new ArrayList<>();
   private final List<ElwhaIconButton> actions = new ArrayList<>();
+
+  private final ScrollSourceBinding scrollBinding = new ScrollSourceBinding(this::onScroll);
+  private final MorphAnimator liftAnimator = new MorphAnimator(this, LIFT_FADE_MS);
+  private JScrollPane scrollSource;
+  private boolean liftOnScroll = true;
+  private boolean lifted;
 
   private ElwhaIconButton navigationIcon;
   private String title = "";
@@ -87,6 +99,7 @@ public class ElwhaAppBar extends JComponent {
   public ElwhaAppBar(final AppBarVariant variant) {
     this.variant = Objects.requireNonNull(variant, "variant");
     setOpaque(true);
+    liftAnimator.addProgressListener(this::repaint);
   }
 
   /**
@@ -381,6 +394,140 @@ public class ElwhaAppBar extends JComponent {
     return titleCentered;
   }
 
+  // ------------------------------------------------------------------ scroll
+
+  /**
+   * Sets the scroll source whose vertical scrolling drives this bar's scroll behaviors — the lift
+   * color change (all variants, while {@link #setLiftOnScroll(boolean)} is on) and, for the
+   * flexible variants, the collapse. Typically the {@link JScrollPane} the bar heads in {@code
+   * BorderLayout.NORTH}. Pass {@code null} to clear; the bar then stays static-expanded.
+   *
+   * <p><strong>Desktop adaptation:</strong> a plain Swing {@link JScrollPane} cannot consume scroll
+   * the way mobile nested scrolling does, so content moves its full scroll distance while the bar
+   * responds — the M3 read (bar reacting as content slides under) is preserved.
+   *
+   * @param source the scroll source, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setScrollSource(final JScrollPane source) {
+    if (source == scrollSource) {
+      return;
+    }
+    scrollSource = source;
+    scrollBinding.setSource(source);
+    if (source != null) {
+      scrollBinding.attach();
+      applyScrollState(scrollBinding.value());
+    } else {
+      updateLift(false);
+    }
+  }
+
+  /**
+   * The scroll source, or {@code null} when none is set.
+   *
+   * @return the scroll source
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public JScrollPane getScrollSource() {
+    return scrollSource;
+  }
+
+  /**
+   * Whether the container lifts — fades {@link ColorRole#SURFACE} to {@link
+   * ColorRole#SURFACE_CONTAINER} — while content is scrolled under the bar. On by default (the MDC
+   * {@code liftOnScroll} default); the lift is tonal only, no shadow (Compose parity).
+   *
+   * @param liftOnScroll {@code false} to keep the container at {@code SURFACE} regardless
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setLiftOnScroll(final boolean liftOnScroll) {
+    if (this.liftOnScroll == liftOnScroll) {
+      return;
+    }
+    this.liftOnScroll = liftOnScroll;
+    applyScrollState(scrollBinding.value());
+  }
+
+  /**
+   * Whether lift-on-scroll is enabled.
+   *
+   * @return the lift-on-scroll flag
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isLiftOnScroll() {
+    return liftOnScroll;
+  }
+
+  /**
+   * Whether the container is currently lifted.
+   *
+   * @return {@code true} while lifted
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isLifted() {
+    return lifted;
+  }
+
+  /**
+   * Forces the lifted treatment — a static-rendering hook for galleries and tests (the {@code
+   * setHovered}/{@code setPressed} convention). A live scroll source overrides the forced value on
+   * its next scroll event.
+   *
+   * @param lifted the forced lift state
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setLifted(final boolean lifted) {
+    updateLift(lifted);
+  }
+
+  private void onScroll(final int value, final int delta) {
+    applyScrollState(value);
+  }
+
+  private void applyScrollState(final int value) {
+    updateLift(liftOnScroll && value > 0);
+  }
+
+  private void updateLift(final boolean nowLifted) {
+    if (lifted == nowLifted) {
+      return;
+    }
+    lifted = nowLifted;
+    if (isDisplayable()) {
+      if (nowLifted) {
+        liftAnimator.start();
+      } else {
+        liftAnimator.reverse();
+      }
+    } else {
+      liftAnimator.snapTo(nowLifted ? 1f : 0f);
+    }
+    repaint();
+  }
+
+  @Override
+  public void addNotify() {
+    super.addNotify();
+    if (scrollSource != null) {
+      scrollBinding.attach();
+      applyScrollState(scrollBinding.value());
+    }
+  }
+
+  @Override
+  public void removeNotify() {
+    scrollBinding.detach();
+    liftAnimator.stop();
+    super.removeNotify();
+  }
+
   // ------------------------------------------------------------------ layout
 
   @Override
@@ -460,7 +607,7 @@ public class ElwhaAppBar extends JComponent {
   protected void paintComponent(final Graphics g) {
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
-      g2.setColor(ColorRole.SURFACE.resolve());
+      g2.setColor(containerColor());
       g2.fillRect(0, 0, getWidth(), getHeight());
       g2.setRenderingHint(
           RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -573,5 +720,24 @@ public class ElwhaAppBar extends JComponent {
 
   private Font stripTitleFont() {
     return TypeRole.TITLE_LARGE.resolve();
+  }
+
+  // SURFACE → SURFACE_CONTAINER by the lift fade's eased progress (tonal lift, design §6).
+  private Color containerColor() {
+    final float t = Easing.STANDARD.ease(liftAnimator.progress());
+    if (t <= 0f) {
+      return ColorRole.SURFACE.resolve();
+    }
+    if (t >= 1f) {
+      return ColorRole.SURFACE_CONTAINER.resolve();
+    }
+    return lerp(ColorRole.SURFACE.resolve(), ColorRole.SURFACE_CONTAINER.resolve(), t);
+  }
+
+  private static Color lerp(final Color a, final Color b, final float t) {
+    return new Color(
+        Math.round(a.getRed() + (b.getRed() - a.getRed()) * t),
+        Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * t),
+        Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * t));
   }
 }

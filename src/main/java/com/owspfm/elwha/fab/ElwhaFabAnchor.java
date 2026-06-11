@@ -1,17 +1,16 @@
 package com.owspfm.elwha.fab;
 
 import com.owspfm.elwha.theme.MorphAnimator;
+import com.owspfm.elwha.theme.ScrollSourceBinding;
 import com.owspfm.elwha.theme.ShadowPainter;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Insets;
 import java.beans.PropertyChangeListener;
 import java.util.Objects;
-import javax.swing.BoundedRangeModel;
 import javax.swing.JLayeredPane;
 import javax.swing.JScrollPane;
 import javax.swing.Timer;
-import javax.swing.event.ChangeListener;
 
 /**
  * Placement primitive that floats an {@link ElwhaFab} above a content component at a screen-edge
@@ -107,9 +106,7 @@ public final class ElwhaFabAnchor extends JLayeredPane {
   private ScrollResponse scrollResponse = ScrollResponse.NONE;
   private JScrollPane scrollSource;
   private final MorphAnimator hideAnim;
-  private final ChangeListener scrollListener = e -> onScroll();
-  private BoundedRangeModel attachedModel;
-  private int prevScrollValue;
+  private final ScrollSourceBinding scrollBinding = new ScrollSourceBinding(this::onScroll);
   private boolean hidden;
   private boolean shrunk;
   private Timer shrinkTracker;
@@ -332,28 +329,15 @@ public final class ElwhaFabAnchor extends JLayeredPane {
   }
 
   private void attachScrollListener() {
-    if (scrollSource == null || attachedModel != null) {
-      return;
-    }
-    attachedModel = scrollSource.getVerticalScrollBar().getModel();
-    prevScrollValue = attachedModel.getValue();
-    attachedModel.addChangeListener(scrollListener);
+    scrollBinding.setSource(scrollSource);
+    scrollBinding.attach();
   }
 
   private void detachScrollListener() {
-    if (attachedModel != null) {
-      attachedModel.removeChangeListener(scrollListener);
-      attachedModel = null;
-    }
+    scrollBinding.detach();
   }
 
-  private void onScroll() {
-    if (attachedModel == null) {
-      return;
-    }
-    final int value = attachedModel.getValue();
-    final int delta = value - prevScrollValue;
-    prevScrollValue = value;
+  private void onScroll(final int value, final int delta) {
     if (Math.abs(delta) < SCROLL_THRESHOLD_PX) {
       return;
     }
