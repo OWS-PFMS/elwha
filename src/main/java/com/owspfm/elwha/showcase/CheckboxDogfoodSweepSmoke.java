@@ -14,11 +14,11 @@ import javax.swing.JComponent;
 
 /**
  * Headless guard for the S5 dogfood sweep (story #415): constructs every swept living-Showcase
- * control surface and walks its component tree asserting <strong>zero raw {@link JCheckBox}</strong>
- * instances remain and at least one {@link ElwhaCheckbox} took their place. The raw-Swing
- * Foundations gallery is exempt by design (its {@code JCheckBox} is demo subject matter), as are
- * frozen per-story demo artifacts — see the epic #410 PR body for the exclusion list. Runs in CI's
- * headless JVM ({@code -Djava.awt.headless=true} safe).
+ * control surface and walks its component tree asserting <strong>zero raw {@link
+ * JCheckBox}</strong> instances remain and at least one {@link ElwhaCheckbox} took their place. The
+ * raw-Swing Foundations gallery is exempt by design (its {@code JCheckBox} is demo subject matter),
+ * as are frozen per-story demo artifacts — see the epic #410 PR body for the exclusion list. Runs
+ * in CI's headless JVM ({@code -Djava.awt.headless=true} safe).
  *
  * @author Charles Bryan
  * @version v0.4.0

@@ -67,8 +67,8 @@ import javax.swing.Timer;
  * error flag} swaps the chromatic role to the M3 error palette. Accessibility reports {@link
  * AccessibleRole#CHECK_BOX} with the standard checked / indeterminate states.
  *
- * <p>All theme tokens resolve at paint time — the component auto-themes across palette / mode
- * swaps with zero new theme tokens; geometry is fixed component constants per design §5.
+ * <p>All theme tokens resolve at paint time — the component auto-themes across palette / mode swaps
+ * with zero new theme tokens; geometry is fixed component constants per design §5.
  *
  * <p><strong>Parent–child tri-state wiring</strong> (a parent checkbox summarizing children) is
  * deliberately app logic, as in every first-party M3 implementation: listen to the children, call
@@ -363,8 +363,8 @@ public class ElwhaCheckbox extends JComponent {
   }
 
   /**
-   * Sets the accessible name independently of the visual label — required for label-less
-   * checkboxes (the web {@code aria-label} analogue), optional otherwise.
+   * Sets the accessible name independently of the visual label — required for label-less checkboxes
+   * (the web {@code aria-label} analogue), optional otherwise.
    *
    * @param accessibleLabel the accessible name; {@code null} falls back to the visual label
    * @version v0.4.0
@@ -626,8 +626,7 @@ public class ElwhaCheckbox extends JComponent {
   }
 
   private void userToggle() {
-    setCheckState(
-        checkState == CheckState.CHECKED ? CheckState.UNCHECKED : CheckState.CHECKED);
+    setCheckState(checkState == CheckState.CHECKED ? CheckState.UNCHECKED : CheckState.CHECKED);
     final ActionEvent evt = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "toggle");
     for (final ActionListener l : new ArrayList<>(actionListeners)) {
       l.actionPerformed(evt);
@@ -663,8 +662,10 @@ public class ElwhaCheckbox extends JComponent {
     g2.setColor(withAlpha(tint, layer.opacity()));
     g2.fill(
         new Ellipse2D.Float(
-            cx - STATE_LAYER_SIZE / 2f, cy - STATE_LAYER_SIZE / 2f,
-            STATE_LAYER_SIZE, STATE_LAYER_SIZE));
+            cx - STATE_LAYER_SIZE / 2f,
+            cy - STATE_LAYER_SIZE / 2f,
+            STATE_LAYER_SIZE,
+            STATE_LAYER_SIZE));
   }
 
   private StateLayer activeLayer() {
@@ -893,8 +894,7 @@ public class ElwhaCheckbox extends JComponent {
 
   private static Color withAlpha(final Color base, final float alpha) {
     final float clamped = Math.max(0f, Math.min(1f, alpha));
-    return new Color(
-        base.getRed(), base.getGreen(), base.getBlue(), Math.round(clamped * 255f));
+    return new Color(base.getRed(), base.getGreen(), base.getBlue(), Math.round(clamped * 255f));
   }
 
   // ---------------------------------------------------------------- a11y
@@ -910,8 +910,8 @@ public class ElwhaCheckbox extends JComponent {
   /**
    * Accessible context for the checkbox — reports {@link AccessibleRole#CHECK_BOX}, adds {@link
    * AccessibleState#CHECKED} / {@link AccessibleState#INDETERMINATE} to the state set, names the
-   * component from the accessible-label override or the visual label, and describes the error
-   * state so assistive tech announces it.
+   * component from the accessible-label override or the visual label, and describes the error state
+   * so assistive tech announces it.
    *
    * @author Charles Bryan
    * @version v0.4.0

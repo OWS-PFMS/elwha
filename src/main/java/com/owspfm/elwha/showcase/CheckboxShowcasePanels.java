@@ -19,10 +19,10 @@ import javax.swing.event.DocumentListener;
 
 /**
  * The Elwha Showcase leaf surface for {@link ElwhaCheckbox} (story #414): a {@link
- * ComponentWorkbench} stage with a live tri-state selector, label text, error, and enabled
- * controls plus the generated-code view, and a state gallery matrix rendering enabled / hover /
- * focused / pressed / disabled across the plain, labeled, error, and indeterminate configurations.
- * The boolean workbench controls are themselves {@code ElwhaCheckbox}es and the label control is an
+ * ComponentWorkbench} stage with a live tri-state selector, label text, error, and enabled controls
+ * plus the generated-code view, and a state gallery matrix rendering enabled / hover / focused /
+ * pressed / disabled across the plain, labeled, error, and indeterminate configurations. The
+ * boolean workbench controls are themselves {@code ElwhaCheckbox}es and the label control is an
  * {@link ElwhaTextField} — the component dogfoods its own leaf.
  *
  * @author Charles Bryan
@@ -63,8 +63,7 @@ final class CheckboxShowcasePanels {
           subject.setErrorShown(errorCtl.isChecked());
           subject.setEnabled(enabledCtl.isChecked());
           workbench.setStage(stage(subject));
-          workbench.setCode(
-              renderCode(state, label, errorCtl.isChecked(), enabledCtl.isChecked()));
+          workbench.setCode(renderCode(state, label, errorCtl.isChecked(), enabledCtl.isChecked()));
         };
 
     // The live subject feeds the state selector back so a stage click keeps the rail honest.
