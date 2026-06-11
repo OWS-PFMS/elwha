@@ -146,6 +146,10 @@ Inline-height tabs **bottom-align** in a 64 bar (web `align-items: end`). Prefer
 - **S6 — keyboard, a11y & RTL** (#431) — roving focus + wrap + RTL arrows, Home/End, Enter/Space, `autoActivate`, focus-restore-to-active, focus ring (+1 above indicator), `PAGE_TAB_LIST`/`PAGE_TAB`/`AccessibleSelection`/`SELECTED`/action, `setAccessibleLabel`, full RTL mirror (layout/indicator/scroll). §7/§8. Demo: `ElwhaTabsKeyboardA11yDemo`; guard: `ElwhaTabsA11ySmoke`.
 - **S7 — Showcase + CHANGELOG** (#433) — §9 panels + registration + `ElwhaTabsShowcaseSmoke`; CHANGELOG `[Unreleased]` entry. *Completes V1; closes the epic.*
 
+### S1 spike outcome (2026-06-10)
+
+Confirmed — §2 locked as built. The paint hook (§12-1) is a **`paintChildren` override** (`super.paintChildren` → divider → indicator) with non-opaque tabs over an opaque bar: any child-initiated repaint dirties the bar, so the overlay re-runs and the indicator can never be erased by a tab's own repaint. The primary content-hugging indicator (§12-2) spans the label cluster and reads correctly at 16px padding (pixel-asserted narrower than the tab in `ElwhaTabsChromeSmoke`). FIXED-mode remainder pixels (§12-3) distribute leading-first (`width % count` tabs get +1). Both variants pixel-asserted token-correct light + dark; top-only indicator rounding via the clip-a-taller-roundrect trick. No fallback needed.
+
 ## §12. Open for the S1 spike
 
 1. The indicator/divider paint hook: override `paint(g)` calling `super.paint` then overlay, vs `paintChildren` override — pick whichever keeps tab repaints (ripples) from erasing the indicator; remember `isPaintingOrigin()` if any child-transform tricks appear ([[ref_painting_origin_for_transformed_children]] — not expected here).
