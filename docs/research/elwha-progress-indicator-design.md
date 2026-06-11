@@ -81,9 +81,12 @@ One "Progress" catalog entry → Workbench + Gallery tabs (tabs-epic pattern). W
 
 Fresh demo per story + headless smoke per story (lib rule).
 
-### S1 spike outcome
+### S1 spike outcome (2026-06-11)
 
-*(recorded during the build)*
+1. §12.1 → **paint helpers stay variant-local**; the base (`AbstractElwhaProgressIndicator`) hosts model/mode/color/geometry state + the animation clock only. The asymmetric-corner capsule lives in `ElwhaLinearProgressIndicator` (package-visible for the smokes); circular needs arc math instead, no sharing to force.
+2. §12.2 → degenerate-end clamp order locked: active capsule width = `clamp(fraction·run, thickness, run)` and is skipped under 0.5px; track = `[head + gap, end]`, skipped under 1px wide; stop dot needs a live track segment *and* `head + gap ≤ stopX`. 0% / 100% verified clean by `ElwhaLinearProgressChromeSmoke`.
+3. §12.3 → clock cadence **16ms (~60fps)**, demand-gated; determinate-flat indicators never start it.
+4. The `BoundedRangeModel` + capsule-path architecture held with no fights — locked for S2–S7.
 
 ## §12. Open for the S1 spike
 
