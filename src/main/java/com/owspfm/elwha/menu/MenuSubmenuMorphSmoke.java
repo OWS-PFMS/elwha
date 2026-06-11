@@ -14,10 +14,11 @@ import javax.swing.SwingUtilities;
 /**
  * Headless + windowed guard for epic #322 S3 — the active-state corner shape-morph. The pure
  * portion pins the rest-shape triplet; the windowed portion (reduced motion → synchronous snap)
- * mounts a submenu chain and asserts the container radius tracks each level's chain role: a
- * standalone root is {@code MD}, a focused submenu rounds up to {@code LG}, and an ancestor squares
- * off to {@code SM}; the swap reverses as focus crosses levels back. Exits non-zero on any failed
- * assertion.
+ * mounts an A → B → C chain and asserts the M3 hover rule: opening a submenu morphs nothing on its
+ * own, the submenu the pointer is <em>over</em> rounds up to {@code LG} while its immediate parent
+ * squares off to {@code SM}, every other level (including a just-opened, unhovered submenu) rests
+ * at {@code MD}, and it all reverses as the pointer moves between levels. Exits non-zero on any
+ * failed assertion.
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.4.0
@@ -51,7 +52,7 @@ public final class MenuSubmenuMorphSmoke {
 
     if (!headless) {
       failures += windowedMorphProof(sm, md, lg);
-      checks += 7;
+      checks += 13;
     } else {
       System.out.println("  skip (headless) windowed shape-morph proof");
     }
@@ -77,8 +78,11 @@ public final class MenuSubmenuMorphSmoke {
           frame.setLocationRelativeTo(null);
           frame.setVisible(true);
 
+          // Chain A → B(share) → C(deep).
+          final ElwhaMenu deepMenu = ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Leaf")).build();
+          final ElwhaSubMenuItem deep = ElwhaSubMenuItem.of("More", deepMenu);
           final ElwhaMenu shareMenu =
-              ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Email")).build();
+              ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Email")).addItem(deep).build();
           final ElwhaSubMenuItem share = ElwhaSubMenuItem.of("Share", shareMenu);
           final ElwhaMenu rootMenu =
               ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Rename")).addItem(share).build();
@@ -86,37 +90,45 @@ public final class MenuSubmenuMorphSmoke {
           rootMenu.open(anchor);
           frame.getRootPane().getLayeredPane().validate();
           fail[0] += check(rootMenu.currentContainerRadius() == md, "standalone root is MD");
-          rootMenu.setMorphActive(true);
+
+          share.activate(0); // B opens — by itself this must NOT morph anything.
+          rootMenu.applyActiveMorph(rootMenu); // pointer on A (the parent)
+          fail[0] +=
+              check(rootMenu.currentContainerRadius() == md, "open submenu does not morph A");
+          fail[0] +=
+              check(
+                  shareMenu.currentContainerRadius() == md,
+                  "a just-opened, unhovered submenu stays MD");
+
+          rootMenu.applyActiveMorph(shareMenu); // pointer moves onto B
+          fail[0] += check(shareMenu.currentContainerRadius() == lg, "hovering B rounds it to LG");
+          fail[0] += check(rootMenu.currentContainerRadius() == sm, "A (B's parent) squares to SM");
+
+          rootMenu.applyActiveMorph(rootMenu); // pointer back onto A
+          fail[0] +=
+              check(
+                  shareMenu.currentContainerRadius() == md
+                      && rootMenu.currentContainerRadius() == md,
+                  "moving back onto A rests both at MD");
+
+          deep.activate(0); // C opens (chain A → B → C)
+          rootMenu.applyActiveMorph(deepMenu); // pointer onto C
+          fail[0] += check(deepMenu.currentContainerRadius() == lg, "hovering C rounds it to LG");
+          fail[0] +=
+              check(shareMenu.currentContainerRadius() == sm, "B (C's parent) squares to SM");
           fail[0] +=
               check(
                   rootMenu.currentContainerRadius() == md,
-                  "a standalone menu ignores active state (stays MD)");
+                  "A rests at MD when the pointer is on C");
 
-          share.activate(0);
-          // The active level rounds up; the other squares off — and it reverses, the operator's
-          // "submenu rounds on enter, squares on exit; the containing menu morphs opposite".
-          shareMenu.setMorphActive(true);
-          rootMenu.setMorphActive(false);
+          rootMenu.applyActiveMorph(shareMenu); // pointer back onto B
           fail[0] +=
-              check(
-                  shareMenu.currentContainerRadius() == lg,
-                  "active (hovered) submenu rounds to LG");
+              check(deepMenu.currentContainerRadius() == md, "C rests at MD while B is hovered");
+          fail[0] += check(shareMenu.currentContainerRadius() == lg, "B rounds back to LG");
           fail[0] +=
-              check(rootMenu.currentContainerRadius() == sm, "the containing menu squares to SM");
+              check(rootMenu.currentContainerRadius() == sm, "A squares only when B is hovered");
 
-          shareMenu.setMorphActive(false);
-          rootMenu.setMorphActive(true);
-          fail[0] +=
-              check(
-                  shareMenu.currentContainerRadius() == sm,
-                  "submenu squares back when the pointer leaves it");
-          fail[0] +=
-              check(
-                  rootMenu.currentContainerRadius() == lg,
-                  "the containing menu rounds up opposite");
-
-          // Closing the submenu collapses the chain — the lone root returns to the MD rest.
-          shareMenu.close(MenuDismissCause.ESCAPE);
+          shareMenu.close(MenuDismissCause.ESCAPE); // collapses B (and C) back to the lone root
           fail[0] +=
               check(
                   rootMenu.currentContainerRadius() == md,

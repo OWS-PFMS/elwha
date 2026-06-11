@@ -135,15 +135,16 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   // the parent itself closes.
   private ElwhaMenu openChildMenu;
   private ElwhaSubMenuItem openerSubItem;
-  // Active-state shape morph (epic #322 S3): while a menu is part of a submenu chain, the level the
-  // user is currently over/focused (morphActive) rounds more (LG) and every other level squares off
-  // (SM); a standalone menu (no chain) stays MD. The active level follows the pointer (a chain-wide
-  // motion watch installed on the chain root) or the keyboard focus. shapeMorph interpolates the
-  // container radius from shapeFromRadius to shapeToRadius.
+  // Active-state shape morph (epic #322 S3): in a submenu chain, the submenu the user is currently
+  // over rounds up (LG) and its immediate parent squares off (SM); every other level — including a
+  // just-opened-but-unhovered submenu — rests at MD, so opening a submenu morphs nothing on its
+  // own.
+  // The hovered level follows the pointer (a chain-wide motion watch on the chain root) or, for
+  // keyboard, the focus. shapeMorph interpolates the container radius from shapeFromRadius to
+  // shapeToRadius.
   private MorphAnimator shapeMorph;
   private int shapeFromRadius = CONTAINER_ARC_PX;
   private int shapeToRadius = CONTAINER_ARC_PX;
-  private boolean morphActive;
   private AWTEventListener chainHoverWatch;
   private int focusedIndex = -1;
   // The roving focus ring is keyboard-visible (M3 focus-visible): the index tracks always, but the
@@ -227,17 +228,6 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
   // ----------------------------------------- active-state shape morph (S3)
 
-  // The container radius this menu should morph toward right now: in a chain, the active (hovered /
-  // focused) level rounds up to LG and every other level squares off to SM; a standalone menu (no
-  // chain) stays at the MD rest — the M3 "focused rounds more, unfocused squares off" dynamic.
-  private int targetRadius() {
-    final boolean inChain = chainChildOverlay() != null || chainParentOverlay() != null;
-    if (!inChain) {
-      return CONTAINER_ARC_PX;
-    }
-    return morphActive ? ShapeScale.LG.px() : ShapeScale.SM.px();
-  }
-
   // The container corner radius at the current morph phase, interpolated by the shared
   // ShapeMorphPainter (#176) — no bespoke animator.
   int currentContainerRadius() {
@@ -251,13 +241,6 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
             shapeMorph.progress(),
             Easing.EMPHASIZED);
     return radii.topLeftPx();
-  }
-
-  // Sets whether this menu is the active (hovered / focused) chain level and animates toward the
-  // resulting shape. Idempotent when the resolved target is already in flight.
-  void setMorphActive(final boolean active) {
-    this.morphActive = active;
-    animateShapeTo(targetRadius());
   }
 
   private void animateShapeTo(final int target) {
@@ -307,9 +290,9 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
   }
 
-  // Recompute the active level across the whole chain: the innermost level under the pointer wins;
-  // if the pointer is over no level (keyboard-only / between levels), the focus-owning level wins.
-  // When neither resolves, the active level is left unchanged.
+  // Recompute the morph across the whole chain from the level the user is currently over (the
+  // innermost level under the pointer, else the focus-owning level for keyboard). Opening a submenu
+  // does NOT morph anything on its own — only moving onto a submenu does (M3 §V).
   void recomputeChainActive() {
     final List<ElwhaMenu> levels = chainLevels();
     if (levels.size() < 2) {
@@ -317,25 +300,44 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
     final Point pointer =
         MouseInfo.getPointerInfo() != null ? MouseInfo.getPointerInfo().getLocation() : null;
-    ElwhaMenu active = null;
-    for (int i = levels.size() - 1; i >= 0 && active == null; i--) {
+    ElwhaMenu hovered = null;
+    for (int i = levels.size() - 1; i >= 0 && hovered == null; i--) {
       if (levels.get(i).surfaceContainsScreen(pointer)) {
-        active = levels.get(i);
+        hovered = levels.get(i);
       }
     }
-    if (active == null) {
+    if (hovered == null) {
       for (final ElwhaMenu level : levels) {
         if (level.menuSurface != null && level.menuSurface.isFocusOwner()) {
-          active = level;
+          hovered = level;
           break;
         }
       }
     }
-    if (active == null) {
+    if (hovered == null) {
       return;
     }
-    for (final ElwhaMenu level : levels) {
-      level.setMorphActive(level == active);
+    applyActiveMorph(hovered);
+  }
+
+  // Applies the M3 active-state rule given the level the user is over: a hovered <em>submenu</em>
+  // (one with a parent) rounds up to LG and its immediate parent squares off to SM; every other
+  // level — including the root when the pointer is on it, and the just-opened-but-unhovered
+  // submenu — rests at MD. So a submenu only morphs once the pointer moves onto it, and only its
+  // direct parent reacts.
+  void applyActiveMorph(final ElwhaMenu hovered) {
+    final List<ElwhaMenu> levels = chainLevels();
+    final int hoveredIndex = levels.indexOf(hovered);
+    for (int i = 0; i < levels.size(); i++) {
+      final int target;
+      if (i == hoveredIndex && i > 0) {
+        target = ShapeScale.LG.px();
+      } else if (hoveredIndex > 0 && i == hoveredIndex - 1) {
+        target = ShapeScale.SM.px();
+      } else {
+        target = CONTAINER_ARC_PX;
+      }
+      levels.get(i).animateShapeTo(target);
     }
   }
 
@@ -430,7 +432,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     // level (the level the user is now over / focused rounds back up).
     if (chainChildOverlay() == null && chainParentOverlay() == null) {
       removeChainHoverWatch();
-      setMorphActive(false);
+      animateShapeTo(CONTAINER_ARC_PX);
     } else {
       recomputeChainActive();
       SwingUtilities.invokeLater(this::recomputeChainActive);
@@ -571,13 +573,12 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     final boolean gapCards = layout == Layout.GROUPED && separator == Separator.GAP && !scrollable;
     this.menuSurface = new MenuSurface(content, gapCards);
 
-    // A fresh surface snaps to its rest shape: a just-opened submenu starts squared (SM, inactive)
-    // until the pointer / focus enters it; a standalone root is MD. The morph only animates later
-    // active-level flips, not the entrance.
+    // A fresh surface snaps to the MD rest — including a just-opened submenu, which only morphs
+    // once
+    // the pointer/focus moves onto it. The morph animates later hover changes, never the entrance.
     this.shapeMorph = null;
-    this.morphActive = false;
-    this.shapeFromRadius = targetRadius();
-    this.shapeToRadius = shapeFromRadius;
+    this.shapeFromRadius = CONTAINER_ARC_PX;
+    this.shapeToRadius = CONTAINER_ARC_PX;
 
     this.itemOrder = flatten();
     this.focusedIndex = itemOrder.isEmpty() ? -1 : 0;
@@ -596,7 +597,6 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       shapeMorph = null;
     }
     removeChainHoverWatch();
-    morphActive = false;
     focusedIndex = -1;
   }
 
@@ -801,11 +801,10 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
     if (itemOrder.get(focusedIndex) instanceof ElwhaSubMenuItem sub) {
       openSubMenuFor(sub);
-      // Keyboard open moves focus into the submenu, so it is the active level (rounds up) even
-      // though the pointer hasn't entered it; this level squares off behind it.
+      // Keyboard open moves focus into the submenu, so it becomes the hovered/focused level — round
+      // it up and square its parent. (The pointer hasn't moved, so the motion watch won't do this.)
       if (openChildMenu != null) {
-        openChildMenu.setMorphActive(true);
-        setMorphActive(false);
+        openChildMenu.applyActiveMorph(openChildMenu);
       }
     }
   }
