@@ -400,6 +400,32 @@ public class ElwhaCheckbox extends JComponent {
     actionListeners.remove(listener);
   }
 
+  /**
+   * Forces the hover state on or off for static rendering (gallery / documentation previews), as on
+   * {@code ElwhaButton} / {@code ElwhaSlider}. Live mouse hover overrides this.
+   *
+   * @param hovered {@code true} to paint the hover state layer
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setHovered(final boolean hovered) {
+    this.hovered = hovered;
+    repaint();
+  }
+
+  /**
+   * Forces the pressed state on or off for static rendering (gallery / documentation previews).
+   * Live pointer interaction overrides this.
+   *
+   * @param pressed {@code true} to paint the pressed state layer
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setPressed(final boolean pressed) {
+    this.pressed = pressed;
+    repaint();
+  }
+
   @Override
   public void setEnabled(final boolean enabled) {
     super.setEnabled(enabled);
