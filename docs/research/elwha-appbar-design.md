@@ -160,6 +160,10 @@ Layout regions (flexible, fraction *f*):
 - **S5 — a11y, RTL & enabled** — `AccessibleElwhaAppBar` (PANEL + name splicing), accessible-name conveniences + Javadoc requirements, full RTL mirror (slots, alignment, expanded block, collapse), `setEnabled` propagation + disabled text opacity. §9. Demo + smoke.
 - **S6 — Showcase + CHANGELOG** — §10 panels + registration + overflow-`ElwhaMenu` recipe (Javadoc + Workbench) + `ElwhaAppBarShowcaseSmoke`; CHANGELOG `[Unreleased]` entry. *Completes V1; closes the epic.*
 
+## §11.1 S1 spike outcome (2026-06-11)
+
+Confirmed — §2 locked as built. One class, all variants; the nav/trailing children lay out in 48px slots (4px edge spaces, zero gap) with the default `IconButtonSize.M` (40px) button centered in its slot, which lands the 24px glyph exactly 16px from the container edge — the Compose render falls out of the existing icon-button sizing with no restyling. Bar-painted title/subtitle stack centers as a unit in the 64 strip; ellipsis + centered-clamping verified pixel-level in `ElwhaAppBarChromeSmoke` (light + dark). One adaptation from the §3 sketch: `MaterialIcons` exposes per-glyph static methods, not a `Symbol` enum, so the conveniences take `(Icon, String accessibleName, ActionListener)` — the accessible name is required at the convenience layer, which also satisfies the §9 requirement earlier than planned. No fallback needed.
+
 ## §12. Out of scope (every cut filed or documented)
 
 - **Search app bar** → **stub epic filed** (V2): the headline slot hosts the M3 search-field anatomy ("icons inside and outside the search bar, centered text") — blocked by `ElwhaTextField` #286 maturity. Not silently cut.
