@@ -775,6 +775,13 @@ public final class ElwhaShowcase {
             buildCheckboxComponent()));
     register(
         new LeafEntry(
+            "Radio button",
+            "M3 radio button — the ring-and-dot single select, with ElwhaRadioGroup exclusion,"
+                + " arrow navigation, and a roving tab stop.",
+            AREA_COMPONENTS,
+            buildRadioButtonComponent()));
+    register(
+        new LeafEntry(
             "Side Sheet",
             "M3 side sheet — standard (docked, reflowing) + modal (scrim overlay) supplementary"
                 + " surface with header, content, and action footer.",
@@ -1964,6 +1971,20 @@ public final class ElwhaShowcase {
     tabs.addTab(
         "Gallery",
         scroll(stack(gallerySection("Configurations", SideSheetShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- radio button
+
+  private static JComponent buildRadioButtonComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", RadioButtonShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection(
+                    "States & configurations", RadioButtonShowcasePanels.buildGallery()))));
     return tabs;
   }
 
