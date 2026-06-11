@@ -396,7 +396,7 @@ public class ElwhaColorPicker extends JComponent {
   private ColorPickerPane createPane(final PickerMode mode) {
     return switch (mode) {
       case SWATCHES -> new SwatchesPane(this);
-      case SPECTRUM -> new PlaceholderPane(this, mode);
+      case SPECTRUM -> new SpectrumPane(this);
       case SLIDERS -> new PlaceholderPane(this, mode);
     };
   }
