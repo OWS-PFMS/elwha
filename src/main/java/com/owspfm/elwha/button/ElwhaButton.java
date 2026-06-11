@@ -1123,7 +1123,8 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
         new AbstractAction() {
           @Override
           public void actionPerformed(final ActionEvent e) {
-            if (!isEnabled()) {
+            // Outer-qualified — AbstractAction has its own always-true isEnabled() (#432).
+            if (!ElwhaButton.this.isEnabled()) {
               return;
             }
             // Center-of-body ripple for keyboard activation — body-local coords, not

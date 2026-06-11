@@ -84,7 +84,7 @@ import javax.swing.Timer;
  * }</pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.1.0
  */
 public class ElwhaChip extends JPanel {
@@ -1126,7 +1126,8 @@ public class ElwhaChip extends JPanel {
         new AbstractAction() {
           @Override
           public void actionPerformed(final ActionEvent e) {
-            if (!isEnabled() || interactionMode == ChipInteractionMode.STATIC) {
+            // Outer-qualified — AbstractAction has its own always-true isEnabled() (#432).
+            if (!ElwhaChip.this.isEnabled() || interactionMode == ChipInteractionMode.STATIC) {
               return;
             }
             // Keyboard activation seeds the ripple at the chip's center, matching ElwhaButton.
@@ -1138,7 +1139,7 @@ public class ElwhaChip extends JPanel {
         new AbstractAction() {
           @Override
           public void actionPerformed(final ActionEvent e) {
-            if (contextMenuCallback == null || !isEnabled()) {
+            if (contextMenuCallback == null || !ElwhaChip.this.isEnabled()) {
               return;
             }
             final Point p = new Point(getWidth() / 2, getHeight() / 2);
