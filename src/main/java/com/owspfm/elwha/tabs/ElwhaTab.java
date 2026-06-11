@@ -75,9 +75,11 @@ import javax.swing.Timer;
  *
  * <p><strong>Badges (anatomy item 2).</strong> {@link #setBadge(ElwhaBadge)} anchors via {@link
  * ElwhaBadgeAnchor} with the nav-rail placement rule: {@code ICON_CORNER} while the icon is the
- * visual anchor (stacked / icon-only), {@code TRAILING_EDGE} once a label sits beside the content
- * (inline, secondary, label-only) — re-pinned automatically on form changes; this tab implements
- * {@link IconBearing} for the anchor's geometry feed.
+ * visual anchor (stacked / icon-only), {@code LABEL_TRAILING} — inline right after the label text,
+ * the M3 badge-spec "Label&nbsp;999+" row — once a label sits beside the content (inline,
+ * secondary, label-only); re-pinned automatically on form changes. This tab implements {@link
+ * IconBearing} as the anchor's geometry feed: the icon rect for the corner forms, the label rect
+ * for the trailing form.
  *
  * <p><strong>Activation flows through the bar.</strong> {@link #isActive()} is read-only here;
  * {@link ElwhaTabs#setActiveTabIndex(int)} (or a user gesture on the tab) is the way a tab becomes
@@ -312,10 +314,12 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
    * ElwhaBadgeAnchor.AnchorMode#ICON_CORNER} rides the icon's upper-trailing corner only while the
    * icon is the tab's visual anchor — stacked icon-over-label and icon-only forms. The moment a
    * label sits <em>beside</em> the content (inline primary, all secondary icon tabs, label-only
-   * tabs), the badge moves to {@link ElwhaBadgeAnchor.AnchorMode#TRAILING_EDGE} — pinning a count
-   * pill to the icon corner there would flatten the adjacent label. The mode re-pins automatically
-   * when the form changes ({@link #setInlineIcon(boolean)}, the bar restamping the variant). Badge
-   * accessibility content splices into this tab's accessible name via the anchor's push-model.
+   * tabs), the badge moves to {@link ElwhaBadgeAnchor.AnchorMode#LABEL_TRAILING} — flowing inline
+   * right after the label text, vertically centered (the M3 badge-spec "Label&nbsp;999+" row) —
+   * pinning a count pill to the icon corner there would flatten the adjacent label, and the
+   * cell-edge mode strands it in a wide fixed cell. The mode re-pins automatically when the form
+   * changes ({@link #setInlineIcon(boolean)}, the bar restamping the variant). Badge accessibility
+   * content splices into this tab's accessible name via the anchor's push-model.
    *
    * @param badge the badge to anchor, or {@code null} to clear
    * @version v0.4.0
@@ -332,12 +336,14 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
     }
   }
 
-  // The nav-rail placement rule: icon corner while the icon is the visual anchor (stacked /
-  // icon-only); trailing edge once a label sits beside the content.
+  // The M3 badge-spec placement rule: icon corner while the icon is the visual anchor (stacked /
+  // icon-only); the "Label 999+" inline-after-text placement once a label sits beside the content
+  // (the cell-edge TRAILING_EDGE mode is wrong here — a fixed tab cell is far wider than its
+  // centered content, so the badge must trail the TEXT rect; smoke-finding round 2).
   private ElwhaBadgeAnchor.AnchorMode anchorModeForForm() {
     return hasIcon() && (isStacked() || !hasLabel())
         ? ElwhaBadgeAnchor.AnchorMode.ICON_CORNER
-        : ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE;
+        : ElwhaBadgeAnchor.AnchorMode.LABEL_TRAILING;
   }
 
   private void attachBadgeForForm() {
@@ -632,11 +638,17 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
   @Override
   public Rectangle getIconBounds() {
     final ContentGeometry geom = contentGeometry();
-    if (geom.icon != null) {
+    // The badge-anchor feed follows the anchor mode: the icon rect while the icon is the visual
+    // anchor (ICON_CORNER forms), the label rect once a label sits beside the content (the
+    // LABEL_TRAILING feed — the badge trails the text, not the cell).
+    if (geom.icon != null && (isStacked() || !hasLabel())) {
       return geom.icon;
     }
     if (geom.text != null) {
       return geom.text;
+    }
+    if (geom.icon != null) {
+      return geom.icon;
     }
     return new Rectangle(0, 0, getWidth(), getHeight());
   }

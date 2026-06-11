@@ -5,6 +5,7 @@ import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import java.awt.ComponentOrientation;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.FocusEvent;
 import javax.accessibility.AccessibleContext;
@@ -290,9 +291,12 @@ public final class ElwhaTabsA11ySmoke {
     secondaryRtl.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
     secondaryRtl.setSize(300, 48);
     secondaryRtl.doLayout();
+    // getIconBounds is the badge-anchor feed — for an inline tab it returns the LABEL rect, so
+    // the mirror reads through it: label leading-of-center ⇒ the icon trails on the right.
+    final Rectangle rtlLabel = iconTab.getIconBounds();
     check(
-        "RTL inline icon sits on the leading (right) side of its label",
-        iconTab.getIconBounds().x > iconTab.getWidth() / 2);
+        "RTL inline mirrors: label leading-of-center, icon trailing on the right",
+        rtlLabel.x + rtlLabel.width / 2 < iconTab.getWidth() / 2);
   }
 
   // ----------------------------------------------------------------- helpers

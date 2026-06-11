@@ -8,9 +8,13 @@ import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import java.awt.Color;
+import java.awt.ComponentOrientation;
+import java.awt.Container;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
+import javax.swing.JRootPane;
+import javax.swing.SwingUtilities;
 
 /**
  * S4 headless guard for {@link ElwhaTab} icons and badges (#429): per-form preferred sizing
@@ -46,6 +50,7 @@ public final class ElwhaTabsIconsSmoke {
     checkIndicatorSpans();
     checkIconPaint();
     checkBadges();
+    checkBadgeGeometry();
 
     System.out.println(
         "ElwhaTabsIconsSmoke: OK (form sizing, secondary inline rule, inline toggle, 64px bar"
@@ -190,8 +195,8 @@ public final class ElwhaTabsIconsSmoke {
         iconTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.ICON_CORNER);
     iconTab.setInlineIcon(true);
     check(
-        "inline icon+label re-pins to TRAILING_EDGE (the Favorites-84 rule)",
-        iconTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE);
+        "inline icon+label re-pins to LABEL_TRAILING (the badge-spec Label row)",
+        iconTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.LABEL_TRAILING);
     iconTab.setInlineIcon(false);
     check(
         "back to stacked re-pins to ICON_CORNER",
@@ -202,8 +207,8 @@ public final class ElwhaTabsIconsSmoke {
         secondaryBar.addTab(ElwhaTab.of(MaterialIcons.symbol("favorite"), "Hotel"));
     secondaryIconTab.setBadge(ElwhaBadge.large(3));
     check(
-        "secondary icon tab (always inline) anchors TRAILING_EDGE",
-        secondaryIconTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE);
+        "secondary icon tab (always inline) anchors LABEL_TRAILING",
+        secondaryIconTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.LABEL_TRAILING);
 
     final ElwhaTab iconOnly = ElwhaTab.iconOnly(MaterialIcons.symbol("favorite"), "Favorites");
     iconOnly.setBadge(ElwhaBadge.small());
@@ -220,10 +225,52 @@ public final class ElwhaTabsIconsSmoke {
     final ElwhaTab labelTab = ElwhaTab.of("Updates");
     labelTab.setBadge(ElwhaBadge.small());
     check(
-        "label-only tab anchors TRAILING_EDGE",
-        labelTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE);
+        "label-only tab anchors LABEL_TRAILING",
+        labelTab.badgeAnchorMode() == ElwhaBadgeAnchor.AnchorMode.LABEL_TRAILING);
     labelTab.setBadge(null);
     check("trailing-edge badge detaches", labelTab.getBadge() == null);
+  }
+
+  // The round-2 smoke finding, asserted in real layered-pane coordinates (the rail harness
+  // pattern): a 999+ pill on an inline tab must flow AFTER the label text with the 4px gap,
+  // vertically centered on it, never overlapping the glyphs — not pinned to the icon corner
+  // (round 1) and not stranded at the wide fixed cell's edge (round 2).
+  private static void checkBadgeGeometry() {
+    final JRootPane root = new JRootPane();
+    root.setSize(480, 96);
+    root.getLayeredPane().setBounds(0, 0, 480, 96);
+    final Container content = root.getContentPane();
+    content.setLayout(null);
+    content.setBounds(0, 0, 480, 96);
+
+    final ElwhaTabs bar = ElwhaTabs.secondary();
+    final ElwhaTab fav = bar.addTab(ElwhaTab.of(MaterialIcons.symbol("favorite"), "Favorites"));
+    bar.addTab("About");
+    content.add(bar);
+    bar.setBounds(0, 0, 480, 48);
+    bar.doLayout();
+
+    final ElwhaBadge pill = ElwhaBadge.large("999+");
+    fav.setBadge(pill);
+    Rectangle text =
+        SwingUtilities.convertRectangle(fav, fav.getIconBounds(), root.getLayeredPane());
+    Rectangle bounds = pill.getBounds();
+    check("LTR: badge flows after the label with the 4px gap", bounds.x == text.x + text.width + 4);
+    check(
+        "LTR: badge vertically centers on the text line",
+        Math.abs((bounds.y + bounds.height / 2) - (text.y + text.height / 2)) <= 1);
+    check("LTR: badge clears the label glyphs", !bounds.intersects(text));
+
+    bar.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+    bar.doLayout();
+    fav.setBadge(null);
+    fav.setBadge(pill);
+    text = SwingUtilities.convertRectangle(fav, fav.getIconBounds(), root.getLayeredPane());
+    bounds = pill.getBounds();
+    check(
+        "RTL: badge flows before the label's leading (left) edge with the 4px gap",
+        bounds.x + bounds.width == text.x - 4);
+    check("RTL: badge clears the label glyphs", !bounds.intersects(text));
   }
 
   // ----------------------------------------------------------------- helpers
