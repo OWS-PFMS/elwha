@@ -139,6 +139,7 @@ public class ElwhaTabs extends JComponent {
   public ElwhaTab addTab(final ElwhaTab tab) {
     Objects.requireNonNull(tab, "tab");
     tab.setVariant(variant);
+    tab.setEnabled(isEnabled());
     tabs.add(tab);
     add(tab);
     if (activeTabIndex < 0) {
@@ -288,6 +289,38 @@ public class ElwhaTabs extends JComponent {
    */
   public void removeChangeListener(final ChangeListener listener) {
     changeListeners.remove(listener);
+  }
+
+  /**
+   * Enables or disables the whole bar, cascading to every tab: content paints at the disabled
+   * opacity and all interaction is off. There is no per-tab disabled — M3 defines none for tabs
+   * (design §10).
+   *
+   * @param enabled the new enabled state
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  public void setEnabled(final boolean enabled) {
+    super.setEnabled(enabled);
+    for (ElwhaTab tab : tabs) {
+      tab.setEnabled(enabled);
+    }
+    repaint();
+  }
+
+  // A user gesture (click; keyboard with S6) on a tab — activates it and fires that tab's
+  // ActionListeners. A gesture on the already-active tab is a no-op (material-web parity).
+  void userActivate(final ElwhaTab tab, final int modifiers) {
+    if (!isEnabled()) {
+      return;
+    }
+    final int index = tabs.indexOf(tab);
+    if (index < 0 || index == activeTabIndex) {
+      return;
+    }
+    activate(index, false);
+    tab.fireAction(modifiers);
   }
 
   private void activate(final int index, final boolean silent) {
