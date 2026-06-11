@@ -497,31 +497,57 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   protected JComponent createSurface() {
     claimExclusive();
     installWheelWatch();
-    this.tooltipSurface = new TooltipSurface(variant, text, subhead, supportingText);
-    tooltipSurface.setAlphaSupplier(() -> motionProgress);
+    this.tooltipSurface = buildSurface(true);
+    return tooltipSurface;
+  }
+
+  /**
+   * Renders the tooltip's surface as a standalone component for a <em>static preview</em> (a
+   * Showcase gallery tile, documentation) — the {@link com.owspfm.elwha.menu.ElwhaMenu} {@code
+   * renderPreview} contract. There is no overlay mount, no trigger machinery, no dismissal, and no
+   * fade; action buttons fire their consumer listeners directly. Not a substitute for {@link
+   * #show(Component)}. Each call returns a fresh component.
+   *
+   * @return a non-modal render of the tooltip surface
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public JComponent renderPreview() {
+    return buildSurface(false);
+  }
+
+  // The shared surface build. A live surface fades with motionProgress, wraps action listeners
+  // with dismiss-then-fire (the consumer's handler may open a dialog — design §7), and dismisses
+  // non-persistent tooltips on a press inside the contents; a preview carries none of that.
+  private TooltipSurface buildSurface(final boolean live) {
+    final TooltipSurface built = new TooltipSurface(variant, text, subhead, supportingText);
+    if (live) {
+      built.setAlphaSupplier(() -> motionProgress);
+    }
     for (final TooltipAction action : actions) {
       final ElwhaButton button = ElwhaButton.textButton(action.label());
-      // Dismiss before firing: the consumer's handler may open a dialog, and a stale tooltip
-      // floating over it is exactly what the dismissal contract forbids (design §7).
       button.addActionListener(
-          e -> {
-            dismiss();
-            action.listener().actionPerformed(e);
-          });
-      tooltipSurface.addActionButton(button);
+          live
+              ? e -> {
+                dismiss();
+                action.listener().actionPerformed(e);
+              }
+              : action.listener());
+      built.addActionButton(button);
     }
-    // A press inside the contents dismisses a non-persistent tooltip (MDC default-rich; harmless
-    // and consistent on plain). The action buttons consume their own presses and never reach this.
-    tooltipSurface.addMouseListener(
-        new MouseAdapter() {
-          @Override
-          public void mousePressed(final MouseEvent e) {
-            if (!persistent) {
-              dismiss();
+    if (live) {
+      // The action buttons consume their own presses and never reach this.
+      built.addMouseListener(
+          new MouseAdapter() {
+            @Override
+            public void mousePressed(final MouseEvent e) {
+              if (!persistent) {
+                dismiss();
+              }
             }
-          }
-        });
-    return tooltipSurface;
+          });
+    }
+    return built;
   }
 
   // Esc dismisses from anywhere in the focused window (the tooltip itself never has focus, so a

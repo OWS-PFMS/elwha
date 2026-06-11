@@ -773,6 +773,13 @@ public final class ElwhaShowcase {
                 + " cross-color pressed ripple.",
             AREA_COMPONENTS,
             buildCheckboxComponent()));
+    register(
+        new LeafEntry(
+            "Tooltip",
+            "M3 tooltips — plain inverse-surface labels and rich cards with subhead, supporting"
+                + " text, and actions; hover/focus triggers, persistent flavor.",
+            AREA_COMPONENTS,
+            TooltipShowcasePanels.buildComponent()));
 
     register(
         new LeafEntry(
@@ -806,7 +813,7 @@ public final class ElwhaShowcase {
 
   // The four landing cards, populated into the CardLayout content panel. Each is a grid of
   // ElwhaCards — title + supporting text + an actionable click that routes to the leaf surface.
-  // Home is the master index (all 19 leaves, grouped by area heading); each area landing covers
+  // Home is the master index (all 20 leaves, grouped by area heading); each area landing covers
   // just its own leaves. ElwhaCard's actionable mode is the entire raison-d'être here: the cards
   // are the navigation surface, not decoration.
   private void populateLandingCards() {
