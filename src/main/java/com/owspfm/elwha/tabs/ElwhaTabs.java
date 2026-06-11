@@ -389,10 +389,13 @@ public class ElwhaTabs extends JComponent {
   @Override
   public Dimension getPreferredSize() {
     int width = 0;
+    int height = BAR_HEIGHT_INLINE_PX;
     for (ElwhaTab tab : tabs) {
-      width += tab.getPreferredSize().width;
+      final Dimension pref = tab.getPreferredSize();
+      width += pref.width;
+      height = Math.max(height, pref.height);
     }
-    return new Dimension(width, BAR_HEIGHT_INLINE_PX);
+    return new Dimension(width, height);
   }
 
   @Override
