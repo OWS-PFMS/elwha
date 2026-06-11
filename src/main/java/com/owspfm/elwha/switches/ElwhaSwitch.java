@@ -25,6 +25,12 @@ import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import javax.accessibility.AccessibleAction;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
+import javax.accessibility.AccessibleState;
+import javax.accessibility.AccessibleStateSet;
+import javax.accessibility.AccessibleValue;
 import javax.swing.AbstractAction;
 import javax.swing.Icon;
 import javax.swing.JComponent;
@@ -74,7 +80,9 @@ import javax.swing.event.EventListenerList;
  * #HANDLE_PRESSED_PX} dp, paints {@link StateLayer#PRESSED}, and shows a {@link RipplePainter}
  * ripple bounded to the same circle. User-gesture commits fire the registered {@link
  * ActionListener}s <em>and</em> {@link ChangeListener}s; programmatic {@code setSelected} fires
- * only the latter.
+ * only the latter. Under a right-to-left {@link java.awt.ComponentOrientation} the switch mirrors:
+ * selected rests the handle at the <em>left</em> end, and the travel, drag scrubbing, and commit
+ * halves all flip with it.
  *
  * <p><strong>Motion (design §6 / research §Mo).</strong> A toggle slides the handle over {@value
  * #SLIDE_MS}&nbsp;ms on material-web's overshoot bezier {@code (0.175, 0.885, 0.32, 1.275)} — the
@@ -99,10 +107,13 @@ import javax.swing.event.EventListenerList;
  * flourish). Glyphs are recolored at paint time by compositing — no shared {@code FlatSVGIcon}
  * color-filter mutation — so any {@link Icon} works.
  *
- * <p><strong>Labelling.</strong> A switch never labels itself — M3 requires an adjacent label
- * naming what it toggles, and the accessible name must always be set: call {@code setLabel(String)}
- * or associate a {@link javax.swing.JLabel} via {@link javax.swing.JLabel#setLabelFor} (the a11y
- * story wires both).
+ * <p><strong>Labelling &amp; accessibility (research §A / §X).</strong> A switch never labels
+ * itself — M3 requires an adjacent label naming what it toggles, and the accessible name must
+ * <em>always</em> be set: call {@link #setLabel(String)} or associate a {@link javax.swing.JLabel}
+ * via {@link javax.swing.JLabel#setLabelFor}. Swing has no SWITCH role, so the accessible context
+ * is the {@code JToggleButton} shape: {@link AccessibleRole#TOGGLE_BUTTON} with {@link
+ * AccessibleState#CHECKED} while selected, one "click" {@link AccessibleAction} (a user-gesture
+ * toggle), and an {@link AccessibleValue} of 0/1.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -173,6 +184,8 @@ public class ElwhaSwitch extends JComponent {
   private int pressX;
   private float dragFraction;
 
+  private String label;
+
   private boolean iconsVisible;
   private boolean showOnlySelectedIcon;
   private Icon selectedIcon = MaterialIcons.check(ICON_SIZE_PX);
@@ -208,6 +221,7 @@ public class ElwhaSwitch extends JComponent {
     setFocusable(true);
     initInteraction();
     initKeyboard();
+    addPropertyChangeListener("componentOrientation", e -> repaint());
   }
 
   // ------------------------------------------------------------------ selection
@@ -240,6 +254,12 @@ public class ElwhaSwitch extends JComponent {
     this.selected = selected;
     syncMotion(animateAllowed());
     fireStateChanged();
+    if (accessibleContext != null) {
+      accessibleContext.firePropertyChange(
+          AccessibleContext.ACCESSIBLE_STATE_PROPERTY,
+          selected ? null : AccessibleState.CHECKED,
+          selected ? AccessibleState.CHECKED : null);
+    }
     repaint();
   }
 
@@ -316,6 +336,32 @@ public class ElwhaSwitch extends JComponent {
     if (changed) {
       fireActionPerformed();
     }
+  }
+
+  /**
+   * Returns the switch's accessible label, or {@code null} if none was set via {@link
+   * #setLabel(String)}.
+   *
+   * @return the accessible label text, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getLabel() {
+    return label;
+  }
+
+  /**
+   * Sets the switch's accessible name — the adjacent UI label a screen reader reads before the role
+   * and state (research §A: a switch always needs one). Alternatively, associate a {@link
+   * javax.swing.JLabel} via {@link javax.swing.JLabel#setLabelFor} and the name is derived from it
+   * automatically; an explicit value here takes precedence.
+   *
+   * @param label the accessible label, or {@code null} to clear
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setLabel(final String label) {
+    this.label = label;
   }
 
   // -------------------------------------------------------------- gallery hooks
@@ -508,13 +554,20 @@ public class ElwhaSwitch extends JComponent {
     return trackX() + TRACK_WIDTH_PX - TRACK_HEIGHT_PX / 2;
   }
 
+  /** Whether the travel is mirrored — a right-to-left {@code ComponentOrientation}. */
+  private boolean mirror() {
+    return !getComponentOrientation().isLeftToRight();
+  }
+
   /**
    * The handle center's x — the slide tween's position (deliberately unclamped: the overshoot
-   * swings past the rest point), or the scrub position mid-drag.
+   * swings past the rest point), or the scrub position mid-drag. Value-space fractions ({@code 0} =
+   * unselected, {@code 1} = selected) flip to pixel space under a right-to-left orientation.
    */
   int handleCenterX() {
     final float fraction = dragging ? dragFraction : slideTween.value();
-    return Math.round(travelStartX() + fraction * (travelEndX() - travelStartX()));
+    final float pixelFraction = mirror() ? 1f - fraction : fraction;
+    return Math.round(travelStartX() + pixelFraction * (travelEndX() - travelStartX()));
   }
 
   /** The handle center's y — the track's vertical center. */
@@ -522,14 +575,15 @@ public class ElwhaSwitch extends JComponent {
     return trackY() + TRACK_HEIGHT_PX / 2;
   }
 
-  /** Maps a pointer x to a travel fraction {@code [0, 1]} along the handle run. */
+  /** Maps a pointer x to a value-space fraction {@code [0, 1]} — orientation-aware. */
   private float fractionForX(final int x) {
     final int start = travelStartX();
     final int end = travelEndX();
     if (end <= start) {
       return 0f;
     }
-    return clampF((x - start) / (float) (end - start));
+    final float pixelFraction = clampF((x - start) / (float) (end - start));
+    return mirror() ? 1f - pixelFraction : pixelFraction;
   }
 
   /** The handle diameter — the size tween's current value. */
@@ -801,6 +855,108 @@ public class ElwhaSwitch extends JComponent {
     final Color selectedRole =
         (active ? ColorRole.PRIMARY_CONTAINER : ColorRole.ON_PRIMARY).resolve();
     return mixColor(unselectedRole, selectedRole, colorProgress());
+  }
+
+  // ------------------------------------------------------------- accessibility
+
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaSwitch();
+    }
+    return accessibleContext;
+  }
+
+  /**
+   * Accessible context for the switch — the {@code JToggleButton} shape, Swing's closest mapping
+   * for the web {@code switch} role (research §X): {@link AccessibleRole#TOGGLE_BUTTON}, {@link
+   * AccessibleState#CHECKED} while selected, one "click" {@link AccessibleAction} performing the
+   * user-gesture toggle (assistive tech acts as the user, so it fires {@code ActionListener}s), and
+   * an {@link AccessibleValue} of 0/1 (programmatic, so it fires {@code ChangeListener}s only). The
+   * accessible name comes from {@link ElwhaSwitch#setLabel(String)}, falling back to an associated
+   * {@code labelFor} {@link javax.swing.JLabel}.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected class AccessibleElwhaSwitch extends AccessibleJComponent
+      implements AccessibleAction, AccessibleValue {
+
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.TOGGLE_BUTTON;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      if (label != null && !label.isEmpty()) {
+        return label;
+      }
+      return super.getAccessibleName();
+    }
+
+    @Override
+    public AccessibleStateSet getAccessibleStateSet() {
+      final AccessibleStateSet states = super.getAccessibleStateSet();
+      if (selected) {
+        states.add(AccessibleState.CHECKED);
+      }
+      return states;
+    }
+
+    @Override
+    public AccessibleAction getAccessibleAction() {
+      return this;
+    }
+
+    @Override
+    public AccessibleValue getAccessibleValue() {
+      return this;
+    }
+
+    @Override
+    public int getAccessibleActionCount() {
+      return 1;
+    }
+
+    @Override
+    public String getAccessibleActionDescription(final int i) {
+      return i == 0 ? "click" : null;
+    }
+
+    @Override
+    public boolean doAccessibleAction(final int i) {
+      if (i != 0 || !ElwhaSwitch.this.isEnabled()) {
+        return false;
+      }
+      commitUserToggle(!selected);
+      return true;
+    }
+
+    @Override
+    public Number getCurrentAccessibleValue() {
+      return selected ? 1 : 0;
+    }
+
+    @Override
+    public boolean setCurrentAccessibleValue(final Number n) {
+      if (n == null) {
+        return false;
+      }
+      setSelected(n.intValue() != 0);
+      return true;
+    }
+
+    @Override
+    public Number getMinimumAccessibleValue() {
+      return 0;
+    }
+
+    @Override
+    public Number getMaximumAccessibleValue() {
+      return 1;
+    }
   }
 
   // ---------------------------------------------------------------- interaction
