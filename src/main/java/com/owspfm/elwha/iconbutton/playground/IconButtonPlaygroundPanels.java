@@ -1,5 +1,6 @@
 package com.owspfm.elwha.iconbutton.playground;
 
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonGroup;
 import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
@@ -21,7 +22,6 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -43,7 +43,7 @@ import javax.swing.UIManager;
  * pattern, same reasons.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.4.0
  * @since v0.1.0
  */
 public final class IconButtonPlaygroundPanels {
@@ -223,7 +223,7 @@ public final class IconButtonPlaygroundPanels {
    * chip playgrounds' live tabs; lets the viewer feel every property change live without recompile.
    *
    * @return the live-control panel
-   * @version v0.1.0
+   * @version v0.4.0
    * @since v0.1.0
    */
   public static JPanel buildLivePanel() {
@@ -297,14 +297,16 @@ public final class IconButtonPlaygroundPanels {
         });
     addControlRow(controls, gbc, row++, "Icon pair", iconBox);
 
-    final JCheckBox selectedBox = new JCheckBox("Selected");
-    selectedBox.addActionListener(e -> target.setSelected(selectedBox.isSelected()));
+    final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
+    selectedBox.addActionListener(e -> target.setSelected(selectedBox.isChecked()));
     target.addSelectionChangeListener(
-        evt -> selectedBox.setSelected(Boolean.TRUE.equals(evt.getNewValue())));
+        evt -> selectedBox.setChecked(Boolean.TRUE.equals(evt.getNewValue())));
     addControlRow(controls, gbc, row++, "", selectedBox);
 
-    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
-    enabledBox.addActionListener(e -> target.setEnabled(enabledBox.isSelected()));
+    final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
+
+    enabledBox.setChecked(true);
+    enabledBox.addActionListener(e -> target.setEnabled(enabledBox.isChecked()));
     addControlRow(controls, gbc, row++, "", enabledBox);
 
     final JPanel stage = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
