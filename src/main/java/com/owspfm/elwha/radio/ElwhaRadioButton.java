@@ -22,6 +22,14 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
+import javax.accessibility.AccessibleAction;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRelation;
+import javax.accessibility.AccessibleRelationSet;
+import javax.accessibility.AccessibleRole;
+import javax.accessibility.AccessibleState;
+import javax.accessibility.AccessibleStateSet;
+import javax.accessibility.AccessibleValue;
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
@@ -80,8 +88,14 @@ import javax.swing.event.EventListenerList;
  * side; the chrome centers itself in larger bounds. The M3 48&nbsp;dp touch target is guidance for
  * touch contexts, not painted geometry — the component's whole bounds are interactive.
  *
- * <p><strong>Labelling.</strong> A radio button never labels itself — M3 requires an adjacent label
- * and the accessible name must always be set (research §A); pair with a {@link javax.swing.JLabel}.
+ * <p><strong>Labelling &amp; accessibility (research §A / §X).</strong> A radio button never labels
+ * itself — M3 requires an adjacent label naming the option, and the accessible name must
+ * <em>always</em> be set: call {@link #setLabel(String)} or associate a {@link javax.swing.JLabel}
+ * via {@link javax.swing.JLabel#setLabelFor}. Swing has the native vocabulary, no role compromise:
+ * {@link AccessibleRole#RADIO_BUTTON} with {@link AccessibleState#CHECKED} while selected, one
+ * "click" {@link AccessibleAction} (the user-gesture select), an {@link AccessibleValue} of 0/1
+ * (programmatic semantics), and an {@link AccessibleRelation#MEMBER_OF} relation answering the
+ * current {@link ElwhaRadioGroup} membership.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -125,6 +139,8 @@ public class ElwhaRadioButton extends JComponent {
   private boolean selected;
   private boolean hovered;
   private boolean pressed;
+
+  private String label;
 
   private ElwhaRadioGroup group;
 
@@ -195,7 +211,39 @@ public class ElwhaRadioButton extends JComponent {
       group.memberSelectionChanged(this, selected);
     }
     fireStateChanged();
+    if (accessibleContext != null) {
+      accessibleContext.firePropertyChange(
+          AccessibleContext.ACCESSIBLE_STATE_PROPERTY,
+          selected ? null : AccessibleState.CHECKED,
+          selected ? AccessibleState.CHECKED : null);
+    }
     repaint();
+  }
+
+  /**
+   * Returns the radio's accessible label, or {@code null} if none was set via {@link
+   * #setLabel(String)}.
+   *
+   * @return the accessible label text, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getLabel() {
+    return label;
+  }
+
+  /**
+   * Sets the radio's accessible name — the adjacent UI label a screen reader reads before the role
+   * and state (research §A: a radio always needs one). Alternatively, associate a {@link
+   * javax.swing.JLabel} via {@link javax.swing.JLabel#setLabelFor} and the name is derived from it
+   * automatically; an explicit value here takes precedence.
+   *
+   * @param label the accessible label, or {@code null} to clear
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setLabel(final String label) {
+    this.label = label;
   }
 
   /**
@@ -529,6 +577,129 @@ public class ElwhaRadioButton extends JComponent {
       return withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
     }
     return ColorRole.PRIMARY.resolve();
+  }
+
+  // ------------------------------------------------------------- accessibility
+
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaRadioButton();
+    }
+    return accessibleContext;
+  }
+
+  /**
+   * Accessible context for the radio button — Swing's native radio vocabulary (research §X): {@link
+   * AccessibleRole#RADIO_BUTTON}, {@link AccessibleState#CHECKED} while selected, one "click"
+   * {@link AccessibleAction} performing the user-gesture select (assistive tech acts as the user,
+   * so it fires {@code ActionListener}s), an {@link AccessibleValue} of 0/1 (programmatic, so it
+   * fires {@code ChangeListener}s only and routes the group exclusion), and an {@link
+   * AccessibleRelation#MEMBER_OF} relation computed live from the {@link ElwhaRadioGroup}
+   * membership. The accessible name comes from {@link ElwhaRadioButton#setLabel(String)}, falling
+   * back to an associated {@code labelFor} {@link javax.swing.JLabel}.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected class AccessibleElwhaRadioButton extends AccessibleJComponent
+      implements AccessibleAction, AccessibleValue {
+
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.RADIO_BUTTON;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      if (label != null && !label.isEmpty()) {
+        return label;
+      }
+      return super.getAccessibleName();
+    }
+
+    @Override
+    public AccessibleStateSet getAccessibleStateSet() {
+      final AccessibleStateSet states = super.getAccessibleStateSet();
+      if (selected) {
+        states.add(AccessibleState.CHECKED);
+      }
+      return states;
+    }
+
+    // The inherited relation set is persistent and add() MERGES targets into an existing same-key
+    // relation — recomputing via add() accumulates stale targets. Replace in place / remove.
+    @Override
+    public AccessibleRelationSet getAccessibleRelationSet() {
+      final AccessibleRelationSet relations = super.getAccessibleRelationSet();
+      final AccessibleRelation existing = relations.get(AccessibleRelation.MEMBER_OF);
+      if (group != null) {
+        if (existing != null) {
+          existing.setTarget(group.getMembers().toArray());
+        } else {
+          final AccessibleRelation memberOf = new AccessibleRelation(AccessibleRelation.MEMBER_OF);
+          memberOf.setTarget(group.getMembers().toArray());
+          relations.add(memberOf);
+        }
+      } else if (existing != null) {
+        relations.remove(existing);
+      }
+      return relations;
+    }
+
+    @Override
+    public AccessibleAction getAccessibleAction() {
+      return this;
+    }
+
+    @Override
+    public AccessibleValue getAccessibleValue() {
+      return this;
+    }
+
+    @Override
+    public int getAccessibleActionCount() {
+      return 1;
+    }
+
+    @Override
+    public String getAccessibleActionDescription(final int i) {
+      return i == 0 ? "click" : null;
+    }
+
+    @Override
+    public boolean doAccessibleAction(final int i) {
+      if (i != 0 || !ElwhaRadioButton.this.isEnabled()) {
+        return false;
+      }
+      commitUserSelect();
+      return true;
+    }
+
+    @Override
+    public Number getCurrentAccessibleValue() {
+      return selected ? 1 : 0;
+    }
+
+    @Override
+    public boolean setCurrentAccessibleValue(final Number n) {
+      if (n == null) {
+        return false;
+      }
+      setSelected(n.intValue() != 0);
+      return true;
+    }
+
+    @Override
+    public Number getMinimumAccessibleValue() {
+      return 0;
+    }
+
+    @Override
+    public Number getMaximumAccessibleValue() {
+      return 1;
+    }
   }
 
   // ---------------------------------------------------------------- interaction
