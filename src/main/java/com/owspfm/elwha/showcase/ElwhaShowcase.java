@@ -269,7 +269,7 @@ public final class ElwhaShowcase {
     final JPanel root = new JPanel(new BorderLayout());
     root.add(contentWrapper, BorderLayout.CENTER);
 
-    // Populate the catalog of leaves + build all CardLayout cards (4 landings + 18 wrapped
+    // Populate the catalog of leaves + build all CardLayout cards (4 landings + 19 wrapped
     // leaves). Must run before the rail is built so the rail's primary action listeners can
     // resolve landing keys that already have cards registered.
     populateCatalog();
@@ -758,6 +758,13 @@ public final class ElwhaShowcase {
                 + " on-handle icons.",
             AREA_COMPONENTS,
             buildSwitchComponent()));
+    register(
+        new LeafEntry(
+            "Tabs",
+            "M3 tabs — primary/secondary bar of ElwhaTab primitives with the sliding indicator,"
+                + " fixed + scrollable modes, icons, and badges.",
+            AREA_COMPONENTS,
+            buildTabsComponent()));
 
     register(
         new LeafEntry(
@@ -791,7 +798,7 @@ public final class ElwhaShowcase {
 
   // The four landing cards, populated into the CardLayout content panel. Each is a grid of
   // ElwhaCards — title + supporting text + an actionable click that routes to the leaf surface.
-  // Home is the master index (all 18 leaves, grouped by area heading); each area landing covers
+  // Home is the master index (all 19 leaves, grouped by area heading); each area landing covers
   // just its own leaves. ElwhaCard's actionable mode is the entire raison-d'être here: the cards
   // are the navigation surface, not decoration.
   private void populateLandingCards() {
@@ -1892,6 +1899,18 @@ public final class ElwhaShowcase {
         "Gallery",
         scroll(
             stack(gallerySection("States & configurations", SwitchShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- Tabs
+
+  private static JComponent buildTabsComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", TabsShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(gallerySection("States & configurations", TabsShowcasePanels.buildGallery()))));
     return tabs;
   }
 
