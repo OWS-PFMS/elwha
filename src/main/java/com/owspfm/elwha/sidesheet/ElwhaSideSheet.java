@@ -5,6 +5,8 @@ import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.ShadowBearing;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
@@ -88,6 +90,10 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
   private boolean footerDividerVisible = true;
   private JComponent content;
   private final List<ElwhaButton> actions = new ArrayList<>();
+
+  private boolean open = true;
+  private float openProgress = 1f;
+  private MorphAnimator openAnimator;
 
   private final JPanel body = new JPanel(new BorderLayout());
   private final JPanel header = new JPanel(new BorderLayout(SpaceScale.MD.px(), 0));
@@ -494,6 +500,76 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
     return footerDividerVisible;
   }
 
+  // ------------------------------------------------------------ standard presentation
+
+  /**
+   * Opens an embedded standard sheet — animates the preferred width from its current state to the
+   * full {@link #getSheetWidth() sheet width} (300ms, emphasized; snaps under reduced motion),
+   * revalidating per tick so sibling content reflows: the M3 coplanar squash. A no-op when already
+   * open.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void open() {
+    setOpen(true);
+  }
+
+  /**
+   * Closes an embedded standard sheet — the reverse of {@link #open()}, collapsing the preferred
+   * width to 0 while the component stays in the hierarchy (so the animation is symmetric and the
+   * consumer's layout code stays branch-free). A no-op when already closed.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void close() {
+    setOpen(false);
+  }
+
+  /**
+   * Sets the open state, animating toward it — see {@link #open()} / {@link #close()}.
+   *
+   * @param open the target state
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setOpen(final boolean open) {
+    if (open == this.open) {
+      return;
+    }
+    this.open = open;
+    ensureOpenAnimator();
+    if (open) {
+      openAnimator.start();
+    } else {
+      openAnimator.reverse();
+    }
+  }
+
+  /**
+   * @return the target open state ({@code true} from construction); flips immediately on {@link
+   *     #setOpen} while the width animation catches up
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isOpen() {
+    return open;
+  }
+
+  private void ensureOpenAnimator() {
+    if (openAnimator != null) {
+      return;
+    }
+    openAnimator = new MorphAnimator(this, MorphAnimator.MEDIUM2_MS);
+    openAnimator.snapTo(openProgress);
+    openAnimator.addProgressListener(
+        () -> {
+          openProgress = Easing.EMPHASIZED_DECELERATE.ease(openAnimator.progress());
+          revalidate();
+        });
+  }
+
   // ------------------------------------------------------------ affordance behavior
 
   void onBackActivated() {
@@ -502,7 +578,9 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
     }
   }
 
-  void onCloseActivated() {}
+  void onCloseActivated() {
+    close();
+  }
 
   // ------------------------------------------------------------ geometry & chrome
 
@@ -556,7 +634,8 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
   }
 
   /**
-   * @return the open size — the sheet width plus shadow reserve, at the anatomy's natural height
+   * @return the current size — the sheet width scaled by the open/close animation progress, plus
+   *     the shadow reserve, at the anatomy's natural height
    * @version v0.4.0
    * @since v0.4.0
    */
@@ -567,11 +646,15 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
     }
     final Insets s = getInsets();
     return new Dimension(
-        sheetWidth + s.left + s.right, body.getPreferredSize().height + s.top + s.bottom);
+        Math.round(sheetWidth * openProgress) + s.left + s.right,
+        body.getPreferredSize().height + s.top + s.bottom);
   }
 
   /**
-   * Lays the anatomy body across the visible chassis (inside the shadow reserve).
+   * Lays the anatomy body across the visible chassis (inside the shadow reserve). While the
+   * open/close animation is mid-flight the body stays pinned at the full sheet width — anchored so
+   * the visible portion is the one nearest the main content — and the shrinking chassis clips it:
+   * children keep their open-width layout instead of re-wrapping every tick (design doc §14).
    *
    * @version v0.4.0
    * @since v0.4.0
@@ -581,7 +664,9 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
     final Insets s = getInsets();
     final int availW = Math.max(0, getWidth() - s.left - s.right);
     final int availH = Math.max(0, getHeight() - s.top - s.bottom);
-    body.setBounds(s.left, s.top, availW, availH);
+    final int bodyW = openProgress < 1f ? Math.max(availW, sheetWidth) : availW;
+    final int x = isDockedRight() ? s.left : getWidth() - s.right - bodyW;
+    body.setBounds(x, s.top, bodyW, availH);
   }
 
   /**
