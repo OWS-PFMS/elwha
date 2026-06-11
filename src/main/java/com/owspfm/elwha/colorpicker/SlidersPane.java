@@ -83,6 +83,12 @@ final class SlidersPane extends ColorPickerPane {
     hsvRows[0] = new ChannelRow("H", 0, 360, (v, adj) -> hsvFromUser(0, v, adj));
     hsvRows[1] = new ChannelRow("S", 0, 100, (v, adj) -> hsvFromUser(1, v, adj));
     hsvRows[2] = new ChannelRow("V", 0, 100, (v, adj) -> hsvFromUser(2, v, adj));
+    rgbRows[0].slider.setAccessibleChannelName("Red");
+    rgbRows[1].slider.setAccessibleChannelName("Green");
+    rgbRows[2].slider.setAccessibleChannelName("Blue");
+    hsvRows[0].slider.setAccessibleChannelName("Hue");
+    hsvRows[1].slider.setAccessibleChannelName("Saturation");
+    hsvRows[2].slider.setAccessibleChannelName("Value");
 
     this.rowCards = new CardLayout();
     this.rowsHost = new JPanel(rowCards);
@@ -116,6 +122,7 @@ final class SlidersPane extends ColorPickerPane {
     add(rowsHost);
     if (picker.isAlphaEnabled()) {
       this.alphaRow = new ChannelRow("A", 0, 255, this::alphaFromUser);
+      alphaRow.slider.setAccessibleChannelName("Alpha");
       alphaRow.slider.setCheckerboardBacking(true);
       alphaRow.setAlignmentX(LEFT_ALIGNMENT);
       add(Box.createVerticalStrut(SpaceScale.SM.px()));

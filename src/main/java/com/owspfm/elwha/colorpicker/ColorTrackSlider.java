@@ -111,8 +111,8 @@ final class ColorTrackSlider extends JComponent {
             repaint();
           }
         });
-    bindKey(KeyEvent.VK_LEFT, () -> userSet(value - 1, false));
-    bindKey(KeyEvent.VK_RIGHT, () -> userSet(value + 1, false));
+    bindKey(KeyEvent.VK_LEFT, () -> userSet(value + (leftToRight() ? -1 : 1), false));
+    bindKey(KeyEvent.VK_RIGHT, () -> userSet(value + (leftToRight() ? 1 : -1), false));
     bindKey(KeyEvent.VK_PAGE_DOWN, () -> userSet(value - 10, false));
     bindKey(KeyEvent.VK_PAGE_UP, () -> userSet(value + 10, false));
     bindKey(KeyEvent.VK_HOME, () -> userSet(min, false));
@@ -157,8 +157,16 @@ final class ColorTrackSlider extends JComponent {
     }
   }
 
+  void setAccessibleChannelName(final String name) {
+    getAccessibleContext().setAccessibleName(name);
+  }
+
   private boolean isInteractive() {
     return isEnabled();
+  }
+
+  private boolean leftToRight() {
+    return getComponentOrientation().isLeftToRight();
   }
 
   private int clamp(final int candidate) {
@@ -169,10 +177,14 @@ final class ColorTrackSlider extends JComponent {
     return HANDLE_WIDTH / 2 + 2;
   }
 
-  private int valueAt(final int x) {
+  int valueAt(final int x) {
     final int span = Math.max(1, getWidth() - 2 * inset());
-    final float fraction = (x - inset()) / (float) span;
-    return min + Math.round(Math.max(0f, Math.min(1f, fraction)) * (max - min));
+    float fraction = (x - inset()) / (float) span;
+    fraction = Math.max(0f, Math.min(1f, fraction));
+    if (!leftToRight()) {
+      fraction = 1f - fraction;
+    }
+    return min + Math.round(fraction * (max - min));
   }
 
   private void bindKey(final int keyCode, final Runnable action) {
@@ -226,8 +238,9 @@ final class ColorTrackSlider extends JComponent {
         for (int i = 0; i < trackStops.length; i++) {
           fractions[i] = i / (float) (trackStops.length - 1);
         }
-        g2.setPaint(
-            new LinearGradientPaint(inset(), 0, width - inset(), 0, fractions, trackStops));
+        final int start = leftToRight() ? inset() : width - inset();
+        final int end = leftToRight() ? width - inset() : inset();
+        g2.setPaint(new LinearGradientPaint(start, 0, end, 0, fractions, trackStops));
       } else {
         g2.setPaint(trackStops[0]);
       }
@@ -243,7 +256,10 @@ final class ColorTrackSlider extends JComponent {
 
   private void paintHandle(final Graphics2D g2) {
     final int span = Math.max(1, getWidth() - 2 * inset());
-    final float fraction = max == min ? 0f : (value - min) / (float) (max - min);
+    float fraction = max == min ? 0f : (value - min) / (float) (max - min);
+    if (!leftToRight()) {
+      fraction = 1f - fraction;
+    }
     final int handleX = Math.round(inset() + fraction * span) - HANDLE_WIDTH / 2;
     final int handleY = (getHeight() - HANDLE_HEIGHT) / 2;
     if (isFocusOwner()) {
@@ -256,5 +272,52 @@ final class ColorTrackSlider extends JComponent {
     g2.setColor(ColorRole.OUTLINE.resolve());
     g2.setStroke(new BasicStroke(1f));
     g2.drawRoundRect(handleX, handleY, HANDLE_WIDTH, HANDLE_HEIGHT, HANDLE_WIDTH, HANDLE_WIDTH);
+  }
+
+  @Override
+  public javax.accessibility.AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleColorTrackSlider();
+    }
+    return accessibleContext;
+  }
+
+  /** Exposes the track as an accessible slider carrying its channel name and value. */
+  private final class AccessibleColorTrackSlider extends AccessibleJComponent
+      implements javax.accessibility.AccessibleValue {
+
+    @Override
+    public javax.accessibility.AccessibleRole getAccessibleRole() {
+      return javax.accessibility.AccessibleRole.SLIDER;
+    }
+
+    @Override
+    public javax.accessibility.AccessibleValue getAccessibleValue() {
+      return this;
+    }
+
+    @Override
+    public Number getCurrentAccessibleValue() {
+      return value;
+    }
+
+    @Override
+    public boolean setCurrentAccessibleValue(final Number n) {
+      if (n == null) {
+        return false;
+      }
+      userSet(n.intValue(), false);
+      return true;
+    }
+
+    @Override
+    public Number getMinimumAccessibleValue() {
+      return min;
+    }
+
+    @Override
+    public Number getMaximumAccessibleValue() {
+      return max;
+    }
   }
 }

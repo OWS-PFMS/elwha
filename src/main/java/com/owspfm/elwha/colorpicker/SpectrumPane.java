@@ -58,6 +58,7 @@ final class SpectrumPane extends ColorPickerPane {
     this.svBox = new SvBox();
     this.hueSlider = new ColorTrackSlider(0, 360, Math.round(hueDegrees));
     hueSlider.setTrackStops(rainbow());
+    hueSlider.setAccessibleChannelName("Hue");
     hueSlider.setListener((degrees, adjusting) -> hueTo(degrees, adjusting));
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     add(svBox);
@@ -66,6 +67,7 @@ final class SpectrumPane extends ColorPickerPane {
     if (picker.isAlphaEnabled()) {
       this.alphaSlider = new ColorTrackSlider(0, 255, alpha);
       alphaSlider.setCheckerboardBacking(true);
+      alphaSlider.setAccessibleChannelName("Alpha");
       alphaSlider.setListener(this::alphaTo);
       add(Box.createVerticalStrut(SpaceScale.SM.px()));
       add(alphaSlider);
@@ -294,6 +296,36 @@ final class SpectrumPane extends ColorPickerPane {
         g2.setColor(ColorRole.PRIMARY.resolve());
         g2.setStroke(new BasicStroke(2f));
         g2.drawOval(x - 12, y - 12, 24, 24);
+      }
+    }
+
+    @Override
+    public javax.accessibility.AccessibleContext getAccessibleContext() {
+      if (accessibleContext == null) {
+        accessibleContext = new AccessibleSvBox();
+      }
+      return accessibleContext;
+    }
+
+    /** Names the square and reads back the current saturation/value pair. */
+    private final class AccessibleSvBox extends AccessibleJComponent {
+
+      @Override
+      public javax.accessibility.AccessibleRole getAccessibleRole() {
+        return javax.accessibility.AccessibleRole.PANEL;
+      }
+
+      @Override
+      public String getAccessibleName() {
+        return "Saturation and value";
+      }
+
+      @Override
+      public String getAccessibleDescription() {
+        return Math.round(saturation * 100f)
+            + "% saturation, "
+            + Math.round(value * 100f)
+            + "% value";
       }
     }
 

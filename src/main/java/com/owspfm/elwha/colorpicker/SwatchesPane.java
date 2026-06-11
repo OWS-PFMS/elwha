@@ -203,8 +203,8 @@ final class SwatchesPane extends ColorPickerPane {
               repaint();
             }
           });
-      bindKey(KeyEvent.VK_LEFT, () -> moveCursor(-1));
-      bindKey(KeyEvent.VK_RIGHT, () -> moveCursor(1));
+      bindKey(KeyEvent.VK_LEFT, () -> moveCursor(ltr() ? -1 : 1));
+      bindKey(KeyEvent.VK_RIGHT, () -> moveCursor(ltr() ? 1 : -1));
       bindKey(KeyEvent.VK_UP, () -> moveCursor(-columns()));
       bindKey(KeyEvent.VK_DOWN, () -> moveCursor(columns()));
       bindKey(KeyEvent.VK_SPACE, this::activateCursor);
@@ -221,8 +221,43 @@ final class SwatchesPane extends ColorPickerPane {
 
     abstract void activate(int index);
 
+    abstract String stripName();
+
+    abstract String cellName(int index);
+
     boolean isInteractive() {
       return SwatchesPane.this.isEnabled() && picker().isEnabled();
+    }
+
+    final boolean ltr() {
+      return getComponentOrientation().isLeftToRight();
+    }
+
+    @Override
+    public javax.accessibility.AccessibleContext getAccessibleContext() {
+      if (accessibleContext == null) {
+        accessibleContext = new AccessibleCellStrip();
+      }
+      return accessibleContext;
+    }
+
+    /** Names the strip and describes the focused cell for assistive tech. */
+    private final class AccessibleCellStrip extends AccessibleJComponent {
+
+      @Override
+      public javax.accessibility.AccessibleRole getAccessibleRole() {
+        return javax.accessibility.AccessibleRole.LIST;
+      }
+
+      @Override
+      public String getAccessibleName() {
+        return stripName();
+      }
+
+      @Override
+      public String getAccessibleDescription() {
+        return cursor >= 0 && cursor < count() ? cellName(cursor) : null;
+      }
     }
 
     private void bindKey(final int keyCode, final Runnable action) {
@@ -313,7 +348,10 @@ final class SwatchesPane extends ColorPickerPane {
     @Override
     Rectangle cellRect(final int index) {
       final int pitchX = Math.max(1, getWidth() / GRID_COLUMNS);
-      final int col = index % GRID_COLUMNS;
+      int col = index % GRID_COLUMNS;
+      if (!ltr()) {
+        col = GRID_COLUMNS - 1 - col;
+      }
       final int row = index / GRID_COLUMNS;
       return new Rectangle(col * pitchX, row * GRID_ROW_PITCH, pitchX, GRID_ROW_PITCH);
     }
@@ -328,6 +366,21 @@ final class SwatchesPane extends ColorPickerPane {
     @Override
     void activate(final int index) {
       selectHue(index);
+    }
+
+    @Override
+    String stripName() {
+      return "Hue swatches";
+    }
+
+    @Override
+    String cellName(final int index) {
+      final MaterialSwatchCatalog.Hue hue = MaterialSwatchCatalog.hues().get(index);
+      return hue.name()
+          + " "
+          + MaterialSwatchCatalog.shadeName(MaterialSwatchCatalog.REPRESENTATIVE_SHADE)
+          + " · "
+          + ColorHex.format(cellColor(index), false);
     }
 
     @Override
@@ -385,9 +438,10 @@ final class SwatchesPane extends ColorPickerPane {
     @Override
     Rectangle cellRect(final int index) {
       final int width = getWidth();
+      final int position = ltr() ? index : count() - 1 - index;
       final int segment = (width - (count() - 1) * STRIP_GAP) / count();
-      final int x = index * (segment + STRIP_GAP);
-      final int w = index == count() - 1 ? width - x : segment;
+      final int x = position * (segment + STRIP_GAP);
+      final int w = position == count() - 1 ? width - x : segment;
       return new Rectangle(x, 0, w, STRIP_HEIGHT);
     }
 
@@ -399,6 +453,20 @@ final class SwatchesPane extends ColorPickerPane {
     @Override
     void activate(final int index) {
       selectShade(index);
+    }
+
+    @Override
+    String stripName() {
+      return "Shades of " + MaterialSwatchCatalog.hues().get(activeHue).name();
+    }
+
+    @Override
+    String cellName(final int index) {
+      return MaterialSwatchCatalog.hues().get(activeHue).name()
+          + " "
+          + MaterialSwatchCatalog.shadeName(index)
+          + " · "
+          + ColorHex.format(cellColor(index), false);
     }
 
     @Override
@@ -456,7 +524,11 @@ final class SwatchesPane extends ColorPickerPane {
     @Override
     Rectangle cellRect(final int index) {
       final int top = labelHeight() + SpaceScale.SM.px();
-      return new Rectangle(index * RECENT_PITCH, top, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
+      final int x =
+          ltr()
+              ? index * RECENT_PITCH
+              : getWidth() - (index + 1) * RECENT_PITCH + (RECENT_PITCH - CIRCLE_DIAMETER);
+      return new Rectangle(x, top, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
     }
 
     @Override
@@ -467,6 +539,16 @@ final class SwatchesPane extends ColorPickerPane {
     @Override
     void activate(final int index) {
       selectRecent(index);
+    }
+
+    @Override
+    String stripName() {
+      return "Recent colors";
+    }
+
+    @Override
+    String cellName(final int index) {
+      return ColorHex.format(cellColor(index), picker().isAlphaEnabled());
     }
 
     private int labelHeight() {

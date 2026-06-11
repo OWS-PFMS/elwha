@@ -424,6 +424,54 @@ public class ElwhaColorPicker extends JComponent {
     paneCards.show(paneHost, getMode().name());
   }
 
+  /**
+   * Returns the picker's accessible context — role {@code COLOR_CHOOSER}, named by the supporting
+   * text, describing the current color's hex (design doc §10).
+   *
+   * @return the accessible context
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public javax.accessibility.AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaColorPicker();
+    }
+    return accessibleContext;
+  }
+
+  /** Accessible support for the picker composite. */
+  protected class AccessibleElwhaColorPicker extends AccessibleJComponent {
+
+    /**
+     * Creates the accessible context.
+     *
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    protected AccessibleElwhaColorPicker() {}
+
+    @Override
+    public javax.accessibility.AccessibleRole getAccessibleRole() {
+      return javax.accessibility.AccessibleRole.COLOR_CHOOSER;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      final String explicit = super.getAccessibleName();
+      if (explicit != null) {
+        return explicit;
+      }
+      return supportingText != null ? supportingText : "Select color";
+    }
+
+    @Override
+    public String getAccessibleDescription() {
+      final String explicit = super.getAccessibleDescription();
+      return explicit != null ? explicit : "Current color " + formatCurrentHex();
+    }
+  }
+
   private ColorPickerPane createPane(final PickerMode mode) {
     return switch (mode) {
       case SWATCHES -> new SwatchesPane(this);
