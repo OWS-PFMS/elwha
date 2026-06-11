@@ -75,6 +75,22 @@ public final class ElwhaColorPickerSpectrumSmoke {
 
     slider.setValue(100);
     check("programmatic setValue never notifies", fires.get() == 3 && slider.value() == 100);
+
+    slider.setSize(120, ColorTrackSlider.COMPONENT_HEIGHT);
+    final int dragX = 90;
+    final int expected = slider.valueAt(dragX);
+    dispatchMouse(slider, java.awt.event.MouseEvent.MOUSE_PRESSED, 60);
+    dispatchMouse(slider, java.awt.event.MouseEvent.MOUSE_DRAGGED, dragX);
+    dispatchMouse(slider, java.awt.event.MouseEvent.MOUSE_RELEASED, dragX);
+    check(
+        "release settles at the dragged value, not the construction value",
+        slider.value() == expected && last[0] == expected && last[1] == 0);
+  }
+
+  private static void dispatchMouse(final ColorTrackSlider target, final int id, final int x) {
+    target.dispatchEvent(
+        new java.awt.event.MouseEvent(
+            target, id, 0L, 0, x, 14, 1, false, java.awt.event.MouseEvent.BUTTON1));
   }
 
   private static void checkPane() {

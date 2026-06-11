@@ -63,10 +63,13 @@ final class ColorTrackSlider extends JComponent {
   private ValueListener listener;
   private boolean dragging;
 
-  ColorTrackSlider(final int min, final int max, final int value) {
+  // The parameter must not be named "value": the constructor-scoped mouse/key handlers would
+  // capture the parameter instead of the field — every release would snap to the construction
+  // value (the smoke-iterate jump-to-left bug; same shadowing family as #432).
+  ColorTrackSlider(final int min, final int max, final int initialValue) {
     this.min = min;
     this.max = max;
-    this.value = clamp(value);
+    this.value = clamp(initialValue);
     setOpaque(false);
     setFocusable(true);
     setAlignmentX(LEFT_ALIGNMENT);

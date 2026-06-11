@@ -39,6 +39,7 @@ public final class ElwhaColorPickerSlidersSmoke {
     checkParse();
     checkChannels();
     checkHexField();
+    checkMouseGesture();
     for (final Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK}) {
       ElwhaTheme.install(ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
       checkPaint(mode);
@@ -115,6 +116,55 @@ public final class ElwhaColorPickerSlidersSmoke {
 
     picker.setColor(new Color(0xD32F2F));
     check("external commit refreshes hex", "#D32F2F".equals(pane.hexText()));
+  }
+
+  // Drives the REAL mouse path (press → drag → release) — the settled value must be the dragged
+  // value, never the construction value (the parameter-shadowing jump-to-left regression).
+  private static void checkMouseGesture() {
+    final ElwhaColorPicker picker = new ElwhaColorPicker(new Color(0x336699));
+    picker.setModes(PickerMode.SLIDERS);
+    layoutTree(picker, new Dimension(328, 480));
+    final SlidersPane pane = (SlidersPane) picker.paneFor(PickerMode.SLIDERS);
+    final java.util.List<ColorTrackSlider> sliders = new java.util.ArrayList<>();
+    collectSliders(pane, sliders);
+    final ColorTrackSlider red = sliders.get(0);
+    check("gesture target laid out", red.getWidth() > 50);
+
+    final int dragX = red.getWidth() / 2 + 20;
+    final int expected = red.valueAt(dragX);
+    mouse(red, java.awt.event.MouseEvent.MOUSE_PRESSED, red.getWidth() / 2);
+    mouse(red, java.awt.event.MouseEvent.MOUSE_DRAGGED, dragX);
+    check("drag tracks the cursor", red.value() == expected && picker.isAdjusting());
+    mouse(red, java.awt.event.MouseEvent.MOUSE_RELEASED, dragX);
+    check("release settles at the dragged value", red.value() == expected);
+    check("release commits the dragged color", picker.getColor().getRed() == expected);
+    check("release ends adjusting", !picker.isAdjusting());
+
+    final javax.swing.KeyStroke right =
+        javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, 0);
+    red.getActionMap()
+        .get(right.toString())
+        .actionPerformed(
+            new java.awt.event.ActionEvent(red, java.awt.event.ActionEvent.ACTION_PERFORMED, ""));
+    check("keyboard nudges from the CURRENT value", red.value() == expected + 1);
+  }
+
+  private static void mouse(final Component target, final int id, final int x) {
+    target.dispatchEvent(
+        new java.awt.event.MouseEvent(
+            target, id, 0L, 0, x, 14, 1, false, java.awt.event.MouseEvent.BUTTON1));
+  }
+
+  private static void collectSliders(
+      final Container root, final java.util.List<ColorTrackSlider> out) {
+    for (final Component child : root.getComponents()) {
+      if (child instanceof ColorTrackSlider slider) {
+        out.add(slider);
+      }
+      if (child instanceof Container nested) {
+        collectSliders(nested, out);
+      }
+    }
   }
 
   private static void checkPaint(final Mode mode) {
