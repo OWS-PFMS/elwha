@@ -66,15 +66,19 @@ public final class ElwhaTabsInteractionDemo {
 
     final ElwhaTabs forced = ElwhaTabs.primary();
     forced.addTab("Active");
-    forced.addTab("Hovered").setHovered(true);
-    forced.addTab("Pressed (PRIMARY quirk)").setPressed(true);
+    forced.addTab("Frozen hover (forced)").setHovered(true);
+    forced.addTab("Frozen press (forced)").setPressed(true);
     forced.addTab("Rest");
 
     final JPanel bars = new JPanel(new GridLayout(0, 1, 0, 18));
     bars.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
     bars.add(titled("Primary — click around; click the active tab (no-op)", primary));
     bars.add(titled("Secondary — layers tint ON_SURFACE in every state", secondary));
-    bars.add(titled("Forced states (gallery hooks) — inactive pressed flashes PRIMARY", forced));
+    bars.add(
+        titled(
+            "Static gallery hooks — these two stay tinted BY DESIGN (press = PRIMARY @10%, only"
+                + " faintly more lavender than hover's ON_SURFACE @8% on a light surface)",
+            forced));
 
     final ElwhaButton programmatic = ElwhaButton.filledTonalButton("Programmatic next (top bar)");
     programmatic.addActionListener(
