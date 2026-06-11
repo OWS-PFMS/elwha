@@ -96,23 +96,24 @@ public final class ElwhaSwitchChromeSmoke {
     final Color ground = ColorRole.SURFACE.resolve();
     final float container = StateLayer.disabledContainerOpacity();
     final float content = StateLayer.disabledContentOpacity();
-    final BufferedImage dOff = render(switchAt(false, false));
-    final Color dOffTrack = mix(ground, ColorRole.SURFACE_CONTAINER_HIGHEST.resolve(), container);
+    final BufferedImage disabledOff = render(switchAt(false, false));
+    final Color disabledOffTrack =
+        mix(ground, ColorRole.SURFACE_CONTAINER_HIGHEST.resolve(), container);
     check(
         modeTag + ": disabled unselected track is scH @ 0.12 over SURFACE",
-        near(dOff, 44, CY, dOffTrack));
+        near(disabledOff, 44, CY, disabledOffTrack));
     check(
         modeTag + ": disabled unselected handle is ON_SURFACE @ 0.38",
-        near(dOff, 20, CY, mix(dOffTrack, ColorRole.ON_SURFACE.resolve(), content)));
+        near(disabledOff, 20, CY, mix(disabledOffTrack, ColorRole.ON_SURFACE.resolve(), content)));
 
     // Disabled selected: 12% ON_SURFACE track, opaque SURFACE handle (the §T asymmetry).
-    final BufferedImage dOn = render(switchAt(true, false));
+    final BufferedImage disabledOn = render(switchAt(true, false));
     check(
         modeTag + ": disabled selected track is ON_SURFACE @ 0.12 over SURFACE",
-        near(dOn, 10, CY, mix(ground, ColorRole.ON_SURFACE.resolve(), container)));
+        near(disabledOn, 10, CY, mix(ground, ColorRole.ON_SURFACE.resolve(), container)));
     check(
         modeTag + ": disabled selected handle is opaque SURFACE",
-        near(dOn, 40, CY, ColorRole.SURFACE.resolve()));
+        near(disabledOn, 40, CY, ColorRole.SURFACE.resolve()));
   }
 
   private static ElwhaSwitch switchAt(final boolean selected, final boolean enabled) {

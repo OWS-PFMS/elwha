@@ -150,20 +150,24 @@ public final class ElwhaSwitchInteractionSmoke {
 
     final ElwhaSwitch hover = sized(new ElwhaSwitch());
     hover.setHovered(true);
-    final BufferedImage hImg = render(hover);
+    final BufferedImage hoverImg = render(hover);
     check(
         "hover paints the ON_SURFACE 8% layer on the halo",
-        near(hImg, 7, 7, mix(ground, ColorRole.ON_SURFACE.resolve(), StateLayer.HOVER.opacity())));
+        near(
+            hoverImg,
+            7,
+            7,
+            mix(ground, ColorRole.ON_SURFACE.resolve(), StateLayer.HOVER.opacity())));
     check(
         "hover shifts the unselected handle to ON_SURFACE_VARIANT",
-        near(hImg, 20, CY, ColorRole.ON_SURFACE_VARIANT.resolve()));
+        near(hoverImg, 20, CY, ColorRole.ON_SURFACE_VARIANT.resolve()));
 
     final ElwhaSwitch pressedOn = sized(new ElwhaSwitch(true));
     pressedOn.setPressed(true);
-    final BufferedImage pImg = render(pressedOn);
+    final BufferedImage pressedImg = render(pressedOn);
     check(
         "pressed shifts the selected handle to PRIMARY_CONTAINER",
-        near(pImg, 40, CY, ColorRole.PRIMARY_CONTAINER.resolve()));
+        near(pressedImg, 40, CY, ColorRole.PRIMARY_CONTAINER.resolve()));
 
     final ElwhaSwitch pressedOff = sized(new ElwhaSwitch());
     final BufferedImage idleImg = render(pressedOff);
