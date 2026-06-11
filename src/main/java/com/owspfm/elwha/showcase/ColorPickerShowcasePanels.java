@@ -27,10 +27,10 @@ import javax.swing.SwingConstants;
 /**
  * The Elwha Showcase leaf surface for {@link ElwhaColorPicker} + {@link ElwhaColorPickerDialog}
  * (story #490): a {@link ComponentWorkbench} stage hosting one persistent live picker with
- * mode-subset, preset-color, alpha, enabled, and supporting-text knobs plus a dialog launcher and
- * a generated construction snippet — every knob an Elwha control (the #424 dogfood direction);
- * and a gallery of single-mode pickers, the alpha-enabled spectrum, a populated recent row, and
- * the disabled treatment.
+ * mode-subset, preset-color, alpha, enabled, and supporting-text knobs plus a dialog launcher and a
+ * generated construction snippet — every knob an Elwha control (the #424 dogfood direction); and a
+ * gallery of single-mode pickers, the alpha-enabled spectrum, a populated recent row, and the
+ * disabled treatment.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -94,8 +94,7 @@ final class ColorPickerShowcasePanels {
     controls.addSection("Dialog");
     controls.addControl("", dialogButton);
 
-    final JLabel readout =
-        new JLabel("getColor() → #FF7043FF (adjusting)", SwingConstants.CENTER);
+    final JLabel readout = new JLabel("getColor() → #FF7043FF (adjusting)", SwingConstants.CENTER);
     final Dimension readoutPref = readout.getPreferredSize();
     readout.setPreferredSize(readoutPref);
     readout.setMaximumSize(readoutPref);
@@ -103,9 +102,7 @@ final class ColorPickerShowcasePanels {
     picker.addChangeListener(
         e ->
             readout.setText(
-                "getColor() → "
-                    + hex(picker)
-                    + (picker.isAdjusting() ? " (adjusting)" : "")));
+                "getColor() → " + hex(picker) + (picker.isAdjusting() ? " (adjusting)" : "")));
 
     workbench.setStage(stage(picker, readout));
 

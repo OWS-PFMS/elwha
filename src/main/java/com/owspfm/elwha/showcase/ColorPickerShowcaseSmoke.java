@@ -44,8 +44,7 @@ public final class ColorPickerShowcaseSmoke {
     checkWorkbench();
     checkGallery();
     for (final Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK}) {
-      ElwhaTheme.install(
-          ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
+      ElwhaTheme.install(ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
       paintPass(ColorPickerShowcasePanels.buildWorkbench(), mode + " workbench");
       paintPass(ColorPickerShowcasePanels.buildGallery(), mode + " gallery");
     }

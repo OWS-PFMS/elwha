@@ -13,12 +13,12 @@ import java.util.function.Consumer;
  * elwha-color-picker-design.md} §8): edits stay in the embedded picker, <em>OK</em> delivers the
  * final color to {@link #onConfirm}, and Cancel / Esc / scrim discard it. Composition over the
  * package-private dialog host by design — the dialog supplies the M3 container
- * (surface-container-high, XL corners, elevation 3), the headline naming the task, and the
- * trailing text-button action row.
+ * (surface-container-high, XL corners, elevation 3), the headline naming the task, and the trailing
+ * text-button action row.
  *
  * <p>Non-blocking, like every Elwha overlay: {@link #show} returns immediately and the outcome
- * arrives through the callbacks — the in-window translation of {@code JColorChooser.showDialog}.
- * A confirmed color becomes the next show's staged color; a cancelled one is forgotten.
+ * arrives through the callbacks — the in-window translation of {@code JColorChooser.showDialog}. A
+ * confirmed color becomes the next show's staged color; a cancelled one is forgotten.
  *
  * <pre>{@code
  * ElwhaColorPickerDialog.show(button, "Accent color", current, chosen -> apply(chosen));
@@ -72,8 +72,8 @@ public class ElwhaColorPickerDialog {
   }
 
   /**
-   * Sets the color staged when the dialog next shows. A confirmed pick replaces it; a cancelled
-   * one does not.
+   * Sets the color staged when the dialog next shows. A confirmed pick replaces it; a cancelled one
+   * does not.
    *
    * @param initialColor the color to stage
    * @throws IllegalArgumentException if {@code initialColor} is {@code null}

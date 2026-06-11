@@ -40,8 +40,7 @@ public final class ElwhaColorPickerSlidersSmoke {
     checkChannels();
     checkHexField();
     for (final Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK}) {
-      ElwhaTheme.install(
-          ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
+      ElwhaTheme.install(ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
       checkPaint(mode);
     }
 

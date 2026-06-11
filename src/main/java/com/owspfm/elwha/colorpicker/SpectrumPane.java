@@ -110,8 +110,7 @@ final class SpectrumPane extends ColorPickerPane {
 
   @Override
   void syncFromPicker(final Color color) {
-    if ((currentRgb() & 0xFFFFFF) == (color.getRGB() & 0xFFFFFF)
-        && alpha == color.getAlpha()) {
+    if ((currentRgb() & 0xFFFFFF) == (color.getRGB() & 0xFFFFFF) && alpha == color.getAlpha()) {
       return;
     }
     adoptHsv(color);
@@ -125,8 +124,7 @@ final class SpectrumPane extends ColorPickerPane {
   }
 
   private void adoptHsv(final Color color) {
-    final float[] hsb =
-        Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), null);
+    final float[] hsb = Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), null);
     if (hsb[1] > 0f && hsb[2] > 0f) {
       hueDegrees = hsb[0] * 360f;
     }

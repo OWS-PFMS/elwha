@@ -43,8 +43,7 @@ public final class ElwhaColorPickerSwatchesSmoke {
     checkActivation();
     checkRecent();
     for (final Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK}) {
-      ElwhaTheme.install(
-          ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
+      ElwhaTheme.install(ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
       checkPaint(mode);
     }
 
@@ -61,7 +60,8 @@ public final class ElwhaColorPickerSwatchesSmoke {
       check(hue.name() + " has ten shades", hue.shades().length == 10);
     }
     check("Red 500 verbatim", new Color(0xF44336).equals(hues.get(0).shades()[5]));
-    check("Monochrome runs white to black",
+    check(
+        "Monochrome runs white to black",
         Color.WHITE.equals(hues.get(19).shades()[0])
             && Color.BLACK.equals(hues.get(19).shades()[9]));
     final int[] found = MaterialSwatchCatalog.find(new Color(0x00796B));
@@ -116,9 +116,7 @@ public final class ElwhaColorPickerSwatchesSmoke {
       picker.setColor(new Color(40 + i, 0, 0));
     }
     check("recent caps at ten", picker.recentColors().size() == 10);
-    check(
-        "newest first after cap",
-        new Color(51, 0, 0).equals(picker.recentColors().get(0)));
+    check("newest first after cap", new Color(51, 0, 0).equals(picker.recentColors().get(0)));
 
     pane.selectRecent(1);
     check("recent click commits that entry", new Color(50, 0, 0).equals(picker.getColor()));

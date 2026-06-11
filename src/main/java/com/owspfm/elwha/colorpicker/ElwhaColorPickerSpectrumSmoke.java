@@ -41,8 +41,7 @@ public final class ElwhaColorPickerSpectrumSmoke {
     checkSlider();
     checkPane();
     for (final Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK}) {
-      ElwhaTheme.install(
-          ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
+      ElwhaTheme.install(ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
       checkPaint(mode);
     }
 
@@ -82,7 +81,8 @@ public final class ElwhaColorPickerSpectrumSmoke {
     final ElwhaColorPicker picker = new ElwhaColorPicker(new Color(0xFF0000));
     picker.setModes(PickerMode.SPECTRUM);
     final SpectrumPane pane = (SpectrumPane) picker.paneFor(PickerMode.SPECTRUM);
-    check("red adopts h=0 s=1 v=1",
+    check(
+        "red adopts h=0 s=1 v=1",
         pane.hueDegrees() == 0f && pane.saturation() == 1f && pane.value() == 1f);
 
     pane.hueTo(120, false);

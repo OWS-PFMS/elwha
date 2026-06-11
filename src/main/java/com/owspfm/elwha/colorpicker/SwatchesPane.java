@@ -87,8 +87,9 @@ final class SwatchesPane extends ColorPickerPane {
     activeHue = hueIndex;
     commit(
         preserveAlpha(
-            MaterialSwatchCatalog.hues().get(hueIndex).shades()[
-                MaterialSwatchCatalog.REPRESENTATIVE_SHADE]),
+            MaterialSwatchCatalog.hues()
+                .get(hueIndex)
+                .shades()[MaterialSwatchCatalog.REPRESENTATIVE_SHADE]),
         false);
     repaint();
   }

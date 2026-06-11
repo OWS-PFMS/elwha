@@ -14,9 +14,9 @@ import java.awt.image.BufferedImage;
 /**
  * S6 headless guard for the alpha channel (#488): the opt-in gate (off strips, on preserves,
  * turning off strips the current color with a change commit), the 8-digit hex readout and headline
- * step-down, alpha edits flowing through the spectrum and sliders panes, hex alpha grammar +
- * error text, swatch picks preserving alpha, dialog pass-through, and a paint pass asserting the
- * alpha track's opaque end reaches pixels.
+ * step-down, alpha edits flowing through the spectrum and sliders panes, hex alpha grammar + error
+ * text, swatch picks preserving alpha, dialog pass-through, and a paint pass asserting the alpha
+ * track's opaque end reaches pixels.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -61,7 +61,8 @@ public final class ElwhaColorPickerAlphaSmoke {
     final int[] fires = {0};
     picker.addChangeListener(e -> fires[0]++);
     picker.setAlphaEnabled(false);
-    check("turning off strips with a change commit",
+    check(
+        "turning off strips with a change commit",
         picker.getColor().getAlpha() == 255 && fires[0] == 1);
     check("readout shrinks back", "#0A141E".equals(picker.formatCurrentHex()));
     check("headline restores", picker.headlineTypeRole() == TypeRole.HEADLINE_LARGE);
@@ -94,7 +95,8 @@ public final class ElwhaColorPickerAlphaSmoke {
     sliders.revertHex();
     final SwatchesPane swatches = (SwatchesPane) picker.paneFor(PickerMode.SWATCHES);
     swatches.selectHue(0);
-    check("swatch pick preserves alpha",
+    check(
+        "swatch pick preserves alpha",
         picker.getColor().getAlpha() == 0x44
             && (picker.getColor().getRGB() & 0xFFFFFF) == 0xF44336);
   }
@@ -110,8 +112,7 @@ public final class ElwhaColorPickerAlphaSmoke {
 
   private static void checkPaint() {
     for (final Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK}) {
-      ElwhaTheme.install(
-          ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
+      ElwhaTheme.install(ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
       final ElwhaColorPicker picker = new ElwhaColorPicker();
       picker.setAlphaEnabled(true);
       picker.setColor(new Color(0xD3, 0x2F, 0x2F, 0x60));
@@ -123,9 +124,7 @@ public final class ElwhaColorPickerAlphaSmoke {
       g2.fillRect(0, 0, 360, 520);
       picker.paint(g2);
       g2.dispose();
-      check(
-          "alpha track opaque end painted (" + mode + ")",
-          contains(image, new Color(0xD32F2F)));
+      check("alpha track opaque end painted (" + mode + ")", contains(image, new Color(0xD32F2F)));
     }
   }
 

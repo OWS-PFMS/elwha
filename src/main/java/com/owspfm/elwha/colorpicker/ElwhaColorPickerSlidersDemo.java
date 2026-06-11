@@ -17,8 +17,8 @@ import javax.swing.SwingUtilities;
  * S4 visual smoke for the SLIDERS pane (#486): the connected RGB/HSV sub-toggle, three
  * context-gradient channel rows per model (each track sweeps its channel through the current
  * color), live value labels, and the validated hex field — Enter or focus-loss commits, bad text
- * raises the error supporting line ("Use #RRGGBB") and reverts on focus-loss. Try typing
- * {@code 0f0}, then garbage, then Tab away.
+ * raises the error supporting line ("Use #RRGGBB") and reverts on focus-loss. Try typing {@code
+ * 0f0}, then garbage, then Tab away.
  *
  * @author Charles Bryan
  * @version v0.5.0

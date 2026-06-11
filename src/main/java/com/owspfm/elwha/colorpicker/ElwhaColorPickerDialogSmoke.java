@@ -76,13 +76,15 @@ public final class ElwhaColorPickerDialogSmoke {
     check("cancel keeps the staged color", new Color(0x42A5F5).equals(dialog.getInitialColor()));
 
     dialog.stage();
-    check("re-stage restores the initial color",
+    check(
+        "re-stage restores the initial color",
         new Color(0x42A5F5).equals(dialog.picker().getColor()));
 
     dialog.picker().setColor(new Color(0x2E7D32));
     dialog.handleClose(DismissCause.CONFIRM);
     check("confirm delivers the pending color", new Color(0x2E7D32).equals(confirmed.get()));
-    check("confirm re-stages for the next show",
+    check(
+        "confirm re-stages for the next show",
         new Color(0x2E7D32).equals(dialog.getInitialColor()));
     check("confirm never runs cancel", cancels.get() == 1);
 

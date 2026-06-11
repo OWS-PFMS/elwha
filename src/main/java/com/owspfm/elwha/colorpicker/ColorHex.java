@@ -30,8 +30,8 @@ final class ColorHex {
   }
 
   /**
-   * Parses web hex — {@code #RRGGBB} or shorthand {@code #RGB}, plus {@code #RRGGBBAA} /
-   * {@code #RGBA} when {@code allowAlpha}. The leading {@code #} is optional; case is ignored.
+   * Parses web hex — {@code #RRGGBB} or shorthand {@code #RGB}, plus {@code #RRGGBBAA} / {@code
+   * #RGBA} when {@code allowAlpha}. The leading {@code #} is optional; case is ignored.
    *
    * @param text the candidate text
    * @param allowAlpha whether 4/8-digit alpha forms are accepted

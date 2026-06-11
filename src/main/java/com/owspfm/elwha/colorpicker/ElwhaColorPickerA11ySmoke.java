@@ -19,10 +19,10 @@ import javax.swing.KeyStroke;
 
 /**
  * S7 headless guard for keyboard + a11y + RTL (#489): the picker's COLOR_CHOOSER role with
- * supporting-text naming and live hex description, ColorTrackSlider's SLIDER role +
- * AccessibleValue round-trip + channel names, the three swatch strips exposing LIST roles with
- * catalog cell names, the SV box's name/value description, RTL value mapping on the track, and
- * the #432 contract — a disabled slider's keyboard action leaves the value untouched.
+ * supporting-text naming and live hex description, ColorTrackSlider's SLIDER role + AccessibleValue
+ * round-trip + channel names, the three swatch strips exposing LIST roles with catalog cell names,
+ * the SV box's name/value description, RTL value mapping on the track, and the #432 contract — a
+ * disabled slider's keyboard action leaves the value untouched.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -60,13 +60,9 @@ public final class ElwhaColorPickerA11ySmoke {
     check("named by default supporting text", "Select color".equals(context.getAccessibleName()));
     picker.setSupportingText("Pick an accent");
     check("name follows supporting text", "Pick an accent".equals(context.getAccessibleName()));
-    check(
-        "description carries the hex",
-        context.getAccessibleDescription().contains("#7E57C2"));
+    check("description carries the hex", context.getAccessibleDescription().contains("#7E57C2"));
     picker.setColor(new Color(0x00FF00));
-    check(
-        "description tracks commits",
-        context.getAccessibleDescription().contains("#00FF00"));
+    check("description tracks commits", context.getAccessibleDescription().contains("#00FF00"));
   }
 
   private static void checkSliderAccessibility() {
@@ -75,7 +71,8 @@ public final class ElwhaColorPickerA11ySmoke {
     final AccessibleContext context = slider.getAccessibleContext();
     check("slider role", context.getAccessibleRole() == AccessibleRole.SLIDER);
     check("channel name", "Red".equals(context.getAccessibleName()));
-    check("current value", context.getAccessibleValue().getCurrentAccessibleValue().intValue() == 10);
+    check(
+        "current value", context.getAccessibleValue().getCurrentAccessibleValue().intValue() == 10);
     check(
         "min and max",
         context.getAccessibleValue().getMinimumAccessibleValue().intValue() == 0
@@ -104,12 +101,11 @@ public final class ElwhaColorPickerA11ySmoke {
     check("sv box named", panelNames.contains("Saturation and value"));
 
     final List<String> sliderNames = new ArrayList<>();
-    collectNamesByRole((Container) picker.paneFor(PickerMode.SLIDERS), AccessibleRole.SLIDER,
-        sliderNames);
+    collectNamesByRole(
+        (Container) picker.paneFor(PickerMode.SLIDERS), AccessibleRole.SLIDER, sliderNames);
     check(
         "channel sliders named",
-        sliderNames.containsAll(
-            List.of("Red", "Green", "Blue", "Hue", "Saturation", "Value")));
+        sliderNames.containsAll(List.of("Red", "Green", "Blue", "Hue", "Saturation", "Value")));
   }
 
   private static void checkRtlAndDisabled() {

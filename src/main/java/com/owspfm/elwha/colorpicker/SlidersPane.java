@@ -75,7 +75,8 @@ final class SlidersPane extends ColorPickerPane {
     modelToggle.setSelectedIndex(0);
     modelToggle.setAlignmentX(LEFT_ALIGNMENT);
     modelToggle.addSelectionListener(
-        group -> setChannelModel(group.getSelectedIndex() == 1 ? ChannelModel.HSV : ChannelModel.RGB));
+        group ->
+            setChannelModel(group.getSelectedIndex() == 1 ? ChannelModel.HSV : ChannelModel.RGB));
 
     rgbRows[0] = new ChannelRow("R", 0, 255, (v, adj) -> rgbFromUser(0, v, adj));
     rgbRows[1] = new ChannelRow("G", 0, 255, (v, adj) -> rgbFromUser(1, v, adj));

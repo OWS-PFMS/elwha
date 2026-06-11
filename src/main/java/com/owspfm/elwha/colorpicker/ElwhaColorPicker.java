@@ -23,7 +23,8 @@ import javax.swing.event.ChangeListener;
  * elwha-color-picker-design.md}). M3 defines no color picker; this component applies the picker
  * grammar M3's date and time pickers share — supporting text over a large headline that renders the
  * pending selection, a divider, the picking surface, and a tabbed mode switch — to color,
- * cross-checked against the JColorChooser / WinUI / macOS / Chrome picker lineage (research doc §X).
+ * cross-checked against the JColorChooser / WinUI / macOS / Chrome picker lineage (research doc
+ * §X).
  *
  * <p><strong>Modes are closed.</strong> {@link #setModes} accepts any non-empty, duplicate-free
  * subset of {@link PickerMode} in any order — the first becomes the active tab, and a single mode
@@ -33,9 +34,9 @@ import javax.swing.event.ChangeListener;
  * <p><strong>Selection model.</strong> {@link #getColor()} is never {@code null}. Every edit —
  * swatch click, spectrum drag, slider drag, hex entry, {@link #setColor} — funnels through one
  * commit path; {@link ChangeListener}s registered via {@link #addChangeListener} fire on every
- * accepted commit, and {@link #isAdjusting()} answers {@code true} while a drag is in flight
- * (the {@code BoundedRangeModel} convention {@code ElwhaSlider} also follows). Switching modes
- * never mutates the color.
+ * accepted commit, and {@link #isAdjusting()} answers {@code true} while a drag is in flight (the
+ * {@code BoundedRangeModel} convention {@code ElwhaSlider} also follows). Switching modes never
+ * mutates the color.
  *
  * <p>For the modal form with pending-until-OK semantics, see {@code ElwhaColorPickerDialog}.
  *
@@ -129,8 +130,8 @@ public class ElwhaColorPicker extends JComponent {
   }
 
   /**
-   * Sets the current color programmatically — a non-adjusting commit: every pane resyncs and
-   * {@code ChangeListener}s fire if the color actually changed.
+   * Sets the current color programmatically — a non-adjusting commit: every pane resyncs and {@code
+   * ChangeListener}s fire if the color actually changed.
    *
    * @param color the new color
    * @throws IllegalArgumentException if {@code color} is {@code null}
@@ -270,10 +271,10 @@ public class ElwhaColorPicker extends JComponent {
 
   /**
    * Opts the picker into the alpha channel (WinUI's {@code IsAlphaEnabled} precedent, design §9):
-   * an alpha track joins the SPECTRUM and SLIDERS panes, the hex grammar grows to
-   * {@code #RRGGBBAA}, and the preview backs translucency with the transparency checkerboard.
-   * Turning alpha off strips the current color to opaque (a change commit if it carried alpha).
-   * Mode panes are rebuilt; the recent row survives.
+   * an alpha track joins the SPECTRUM and SLIDERS panes, the hex grammar grows to {@code
+   * #RRGGBBAA}, and the preview backs translucency with the transparency checkerboard. Turning
+   * alpha off strips the current color to opaque (a change commit if it carried alpha). Mode panes
+   * are rebuilt; the recent row survives.
    *
    * @param alphaEnabled whether colors carry alpha
    * @version v0.5.0
@@ -285,8 +286,7 @@ public class ElwhaColorPicker extends JComponent {
     }
     this.alphaEnabled = alphaEnabled;
     if (!alphaEnabled && color.getAlpha() != 255) {
-      commitInternal(
-          null, new Color(color.getRed(), color.getGreen(), color.getBlue()), false);
+      commitInternal(null, new Color(color.getRed(), color.getGreen(), color.getBlue()), false);
     }
     rebuildModes();
     header.revalidate();

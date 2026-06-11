@@ -15,9 +15,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * S1 headless guard for the {@link ElwhaColorPicker} shell (#483): selection-model contract
- * (never-null color, alpha stripping, change-fire rules, adjusting semantics), the closed
- * {@code setModes} validation, single-mode tab-bar hiding, supporting-text collapse, enabled
- * cascade, hex formatting, and a light+dark paint pass with a swatch pixel assertion.
+ * (never-null color, alpha stripping, change-fire rules, adjusting semantics), the closed {@code
+ * setModes} validation, single-mode tab-bar hiding, supporting-text collapse, enabled cascade, hex
+ * formatting, and a light+dark paint pass with a swatch pixel assertion.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -43,8 +43,7 @@ public final class ElwhaColorPickerShellSmoke {
     checkModes();
     checkHex();
     for (final Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK}) {
-      ElwhaTheme.install(
-          ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
+      ElwhaTheme.install(ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
       checkPaint(mode);
     }
 
