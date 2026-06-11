@@ -328,6 +328,20 @@ public class ElwhaColorPicker extends JComponent {
     return d;
   }
 
+  /**
+   * Returns a maximum size whose width is pinned to the preferred width — the M3 picker is a
+   * fixed-width surface, so stretching layouts (Showcase stage, BoxLayout) keep the designed
+   * grid/strip geometry instead of inflating it.
+   *
+   * @return the width-capped maximum size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public Dimension getMaximumSize() {
+    return new Dimension(getPreferredSize().width, Integer.MAX_VALUE);
+  }
+
   void commitFromPane(final ColorPickerPane source, final Color next, final boolean adjusting) {
     commitInternal(source, normalize(next), adjusting);
   }
@@ -401,8 +415,9 @@ public class ElwhaColorPicker extends JComponent {
       paneHost.removeAll();
       panes.clear();
       for (final PickerMode mode : modes) {
+        // Stacked icon-over-label: three inline-icon tabs truncate their labels inside the
+        // 328px picker width (smoke-iterate finding).
         final ElwhaTab tab = ElwhaTab.of(MaterialIcons.symbol(mode.iconName()), mode.label());
-        tab.setInlineIcon(true);
         tabs.addTab(tab);
         final ColorPickerPane pane = createPane(mode);
         pane.setEnabled(isEnabled());
