@@ -1,6 +1,8 @@
 package com.owspfm.elwha.radio;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
 import java.awt.AlphaComposite;
@@ -61,6 +63,15 @@ import javax.swing.event.EventListenerList;
  * selection commits fire the registered {@link ActionListener}s <em>and</em> {@link
  * ChangeListener}s; programmatic {@code setSelected} fires only the latter.
  *
+ * <p><strong>Motion (design §6 / research §Mo — M3 verbatim).</strong> Selecting grows the dot
+ * {@code 0→1} over {@value #DOT_GROW_MS}&nbsp;ms on {@link Easing#EMPHASIZED_DECELERATE}
+ * (material-web's {@code inner-circle-grow}) while the dot's alpha and the ring color arrive in
+ * {@value #COLOR_FADE_MS}&nbsp;ms linear; deselecting <em>fades</em> the dot at its current scale —
+ * M3 specs no shrink — and crossfades the ring back, both over {@value #COLOR_FADE_MS}&nbsp;ms. A
+ * mid-flight direction change continues from the current value (no jump). Programmatic {@code
+ * setSelected} animates only while the radio is displayable and enabled — otherwise it snaps — and
+ * {@link MorphAnimator#isReducedMotion() reduced motion} snaps everything globally.
+ *
  * <p><strong>Geometry (M3 token-locked — research §T/§G).</strong> The ring is painted as a filled
  * ring ({@link Area} subtraction — material-web mask-builds it the same way), never a stroke, so
  * the disabled translucent fills cannot double-blend and no half-pixel seam appears. The preferred
@@ -95,11 +106,21 @@ public class ElwhaRadioButton extends JComponent {
   /** The state layer's overhang past the icon, per side. */
   static final int HALO_OVERHANG_PX = (STATE_LAYER_SIZE_PX - ICON_SIZE_PX) / 2;
 
+  /** Dot-grow duration on select — {@code motion.duration.medium2}, material-web verbatim. */
+  static final int DOT_GROW_MS = MorphAnimator.MEDIUM2_MS;
+
+  /** Deselect dot fade + ring color crossfade duration — material-web's 50ms linear transitions. */
+  static final int COLOR_FADE_MS = 50;
+
   private static final int RIPPLE_TOTAL_MS = 400;
   private static final int RIPPLE_TICK_MS = 16;
 
   private final EventListenerList listenerList = new EventListenerList();
   private final ChangeEvent changeEvent = new ChangeEvent(this);
+
+  private final RetargetTween dotScale;
+  private final RetargetTween dotAlpha;
+  private final RetargetTween ringBlend;
 
   private boolean selected;
   private boolean hovered;
@@ -129,6 +150,10 @@ public class ElwhaRadioButton extends JComponent {
    */
   public ElwhaRadioButton(final boolean selected) {
     this.selected = selected;
+    final float rest = selected ? 1f : 0f;
+    this.dotScale = new RetargetTween(DOT_GROW_MS, rest);
+    this.dotAlpha = new RetargetTween(COLOR_FADE_MS, rest);
+    this.ringBlend = new RetargetTween(COLOR_FADE_MS, rest);
     setOpaque(false);
     setFocusable(true);
     initInteraction();
@@ -163,8 +188,34 @@ public class ElwhaRadioButton extends JComponent {
       return;
     }
     this.selected = selected;
+    syncMotion(animateAllowed());
     fireStateChanged();
     repaint();
+  }
+
+  /**
+   * Retargets the dot + ring tweens at the current state; snaps when animation is not allowed
+   * (research §Mo): select grows the dot over {@value #DOT_GROW_MS}ms emphasized-decelerate while
+   * its alpha and the ring color arrive in {@value #COLOR_FADE_MS}ms; deselect fades the dot at its
+   * current scale — M3 has no shrink — and crossfades the ring back.
+   */
+  private void syncMotion(final boolean animate) {
+    if (selected) {
+      if (dotAlpha.value() <= 0f) {
+        dotScale.seed(0f);
+      }
+      dotScale.retarget(1f, DOT_GROW_MS, Easing.EMPHASIZED_DECELERATE, animate);
+      dotAlpha.retarget(1f, COLOR_FADE_MS, Easing.LINEAR, animate);
+    } else {
+      dotScale.seed(dotScale.value());
+      dotAlpha.retarget(0f, COLOR_FADE_MS, Easing.LINEAR, animate);
+    }
+    ringBlend.retarget(selected ? 1f : 0f, COLOR_FADE_MS, Easing.LINEAR, animate);
+  }
+
+  /** Whether state changes may tween — never while undisplayable (first paint) or disabled. */
+  private boolean animateAllowed() {
+    return isDisplayable() && isEnabled();
   }
 
   /**
@@ -404,13 +455,27 @@ public class ElwhaRadioButton extends JComponent {
     }
   }
 
-  /** Paints the ring, and the dot while selected. */
+  /**
+   * Paints the ring, and the dot at its tweened scale and alpha — mid-grow the dot is a smaller
+   * {@code PRIMARY} circle; mid-fade it holds its scale and loses alpha (research §Mo).
+   */
   private void paintIcon(final Graphics2D g2) {
     g2.setColor(ringColor());
     g2.fill(ring());
-    if (selected) {
-      g2.setColor(dotColor());
-      g2.fill(dotCircle(DOT_SIZE_PX));
+    final float scale = clampF(dotScale.value());
+    final float alpha = clampF(dotAlpha.value());
+    if (scale <= 0f || alpha <= 0f) {
+      return;
+    }
+    final Graphics2D d = (Graphics2D) g2.create();
+    try {
+      if (alpha < 1f) {
+        d.setComposite(AlphaComposite.SrcOver.derive(alpha));
+      }
+      d.setColor(dotColor());
+      d.fill(dotCircle(DOT_SIZE_PX * scale));
+    } finally {
+      d.dispose();
     }
   }
 
@@ -423,15 +488,17 @@ public class ElwhaRadioButton extends JComponent {
     return hovered || pressed || isFocusOwner();
   }
 
-  /** The ring fill — per-state roles, disabled at the 0.38 content opacity (research §T). */
+  /**
+   * The ring fill — per-state roles crossfaded over {@value #COLOR_FADE_MS}ms (research §Mo),
+   * disabled at the 0.38 content opacity (research §T).
+   */
   private Color ringColor() {
     if (!isEnabled()) {
       return withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
     }
-    if (selected) {
-      return ColorRole.PRIMARY.resolve();
-    }
-    return (interactionActive() ? ColorRole.ON_SURFACE : ColorRole.ON_SURFACE_VARIANT).resolve();
+    final Color unselectedRing =
+        (interactionActive() ? ColorRole.ON_SURFACE : ColorRole.ON_SURFACE_VARIANT).resolve();
+    return mixColor(unselectedRing, ColorRole.PRIMARY.resolve(), clampF(ringBlend.value()));
   }
 
   /** The dot fill — {@link ColorRole#PRIMARY}, disabled at the 0.38 content opacity. */
@@ -567,6 +634,9 @@ public class ElwhaRadioButton extends JComponent {
     if (rippleTimer != null) {
       rippleTimer.stop();
     }
+    dotScale.finish();
+    dotAlpha.finish();
+    ringBlend.finish();
     super.removeNotify();
   }
 
@@ -579,5 +649,79 @@ public class ElwhaRadioButton extends JComponent {
 
   private static float clampF(final float v) {
     return Math.max(0f, Math.min(1f, v));
+  }
+
+  /** Opaque RGB lerp between two colors. */
+  private static Color mixColor(final Color a, final Color b, final float t) {
+    final float f = clampF(t);
+    return new Color(
+        Math.round(a.getRed() + (b.getRed() - a.getRed()) * f),
+        Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * f),
+        Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * f));
+  }
+
+  /**
+   * A retargeting tween over one float quantity — the CSS-transition model the research §Mo
+   * durations describe. Each {@link #retarget} captures the current value as the new starting point
+   * and re-runs the backing {@link MorphAnimator} {@code 0→1} through the given {@link Easing}, so
+   * a mid-flight direction change (deselect during the dot grow) continues from wherever the value
+   * currently is instead of jumping. Re-implemented privately from {@code ElwhaSwitch} — the #401
+   * branch is unmerged; extraction to {@code theme/} is the recorded design §14-2 follow-up.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  private final class RetargetTween {
+
+    private final MorphAnimator animator;
+    private float from;
+    private float to;
+    private Easing easing = Easing.LINEAR;
+
+    RetargetTween(final int durationMs, final float initial) {
+      this.animator = new MorphAnimator(ElwhaRadioButton.this, durationMs);
+      this.from = initial;
+      this.to = initial;
+      this.animator.snapTo(1f);
+    }
+
+    float value() {
+      return from + (to - from) * easing.ease(animator.progress());
+    }
+
+    void retarget(
+        final float target, final int durationMs, final Easing easing, final boolean animate) {
+      if (this.to == target) {
+        if (!animate) {
+          this.from = target;
+          animator.snapTo(1f);
+        }
+        return;
+      }
+      this.from = value();
+      this.to = target;
+      this.easing = easing;
+      animator.setDurationMs(durationMs);
+      if (animate) {
+        animator.snapTo(0f);
+        animator.start();
+      } else {
+        this.from = target;
+        animator.snapTo(1f);
+      }
+    }
+
+    /** Re-seats the tween at the given value without animating. */
+    void seed(final float value) {
+      this.from = value;
+      this.to = value;
+      animator.snapTo(1f);
+    }
+
+    /** Stops the timer and lands on the target — {@code removeNotify} cleanup. */
+    void finish() {
+      animator.immediateFinish();
+    }
   }
 }
