@@ -6,6 +6,7 @@ import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import java.awt.ComponentOrientation;
 import java.awt.event.ActionEvent;
+import java.awt.event.FocusEvent;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
 import javax.accessibility.AccessibleSelection;
@@ -46,6 +47,7 @@ public final class ElwhaTabsA11ySmoke {
     checkAccessibleAction();
     checkAccessibleNames();
     checkKeyboardActions();
+    checkFocusRingGating();
     checkRtlGeometry();
 
     System.out.println(
@@ -207,6 +209,46 @@ public final class ElwhaTabsA11ySmoke {
     check(
         "disabled bar ignores keyboard actions (the #432 guard)",
         bar.getActiveTabIndex() == before);
+  }
+
+  // The smoke-test finding from #427's demo: window activation handed the first tab focus and it
+  // rang (and FOCUS-layered) forever, because clicks never move focus. The ring must arm only on
+  // Tab traversal or an arrow-key move.
+  private static void checkFocusRingGating() {
+    final ElwhaTabs bar = laidOutBar();
+    final ElwhaTab tab = bar.getTabAt(0);
+
+    focus(tab, FocusEvent.FOCUS_GAINED, FocusEvent.Cause.ACTIVATION);
+    check("window-activation focus does NOT ring", !tab.isFocusRingVisible());
+    focus(tab, FocusEvent.FOCUS_LOST, FocusEvent.Cause.UNKNOWN);
+
+    focus(tab, FocusEvent.FOCUS_GAINED, FocusEvent.Cause.TRAVERSAL_FORWARD);
+    check("Tab-traversal focus rings", tab.isFocusRingVisible());
+    focus(tab, FocusEvent.FOCUS_LOST, FocusEvent.Cause.UNKNOWN);
+    check("focus loss clears the ring", !tab.isFocusRingVisible());
+
+    tab.armKeyboardFocus();
+    focus(tab, FocusEvent.FOCUS_GAINED, FocusEvent.Cause.UNKNOWN);
+    check("an armed arrow-move rings despite the programmatic cause", tab.isFocusRingVisible());
+    focus(tab, FocusEvent.FOCUS_LOST, FocusEvent.Cause.UNKNOWN);
+
+    focus(tab, FocusEvent.FOCUS_GAINED, FocusEvent.Cause.UNKNOWN);
+    check(
+        "the arm is consumed — later programmatic focus does not ring", !tab.isFocusRingVisible());
+    focus(tab, FocusEvent.FOCUS_LOST, FocusEvent.Cause.UNKNOWN);
+  }
+
+  // AWT swallows synthetic FocusEvents dispatched at a component that does not really own focus
+  // (probe-confirmed), so drive the production listeners directly.
+  private static void focus(final ElwhaTab tab, final int id, final FocusEvent.Cause cause) {
+    final FocusEvent event = new FocusEvent(tab, id, false, null, cause);
+    for (java.awt.event.FocusListener listener : tab.getFocusListeners()) {
+      if (id == FocusEvent.FOCUS_GAINED) {
+        listener.focusGained(event);
+      } else {
+        listener.focusLost(event);
+      }
+    }
   }
 
   private static void checkRtlGeometry() {

@@ -505,7 +505,10 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
   /**
    * Enables or disables the whole bar, cascading to every tab: content paints at the disabled
-   * opacity and all interaction is off. There is no per-tab disabled — M3 defines none for tabs
+   * opacity and all <em>user</em> interaction is off — click, keyboard, wheel, and the accessible
+   * "click" action. Programmatic activation ({@link #setActiveTabIndex(int)} et al.) still works
+   * while disabled, standard Swing semantics (a disabled {@code JTabbedPane} honors {@code
+   * setSelectedIndex} the same way). There is no per-tab disabled — M3 defines none for tabs
    * (design §10).
    *
    * @param enabled the new enabled state
@@ -521,7 +524,7 @@ public class ElwhaTabs extends JComponent implements Accessible {
     repaint();
   }
 
-  // A user gesture (click; keyboard with S6) on a tab — activates it and fires that tab's
+  // A user gesture (click or keyboard) on a tab — activates it and fires that tab's
   // ActionListeners. A gesture on the already-active tab is a no-op (material-web parity).
   void userActivate(final ElwhaTab tab, final int modifiers) {
     if (!isEnabled()) {
@@ -532,6 +535,16 @@ public class ElwhaTabs extends JComponent implements Accessible {
       return;
     }
     activate(index, false);
+    // Focus and activation must not diverge inside the bar: if some other tab currently owns
+    // focus (it keeps focus on click because mouse presses never request it), hand focus to the
+    // newly activated tab — without arming the keyboard ring. Focus outside the bar is left
+    // alone.
+    for (ElwhaTab other : tabs) {
+      if (other != tab && other.isFocusOwner()) {
+        tab.requestFocusInWindow();
+        break;
+      }
+    }
     tab.fireAction(modifiers);
   }
 
@@ -796,6 +809,7 @@ public class ElwhaTabs extends JComponent implements Accessible {
   }
 
   private void focusTab(final ElwhaTab target) {
+    target.armKeyboardFocus();
     target.requestFocusInWindow();
     scrollToTab(target);
     if (autoActivate) {

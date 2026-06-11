@@ -6,6 +6,7 @@ import com.owspfm.elwha.badge.ElwhaBadgeAnchor;
 import com.owspfm.elwha.badge.IconBearing;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.StateLayer;
@@ -132,6 +133,8 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
   private boolean hovered;
   private boolean pressed;
   private boolean inlineIcon;
+  private boolean focusVisible;
+  private boolean pendingKeyboardFocus;
 
   private ElwhaBadge badge;
   private ElwhaBadgeAnchor.Attachment badgeAttachment;
@@ -621,10 +624,11 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
   }
 
   // Inward keyboard-focus ring (research §I: 8px shape; on the active tab the ring bottom sits
-  // 1px above the indicator). Mouse presses never request focus, so owning focus implies
-  // keyboard arrival — the M3 tablist keyboard-only focus affordance (the nav-rail mechanism).
+  // 1px above the indicator). Keyboard-only: focusVisible arms on traversal-caused focus or an
+  // arrow-key move (design §6, the FocusVisible gate) — window activation handing a tab the
+  // initial focus must NOT ring it.
   private void paintFocusRing(final Graphics2D g2) {
-    if (!isFocusOwner() || !isEnabled()) {
+    if (!focusVisible || !isEnabled()) {
       return;
     }
     final Graphics2D f = (Graphics2D) g2.create();
@@ -661,7 +665,7 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
     if (hovered) {
       return StateLayer.HOVER;
     }
-    if (isFocusOwner()) {
+    if (focusVisible) {
       return StateLayer.FOCUS;
     }
     return null;
@@ -740,7 +744,7 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
     if (active) {
       return activeContentRole().resolve();
     }
-    if (isEnabled() && (hovered || pressed || isFocusOwner())) {
+    if (isEnabled() && (hovered || pressed || focusVisible)) {
       return ColorRole.ON_SURFACE.resolve();
     }
     return ColorRole.ON_SURFACE_VARIANT.resolve();
@@ -818,12 +822,18 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
         new FocusAdapter() {
           @Override
           public void focusGained(final FocusEvent e) {
+            // Keyboard arrival only: Tab traversal carries a traversal cause; our arrow-key
+            // moves arm pendingKeyboardFocus before requesting focus (their cause is
+            // programmatic). Window activation / programmatic focus stays ring-less.
+            focusVisible = FocusVisible.isKeyboardCause(e.getCause()) || pendingKeyboardFocus;
+            pendingKeyboardFocus = false;
             repaint();
           }
 
           @Override
           public void focusLost(final FocusEvent e) {
             pressed = false;
+            focusVisible = false;
             repaint();
           }
         });
@@ -844,6 +854,16 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
     getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), ACTION_ACTIVATE);
     getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), ACTION_ACTIVATE);
     getActionMap().put(ACTION_ACTIVATE, activate);
+  }
+
+  // Arms the keyboard-focus ring for the next focusGained — called by the bar's arrow/Home/End
+  // moves, whose requestFocusInWindow reports a programmatic (non-traversal) cause.
+  void armKeyboardFocus() {
+    pendingKeyboardFocus = true;
+  }
+
+  boolean isFocusRingVisible() {
+    return focusVisible;
   }
 
   // User-gesture activation from the keyboard (Space/Enter, the a11y "click" action): seeds a
