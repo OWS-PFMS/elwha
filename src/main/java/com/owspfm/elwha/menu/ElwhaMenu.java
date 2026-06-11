@@ -25,6 +25,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -124,12 +125,18 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   private final boolean colorStyleExplicit;
   private final SelectionMode selectionMode;
   private final Consumer<ElwhaMenuItem> onSelectionChange;
+  private final Component focusHome;
   private Separator separator;
 
   // Live state — non-null while shown.
   private List<JComponent> groupPanels;
+  private List<List<ElwhaMenuItem>> effectiveGroups;
   private List<ElwhaMenuItem> itemOrder;
   private MenuSurface menuSurface;
+  private JComponent column;
+  private JScrollPane scrollPane;
+  private int contentWidth;
+  private int scrollBodyH;
   // The open child submenu and the item that opened it (epic #322): a parent menu holds at most one
   // open submenu; opening a different one closes the prior, and the chain host tears this down when
   // the parent itself closes.
@@ -161,6 +168,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     this.colorStyleExplicit = b.colorStyleExplicit;
     this.selectionMode = b.selectionMode;
     this.onSelectionChange = b.onSelectionChange;
+    this.focusHome = b.focusHome;
     final boolean selectable = selectionMode != SelectionMode.NONE;
     for (final List<ElwhaMenuItem> group : groups) {
       for (final ElwhaMenuItem item : group) {
@@ -469,6 +477,20 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   }
 
   /**
+   * Closes the menu programmatically (a {@link MenuDismissCause#PROGRAMMATIC} dismiss — focus
+   * restores to the trigger). A no-op when the menu is not showing or already closing. The
+   * counterpart to {@link #open(Component)} for owners that manage the menu's lifecycle themselves,
+   * e.g. the select field's editable combo (#331 Phase 2), whose trailing arrow explicitly closes
+   * the open menu.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void close() {
+    close(MenuDismissCause.PROGRAMMATIC);
+  }
+
+  /**
    * Renders the menu's surface — container + items — as a standalone, non-modal component for a
    * <em>static preview</em> (a Showcase gallery tile, documentation). There is no overlay mount,
    * light-dismiss, focus management, or entrance motion, and no item carries the roving focus ring.
@@ -531,11 +553,133 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     return List.copyOf(selected);
   }
 
+  /**
+   * Live-filters the menu to the given items — the filter-as-you-type surface for the editable
+   * select field (#331 Phase 2 S2). Items not in {@code visible} are hidden (they keep their state
+   * — {@code selected} marks survive filtering); {@code null} restores every item. When the menu is
+   * currently open, the surface re-lays out in place: the item column rebuilds to the visible set,
+   * the anchored placement recomputes (the container shrinks/grows and may re-flip), and the roving
+   * focus resets to the first visible item. When closed, the visibility sticks and the next open
+   * builds the filtered column directly.
+   *
+   * <p>The filter is item-level: under {@link Layout#GROUPED}, group separators are not elided when
+   * a group filters down to nothing — callers filtering grouped menus should expect the separator
+   * chrome to remain.
+   *
+   * @param visible the items to show, or {@code null} to show all
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setVisibleItems(final Collection<ElwhaMenuItem> visible) {
+    for (final ElwhaMenuItem item : flatten()) {
+      item.setVisible(visible == null || visible.contains(item));
+    }
+    if (isShowing() && menuSurface != null) {
+      refreshOpenColumn();
+    }
+  }
+
+  /**
+   * Moves the roving highlight (the M3 focused-item ring) by {@code delta}, wrapping — the
+   * keyboard-navigation surface for an owner whose focus lives outside the menu (a {@linkplain
+   * Builder#focusHome(Component) focus-home} combobox routes its editor's Down/Up here, since the
+   * menu surface never holds focus and its own bindings are inert). No-op while the menu is not
+   * showing.
+   *
+   * @param delta the steps to move (negative = up)
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void moveHighlight(final int delta) {
+    moveFocus(delta);
+  }
+
+  /**
+   * Activates the currently highlighted item — the Enter-commit surface for a focus-home owner.
+   * Selection-mode semantics apply exactly as for a real activation (a {@link SelectionMode#SINGLE}
+   * menu selects and closes). No-op while not showing, on an empty highlight, or on a disabled
+   * item.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void activateHighlighted() {
+    activateFocused();
+  }
+
+  /**
+   * The currently highlighted item, or {@code null} when the menu is not showing or nothing is
+   * highlighted. Lets a focus-home owner decide whether Enter should commit the highlight or fall
+   * back to its own commit semantics (e.g. the disabled "No matches" placeholder is highlighted but
+   * not committable).
+   *
+   * @return the highlighted item, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaMenuItem getHighlightedItem() {
+    if (itemOrder == null || focusedIndex < 0 || focusedIndex >= itemOrder.size()) {
+      return null;
+    }
+    return itemOrder.get(focusedIndex);
+  }
+
+  /**
+   * Moves the highlight to the given item (it must be currently visible). The combobox
+   * filter-priority surface — the select field highlights the first prefix match as the filter
+   * narrows. No-op while not showing or when the item is not in the visible order.
+   *
+   * @param item the item to highlight
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void highlight(final ElwhaMenuItem item) {
+    if (itemOrder == null) {
+      return;
+    }
+    final int index = itemOrder.indexOf(item);
+    if (index >= 0) {
+      setFocusedIndex(index);
+    }
+  }
+
+  // Re-populates the live group panels with the now-visible items, recomputes the column (and
+  // scroll viewport) preferred size, and re-runs the anchored placement — the open-menu half of
+  // setVisibleItems. BoxLayout does not honor component visibility, so hidden items must leave
+  // the containment hierarchy, not merely turn invisible.
+  private void refreshOpenColumn() {
+    for (int i = 0; i < groupPanels.size(); i++) {
+      final JComponent groupPanel = groupPanels.get(i);
+      groupPanel.removeAll();
+      for (final ElwhaMenuItem item : effectiveGroups.get(i)) {
+        if (item.isVisible()) {
+          groupPanel.add(item);
+        }
+      }
+    }
+    final int columnHeight = totalColumnHeight(contentWidth);
+    column.setPreferredSize(new Dimension(contentWidth, columnHeight));
+    if (scrollPane != null) {
+      scrollPane.setPreferredSize(
+          new Dimension(
+              contentWidth + SCROLLBAR_WIDTH_PX,
+              Math.min(scrollBodyH, Math.max(columnHeight, ElwhaMenuItem.MIN_TARGET_PX))));
+    }
+    this.itemOrder = flattenVisible();
+    this.focusedIndex = itemOrder.isEmpty() ? -1 : 0;
+    pushFocusedState();
+    column.revalidate();
+    relayout();
+    menuSurface.revalidate();
+    menuSurface.repaint();
+    layeredPane.repaint();
+  }
+
   // ---------------------------------------------------------- surface
 
   @Override
   protected JComponent createSurface() {
-    final int contentWidth = resolveContentWidth();
+    this.contentWidth = resolveContentWidth();
     final int columnHeight = totalColumnHeight(contentWidth);
 
     final int available =
@@ -543,14 +687,17 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
             - 2 * VIEWPORT_MARGIN_PX;
     final Insets shadow = ShadowPainter.shadowInsets(ELEVATION);
     final int chromeV = 2 * (shadow.top + CONTENT_PAD_PX);
-    this.scrollable = columnHeight + chromeV > available;
+    // The scroll decision uses the FULL item set, not the currently-visible one: a menu opened
+    // under a filter can have its filter cleared while open, and a non-scrollable column cannot
+    // grow a scrollbar after the fact.
+    this.scrollable = allColumnHeight(contentWidth) + chromeV > available;
     if (scrollable && separator == Separator.GAP) {
       // M3: gaps are unsupported in a scrollable menu — force the subtle divider.
       this.separator = Separator.DIVIDER;
     }
 
     this.groupPanels = new ArrayList<>();
-    final JComponent column = buildColumn(contentWidth);
+    this.column = buildColumn(contentWidth);
 
     final JComponent content;
     if (scrollable) {
@@ -563,10 +710,15 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       scroll.getViewport().setOpaque(false);
       scroll.setBorder(BorderFactory.createEmptyBorder());
       scroll.getVerticalScrollBar().setUnitIncrement(16);
-      final int bodyH = Math.max(ElwhaMenuItem.MIN_TARGET_PX, available - chromeV);
-      scroll.setPreferredSize(new Dimension(contentWidth + SCROLLBAR_WIDTH_PX, bodyH));
+      this.scrollBodyH = Math.max(ElwhaMenuItem.MIN_TARGET_PX, available - chromeV);
+      scroll.setPreferredSize(
+          new Dimension(
+              contentWidth + SCROLLBAR_WIDTH_PX,
+              Math.min(scrollBodyH, Math.max(columnHeight, ElwhaMenuItem.MIN_TARGET_PX))));
+      this.scrollPane = scroll;
       content = scroll;
     } else {
+      this.scrollPane = null;
       content = column;
     }
 
@@ -580,7 +732,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     this.shapeFromRadius = CONTAINER_ARC_PX;
     this.shapeToRadius = CONTAINER_ARC_PX;
 
-    this.itemOrder = flatten();
+    this.itemOrder = flattenVisible();
     this.focusedIndex = itemOrder.isEmpty() ? -1 : 0;
     this.keyboardFocusVisible = false;
     pushFocusedState();
@@ -590,8 +742,11 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   @Override
   protected void clearTransientState() {
     groupPanels = null;
+    effectiveGroups = null;
     itemOrder = null;
     menuSurface = null;
+    column = null;
+    scrollPane = null;
     if (shapeMorph != null) {
       shapeMorph.stop();
       shapeMorph = null;
@@ -602,7 +757,16 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
   @Override
   protected Component initialFocusTarget() {
-    return menuSurface;
+    return focusHome != null ? focusHome : menuSurface;
+  }
+
+  // With a focus home, the anchored field keeps keyboard focus while the menu is open (the
+  // editable-combobox pattern): focus changes and presses within its hierarchy must not read as
+  // an escape/outside-press, or every keystroke in the field would dismiss the menu.
+  @Override
+  protected boolean ownsFocus(final Component c) {
+    return super.ownsFocus(c)
+        || (focusHome != null && SwingUtilities.isDescendingFrom(c, focusHome));
   }
 
   private int resolveContentWidth() {
@@ -624,6 +788,23 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       }
       first = false;
       for (final ElwhaMenuItem item : group) {
+        if (item.isVisible()) {
+          h += item.getPreferredSize().height;
+        }
+      }
+    }
+    return h;
+  }
+
+  private int allColumnHeight(final int contentWidth) {
+    int h = 0;
+    boolean first = true;
+    for (final List<ElwhaMenuItem> group : groups) {
+      if (!first) {
+        h += layout == Layout.GROUPED ? separatorGapHeight() : 0;
+      }
+      first = false;
+      for (final ElwhaMenuItem item : group) {
         h += item.getPreferredSize().height;
       }
     }
@@ -637,17 +818,18 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   // Builds the vertical item column from group panels, inserting gap/divider separators between
   // groups (GROUPED). STANDARD collapses to a single flat group.
   private JComponent buildColumn(final int contentWidth) {
-    final JPanel column = new JPanel();
-    column.setOpaque(false);
-    column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+    final JPanel columnPanel = new JPanel();
+    columnPanel.setOpaque(false);
+    columnPanel.setLayout(new BoxLayout(columnPanel, BoxLayout.Y_AXIS));
 
     final List<List<ElwhaMenuItem>> effective =
         layout == Layout.STANDARD ? List.of(flatten()) : groups;
+    this.effectiveGroups = effective;
 
     boolean first = true;
     for (final List<ElwhaMenuItem> group : effective) {
       if (!first && layout == Layout.GROUPED) {
-        column.add(separatorComponent(contentWidth));
+        columnPanel.add(separatorComponent(contentWidth));
       }
       first = false;
       final JPanel groupPanel = new JPanel();
@@ -656,21 +838,37 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       groupPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
       for (final ElwhaMenuItem item : group) {
         item.setAlignmentX(Component.LEFT_ALIGNMENT);
-        groupPanel.add(item);
+        // BoxLayout allocates space for invisible components, so filtered-out items stay out of
+        // the containment hierarchy entirely (setVisibleItems re-populates on changes).
+        if (item.isVisible()) {
+          groupPanel.add(item);
+        }
       }
       groupPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-      column.add(groupPanel);
+      columnPanel.add(groupPanel);
       groupPanels.add(groupPanel);
     }
-    column.setPreferredSize(new Dimension(contentWidth, totalColumnHeight(contentWidth)));
-    column.setMaximumSize(new Dimension(contentWidth, Integer.MAX_VALUE));
-    return column;
+    columnPanel.setPreferredSize(new Dimension(contentWidth, totalColumnHeight(contentWidth)));
+    columnPanel.setMaximumSize(new Dimension(contentWidth, Integer.MAX_VALUE));
+    return columnPanel;
   }
 
   private List<ElwhaMenuItem> flatten() {
     final List<ElwhaMenuItem> flat = new ArrayList<>();
     for (final List<ElwhaMenuItem> group : groups) {
       flat.addAll(group);
+    }
+    return flat;
+  }
+
+  private List<ElwhaMenuItem> flattenVisible() {
+    final List<ElwhaMenuItem> flat = new ArrayList<>();
+    for (final List<ElwhaMenuItem> group : groups) {
+      for (final ElwhaMenuItem item : group) {
+        if (item.isVisible()) {
+          flat.add(item);
+        }
+      }
     }
     return flat;
   }
@@ -958,6 +1156,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     private SelectionMode selectionMode = SelectionMode.NONE;
     private Consumer<ElwhaMenuItem> onSelectionChange;
     private Consumer<MenuDismissCause> onClose;
+    private Component focusHome;
 
     private Builder() {
       groups.add(new ArrayList<>());
@@ -1061,6 +1260,29 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
      */
     public Builder onSelectionChange(final Consumer<ElwhaMenuItem> onSelectionChange) {
       this.onSelectionChange = onSelectionChange;
+      return this;
+    }
+
+    /**
+     * Declares the focusable component that keeps keyboard focus while the menu is open — the ARIA
+     * editable-combobox pattern (#331 Phase 2), where the anchored field's editor stays typeable
+     * and the menu is a non-focused listbox beneath it. When set: opening the menu does not move
+     * focus onto the menu surface (initial focus goes to {@code focusHome} instead), and focus
+     * changes or mouse presses within {@code focusHome}'s hierarchy do not light-dismiss the menu.
+     * {@code null} (the default) keeps the standard menu behavior — focus moves into the menu on
+     * open.
+     *
+     * <p>With a focus home the menu surface never holds focus, so its own key bindings
+     * (Up/Down/Enter/Space/type-ahead) do not fire; the owner routes keyboard navigation
+     * explicitly.
+     *
+     * @param focusHome the component that retains focus, or {@code null} for the default
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public Builder focusHome(final Component focusHome) {
+      this.focusHome = focusHome;
       return this;
     }
 

@@ -245,6 +245,22 @@ public abstract class AbstractElwhaOverlay {
     beginClose();
   }
 
+  /**
+   * Whether a component counts as <em>inside</em> this overlay for the dismiss policy — consulted
+   * by both the focus-escape listener and the light-dismiss outside-press listener. The default is
+   * a descendant of the surface. A subclass hosting an external focus home (the editable-combobox
+   * pattern, where keyboard focus stays in the anchored field while the menu is open) widens this
+   * so focus changes and mouse presses there do not dismiss the overlay.
+   *
+   * @param c the focus owner or press target to classify
+   * @return {@code true} when {@code c} belongs to the overlay
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected boolean ownsFocus(final Component c) {
+    return surface != null && SwingUtilities.isDescendingFrom(c, surface);
+  }
+
   /** Hook for subclasses to null out their own live state during teardown. Default no-op. */
   protected void clearTransientState() {}
 
@@ -588,7 +604,7 @@ public abstract class AbstractElwhaOverlay {
             return;
           }
           final Component owner = (Component) next;
-          if (SwingUtilities.isDescendingFrom(owner, surface)) {
+          if (ownsFocus(owner)) {
             return;
           }
           if (SwingUtilities.getWindowAncestor(owner) != hostWindow) {
@@ -649,17 +665,19 @@ public abstract class AbstractElwhaOverlay {
   // outside every level closes the whole chain from the root. For a chainless overlay this reduces
   // to "inside my surface → ignore, else onOutsidePress()".
   private void handleChainOutsidePress(final Component src) {
-    for (AbstractElwhaOverlay level = this; level != null; level = level.chainParent) {
-      if (level.surface != null
-          && src != null
-          && SwingUtilities.isDescendingFrom(src, level.surface)) {
-        if (level == this) {
+    if (src != null) {
+      for (AbstractElwhaOverlay level = this; level != null; level = level.chainParent) {
+        // ownsFocus (not a raw surface-descendant test) so a level hosting an external focus home
+        // (the editable-combobox pattern) still counts a press there as inside.
+        if (level.surface != null && level.ownsFocus(src)) {
+          if (level == this) {
+            return;
+          }
+          if (level.chainChild != null) {
+            level.chainChild.onOutsidePress();
+          }
           return;
         }
-        if (level.chainChild != null) {
-          level.chainChild.onOutsidePress();
-        }
-        return;
       }
     }
     chainRootOverlay().onOutsidePress();
@@ -672,8 +690,11 @@ public abstract class AbstractElwhaOverlay {
     if (surface == null) {
       return;
     }
+    // A preferred target that already owns focus is done — requestFocusInWindow() on the current
+    // owner can return false (the request is dropped as redundant), and falling through would
+    // hand focus to the surface, yanking it out of a focus-home editor mid-keystroke (#331 P2).
     final Component preferred = initialFocusTarget();
-    if (preferred != null && preferred.requestFocusInWindow()) {
+    if (preferred != null && (preferred.isFocusOwner() || preferred.requestFocusInWindow())) {
       return;
     }
     final Component first = firstFocusable(surface);

@@ -99,3 +99,74 @@ A select field **is** an embeddable surface (the popup aside), so it fits the st
 - The **menu lifecycle** — build-per-open vs cache-and-rebuild-on-options-change (lean: rebuild on options change; preserves `selected` marks cheaply). S1 decides.
 - The **arrow mechanism** — rotate-in-the-trailing-button vs paint-in-the-select-field (lean: the trailing `ElwhaIconButton`, swapping `arrow_drop_down`↔`arrow_drop_up`). S1 confirms.
 - **Name** — `ElwhaSelectField` (recommended) vs `ElwhaDropdownField` / `ElwhaExposedDropdown`. Confirm at sign-off.
+
+## S1 spike outcome (Phase 1, #374 — 2026-06-07) — architecture LOCKED
+
+The §2 composition is proven and locked. `ElwhaSelectField<T> extends JComponent` owns a read-only `ElwhaTextField` (added `BorderLayout.CENTER`, so `getPreferredSize` delegates to the field) and a trailing-slot `ElwhaIconButton` carrying the dropdown arrow; it builds an `ElwhaMenu` (`SelectionMode.SINGLE`, the field as anchor) for the options. No subclassing, no `selectMode` flag. The §12 questions resolved:
+
+1. **Name = `ElwhaSelectField`** (confirmed) — package `com.owspfm.elwha.selectfield`.
+2. **Menu lifecycle = cache-and-rebuild-on-options-change** (the lean). The built menu is cached; `setOptions` / `setDisplayFunction` null it so the next open rebuilds. Picking via the menu's `SelectionMode.SINGLE` keeps the `selected` mark on the cached items across reopens — no rebuild on a plain pick.
+3. **Arrow = the trailing `ElwhaIconButton`, glyph-swap** `arrow_drop_down` ↔ `arrow_drop_up` (the lean). Rotation + reduced-motion is **S3** (#376); S1 ships the swap. Sized `IconButtonSize.S` (32 dp container, 20 dp glyph) in the field's trailing slot.
+4. **New assets (sanctioned by §4):** bundled `arrow_drop_down.svg` + `arrow_drop_up.svg` Material Symbols + `MaterialIcons.arrowDropDown()` / `arrowDropUp()` accessors. **Zero new theme tokens** (held).
+
+**Toggle-reopen guard (finding).** The shared overlay's outside-press listener treats the trigger (field + arrow) as *outside* the surface, so pressing the trigger while open begins a light-dismiss. An `expanded` flag — set on open, cleared in the menu's `onClose` (which fires after the animated teardown, so it stays `true` through the dismissing click) — makes the same click read as a close, not a re-toggle. The whole field body and the arrow both toggle (a `mousePressed` on the field + its editor, plus the arrow's action).
+
+**Menu width-tracking (deferred, not cut).** `ElwhaMenu`/`Builder` exposes no width hook today, so the popup opens at its intrinsic content width rather than matching the field (design §5). Not forced in S1; revisit in S4 (arrow/affordance polish) or as a small `ElwhaMenu` enhancement if the visual gap warrants — recorded here rather than silently dropped.
+
+**Headless testability (finding).** `ElwhaMenuItem.activate(int)` is package-private to `menu`, and the popup needs a window — so the round-trip is driven headlessly through a package-private `ElwhaSelectField.selectIndex(int)` (the shared selection seam; S2's public `setSelectedValue` builds on it). Window-dependent behavior (anchor/flip/light-dismiss/focus-return/arrow flip) is exercised by the interactive `SelectFieldS1SpikeDemo`.
+
+## Phase 1 complete (#374–#378 — 2026-06-07) — non-editable select shipped
+
+All five stories built on one stacked branch: S1 skeleton (#374) → S2 typed value model + listeners (#375) → S3 combobox keyboard + expanded/collapsed a11y + arrow rotation (#376) → S4 variant delegation + state propagation + owned trailing slot (#377) → S5 Showcase leaf + docs (#378). Five fresh demos + five headless guards (66 checks total). Zero new theme tokens held; the only new assets are the two arrow glyphs + their `MaterialIcons` accessors.
+
+**Dogfood pass (S5) — documented skip.** The story asked to swap a genuine Showcase/playground `JComboBox`/hand-rolled select onto `ElwhaSelectField`. None is a natural fit, so it is **skipped, not forced** (per the story's explicit allowance): the prominent labeled select in the Showcase is the **toolbar palette picker**, but it is load-bearing chrome with a custom `ListCellRenderer`, a dynamic tier-switch `setModel`, and a `pickerAdjusting` re-entry guard, and it sits in a compact toolbar where an `ElwhaSelectField`'s floating-label + reserved-supporting-row anatomy (~56 dp) would break the toolbar height. The remaining Showcase combos are dense control-panel enum pickers in tight control columns — the same form-field-too-tall mismatch. The Select Field leaf's own Workbench instead dogfoods Elwha controls (button-group variant picker, `SELECTABLE` toggles, icon-button steppers, text-field inputs). The editable-combo Phase 2 (a toolbar-friendly filter-as-you-type form) is the natural future home for a real swap.
+
+**Later phases (progressive filing):** Phase 2 (editable / filter-as-you-type combo) and Phase 3 (multi-select + summary display) are filed when Phase 1 lands. Epic #331 stays open until the final V1 phase ships.
+
+## Phase 2 complete (#391–#394 — 2026-06-10) — editable combo shipped
+
+All four stories built on one stacked branch: S1 editable spike (#391) → S2 filter-as-you-type (#392, `ElwhaMenu.setVisibleItems` live in-place filter + the "No matches" placeholder) → S3 value model + keyboard + a11y (#393, free-text policy, Enter/Esc/focus-loss commit semantics, `moveHighlight`/`activateHighlighted` routing, editor-side combobox a11y) → S4 Showcase + docs (#394). Four fresh demos + four headless guards. Zero new theme tokens held; zero new assets (Phase 2 is pure behavior).
+
+**Dogfood pass (Phase 2 S4) — documented skip, again.** The story asked to revisit swapping the Showcase toolbar palette picker (`JComboBox`) now that an editable combo exists. Re-evaluated and **still skipped, not forced**: the Phase-1 blockers were never about typeability — they are (1) the picker's per-option **swatch icons** (custom `ListCellRenderer`); `ElwhaSelectField` has no per-option icon API (its display function is `Function<T,String>`), so the swap would silently drop the palette swatches or require inventing a per-option-icon API outside this story's scope; and (2) the form-field anatomy (floating label + reserved supporting row, ~56 dp) still breaks the compact toolbar height — editable mode does not change the chrome. The natural unlock is a future per-option leading-icon hook + a dense/toolbar density variant; until then the Showcase's Select Field leaf and the Phase-2 filtering gallery are the genuine in-repo dogfood sites.
+
+**Phase 3 (final V1 phase, files when Phase 2 lands):** multi-select — `SelectionMode.MULTI` + a summary display in the field; its PR `Closes #331`.
+
+## Phase 2 S1 spike outcome (#391 — 2026-06-10) — editable architecture LOCKED
+
+`setEditable(boolean)` (default `false` = the shipped pure select) lifts the embedded field's read-only behind the opt-in; the select-level `setReadOnly` re-imposes it in either mode (`field.setReadOnly(!editable || readOnly)`). The coexistence questions the story asked to decide:
+
+1. **Focus model = focus stays in the editor (ARIA combobox).** The menu gains a `Builder.focusHome(Component)` axis: when set, opening does not move focus onto the menu surface (`initialFocusTarget()` → the focus home) and focus changes / mouse presses within the focus home's hierarchy do not light-dismiss. Implemented as a new `ownsFocus(Component)` strategy hook on `AbstractElwhaOverlay` (default = descends-from-surface; `ElwhaMenu` widens it with the focus home) consulted by both the focus-escape and outside-press listeners. The select field passes `field.getEditor()` as the focus home when editable.
+2. **Open gestures (editable):** typing a letter/digit opens (the character lands in the editor — no consume, no type-ahead forwarding), Down / Alt+Down opens, the trailing arrow toggles. Enter / Space / Up do **not** open — they are text keys in a typeable editor. A press in the field places the caret (a press on the field chrome focuses the editor); only the arrow toggles by pointer. Pure-select gestures are untouched.
+3. **Keystroke routing while open:** printable keys keep landing in the editor (S2 turns them into the live filter). The menu surface never holds focus, so its own Up/Down/Enter bindings are inert; S3 routes highlight navigation from the editor explicitly. Esc already closes via the surface's `WHEN_IN_FOCUSED_WINDOW` binding.
+4. **Arrow close = the Phase-1 light-dismiss path.** The arrow sits outside the focus home (the editor), so pressing it while open still outside-press-dismisses and the existing toggle-reopen guard makes the same click read as a close — no new mechanism. Presses on the field chrome (outside the editor) likewise still light-dismiss; recorded as acceptable combobox behavior (the editor is the input surface).
+5. **`ElwhaMenu.close()`** (public, `PROGRAMMATIC` cause) added for owners that manage the menu lifecycle — a mode flip closes an open menu, and S3's free-text Enter commit needs it.
+6. **Zero new theme tokens (held).** All Phase 2 additions are behavior; no new paint, no new assets.
+
+## Phase 3 S1 spike outcome (#397 — 2026-06-10) — multi-select architecture LOCKED
+
+`setMultiSelect(boolean)` (default `false` = the shipped single select / editable combo) lifts the single-selection constraint behind the opt-in. The menu side needed **nothing new**: `SelectionMode.MULTI` (toggle-without-closing, reserved check column, checkbox `CHECKED` a11y) shipped with epic #298 and is reused as-is — the spike is select-field-side model + wiring. The coexistence questions the story asked to decide:
+
+1. **Opt-in shape = `setMultiSelect(boolean)` / `isMultiSelect()`** (the story's lean, adopted). When on, `rebuildMenu()` builds `SelectionMode.MULTI` and routes `onSelectionChange` to the multi toggle path; toggling never closes, Esc / outside-press / the arrow close (all existing menu paths — `keepOpen` is the MULTI mode's own semantic).
+2. **Value model:** `getSelectedValues()` / `setSelectedValues(Collection<T>)`. The canonical store is an **option-ordered** list, re-derived through one invariant funnel (`reorderMultiValues`): always a subset of the current options, option order regardless of toggle/collection order, duplicates collapsed, unknowns ignored (the lib's lenient house style — no exceptions). `setOptions` prunes the selection to the surviving options.
+3. **Single-value API in multi mode (decided + recorded):** `getSelectedValue()` returns the **first selected value in option order** (mirroring `JList.getSelectedValue`), `null` when empty — the internal `selectedValue` field always tracks `multiValues[0]`, so every Phase-1 read path stays meaningful. `setSelectedValue(v)` delegates to `setSelectedValues(List.of(v))` (null → clear) — the value becomes the entire selection. Symmetrically, `getSelectedValues()` works in single mode (empty/singleton mirror) and `setSelectedValues` in single mode leniently applies the first recognized value.
+4. **Editable + multi = mutually exclusive in V1 (decided + recorded).** A filterable multi-select is a real combinatorial surface (filter + toggle + summary + free text interactions) deferred per §10's discipline — documented, not silently cut. The exclusion **forces** rather than throws (lenient house style): `setMultiSelect(true)` on an editable combo first runs `setEditable(false)`, and `setEditable(true)` on a multi-select first runs `setMultiSelect(false)`.
+5. **Mode flips preserve what they can:** single→multi seeds the selection with the current single value; multi→single collapses to the first value in option order. Neither fires change listeners — `getSelectedValue()` is unchanged by either flip.
+6. **Provisional summary (S1):** display strings joined `", "` in option order, empty selection resting the floating label. The real summary format + overflow policy is S2 (#398).
+7. **Zero new theme tokens (held); zero new assets** — Phase 3 S1 is pure behavior over the shipped MULTI menu.
+
+## Phase 3 complete (#397–#400 — 2026-06-10) — multi-select shipped; V1 COMPLETE
+
+All four stories built on one stacked branch: S1 multi spike + value model (#397, `setMultiSelect` over the shipped `SelectionMode.MULTI`, option-ordered `getSelectedValues`/`setSelectedValues`, the editable exclusion) → S2 summary display (#398, join-up-to-`setSummaryLimit` then the `N selected` count form, per-toggle `addMultiSelectionChangeListener`) → S3 keyboard + a11y (#399, the shipped MULTI Enter/Space toggle-without-close + Esc focus-return locked in through the combo; CHECKED items, unchanged arrow announcements, summary on the accessible-text path) → S4 Showcase + docs (#400). Three fresh demos + four headless guards. **Zero new theme tokens held across all three phases; Phase 3 adds zero assets** (pure behavior over the #298 MULTI menu).
+
+**V1 completeness sweep (§10 re-asserted, nothing silently dropped):**
+- **Editable + multi-select combined** (filterable multi-select) — deferred by the Phase-3 S1 decision (mutually exclusive in V1, each setter forces the other off); future-owned.
+- **Async / remote option loading** — consumer-owned (`setOptions` is cheap and rebuild-on-change; a consumer loads then sets).
+- **Formatted / typed-value parsing** — consumer-owned via `setDisplayFunction` + their own `T`.
+- **Grouped / sectioned options** beyond the menu's `addGroup` — future-owned (the select field flattens; a grouped select would compose the menu's group API).
+- **`JComboBox` drop-in compatibility** — out by design; dedicated M3 primitive.
+- **Menu width-tracking** (Phase 1 S1 deferral) — still open as a possible `ElwhaMenu` enhancement; the visual gap has not warranted it through three phases.
+- **Anchored-menu height cap** — filed as [#396](https://github.com/OWS-PFMS/elwha/issues/396) (menu-side, operator-deferred).
+
+**Dogfood status (third look, unchanged conclusion):** the Showcase toolbar palette picker still needs per-option swatch icons + a toolbar-density anatomy before an `ElwhaSelectField` swap is honest; multi-select changes neither blocker. The Select Field leaf (Workbench + three gallery sections) is the genuine in-repo dogfood site.
+
+**Epic #331 closes with this phase's PR.** No follow-on epic; follow-ups live as individual issues (#396).

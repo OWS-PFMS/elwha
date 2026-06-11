@@ -1,5 +1,6 @@
 package com.owspfm.elwha.slider;
 
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
@@ -22,6 +23,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
+import java.util.logging.Logger;
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
@@ -30,6 +32,7 @@ import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.BoundedRangeModel;
 import javax.swing.DefaultBoundedRangeModel;
+import javax.swing.Icon;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
@@ -58,8 +61,10 @@ import javax.swing.event.EventListenerList;
  * the handle in either direction — for a positive/negative range with the default in the middle.
  * {@link Variant#RANGE} adds a second handle and fills the active track <em>between</em> the two,
  * selecting a {@code [lower, upper]} sub-span (build one with {@link #range(int, int, int, int)}).
- * The size / orientation axes are later V1 phases; the geometry constants below are the XS preset
- * (M3's only off-Android code preset; research §M / §Cfg).
+ * The {@linkplain Size size} axis ({@link #setSizeVariant(Size)}) scales the chrome across the M3
+ * {@code XS}&ndash;{@code XL} preset table; the orientation axis is a later V1 phase. The geometry
+ * constants below are the {@code XS} (default) preset (M3's only off-Android code preset; §M /
+ * §Cfg).
  *
  * <p><strong>Interaction & motion (research §S / §TS / §B).</strong> Drag the handle or click the
  * track to jump; the value updates live and a {@link ChangeListener} fires on every change with
@@ -116,6 +121,27 @@ public class ElwhaSlider extends JComponent {
   }
 
   /**
+   * The axis along which the slider's track runs and the handle travels (research §A / §GD4).
+   *
+   * <p>{@link #HORIZONTAL} is the default and matches Phases 1&ndash;4: the active fill grows from
+   * the leading ({@linkplain java.awt.ComponentOrientation#isLeftToRight() orientation-aware}) end
+   * toward the handle. {@link #VERTICAL} is the M3 Expressive transposition: a tall track whose
+   * active fill grows <strong>bottom-up</strong> (from the minimum/bottom end toward the handle),
+   * with a horizontal pill handle. Vertical is <em>not</em> right-to-left mirrored — it always
+   * fills bottom-up regardless of {@code ComponentOrientation}.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public enum Orientation {
+    /** The track runs left&harr;right; the active fill honors right-to-left mirroring. */
+    HORIZONTAL,
+    /** The track runs top&harr;bottom; the active fill grows bottom-up (never RTL-mirrored). */
+    VERTICAL
+  }
+
+  /**
    * Which of a {@link Variant#RANGE} slider's two handles a per-handle operation targets.
    *
    * @author Charles Bryan
@@ -129,7 +155,55 @@ public class ElwhaSlider extends JComponent {
     UPPER
   }
 
-  // --- XS geometry preset (dp == px at 100% scale; research §M / §T) ---
+  /**
+   * The slider's size preset — the M3 track-thickness scale {@code XS} &le; {@code S} &le; {@code
+   * M} &le; {@code L} &le; {@code XL} (research §M / §GD5). Each size scales the three geometry
+   * values the M3 measurements table varies — {@linkplain #trackHeight() track height}, {@linkplain
+   * #handleHeight() handle height}, and the {@linkplain #outerCorner() outer corner radius} — plus
+   * the {@linkplain #insetIconSize() inset-icon size}; the handle width, handle&harr;track gap,
+   * stop dot, inner corner, and value bubble are constant across sizes (M3 §M). {@code XS} is the
+   * default and M3's only off-Android code preset; larger sizes give a bigger touch target and more
+   * visual emphasis ({@code XL} for hero moments).
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public enum Size {
+    /** Extra-small — track 16, handle 44, corner 8; the default. No inset icon. */
+    XS(16, 44, 8, 0),
+    /** Small — track 24, handle 44, corner 8. No inset icon. */
+    S(24, 44, 8, 0),
+    /** Medium — track 40, handle 52, corner 12; inset icon 24 (the &ge;40&nbsp;dp floor). */
+    M(40, 52, 12, 24),
+    /** Large — track 56, handle 68, corner 16; inset icon 24. */
+    L(56, 68, 16, 24),
+    /** Extra-large — track 96, handle 108, corner 28; inset icon 32. For hero moments. */
+    XL(96, 108, 28, 32);
+
+    private final int trackHeight;
+    private final int handleHeight;
+    private final int outerCorner;
+    private final int insetIconSize;
+
+    Size(final int trackHeight, final int handleHeight, final int outerCorner, final int icon) {
+      this.trackHeight = trackHeight;
+      this.handleHeight = handleHeight;
+      this.outerCorner = outerCorner;
+      this.insetIconSize = icon;
+    }
+
+    /**
+     * Whether this size admits an inset icon (M/L/XL — a track &ge;&nbsp;40&nbsp;dp; research
+     * §GD4).
+     */
+    boolean allowsInsetIcon() {
+      return insetIconSize > 0;
+    }
+  }
+
+  // --- XS geometry preset; the XS row of the {@link Size} table (dp == px at 100% scale; §M / §T)
+  // ---
 
   /** Track thickness (both active and inactive segments). */
   static final int TRACK_HEIGHT_PX = 16;
@@ -170,6 +244,8 @@ public class ElwhaSlider extends JComponent {
   /** Default preferred track length when the layout gives the slider its preferred size. */
   static final int DEFAULT_TRACK_LENGTH_PX = 240;
 
+  private static final Logger LOG = Logger.getLogger(ElwhaSlider.class.getName());
+
   private static final int VALUE_BUBBLE_NUB_HEIGHT_PX = 8;
   private static final int HANDLE_MORPH_MS = MorphAnimator.SHORT3_MS;
   private static final int RIPPLE_TOTAL_MS = 400;
@@ -192,7 +268,15 @@ public class ElwhaSlider extends JComponent {
   private boolean spaceDown;
   private boolean endStopsVisible = true;
   private Variant variant = Variant.STANDARD;
+  private Size sizeVariant = Size.XS;
+  private Orientation orientation = Orientation.HORIZONTAL;
+  private boolean verticalRangeWarned;
   private Integer originOverride;
+
+  private Icon insetIcon;
+  private FlatSVGIcon insetIconThemed;
+  private Color insetIconTint;
+  private boolean insetIconNoOpWarned;
 
   private int lowerValue;
   private int upperValue;
@@ -699,6 +783,7 @@ public class ElwhaSlider extends JComponent {
     }
     this.variant = variant;
     applyRangeFocusModel();
+    maybeWarnVerticalRange();
     repaint();
   }
 
@@ -720,6 +805,160 @@ public class ElwhaSlider extends JComponent {
     }
     setFocusable(!range);
     revalidate();
+  }
+
+  /**
+   * Returns the slider's {@linkplain Size size} preset.
+   *
+   * <p><strong>Named {@code getSizeVariant} (not {@code getSize}) deliberately:</strong> {@link
+   * java.awt.Component} already defines {@code getSize()} / {@code setSize(int, int)} returning the
+   * pixel {@link Dimension}, so the M3 size axis is exposed under a distinct name rather than
+   * shadowing the {@code Component} contract.
+   *
+   * @return the current size preset (default {@link Size#XS})
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public Size getSizeVariant() {
+    return sizeVariant;
+  }
+
+  /**
+   * Sets the slider's {@linkplain Size size} preset — the M3 track-thickness scale that grows the
+   * track, handle, and outer corner together (research §M / §GD5). Defaults to {@link Size#XS}, the
+   * canonical M3 code preset; the Phase&nbsp;1&ndash;3 behavior is exactly the {@code XS} size.
+   * Switching size does not change the value; all variants, interaction, keyboard, stops, value
+   * bubble, and disabled behavior are shared across sizes. The optional {@linkplain
+   * #setInsetIcon(javax.swing.Icon) inset icon} requires {@link Size#M} or larger.
+   *
+   * @param size the size preset; never {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setSizeVariant(final Size size) {
+    if (size == null) {
+      throw new IllegalArgumentException("size");
+    }
+    if (this.sizeVariant == size) {
+      return;
+    }
+    this.sizeVariant = size;
+    rebuildInsetIcon();
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns the slider's {@linkplain Orientation orientation} — the axis the track runs along.
+   *
+   * @return the current orientation (default {@link Orientation#HORIZONTAL})
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public Orientation getOrientation() {
+    return orientation;
+  }
+
+  /**
+   * Sets the slider's {@linkplain Orientation orientation}. {@link Orientation#VERTICAL} transposes
+   * the whole component to a tall track whose active fill grows <strong>bottom-up</strong> (minimum
+   * at the bottom, maximum at the top) with a horizontal pill handle; the {@linkplain
+   * #getPreferredSize() preferred size} swaps its long and short axes accordingly. All variants,
+   * sizes, stops, value indicator, keyboard, and accessibility carry over unchanged; vertical is
+   * never right-to-left mirrored (it always fills bottom-up).
+   *
+   * <p><strong>Vertical {@link Variant#RANGE} is discouraged</strong> (M3 cognitive-load guidance —
+   * research §G): a two-handle range is harder to scan vertically. The combination is
+   * <em>allowed</em> (no hard block, matching Elwha's no-nanny API doctrine) but logs a one-time
+   * advisory; prefer a horizontal range slider.
+   *
+   * @param orientation the orientation; never {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setOrientation(final Orientation orientation) {
+    if (orientation == null) {
+      throw new IllegalArgumentException("orientation");
+    }
+    if (this.orientation == orientation) {
+      return;
+    }
+    this.orientation = orientation;
+    maybeWarnVerticalRange();
+    revalidate();
+    repaint();
+  }
+
+  /** Logs one advisory when a range slider is put into the discouraged vertical orientation. */
+  private void maybeWarnVerticalRange() {
+    if (orientation == Orientation.VERTICAL && variant == Variant.RANGE && !verticalRangeWarned) {
+      verticalRangeWarned = true;
+      LOG.info(
+          "ElwhaSlider: vertical RANGE is discouraged (M3 cognitive-load guidance) — a two-handle"
+              + " range is harder to scan vertically. The combination is allowed but a horizontal"
+              + " range slider is recommended.");
+    }
+  }
+
+  /**
+   * Returns the optional inset icon painted inside the active track at the leading/origin end, or
+   * {@code null} if none is set. Renders only for the {@link Variant#STANDARD} variant at sizes
+   * {@link Size#M} and larger.
+   *
+   * @return the inset icon, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public Icon getInsetIcon() {
+    return insetIcon;
+  }
+
+  /**
+   * Sets the optional <strong>inset icon</strong> (M3 §An part&nbsp;6) painted inside the track at
+   * the leading/origin end — a glyph denoting what the slider controls (volume, brightness). Source
+   * it via {@link com.owspfm.elwha.icons.MaterialIcons} so it is auto-tinted for contrast and sized
+   * to the preset's icon dp (24 at {@link Size#M}/{@link Size#L}, 32 at {@link Size#XL}); a {@link
+   * FlatSVGIcon} is recolored to {@link ColorRole#ON_PRIMARY} on the active track and {@link
+   * ColorRole#ON_SECONDARY_CONTAINER} once it swaps to the inactive track, while a non-{@code
+   * FlatSVGIcon} is painted verbatim.
+   *
+   * <p><strong>Standard variant, sizes M/L/XL only</strong> (research §GD4 — a track below
+   * 40&nbsp;dp is too thin to inset a legible glyph). Setting an icon on {@link Size#XS}/{@link
+   * Size#S}, {@link Variant#CENTERED}, or {@link Variant#RANGE} is a documented no-op (it logs one
+   * advisory message and paints nothing). The icon sits at the leading end of the active fill and
+   * <strong>repositions into the inactive track</strong> when the value drops too low for the
+   * active fill to contain it (the M3 swap-at-zero affordance); the leading end and reposition
+   * direction both mirror under a right-to-left {@link java.awt.ComponentOrientation}.
+   *
+   * @param icon the inset icon, or {@code null} to clear
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setInsetIcon(final Icon icon) {
+    this.insetIcon = icon;
+    this.insetIconNoOpWarned = false;
+    rebuildInsetIcon();
+    repaint();
+  }
+
+  /**
+   * Caches a slot-sized, filter-bound copy of a {@link FlatSVGIcon} inset icon so paint never
+   * mutates the caller's shared glyph (the #197 shared-icon-filter hazard) nor re-derives per
+   * frame. Re-run whenever the icon or {@linkplain Size size} changes. Non-{@code FlatSVGIcon}
+   * icons are painted as-is, so there is nothing to cache.
+   */
+  private void rebuildInsetIcon() {
+    if (insetIcon instanceof FlatSVGIcon svg && sizeVariant.allowsInsetIcon()) {
+      final int px = sizeVariant.insetIconSize;
+      insetIconThemed =
+          (svg.getIconWidth() == px && svg.getIconHeight() == px)
+              ? new FlatSVGIcon(svg)
+              : svg.derive(px, px);
+      insetIconTint = null;
+    } else {
+      insetIconThemed = null;
+      insetIconTint = null;
+    }
   }
 
   /**
@@ -819,25 +1058,72 @@ public class ElwhaSlider extends JComponent {
   }
 
   private int contentHeight() {
-    return bubbleReserveHeight() + HANDLE_HEIGHT_PX;
+    return bubbleReserveHeight() + handleHeight();
   }
 
   @Override
   public Dimension getPreferredSize() {
-    return new Dimension(DEFAULT_TRACK_LENGTH_PX, contentHeight());
+    return sized(DEFAULT_TRACK_LENGTH_PX, contentHeight());
   }
 
   @Override
   public Dimension getMinimumSize() {
-    return new Dimension(HANDLE_HEIGHT_PX, contentHeight());
+    return sized(handleHeight(), contentHeight());
   }
 
   @Override
   public Dimension getMaximumSize() {
-    return new Dimension(Integer.MAX_VALUE, contentHeight());
+    return sized(Integer.MAX_VALUE, contentHeight());
+  }
+
+  /**
+   * Packs a (long-axis, short-axis) extent pair into a {@link Dimension}, swapping width/height for
+   * the {@linkplain Orientation#VERTICAL vertical} orientation so the long track axis is the
+   * height.
+   */
+  private Dimension sized(final int longAxis, final int shortAxis) {
+    return vertical() ? new Dimension(shortAxis, longAxis) : new Dimension(longAxis, shortAxis);
   }
 
   // ------------------------------------------------------------------ geometry
+
+  /** Whether the slider is laid out and painted on the vertical axis. */
+  private boolean vertical() {
+    return orientation == Orientation.VERTICAL;
+  }
+
+  /** The pixel length of the long (track-running) axis — width when horizontal, height vertical. */
+  private int longExtent() {
+    return vertical() ? getHeight() : getWidth();
+  }
+
+  /** The pixel length of the short (cross) axis — height when horizontal, width when vertical. */
+  private int shortExtent() {
+    return vertical() ? getWidth() : getHeight();
+  }
+
+  /**
+   * Whether the active fill is mirrored relative to value-space. Only a horizontal right-to-left
+   * component mirrors; vertical always fills bottom-up (research §385/§386), so it never mirrors.
+   */
+  private boolean mirror() {
+    return !vertical() && !getComponentOrientation().isLeftToRight();
+  }
+
+  /** The current size preset's track thickness (both segments), per the M3 §M scale. */
+  private int trackHeight() {
+    return sizeVariant.trackHeight;
+  }
+
+  /** The current size preset's resting handle height, per the M3 §M scale. */
+  private int handleHeight() {
+    return sizeVariant.handleHeight;
+  }
+
+  /** The current size preset's outer (far-end) track corner radius, per the M3 §M scale. */
+  private int outerCorner() {
+    return sizeVariant.outerCorner;
+  }
 
   /** The half-width used for handle travel — the resting pill half-width, stable across morphs. */
   private static int travelInset() {
@@ -849,9 +1135,9 @@ public class ElwhaSlider extends JComponent {
     return travelInset();
   }
 
-  /** The x of the rightmost handle-center position (value == maximum). */
+  /** The long-axis position of the maximum-value handle center (right when horizontal). */
   private int trackEndX() {
-    return getWidth() - travelInset();
+    return longExtent() - travelInset();
   }
 
   /**
@@ -865,12 +1151,12 @@ public class ElwhaSlider extends JComponent {
     return (model.getValue() - model.getMinimum()) / (float) range;
   }
 
-  /** The pixel-space fraction, mirrored under a right-to-left component orientation. */
+  /** The pixel-space fraction, mirrored under a right-to-left (horizontal-only) orientation. */
   private float pixelFraction() {
-    return getComponentOrientation().isLeftToRight() ? valueFraction() : 1f - valueFraction();
+    return mirror() ? 1f - valueFraction() : valueFraction();
   }
 
-  /** The handle's center x for the current value; fill direction honors RTL. */
+  /** The handle's center along the long axis for the current value; honors RTL / bottom-up fill. */
   int handleCenterX() {
     final int start = trackStartX();
     final int end = trackEndX();
@@ -887,22 +1173,26 @@ public class ElwhaSlider extends JComponent {
       return model.getMinimum();
     }
     float fraction = clampF((x - start) / (float) (end - start));
-    if (!getComponentOrientation().isLeftToRight()) {
+    if (mirror()) {
       fraction = 1f - fraction;
     }
     final int range = model.getMaximum() - model.getMinimum();
     return model.getMinimum() + Math.round(fraction * range);
   }
 
-  /** The y of the handle band's top — the tall pill, below the reserved bubble band. */
+  /**
+   * The cross-axis offset of the handle band's near edge — below the reserved bubble band. In the
+   * rotated vertical paint frame this is a logical-y, mapping to a device-x (the bubble reserve
+   * sits to the handle's leading side); horizontally it is the literal y below the bubble band.
+   */
   int handleTopY() {
-    final int top = (getHeight() - contentHeight()) / 2;
+    final int top = (shortExtent() - contentHeight()) / 2;
     return Math.max(0, top) + bubbleReserveHeight();
   }
 
   /** The y of the track bar's top — centered on the handle band. */
   private int trackTopY() {
-    return handleTopY() + (HANDLE_HEIGHT_PX - TRACK_HEIGHT_PX) / 2;
+    return handleTopY() + (handleHeight() - trackHeight()) / 2;
   }
 
   /** The current handle width, narrowed by the focus/press morph. */
@@ -917,20 +1207,58 @@ public class ElwhaSlider extends JComponent {
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      if (variant == Variant.RANGE) {
-        paintRange(g2);
-        return;
+      maybeWarnInsetIconNoOp();
+      // Chrome (track / stops / handle / state layer / ripple) paints in a logical long-axis frame:
+      // for VERTICAL the graphics is rotated -90° so the existing horizontal paint code draws a
+      // tall, bottom-up slider verbatim. The upright overlays (inset glyph + value bubble) paint
+      // afterward in native device space so their glyph / text stay upright (research §A render).
+      final Graphics2D chrome = chromeGraphics(g2);
+      try {
+        if (variant == Variant.RANGE) {
+          paintRange(chrome);
+        } else {
+          final int cx = handleCenterX();
+          paintTrack(chrome, cx);
+          if (!vertical()) {
+            paintInsetIcon(chrome, cx);
+          }
+          paintStops(chrome, cx);
+          paintStateLayer(chrome, cx);
+          paintRipple(chrome, cx);
+          paintHandle(chrome, cx);
+          if (!vertical()) {
+            paintValueBubble(chrome, cx);
+          }
+        }
+      } finally {
+        if (chrome != g2) {
+          chrome.dispose();
+        }
       }
-      final int cx = handleCenterX();
-      paintTrack(g2, cx);
-      paintStops(g2, cx);
-      paintStateLayer(g2, cx);
-      paintRipple(g2, cx);
-      paintHandle(g2, cx);
-      paintValueBubble(g2, cx);
+      if (vertical() && variant != Variant.RANGE) {
+        final int cx = handleCenterX();
+        paintInsetIconVertical(g2, cx);
+        paintValueBubbleVertical(g2, cx, valueText());
+      }
     } finally {
       g2.dispose();
     }
+  }
+
+  /**
+   * The graphics used to paint chrome: a copy rotated into the logical long-axis frame for {@link
+   * Orientation#VERTICAL} (translate to the bottom-left, rotate &minus;90° so logical&nbsp;+x runs
+   * up and logical&nbsp;+y runs right), or {@code g2} itself when horizontal. Callers dispose the
+   * returned graphics only when it differs from {@code g2}.
+   */
+  private Graphics2D chromeGraphics(final Graphics2D g2) {
+    if (!vertical()) {
+      return g2;
+    }
+    final Graphics2D rot = (Graphics2D) g2.create();
+    rot.translate(0, getHeight());
+    rot.rotate(-Math.PI / 2);
+    return rot;
   }
 
   private void paintTrack(final Graphics2D g2, final int cx) {
@@ -942,15 +1270,16 @@ public class ElwhaSlider extends JComponent {
     final int half = HANDLE_WIDTH_PX / 2;
     final int leftWidth = cx - half - HANDLE_TRACK_GAP_PX;
     final int rightStart = cx + half + HANDLE_TRACK_GAP_PX;
-    final int rightEnd = getWidth();
-    // The active segment grows from the origin end: LTR origin is the left edge, RTL the right —
-    // so the left geometric segment is active in LTR, inactive in RTL (only the color swaps; the
-    // geometry is identical). Outer (far) corners full-round, handle-facing inner corners squared.
-    final boolean leftIsActive = getComponentOrientation().isLeftToRight();
+    final int rightEnd = longExtent();
+    // The active segment grows from the origin end: the leading (low-value) geometric segment is
+    // active unless a horizontal RTL orientation mirrors it (only the color swaps; the geometry is
+    // identical). Outer (far) corners full-round, handle-facing inner corners squared.
+    final boolean leftIsActive = !mirror();
 
+    final int trackH = trackHeight();
     if (leftWidth > 0) {
       g2.setColor(trackColor(leftIsActive));
-      g2.fill(trackSegment(0, trackTop, leftWidth, TRACK_OUTER_CORNER_PX, TRACK_INNER_CORNER_PX));
+      g2.fill(trackSegment(0, trackTop, leftWidth, trackH, outerCorner(), TRACK_INNER_CORNER_PX));
     }
     if (rightStart < rightEnd) {
       g2.setColor(trackColor(!leftIsActive));
@@ -959,8 +1288,9 @@ public class ElwhaSlider extends JComponent {
               rightStart,
               trackTop,
               rightEnd - rightStart,
+              trackH,
               TRACK_INNER_CORNER_PX,
-              TRACK_OUTER_CORNER_PX));
+              outerCorner()));
     }
   }
 
@@ -976,23 +1306,16 @@ public class ElwhaSlider extends JComponent {
     final int half = HANDLE_WIDTH_PX / 2;
     final int leftEnd = cx - half - HANDLE_TRACK_GAP_PX;
     final int rightStart = cx + half + HANDLE_TRACK_GAP_PX;
-    final int width = getWidth();
+    final int width = longExtent();
     final int originX = clamp(xForValue(getOrigin()), 0, width);
 
     if (leftEnd > 0) {
       paintCenteredSegment(
-          g2, trackTop, 0, leftEnd, originX, TRACK_OUTER_CORNER_PX, TRACK_INNER_CORNER_PX, true);
+          g2, trackTop, 0, leftEnd, originX, outerCorner(), TRACK_INNER_CORNER_PX, true);
     }
     if (rightStart < width) {
       paintCenteredSegment(
-          g2,
-          trackTop,
-          rightStart,
-          width,
-          originX,
-          TRACK_INNER_CORNER_PX,
-          TRACK_OUTER_CORNER_PX,
-          false);
+          g2, trackTop, rightStart, width, originX, TRACK_INNER_CORNER_PX, outerCorner(), false);
     }
   }
 
@@ -1016,15 +1339,16 @@ public class ElwhaSlider extends JComponent {
       return;
     }
     final int split = clamp(originX, x0, x1);
+    final int trackH = trackHeight();
     if (split > x0) {
       final int rightCorner = (split < x1) ? 0 : outerRightCorner;
       g2.setColor(trackColor(!leftOfHandle));
-      g2.fill(trackSegment(x0, trackTop, split - x0, outerLeftCorner, rightCorner));
+      g2.fill(trackSegment(x0, trackTop, split - x0, trackH, outerLeftCorner, rightCorner));
     }
     if (split < x1) {
       final int leftCorner = (split > x0) ? 0 : outerLeftCorner;
       g2.setColor(trackColor(leftOfHandle));
-      g2.fill(trackSegment(split, trackTop, x1 - split, leftCorner, outerRightCorner));
+      g2.fill(trackSegment(split, trackTop, x1 - split, trackH, leftCorner, outerRightCorner));
     }
   }
 
@@ -1125,15 +1449,29 @@ public class ElwhaSlider extends JComponent {
     }
   }
 
-  /** Sizes/positions a focus proxy over its handle halo (focus-ring + screen-reader bounds). */
+  /**
+   * Sizes/positions a focus proxy over its handle halo (focus-ring + screen-reader bounds). {@code
+   * cx} is the handle's long-axis center; for the vertical orientation it is mapped to device space
+   * (device-y = {@code height − cx}) with the halo/handle extents transposed.
+   */
   private void positionHandleFocus(final RangeHandle child, final int cx) {
-    final int x = cx - HANDLE_HALO_WIDTH_PX / 2;
-    final int y = handleTopY();
-    if (child.getX() != x
-        || child.getY() != y
-        || child.getWidth() != HANDLE_HALO_WIDTH_PX
-        || child.getHeight() != HANDLE_HEIGHT_PX) {
-      child.setBounds(x, y, HANDLE_HALO_WIDTH_PX, HANDLE_HEIGHT_PX);
+    final int x;
+    final int y;
+    final int w;
+    final int h;
+    if (vertical()) {
+      x = handleTopY();
+      y = getHeight() - cx - HANDLE_HALO_WIDTH_PX / 2;
+      w = handleHeight();
+      h = HANDLE_HALO_WIDTH_PX;
+    } else {
+      x = cx - HANDLE_HALO_WIDTH_PX / 2;
+      y = handleTopY();
+      w = HANDLE_HALO_WIDTH_PX;
+      h = handleHeight();
+    }
+    if (child.getX() != x || child.getY() != y || child.getWidth() != w || child.getHeight() != h) {
+      child.setBounds(x, y, w, h);
     }
   }
 
@@ -1207,21 +1545,27 @@ public class ElwhaSlider extends JComponent {
   private void paintRangeTrack(final Graphics2D g2, final int leftX, final int rightX) {
     final int trackTop = trackTopY();
     final int half = HANDLE_WIDTH_PX / 2;
-    final int width = getWidth();
+    final int width = longExtent();
     final int leftEnd = leftX - half - HANDLE_TRACK_GAP_PX;
     final int midStart = leftX + half + HANDLE_TRACK_GAP_PX;
     final int midEnd = rightX - half - HANDLE_TRACK_GAP_PX;
     final int rightStart = rightX + half + HANDLE_TRACK_GAP_PX;
 
+    final int trackH = trackHeight();
     if (leftEnd > 0) {
       g2.setColor(trackColor(false));
-      g2.fill(trackSegment(0, trackTop, leftEnd, TRACK_OUTER_CORNER_PX, TRACK_INNER_CORNER_PX));
+      g2.fill(trackSegment(0, trackTop, leftEnd, trackH, outerCorner(), TRACK_INNER_CORNER_PX));
     }
     if (midEnd > midStart) {
       g2.setColor(trackColor(true));
       g2.fill(
           trackSegment(
-              midStart, trackTop, midEnd - midStart, TRACK_INNER_CORNER_PX, TRACK_INNER_CORNER_PX));
+              midStart,
+              trackTop,
+              midEnd - midStart,
+              trackH,
+              TRACK_INNER_CORNER_PX,
+              TRACK_INNER_CORNER_PX));
     }
     if (rightStart < width) {
       g2.setColor(trackColor(false));
@@ -1230,8 +1574,9 @@ public class ElwhaSlider extends JComponent {
               rightStart,
               trackTop,
               width - rightStart,
+              trackH,
               TRACK_INNER_CORNER_PX,
-              TRACK_OUTER_CORNER_PX));
+              outerCorner()));
     }
   }
 
@@ -1269,7 +1614,7 @@ public class ElwhaSlider extends JComponent {
   int xForValue(final int value) {
     final int range = model.getMaximum() - model.getMinimum();
     final float frac = range <= 0 ? 0f : (value - model.getMinimum()) / (float) range;
-    final float pixelFrac = getComponentOrientation().isLeftToRight() ? frac : 1f - frac;
+    final float pixelFrac = mirror() ? 1f - frac : frac;
     return Math.round(trackStartX() + pixelFrac * (trackEndX() - trackStartX()));
   }
 
@@ -1329,7 +1674,7 @@ public class ElwhaSlider extends JComponent {
 
   /** Draws a single stop-indicator dot centered on the track at the given x. */
   private void drawStopDot(final Graphics2D g2, final int x, final boolean onActiveTrack) {
-    final int cy = trackTopY() + TRACK_HEIGHT_PX / 2;
+    final int cy = trackTopY() + trackHeight() / 2;
     final float r = STOP_INDICATOR_SIZE_PX / 2f;
     g2.setColor(stopColor(onActiveTrack));
     g2.fill(
@@ -1407,7 +1752,117 @@ public class ElwhaSlider extends JComponent {
     final int handleTop = handleTopY();
     final float x = cx - width / 2f;
     g2.setColor(handleColor());
-    g2.fill(new RoundRectangle2D.Float(x, handleTop, width, HANDLE_HEIGHT_PX, width, width));
+    g2.fill(new RoundRectangle2D.Float(x, handleTop, width, handleHeight(), width, width));
+  }
+
+  /** Whether the inset icon should render: a non-null icon on a standard M/L/XL slider. */
+  private boolean insetIconApplies() {
+    return insetIcon != null && variant == Variant.STANDARD && sizeVariant.allowsInsetIcon();
+  }
+
+  /** Logs one advisory when an inset icon was set but the current variant/size won't render it. */
+  private void maybeWarnInsetIconNoOp() {
+    if (insetIcon != null && !insetIconApplies() && !insetIconNoOpWarned) {
+      insetIconNoOpWarned = true;
+      LOG.info(
+          "ElwhaSlider inset icon ignored: it renders only on the STANDARD variant at sizes M/L/XL"
+              + " (current variant="
+              + variant
+              + ", size="
+              + sizeVariant
+              + ").");
+    }
+  }
+
+  /**
+   * Paints the inset icon at the leading/origin end of the active fill, swapping it into the
+   * inactive track on the handle's trailing side when the value is too low for the active fill to
+   * contain it (M3 swap-at-zero, §GD4). All x math is pixel-space and RTL-mirrored via {@link
+   * #mirror()}. The vertical orientation uses {@link #paintInsetIconVertical(Graphics2D, int)}.
+   */
+  private void paintInsetIcon(final Graphics2D g2, final int cx) {
+    if (!insetIconApplies()) {
+      return;
+    }
+    final int iconSize = sizeVariant.insetIconSize;
+    final int pad = iconSize / 2;
+    final int width = longExtent();
+    final int half = HANDLE_WIDTH_PX / 2;
+    final int iconY = trackTopY() + trackHeight() / 2 - iconSize / 2;
+    final boolean ltr = !mirror();
+
+    final int leadingSlotX = ltr ? pad : width - pad - iconSize;
+    final int activeFillLength =
+        ltr ? cx - half - HANDLE_TRACK_GAP_PX : width - (cx + half + HANDLE_TRACK_GAP_PX);
+
+    final boolean onActive = activeFillLength >= pad + iconSize;
+    final int iconX;
+    if (onActive) {
+      iconX = leadingSlotX;
+    } else {
+      final int swapped =
+          ltr
+              ? cx + half + HANDLE_TRACK_GAP_PX + pad
+              : cx - half - HANDLE_TRACK_GAP_PX - pad - iconSize;
+      iconX = clamp(swapped, pad, Math.max(pad, width - pad - iconSize));
+    }
+    paintInsetGlyph(g2, iconX, iconY, onActive);
+  }
+
+  /**
+   * Paints the inset glyph upright at the <strong>top (max) end</strong> of a vertical track — the
+   * M3 bulb-at-top pattern (research §123 / §A). Unlike the horizontal leading-end icon, the
+   * vertical icon stays pinned at the top: its tint follows whichever segment currently covers it,
+   * swapping {@link ColorRole#ON_SECONDARY_CONTAINER} &rarr; {@link ColorRole#ON_PRIMARY} once the
+   * bottom-up active fill rises far enough to reach it. Painted in device space (upright).
+   */
+  private void paintInsetIconVertical(final Graphics2D g2, final int cx) {
+    if (!insetIconApplies()) {
+      return;
+    }
+    final int iconSize = sizeVariant.insetIconSize;
+    final int pad = iconSize / 2;
+    final int half = HANDLE_WIDTH_PX / 2;
+    // Device-x: centered on the track's cross axis (logical-y maps to device-x under the rotation).
+    final int iconX = trackTopY() + trackHeight() / 2 - iconSize / 2;
+    // Device-y: pinned near the top (max) end, the icon's near edge a pad below the top.
+    final int iconY = pad;
+    // The active fill rises from the bottom to the handle; it covers the top icon slot once its top
+    // (logical-x cx-half-gap) passes the icon's lower edge (longExtent - pad - iconSize).
+    final int activeFillTop = cx - half - HANDLE_TRACK_GAP_PX;
+    final boolean onActive = activeFillTop >= longExtent() - pad - iconSize;
+    paintInsetGlyph(g2, iconX, iconY, onActive);
+  }
+
+  /** Paints the (possibly themed) inset glyph; a {@link FlatSVGIcon} is recolored for its track. */
+  private void paintInsetGlyph(
+      final Graphics2D g2, final int iconX, final int iconY, final boolean onActive) {
+    if (insetIconThemed != null) {
+      final Color tint = insetIconTintColor(onActive);
+      if (!tint.equals(insetIconTint)) {
+        insetIconTint = tint;
+        insetIconThemed.setColorFilter(new FlatSVGIcon.ColorFilter(c -> tint));
+      }
+      insetIconThemed.paintIcon(this, g2, iconX, iconY);
+      return;
+    }
+    final Graphics2D ig = (Graphics2D) g2.create();
+    try {
+      if (!isEnabled()) {
+        ig.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContentOpacity()));
+      }
+      insetIcon.paintIcon(this, ig, iconX, iconY);
+    } finally {
+      ig.dispose();
+    }
+  }
+
+  /** The inset-icon tint: ON_PRIMARY on the active track, ON_SECONDARY_CONTAINER once swapped. */
+  private Color insetIconTintColor(final boolean onActive) {
+    if (!isEnabled()) {
+      return withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
+    }
+    return (onActive ? ColorRole.ON_PRIMARY : ColorRole.ON_SECONDARY_CONTAINER).resolve();
   }
 
   private void paintValueBubble(final Graphics2D g2, final int cx) {
@@ -1426,7 +1881,7 @@ public class ElwhaSlider extends JComponent {
         clamp(
             cx,
             VALUE_BUBBLE_WIDTH_PX / 2,
-            Math.max(VALUE_BUBBLE_WIDTH_PX / 2, getWidth() - VALUE_BUBBLE_WIDTH_PX / 2));
+            Math.max(VALUE_BUBBLE_WIDTH_PX / 2, longExtent() - VALUE_BUBBLE_WIDTH_PX / 2));
     final int nubTipY = handleTopY() - VALUE_BUBBLE_GAP_PX;
     final float scale = lerp(VALUE_BUBBLE_MIN_SCALE, 1f, appear);
 
@@ -1453,6 +1908,74 @@ public class ElwhaSlider extends JComponent {
     } finally {
       b.dispose();
     }
+  }
+
+  /**
+   * Paints the value bubble for a vertical slider, upright, on the handle's <strong>leading
+   * side</strong> (left of the track) with the nub pointing right at the handle — the transposition
+   * of the horizontal above-the-handle bubble. Drawn in device space so the text stays upright;
+   * {@code longPos} is the handle's logical long-axis center (device-y = {@code height − longPos}).
+   */
+  private void paintValueBubbleVertical(final Graphics2D g2, final int longPos, final String text) {
+    if (!valueIndicatorEnabled) {
+      return;
+    }
+    final float appear = interactionAnimator.progress();
+    if (appear <= 0f) {
+      return;
+    }
+    final int half = VALUE_BUBBLE_WIDTH_PX / 2;
+    final float cy = clamp(getHeight() - longPos, half, Math.max(half, getHeight() - half));
+    final float nubTipX = handleTopY() - VALUE_BUBBLE_GAP_PX;
+    final float scale = lerp(VALUE_BUBBLE_MIN_SCALE, 1f, appear);
+
+    final Graphics2D b = (Graphics2D) g2.create();
+    try {
+      b.setComposite(AlphaComposite.SrcOver.derive(clampF(appear)));
+      // Scale about the nub tip so the bubble grows out of the handle.
+      b.translate(nubTipX, cy);
+      b.scale(scale, scale);
+      b.translate(-nubTipX, -cy);
+
+      b.setColor(ColorRole.INVERSE_SURFACE.resolve());
+      b.fill(verticalValueBubbleShape(nubTipX, cy));
+
+      b.setColor(ColorRole.INVERSE_ON_SURFACE.resolve());
+      b.setFont(getFont().deriveFont(Font.PLAIN, VALUE_BUBBLE_LABEL_PT));
+      final FontMetrics fm = b.getFontMetrics();
+      final float bodyWidth = VALUE_BUBBLE_HEIGHT_PX - VALUE_BUBBLE_NUB_HEIGHT_PX;
+      final float bodyRight = nubTipX - VALUE_BUBBLE_NUB_HEIGHT_PX;
+      final float bodyLeft = bodyRight - bodyWidth;
+      final int tx = Math.round(bodyLeft + (bodyWidth - fm.stringWidth(text)) / 2f);
+      final int ty = Math.round(cy - fm.getHeight() / 2f + fm.getAscent());
+      b.drawString(text, tx, ty);
+    } finally {
+      b.dispose();
+    }
+  }
+
+  /**
+   * The rounded body plus rightward nub for the vertical value bubble; the nub tip sits at {@code
+   * (nubTipX, cy)} pointing right at the handle, the body extending leftward.
+   */
+  private static Path2D.Float verticalValueBubbleShape(final float nubTipX, final float cy) {
+    final float bodyW = VALUE_BUBBLE_HEIGHT_PX - VALUE_BUBBLE_NUB_HEIGHT_PX;
+    final float bodyH = VALUE_BUBBLE_WIDTH_PX;
+    final float right = nubTipX - VALUE_BUBBLE_NUB_HEIGHT_PX;
+    final float left = right - bodyW;
+    final float top = cy - bodyH / 2f;
+    final float arc = Math.min(bodyW, bodyH) / 2f;
+    final float nubHalf = 6f;
+
+    final Path2D.Float p = new Path2D.Float();
+    p.append(new RoundRectangle2D.Float(left, top, bodyW, bodyH, arc, arc), false);
+    final Path2D.Float nub = new Path2D.Float();
+    nub.moveTo(right, cy - nubHalf);
+    nub.lineTo(right, cy + nubHalf);
+    nub.lineTo(nubTipX, cy);
+    nub.closePath();
+    p.append(nub, false);
+    return p;
   }
 
   /** The text shown in the value bubble — the {@code valueFormatter} output, or the raw value. */
@@ -1510,16 +2033,21 @@ public class ElwhaSlider extends JComponent {
         x,
         handleTop,
         HANDLE_HALO_WIDTH_PX,
-        HANDLE_HEIGHT_PX,
+        handleHeight(),
         HANDLE_HALO_WIDTH_PX,
         HANDLE_HALO_WIDTH_PX);
   }
 
   /** A horizontal track segment with independent left/right corner radii (top == bottom). */
   static Path2D.Float trackSegment(
-      final int x, final int y, final int width, final int leftRadius, final int rightRadius) {
+      final int x,
+      final int y,
+      final int width,
+      final int height,
+      final int leftRadius,
+      final int rightRadius) {
     final float w = width;
-    final float h = TRACK_HEIGHT_PX;
+    final float h = height;
     final float lr = Math.min(leftRadius, Math.min(w / 2f, h / 2f));
     final float rr = Math.min(rightRadius, Math.min(w / 2f, h / 2f));
     final Path2D.Float p = new Path2D.Float();
@@ -1581,7 +2109,7 @@ public class ElwhaSlider extends JComponent {
             if (!isEnabled() || variant != Variant.RANGE) {
               return;
             }
-            final Handle next = pickHandle(e.getX());
+            final Handle next = pickHandle(longCoord(e));
             if (next != hoveredHandle) {
               hoveredHandle = next;
               repaint();
@@ -1597,13 +2125,14 @@ public class ElwhaSlider extends JComponent {
             pressed = true;
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
             model.setValueIsAdjusting(true);
+            final int pos = longCoord(e);
             if (variant == Variant.RANGE) {
-              activeHandle = pickHandle(e.getX());
+              activeHandle = pickHandle(pos);
               childFor(activeHandle).requestFocusInWindow();
-              setActiveHandleValue(valueForX(e.getX()));
+              setActiveHandleValue(valueForX(pos));
               startRipple(new Point(activeHandleCenterX(), handleCenterY()));
             } else {
-              setValue(valueForX(e.getX()));
+              setValue(valueForX(pos));
               startRipple(new Point(handleCenterX(), handleCenterY()));
             }
             updateInteractionAnimator();
@@ -1616,9 +2145,9 @@ public class ElwhaSlider extends JComponent {
               return;
             }
             if (variant == Variant.RANGE) {
-              setActiveHandleValue(valueForX(e.getX()));
+              setActiveHandleValue(valueForX(longCoord(e)));
             } else {
-              setValue(valueForX(e.getX()));
+              setValue(valueForX(longCoord(e)));
             }
             repaint();
           }
@@ -1659,7 +2188,16 @@ public class ElwhaSlider extends JComponent {
   }
 
   private int handleCenterY() {
-    return handleTopY() + HANDLE_HEIGHT_PX / 2;
+    return handleTopY() + handleHeight() / 2;
+  }
+
+  /**
+   * Maps a mouse event to the long-axis position {@link #valueForX(int)} / {@link #pickHandle(int)}
+   * expect: the literal {@code x} when horizontal, or {@code height − y} when vertical (so the
+   * bottom of the component is the minimum end and the top is the maximum).
+   */
+  private int longCoord(final MouseEvent e) {
+    return vertical() ? getHeight() - e.getY() : e.getX();
   }
 
   /** Drives the handle-narrow + value-bubble appearance toward active (focus or press) or rest. */
@@ -1695,6 +2233,24 @@ public class ElwhaSlider extends JComponent {
     repaint();
   }
 
+  /**
+   * Enables or disables the slider, propagating the state to the {@link Variant#RANGE} focus-proxy
+   * children — a disabled component is skipped by focus traversal, so without the propagation a
+   * disabled range slider's two handle proxies stayed Tab-reachable and the keyboard could move its
+   * handles (#432). The single variant needs nothing extra: the slider itself is the focus stop.
+   *
+   * @param enabled whether the slider responds to input
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  public void setEnabled(final boolean enabled) {
+    super.setEnabled(enabled);
+    lowerFocus.setEnabled(enabled);
+    upperFocus.setEnabled(enabled);
+    repaint();
+  }
+
   @Override
   public void removeNotify() {
     if (rippleTimer != null) {
@@ -1714,11 +2270,13 @@ public class ElwhaSlider extends JComponent {
     installKeys(getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT));
     final ActionMap am = getActionMap();
 
-    // Horizontal arrows mirror under RTL; vertical arrows do not. Space held promotes arrows to the
-    // block increment (research §X #49 "Space & Arrows"); Page keys are the always-block
-    // equivalent.
-    am.put("elwhaSlider.left", step(() -> ltr() ? -stepAmount() : stepAmount()));
-    am.put("elwhaSlider.right", step(() -> ltr() ? stepAmount() : -stepAmount()));
+    // Up/Down always increase/decrease the value — the primary axis for a vertical slider. Left/
+    // Right also adjust: they mirror under a horizontal RTL orientation but never for vertical
+    // (which fills bottom-up regardless). Space held promotes arrows to the block increment
+    // (research
+    // §X #49 "Space & Arrows"); Page keys are the always-block equivalent.
+    am.put("elwhaSlider.left", step(() -> mirror() ? stepAmount() : -stepAmount()));
+    am.put("elwhaSlider.right", step(() -> mirror() ? -stepAmount() : stepAmount()));
     am.put("elwhaSlider.increase", step(this::stepAmount));
     am.put("elwhaSlider.decrease", step(() -> -stepAmount()));
     am.put("elwhaSlider.blockUp", step(this::getBlockIncrement));
@@ -1742,10 +2300,6 @@ public class ElwhaSlider extends JComponent {
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0, true), "elwhaSlider.spaceUp");
   }
 
-  private boolean ltr() {
-    return getComponentOrientation().isLeftToRight();
-  }
-
   /** The current arrow step — block while Space is held, otherwise the unit increment. */
   private int stepAmount() {
     return spaceDown ? getBlockIncrement() : effectiveUnitIncrement();
@@ -1762,7 +2316,9 @@ public class ElwhaSlider extends JComponent {
     return new AbstractAction() {
       @Override
       public void actionPerformed(final ActionEvent e) {
-        if (!isEnabled()) {
+        // ElwhaSlider.this-qualified: an unqualified isEnabled() binds to AbstractAction's own
+        // always-true flag, letting keyboard actions mutate a disabled slider (#432).
+        if (!ElwhaSlider.this.isEnabled()) {
           return;
         }
         if (variant == Variant.RANGE) {
@@ -1778,7 +2334,7 @@ public class ElwhaSlider extends JComponent {
     return new AbstractAction() {
       @Override
       public void actionPerformed(final ActionEvent e) {
-        if (!isEnabled()) {
+        if (!ElwhaSlider.this.isEnabled()) {
           return;
         }
         if (variant == Variant.RANGE) {

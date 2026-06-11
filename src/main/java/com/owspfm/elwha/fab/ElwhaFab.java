@@ -840,7 +840,8 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
         new AbstractAction() {
           @Override
           public void actionPerformed(final ActionEvent e) {
-            if (!isEnabled()) {
+            // Outer-qualified — AbstractAction has its own always-true isEnabled() (#432).
+            if (!ElwhaFab.this.isEnabled()) {
               return;
             }
             pressed = true;

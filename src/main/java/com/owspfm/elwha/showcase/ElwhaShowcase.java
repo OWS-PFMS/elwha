@@ -270,7 +270,7 @@ public final class ElwhaShowcase {
     final JPanel root = new JPanel(new BorderLayout());
     root.add(contentWrapper, BorderLayout.CENTER);
 
-    // Populate the catalog of leaves + build all CardLayout cards (4 landings + 17 wrapped
+    // Populate the catalog of leaves + build all CardLayout cards (4 landings + 18 wrapped
     // leaves). Must run before the rail is built so the rail's primary action listeners can
     // resolve landing keys that already have cards registered.
     populateCatalog();
@@ -745,6 +745,20 @@ public final class ElwhaShowcase {
             "M3 Expressive slider — split track, pill handle, stops, value bubble (standard XS).",
             AREA_COMPONENTS,
             buildSliderComponent()));
+    register(
+        new LeafEntry(
+            "Select Field",
+            "M3 exposed dropdown — a read-only ElwhaTextField + anchored ElwhaMenu of typed"
+                + " options, with single-select write-back.",
+            AREA_COMPONENTS,
+            SelectFieldShowcasePanels.buildComponent()));
+    register(
+        new LeafEntry(
+            "Switch",
+            "M3 switch — binary toggle with the state-morphing handle, drag-to-toggle, and"
+                + " on-handle icons.",
+            AREA_COMPONENTS,
+            buildSwitchComponent()));
 
     register(
         new LeafEntry(
@@ -778,7 +792,7 @@ public final class ElwhaShowcase {
 
   // The four landing cards, populated into the CardLayout content panel. Each is a grid of
   // ElwhaCards — title + supporting text + an actionable click that routes to the leaf surface.
-  // Home is the master index (all 17 leaves, grouped by area heading); each area landing covers
+  // Home is the master index (all 18 leaves, grouped by area heading); each area landing covers
   // just its own leaves. ElwhaCard's actionable mode is the entire raison-d'être here: the cards
   // are the navigation surface, not decoration.
   private void populateLandingCards() {
@@ -1867,6 +1881,18 @@ public final class ElwhaShowcase {
         "Gallery",
         scroll(
             stack(gallerySection("States & configurations", SliderShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- Switch
+
+  private static JComponent buildSwitchComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", SwitchShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(gallerySection("States & configurations", SwitchShowcasePanels.buildGallery()))));
     return tabs;
   }
 
