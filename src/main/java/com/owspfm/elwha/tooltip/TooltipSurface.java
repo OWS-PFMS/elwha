@@ -5,6 +5,7 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.TypeRole;
+import java.awt.AlphaComposite;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -14,6 +15,8 @@ import java.awt.RenderingHints;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
 import javax.swing.JPanel;
 
 /**
@@ -85,6 +88,7 @@ class TooltipSurface extends JPanel {
   private String text;
   private String subhead;
   private String supportingText;
+  private FloatSupplier alphaSupplier = () -> 1f;
 
   TooltipSurface(final String text) {
     this(TooltipVariant.PLAIN, text, null, null);
@@ -129,6 +133,48 @@ class TooltipSurface extends JPanel {
   void addActionButton(final ElwhaButton button) {
     actionButtons.add(button);
     add(button);
+  }
+
+  void setAlphaSupplier(final FloatSupplier alphaSupplier) {
+    this.alphaSupplier = alphaSupplier;
+  }
+
+  /** The fade-alpha feed — the overlay host's eased {@code motionProgress}. */
+  interface FloatSupplier {
+    float get();
+  }
+
+  // The whole surface — container, text, and live action-button children — fades as one unit
+  // (design §6 / §12-2: children must not pop in at full alpha mid-entrance). SrcOver at 1.0 is
+  // the steady-state no-op.
+  @Override
+  public void paint(final Graphics g) {
+    final float alpha = Math.max(0f, Math.min(1f, alphaSupplier.get()));
+    if (alpha >= 1f) {
+      super.paint(g);
+      return;
+    }
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+      super.paint(g2);
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext =
+          new AccessibleJPanel() {
+            @Override
+            public AccessibleRole getAccessibleRole() {
+              return AccessibleRole.TOOL_TIP;
+            }
+          };
+    }
+    return accessibleContext;
   }
 
   List<ElwhaButton> actionButtons() {

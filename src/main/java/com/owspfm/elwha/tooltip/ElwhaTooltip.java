@@ -67,6 +67,12 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   /** Hide linger after the pointer leaves the anchor ∪ surface union (MDC Web default). */
   static final int DEFAULT_HIDE_DELAY_MS = 600;
 
+  /** Entrance fade duration (material-web/MDC transition). */
+  static final int ENTER_MS = 150;
+
+  /** Exit fade duration (material-web/MDC transition). */
+  static final int EXIT_MS = 75;
+
   // The one-at-a-time slot (Compose MutatorMutex / Swing ToolTipManager parity): showing any
   // tooltip evicts the incumbent.
   private static ElwhaTooltip shownTooltip;
@@ -166,6 +172,7 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
           "setText is plain-only; use setSubhead/setSupportingText on a rich tooltip");
     }
     this.text = Objects.requireNonNull(text, "text");
+    syncAnchorDescription();
     if (tooltipSurface != null) {
       tooltipSurface.setText(text);
       relayout();
@@ -194,6 +201,7 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   public void setSubhead(final String subhead) {
     requireRich("setSubhead");
     this.subhead = subhead;
+    syncAnchorDescription();
     if (tooltipSurface != null) {
       tooltipSurface.setSubhead(subhead);
       relayout();
@@ -223,6 +231,7 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   public void setSupportingText(final String supportingText) {
     requireRich("setSupportingText");
     this.supportingText = Objects.requireNonNull(supportingText, "supportingText");
+    syncAnchorDescription();
     if (tooltipSurface != null) {
       tooltipSurface.setSupportingText(supportingText);
       relayout();
@@ -338,17 +347,23 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
     this.attachedAnchor = anchor;
     this.trigger = new TooltipTrigger(this, anchor);
     trigger.install();
+    syncAnchorDescription();
     return this;
   }
 
   /**
-   * Removes the trigger machinery from the attached anchor and dismisses a showing tooltip; a no-op
-   * when not attached.
+   * Removes the trigger machinery from the attached anchor, clears the accessible description it
+   * wrote (only if still ours), and dismisses a showing tooltip; a no-op when not attached.
    *
    * @version v0.4.0
    * @since v0.4.0
    */
   public void detach() {
+    if (attachedAnchor != null
+        && Objects.equals(
+            attachedAnchor.getAccessibleContext().getAccessibleDescription(), accessibleName())) {
+      attachedAnchor.getAccessibleContext().setAccessibleDescription(null);
+    }
     if (trigger != null) {
       trigger.uninstall();
       trigger = null;
@@ -356,6 +371,14 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
     attachedAnchor = null;
     if (isTooltipShowing()) {
       dismiss();
+    }
+  }
+
+  // The aria-describedby analogue — the same wiring Swing's own setToolTipText performs. Re-run
+  // on every content change so the description tracks the visible text.
+  private void syncAnchorDescription() {
+    if (attachedAnchor != null) {
+      attachedAnchor.getAccessibleContext().setAccessibleDescription(accessibleName());
     }
   }
 
@@ -437,22 +460,45 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   }
 
   /**
-   * Dismisses a showing tooltip; a no-op otherwise.
+   * Dismisses a showing tooltip (75&nbsp;ms exit fade; reduced motion snaps); a no-op otherwise.
    *
    * @version v0.4.0
    * @since v0.4.0
    */
   public void dismiss() {
+    if (entrance != null) {
+      entrance.setDurationMs(EXIT_MS);
+    }
     beginClose();
   }
 
   // ------------------------------------------------------- overlay anatomy
+
+  // M3 tooltip motion is fade-dominant and fast — 150ms in / 75ms out on the standard curve
+  // (research §I); the surface composites itself and its children by motionProgress.
+
+  @Override
+  protected int motionDurationMs() {
+    return ENTER_MS;
+  }
+
+  @Override
+  protected com.owspfm.elwha.theme.Easing easing() {
+    return com.owspfm.elwha.theme.Easing.STANDARD;
+  }
+
+  // Every dismiss path funnels through dismiss() so the 75ms exit retune is never skipped.
+  @Override
+  protected void onOutsidePress() {
+    dismiss();
+  }
 
   @Override
   protected JComponent createSurface() {
     claimExclusive();
     installWheelWatch();
     this.tooltipSurface = new TooltipSurface(variant, text, subhead, supportingText);
+    tooltipSurface.setAlphaSupplier(() -> motionProgress);
     for (final TooltipAction action : actions) {
       final ElwhaButton button = ElwhaButton.textButton(action.label());
       // Dismiss before firing: the consumer's handler may open a dialog, and a stale tooltip
