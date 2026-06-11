@@ -773,6 +773,13 @@ public final class ElwhaShowcase {
                 + " cross-color pressed ripple.",
             AREA_COMPONENTS,
             buildCheckboxComponent()));
+    register(
+        new LeafEntry(
+            "Side Sheet",
+            "M3 side sheet — standard (docked, reflowing) + modal (scrim overlay) supplementary"
+                + " surface with header, content, and action footer.",
+            AREA_COMPONENTS,
+            buildSideSheetComponent()));
 
     register(
         new LeafEntry(
@@ -1946,6 +1953,17 @@ public final class ElwhaShowcase {
         "Gallery",
         scroll(
             stack(gallerySection("States & configurations", TabsShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- Side Sheet (#308)
+
+  private static JComponent buildSideSheetComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", SideSheetShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(stack(gallerySection("Configurations", SideSheetShowcasePanels.buildGallery()))));
     return tabs;
   }
 
