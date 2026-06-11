@@ -7,6 +7,7 @@ import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Container;
 import java.awt.KeyboardFocusManager;
+import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.AWTEventListener;
@@ -112,6 +113,15 @@ public abstract class AbstractElwhaOverlay {
   private PropertyChangeListener focusListener;
   private AWTEventListener outsidePressListener;
   private boolean closing;
+
+  // Overlay chain (epic #322 S1 spike): a child overlay (e.g. a submenu) opens above its parent
+  // without dismissing it. Links are set when the child is shown via showInChain(...). The chain is
+  // linear — at most one open child per level — and is the unit of "one overlay open": focus lives
+  // in the topmost level (only it reacts to focus escapes), an outside-the-chain press closes the
+  // whole chain, an ancestor's teardown cascades to its descendants, and a child closing on its own
+  // (Esc/Left) leaves the parent up and notifies it via onChainChildClosed().
+  private AbstractElwhaOverlay chainParent;
+  private AbstractElwhaOverlay chainChild;
 
   // -------------------------------------------------- abstract anatomy hooks
 
@@ -315,6 +325,9 @@ public abstract class AbstractElwhaOverlay {
     layeredPane.addComponentListener(relayoutListener);
     OPEN.remove(this);
     OPEN.addLast(this);
+    if (chainParent != null) {
+      chainParent.chainChild = this;
+    }
     installFocusListener();
     if (lightDismiss()) {
       installOutsidePressListener();
@@ -331,6 +344,101 @@ public abstract class AbstractElwhaOverlay {
     layeredPane.repaint();
 
     SwingUtilities.invokeLater(this::focusInitial);
+  }
+
+  /**
+   * Shows this overlay as a <em>child</em> of {@code parent} in the overlay chain (epic #322): it
+   * mounts above {@code parent} — typically anchored to an item inside it — <strong>without
+   * dismissing {@code parent}</strong>. The chain (root → child → …) becomes the unit of "one
+   * overlay open": focus lives in the topmost level, an outside-the-chain press closes every level,
+   * and {@code parent}'s teardown cascades to this child. When this child closes on its own
+   * (Escape, a back key, focus loss) {@code parent} stays up and is notified via {@link
+   * #onChainChildClosed()}.
+   *
+   * @param anchor the component to anchor and resolve the host from (an item inside {@code parent})
+   * @param parent the overlay this one nests under; required
+   * @throws NullPointerException if {@code anchor} or {@code parent} is {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected final void showInChain(final Component anchor, final AbstractElwhaOverlay parent) {
+    this.chainParent = Objects.requireNonNull(parent, "parent");
+    show(anchor);
+  }
+
+  /**
+   * The overlay this one nests under in the chain, or {@code null} if it is a root.
+   *
+   * @return the chain parent, or {@code null}
+   */
+  protected final AbstractElwhaOverlay chainParentOverlay() {
+    return chainParent;
+  }
+
+  /**
+   * The open child overlay nested above this one, or {@code null} if this is the chain leaf.
+   *
+   * @return the chain child, or {@code null}
+   */
+  protected final AbstractElwhaOverlay chainChildOverlay() {
+    return chainChild;
+  }
+
+  /**
+   * Walks up the chain to its root (the overlay with no chain parent) — {@code this} when this
+   * overlay is not part of a chain.
+   *
+   * @return the chain root
+   */
+  protected final AbstractElwhaOverlay chainRootOverlay() {
+    AbstractElwhaOverlay root = this;
+    while (root.chainParent != null) {
+      root = root.chainParent;
+    }
+    return root;
+  }
+
+  /**
+   * Every overlay in this overlay's chain, ordered root → leaf (a single-element list when not part
+   * of a chain). Lets a subclass walk the whole chain without cross-package protected access to the
+   * per-link accessors.
+   *
+   * @return the chain overlays, root first
+   */
+  protected final java.util.List<AbstractElwhaOverlay> chainOverlays() {
+    final java.util.List<AbstractElwhaOverlay> out = new java.util.ArrayList<>();
+    for (AbstractElwhaOverlay o = chainRootOverlay(); o != null; o = o.chainChild) {
+      out.add(o);
+    }
+    return out;
+  }
+
+  /**
+   * Notification to a parent overlay that its chain child closed <em>on its own</em> (a back
+   * key/Escape/leaf focus loss), not as part of this parent's own teardown. Default no-op; a menu
+   * overrides this to re-arm focus on the opener item and clear the opener's expanded state.
+   */
+  protected void onChainChildClosed() {}
+
+  /**
+   * Whether the given screen point lands on this overlay's surface or any of its open descendants
+   * in the chain — the hover-intent test that keeps a submenu open while the pointer crosses into
+   * it (or into a deeper level). Safe to call when not shown (returns {@code false}).
+   *
+   * @param screenPoint a point in screen coordinates
+   * @return {@code true} if the point is over this overlay or a descendant's surface
+   */
+  protected final boolean chainContainsScreenPoint(final Point screenPoint) {
+    for (AbstractElwhaOverlay level = this; level != null; level = level.chainChild) {
+      final JComponent s = level.surface;
+      if (s != null && s.isShowing()) {
+        final Point origin = s.getLocationOnScreen();
+        if (new java.awt.Rectangle(origin, s.getSize()).contains(screenPoint)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -399,6 +507,15 @@ public abstract class AbstractElwhaOverlay {
     if (layeredPane == null) {
       return;
     }
+    // Cascade down the chain: tearing down an ancestor closes its open child (and, recursively, the
+    // rest of the chain above it). Unlink first so the child's own teardown doesn't try to notify a
+    // parent that is itself going away.
+    if (chainChild != null) {
+      final AbstractElwhaOverlay child = chainChild;
+      chainChild = null;
+      child.chainParent = null;
+      child.beginClose();
+    }
     if (entrance != null) {
       entrance.stop();
     }
@@ -414,6 +531,14 @@ public abstract class AbstractElwhaOverlay {
     if (backdrop != null) {
       layeredPane.remove(backdrop);
     }
+    // Chain child closing on its own (parent stays open): move focus to the parent surface BEFORE
+    // removing this surface, so the removal doesn't bounce focus to the host frame — which the
+    // now-topmost parent would read as a focus escape and dismiss itself, cascading the whole chain
+    // shut (epic #322). The whole-chain cascade nulls chainParent first, so this only fires when a
+    // single level collapses under a still-open parent.
+    if (chainParent != null && chainParent.surface != null && restoreFocusOnClose()) {
+      chainParent.surface.requestFocusInWindow();
+    }
     layeredPane.remove(surface);
     layeredPane.revalidate();
     layeredPane.repaint();
@@ -421,6 +546,13 @@ public abstract class AbstractElwhaOverlay {
     final boolean restore = restoreFocusOnClose();
     final Component toRestore = focusOwnerBeforeShow;
     final JLayeredPane closed = layeredPane;
+    // Detach from a still-open parent (a self-initiated close — Esc/Left/focus loss). Captured for
+    // the post-teardown notification so the parent can re-arm focus on the opener item.
+    final AbstractElwhaOverlay parentToNotify = chainParent;
+    if (parentToNotify != null) {
+      parentToNotify.chainChild = null;
+    }
+    chainParent = null;
     layeredPane = null;
     backdrop = null;
     surface = null;
@@ -441,6 +573,9 @@ public abstract class AbstractElwhaOverlay {
     }
 
     onClosed();
+    if (parentToNotify != null) {
+      parentToNotify.onChainChildClosed();
+    }
   }
 
   // Stretches the backdrop over the full layered pane, then delegates surface sizing/placement to
@@ -511,14 +646,41 @@ public abstract class AbstractElwhaOverlay {
           if (surface == null || closing) {
             return;
           }
-          final Object src = me.getSource();
-          if (src instanceof Component c && ownsFocus(c)) {
+          // Only the chain leaf (no open child) decides how an outside press unwinds the chain; a
+          // chainless overlay is its own leaf, so this degrades to the plain single-overlay case.
+          if (chainChild != null) {
             return;
           }
-          onOutsidePress();
+          final Component src = me.getSource() instanceof Component c ? c : null;
+          handleChainOutsidePress(src);
         };
     Toolkit.getDefaultToolkit()
         .addAWTEventListener(outsidePressListener, AWTEvent.MOUSE_EVENT_MASK);
+  }
+
+  // From the chain leaf, find the deepest chain level whose surface contains the press: inside the
+  // leaf is a normal interaction (ignored); inside an ancestor closes only the levels above it
+  // (that
+  // ancestor stays — e.g. clicking a sibling item in the parent menu collapses just the submenu);
+  // outside every level closes the whole chain from the root. For a chainless overlay this reduces
+  // to "inside my surface → ignore, else onOutsidePress()".
+  private void handleChainOutsidePress(final Component src) {
+    if (src != null) {
+      for (AbstractElwhaOverlay level = this; level != null; level = level.chainParent) {
+        // ownsFocus (not a raw surface-descendant test) so a level hosting an external focus home
+        // (the editable-combobox pattern) still counts a press there as inside.
+        if (level.surface != null && level.ownsFocus(src)) {
+          if (level == this) {
+            return;
+          }
+          if (level.chainChild != null) {
+            level.chainChild.onOutsidePress();
+          }
+          return;
+        }
+      }
+    }
+    chainRootOverlay().onOutsidePress();
   }
 
   // Initial / recovered focus: the subclass's preferred target, else the first focusable
