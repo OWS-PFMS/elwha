@@ -65,6 +65,9 @@ public class ElwhaTabs extends JComponent {
   static final int PRIMARY_INDICATOR_CORNER_RADIUS_PX = 3;
   static final int SECONDARY_INDICATOR_HEIGHT_PX = 2;
   static final int INDICATOR_SLIDE_MS = 250;
+  static final int SCROLLABLE_MIN_TAB_WIDTH_PX = 72;
+  static final int SCROLLABLE_MAX_TAB_WIDTH_PX = 264;
+  static final int SCROLL_MARGIN_PX = 48;
 
   private final TabsVariant variant;
   private final List<ElwhaTab> tabs = new ArrayList<>();
@@ -72,6 +75,12 @@ public class ElwhaTabs extends JComponent {
 
   private final MorphAnimator slideAnimator = new MorphAnimator(this, INDICATOR_SLIDE_MS);
   private Rectangle slideFromRect;
+
+  private final MorphAnimator scrollAnimator = new MorphAnimator(this, MorphAnimator.MEDIUM2_MS);
+  private TabMode tabMode = TabMode.FIXED;
+  private int scrollOffset;
+  private int scrollFrom;
+  private int scrollTo;
 
   private int activeTabIndex = -1;
 
@@ -95,6 +104,19 @@ public class ElwhaTabs extends JComponent {
   public ElwhaTabs(final TabsVariant variant) {
     this.variant = Objects.requireNonNull(variant, "variant");
     setOpaque(true);
+    scrollAnimator.addProgressListener(
+        () -> {
+          final float t = Easing.STANDARD.ease(scrollAnimator.progress());
+          scrollOffset = Math.round(scrollFrom + (scrollTo - scrollFrom) * t);
+          doLayout();
+        });
+    addMouseWheelListener(
+        e -> {
+          if (tabMode != TabMode.SCROLLABLE || !isEnabled()) {
+            return;
+          }
+          setScrollOffset(scrollOffset + (int) Math.round(e.getPreciseWheelRotation() * 30));
+        });
   }
 
   /**
@@ -152,6 +174,10 @@ public class ElwhaTabs extends JComponent {
       activate(0, true);
     }
     revalidate();
+    if (getWidth() > 0) {
+      doLayout();
+      keepActiveVisible();
+    }
     repaint();
     return tab;
   }
@@ -194,7 +220,133 @@ public class ElwhaTabs extends JComponent {
       activeTabIndex--;
     }
     revalidate();
+    if (getWidth() > 0) {
+      doLayout();
+      keepActiveVisible();
+    }
     repaint();
+  }
+
+  /**
+   * Switches the bar between {@link TabMode#FIXED} equal-width layout and the {@link
+   * TabMode#SCROLLABLE} content-width scrolling strip. Switching resets the scroll offset and then
+   * keeps the active tab visible.
+   *
+   * @param tabMode the layout mode; required
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setTabMode(final TabMode tabMode) {
+    Objects.requireNonNull(tabMode, "tabMode");
+    if (this.tabMode == tabMode) {
+      return;
+    }
+    this.tabMode = tabMode;
+    scrollAnimator.stop();
+    scrollOffset = 0;
+    revalidate();
+    doLayout();
+    keepActiveVisible();
+    repaint();
+  }
+
+  /**
+   * The bar's layout mode.
+   *
+   * @return the mode, never {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public TabMode getTabMode() {
+    return tabMode;
+  }
+
+  /**
+   * Scrolls the strip, if overflowing, so the given tab is visible with the M3 48&nbsp;px margin —
+   * tweened (300&nbsp;ms standard) while displayable, snapped otherwise. No-op in {@link
+   * TabMode#FIXED} or for tabs that are not children of this bar; wheel input cancels an in-flight
+   * tween.
+   *
+   * @param tab the tab to scroll to
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void scrollToTab(final ElwhaTab tab) {
+    if (tabMode != TabMode.SCROLLABLE || !tabs.contains(tab) || getWidth() <= 0) {
+      return;
+    }
+    final int target = clampScroll(scrollTargetFor(tab));
+    if (target == scrollOffset) {
+      return;
+    }
+    if (!isDisplayable()) {
+      setScrollOffset(target);
+      return;
+    }
+    scrollFrom = scrollOffset;
+    scrollTo = target;
+    scrollAnimator.snapTo(0f);
+    scrollAnimator.start();
+    if (scrollAnimator.progress() >= 1f) {
+      setScrollOffset(target);
+    }
+  }
+
+  // The material-web scroll-to formula (research §I): keep the tab visible with SCROLL_MARGIN_PX
+  // of its neighbors showing on either side.
+  private int scrollTargetFor(final ElwhaTab tab) {
+    final int tabOffset = tab.getX() + scrollOffset;
+    final int min = tabOffset - SCROLL_MARGIN_PX;
+    final int max = tabOffset + tab.getWidth() - getWidth() + SCROLL_MARGIN_PX;
+    return Math.min(min, Math.max(max, scrollOffset));
+  }
+
+  private int clampScroll(final int offset) {
+    return Math.max(0, Math.min(offset, maxScroll()));
+  }
+
+  private int maxScroll() {
+    if (tabMode != TabMode.SCROLLABLE) {
+      return 0;
+    }
+    return Math.max(0, scrollableContentWidth() - getWidth());
+  }
+
+  private int scrollableContentWidth() {
+    int width = 0;
+    for (ElwhaTab tab : tabs) {
+      width += clampedScrollableWidth(tab);
+    }
+    return width;
+  }
+
+  private static int clampedScrollableWidth(final ElwhaTab tab) {
+    return Math.max(
+        SCROLLABLE_MIN_TAB_WIDTH_PX,
+        Math.min(tab.getPreferredSize().width, SCROLLABLE_MAX_TAB_WIDTH_PX));
+  }
+
+  // Direct (non-tweened) scroll: wheel input and snap paths. Cancels any in-flight tween.
+  void setScrollOffset(final int offset) {
+    scrollAnimator.stop();
+    final int clamped = clampScroll(offset);
+    if (clamped == scrollOffset) {
+      return;
+    }
+    scrollOffset = clamped;
+    doLayout();
+    repaint();
+  }
+
+  int getScrollOffset() {
+    return scrollOffset;
+  }
+
+  private void keepActiveVisible() {
+    final ElwhaTab active = getActiveTab();
+    if (active != null && tabMode == TabMode.SCROLLABLE && getWidth() > 0) {
+      setScrollOffset(clampScroll(scrollTargetFor(active)));
+    }
   }
 
   /**
@@ -354,6 +506,7 @@ public class ElwhaTabs extends JComponent {
     if (!silent) {
       fireChange();
     }
+    scrollToTab(getActiveTab());
     repaint();
   }
 
@@ -372,8 +525,19 @@ public class ElwhaTabs extends JComponent {
     if (count == 0) {
       return;
     }
-    final int width = getWidth();
     final int height = getHeight();
+    if (tabMode == TabMode.SCROLLABLE) {
+      scrollOffset = clampScroll(scrollOffset);
+      int x = -scrollOffset;
+      for (ElwhaTab tab : tabs) {
+        final int w = clampedScrollableWidth(tab);
+        final int tabHeight = Math.min(tab.getPreferredSize().height, height);
+        tab.setBounds(x, height - tabHeight, w, tabHeight);
+        x += w;
+      }
+      return;
+    }
+    final int width = getWidth();
     final int base = width / count;
     final int remainder = width % count;
     int x = 0;
@@ -392,7 +556,7 @@ public class ElwhaTabs extends JComponent {
     int height = BAR_HEIGHT_INLINE_PX;
     for (ElwhaTab tab : tabs) {
       final Dimension pref = tab.getPreferredSize();
-      width += pref.width;
+      width += tabMode == TabMode.SCROLLABLE ? clampedScrollableWidth(tab) : pref.width;
       height = Math.max(height, pref.height);
     }
     return new Dimension(width, height);
@@ -476,6 +640,7 @@ public class ElwhaTabs extends JComponent {
   public void removeNotify() {
     slideAnimator.stop();
     slideFromRect = null;
+    scrollAnimator.stop();
     super.removeNotify();
   }
 

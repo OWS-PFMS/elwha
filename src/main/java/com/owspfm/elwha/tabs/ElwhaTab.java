@@ -452,15 +452,17 @@ public final class ElwhaTab extends JComponent implements IconBearing {
 
   // ----------------------------------------------------------------- geometry
 
-  private record ContentGeometry(Rectangle icon, Rectangle text, Rectangle span) {}
+  private record ContentGeometry(
+      Rectangle icon, Rectangle text, Rectangle span, String displayLabel) {}
 
   private ContentGeometry contentGeometry() {
     final FontMetrics fm = getFontMetrics(labelFont());
-    final int labelWidth = hasLabel() ? fm.stringWidth(label) : 0;
     final int width = getWidth();
     final int height = getHeight();
 
     if (isStacked()) {
+      final String display = clipLabel(label, fm, width - 2 * H_PADDING_PX);
+      final int labelWidth = fm.stringWidth(display);
       final int clusterWidth = Math.max(hasIcon() ? ICON_SIZE_PX : 0, labelWidth);
       final int blockHeight = ICON_SIZE_PX + STACKED_GAP_PX + fm.getHeight();
       final int blockY = (height - blockHeight) / 2;
@@ -473,9 +475,15 @@ public final class ElwhaTab extends JComponent implements IconBearing {
               labelWidth,
               fm.getHeight());
       return new ContentGeometry(
-          icon, text, new Rectangle((width - clusterWidth) / 2, 0, clusterWidth, height));
+          icon, text, new Rectangle((width - clusterWidth) / 2, 0, clusterWidth, height), display);
     }
 
+    int available = width - 2 * H_PADDING_PX;
+    if (hasIcon()) {
+      available -= ICON_SIZE_PX + (hasLabel() ? INLINE_GAP_PX : 0);
+    }
+    final String display = hasLabel() ? clipLabel(label, fm, available) : "";
+    final int labelWidth = fm.stringWidth(display);
     int clusterWidth = labelWidth;
     if (hasIcon()) {
       clusterWidth += ICON_SIZE_PX + (hasLabel() ? INLINE_GAP_PX : 0);
@@ -491,7 +499,25 @@ public final class ElwhaTab extends JComponent implements IconBearing {
         hasLabel()
             ? new Rectangle(textX, (height - fm.getHeight()) / 2, labelWidth, fm.getHeight())
             : null;
-    return new ContentGeometry(icon, text, new Rectangle(clusterX, 0, clusterWidth, height));
+    return new ContentGeometry(
+        icon, text, new Rectangle(clusterX, 0, clusterWidth, height), display);
+  }
+
+  // Single-line truncation with an ellipsis when the tab is narrower than the label wants —
+  // SCROLLABLE's 264px cap and squeezed FIXED bars (design §5). Zero-width tabs (pre-layout)
+  // keep the full label so preferred sizes stay content-driven.
+  private static String clipLabel(final String label, final FontMetrics fm, final int available) {
+    if (available <= 0 || fm.stringWidth(label) <= available) {
+      return label;
+    }
+    final String ellipsis = "…";
+    final int ellipsisWidth = fm.stringWidth(ellipsis);
+    for (int end = label.length() - 1; end > 0; end--) {
+      if (fm.stringWidth(label.substring(0, end)) + ellipsisWidth <= available) {
+        return label.substring(0, end) + ellipsis;
+      }
+    }
+    return ellipsisWidth <= available ? ellipsis : "";
   }
 
   // The horizontal span of the content cluster, in tab coordinates — the PRIMARY variant's
@@ -613,7 +639,7 @@ public final class ElwhaTab extends JComponent implements IconBearing {
       l.setFont(labelFont());
       final FontMetrics fm = l.getFontMetrics();
       l.setColor(contentColor());
-      l.drawString(label, geom.text.x, geom.text.y + fm.getAscent());
+      l.drawString(geom.displayLabel, geom.text.x, geom.text.y + fm.getAscent());
     } finally {
       l.dispose();
     }
