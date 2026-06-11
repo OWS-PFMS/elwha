@@ -19,10 +19,14 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 /**
- * S6 a11y demo (story #422) — labeled groups two ways ({@code setLabel} and {@code
- * JLabel.setLabelFor}) plus an RTL pane, with a live accessible-tree readout: focus any radio and
- * the bar shows its accessible name, role, CHECKED state, value, and MEMBER_OF target count exactly
- * as assistive tech would query them.
+ * S6 a11y demo (story #422) — labeled groups two ways, with a live accessible-tree readout: focus
+ * any radio and the bar shows its accessible name, role, CHECKED state, value, and MEMBER_OF target
+ * count exactly as assistive tech would query them. Left pane: the built-in {@code setLabel} label
+ * (clickable — it extends the click target). Right pane: the {@code JLabel.setLabelFor} fallback
+ * under RTL orientation — it provides the accessible <em>name only</em>; an external label is
+ * deliberately not part of the radio's click target. (Plain-text strings throughout — the bundled
+ * Inter face has no Arabic glyphs, and RTL mirroring is driven by {@code ComponentOrientation}, not
+ * the script.)
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -70,8 +74,9 @@ public final class ElwhaRadioButtonA11yRtlDemo {
     final ElwhaRadioGroup labeled = new ElwhaRadioGroup();
     final JPanel labeledPane = new JPanel(new GridLayout(3, 1, 0, 4));
     labeledPane.setBorder(
-        BorderFactory.createTitledBorder("JLabel.setLabelFor naming + RTL orientation"));
-    for (final String option : new String[] {"يمين", "وسط", "يسار"}) {
+        BorderFactory.createTitledBorder(
+            "JLabel.setLabelFor + RTL — name-only fallback (label NOT clickable)"));
+    for (final String option : new String[] {"First", "Middle", "Last"}) {
       final ElwhaRadioButton radio = new ElwhaRadioButton();
       radio.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
       labeled.add(radio);
