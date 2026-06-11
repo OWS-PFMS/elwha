@@ -2,6 +2,7 @@ package com.owspfm.elwha.showcase;
 
 import com.owspfm.elwha.badge.ElwhaBadge;
 import com.owspfm.elwha.badge.playground.BadgePlaygroundPanels;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.tabs.ElwhaTab;
@@ -18,7 +19,6 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -83,9 +83,10 @@ final class TabsShowcasePanels {
     final ElwhaSelectField<Integer> countBox = ElwhaSelectField.outlined("Tabs");
     countBox.setOptions(List.of(3, 4, 6, 10));
     countBox.setSelectedValue(4);
-    final JCheckBox autoActivateBox = new JCheckBox("Auto-activate on focus");
-    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
-    final JCheckBox rtlBox = new JCheckBox("Right-to-left");
+    final ElwhaCheckbox autoActivateBox = new ElwhaCheckbox("Auto-activate on focus");
+    final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
+    enabledBox.setChecked(true);
+    final ElwhaCheckbox rtlBox = new ElwhaCheckbox("Right-to-left");
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Tabs");
@@ -126,7 +127,7 @@ final class TabsShowcasePanels {
             pages.add(buildPage(i), String.valueOf(i));
           }
           bar.setTabMode(mode);
-          bar.setAutoActivate(autoActivateBox.isSelected());
+          bar.setAutoActivate(autoActivateBox.isChecked());
           badgedTab[0] = bar.getTabAt(Math.min(1, count - 1));
           badgedTab[0].setBadge(badge[0]);
           bar.setActiveTabIndex(Math.min(activeIndex[0], count - 1));
@@ -138,7 +139,7 @@ final class TabsShowcasePanels {
                     .show(pages, String.valueOf(bar.getActiveTabIndex()));
               });
           ((CardLayout) pages.getLayout()).show(pages, String.valueOf(bar.getActiveTabIndex()));
-          bar.setEnabled(enabledBox.isSelected());
+          bar.setEnabled(enabledBox.isChecked());
 
           final JPanel stage = new JPanel(new BorderLayout());
           stage.setOpaque(false);
@@ -146,7 +147,7 @@ final class TabsShowcasePanels {
           stage.add(pages, BorderLayout.CENTER);
           stage.setPreferredSize(new Dimension(520, 240));
           stage.applyComponentOrientation(
-              rtlBox.isSelected()
+              rtlBox.isChecked()
                   ? ComponentOrientation.RIGHT_TO_LEFT
                   : ComponentOrientation.LEFT_TO_RIGHT);
           workbench.setStage(stage);
@@ -156,9 +157,9 @@ final class TabsShowcasePanels {
                   mode,
                   form,
                   count,
-                  autoActivateBox.isSelected(),
-                  enabledBox.isSelected(),
-                  rtlBox.isSelected()));
+                  autoActivateBox.isChecked(),
+                  enabledBox.isChecked(),
+                  rtlBox.isChecked()));
         };
 
     // --- Badge facet (the nav-rail pattern: ElwhaShowcase #306 wiring) ---

@@ -1,5 +1,6 @@
 package com.owspfm.elwha.showcase;
 
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.switches.ElwhaSwitch;
 import com.owspfm.elwha.textfield.ElwhaTextField;
@@ -10,7 +11,6 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 
 /**
@@ -54,7 +54,7 @@ public final class ElwhaSwitchShowcaseSmoke {
         "Wi-Fi".equals(staged.getAccessibleContext().getAccessibleName()));
 
     int clicked = 0;
-    for (final JCheckBox box : collect(workbench, JCheckBox.class)) {
+    for (final ElwhaCheckbox box : collect(workbench, ElwhaCheckbox.class)) {
       box.doClick();
       box.doClick();
       clicked++;

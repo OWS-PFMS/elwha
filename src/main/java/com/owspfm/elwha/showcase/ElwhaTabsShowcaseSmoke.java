@@ -1,5 +1,6 @@
 package com.owspfm.elwha.showcase;
 
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.tabs.ElwhaTabs;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -10,7 +11,6 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 
 /**
@@ -52,7 +52,7 @@ public final class ElwhaTabsShowcaseSmoke {
     bar.setActiveTabIndex(2);
     check("activating tab 2 switches to page 2", "page-2".equals(visibleChildName(pages)));
 
-    for (JCheckBox box : collect(workbench, JCheckBox.class)) {
+    for (ElwhaCheckbox box : collect(workbench, ElwhaCheckbox.class)) {
       box.doClick();
     }
     check(

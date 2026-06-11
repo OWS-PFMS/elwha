@@ -53,6 +53,9 @@ public final class CheckboxDogfoodSweepSmoke {
       System.out.println(
           "  – ChipPlaygroundPanels.buildLiveListPanel skipped headless (cursor loading)");
     }
+    // Landed on main mid-epic (Switch #401 / Tabs #425) — swept in the same pass.
+    assertSwept("SwitchShowcasePanels.buildWorkbench", SwitchShowcasePanels.buildWorkbench());
+    assertSwept("TabsShowcasePanels.buildWorkbench", TabsShowcasePanels.buildWorkbench());
 
     final ComponentWorkbench host = new ComponentWorkbench();
     new SurfaceControlPanel(host.controls(), false);

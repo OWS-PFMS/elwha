@@ -401,6 +401,22 @@ public class ElwhaCheckbox extends JComponent {
   }
 
   /**
+   * Programmatically performs a user-equivalent toggle — runs the click cycle ({@code
+   * UNCHECKED→CHECKED→UNCHECKED}, indeterminate exits to checked) and fires the action listeners,
+   * exactly as a pointer click or Space does (the {@code AbstractButton.doClick()} analogue for
+   * tests and automation). No-op when disabled.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void doClick() {
+    if (!isEnabled()) {
+      return;
+    }
+    userToggle();
+  }
+
+  /**
    * Forces the hover state on or off for static rendering (gallery / documentation previews), as on
    * {@code ElwhaButton} / {@code ElwhaSlider}. Live mouse hover overrides this.
    *
