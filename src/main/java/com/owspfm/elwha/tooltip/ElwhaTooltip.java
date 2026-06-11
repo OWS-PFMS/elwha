@@ -236,6 +236,37 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   }
 
   /**
+   * Whether this rich tooltip is the persistent flavor; always {@code false} on plain.
+   *
+   * @return {@code true} for persistent rich
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isPersistent() {
+    return persistent;
+  }
+
+  /**
+   * Switches the rich tooltip between the default and persistent flavors. Persistent tooltips are
+   * <em>toggled</em> by an anchor click (or Enter/Space on a focused anchor) instead of shown by
+   * hover/focus, stay through arbitrary hovering, and dismiss only on a press outside the contents,
+   * Esc, wheel input, an action click, or a re-toggle.
+   *
+   * <p>MDC's pairing guidance, verbatim: persistent rich tooltips are <em>"recommended against
+   * pairing with anchor elements that have click actions"</em> — the toggle and the anchor's own
+   * action would both fire.
+   *
+   * @param persistent {@code true} for the persistent flavor
+   * @throws IllegalStateException on a plain tooltip — M3 defines persistence for rich only
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setPersistent(final boolean persistent) {
+    requireRich("setPersistent");
+    this.persistent = persistent;
+  }
+
+  /**
    * The preferred vertical side of the anchor (default {@link TooltipPlacement#ABOVE}).
    *
    * @return the preferred placement
@@ -498,6 +529,16 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   @Override
   protected boolean restoreFocusOnClose() {
     return false;
+  }
+
+  // The attached anchor counts as "inside" for the host's outside-press routing (the
+  // editable-combobox pattern): anchor presses are the trigger's sole authority — the persistent
+  // toggle — and must not race the host's own dismiss, which would re-show under reduced motion
+  // (teardown completes synchronously before the anchor's mouse listener runs).
+  @Override
+  protected boolean ownsFocus(final Component c) {
+    return super.ownsFocus(c)
+        || (attachedAnchor != null && SwingUtilities.isDescendingFrom(c, attachedAnchor));
   }
 
   @Override

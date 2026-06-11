@@ -12,6 +12,9 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -41,6 +44,7 @@ final class TooltipTrigger {
   private final MouseListener mouseListener;
   private final FocusListener focusListener;
   private final HierarchyListener hierarchyListener;
+  private final KeyListener keyListener;
   private AWTEventListener hoverWatch;
   private boolean keyboardFocusActive;
   private boolean shownByTrigger;
@@ -73,7 +77,7 @@ final class TooltipTrigger {
         new FocusListener() {
           @Override
           public void focusGained(final FocusEvent e) {
-            if (FocusVisible.isKeyboardCause(e.getCause())) {
+            if (!tooltip.isPersistent() && FocusVisible.isKeyboardCause(e.getCause())) {
               keyboardFocusActive = true;
               showTimer.stop();
               hideTimer.stop();
@@ -84,8 +88,21 @@ final class TooltipTrigger {
           @Override
           public void focusLost(final FocusEvent e) {
             keyboardFocusActive = false;
-            if (shownByTrigger && tooltip.isTooltipShowing() && !pointerInUnion()) {
+            if (!tooltip.isPersistent()
+                && shownByTrigger
+                && tooltip.isTooltipShowing()
+                && !pointerInUnion()) {
               tooltip.dismiss();
+            }
+          }
+        };
+    this.keyListener =
+        new KeyAdapter() {
+          @Override
+          public void keyPressed(final KeyEvent e) {
+            if (tooltip.isPersistent()
+                && (e.getKeyCode() == KeyEvent.VK_ENTER || e.getKeyCode() == KeyEvent.VK_SPACE)) {
+              toggle();
             }
           }
         };
@@ -106,6 +123,7 @@ final class TooltipTrigger {
     anchor.addMouseListener(mouseListener);
     anchor.addFocusListener(focusListener);
     anchor.addHierarchyListener(hierarchyListener);
+    anchor.addKeyListener(keyListener);
   }
 
   void uninstall() {
@@ -114,6 +132,7 @@ final class TooltipTrigger {
     anchor.removeMouseListener(mouseListener);
     anchor.removeFocusListener(focusListener);
     anchor.removeHierarchyListener(hierarchyListener);
+    anchor.removeKeyListener(keyListener);
     removeHoverWatch();
   }
 
@@ -125,6 +144,9 @@ final class TooltipTrigger {
   }
 
   private void pointerEntered() {
+    if (tooltip.isPersistent()) {
+      return;
+    }
     hideTimer.stop();
     if (!tooltip.isTooltipShowing()) {
       showTimer.setInitialDelay(tooltip.getShowDelayMs());
@@ -133,18 +155,34 @@ final class TooltipTrigger {
   }
 
   private void pointerExited() {
+    if (tooltip.isPersistent()) {
+      return;
+    }
     showTimer.stop();
     if (shownByTrigger && tooltip.isTooltipShowing()) {
       armLinger();
     }
   }
 
-  // The user is acting on the control — the tooltip is noise now. Desktop adaptation noted in
-  // the design doc §7; persistent rich (S4) replaces this path with the click toggle.
+  // Persistent: the anchor press IS the toggle (mousePressed, not clicked — macOS drops
+  // MOUSE_CLICKED under rapid clicks, #299). Non-persistent: the user is acting on the control —
+  // the tooltip is noise now (desktop adaptation, design doc §7).
   private void anchorPressed() {
+    if (tooltip.isPersistent()) {
+      toggle();
+      return;
+    }
     showTimer.stop();
     if (tooltip.isTooltipShowing()) {
       tooltip.dismiss();
+    }
+  }
+
+  private void toggle() {
+    if (tooltip.isTooltipShowing()) {
+      tooltip.dismiss();
+    } else {
+      showNow();
     }
   }
 
@@ -156,10 +194,11 @@ final class TooltipTrigger {
     }
     shownByTrigger = true;
     tooltip.show(anchor);
-    if (tooltip.isTooltipShowing()) {
-      installHoverWatch();
-    } else {
+    if (!tooltip.isTooltipShowing()) {
       shownByTrigger = false;
+    } else if (!tooltip.isPersistent()) {
+      // Persistent tooltips ignore hover entirely — no linger machinery to arm.
+      installHoverWatch();
     }
   }
 
