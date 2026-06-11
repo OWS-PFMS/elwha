@@ -10,6 +10,7 @@ import java.awt.Container;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 
 /**
@@ -57,7 +58,15 @@ public final class ElwhaSwitchShowcaseSmoke {
       box.doClick();
       clicked++;
     }
-    check("every workbench checkbox exercises the apply path (x2)", clicked >= 6);
+    check("every workbench checkbox exercises the apply path (x2)", clicked >= 4);
+    int comboStops = 0;
+    for (final JComboBox<?> combo : collect(workbench, JComboBox.class)) {
+      for (int i = 0; i < combo.getItemCount(); i++) {
+        combo.setSelectedItem(combo.getItemAt(i));
+        comboStops++;
+      }
+    }
+    check("the icon-mode combo exercises all three modes", comboStops >= 3);
     renderOnce(workbench);
     check("workbench lays out and paints headlessly", true);
 
