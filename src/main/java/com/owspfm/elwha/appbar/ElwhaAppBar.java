@@ -53,6 +53,18 @@ import javax.swing.JScrollPane;
  * frame.add(bar, BorderLayout.NORTH);
  * }</pre>
  *
+ * <p><strong>Action overflow</strong> is consumer composition (M3 guidance shows up to ~3 visible
+ * actions): append a {@code more_vert} action and open an {@code ElwhaMenu} from it —
+ *
+ * <pre>{@code
+ * ElwhaIconButton more = bar.addAction(MaterialIcons.moreVert(), "More options", null);
+ * ElwhaMenu menu = ElwhaMenu.builder()
+ *     .addItem(ElwhaMenuItem.of("Settings"))
+ *     .addItem(ElwhaMenuItem.of("Help"))
+ *     .build();
+ * more.addActionListener(e -> menu.open(more));
+ * }</pre>
+ *
  * <p>Design: {@code docs/research/elwha-appbar-design.md}; research: {@code
  * elwha-appbar-research.md}.
  *
