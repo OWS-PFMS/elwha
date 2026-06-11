@@ -6,10 +6,14 @@ import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
+import com.owspfm.elwha.theme.TypeRole;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -26,6 +30,10 @@ import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
+import javax.accessibility.AccessibleState;
+import javax.accessibility.AccessibleStateSet;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.ActionMap;
@@ -53,6 +61,11 @@ import javax.swing.Timer;
  * layers: an unchecked press previews {@code PRIMARY}, a checked press previews {@code ON_SURFACE}.
  * The press ripple is the shared {@link RipplePainter} clipped to the 40px circle; the mark draws
  * in / retracts via a {@link MorphAnimator}-driven stroke reveal (reduced-motion snaps).
+ *
+ * <p>An optional {@link #setLabel(String) text label} ({@link TypeRole#BODY_MEDIUM}) extends the
+ * click target and provides the accessible name; the orthogonal {@link #setErrorShown(boolean)
+ * error flag} swaps the chromatic role to the M3 error palette. Accessibility reports {@link
+ * AccessibleRole#CHECK_BOX} with the standard checked / indeterminate states.
  *
  * <p>All theme tokens resolve at paint time — the component auto-themes across palette / mode
  * swaps with zero new theme tokens; geometry is fixed component constants per design §5.
@@ -116,10 +129,16 @@ public class ElwhaCheckbox extends JComponent {
   private static final float[] CHECK_Y = {9.3f, 12.3f, 6.1f};
   private static final float DASH_HALF_LENGTH = 4.5f;
 
+  /** Trailing padding after the label in px ({@code SpaceScale.XS}'s 4px grid step). */
+  private static final int LABEL_TRAILING_PAD = 4;
+
   private static final int RIPPLE_TOTAL_MS = 400;
   private static final int RIPPLE_TICK_MS = 16;
 
   private CheckState checkState = CheckState.UNCHECKED;
+  private String label;
+  private boolean errorShown;
+  private String accessibleLabel;
 
   private final List<ActionListener> actionListeners = new ArrayList<>();
 
@@ -155,6 +174,19 @@ public class ElwhaCheckbox extends JComponent {
   }
 
   /**
+   * Creates an unchecked, enabled checkbox with a text label. The label paints in {@link
+   * TypeRole#BODY_MEDIUM}, extends the click target, and provides the accessible name.
+   *
+   * @param label the label text; {@code null} or blank means no label
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaCheckbox(final String label) {
+    this();
+    setLabel(label);
+  }
+
+  /**
    * Returns the current tri-state check value.
    *
    * @return the check state; never {@code null}
@@ -187,7 +219,26 @@ public class ElwhaCheckbox extends JComponent {
     this.checkState = state;
     animateTransition(state);
     firePropertyChange(PROPERTY_CHECK_STATE, old, state);
+    fireAccessibleStateChange(old, state);
     repaint();
+  }
+
+  private void fireAccessibleStateChange(final CheckState old, final CheckState next) {
+    if (accessibleContext == null) {
+      return;
+    }
+    if ((old == CheckState.CHECKED) != (next == CheckState.CHECKED)) {
+      accessibleContext.firePropertyChange(
+          AccessibleContext.ACCESSIBLE_STATE_PROPERTY,
+          next == CheckState.CHECKED ? null : AccessibleState.CHECKED,
+          next == CheckState.CHECKED ? AccessibleState.CHECKED : null);
+    }
+    if ((old == CheckState.INDETERMINATE) != (next == CheckState.INDETERMINATE)) {
+      accessibleContext.firePropertyChange(
+          AccessibleContext.ACCESSIBLE_STATE_PROPERTY,
+          next == CheckState.INDETERMINATE ? null : AccessibleState.INDETERMINATE,
+          next == CheckState.INDETERMINATE ? AccessibleState.INDETERMINATE : null);
+    }
   }
 
   /**
@@ -242,6 +293,88 @@ public class ElwhaCheckbox extends JComponent {
   }
 
   /**
+   * Returns the label text.
+   *
+   * @return the label, or {@code null} when label-less
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getLabel() {
+    return label;
+  }
+
+  /**
+   * Sets the label text. The label paints after the touch target in {@link TypeRole#BODY_MEDIUM},
+   * widens the preferred size, extends the click target, and provides the accessible name (unless
+   * {@link #setAccessibleLabel(String)} overrides it). {@code null} or blank clears it.
+   *
+   * @param label the label text
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setLabel(final String label) {
+    final String next = (label == null || label.isBlank()) ? null : label;
+    if (java.util.Objects.equals(this.label, next)) {
+      return;
+    }
+    this.label = next;
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns whether the error treatment is showing.
+   *
+   * @return {@code true} when the checkbox renders with the error palette
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isErrorShown() {
+    return errorShown;
+  }
+
+  /**
+   * Shows or clears the M3 error treatment (the MDC {@code errorShown} noun): the outline / fill
+   * swaps to {@link ColorRole#ERROR}, the mark to {@link ColorRole#ON_ERROR}, and every state layer
+   * tints {@code ERROR}. Disabled wins over error. The accessible description reports the error so
+   * assistive tech announces it.
+   *
+   * @param errorShown whether the error treatment shows
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setErrorShown(final boolean errorShown) {
+    if (this.errorShown == errorShown) {
+      return;
+    }
+    this.errorShown = errorShown;
+    repaint();
+  }
+
+  /**
+   * Returns the explicit accessible name override, if any.
+   *
+   * @return the accessible label, or {@code null} when the visual label (or nothing) provides it
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getAccessibleLabel() {
+    return accessibleLabel;
+  }
+
+  /**
+   * Sets the accessible name independently of the visual label — required for label-less
+   * checkboxes (the web {@code aria-label} analogue), optional otherwise.
+   *
+   * @param accessibleLabel the accessible name; {@code null} falls back to the visual label
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setAccessibleLabel(final String accessibleLabel) {
+    this.accessibleLabel = accessibleLabel;
+  }
+
+  /**
    * Registers a listener fired on every <em>user-driven</em> toggle — pointer click or Space.
    * Programmatic {@link #setCheckState(CheckState)} calls do not fire it; observe {@link
    * #PROPERTY_CHECK_STATE} for those.
@@ -284,7 +417,29 @@ public class ElwhaCheckbox extends JComponent {
     if (isPreferredSizeSet()) {
       return super.getPreferredSize();
     }
-    return new Dimension(TOUCH_TARGET, TOUCH_TARGET);
+    if (label == null) {
+      return new Dimension(TOUCH_TARGET, TOUCH_TARGET);
+    }
+    final FontMetrics fm = getFontMetrics(labelFont());
+    return new Dimension(
+        TOUCH_TARGET + fm.stringWidth(label) + LABEL_TRAILING_PAD,
+        Math.max(TOUCH_TARGET, fm.getHeight()));
+  }
+
+  @Override
+  public int getBaseline(final int width, final int height) {
+    if (label == null) {
+      return super.getBaseline(width, height);
+    }
+    final FontMetrics fm = getFontMetrics(labelFont());
+    return labelBaselineY(fm, height / 2);
+  }
+
+  @Override
+  public Component.BaselineResizeBehavior getBaselineResizeBehavior() {
+    return label == null
+        ? super.getBaselineResizeBehavior()
+        : Component.BaselineResizeBehavior.CENTER_OFFSET;
   }
 
   @Override
@@ -461,11 +616,13 @@ public class ElwhaCheckbox extends JComponent {
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-      final int cx = TOUCH_TARGET / 2;
+      final boolean ltr = getComponentOrientation().isLeftToRight();
+      final int cx = ltr ? TOUCH_TARGET / 2 : getWidth() - TOUCH_TARGET / 2;
       final int cy = getHeight() / 2;
       paintStateLayer(g2, cx, cy);
       paintRipple(g2, cx, cy);
       paintContainer(g2, cx, cy);
+      paintLabel(g2, cy, ltr);
     } finally {
       g2.dispose();
     }
@@ -599,6 +756,47 @@ public class ElwhaCheckbox extends JComponent {
     return path;
   }
 
+  private void paintLabel(final Graphics2D g2, final int cy, final boolean ltr) {
+    if (label == null) {
+      return;
+    }
+    g2.setRenderingHint(
+        RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+    final Font font = labelFont();
+    final FontMetrics fm = g2.getFontMetrics(font);
+    final int available = getWidth() - TOUCH_TARGET - LABEL_TRAILING_PAD;
+    if (available <= 0) {
+      return;
+    }
+    final String text = truncate(label, fm, available);
+    final int x = ltr ? TOUCH_TARGET : getWidth() - TOUCH_TARGET - fm.stringWidth(text);
+    g2.setFont(font);
+    g2.setColor(labelColor());
+    g2.drawString(text, x, labelBaselineY(fm, cy));
+  }
+
+  private Font labelFont() {
+    return TypeRole.BODY_MEDIUM.resolve();
+  }
+
+  private static int labelBaselineY(final FontMetrics fm, final int cy) {
+    return cy - (fm.getAscent() + fm.getDescent()) / 2 + fm.getAscent();
+  }
+
+  private static String truncate(final String text, final FontMetrics fm, final int available) {
+    if (fm.stringWidth(text) <= available) {
+      return text;
+    }
+    final String ellipsis = "…";
+    for (int end = text.length() - 1; end > 0; end--) {
+      final String candidate = text.substring(0, end) + ellipsis;
+      if (fm.stringWidth(candidate) <= available) {
+        return candidate;
+      }
+    }
+    return ellipsis;
+  }
+
   // ---------------------------------------------------------------- colors
 
   /**
@@ -609,6 +807,9 @@ public class ElwhaCheckbox extends JComponent {
   private Color outlineColor() {
     if (!isEnabled()) {
       return withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
+    }
+    if (errorShown) {
+      return ColorRole.ERROR.resolve();
     }
     if (hovered || pressed || focusVisible) {
       return ColorRole.ON_SURFACE.resolve();
@@ -621,7 +822,7 @@ public class ElwhaCheckbox extends JComponent {
     if (!isEnabled()) {
       return withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
     }
-    return ColorRole.PRIMARY.resolve();
+    return errorShown ? ColorRole.ERROR.resolve() : ColorRole.PRIMARY.resolve();
   }
 
   /** Mark color — disabled punches {@code SURFACE} through the 38% fill per the token table. */
@@ -629,11 +830,22 @@ public class ElwhaCheckbox extends JComponent {
     if (!isEnabled()) {
       return ColorRole.SURFACE.resolve();
     }
-    return ColorRole.ON_PRIMARY.resolve();
+    return errorShown ? ColorRole.ON_ERROR.resolve() : ColorRole.ON_PRIMARY.resolve();
   }
 
-  /** Hover / focus layers tint with the <em>current</em> state's color. */
+  /** Label color — {@code ON_SURFACE}, dimmed to the disabled content opacity. */
+  private Color labelColor() {
+    if (!isEnabled()) {
+      return withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
+    }
+    return ColorRole.ON_SURFACE.resolve();
+  }
+
+  /** Hover / focus layers tint with the <em>current</em> state's color; error tints everything. */
   private Color hoverFocusLayerTint() {
+    if (errorShown) {
+      return ColorRole.ERROR.resolve();
+    }
     return checkState == CheckState.UNCHECKED
         ? ColorRole.ON_SURFACE.resolve()
         : ColorRole.PRIMARY.resolve();
@@ -642,9 +854,12 @@ public class ElwhaCheckbox extends JComponent {
   /**
    * The pressed layer (and ripple) tints with the <em>destination</em> state's color — the M3
    * cross-color rule: unchecked-pressed previews {@code PRIMARY}, selected-pressed previews {@code
-   * ON_SURFACE}.
+   * ON_SURFACE}. Error tints everything {@code ERROR}.
    */
   private Color pressedLayerTint() {
+    if (errorShown) {
+      return ColorRole.ERROR.resolve();
+    }
     return checkState == CheckState.UNCHECKED
         ? ColorRole.PRIMARY.resolve()
         : ColorRole.ON_SURFACE.resolve();
@@ -654,5 +869,73 @@ public class ElwhaCheckbox extends JComponent {
     final float clamped = Math.max(0f, Math.min(1f, alpha));
     return new Color(
         base.getRed(), base.getGreen(), base.getBlue(), Math.round(clamped * 255f));
+  }
+
+  // ---------------------------------------------------------------- a11y
+
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaCheckbox();
+    }
+    return accessibleContext;
+  }
+
+  /**
+   * Accessible context for the checkbox — reports {@link AccessibleRole#CHECK_BOX}, adds {@link
+   * AccessibleState#CHECKED} / {@link AccessibleState#INDETERMINATE} to the state set, names the
+   * component from the accessible-label override or the visual label, and describes the error
+   * state so assistive tech announces it.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected class AccessibleElwhaCheckbox extends AccessibleJComponent {
+
+    /**
+     * Creates the accessible context.
+     *
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    protected AccessibleElwhaCheckbox() {}
+
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.CHECK_BOX;
+    }
+
+    @Override
+    public AccessibleStateSet getAccessibleStateSet() {
+      final AccessibleStateSet states = super.getAccessibleStateSet();
+      if (checkState == CheckState.CHECKED) {
+        states.add(AccessibleState.CHECKED);
+      } else if (checkState == CheckState.INDETERMINATE) {
+        states.add(AccessibleState.INDETERMINATE);
+      }
+      return states;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      final String explicit = super.getAccessibleName();
+      if (explicit != null) {
+        return explicit;
+      }
+      if (accessibleLabel != null) {
+        return accessibleLabel;
+      }
+      return label;
+    }
+
+    @Override
+    public String getAccessibleDescription() {
+      final String explicit = super.getAccessibleDescription();
+      if (explicit != null) {
+        return explicit;
+      }
+      return errorShown ? "Error" : null;
+    }
   }
 }
