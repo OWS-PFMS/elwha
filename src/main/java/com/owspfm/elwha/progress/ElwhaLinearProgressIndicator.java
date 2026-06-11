@@ -1,6 +1,7 @@
 package com.owspfm.elwha.progress;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Easing;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -20,9 +21,11 @@ import javax.swing.DefaultBoundedRangeModel;
  * reaches it). Outer ends are full-round; the gap-facing inner ends hold the spec's 2px radius.
  *
  * <p>Determinate fills toward {@link #getProgressFraction()}; {@linkplain #setIndeterminate
- * indeterminate} loops the current-M3 two-line cycle (S2 — story #470). The Expressive {@linkplain
- * #setWavy wavy} shape lands in S3 (story #471). Direction follows {@link
- * java.awt.ComponentOrientation} — RTL mirrors the fill and the stop dot.
+ * indeterminate} loops the current-M3 two-line cycle — a 1750ms timeline whose two
+ * emphasized-accelerate [tail, head] line spans sweep the run while the track fills the
+ * complementary spans (gap on each side; no stop dot). The Expressive {@linkplain #setWavy wavy}
+ * shape lands in S3 (story #471). Direction follows {@link java.awt.ComponentOrientation} — RTL
+ * mirrors the fill and the stop dot.
  *
  * <p>The bar stretches to its layout width (preferred 240px); height is the chrome height (track
  * thickness, plus the wave band when wavy). See {@code elwha-progress-indicator-design.md} §5.
@@ -49,6 +52,12 @@ public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator
   public static final float WAVE_AMPLITUDE_PX = 3f;
 
   private static final int MIN_WIDTH_PX = 48;
+  private static final int INDETERMINATE_CYCLE_MS = 1750;
+  private static final int FIRST_LINE_MS = 1000;
+  private static final int FIRST_LINE_TAIL_DELAY_MS = 250;
+  private static final int SECOND_LINE_MS = 850;
+  private static final int SECOND_LINE_HEAD_DELAY_MS = 650;
+  private static final int SECOND_LINE_TAIL_DELAY_MS = 900;
 
   private int trackStopIndicatorSize = STOP_SIZE_DEFAULT_PX;
   private ColorRole stopIndicatorColorRole = ColorRole.PRIMARY;
@@ -305,8 +314,71 @@ public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator
       final Graphics2D g2, final float runX, final float runW, final float midY) {
     final float thickness = getTrackThickness();
     final float halfT = thickness / 2f;
-    g2.setColor(getTrackColorRole().resolve());
-    g2.fill(capsule(runX, midY - halfT, runW, thickness, halfT, halfT));
+    final float top = midY - halfT;
+    final float innerR = Math.min(INNER_CORNER_RADIUS_PX, halfT);
+    final float gap = getIndicatorTrackGapSize();
+    final float runEnd = runX + runW;
+
+    final long ms = indeterminateElapsedMs() % INDETERMINATE_CYCLE_MS;
+    final float[][] lines = {
+      {channel(ms, FIRST_LINE_TAIL_DELAY_MS, FIRST_LINE_MS), channel(ms, 0, FIRST_LINE_MS)},
+      {
+        channel(ms, SECOND_LINE_TAIL_DELAY_MS, SECOND_LINE_MS),
+        channel(ms, SECOND_LINE_HEAD_DELAY_MS, SECOND_LINE_MS)
+      }
+    };
+    if (lines[0][0] > lines[1][0]) {
+      final float[] first = lines[0];
+      lines[0] = lines[1];
+      lines[1] = first;
+    }
+
+    float cursor = runX;
+    for (final float[] line : lines) {
+      final float x0 = runX + line[0] * runW;
+      final float x1 = runX + line[1] * runW;
+      if (x1 - x0 < 0.5f) {
+        continue;
+      }
+      final float segEnd = x0 - gap;
+      if (segEnd - cursor >= 1f) {
+        g2.setColor(getTrackColorRole().resolve());
+        g2.fill(
+            capsule(
+                cursor,
+                top,
+                segEnd - cursor,
+                thickness,
+                cursor <= runX + 0.5f ? halfT : innerR,
+                innerR));
+      }
+      g2.setColor(getIndicatorColorRole().resolve());
+      g2.fill(
+          capsule(
+              x0,
+              top,
+              x1 - x0,
+              thickness,
+              x0 <= runX + 0.5f ? halfT : innerR,
+              x1 >= runEnd - 0.5f ? halfT : innerR));
+      cursor = x1 + gap;
+    }
+    if (runEnd - cursor >= 1f) {
+      g2.setColor(getTrackColorRole().resolve());
+      g2.fill(
+          capsule(
+              cursor,
+              top,
+              runEnd - cursor,
+              thickness,
+              cursor <= runX + 0.5f ? halfT : innerR,
+              halfT));
+    }
+  }
+
+  private static float channel(final long cycleMs, final int delayMs, final int durationMs) {
+    final float raw = Math.max(0f, Math.min(1f, (cycleMs - delayMs) / (float) durationMs));
+    return Easing.EMPHASIZED_ACCELERATE.ease(raw);
   }
 
   static Path2D.Float capsule(
