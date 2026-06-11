@@ -599,9 +599,11 @@ final class SwatchesPane extends ColorPickerPane {
           g2.setColor(ColorRole.OUTLINE_VARIANT.resolve());
           g2.drawOval(cell.x, cell.y, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
           if (matchesCurrent(base)) {
+            // -2 like the hue grid: a -3 ring reaches across the 4px inter-circle gap and
+            // touches the neighbor (smoke-iterate finding).
             g2.setColor(ColorRole.PRIMARY.resolve());
             g2.setStroke(new BasicStroke(2f));
-            g2.drawOval(cell.x - 3, cell.y - 3, CIRCLE_DIAMETER + 6, CIRCLE_DIAMETER + 6);
+            g2.drawOval(cell.x - 2, cell.y - 2, CIRCLE_DIAMETER + 4, CIRCLE_DIAMETER + 4);
           }
         }
       } finally {
