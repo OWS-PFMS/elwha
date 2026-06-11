@@ -136,6 +136,10 @@ Anchor bounds convert to pane coordinates via `SwingUtilities.convertRectangle`;
 - **S5 — motion, RTL & a11y** ([451](https://github.com/OWS-PFMS/elwha/issues/451)) — 150/75 fade via `motionProgress` alpha + retuned exit, reduced-motion snap, RTL mirror of START/END + rich corner default, `TOOL_TIP` role + accessible name + anchor description wiring. §6/§8. Demo: `TooltipMotionRtlDemo`; guard: `TooltipA11ySmoke`.
 - **S6 — Showcase + CHANGELOG** ([452](https://github.com/OWS-PFMS/elwha/issues/452)) — §9 panels + registration + `ElwhaTooltipShowcaseSmoke`; CHANGELOG `[Unreleased]` entry. *Completes V1; closes the epic.*
 
+### S1 spike outcome (2026-06-11)
+
+Confirmed — §2 locked as built. The `takesFocus()` opt-out short-circuits exactly the three expected host call sites (`focusInitial` scheduling, `installFocusListener`, teardown restore — §12-1; the chain-parent refocus never fires for chainless overlays) plus a defensive `takesFocus() && restoreFocusOnClose()` at teardown. A re-entry guard was added to `show()` while in there (double-show would strand the first surface and its listeners on the pane — always a caller bug, now a no-op). `TooltipPlainChromeSmoke` asserts the contract end to end on a real pane: focus-owner identity unchanged across show/dismiss, `POPUP_LAYER` mount, 4 px placement in pane coordinates, double-show no-op, teardown clean — 28/28. One smoke-side correction: a top-of-frame anchor *legitimately* flips below, so the fixture centers the anchor before asserting the ABOVE case.
+
 ## §12. Open for the S1 spike
 
 1. Exactly which host call sites the `takesFocus()` hook short-circuits — `focusInitial` scheduling, `installFocusListener`, and the teardown restore are the expected three; verify no fourth focus path (the chain-parent refocus only fires for chained overlays — tooltips never chain).
