@@ -73,6 +73,7 @@ public class ElwhaAppBar extends JComponent {
   private JScrollPane scrollSource;
   private boolean liftOnScroll = true;
   private boolean lifted;
+  private float collapsedFraction;
 
   private ElwhaIconButton navigationIcon;
   private String title = "";
@@ -487,12 +488,53 @@ public class ElwhaAppBar extends JComponent {
     updateLift(lifted);
   }
 
+  /**
+   * The flexible collapse fraction — {@code 0} fully expanded, {@code 1} collapsed to the
+   * 64&nbsp;px strip. Scroll-position-driven: scrubbing the scrollbar scrubs the bar. Always {@code
+   * 0} for {@link AppBarVariant#SMALL}.
+   *
+   * @return the collapse fraction in {@code [0, 1]}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public float getCollapsedFraction() {
+    return collapsedFraction;
+  }
+
+  /**
+   * Forces a collapse fraction — the static-rendering hook for galleries and tests (the {@code
+   * setLifted} convention). Ignored for {@link AppBarVariant#SMALL}; a live scroll source overrides
+   * the forced value on its next scroll event.
+   *
+   * @param fraction the forced fraction, clamped to {@code [0, 1]}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setCollapsedFraction(final float fraction) {
+    if (variant.isFlexible()) {
+      updateCollapse(Math.max(0f, Math.min(1f, fraction)));
+    }
+  }
+
   private void onScroll(final int value, final int delta) {
     applyScrollState(value);
   }
 
   private void applyScrollState(final int value) {
     updateLift(liftOnScroll && value > 0);
+    if (variant.isFlexible()) {
+      final int range = variant.expandedHeightPx(subtitle != null) - STRIP_HEIGHT_PX;
+      updateCollapse(Math.max(0f, Math.min(1f, value / (float) range)));
+    }
+  }
+
+  private void updateCollapse(final float fraction) {
+    if (Math.abs(fraction - collapsedFraction) < 0.001f) {
+      return;
+    }
+    collapsedFraction = fraction;
+    revalidate();
+    repaint();
   }
 
   private void updateLift(final boolean nowLifted) {
@@ -593,7 +635,17 @@ public class ElwhaAppBar extends JComponent {
         width += slotWidth(element);
       }
     }
-    return new Dimension(width, variant.expandedHeightPx(subtitle != null));
+    return new Dimension(width, currentHeightPx());
+  }
+
+  // The container height at the current collapse fraction: the expanded token height at 0, the
+  // 64px strip at 1, lerped between.
+  private int currentHeightPx() {
+    final int expanded = variant.expandedHeightPx(subtitle != null);
+    if (!variant.isFlexible() || collapsedFraction <= 0f) {
+      return expanded;
+    }
+    return STRIP_HEIGHT_PX + Math.round((expanded - STRIP_HEIGHT_PX) * (1f - collapsedFraction));
   }
 
   @Override
@@ -612,7 +664,7 @@ public class ElwhaAppBar extends JComponent {
       g2.setRenderingHint(
           RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
       if (variant.isFlexible()) {
-        paintExpandedHeadline(g2);
+        paintCollapseCrossfade(g2);
       } else {
         paintStripText(g2);
       }
@@ -621,9 +673,35 @@ public class ElwhaAppBar extends JComponent {
     }
   }
 
+  // The two-layer collapse crossfade (design §7, Compose parity): the expanded headline fades out
+  // linearly with the fraction and slides up with the shrinking container — unclipped, as Compose
+  // renders it — while the collapsed strip title ramps in over the last 30% of the collapse.
+  private void paintCollapseCrossfade(final Graphics2D g2) {
+    final float expandedAlpha = 1f - collapsedFraction;
+    if (expandedAlpha > 0f) {
+      final Graphics2D layer = (Graphics2D) g2.create();
+      try {
+        layer.setComposite(java.awt.AlphaComposite.SrcOver.derive(expandedAlpha));
+        paintExpandedHeadline(layer);
+      } finally {
+        layer.dispose();
+      }
+    }
+    final float collapsedAlpha = Math.max(0f, (collapsedFraction - 0.7f) / 0.3f);
+    if (collapsedAlpha > 0f) {
+      final Graphics2D layer = (Graphics2D) g2.create();
+      try {
+        layer.setComposite(java.awt.AlphaComposite.SrcOver.derive(collapsedAlpha));
+        paintStripText(layer);
+      } finally {
+        layer.dispose();
+      }
+    }
+  }
+
   // The flexible variants' expanded headline block: 16px margins, bottom-anchored at the
-  // variant's bottom padding, title over subtitle with zero gap (the v14.0.0 anatomy). The
-  // collapsed-title strip layer stays absent at rest (it fades in with the S4 collapse).
+  // variant's bottom padding (against the current collapse height), title over subtitle with
+  // zero gap (the v14.0.0 anatomy).
   private void paintExpandedHeadline(final Graphics2D g2) {
     if (title.isEmpty() && subtitle == null) {
       return;

@@ -124,7 +124,7 @@ Layout regions (flexible, fraction *f*):
 ```
 
 - The 64 strip is *literally the small-bar layout/paint path* (variant identity, §2) — nav/actions never move during collapse.
-- The headline block clips to its shrinking region (no paint bleed into the strip); bottom-anchored so the text exits downward-feeling, matching the Compose render.
+- The headline block is bottom-anchored against the *current* collapse height, so the text slides up as the bar shrinks. ⚠️ S4 correction: it is **not** rectangle-clipped at the strip boundary — the geometry makes that impossible even at rest (the large-flexible 36pt headline tops out above y=64 at 120px), and Compose doesn't clip either; the linear alpha fade carries the transition (Compose parity).
 - At `f = 1` the flexible bar **is** a lifted small bar with the collapsed title visible.
 - `getCollapsedFraction()` public read-only (smokes, demos, consumer curiosity).
 
