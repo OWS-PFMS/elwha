@@ -2,11 +2,13 @@ package com.owspfm.elwha.progress;
 
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
+import java.awt.BasicStroke;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.Stroke;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
@@ -24,8 +26,10 @@ import javax.swing.DefaultBoundedRangeModel;
  * indeterminate} loops the current-M3 two-line cycle — a 1750ms timeline whose two
  * emphasized-accelerate [tail, head] line spans sweep the run while the track fills the
  * complementary spans (gap on each side; no stop dot). The Expressive {@linkplain #setWavy wavy}
- * shape lands in S3 (story #471). Direction follows {@link java.awt.ComponentOrientation} — RTL
- * mirrors the fill and the stop dot.
+ * shape strokes the active spans as a traveling sine (amplitude 3px; wavelength 40px determinate
+ * / 20px indeterminate; one wavelength per second) — the determinate amplitude ramps flat outside
+ * {@code (10%, 95%)} progress, and the track always stays flat. Direction follows {@link
+ * java.awt.ComponentOrientation} — RTL mirrors the fill and the stop dot.
  *
  * <p>The bar stretches to its layout width (preferred 240px); height is the chrome height (track
  * thickness, plus the wave band when wavy). See {@code elwha-progress-indicator-design.md} §5.
@@ -289,7 +293,7 @@ public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator
       final float capsuleW = Math.min(Math.max(activeW, thickness), runW);
       head = runX + capsuleW;
       g2.setColor(getIndicatorColorRole().resolve());
-      g2.fill(capsule(runX, top, capsuleW, thickness, halfT, innerR));
+      paintActiveSpan(g2, runX, head, midY, thickness, halfT, innerR);
     }
 
     final float trackStart = hasActive ? head + gap : runX;
@@ -353,14 +357,14 @@ public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator
                 innerR));
       }
       g2.setColor(getIndicatorColorRole().resolve());
-      g2.fill(
-          capsule(
-              x0,
-              top,
-              x1 - x0,
-              thickness,
-              x0 <= runX + 0.5f ? halfT : innerR,
-              x1 >= runEnd - 0.5f ? halfT : innerR));
+      paintActiveSpan(
+          g2,
+          x0,
+          x1,
+          midY,
+          thickness,
+          x0 <= runX + 0.5f ? halfT : innerR,
+          x1 >= runEnd - 0.5f ? halfT : innerR);
       cursor = x1 + gap;
     }
     if (runEnd - cursor >= 1f) {
@@ -379,6 +383,46 @@ public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator
   private static float channel(final long cycleMs, final int delayMs, final int durationMs) {
     final float raw = Math.max(0f, Math.min(1f, (cycleMs - delayMs) / (float) durationMs));
     return Easing.EMPHASIZED_ACCELERATE.ease(raw);
+  }
+
+  private void paintActiveSpan(
+      final Graphics2D g2,
+      final float x0,
+      final float x1,
+      final float midY,
+      final float thickness,
+      final float leftRadius,
+      final float rightRadius) {
+    final float amplitude = amplitudeFraction() * getWaveAmplitude();
+    final float halfT = thickness / 2f;
+    if (amplitude < 0.25f || x1 - x0 < thickness * 2f) {
+      g2.fill(capsule(x0, midY - halfT, x1 - x0, thickness, leftRadius, rightRadius));
+      return;
+    }
+    final float wavelength = Math.max(1, currentWavelength());
+    final float phase = wavePhasePx();
+    final float start = x0 + halfT;
+    final float end = x1 - halfT;
+    final float step = Math.min(2f, wavelength / 8f);
+    final Path2D.Float wave = new Path2D.Float();
+    wave.moveTo(start, waveY(start, midY, amplitude, wavelength, phase));
+    for (float x = start + step; x < end; x += step) {
+      wave.lineTo(x, waveY(x, midY, amplitude, wavelength, phase));
+    }
+    wave.lineTo(end, waveY(end, midY, amplitude, wavelength, phase));
+    final Stroke previous = g2.getStroke();
+    g2.setStroke(new BasicStroke(thickness, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    g2.draw(wave);
+    g2.setStroke(previous);
+  }
+
+  private static float waveY(
+      final float x,
+      final float midY,
+      final float amplitude,
+      final float wavelength,
+      final float phase) {
+    return midY + amplitude * (float) Math.sin(2.0 * Math.PI * (x - phase) / wavelength);
   }
 
   static Path2D.Float capsule(

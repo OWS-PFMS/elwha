@@ -590,15 +590,19 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent {
     final boolean transition =
         amplitudeAnimStartNanos >= 0L || Math.abs(amplitudeFraction - amplitudeTargetNow()) > 0.001f;
     final boolean needed = isShowing() && (indeterminate || waveMoving || transition);
-    if (needed && !clock.isRunning()) {
-      lastTickNanos = System.nanoTime();
-      startAmplitudeAnimationIfNeeded();
-      clock.start();
-    } else if (!needed && clock.isRunning()) {
-      clock.stop();
+    if (needed) {
+      if (!clock.isRunning()) {
+        lastTickNanos = System.nanoTime();
+        startAmplitudeAnimationIfNeeded();
+        clock.start();
+      }
+    } else {
+      if (clock.isRunning()) {
+        clock.stop();
+        cycleAnchorNanos = 0L;
+      }
       amplitudeFraction = amplitudeTargetNow();
       amplitudeAnimStartNanos = -1L;
-      cycleAnchorNanos = 0L;
     }
   }
 
