@@ -93,6 +93,8 @@ public class ElwhaSelectField<T> extends JComponent {
   private boolean freeTextAllowed;
   private boolean multiSelect;
   private final List<T> multiValues = new ArrayList<>();
+  private final List<Consumer<List<T>>> multiSelectionListeners = new ArrayList<>();
+  private int summaryLimit = 3;
   private String filterText = "";
   private String committedText = "";
   private boolean suppressFilter;
@@ -231,7 +233,9 @@ public class ElwhaSelectField<T> extends JComponent {
 
   /**
    * Registers a listener notified with the new value whenever the selection changes (via a menu
-   * pick or {@link #setSelectedValue}). Not fired for a no-op set to the current value.
+   * pick or {@link #setSelectedValue}). Not fired for a no-op set to the current value, and not
+   * fired in {@linkplain #setMultiSelect multi-select} mode — register a {@linkplain
+   * #addMultiSelectionChangeListener multi-selection-change listener} there.
    *
    * @param listener the change listener; {@code null} is ignored
    */
@@ -428,17 +432,84 @@ public class ElwhaSelectField<T> extends JComponent {
       setSelectedValue(null);
       return;
     }
-    multiValues.clear();
+    final List<T> next = new ArrayList<>();
     if (values != null) {
       for (final T option : options) {
-        if (values.contains(option) && !multiValues.contains(option)) {
-          multiValues.add(option);
+        if (values.contains(option) && !next.contains(option)) {
+          next.add(option);
         }
       }
     }
+    final boolean changed = !next.equals(multiValues);
+    multiValues.clear();
+    multiValues.addAll(next);
     this.selectedValue = multiValues.isEmpty() ? null : multiValues.get(0);
     syncMultiMarks();
     writeMultiSummary();
+    if (changed) {
+      fireMultiSelectionChange();
+    }
+  }
+
+  /**
+   * Registers a listener notified with the current selection — an option-ordered, unmodifiable
+   * snapshot — on every change while in {@linkplain #setMultiSelect multi-select} mode: each menu
+   * toggle (the menu stays open, so a listener fires per toggle) and every effective {@link
+   * #setSelectedValues} / {@link #setSelectedValue}. Not fired for a no-op set, outside multi mode,
+   * or on a {@linkplain #setMultiSelect mode flip}. The single-value {@linkplain
+   * #addSelectionChangeListener listeners} are the single-select counterpart — they do not fire in
+   * multi mode.
+   *
+   * @param listener the change listener; {@code null} is ignored
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void addMultiSelectionChangeListener(final Consumer<List<T>> listener) {
+    if (listener != null) {
+      multiSelectionListeners.add(listener);
+    }
+  }
+
+  /**
+   * Removes a previously {@linkplain #addMultiSelectionChangeListener registered}
+   * multi-selection-change listener.
+   *
+   * @param listener the listener to remove
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void removeMultiSelectionChangeListener(final Consumer<List<T>> listener) {
+    multiSelectionListeners.remove(listener);
+  }
+
+  /**
+   * The summary overflow threshold (default {@code 3}): the largest selection the field still
+   * renders as joined display strings. Bigger selections render as the count form.
+   *
+   * @return the summary limit
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public int getSummaryLimit() {
+    return summaryLimit;
+  }
+
+  /**
+   * Sets the summary overflow threshold. While the selection holds at most this many values, the
+   * field shows their display strings joined in option order (e.g. {@code Earth, Mars}); past it,
+   * the count form (e.g. {@code 5 selected}) — so a wide selection never blows out the field. A
+   * negative limit clamps to {@code 0} (any non-empty selection shows the count form). The summary
+   * re-renders immediately when the limit changes.
+   *
+   * @param summaryLimit the largest selection rendered as a join
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setSummaryLimit(final int summaryLimit) {
+    this.summaryLimit = Math.max(0, summaryLimit);
+    if (multiSelect) {
+      writeMultiSummary();
+    }
   }
 
   // The MULTI menu's onSelectionChange: the item's selected flag has already flipped — mirror it
@@ -458,6 +529,7 @@ public class ElwhaSelectField<T> extends JComponent {
     }
     reorderMultiValues();
     writeMultiSummary();
+    fireMultiSelectionChange();
   }
 
   // Re-derives multiValues in option order, pruning values no longer among the options, and keeps
@@ -474,9 +546,19 @@ public class ElwhaSelectField<T> extends JComponent {
     this.selectedValue = multiValues.isEmpty() ? null : multiValues.get(0);
   }
 
-  // Provisional Phase-3 S1 summary: the display strings joined in option order (the real summary
-  // format — overflow policy included — is S2, #398).
+  // The M3 summary display (S2, #398): joined display strings in option order up to the summary
+  // limit, the count form past it, the empty selection resting the floating label.
   private void writeMultiSummary() {
+    writeFieldText(summaryText());
+  }
+
+  private String summaryText() {
+    if (multiValues.isEmpty()) {
+      return "";
+    }
+    if (multiValues.size() > summaryLimit) {
+      return multiValues.size() + " selected";
+    }
     final StringBuilder sb = new StringBuilder();
     for (final T value : multiValues) {
       if (sb.length() > 0) {
@@ -484,7 +566,14 @@ public class ElwhaSelectField<T> extends JComponent {
       }
       sb.append(display.apply(value));
     }
-    writeFieldText(sb.toString());
+    return sb.toString();
+  }
+
+  private void fireMultiSelectionChange() {
+    final List<T> snapshot = List.copyOf(multiValues);
+    for (final Consumer<List<T>> listener : new ArrayList<>(multiSelectionListeners)) {
+      listener.accept(snapshot);
+    }
   }
 
   private void syncMultiMarks() {
