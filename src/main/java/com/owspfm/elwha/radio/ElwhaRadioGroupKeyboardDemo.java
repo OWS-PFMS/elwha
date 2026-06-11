@@ -58,7 +58,7 @@ public final class ElwhaRadioGroupKeyboardDemo {
     verticalPane.setBorder(BorderFactory.createTitledBorder("Vertical (third disabled)"));
     final String[] verticalNames = {"first", "second", "third (disabled)", "fourth"};
     for (int i = 0; i < verticalNames.length; i++) {
-      final ElwhaRadioButton radio = new ElwhaRadioButton(i == 0);
+      final ElwhaRadioButton radio = new ElwhaRadioButton(verticalNames[i], i == 0);
       if (i == 2) {
         radio.setEnabled(false);
       }
@@ -66,7 +66,6 @@ public final class ElwhaRadioGroupKeyboardDemo {
       wireReadout(vertical, radio, "vertical/" + verticalNames[i]);
       final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 0));
       row.add(radio);
-      row.add(new JLabel(verticalNames[i]));
       verticalPane.add(row);
     }
     center.add(verticalPane);
@@ -78,11 +77,10 @@ public final class ElwhaRadioGroupKeyboardDemo {
     final String[] horizontalNames = {"small", "medium", "large"};
     final ElwhaRadioButton[] horizontalRadios = new ElwhaRadioButton[horizontalNames.length];
     for (int i = 0; i < horizontalNames.length; i++) {
-      horizontalRadios[i] = new ElwhaRadioButton(i == 0);
+      horizontalRadios[i] = new ElwhaRadioButton(horizontalNames[i], i == 0);
       horizontal.add(horizontalRadios[i]);
       wireReadout(horizontal, horizontalRadios[i], "horizontal/" + horizontalNames[i]);
       horizontalRow.add(horizontalRadios[i]);
-      horizontalRow.add(new JLabel(horizontalNames[i]));
     }
     final JCheckBox rtl = new JCheckBox("Right-to-left orientation");
     rtl.addActionListener(

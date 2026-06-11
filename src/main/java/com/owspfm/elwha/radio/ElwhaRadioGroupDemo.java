@@ -6,8 +6,6 @@ import com.owspfm.elwha.theme.Mode;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -59,16 +57,13 @@ public final class ElwhaRadioGroupDemo {
 
   private JPanel groupPane(final String title, final String... options) {
     final ElwhaRadioGroup group = new ElwhaRadioGroup();
-    final Map<ElwhaRadioButton, String> names = new LinkedHashMap<>();
 
     final JPanel rows = new JPanel(new GridLayout(options.length, 1, 0, 4));
     for (final String option : options) {
-      final ElwhaRadioButton radio = new ElwhaRadioButton();
+      final ElwhaRadioButton radio = new ElwhaRadioButton(option);
       group.add(radio);
-      names.put(radio, option);
       final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 0));
       row.add(radio);
-      row.add(new JLabel(option));
       rows.add(row);
     }
 
@@ -76,7 +71,7 @@ public final class ElwhaRadioGroupDemo {
     group.addChangeListener(
         e -> {
           final ElwhaRadioButton current = group.getSelected();
-          readout.setText("selected: " + (current == null ? "(none)" : names.get(current)));
+          readout.setText("selected: " + (current == null ? "(none)" : current.getLabel()));
         });
     group.setSelected(group.getMembers().get(0));
 

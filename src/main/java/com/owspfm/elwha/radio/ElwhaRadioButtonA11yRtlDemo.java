@@ -56,14 +56,12 @@ public final class ElwhaRadioButtonA11yRtlDemo {
 
     final ElwhaRadioGroup named = new ElwhaRadioGroup();
     final JPanel namedPane = new JPanel(new GridLayout(3, 1, 0, 4));
-    namedPane.setBorder(BorderFactory.createTitledBorder("setLabel(...) naming"));
+    namedPane.setBorder(BorderFactory.createTitledBorder("Built-in label (clickable)"));
     for (final String option : new String[] {"Comfortable", "Cozy", "Compact"}) {
-      final ElwhaRadioButton radio = new ElwhaRadioButton();
-      radio.setLabel(option);
+      final ElwhaRadioButton radio = new ElwhaRadioButton(option);
       named.add(radio);
       final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 0));
       row.add(radio);
-      row.add(new JLabel(option));
       namedPane.add(row);
     }
     named.setSelected(named.getMembers().get(0));

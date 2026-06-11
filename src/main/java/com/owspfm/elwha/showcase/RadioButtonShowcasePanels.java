@@ -45,12 +45,8 @@ final class RadioButtonShowcasePanels {
 
     final ElwhaRadioGroup group = new ElwhaRadioGroup();
     final ElwhaRadioButton[] radios = new ElwhaRadioButton[MEMBER_NAMES.length];
-    final JLabel[] rowLabels = new JLabel[MEMBER_NAMES.length];
     for (int i = 0; i < MEMBER_NAMES.length; i++) {
-      radios[i] = new ElwhaRadioButton();
-      radios[i].setLabel(MEMBER_NAMES[i]);
-      rowLabels[i] = new JLabel(MEMBER_NAMES[i]);
-      rowLabels[i].setLabelFor(radios[i]);
+      radios[i] = new ElwhaRadioButton(MEMBER_NAMES[i]);
       group.add(radios[i]);
     }
     group.setSelected(radios[0]);
@@ -113,7 +109,7 @@ final class RadioButtonShowcasePanels {
             radios[i].setComponentOrientation(orientation);
           }
           MorphAnimator.setReducedMotion(reducedBox.isSelected());
-          workbench.setStage(stage(radios, rowLabels, readout, orientation));
+          workbench.setStage(stage(radios, readout, orientation));
           workbench.setCode(
               renderCode(
                   selection,
@@ -180,7 +176,7 @@ final class RadioButtonShowcasePanels {
 
   private static JComponent galleryCell(final boolean selected, final int col) {
     final ElwhaRadioButton radio = new ElwhaRadioButton(selected);
-    radio.setLabel("Gallery radio");
+    radio.setAccessibleLabel("Gallery radio");
     switch (col) {
       case 1 -> radio.setHovered(true);
       case 3 -> radio.setPressed(true);
@@ -191,7 +187,6 @@ final class RadioButtonShowcasePanels {
     }
     final JPanel holder = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
     holder.setOpaque(false);
-    holder.setPreferredSize(new Dimension(64, 44));
     holder.add(radio);
     return holder;
   }
@@ -203,13 +198,9 @@ final class RadioButtonShowcasePanels {
     row.setOpaque(false);
     final String[] options = {"Small", "Medium", "Large"};
     for (int i = 0; i < options.length; i++) {
-      final ElwhaRadioButton radio = new ElwhaRadioButton(i == 0);
-      radio.setLabel(options[i]);
+      final ElwhaRadioButton radio = new ElwhaRadioButton(options[i], i == 0);
       group.add(radio);
-      final JLabel label = new JLabel(options[i]);
-      label.setLabelFor(radio);
       row.add(radio);
-      row.add(label);
     }
 
     final JPanel pane = new JPanel(new BorderLayout());
@@ -224,7 +215,6 @@ final class RadioButtonShowcasePanels {
 
   private static JComponent stage(
       final ElwhaRadioButton[] radios,
-      final JLabel[] rowLabels,
       final JLabel readout,
       final ComponentOrientation orientation) {
     final JPanel rows = new JPanel();
@@ -235,7 +225,6 @@ final class RadioButtonShowcasePanels {
       row.setOpaque(false);
       row.setComponentOrientation(orientation);
       row.add(radios[i]);
-      row.add(rowLabels[i]);
       row.setAlignmentX(0.5f);
       final Dimension pref = row.getPreferredSize();
       row.setMaximumSize(new Dimension(220, pref.height));
@@ -268,9 +257,7 @@ final class RadioButtonShowcasePanels {
     for (int i = 0; i < vars.length; i++) {
       code.append("ElwhaRadioButton ")
           .append(vars[i])
-          .append(" = new ElwhaRadioButton();\n")
-          .append(vars[i])
-          .append(".setLabel(\"")
+          .append(" = new ElwhaRadioButton(\"")
           .append(MEMBER_NAMES[i])
           .append("\");\n");
       if (!enabled[i]) {

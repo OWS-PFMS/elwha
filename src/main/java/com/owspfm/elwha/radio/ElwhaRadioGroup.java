@@ -340,7 +340,7 @@ public class ElwhaRadioGroup {
     }
     navigationTarget = target;
     target.setFocusable(true);
-    final boolean focusLikely = target.requestFocusInWindow();
+    final boolean focusLikely = target.requestFocusFromGroupNavigation();
     target.commitUserSelect();
     if (!focusLikely) {
       navigationTarget = null;

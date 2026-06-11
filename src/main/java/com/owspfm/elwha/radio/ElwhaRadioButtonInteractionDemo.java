@@ -9,7 +9,6 @@ import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -54,7 +53,9 @@ public final class ElwhaRadioButtonInteractionDemo {
     frame.setLayout(new BorderLayout());
 
     final ElwhaRadioButton[] radios = {
-      new ElwhaRadioButton(), new ElwhaRadioButton(true), new ElwhaRadioButton()
+      new ElwhaRadioButton("alpha"),
+      new ElwhaRadioButton("beta", true),
+      new ElwhaRadioButton("gamma")
     };
     final String[] names = {"alpha", "beta", "gamma"};
     final JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 12));
@@ -65,14 +66,12 @@ public final class ElwhaRadioButtonInteractionDemo {
       radio.addChangeListener(
           e -> append(name + " change → " + (radio.isSelected() ? "selected" : "deselected")));
       row.add(radio);
-      row.add(new JLabel(name));
     }
 
-    final ElwhaRadioButton disabledRadio = new ElwhaRadioButton();
+    final ElwhaRadioButton disabledRadio = new ElwhaRadioButton("disabled");
     disabledRadio.setEnabled(false);
     disabledRadio.addActionListener(e -> append("disabled action — MUST NEVER APPEAR"));
     row.add(disabledRadio);
-    row.add(new JLabel("disabled"));
 
     final JButton deselectAll = new JButton("setSelected(false) all (programmatic)");
     deselectAll.addActionListener(

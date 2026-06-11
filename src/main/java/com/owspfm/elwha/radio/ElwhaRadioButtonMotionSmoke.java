@@ -25,7 +25,7 @@ import java.awt.image.BufferedImage;
  */
 public final class ElwhaRadioButtonMotionSmoke {
 
-  private static final int SIZE = ElwhaRadioButton.STATE_LAYER_SIZE_PX;
+  private static final int SIZE = ElwhaRadioButton.TOUCH_TARGET;
   private static final int CX = SIZE / 2;
 
   private ElwhaRadioButtonMotionSmoke() {}
@@ -82,12 +82,12 @@ public final class ElwhaRadioButtonMotionSmoke {
       radio.setSelected(true);
       BufferedImage img = render(radio, surface);
       check("select snaps to full PRIMARY dot" + tag, near(img.getRGB(CX, CX), primary));
-      check("select snaps ring to PRIMARY" + tag, near(img.getRGB(13, 13), primary));
+      check("select snaps ring to PRIMARY" + tag, near(img.getRGB(17, 17), primary));
 
       radio.setSelected(false);
       img = render(radio, surface);
       check("deselect snaps the dot away" + tag, near(img.getRGB(CX, CX), surface));
-      check("deselect snaps ring back" + tag, near(img.getRGB(13, 13), restRing));
+      check("deselect snaps ring back" + tag, near(img.getRGB(17, 17), restRing));
 
       radio.setSelected(true);
       radio.setSelected(false);

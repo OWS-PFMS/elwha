@@ -54,6 +54,9 @@ public final class ElwhaRadioButtonShowcaseSmoke {
     // Only the strip radios are grouped — and the group's roving rules leave exactly one tab stop.
     check("the strip radios are grouped", count(gallery, r -> r.getGroup() != null) == 3);
     check(
+        "the strip radios carry built-in labels",
+        count(gallery, r -> r.getGroup() != null && r.getLabel() != null) == 3);
+    check(
         "the grouped strip is a single tab stop",
         count(gallery, r -> r.getGroup() != null && r.isFocusable()) == 1);
 

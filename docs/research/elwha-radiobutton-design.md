@@ -1,6 +1,6 @@
 # ElwhaRadioButton — Phase 0 Design
 
-**Status:** LOCKED (S1 spike confirms §2). **Drafted:** 2026-06-10. **Author:** Charles Bryan (`cfb3@uw.edu`).
+**Status:** LOCKED (S1 spike confirms §2) + **smoke iterate 1 applied (§15 — operator-driven `ElwhaCheckbox` API alignment, 2026-06-11; supersedes parts of §3/§5/§6/§12)**. **Drafted:** 2026-06-10. **Author:** Charles Bryan (`cfb3@uw.edu`).
 **Parents:** epic [#416](https://github.com/OWS-PFMS/elwha/issues/416). **Milestone:** `v0.4.0`.
 **Research:** [`elwha-radiobutton-research.md`](elwha-radiobutton-research.md) — the captured spec; this doc holds only the decisions.
 
@@ -20,6 +20,7 @@
 10. **Group keyboard = material-web's controller, verbatim:** arrows move **and select** (selection follows focus), wrap, skip disabled, RTL flips horizontal; **roving tab stop** via the three focusable rules. §9.
 11. **a11y is Swing-native:** `AccessibleRole.RADIO_BUTTON` + `AccessibleState.CHECKED` + `AccessibleAction` + `AccessibleValue(0/1)` + **`AccessibleRelation.MEMBER_OF`** across group members; name via `setLabel` / `labelFor`. §10.
 12. **V1 = one phase, seven stories** (S1 spike → interaction → motion → group → keyboard → a11y → Showcase). §13.
+13. **Smoke iterate 1 (§15):** the radio carries the `ElwhaCheckbox` label/geometry/focus contract — attached clickable `setLabel` text, `setAccessibleLabel` override, 48px leading touch-target block in the preferred size, `FocusVisible`-gated single state layer, `doClick()`. Locked by the operator against PR #435.
 
 ## §1. Scope — what V1 ships
 
@@ -160,3 +161,29 @@ Material-web's `SingleSelectionController` contract, verbatim (research §B′):
 2. **`RetargetTween` duplication** — the idiom lives privately in `ElwhaSwitch` on the unmerged #401 branch; this epic re-implements it privately in `ElwhaRadioButton`. **File a `theme/` extraction follow-up issue once both epics are on `main`** — flagged here so the duplication is a recorded decision, not an accident. [merge time]
 3. Focus-transit ordering for the roving-stop flag flips (§9 risk point) — pin with the S5 smoke's Tab/arrow walk. [S5]
 4. Whether arrow-arrival selection should animate the dot grow (it should — it's a user gesture like click; confirm the tween isn't starved by rapid arrow repeats). [S5]
+
+## §15. Smoke iterate 1 — `ElwhaCheckbox` API alignment (2026-06-11, operator-driven)
+
+`ElwhaCheckbox` (epic #410, PR #435) merged while this epic's PR was in smoke, shipping the sibling
+selection control **with an attached clickable label**. The operator ruled the pair must share one
+API ("we have different APIs for checkbox radio — that's probably wrong"). Changes applied on the
+epic branch, superseding the original locks where named:
+
+1. **`setLabel(String)` is the visible label** (supersedes §3's icon-only anatomy and §12's
+   labeled-row exclusion): paints after the touch target in `TypeRole.BODY_MEDIUM` with a 4px
+   trailing pad, widens the preferred size, **extends the click target**, truncates with an
+   ellipsis, and provides the accessible name. Constructors `ElwhaRadioButton(String)` and
+   `(String, boolean)` added. `setAccessibleLabel(String)` is the label-less override (the
+   `aria-label` analogue); the name chain is explicit → accessibleLabel → label → `labelFor`.
+2. **48px leading touch-target block** (supersedes §5's 40×40 state-layer box): the icon centers in
+   a `TOUCH_TARGET` (48px) block pinned to the leading edge (mirrored under RTL); preferred size is
+   the block, widened by the label. The 40px state layer is unchanged and stays concentric.
+3. **`FocusVisible`-gated, single state layer** (supersedes §6's stacking + any-focus rule):
+   pressed > hovered > focus-visible, one layer at a time — the checkbox/button-family policy.
+   Group arrow navigation requests focus with a traversal cause so keyboard arrival lights the
+   focus treatment.
+4. **`doClick()`** — the user-equivalent select for tests/automation (checkbox parity).
+5. **Not aligned, operator ruling requested:** the event idiom — checkbox fires
+   `PROPERTY_CHECK_STATE` property changes where radio/slider/switch fire `ChangeListener`s
+   (checkbox is the lib-wide outlier); and the merged `ElwhaSwitch`'s `setLabel`, which remains
+   accessible-only — both flagged at handoff as potential follow-up issues.

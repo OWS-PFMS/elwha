@@ -26,7 +26,7 @@ import javax.swing.KeyStroke;
  */
 public final class ElwhaRadioButtonInteractionSmoke {
 
-  private static final int SIZE = ElwhaRadioButton.STATE_LAYER_SIZE_PX;
+  private static final int SIZE = ElwhaRadioButton.TOUCH_TARGET;
   private static final int CX = SIZE / 2;
 
   private ElwhaRadioButtonInteractionSmoke() {}
@@ -47,8 +47,64 @@ public final class ElwhaRadioButtonInteractionSmoke {
     checkSpaceContract();
     checkDisabledInert();
     checkStateLayers();
+    checkFocusVisibleGating();
+    checkLabelClickTarget();
 
     System.out.println("ElwhaRadioButtonInteractionSmoke: OK (gesture contract + press swap)");
+  }
+
+  /**
+   * Focus layer paints only for keyboard-caused focus — the checkbox/button-family gating. Focus
+   * events synthesized through {@code dispatchEvent} are retargeted (and swallowed) by the
+   * KeyboardFocusManager headlessly, so the registered listeners are driven directly.
+   */
+  private static void checkFocusVisibleGating() {
+    final Color surface = ColorRole.SURFACE.resolve();
+    final Color onSurface = ColorRole.ON_SURFACE.resolve();
+
+    final ElwhaRadioButton radio = sized(new ElwhaRadioButton());
+    focus(
+        radio,
+        java.awt.event.FocusEvent.FOCUS_GAINED,
+        java.awt.event.FocusEvent.Cause.TRAVERSAL_FORWARD);
+    check(
+        "keyboard focus paints the FOCUS layer",
+        near(
+            layerSample(render(radio, surface)),
+            mix(surface, onSurface, StateLayer.FOCUS.opacity())));
+    focus(
+        radio,
+        java.awt.event.FocusEvent.FOCUS_LOST,
+        java.awt.event.FocusEvent.Cause.TRAVERSAL_FORWARD);
+    focus(
+        radio, java.awt.event.FocusEvent.FOCUS_GAINED, java.awt.event.FocusEvent.Cause.MOUSE_EVENT);
+    check(
+        "pointer-caused focus paints no layer", near(layerSample(render(radio, surface)), surface));
+
+    final ElwhaRadioButton stacked = sized(new ElwhaRadioButton());
+    stacked.setHovered(true);
+    stacked.setPressed(true);
+    check(
+        "one layer at a time: pressed wins over hover (no stacking)",
+        near(
+            layerSample(render(stacked, surface)),
+            mix(surface, ColorRole.PRIMARY.resolve(), StateLayer.PRESSED.opacity())));
+  }
+
+  /** The attached label extends the click target — clicking the text selects. */
+  private static void checkLabelClickTarget() {
+    final ElwhaRadioButton radio = new ElwhaRadioButton("Click my label");
+    final java.awt.Dimension pref = radio.getPreferredSize();
+    radio.setSize(pref);
+    final int labelX = ElwhaRadioButton.TOUCH_TARGET + 10;
+    final int cy = pref.height / 2;
+    radio.dispatchEvent(
+        new MouseEvent(
+            radio, MouseEvent.MOUSE_PRESSED, 0, 0, labelX, cy, 1, false, MouseEvent.BUTTON1));
+    radio.dispatchEvent(
+        new MouseEvent(
+            radio, MouseEvent.MOUSE_RELEASED, 0, 0, labelX, cy, 1, false, MouseEvent.BUTTON1));
+    check("clicking the label selects the radio", radio.isSelected());
   }
 
   private static void checkClickContract() {
@@ -131,7 +187,7 @@ public final class ElwhaRadioButtonInteractionSmoke {
     check(
         "unselected hover layer is ON_SURFACE @ HOVER",
         near(layerSample(hoverU), mix(surface, onSurface, StateLayer.HOVER.opacity())));
-    check("unselected hovered ring shifts to ON_SURFACE", near(hoverU.getRGB(13, 13), onSurface));
+    check("unselected hovered ring shifts to ON_SURFACE", near(hoverU.getRGB(17, 17), onSurface));
 
     final ElwhaRadioButton hoverSelected = sized(new ElwhaRadioButton(true));
     hoverSelected.setHovered(true);
@@ -159,10 +215,23 @@ public final class ElwhaRadioButtonInteractionSmoke {
     disabledRadio.setHovered(true);
     disabledRadio.setPressed(true);
     final BufferedImage disabledImg = render(disabledRadio, surface);
-    check("disabled paints no state layer", near(disabledImg.getRGB(CX, 3), surface));
+    check("disabled paints no state layer", near(disabledImg.getRGB(CX, 8), surface));
   }
 
   // ------------------------------------------------------------------ plumbing
+
+  private static void focus(
+      final ElwhaRadioButton radio, final int id, final java.awt.event.FocusEvent.Cause cause) {
+    final java.awt.event.FocusEvent event =
+        new java.awt.event.FocusEvent(radio, id, false, null, cause);
+    for (final java.awt.event.FocusListener listener : radio.getFocusListeners()) {
+      if (id == java.awt.event.FocusEvent.FOCUS_GAINED) {
+        listener.focusGained(event);
+      } else {
+        listener.focusLost(event);
+      }
+    }
+  }
 
   private static ElwhaRadioButton sized(final ElwhaRadioButton radio) {
     radio.setSize(SIZE, SIZE);
@@ -207,9 +276,9 @@ public final class ElwhaRadioButtonInteractionSmoke {
     return img;
   }
 
-  /** Samples the state layer inside the 40 circle but clear of the icon (pixel distance ~16.5). */
+  /** Samples the state layer inside the 40 circle but clear of the icon (pixel distance ~15.5). */
   private static int layerSample(final BufferedImage img) {
-    return img.getRGB(CX, 4);
+    return img.getRGB(CX, 8);
   }
 
   private static boolean near(final int argb, final Color target) {

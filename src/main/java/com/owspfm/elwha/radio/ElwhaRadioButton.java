@@ -2,13 +2,18 @@ package com.owspfm.elwha.radio;
 
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
+import com.owspfm.elwha.theme.TypeRole;
 import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -61,10 +66,11 @@ import javax.swing.event.EventListenerList;
  *
  * <p><strong>Interaction (research §B / §S).</strong> A click or Space <em>selects</em> — a user
  * gesture never deselects a radio ("clicking on a radio input always selects it"); deselection
- * happens programmatically or through an {@link ElwhaRadioGroup} sibling. Hover paints {@link
- * StateLayer#HOVER} (0.08) and focus {@link StateLayer#FOCUS} (0.10) on the {@value
- * #STATE_LAYER_SIZE_PX}&nbsp;dp circle in the state's tint ({@link ColorRole#ON_SURFACE}
- * unselected, {@link ColorRole#PRIMARY} selected). A press paints {@link StateLayer#PRESSED} plus a
+ * happens programmatically or through an {@link ElwhaRadioGroup} sibling. One state layer paints at
+ * a time on the {@value #STATE_LAYER_SIZE_PX}&nbsp;dp circle — pressed &gt; hovered &gt;
+ * focus-visible, the {@code ElwhaCheckbox} policy, with the focus treatment gated on keyboard focus
+ * ({@link FocusVisible}). Hover and focus use the state's tint ({@link ColorRole#ON_SURFACE}
+ * unselected, {@link ColorRole#PRIMARY} selected); a press paints {@link StateLayer#PRESSED} plus a
  * {@link RipplePainter} ripple bounded to the same circle — in the <strong>swapped</strong> tint
  * (research §C′): pressing an unselected radio shows {@link ColorRole#PRIMARY} (the press
  * anticipates selection), pressing a selected one shows {@link ColorRole#ON_SURFACE}. User-gesture
@@ -80,20 +86,22 @@ import javax.swing.event.EventListenerList;
  * setSelected} animates only while the radio is displayable and enabled — otherwise it snaps — and
  * {@link MorphAnimator#isReducedMotion() reduced motion} snaps everything globally.
  *
- * <p><strong>Geometry (M3 token-locked — research §T/§G).</strong> The ring is painted as a filled
- * ring ({@link Area} subtraction — material-web mask-builds it the same way), never a stroke, so
- * the disabled translucent fills cannot double-blend and no half-pixel seam appears. The preferred
- * size is the state-layer-inclusive box — the {@value #ICON_SIZE_PX}&nbsp;dp icon plus the {@value
- * #STATE_LAYER_SIZE_PX}&nbsp;dp interaction halo's {@value #HALO_OVERHANG_PX}&nbsp;dp overhang per
- * side; the chrome centers itself in larger bounds. The M3 48&nbsp;dp touch target is guidance for
- * touch contexts, not painted geometry — the component's whole bounds are interactive.
+ * <p><strong>Geometry (M3 token-locked — research §T/§G; the {@code ElwhaCheckbox} block
+ * model).</strong> The ring is painted as a filled ring ({@link Area} subtraction — material-web
+ * mask-builds it the same way), never a stroke, so the disabled translucent fills cannot
+ * double-blend and no half-pixel seam appears. The icon sits centered in a leading {@value
+ * #TOUCH_TARGET}&nbsp;px touch-target block (mirrored under RTL); the preferred size is that block,
+ * widened by the label when one is set. The component's whole bounds are interactive — including
+ * the label.
  *
- * <p><strong>Labelling &amp; accessibility (research §A / §X).</strong> A radio button never labels
- * itself — M3 requires an adjacent label naming the option, and the accessible name must
- * <em>always</em> be set: call {@link #setLabel(String)} or associate a {@link javax.swing.JLabel}
- * via {@link javax.swing.JLabel#setLabelFor}. Swing has the native vocabulary, no role compromise:
- * {@link AccessibleRole#RADIO_BUTTON} with {@link AccessibleState#CHECKED} while selected, one
- * "click" {@link AccessibleAction} (the user-gesture select), an {@link AccessibleValue} of 0/1
+ * <p><strong>Labelling &amp; accessibility (research §A / §X).</strong> An optional {@link
+ * #setLabel(String) text label} ({@link TypeRole#BODY_MEDIUM}) paints after the touch target,
+ * extends the click target, and provides the accessible name — the {@code ElwhaCheckbox} contract.
+ * A label-less radio must still be named: call {@link #setAccessibleLabel(String)} (the {@code
+ * aria-label} analogue) or associate a {@link javax.swing.JLabel} via {@link
+ * javax.swing.JLabel#setLabelFor}. Swing has the native vocabulary, no role compromise: {@link
+ * AccessibleRole#RADIO_BUTTON} with {@link AccessibleState#CHECKED} while selected, one "click"
+ * {@link AccessibleAction} (the user-gesture select), an {@link AccessibleValue} of 0/1
  * (programmatic semantics), and an {@link AccessibleRelation#MEMBER_OF} relation answering the
  * current {@link ElwhaRadioGroup} membership.
  *
@@ -117,8 +125,11 @@ public class ElwhaRadioButton extends JComponent {
   /** Diameter of the hover/focus/press state layer concentric with the icon. */
   static final int STATE_LAYER_SIZE_PX = 40;
 
-  /** The state layer's overhang past the icon, per side. */
-  static final int HALO_OVERHANG_PX = (STATE_LAYER_SIZE_PX - ICON_SIZE_PX) / 2;
+  /** Minimum touch-target edge in px — M3 / WCAG 48dp, matching {@code ElwhaCheckbox}. */
+  static final int TOUCH_TARGET = 48;
+
+  /** Trailing padding after the label in px ({@code SpaceScale.XS}'s 4px grid step). */
+  private static final int LABEL_TRAILING_PAD = 4;
 
   /** Dot-grow duration on select — {@code motion.duration.medium2}, material-web verbatim. */
   static final int DOT_GROW_MS = MorphAnimator.MEDIUM2_MS;
@@ -139,8 +150,10 @@ public class ElwhaRadioButton extends JComponent {
   private boolean selected;
   private boolean hovered;
   private boolean pressed;
+  private boolean focusVisible;
 
   private String label;
+  private String accessibleLabel;
 
   private ElwhaRadioGroup group;
 
@@ -176,6 +189,32 @@ public class ElwhaRadioButton extends JComponent {
     setFocusable(true);
     initInteraction();
     initKeyboard();
+  }
+
+  /**
+   * Creates an unselected radio button with a text label. The label paints in {@link
+   * TypeRole#BODY_MEDIUM}, extends the click target, and provides the accessible name (the {@code
+   * ElwhaCheckbox} contract).
+   *
+   * @param label the label text; {@code null} or blank means no label
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaRadioButton(final String label) {
+    this(label, false);
+  }
+
+  /**
+   * Creates a labeled radio button in the given selection state.
+   *
+   * @param label the label text; {@code null} or blank means no label
+   * @param selected the initial selection state
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaRadioButton(final String label, final boolean selected) {
+    this(selected);
+    setLabel(label);
   }
 
   // ------------------------------------------------------------------ selection
@@ -221,10 +260,9 @@ public class ElwhaRadioButton extends JComponent {
   }
 
   /**
-   * Returns the radio's accessible label, or {@code null} if none was set via {@link
-   * #setLabel(String)}.
+   * Returns the label text.
    *
-   * @return the accessible label text, or {@code null}
+   * @return the label, or {@code null} when label-less
    * @version v0.4.0
    * @since v0.4.0
    */
@@ -233,17 +271,74 @@ public class ElwhaRadioButton extends JComponent {
   }
 
   /**
-   * Sets the radio's accessible name — the adjacent UI label a screen reader reads before the role
-   * and state (research §A: a radio always needs one). Alternatively, associate a {@link
-   * javax.swing.JLabel} via {@link javax.swing.JLabel#setLabelFor} and the name is derived from it
-   * automatically; an explicit value here takes precedence.
+   * Sets the visible text label — the {@code ElwhaCheckbox} contract: the label paints after the
+   * touch target in {@link TypeRole#BODY_MEDIUM}, widens the preferred size, extends the click
+   * target (clicking the text selects), and provides the accessible name (unless {@link
+   * #setAccessibleLabel(String)} overrides it). {@code null} or blank clears it.
    *
-   * @param label the accessible label, or {@code null} to clear
+   * @param label the label text
    * @version v0.4.0
    * @since v0.4.0
    */
   public void setLabel(final String label) {
-    this.label = label;
+    final String next = (label == null || label.isBlank()) ? null : label;
+    if (java.util.Objects.equals(this.label, next)) {
+      return;
+    }
+    this.label = next;
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Returns the explicit accessible name override, if any.
+   *
+   * @return the accessible label, or {@code null} when the visual label (or nothing) provides it
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getAccessibleLabel() {
+    return accessibleLabel;
+  }
+
+  /**
+   * Sets the accessible name independently of the visual label — required for label-less radios
+   * (the web {@code aria-label} analogue; research §A: a radio always needs a name), optional
+   * otherwise.
+   *
+   * @param accessibleLabel the accessible name; {@code null} falls back to the visual label
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setAccessibleLabel(final String accessibleLabel) {
+    this.accessibleLabel = accessibleLabel;
+  }
+
+  /**
+   * Programmatically performs a user-equivalent select — fires the {@code ActionListener}s exactly
+   * as a pointer click or Space does, and a no-op when already selected or disabled (the {@code
+   * ElwhaCheckbox.doClick()} analogue for tests and automation).
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void doClick() {
+    if (!isEnabled()) {
+      return;
+    }
+    commitUserSelect();
+  }
+
+  @Override
+  public void setEnabled(final boolean enabled) {
+    super.setEnabled(enabled);
+    if (!enabled) {
+      hovered = false;
+      pressed = false;
+      rippleProgress = 1f;
+      setCursor(Cursor.getDefaultCursor());
+    }
+    repaint();
   }
 
   /**
@@ -395,22 +490,52 @@ public class ElwhaRadioButton extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
-    return new Dimension(STATE_LAYER_SIZE_PX, STATE_LAYER_SIZE_PX);
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
+    if (label == null) {
+      return new Dimension(TOUCH_TARGET, TOUCH_TARGET);
+    }
+    final FontMetrics fm = getFontMetrics(labelFont());
+    return new Dimension(
+        TOUCH_TARGET + fm.stringWidth(label) + LABEL_TRAILING_PAD,
+        Math.max(TOUCH_TARGET, fm.getHeight()));
   }
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
+  }
+
+  @Override
+  public int getBaseline(final int width, final int height) {
+    if (label == null) {
+      return super.getBaseline(width, height);
+    }
+    final FontMetrics fm = getFontMetrics(labelFont());
+    return labelBaselineY(fm, height / 2);
+  }
+
+  @Override
+  public Component.BaselineResizeBehavior getBaselineResizeBehavior() {
+    return label == null
+        ? super.getBaselineResizeBehavior()
+        : Component.BaselineResizeBehavior.CENTER_OFFSET;
   }
 
   // ------------------------------------------------------------------ geometry
 
-  /** The icon center's x — the component center. */
+  /** The icon center's x — the leading touch-target block's center, orientation-aware. */
   int iconCenterX() {
-    return getWidth() / 2;
+    return getComponentOrientation().isLeftToRight()
+        ? TOUCH_TARGET / 2
+        : getWidth() - TOUCH_TARGET / 2;
   }
 
-  /** The icon center's y — the component center. */
+  /** The icon center's y — the component's vertical center. */
   int iconCenterY() {
     return getHeight() / 2;
   }
@@ -451,44 +576,53 @@ public class ElwhaRadioButton extends JComponent {
       paintStateLayer(g2);
       paintRipple(g2);
       paintIcon(g2);
+      paintLabel(g2);
     } finally {
       g2.dispose();
     }
   }
 
   /**
-   * Paints the static hover/focus/pressed layers on the circle. Hover and focus use the state's
-   * tint ({@code ON_SURFACE} unselected / {@code PRIMARY} selected); pressed uses the
-   * <strong>swap</strong> (research §C′). The layers stack independently, the slider/switch rule.
+   * Paints the active state layer on the circle — one at a time, pressed &gt; hovered &gt;
+   * focus-visible (the {@code ElwhaCheckbox} policy). Hover and focus use the state's tint ({@code
+   * ON_SURFACE} unselected / {@code PRIMARY} selected); pressed uses the <strong>swap</strong>
+   * (research §C′). Pressed feedback is primarily the ripple; the static layer keeps the pressed
+   * state legible in still renders.
    */
   private void paintStateLayer(final Graphics2D g2) {
-    if (!isEnabled()) {
+    final StateLayer layer = activeLayer();
+    if (layer == null) {
       return;
     }
+    final Color tint =
+        layer == StateLayer.PRESSED
+            ? pressedTint()
+            : (selected ? ColorRole.PRIMARY : ColorRole.ON_SURFACE).resolve();
     final Graphics2D s = (Graphics2D) g2.create();
     try {
-      final Ellipse2D.Float halo = stateLayerCircle();
-      final Color restTint = (selected ? ColorRole.PRIMARY : ColorRole.ON_SURFACE).resolve();
-      if (isFocusOwner()) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.FOCUS.opacity()));
-        s.setColor(restTint);
-        s.fill(halo);
-      }
-      if (hovered) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.HOVER.opacity()));
-        s.setColor(restTint);
-        s.fill(halo);
-      }
-      // Pressed feedback is primarily the ripple; the static layer keeps the pressed state
-      // legible in still renders (gallery cells, reduced motion, between ripple frames).
-      if (pressed) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.PRESSED.opacity()));
-        s.setColor(pressedTint());
-        s.fill(halo);
-      }
+      s.setComposite(AlphaComposite.SrcOver.derive(layer.opacity()));
+      s.setColor(tint);
+      s.fill(stateLayerCircle());
     } finally {
       s.dispose();
     }
+  }
+
+  /** The single active layer per the checkbox priority, or {@code null} when idle / disabled. */
+  private StateLayer activeLayer() {
+    if (!isEnabled()) {
+      return null;
+    }
+    if (pressed) {
+      return StateLayer.PRESSED;
+    }
+    if (hovered) {
+      return StateLayer.HOVER;
+    }
+    if (focusVisible) {
+      return StateLayer.FOCUS;
+    }
+    return null;
   }
 
   /**
@@ -551,11 +685,62 @@ public class ElwhaRadioButton extends JComponent {
 
   // --------------------------------------------------------------------- color
 
+  /** Paints the text label after the touch target — the {@code ElwhaCheckbox} geometry. */
+  private void paintLabel(final Graphics2D g2) {
+    if (label == null) {
+      return;
+    }
+    g2.setRenderingHint(
+        RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+    final Font font = labelFont();
+    final FontMetrics fm = g2.getFontMetrics(font);
+    final int available = getWidth() - TOUCH_TARGET - LABEL_TRAILING_PAD;
+    if (available <= 0) {
+      return;
+    }
+    final String text = truncate(label, fm, available);
+    final boolean ltr = getComponentOrientation().isLeftToRight();
+    final int x = ltr ? TOUCH_TARGET : getWidth() - TOUCH_TARGET - fm.stringWidth(text);
+    g2.setFont(font);
+    g2.setColor(labelColor());
+    g2.drawString(text, x, labelBaselineY(fm, getHeight() / 2));
+  }
+
+  private Font labelFont() {
+    return TypeRole.BODY_MEDIUM.resolve();
+  }
+
+  private static int labelBaselineY(final FontMetrics fm, final int cy) {
+    return cy - (fm.getAscent() + fm.getDescent()) / 2 + fm.getAscent();
+  }
+
+  private static String truncate(final String text, final FontMetrics fm, final int available) {
+    if (fm.stringWidth(text) <= available) {
+      return text;
+    }
+    final String ellipsis = "…";
+    for (int end = text.length() - 1; end > 0; end--) {
+      final String candidate = text.substring(0, end) + ellipsis;
+      if (fm.stringWidth(candidate) <= available) {
+        return candidate;
+      }
+    }
+    return ellipsis;
+  }
+
   /**
    * Whether any interactive treatment is active — drives the unselected ring shift (research §T).
    */
   private boolean interactionActive() {
-    return hovered || pressed || isFocusOwner();
+    return hovered || pressed || focusVisible;
+  }
+
+  /** Label color — {@code ON_SURFACE}, dimmed to the disabled content opacity. */
+  private Color labelColor() {
+    if (!isEnabled()) {
+      return withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
+    }
+    return ColorRole.ON_SURFACE.resolve();
   }
 
   /**
@@ -613,10 +798,14 @@ public class ElwhaRadioButton extends JComponent {
 
     @Override
     public String getAccessibleName() {
-      if (label != null && !label.isEmpty()) {
-        return label;
+      final String explicit = super.getAccessibleName();
+      if (explicit != null) {
+        return explicit;
       }
-      return super.getAccessibleName();
+      if (accessibleLabel != null) {
+        return accessibleLabel;
+      }
+      return label;
     }
 
     @Override
@@ -729,6 +918,7 @@ public class ElwhaRadioButton extends JComponent {
               return;
             }
             requestFocusInWindow();
+            focusVisible = false;
             pressed = true;
             startRipple(e.getPoint());
             repaint();
@@ -752,15 +942,26 @@ public class ElwhaRadioButton extends JComponent {
         new FocusAdapter() {
           @Override
           public void focusGained(final FocusEvent e) {
+            focusVisible = FocusVisible.isKeyboardCause(e.getCause());
             repaint();
           }
 
           @Override
           public void focusLost(final FocusEvent e) {
+            focusVisible = false;
             pressed = false;
             repaint();
           }
         });
+  }
+
+  /**
+   * Focus request issued by {@link ElwhaRadioGroup} arrow navigation — a keyboard gesture, so it
+   * carries a traversal cause and lights the focus-visible treatment (a plain {@code
+   * requestFocusInWindow()} reports {@code Cause.UNKNOWN} and would not).
+   */
+  boolean requestFocusFromGroupNavigation() {
+    return super.requestFocusInWindow(FocusEvent.Cause.TRAVERSAL);
   }
 
   private void initKeyboard() {

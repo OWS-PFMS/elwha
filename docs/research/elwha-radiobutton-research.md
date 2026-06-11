@@ -233,7 +233,7 @@ Searched 2026-06-10. The May-2025 Expressive update's "14 new or updated compone
 2. **Roving-focus mechanics in Swing** — material-web's three tabindex rules map to `setFocusable` flag management by the group; the risk point is focus-loss ordering when the flags flip (design §9; tuned in S5).
 3. **Group event surface** — one group `ChangeListener` (selection changed) chosen over an `ItemListener`-style two-event protocol; the deselected member's own `ChangeListener` already tells per-member subscribers (design §8).
 4. **`RetargetTween` duplication** — the switch's motion idiom is on the unmerged #401 branch; this epic re-implements it privately rather than coupling branches. Extraction follow-up filed at merge time (design §14).
-5. **Text label slot** — no label tokens exist in `md-comp-radio-button`; Android's label is `CompoundButton` heritage. V1 = external labels + `setLabel` a11y name (the switch §Open-3 resolution). A labeled radio-row composite is an M3 *list item* pattern — documented out-of-scope (design §12), no stub epic.
+5. **Text label slot** — no label tokens exist in `md-comp-radio-button`; Android's label is `CompoundButton` heritage. V1 originally shipped external labels + `setLabel` a11y name (the switch §Open-3 resolution). **Superseded at smoke (design §15):** `ElwhaCheckbox` (PR #435) merged with an attached clickable label and the operator locked API parity across the pair — the radio now carries the same visible-label contract.
 
 ## §F. Capture log (web-first run — raw URLs, no screenshots)
 

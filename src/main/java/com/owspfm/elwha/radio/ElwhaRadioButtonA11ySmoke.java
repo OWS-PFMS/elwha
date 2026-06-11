@@ -137,6 +137,16 @@ public final class ElwhaRadioButtonA11ySmoke {
 
     named.setLabel(null);
     check("cleared label falls back", named.getAccessibleContext().getAccessibleName() == null);
+
+    final ElwhaRadioButton overridden = new ElwhaRadioButton("Visible text");
+    overridden.setAccessibleLabel("Spoken name");
+    check(
+        "setAccessibleLabel overrides the visual label",
+        "Spoken name".equals(overridden.getAccessibleContext().getAccessibleName()));
+    overridden.setAccessibleLabel(null);
+    check(
+        "cleared override falls back to the visual label",
+        "Visible text".equals(overridden.getAccessibleContext().getAccessibleName()));
   }
 
   private static void checkMemberOf() {

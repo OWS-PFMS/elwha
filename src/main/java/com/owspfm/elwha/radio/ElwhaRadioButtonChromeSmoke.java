@@ -23,7 +23,7 @@ import java.awt.image.BufferedImage;
  */
 public final class ElwhaRadioButtonChromeSmoke {
 
-  private static final int SIZE = ElwhaRadioButton.STATE_LAYER_SIZE_PX;
+  private static final int SIZE = ElwhaRadioButton.TOUCH_TARGET;
   private static final int CX = SIZE / 2;
 
   private ElwhaRadioButtonChromeSmoke() {}
@@ -49,8 +49,10 @@ public final class ElwhaRadioButtonChromeSmoke {
 
   private static void checkApi() {
     final ElwhaRadioButton radio = new ElwhaRadioButton();
-    check("preferred size is 40x40", radio.getPreferredSize().equals(new Dimension(40, 40)));
-    check("minimum size is 40x40", radio.getMinimumSize().equals(new Dimension(40, 40)));
+    check(
+        "preferred size is the 48 touch target",
+        radio.getPreferredSize().equals(new Dimension(48, 48)));
+    check("minimum size matches", radio.getMinimumSize().equals(new Dimension(48, 48)));
     check("default is unselected", !radio.isSelected());
     check("convenience constructor selects", new ElwhaRadioButton(true).isSelected());
 
@@ -62,6 +64,16 @@ public final class ElwhaRadioButtonChromeSmoke {
     check("ChangeListener silent on no-op write", fired[0] == 1);
     radio.setSelected(false);
     check("ChangeListener fires on deselect", fired[0] == 2);
+
+    final ElwhaRadioButton labeled = new ElwhaRadioButton("Compact view");
+    final int textWidth =
+        labeled
+            .getFontMetrics(com.owspfm.elwha.theme.TypeRole.BODY_MEDIUM.resolve())
+            .stringWidth("Compact view");
+    check(
+        "label widens the preferred size by text + trailing pad",
+        labeled.getPreferredSize().width == 48 + textWidth + 4);
+    check("labeled radio reports a baseline", labeled.getBaseline(120, 48) > 0);
   }
 
   private static void checkMode(final Mode mode) {
@@ -79,7 +91,7 @@ public final class ElwhaRadioButtonChromeSmoke {
     final BufferedImage selected = render(new ElwhaRadioButton(true), surface);
     check("selected ring is PRIMARY" + tag, sampleRing(selected, primary));
     check("selected dot is PRIMARY" + tag, near(selected.getRGB(CX, CX), primary));
-    check("dot-to-ring gap stays SURFACE" + tag, near(selected.getRGB(13, CX), surface));
+    check("dot-to-ring gap stays SURFACE" + tag, near(selected.getRGB(17, CX), surface));
 
     final ElwhaRadioButton disabledOff = new ElwhaRadioButton();
     disabledOff.setEnabled(false);
@@ -93,7 +105,7 @@ public final class ElwhaRadioButtonChromeSmoke {
     final BufferedImage disabledS = render(disabledOn, surface);
     check("disabled selected ring blends @ 0.38" + tag, sampleRing(disabledS, disabledBlend));
     check("disabled dot blends @ 0.38" + tag, near(disabledS.getRGB(CX, CX), disabledBlend));
-    check("disabled gap stays SURFACE" + tag, near(disabledS.getRGB(13, CX), surface));
+    check("disabled gap stays SURFACE" + tag, near(disabledS.getRGB(17, CX), surface));
   }
 
   private static BufferedImage render(final ElwhaRadioButton radio, final Color ground) {
@@ -110,9 +122,9 @@ public final class ElwhaRadioButtonChromeSmoke {
     return img;
   }
 
-  /** Samples the ring band on the diagonal — pixel-center distance 9.19, clear of both AA edges. */
+  /** Ring-band diagonal sample around the leading-block center (24,24) — pixel distance 9.19. */
   private static boolean sampleRing(final BufferedImage img, final Color expected) {
-    return near(img.getRGB(13, 13), expected);
+    return near(img.getRGB(17, 17), expected);
   }
 
   private static boolean near(final int argb, final Color target) {
