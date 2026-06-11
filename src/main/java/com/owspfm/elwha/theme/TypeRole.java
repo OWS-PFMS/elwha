@@ -7,12 +7,14 @@ import java.util.Map;
 import javax.swing.UIManager;
 
 /**
- * The 12 semantic type roles of the Elwha token vocabulary, derived from Material 3's type scale.
+ * The 15 semantic type roles of the Elwha token vocabulary — Material 3's full type scale (5 sizes
+ * across display / headline / title / body / label).
  *
- * <p>M3's full scale is 15 (5 sizes across display / headline / title / body / label); Elwha v1
- * drops the {@code display} tier, which a desktop tool rarely needs. Each role resolves at paint
- * time from {@link UIManager} under the key {@code Elwha.type.<key>} to a concrete {@link Font},
- * which {@link ElwhaTheme#install} writes from the installed {@link Typography}.
+ * <p>Elwha v1 shipped without the {@code display} tier on the theory that a desktop tool rarely
+ * needs it; the M3 Expressive app bar broke that theory (its large-flexible expanded title is
+ * {@code display-small}), so v0.4.0 completes the scale. Each role resolves at paint time from
+ * {@link UIManager} under the key {@code Elwha.type.<key>} to a concrete {@link Font}, which {@link
+ * ElwhaTheme#install} writes from the installed {@link Typography}.
  *
  * <p><strong>Binding rule.</strong> Components MUST call {@link #resolve()} at paint time (or
  * re-resolve on {@code updateUI()}) — never cache the returned {@link Font} across paints.
@@ -23,11 +25,33 @@ import javax.swing.UIManager;
  * faithful weight rendering is {@link Typography}'s job — see {@code elwha-token-taxonomy.md} §2.2.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.4.0
  * @since v0.1.0
  */
 public enum TypeRole {
 
+  /**
+   * Display, large (57pt, regular) — the largest text on the screen; reserved for short, key
+   * moments.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  DISPLAY_LARGE("displayLarge", 57, false),
+  /**
+   * Display, medium (45pt, regular) — oversized hero text.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  DISPLAY_MEDIUM("displayMedium", 45, false),
+  /**
+   * Display, small (36pt, regular) — the {@code ElwhaAppBar} large-flexible expanded headline.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  DISPLAY_SMALL("displaySmall", 36, false),
   /**
    * Headline, large (32pt, regular) — consumer page headers.
    *

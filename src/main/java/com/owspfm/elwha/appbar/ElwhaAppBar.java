@@ -1,0 +1,967 @@
+package com.owspfm.elwha.appbar;
+
+import com.owspfm.elwha.iconbutton.ElwhaIconButton;
+import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.MorphAnimator;
+import com.owspfm.elwha.theme.ScrollSourceBinding;
+import com.owspfm.elwha.theme.TypeRole;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import javax.accessibility.Accessible;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
+import javax.swing.Icon;
+import javax.swing.JComponent;
+import javax.swing.JScrollPane;
+
+/**
+ * The M3 Expressive app bar — the token-themed header for the top of an app shell: a leading
+ * navigation button, a bar-painted title (+ optional subtitle), and trailing action icon buttons.
+ * Ships the three Expressive variants ({@link AppBarVariant#SMALL} / {@link
+ * AppBarVariant#MEDIUM_FLEXIBLE} / {@link AppBarVariant#LARGE_FLEXIBLE}); center-aligned text is an
+ * option ({@link #setTitleCentered(boolean)}), not a variant, per the Expressive respec.
+ *
+ * <p><strong>Hosting.</strong> The bar is an in-flow component — drop it in {@code
+ * BorderLayout.NORTH} above the content it heads. It fills whatever width the host grants and
+ * reports its variant's height as preferred size.
+ *
+ * <p><strong>Slots.</strong> The navigation button and trailing elements are real Swing children
+ * laid out in 48&nbsp;px slots (4&nbsp;px edge spaces, zero gap between trailing slots — the
+ * v14.0.0 token values); the title and subtitle are painted by the bar itself. Actions are {@link
+ * ElwhaIconButton}s — the M3 anatomy — while {@link #addTrailingElement(JComponent)} carries the
+ * Expressive imagery/avatar/filled-button allowance. The bar never restyles hosted components
+ * beyond positioning them.
+ *
+ * <pre>{@code
+ * ElwhaAppBar bar = ElwhaAppBar.small();
+ * bar.setTitle("Inbox");
+ * bar.setNavigationIcon(MaterialIcons.menu(), "Open navigation", e -> drawer.toggle());
+ * bar.addAction(MaterialIcons.favorite(), "Favorite", e -> favorite());
+ * bar.addAction(MaterialIcons.moreVert(), "More options", e -> menu.show(...));
+ * frame.add(bar, BorderLayout.NORTH);
+ * }</pre>
+ *
+ * <p><strong>Action overflow</strong> is consumer composition (M3 guidance shows up to ~3 visible
+ * actions): append a {@code more_vert} action and open an {@code ElwhaMenu} from it —
+ *
+ * <pre>{@code
+ * ElwhaIconButton more = bar.addAction(MaterialIcons.moreVert(), "More options", null);
+ * ElwhaMenu menu = ElwhaMenu.builder()
+ *     .addItem(ElwhaMenuItem.of("Settings"))
+ *     .addItem(ElwhaMenuItem.of("Help"))
+ *     .build();
+ * more.addActionListener(e -> menu.open(more));
+ * }</pre>
+ *
+ * <p>Design: {@code docs/research/elwha-appbar-design.md}; research: {@code
+ * elwha-appbar-research.md}.
+ *
+ * @author Charles Bryan
+ * @version v0.4.0
+ * @since v0.4.0
+ */
+public class ElwhaAppBar extends JComponent implements Accessible {
+
+  static final int STRIP_HEIGHT_PX = 64;
+  static final int EDGE_SPACE_PX = 4;
+  static final int SLOT_SIZE_PX = 48;
+  static final int TITLE_INSET_PX = 16;
+  static final int EXPANDED_MARGIN_PX = 16;
+  static final int LIFT_FADE_MS = 200;
+
+  private final AppBarVariant variant;
+  private final List<JComponent> trailingElements = new ArrayList<>();
+  private final List<ElwhaIconButton> actions = new ArrayList<>();
+  private final Map<JComponent, Boolean> preDisableStates = new HashMap<>();
+
+  private final ScrollSourceBinding scrollBinding = new ScrollSourceBinding(this::onScroll);
+  private final MorphAnimator liftAnimator = new MorphAnimator(this, LIFT_FADE_MS);
+  private JScrollPane scrollSource;
+  private boolean liftOnScroll = true;
+  private boolean lifted;
+  private float collapsedFraction;
+
+  private ElwhaIconButton navigationIcon;
+  private String title = "";
+  private String subtitle;
+  private boolean titleCentered;
+
+  /**
+   * Constructs a {@link AppBarVariant#SMALL} app bar.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaAppBar() {
+    this(AppBarVariant.SMALL);
+  }
+
+  /**
+   * Constructs an app bar of the given variant.
+   *
+   * @param variant the M3 variant; required
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaAppBar(final AppBarVariant variant) {
+    this.variant = Objects.requireNonNull(variant, "variant");
+    setOpaque(true);
+    liftAnimator.addProgressListener(this::repaint);
+    addPropertyChangeListener(
+        "componentOrientation",
+        e -> {
+          revalidate();
+          repaint();
+        });
+  }
+
+  /**
+   * Constructs a small app bar — the single-row regular bar.
+   *
+   * @return a new {@link AppBarVariant#SMALL} bar
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static ElwhaAppBar small() {
+    return new ElwhaAppBar(AppBarVariant.SMALL);
+  }
+
+  /**
+   * Constructs a medium flexible app bar — a larger headline that collapses on scroll.
+   *
+   * @return a new {@link AppBarVariant#MEDIUM_FLEXIBLE} bar
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static ElwhaAppBar mediumFlexible() {
+    return new ElwhaAppBar(AppBarVariant.MEDIUM_FLEXIBLE);
+  }
+
+  /**
+   * Constructs a large flexible app bar — emphasizes the page headline; collapses on scroll.
+   *
+   * @return a new {@link AppBarVariant#LARGE_FLEXIBLE} bar
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static ElwhaAppBar largeFlexible() {
+    return new ElwhaAppBar(AppBarVariant.LARGE_FLEXIBLE);
+  }
+
+  /**
+   * The bar's M3 variant.
+   *
+   * @return the variant, never {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public AppBarVariant getVariant() {
+    return variant;
+  }
+
+  // ------------------------------------------------------------------- slots
+
+  /**
+   * Installs the leading navigation button, replacing any previous one. Pass {@code null} to clear;
+   * with no navigation button the title takes the 16&nbsp;px edge inset instead.
+   *
+   * <p>Icon-only buttons need an accessible name (the MDC content-description requirement) — set
+   * one via {@code getAccessibleContext().setAccessibleName(...)} or use the {@link
+   * #setNavigationIcon(Icon, String, ActionListener)} convenience, which does.
+   *
+   * @param button the navigation button, or {@code null} to clear
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setNavigationIcon(final ElwhaIconButton button) {
+    if (navigationIcon != null) {
+      preDisableStates.remove(navigationIcon);
+      remove(navigationIcon);
+    }
+    navigationIcon = button;
+    if (button != null) {
+      // Index 0 keeps focus traversal in layout order: navigation button before the trailing run.
+      add(button, 0);
+      stampEnabled(button);
+    }
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Convenience: creates a {@linkplain ElwhaIconButton#standardIconButton(Icon) standard} icon
+   * button with the given glyph, accessible name, and listener, and installs it as the navigation
+   * button.
+   *
+   * @param icon the glyph, e.g. {@code MaterialIcons.menu()}; required
+   * @param accessibleName the accessible name (also the tooltip); required
+   * @param listener the action listener; null is allowed
+   * @return the created button, for further configuration
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaIconButton setNavigationIcon(
+      final Icon icon, final String accessibleName, final ActionListener listener) {
+    final ElwhaIconButton button = namedStandardButton(icon, accessibleName, listener);
+    setNavigationIcon(button);
+    return button;
+  }
+
+  /**
+   * The leading navigation button, or {@code null} when none is installed.
+   *
+   * @return the navigation button
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaIconButton getNavigationIcon() {
+    return navigationIcon;
+  }
+
+  /**
+   * Adds an action icon button to the trailing end. Actions lay out in add order ending 4&nbsp;px
+   * from the trailing edge, zero gap between slots.
+   *
+   * <p>Icon-only buttons need an accessible name — see {@link #addAction(Icon, String,
+   * ActionListener)}.
+   *
+   * @param action the action button; required
+   * @return {@code action}, for chaining
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaIconButton addAction(final ElwhaIconButton action) {
+    Objects.requireNonNull(action, "action");
+    actions.add(action);
+    trailingElements.add(action);
+    add(action);
+    stampEnabled(action);
+    revalidate();
+    repaint();
+    return action;
+  }
+
+  /**
+   * Convenience: creates a {@linkplain ElwhaIconButton#standardIconButton(Icon) standard} icon
+   * button with the given glyph, accessible name, and listener, and adds it as an action.
+   *
+   * @param icon the glyph, e.g. {@code MaterialIcons.moreVert()}; required
+   * @param accessibleName the accessible name (also the tooltip); required
+   * @param listener the action listener; null is allowed
+   * @return the created button
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaIconButton addAction(
+      final Icon icon, final String accessibleName, final ActionListener listener) {
+    return addAction(namedStandardButton(icon, accessibleName, listener));
+  }
+
+  /**
+   * Removes a previously added action.
+   *
+   * @param action the action to remove; unknown actions are ignored
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void removeAction(final ElwhaIconButton action) {
+    if (actions.remove(action)) {
+      trailingElements.remove(action);
+      preDisableStates.remove(action);
+      remove(action);
+      revalidate();
+      repaint();
+    }
+  }
+
+  /**
+   * The action buttons, in add order.
+   *
+   * @return a snapshot of the actions; never {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public List<ElwhaIconButton> getActions() {
+    return new ArrayList<>(actions);
+  }
+
+  /**
+   * Adds an arbitrary trailing element — the Expressive allowance for imagery, avatars, and filled
+   * buttons in the trailing slot. The element joins the trailing run in add order, vertically
+   * centered in the 64&nbsp;px strip; the bar does not restyle it.
+   *
+   * @param element the element to add; required
+   * @return {@code element}, for chaining
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public JComponent addTrailingElement(final JComponent element) {
+    Objects.requireNonNull(element, "element");
+    trailingElements.add(element);
+    add(element);
+    stampEnabled(element);
+    revalidate();
+    repaint();
+    return element;
+  }
+
+  /**
+   * Removes a previously added trailing element (or action).
+   *
+   * @param element the element to remove; unknown elements are ignored
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void removeTrailingElement(final JComponent element) {
+    if (trailingElements.remove(element)) {
+      actions.remove(element);
+      preDisableStates.remove(element);
+      remove(element);
+      revalidate();
+      repaint();
+    }
+  }
+
+  /**
+   * Enables or disables the whole bar: hosted buttons and trailing elements are disabled with it
+   * (their individual enabled states are remembered and restored on re-enable — a button the
+   * consumer disabled stays disabled), and the title/subtitle paint at the disabled content
+   * opacity. The bar's enabled state is read explicitly when propagating, per the #432 shadowing
+   * doctrine.
+   *
+   * @param enabled the new enabled state
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  public void setEnabled(final boolean enabled) {
+    if (enabled == isEnabled()) {
+      super.setEnabled(enabled);
+      return;
+    }
+    super.setEnabled(enabled);
+    if (!enabled) {
+      for (JComponent child : managedChildren()) {
+        preDisableStates.put(child, child.isEnabled());
+        child.setEnabled(false);
+      }
+    } else {
+      for (JComponent child : managedChildren()) {
+        child.setEnabled(preDisableStates.getOrDefault(child, true));
+      }
+      preDisableStates.clear();
+    }
+    repaint();
+  }
+
+  private List<JComponent> managedChildren() {
+    final List<JComponent> children = new ArrayList<>(trailingElements);
+    if (navigationIcon != null) {
+      children.add(navigationIcon);
+    }
+    return children;
+  }
+
+  // A child added while the bar is disabled joins the disabled treatment; its intended state is
+  // remembered for re-enable.
+  private void stampEnabled(final JComponent child) {
+    if (!isEnabled()) {
+      preDisableStates.put(child, child.isEnabled());
+      child.setEnabled(false);
+    }
+  }
+
+  private static ElwhaIconButton namedStandardButton(
+      final Icon icon, final String accessibleName, final ActionListener listener) {
+    Objects.requireNonNull(icon, "icon");
+    Objects.requireNonNull(accessibleName, "accessibleName");
+    final ElwhaIconButton button = ElwhaIconButton.standardIconButton(icon);
+    button.getAccessibleContext().setAccessibleName(accessibleName);
+    button.setToolTipText(accessibleName);
+    if (listener != null) {
+      button.addActionListener(listener);
+    }
+    return button;
+  }
+
+  // -------------------------------------------------------------------- text
+
+  /**
+   * Sets the title — the bar's headline, painted by the bar in the variant's title role. Single
+   * line; ellipsized at the slot edges.
+   *
+   * @param title the title text; {@code null} is treated as empty
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setTitle(final String title) {
+    final String old = accessibleNameNow();
+    this.title = title == null ? "" : title;
+    fireAccessibleNameChange(old);
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * The title text.
+   *
+   * @return the title; never {@code null}, possibly empty
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getTitle() {
+    return title;
+  }
+
+  /**
+   * Sets the subtitle, painted under the title in the variant's subtitle role. {@code null} or
+   * empty clears it — flexible variants drop to the no-subtitle expanded height.
+   *
+   * @param subtitle the subtitle text, or {@code null} to clear
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setSubtitle(final String subtitle) {
+    final String old = accessibleNameNow();
+    this.subtitle = subtitle == null || subtitle.isEmpty() ? null : subtitle;
+    fireAccessibleNameChange(old);
+    if (scrollSource != null) {
+      applyScrollState(scrollBinding.value());
+    }
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * The subtitle text, or {@code null} when none is set.
+   *
+   * @return the subtitle
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getSubtitle() {
+    return subtitle;
+  }
+
+  /**
+   * Whether the title (and subtitle) center over the container instead of leading-aligning after
+   * the navigation button. Centered text stays clear of the button slots, ellipsizing against them
+   * when space runs out.
+   *
+   * @param titleCentered {@code true} to center
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setTitleCentered(final boolean titleCentered) {
+    if (this.titleCentered != titleCentered) {
+      this.titleCentered = titleCentered;
+      repaint();
+    }
+  }
+
+  /**
+   * Whether the title is center-aligned.
+   *
+   * @return the centered flag
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isTitleCentered() {
+    return titleCentered;
+  }
+
+  // ------------------------------------------------------------------ scroll
+
+  /**
+   * Sets the scroll source whose vertical scrolling drives this bar's scroll behaviors — the lift
+   * color change (all variants, while {@link #setLiftOnScroll(boolean)} is on) and, for the
+   * flexible variants, the collapse. Typically the {@link JScrollPane} the bar heads in {@code
+   * BorderLayout.NORTH}. Pass {@code null} to clear; the bar then stays static-expanded.
+   *
+   * <p><strong>Desktop adaptation:</strong> a plain Swing {@link JScrollPane} cannot consume scroll
+   * the way mobile nested scrolling does, so content moves its full scroll distance while the bar
+   * responds — the M3 read (bar reacting as content slides under) is preserved.
+   *
+   * @param source the scroll source, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setScrollSource(final JScrollPane source) {
+    if (source == scrollSource) {
+      return;
+    }
+    scrollSource = source;
+    scrollBinding.setSource(source);
+    if (source != null) {
+      scrollBinding.attach();
+      applyScrollState(scrollBinding.value());
+    } else {
+      updateLift(false);
+    }
+  }
+
+  /**
+   * The scroll source, or {@code null} when none is set.
+   *
+   * @return the scroll source
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public JScrollPane getScrollSource() {
+    return scrollSource;
+  }
+
+  /**
+   * Whether the container lifts — fades {@link ColorRole#SURFACE} to {@link
+   * ColorRole#SURFACE_CONTAINER} — while content is scrolled under the bar. On by default (the MDC
+   * {@code liftOnScroll} default); the lift is tonal only, no shadow (Compose parity).
+   *
+   * @param liftOnScroll {@code false} to keep the container at {@code SURFACE} regardless
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setLiftOnScroll(final boolean liftOnScroll) {
+    if (this.liftOnScroll == liftOnScroll) {
+      return;
+    }
+    this.liftOnScroll = liftOnScroll;
+    applyScrollState(scrollBinding.value());
+  }
+
+  /**
+   * Whether lift-on-scroll is enabled.
+   *
+   * @return the lift-on-scroll flag
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isLiftOnScroll() {
+    return liftOnScroll;
+  }
+
+  /**
+   * Whether the container is currently lifted.
+   *
+   * @return {@code true} while lifted
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isLifted() {
+    return lifted;
+  }
+
+  /**
+   * Forces the lifted treatment — a static-rendering hook for galleries and tests (the {@code
+   * setHovered}/{@code setPressed} convention). A live scroll source overrides the forced value on
+   * its next scroll event.
+   *
+   * @param lifted the forced lift state
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setLifted(final boolean lifted) {
+    updateLift(lifted);
+  }
+
+  /**
+   * The flexible collapse fraction — {@code 0} fully expanded, {@code 1} collapsed to the
+   * 64&nbsp;px strip. Scroll-position-driven: scrubbing the scrollbar scrubs the bar. Always {@code
+   * 0} for {@link AppBarVariant#SMALL}.
+   *
+   * @return the collapse fraction in {@code [0, 1]}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public float getCollapsedFraction() {
+    return collapsedFraction;
+  }
+
+  /**
+   * Forces a collapse fraction — the static-rendering hook for galleries and tests (the {@code
+   * setLifted} convention). Ignored for {@link AppBarVariant#SMALL}; a live scroll source overrides
+   * the forced value on its next scroll event.
+   *
+   * @param fraction the forced fraction, clamped to {@code [0, 1]}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setCollapsedFraction(final float fraction) {
+    if (variant.isFlexible()) {
+      updateCollapse(Math.max(0f, Math.min(1f, fraction)));
+    }
+  }
+
+  private void onScroll(final int value, final int delta) {
+    applyScrollState(value);
+  }
+
+  private void applyScrollState(final int value) {
+    updateLift(liftOnScroll && value > 0);
+    if (variant.isFlexible()) {
+      final int range = variant.expandedHeightPx(subtitle != null) - STRIP_HEIGHT_PX;
+      updateCollapse(Math.max(0f, Math.min(1f, value / (float) range)));
+    }
+  }
+
+  private void updateCollapse(final float fraction) {
+    if (Math.abs(fraction - collapsedFraction) < 0.001f) {
+      return;
+    }
+    collapsedFraction = fraction;
+    revalidate();
+    repaint();
+  }
+
+  private void updateLift(final boolean nowLifted) {
+    if (lifted == nowLifted) {
+      return;
+    }
+    lifted = nowLifted;
+    if (isDisplayable()) {
+      if (nowLifted) {
+        liftAnimator.start();
+      } else {
+        liftAnimator.reverse();
+      }
+    } else {
+      liftAnimator.snapTo(nowLifted ? 1f : 0f);
+    }
+    repaint();
+  }
+
+  @Override
+  public void addNotify() {
+    super.addNotify();
+    if (scrollSource != null) {
+      scrollBinding.attach();
+      applyScrollState(scrollBinding.value());
+    }
+  }
+
+  @Override
+  public void removeNotify() {
+    scrollBinding.detach();
+    liftAnimator.stop();
+    super.removeNotify();
+  }
+
+  // ------------------------------------------------------------------ layout
+
+  @Override
+  public void doLayout() {
+    final boolean ltr = getComponentOrientation().isLeftToRight();
+    final int width = getWidth();
+    if (navigationIcon != null) {
+      final int slot = slotWidth(navigationIcon);
+      placeInSlot(navigationIcon, ltr ? EDGE_SPACE_PX : width - EDGE_SPACE_PX - slot, slot);
+    }
+    int edge = ltr ? width - EDGE_SPACE_PX : EDGE_SPACE_PX;
+    for (int i = trailingElements.size() - 1; i >= 0; i--) {
+      final JComponent element = trailingElements.get(i);
+      final int slot = slotWidth(element);
+      edge = ltr ? edge - slot : edge + slot;
+      placeInSlot(element, ltr ? edge : edge - slot, slot);
+    }
+  }
+
+  private static int slotWidth(final JComponent element) {
+    return Math.max(SLOT_SIZE_PX, element.getPreferredSize().width);
+  }
+
+  private void placeInSlot(final JComponent element, final int slotX, final int slotWidth) {
+    final Dimension pref = element.getPreferredSize();
+    final int w = Math.min(pref.width, slotWidth);
+    final int h = Math.min(pref.height, STRIP_HEIGHT_PX);
+    element.setBounds(slotX + (slotWidth - w) / 2, (STRIP_HEIGHT_PX - h) / 2, w, h);
+  }
+
+  // The title region's logical bounds (LTR-equivalent coordinates handled by caller flips):
+  // start after the nav slot (or the 16px inset), end before the trailing run (or the 16px
+  // inset). Returns {start, end} in component coordinates honoring orientation.
+  private int[] titleRegion() {
+    final int width = getWidth();
+    final boolean ltr = getComponentOrientation().isLeftToRight();
+    final int navExtent =
+        navigationIcon != null ? EDGE_SPACE_PX + slotWidth(navigationIcon) : TITLE_INSET_PX;
+    int trailingExtent = TITLE_INSET_PX;
+    if (!trailingElements.isEmpty()) {
+      trailingExtent = EDGE_SPACE_PX;
+      for (JComponent element : trailingElements) {
+        trailingExtent += slotWidth(element);
+      }
+    }
+    return ltr
+        ? new int[] {navExtent, width - trailingExtent}
+        : new int[] {trailingExtent, width - navExtent};
+  }
+
+  @Override
+  public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
+    int width = navigationIcon != null ? EDGE_SPACE_PX + slotWidth(navigationIcon) : TITLE_INSET_PX;
+    width += getFontMetrics(stripTitleFont()).stringWidth(title);
+    if (trailingElements.isEmpty()) {
+      width += TITLE_INSET_PX;
+    } else {
+      width += EDGE_SPACE_PX;
+      for (JComponent element : trailingElements) {
+        width += slotWidth(element);
+      }
+    }
+    return new Dimension(width, currentHeightPx());
+  }
+
+  // The container height at the current collapse fraction: the expanded token height at 0, the
+  // 64px strip at 1, lerped between.
+  private int currentHeightPx() {
+    final int expanded = variant.expandedHeightPx(subtitle != null);
+    if (!variant.isFlexible() || collapsedFraction <= 0f) {
+      return expanded;
+    }
+    return STRIP_HEIGHT_PX + Math.round((expanded - STRIP_HEIGHT_PX) * (1f - collapsedFraction));
+  }
+
+  @Override
+  public Dimension getMinimumSize() {
+    return new Dimension(SLOT_SIZE_PX * 2, getPreferredSize().height);
+  }
+
+  // ------------------------------------------------------------------- paint
+
+  @Override
+  protected void paintComponent(final Graphics g) {
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setColor(containerColor());
+      g2.fillRect(0, 0, getWidth(), getHeight());
+      g2.setRenderingHint(
+          RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+      if (variant.isFlexible()) {
+        paintCollapseCrossfade(g2);
+      } else {
+        paintTextLayer(g2, contentAlpha(), this::paintStripText);
+      }
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  // The two-layer collapse crossfade (design §7, Compose parity): the expanded headline fades out
+  // linearly with the fraction and slides up with the shrinking container — unclipped, as Compose
+  // renders it — while the collapsed strip title ramps in over the last 30% of the collapse.
+  // Both layers multiply by the disabled content opacity when the bar is disabled.
+  private void paintCollapseCrossfade(final Graphics2D g2) {
+    final float content = contentAlpha();
+    final float expandedAlpha = (1f - collapsedFraction) * content;
+    if (expandedAlpha > 0f) {
+      paintTextLayer(g2, expandedAlpha, this::paintExpandedHeadline);
+    }
+    final float collapsedAlpha = Math.max(0f, (collapsedFraction - 0.7f) / 0.3f) * content;
+    if (collapsedAlpha > 0f) {
+      paintTextLayer(g2, collapsedAlpha, this::paintStripText);
+    }
+  }
+
+  private void paintTextLayer(
+      final Graphics2D g2, final float alpha, final java.util.function.Consumer<Graphics2D> body) {
+    final Graphics2D layer = (Graphics2D) g2.create();
+    try {
+      if (alpha < 1f) {
+        layer.setComposite(java.awt.AlphaComposite.SrcOver.derive(alpha));
+      }
+      body.accept(layer);
+    } finally {
+      layer.dispose();
+    }
+  }
+
+  private float contentAlpha() {
+    return isEnabled() ? 1f : com.owspfm.elwha.theme.StateLayer.disabledContentOpacity();
+  }
+
+  // The flexible variants' expanded headline block: 16px margins, bottom-anchored at the
+  // variant's bottom padding (against the current collapse height), title over subtitle with
+  // zero gap (the v14.0.0 anatomy).
+  private void paintExpandedHeadline(final Graphics2D g2) {
+    if (title.isEmpty() && subtitle == null) {
+      return;
+    }
+    final Font titleFont = variant.expandedTitleRole().resolve();
+    final Font subtitleFont = variant.expandedSubtitleRole().resolve();
+    final FontMetrics titleFm = g2.getFontMetrics(titleFont);
+    final FontMetrics subtitleFm = g2.getFontMetrics(subtitleFont);
+    final int[] region = {EXPANDED_MARGIN_PX, getWidth() - EXPANDED_MARGIN_PX};
+    if (region[1] - region[0] <= 0) {
+      return;
+    }
+    final int blockBottom = getHeight() - variant.expandedBottomPaddingPx();
+    final int titleBaseline =
+        subtitle != null
+            ? blockBottom - subtitleFm.getHeight() - titleFm.getDescent()
+            : blockBottom - titleFm.getDescent();
+
+    g2.setColor(ColorRole.ON_SURFACE.resolve());
+    g2.setFont(titleFont);
+    drawClippedLine(g2, title, titleFm, region, titleBaseline);
+
+    if (subtitle != null) {
+      g2.setColor(ColorRole.ON_SURFACE_VARIANT.resolve());
+      g2.setFont(subtitleFont);
+      drawClippedLine(g2, subtitle, subtitleFm, region, blockBottom - subtitleFm.getDescent());
+    }
+  }
+
+  // The small bar's title+subtitle stack, vertically centered as a unit in the 64px strip —
+  // also the collapsed-title layer the flexible variants fade in (S4).
+  private void paintStripText(final Graphics2D g2) {
+    if (title.isEmpty() && subtitle == null) {
+      return;
+    }
+    final Font titleFont = stripTitleFont();
+    final Font subtitleFont = TypeRole.LABEL_MEDIUM.resolve();
+    final FontMetrics titleFm = g2.getFontMetrics(titleFont);
+    final FontMetrics subtitleFm = g2.getFontMetrics(subtitleFont);
+    final int[] region = titleRegion();
+    final int available = region[1] - region[0];
+    if (available <= 0) {
+      return;
+    }
+    final int blockHeight = titleFm.getHeight() + (subtitle != null ? subtitleFm.getHeight() : 0);
+    final int top = (STRIP_HEIGHT_PX - blockHeight) / 2;
+
+    g2.setColor(ColorRole.ON_SURFACE.resolve());
+    g2.setFont(titleFont);
+    drawClippedLine(g2, title, titleFm, region, top + titleFm.getAscent());
+
+    if (subtitle != null) {
+      g2.setColor(ColorRole.ON_SURFACE_VARIANT.resolve());
+      g2.setFont(subtitleFont);
+      drawClippedLine(
+          g2, subtitle, subtitleFm, region, top + titleFm.getHeight() + subtitleFm.getAscent());
+    }
+  }
+
+  // Lays one line into the title region: leading-aligned (orientation-aware) or centered over
+  // the container, clamped into the region, ellipsized to fit.
+  private void drawClippedLine(
+      final Graphics2D g2,
+      final String text,
+      final FontMetrics fm,
+      final int[] region,
+      final int baseline) {
+    final String clipped = clipText(text, fm, region[1] - region[0]);
+    final int textWidth = fm.stringWidth(clipped);
+    final int x;
+    if (titleCentered) {
+      x = Math.max(region[0], Math.min((getWidth() - textWidth) / 2, region[1] - textWidth));
+    } else if (getComponentOrientation().isLeftToRight()) {
+      x = region[0];
+    } else {
+      x = region[1] - textWidth;
+    }
+    g2.drawString(clipped, x, baseline);
+  }
+
+  static String clipText(final String text, final FontMetrics fm, final int available) {
+    if (available <= 0 || fm.stringWidth(text) <= available) {
+      return text;
+    }
+    final String ellipsis = "…";
+    final int ellipsisWidth = fm.stringWidth(ellipsis);
+    for (int end = text.length() - 1; end > 0; end--) {
+      if (fm.stringWidth(text.substring(0, end)) + ellipsisWidth <= available) {
+        return text.substring(0, end) + ellipsis;
+      }
+    }
+    return ellipsisWidth <= available ? ellipsis : "";
+  }
+
+  private Font stripTitleFont() {
+    return TypeRole.TITLE_LARGE.resolve();
+  }
+
+  // SURFACE → SURFACE_CONTAINER by the lift fade's eased progress (tonal lift, design §6).
+  private Color containerColor() {
+    final float t = Easing.STANDARD.ease(liftAnimator.progress());
+    if (t <= 0f) {
+      return ColorRole.SURFACE.resolve();
+    }
+    if (t >= 1f) {
+      return ColorRole.SURFACE_CONTAINER.resolve();
+    }
+    return lerp(ColorRole.SURFACE.resolve(), ColorRole.SURFACE_CONTAINER.resolve(), t);
+  }
+
+  private static Color lerp(final Color a, final Color b, final float t) {
+    return new Color(
+        Math.round(a.getRed() + (b.getRed() - a.getRed()) * t),
+        Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * t),
+        Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * t));
+  }
+
+  // ----------------------------------------------------------- accessibility
+
+  private String accessibleNameNow() {
+    if (subtitle == null) {
+      return title;
+    }
+    return title.isEmpty() ? subtitle : title + ", " + subtitle;
+  }
+
+  private void fireAccessibleNameChange(final String old) {
+    if (accessibleContext != null) {
+      accessibleContext.firePropertyChange(
+          AccessibleContext.ACCESSIBLE_NAME_PROPERTY, old, accessibleNameNow());
+    }
+  }
+
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaAppBar();
+    }
+    return accessibleContext;
+  }
+
+  /**
+   * The bar's accessible context — a structural {@link AccessibleRole#PANEL} whose accessible name
+   * is the title (plus {@code ", "} and the subtitle when present), live-updated as the setters
+   * run. The bar adds no interactive a11y of its own; the hosted {@link ElwhaIconButton}s carry
+   * their roles and actions.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected class AccessibleElwhaAppBar extends AccessibleJComponent {
+
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.PANEL;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      final String declared = super.getAccessibleName();
+      if (declared != null && !declared.isEmpty()) {
+        return declared;
+      }
+      final String computed = accessibleNameNow();
+      return computed.isEmpty() ? null : computed;
+    }
+  }
+}

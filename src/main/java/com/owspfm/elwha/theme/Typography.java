@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * A font family resolved against all 12 {@link TypeRole}s — the typography half of a {@link
+ * A font family resolved against all 15 {@link TypeRole}s — the typography half of a {@link
  * Config}.
  *
  * <p>{@link #defaults()} returns the bundled-Inter typography: Elwha ships Inter with real Regular
@@ -22,7 +22,7 @@ import java.util.Objects;
  * <p>Instances are immutable.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.4.0
  * @since v0.1.0
  */
 public final class Typography {
