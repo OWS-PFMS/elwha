@@ -139,14 +139,14 @@ public final class ElwhaLinearProgressWavySmoke {
       final Color target,
       final int x0,
       final int x1,
-      final int yMin,
-      final int yMax) {
+      final int minY,
+      final int maxY) {
     boolean seen = false;
     for (int x = x0; x < Math.min(x1, W); x++) {
       for (int y = 0; y < H; y++) {
         if (nearColor(img.getRGB(x, y), target)) {
           seen = true;
-          if (y < yMin || y > yMax) {
+          if (y < minY || y > maxY) {
             return false;
           }
         }
