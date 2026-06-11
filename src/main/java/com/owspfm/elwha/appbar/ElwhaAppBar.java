@@ -15,8 +15,13 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import javax.accessibility.Accessible;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.JScrollPane;
@@ -55,7 +60,7 @@ import javax.swing.JScrollPane;
  * @version v0.4.0
  * @since v0.4.0
  */
-public class ElwhaAppBar extends JComponent {
+public class ElwhaAppBar extends JComponent implements Accessible {
 
   static final int STRIP_HEIGHT_PX = 64;
   static final int EDGE_SPACE_PX = 4;
@@ -67,6 +72,7 @@ public class ElwhaAppBar extends JComponent {
   private final AppBarVariant variant;
   private final List<JComponent> trailingElements = new ArrayList<>();
   private final List<ElwhaIconButton> actions = new ArrayList<>();
+  private final Map<JComponent, Boolean> preDisableStates = new HashMap<>();
 
   private final ScrollSourceBinding scrollBinding = new ScrollSourceBinding(this::onScroll);
   private final MorphAnimator liftAnimator = new MorphAnimator(this, LIFT_FADE_MS);
@@ -101,6 +107,12 @@ public class ElwhaAppBar extends JComponent {
     this.variant = Objects.requireNonNull(variant, "variant");
     setOpaque(true);
     liftAnimator.addProgressListener(this::repaint);
+    addPropertyChangeListener(
+        "componentOrientation",
+        e -> {
+          revalidate();
+          repaint();
+        });
   }
 
   /**
@@ -163,11 +175,14 @@ public class ElwhaAppBar extends JComponent {
    */
   public void setNavigationIcon(final ElwhaIconButton button) {
     if (navigationIcon != null) {
+      preDisableStates.remove(navigationIcon);
       remove(navigationIcon);
     }
     navigationIcon = button;
     if (button != null) {
-      add(button);
+      // Index 0 keeps focus traversal in layout order: navigation button before the trailing run.
+      add(button, 0);
+      stampEnabled(button);
     }
     revalidate();
     repaint();
@@ -220,6 +235,7 @@ public class ElwhaAppBar extends JComponent {
     actions.add(action);
     trailingElements.add(action);
     add(action);
+    stampEnabled(action);
     revalidate();
     repaint();
     return action;
@@ -251,6 +267,7 @@ public class ElwhaAppBar extends JComponent {
   public void removeAction(final ElwhaIconButton action) {
     if (actions.remove(action)) {
       trailingElements.remove(action);
+      preDisableStates.remove(action);
       remove(action);
       revalidate();
       repaint();
@@ -282,6 +299,7 @@ public class ElwhaAppBar extends JComponent {
     Objects.requireNonNull(element, "element");
     trailingElements.add(element);
     add(element);
+    stampEnabled(element);
     revalidate();
     repaint();
     return element;
@@ -297,9 +315,59 @@ public class ElwhaAppBar extends JComponent {
   public void removeTrailingElement(final JComponent element) {
     if (trailingElements.remove(element)) {
       actions.remove(element);
+      preDisableStates.remove(element);
       remove(element);
       revalidate();
       repaint();
+    }
+  }
+
+  /**
+   * Enables or disables the whole bar: hosted buttons and trailing elements are disabled with it
+   * (their individual enabled states are remembered and restored on re-enable — a button the
+   * consumer disabled stays disabled), and the title/subtitle paint at the disabled content
+   * opacity. The bar's enabled state is read explicitly when propagating, per the #432 shadowing
+   * doctrine.
+   *
+   * @param enabled the new enabled state
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  public void setEnabled(final boolean enabled) {
+    if (enabled == isEnabled()) {
+      super.setEnabled(enabled);
+      return;
+    }
+    super.setEnabled(enabled);
+    if (!enabled) {
+      for (JComponent child : managedChildren()) {
+        preDisableStates.put(child, child.isEnabled());
+        child.setEnabled(false);
+      }
+    } else {
+      for (JComponent child : managedChildren()) {
+        child.setEnabled(preDisableStates.getOrDefault(child, true));
+      }
+      preDisableStates.clear();
+    }
+    repaint();
+  }
+
+  private List<JComponent> managedChildren() {
+    final List<JComponent> children = new ArrayList<>(trailingElements);
+    if (navigationIcon != null) {
+      children.add(navigationIcon);
+    }
+    return children;
+  }
+
+  // A child added while the bar is disabled joins the disabled treatment; its intended state is
+  // remembered for re-enable.
+  private void stampEnabled(final JComponent child) {
+    if (!isEnabled()) {
+      preDisableStates.put(child, child.isEnabled());
+      child.setEnabled(false);
     }
   }
 
@@ -327,7 +395,9 @@ public class ElwhaAppBar extends JComponent {
    * @since v0.4.0
    */
   public void setTitle(final String title) {
+    final String old = accessibleNameNow();
     this.title = title == null ? "" : title;
+    fireAccessibleNameChange(old);
     revalidate();
     repaint();
   }
@@ -352,7 +422,12 @@ public class ElwhaAppBar extends JComponent {
    * @since v0.4.0
    */
   public void setSubtitle(final String subtitle) {
+    final String old = accessibleNameNow();
     this.subtitle = subtitle == null || subtitle.isEmpty() ? null : subtitle;
+    fireAccessibleNameChange(old);
+    if (scrollSource != null) {
+      applyScrollState(scrollBinding.value());
+    }
     revalidate();
     repaint();
   }
@@ -666,7 +741,7 @@ public class ElwhaAppBar extends JComponent {
       if (variant.isFlexible()) {
         paintCollapseCrossfade(g2);
       } else {
-        paintStripText(g2);
+        paintTextLayer(g2, contentAlpha(), this::paintStripText);
       }
     } finally {
       g2.dispose();
@@ -676,27 +751,34 @@ public class ElwhaAppBar extends JComponent {
   // The two-layer collapse crossfade (design §7, Compose parity): the expanded headline fades out
   // linearly with the fraction and slides up with the shrinking container — unclipped, as Compose
   // renders it — while the collapsed strip title ramps in over the last 30% of the collapse.
+  // Both layers multiply by the disabled content opacity when the bar is disabled.
   private void paintCollapseCrossfade(final Graphics2D g2) {
-    final float expandedAlpha = 1f - collapsedFraction;
+    final float content = contentAlpha();
+    final float expandedAlpha = (1f - collapsedFraction) * content;
     if (expandedAlpha > 0f) {
-      final Graphics2D layer = (Graphics2D) g2.create();
-      try {
-        layer.setComposite(java.awt.AlphaComposite.SrcOver.derive(expandedAlpha));
-        paintExpandedHeadline(layer);
-      } finally {
-        layer.dispose();
-      }
+      paintTextLayer(g2, expandedAlpha, this::paintExpandedHeadline);
     }
-    final float collapsedAlpha = Math.max(0f, (collapsedFraction - 0.7f) / 0.3f);
+    final float collapsedAlpha = Math.max(0f, (collapsedFraction - 0.7f) / 0.3f) * content;
     if (collapsedAlpha > 0f) {
-      final Graphics2D layer = (Graphics2D) g2.create();
-      try {
-        layer.setComposite(java.awt.AlphaComposite.SrcOver.derive(collapsedAlpha));
-        paintStripText(layer);
-      } finally {
-        layer.dispose();
-      }
+      paintTextLayer(g2, collapsedAlpha, this::paintStripText);
     }
+  }
+
+  private void paintTextLayer(
+      final Graphics2D g2, final float alpha, final java.util.function.Consumer<Graphics2D> body) {
+    final Graphics2D layer = (Graphics2D) g2.create();
+    try {
+      if (alpha < 1f) {
+        layer.setComposite(java.awt.AlphaComposite.SrcOver.derive(alpha));
+      }
+      body.accept(layer);
+    } finally {
+      layer.dispose();
+    }
+  }
+
+  private float contentAlpha() {
+    return isEnabled() ? 1f : com.owspfm.elwha.theme.StateLayer.disabledContentOpacity();
   }
 
   // The flexible variants' expanded headline block: 16px margins, bottom-anchored at the
@@ -817,5 +899,57 @@ public class ElwhaAppBar extends JComponent {
         Math.round(a.getRed() + (b.getRed() - a.getRed()) * t),
         Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * t),
         Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * t));
+  }
+
+  // ----------------------------------------------------------- accessibility
+
+  private String accessibleNameNow() {
+    if (subtitle == null) {
+      return title;
+    }
+    return title.isEmpty() ? subtitle : title + ", " + subtitle;
+  }
+
+  private void fireAccessibleNameChange(final String old) {
+    if (accessibleContext != null) {
+      accessibleContext.firePropertyChange(
+          AccessibleContext.ACCESSIBLE_NAME_PROPERTY, old, accessibleNameNow());
+    }
+  }
+
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaAppBar();
+    }
+    return accessibleContext;
+  }
+
+  /**
+   * The bar's accessible context — a structural {@link AccessibleRole#PANEL} whose accessible name
+   * is the title (plus {@code ", "} and the subtitle when present), live-updated as the setters
+   * run. The bar adds no interactive a11y of its own; the hosted {@link ElwhaIconButton}s carry
+   * their roles and actions.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected class AccessibleElwhaAppBar extends AccessibleJComponent {
+
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.PANEL;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      final String declared = super.getAccessibleName();
+      if (declared != null && !declared.isEmpty()) {
+        return declared;
+      }
+      final String computed = accessibleNameNow();
+      return computed.isEmpty() ? null : computed;
+    }
   }
 }
