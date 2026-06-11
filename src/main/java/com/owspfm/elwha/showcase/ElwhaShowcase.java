@@ -775,6 +775,13 @@ public final class ElwhaShowcase {
             buildCheckboxComponent()));
     register(
         new LeafEntry(
+            "Radio button",
+            "M3 radio button — the ring-and-dot single select, with ElwhaRadioGroup exclusion,"
+                + " arrow navigation, and a roving tab stop.",
+            AREA_COMPONENTS,
+            buildRadioButtonComponent()));
+    register(
+        new LeafEntry(
             "Tooltip",
             "M3 tooltips — plain inverse-surface labels and rich cards with subhead, supporting"
                 + " text, and actions; hover/focus triggers, persistent flavor.",
@@ -813,7 +820,7 @@ public final class ElwhaShowcase {
 
   // The four landing cards, populated into the CardLayout content panel. Each is a grid of
   // ElwhaCards — title + supporting text + an actionable click that routes to the leaf surface.
-  // Home is the master index (all 20 leaves, grouped by area heading); each area landing covers
+  // Home is the master index (all 21 leaves, grouped by area heading); each area landing covers
   // just its own leaves. ElwhaCard's actionable mode is the entire raison-d'être here: the cards
   // are the navigation surface, not decoration.
   private void populateLandingCards() {
@@ -1953,6 +1960,20 @@ public final class ElwhaShowcase {
         "Gallery",
         scroll(
             stack(gallerySection("States & configurations", TabsShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- radio button
+
+  private static JComponent buildRadioButtonComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", RadioButtonShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection(
+                    "States & configurations", RadioButtonShowcasePanels.buildGallery()))));
     return tabs;
   }
 
