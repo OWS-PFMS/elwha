@@ -72,7 +72,12 @@ final class RadioButtonShowcasePanels {
     controls.addControl("", rtlBox);
     controls.addControl("", reducedBox);
 
-    final JLabel readout = new JLabel(" ", SwingConstants.CENTER);
+    // Pin the readout to its widest footprint so selection changes never reflow the stage.
+    final JLabel readout = new JLabel("group.getSelected() → Second option", SwingConstants.CENTER);
+    final Dimension readoutPref = readout.getPreferredSize();
+    readout.setPreferredSize(readoutPref);
+    readout.setMaximumSize(readoutPref);
+    readout.setText("group.getSelected() → First option");
     group.addChangeListener(
         e -> {
           final ElwhaRadioButton current = group.getSelected();
@@ -89,6 +94,11 @@ final class RadioButtonShowcasePanels {
             selectedBox.setSelectedIndex(index);
           }
         });
+
+    // The stage is built ONCE; apply mutates state in place. Rebuilding per event re-parents the
+    // radios, which finishes their tweens mid-flight (removeNotify) and breathes the surface.
+    final JPanel[] rowPanels = new JPanel[radios.length];
+    workbench.setStage(stage(radios, rowPanels, readout));
 
     final Runnable apply =
         () -> {
@@ -107,9 +117,10 @@ final class RadioButtonShowcasePanels {
           for (int i = 0; i < radios.length; i++) {
             radios[i].setEnabled(enabledBoxes[i].isSelected());
             radios[i].setComponentOrientation(orientation);
+            rowPanels[i].setComponentOrientation(orientation);
+            rowPanels[i].revalidate();
           }
           MorphAnimator.setReducedMotion(reducedBox.isSelected());
-          workbench.setStage(stage(radios, readout, orientation));
           workbench.setCode(
               renderCode(
                   selection,
@@ -213,21 +224,20 @@ final class RadioButtonShowcasePanels {
     return pane;
   }
 
+  /** Builds the persistent stage once; {@code rowPanels} receives the rows for RTL flips. */
   private static JComponent stage(
-      final ElwhaRadioButton[] radios,
-      final JLabel readout,
-      final ComponentOrientation orientation) {
+      final ElwhaRadioButton[] radios, final JPanel[] rowPanels, final JLabel readout) {
     final JPanel rows = new JPanel();
     rows.setOpaque(false);
     rows.setLayout(new BoxLayout(rows, BoxLayout.Y_AXIS));
     for (int i = 0; i < radios.length; i++) {
       final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 2));
       row.setOpaque(false);
-      row.setComponentOrientation(orientation);
       row.add(radios[i]);
       row.setAlignmentX(0.5f);
       final Dimension pref = row.getPreferredSize();
       row.setMaximumSize(new Dimension(220, pref.height));
+      rowPanels[i] = row;
       rows.add(row);
     }
 
