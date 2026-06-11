@@ -69,6 +69,7 @@ public class ElwhaColorPicker extends JComponent {
   private boolean adjusting;
   private boolean committing;
   private boolean rebuilding;
+  private boolean alphaEnabled;
   private String supportingText = "Select color";
 
   /**
@@ -268,6 +269,42 @@ public class ElwhaColorPicker extends JComponent {
   }
 
   /**
+   * Opts the picker into the alpha channel (WinUI's {@code IsAlphaEnabled} precedent, design §9):
+   * an alpha track joins the SPECTRUM and SLIDERS panes, the hex grammar grows to
+   * {@code #RRGGBBAA}, and the preview backs translucency with the transparency checkerboard.
+   * Turning alpha off strips the current color to opaque (a change commit if it carried alpha).
+   * Mode panes are rebuilt; the recent row survives.
+   *
+   * @param alphaEnabled whether colors carry alpha
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setAlphaEnabled(final boolean alphaEnabled) {
+    if (this.alphaEnabled == alphaEnabled) {
+      return;
+    }
+    this.alphaEnabled = alphaEnabled;
+    if (!alphaEnabled && color.getAlpha() != 255) {
+      commitInternal(
+          null, new Color(color.getRed(), color.getGreen(), color.getBlue()), false);
+    }
+    rebuildModes();
+    header.revalidate();
+    header.repaint();
+  }
+
+  /**
+   * Answers whether the alpha channel is enabled.
+   *
+   * @return {@code true} when colors carry alpha
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public boolean isAlphaEnabled() {
+    return alphaEnabled;
+  }
+
+  /**
    * Enables or disables the whole picker — tabs, panes, and header rendering follow.
    *
    * @param enabled the new enabled state
@@ -304,15 +341,15 @@ public class ElwhaColorPicker extends JComponent {
   }
 
   TypeRole headlineTypeRole() {
-    return TypeRole.HEADLINE_LARGE;
+    return alphaEnabled ? TypeRole.HEADLINE_MEDIUM : TypeRole.HEADLINE_LARGE;
   }
 
   String formatCurrentHex() {
-    return ColorHex.format(color, false);
+    return ColorHex.format(color, alphaEnabled);
   }
 
   private Color normalize(final Color candidate) {
-    return candidate.getAlpha() == 255
+    return alphaEnabled || candidate.getAlpha() == 255
         ? candidate
         : new Color(candidate.getRed(), candidate.getGreen(), candidate.getBlue());
   }

@@ -111,6 +111,18 @@ public class ElwhaColorPickerDialog {
   }
 
   /**
+   * Opts the embedded picker into the alpha channel — same contract as {@link
+   * ElwhaColorPicker#setAlphaEnabled}.
+   *
+   * @param alphaEnabled whether colors carry alpha
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setAlphaEnabled(final boolean alphaEnabled) {
+    picker.setAlphaEnabled(alphaEnabled);
+  }
+
+  /**
    * Registers the OK callback — receives the pending color when the confirming action fires.
    *
    * @param onConfirm the confirm consumer

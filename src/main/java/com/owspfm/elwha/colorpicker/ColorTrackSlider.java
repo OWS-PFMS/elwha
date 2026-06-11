@@ -59,6 +59,7 @@ final class ColorTrackSlider extends JComponent {
   private final int max;
   private int value;
   private Color[] trackStops = {Color.BLACK, Color.WHITE};
+  private boolean checkerboardBacking;
   private ValueListener listener;
   private boolean dragging;
 
@@ -139,6 +140,11 @@ final class ColorTrackSlider extends JComponent {
     repaint();
   }
 
+  void setCheckerboardBacking(final boolean checkerboardBacking) {
+    this.checkerboardBacking = checkerboardBacking;
+    repaint();
+  }
+
   void userSet(final int next, final boolean adjusting) {
     final int clamped = clamp(next);
     final boolean changed = clamped != value;
@@ -212,6 +218,9 @@ final class ColorTrackSlider extends JComponent {
       final int trackY = (getHeight() - TRACK_HEIGHT) / 2;
       final RoundRectangle2D.Double track =
           new RoundRectangle2D.Double(0, trackY, width, TRACK_HEIGHT, TRACK_HEIGHT, TRACK_HEIGHT);
+      if (checkerboardBacking) {
+        Checkerboard.fill(g2, track);
+      }
       if (trackStops.length > 1) {
         final float[] fractions = new float[trackStops.length];
         for (int i = 0; i < trackStops.length; i++) {

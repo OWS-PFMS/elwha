@@ -86,15 +86,27 @@ final class SwatchesPane extends ColorPickerPane {
   void selectHue(final int hueIndex) {
     activeHue = hueIndex;
     commit(
-        MaterialSwatchCatalog.hues().get(hueIndex).shades()[
-            MaterialSwatchCatalog.REPRESENTATIVE_SHADE],
+        preserveAlpha(
+            MaterialSwatchCatalog.hues().get(hueIndex).shades()[
+                MaterialSwatchCatalog.REPRESENTATIVE_SHADE]),
         false);
     repaint();
   }
 
   void selectShade(final int shadeIndex) {
-    commit(MaterialSwatchCatalog.hues().get(activeHue).shades()[shadeIndex], false);
+    commit(preserveAlpha(MaterialSwatchCatalog.hues().get(activeHue).shades()[shadeIndex]), false);
     repaint();
+  }
+
+  private Color preserveAlpha(final Color catalogColor) {
+    if (!picker().isAlphaEnabled()) {
+      return catalogColor;
+    }
+    return new Color(
+        catalogColor.getRed(),
+        catalogColor.getGreen(),
+        catalogColor.getBlue(),
+        picker().getColor().getAlpha());
   }
 
   void selectRecent(final int recentIndex) {

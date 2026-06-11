@@ -90,16 +90,15 @@ final class ColorPickerHeader extends JComponent {
 
   private void paintSwatch(final Graphics2D g2, final int x, final int y) {
     final int arc = ShapeScale.SM.px();
-    g2.setColor(opaque(picker.getColor()));
-    g2.fillRoundRect(x, y, SWATCH_SIZE, SWATCH_SIZE, arc, arc);
+    final java.awt.geom.RoundRectangle2D.Double shape =
+        new java.awt.geom.RoundRectangle2D.Double(x, y, SWATCH_SIZE, SWATCH_SIZE, arc, arc);
+    if (picker.isAlphaEnabled() && picker.getColor().getAlpha() < 255) {
+      Checkerboard.fill(g2, shape);
+    }
+    g2.setColor(picker.getColor());
+    g2.fill(shape);
     g2.setColor(ColorRole.OUTLINE_VARIANT.resolve());
     g2.drawRoundRect(x, y, SWATCH_SIZE - 1, SWATCH_SIZE - 1, arc, arc);
-  }
-
-  private static java.awt.Color opaque(final java.awt.Color color) {
-    return color.getAlpha() == 255
-        ? color
-        : new java.awt.Color(color.getRed(), color.getGreen(), color.getBlue());
   }
 
   private static int fontHeight(final Font font) {

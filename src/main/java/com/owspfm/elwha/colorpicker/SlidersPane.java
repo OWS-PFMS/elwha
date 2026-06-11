@@ -54,14 +54,18 @@ final class SlidersPane extends ColorPickerPane {
   private final ChannelRow[] hsvRows = new ChannelRow[3];
   private final ElwhaTextField hexField;
 
+  private final ChannelRow alphaRow;
+
   private ChannelModel channelModel = ChannelModel.RGB;
   private float hueDegrees;
   private float saturation;
   private float value;
+  private int alpha;
 
   SlidersPane(final ElwhaColorPicker picker) {
     super(picker);
     adoptHsv(picker.getColor());
+    this.alpha = picker.getColor().getAlpha();
 
     this.modelToggle =
         ElwhaButtonGroup.connected()
@@ -98,7 +102,7 @@ final class SlidersPane extends ColorPickerPane {
             new FocusAdapter() {
               @Override
               public void focusLost(final FocusEvent e) {
-                if (ColorHex.parse(hexField.getText(), false) == null) {
+                if (ColorHex.parse(hexField.getText(), picker.isAlphaEnabled()) == null) {
                   revertHex();
                 } else {
                   commitHexText(hexField.getText());
@@ -110,6 +114,15 @@ final class SlidersPane extends ColorPickerPane {
     add(modelToggle);
     add(Box.createVerticalStrut(SpaceScale.MD.px()));
     add(rowsHost);
+    if (picker.isAlphaEnabled()) {
+      this.alphaRow = new ChannelRow("A", 0, 255, this::alphaFromUser);
+      alphaRow.slider.setCheckerboardBacking(true);
+      alphaRow.setAlignmentX(LEFT_ALIGNMENT);
+      add(Box.createVerticalStrut(SpaceScale.SM.px()));
+      add(alphaRow);
+    } else {
+      this.alphaRow = null;
+    }
     add(Box.createVerticalStrut(SpaceScale.MD.px()));
     add(hexField);
     refresh(picker.getColor());
@@ -131,7 +144,7 @@ final class SlidersPane extends ColorPickerPane {
     final Color current = picker().getColor();
     final int[] rgb = {current.getRed(), current.getGreen(), current.getBlue()};
     rgb[channel] = Math.max(0, Math.min(255, channelValue));
-    final Color next = new Color(rgb[0], rgb[1], rgb[2]);
+    final Color next = withAlpha(rgb[0], rgb[1], rgb[2]);
     adoptHsv(next);
     commit(next, adjusting);
     refresh(next);
@@ -143,22 +156,41 @@ final class SlidersPane extends ColorPickerPane {
       case 1 -> saturation = Math.max(0f, Math.min(1f, channelValue / 100f));
       default -> value = Math.max(0f, Math.min(1f, channelValue / 100f));
     }
-    final Color next = new Color(Color.HSBtoRGB(hueDegrees / 360f, saturation, value));
+    final int rgb = Color.HSBtoRGB(hueDegrees / 360f, saturation, value);
+    final Color next = withAlpha((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+    commit(next, adjusting);
+    refresh(next);
+  }
+
+  void alphaFromUser(final int channelValue, final boolean adjusting) {
+    alpha = Math.max(0, Math.min(255, channelValue));
+    final Color current = picker().getColor();
+    final Color next = withAlpha(current.getRed(), current.getGreen(), current.getBlue());
     commit(next, adjusting);
     refresh(next);
   }
 
   void commitHexText(final String text) {
-    final Color parsed = ColorHex.parse(text, false);
+    final boolean allowAlpha = picker().isAlphaEnabled();
+    final Color parsed = ColorHex.parse(text, allowAlpha);
     if (parsed == null) {
       hexField.setError(true);
-      hexField.setErrorText("Use #RRGGBB");
+      hexField.setErrorText(allowAlpha ? "Use #RRGGBB or #RRGGBBAA" : "Use #RRGGBB");
       return;
     }
     hexField.setError(false);
     adoptHsv(parsed);
-    commit(new Color(parsed.getRed(), parsed.getGreen(), parsed.getBlue()), false);
+    if (allowAlpha) {
+      alpha = parsed.getAlpha();
+    }
+    commit(parsed, false);
     refresh(picker().getColor());
+  }
+
+  private Color withAlpha(final int red, final int green, final int blue) {
+    return picker().isAlphaEnabled()
+        ? new Color(red, green, blue, alpha)
+        : new Color(red, green, blue);
   }
 
   boolean isHexError() {
@@ -171,7 +203,11 @@ final class SlidersPane extends ColorPickerPane {
 
   void revertHex() {
     hexField.setError(false);
-    hexField.setText(ColorHex.format(picker().getColor(), false));
+    hexField.setText(ColorHex.format(picker().getColor(), picker().isAlphaEnabled()));
+  }
+
+  int alphaValue() {
+    return alphaRow != null ? alphaRow.slider.value() : 255;
   }
 
   int rgbValue(final int channel) {
@@ -206,9 +242,16 @@ final class SlidersPane extends ColorPickerPane {
     hsvRows[0].slider.setValue(Math.round(hueDegrees));
     hsvRows[1].slider.setValue(Math.round(saturation * 100f));
     hsvRows[2].slider.setValue(Math.round(value * 100f));
+    if (alphaRow != null) {
+      alpha = color.getAlpha();
+      alphaRow.slider.setValue(alpha);
+      final int rgb = color.getRGB() & 0xFFFFFF;
+      alphaRow.slider.setTrackStops(new Color(rgb, true), new Color(rgb));
+    }
     updateTracks(color);
-    if (!hexField.isError() && !ColorHex.format(color, false).equals(hexField.getText())) {
-      hexField.setText(ColorHex.format(color, false));
+    final String formatted = ColorHex.format(color, picker().isAlphaEnabled());
+    if (!hexField.isError() && !formatted.equals(hexField.getText())) {
+      hexField.setText(formatted);
     }
     repaint();
   }

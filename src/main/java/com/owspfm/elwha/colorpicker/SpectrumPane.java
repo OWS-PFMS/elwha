@@ -44,14 +44,17 @@ final class SpectrumPane extends ColorPickerPane {
 
   private final SvBox svBox;
   private final ColorTrackSlider hueSlider;
+  private final ColorTrackSlider alphaSlider;
 
   private float hueDegrees;
   private float saturation;
   private float value;
+  private int alpha;
 
   SpectrumPane(final ElwhaColorPicker picker) {
     super(picker);
     adoptHsv(picker.getColor());
+    this.alpha = picker.getColor().getAlpha();
     this.svBox = new SvBox();
     this.hueSlider = new ColorTrackSlider(0, 360, Math.round(hueDegrees));
     hueSlider.setTrackStops(rainbow());
@@ -60,6 +63,16 @@ final class SpectrumPane extends ColorPickerPane {
     add(svBox);
     add(Box.createVerticalStrut(SpaceScale.MD.px()));
     add(hueSlider);
+    if (picker.isAlphaEnabled()) {
+      this.alphaSlider = new ColorTrackSlider(0, 255, alpha);
+      alphaSlider.setCheckerboardBacking(true);
+      alphaSlider.setListener(this::alphaTo);
+      add(Box.createVerticalStrut(SpaceScale.SM.px()));
+      add(alphaSlider);
+      updateAlphaTrack();
+    } else {
+      this.alphaSlider = null;
+    }
   }
 
   float hueDegrees() {
@@ -88,13 +101,24 @@ final class SpectrumPane extends ColorPickerPane {
     commitHsv(adjusting);
   }
 
+  void alphaTo(final int next, final boolean adjusting) {
+    alpha = Math.max(0, Math.min(255, next));
+    commitHsv(adjusting);
+  }
+
   @Override
   void syncFromPicker(final Color color) {
-    if ((currentRgb() & 0xFFFFFF) == (color.getRGB() & 0xFFFFFF)) {
+    if ((currentRgb() & 0xFFFFFF) == (color.getRGB() & 0xFFFFFF)
+        && alpha == color.getAlpha()) {
       return;
     }
     adoptHsv(color);
+    alpha = color.getAlpha();
     hueSlider.setValue(Math.round(hueDegrees));
+    if (alphaSlider != null) {
+      alphaSlider.setValue(alpha);
+      updateAlphaTrack();
+    }
     svBox.repaint();
   }
 
@@ -115,7 +139,17 @@ final class SpectrumPane extends ColorPickerPane {
   }
 
   private void commitHsv(final boolean adjusting) {
-    commit(new Color(currentRgb()), adjusting);
+    if (alphaSlider != null) {
+      updateAlphaTrack();
+      commit(new Color((currentRgb() & 0xFFFFFF) | (alpha << 24), true), adjusting);
+    } else {
+      commit(new Color(currentRgb()), adjusting);
+    }
+  }
+
+  private void updateAlphaTrack() {
+    final int rgb = currentRgb() & 0xFFFFFF;
+    alphaSlider.setTrackStops(new Color(rgb, true), new Color(rgb));
   }
 
   private static Color[] rainbow() {
