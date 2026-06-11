@@ -14,8 +14,12 @@ overlay host with flip + light-dismiss (outside-click / Esc / focus-loss) · ful
 `ColorStyle.STANDARD` **and** `VIBRANT` · `Layout.STANDARD` **and** `GROUPED` (gap / divider) ·
 `SelectionMode.NONE` / `SINGLE` / `MULTI` · default token theming + dark mode · a Showcase leaf.
 
-**Out of scope (V2 / later epics):** submenus (V2, #322), the baseline square menu (#323),
-exposed-dropdown / filtering, a right-click context-menu binding helper, density levels.
+**V2 (shipped, [#322](https://github.com/OWS-PFMS/elwha/issues/322)):** nested **submenus** via
+`ElwhaSubMenuItem` — side placement, hover/keyboard open, active-state shape-morph, nested a11y (see
+[Submenus](#submenus-elwhasubmenuitem-v2)).
+
+**Out of scope (later epics):** the baseline square menu (#323), exposed-dropdown / filtering, a
+right-click context-menu binding helper, density levels.
 
 ## Quick start
 
@@ -135,6 +139,44 @@ Mouse and keyboard (Enter / Space) drive selection identically. The selected vis
 reserves the leading check-column and toggling never reflows the row. Read selection back with
 `getSelectedItems()` / `ElwhaMenuItem.isSelected()`, or observe it via `onSelectionChange`.
 
+## Submenus (`ElwhaSubMenuItem`, V2)
+
+A menu item can host a **nested `ElwhaMenu`** that opens to the side. `ElwhaSubMenuItem` is the one
+sanctioned `ElwhaMenuItem` sibling (the base type is `sealed permits ElwhaSubMenuItem`): it carries a
+trailing `›` caret and the nested menu.
+
+```java
+ElwhaMenu shareTargets = ElwhaMenu.builder()
+    .addItem(ElwhaMenuItem.of(MaterialIcons.add(20), "Email"))
+    .addItem(ElwhaMenuItem.of(MaterialIcons.anchor(20), "Copy link"))
+    .build();
+
+ElwhaMenu menu = ElwhaMenu.builder()
+    .addItem(ElwhaMenuItem.of(MaterialIcons.edit(20), "Rename"))
+    .addItem(ElwhaSubMenuItem.of(MaterialIcons.start(20), "Share", shareTargets))
+    .addItem(ElwhaMenuItem.of(MaterialIcons.delete(20), "Delete"))
+    .build();
+```
+
+- **Open / close** — the submenu opens on a 400 ms hover-intent dwell, a click, or **Right**; it
+  closes on hover-away (matching dwell), **Left**, **Escape**, or a press outside the whole chain.
+  Selecting a leaf action item closes every open level.
+- **Placement** — the submenu side-anchors `START_END` (top-aligned to its opener, opening to the
+  trailing side), flips to the leading side when the trailing side would clip the window, shifts
+  vertically to stay in view, and mirrors under RTL. Arbitrary nesting depth is supported.
+- **Active-state shape-morph** — the focused level's container rounds up (`ShapeScale.LG`) while the
+  level behind it squares off (`ShapeScale.SM`); the swap animates as focus crosses levels (shared
+  `ShapeMorphPainter`, reduced-motion aware). The static Gallery snapshot renders both at the rest
+  shape — see the Workbench or `MenuSubmenuMorphDemo` for the live morph.
+- **Color** — a submenu **inherits its parent's `ColorStyle`** unless it pins its own.
+- **Accessibility** — each level is its own `POPUP_MENU`; the trigger reports
+  `EXPANDABLE` + `EXPANDED`/`COLLAPSED` and exposes the open submenu as its accessible child; focus
+  moves into the submenu and restores to the opener item on close.
+
+The parent stays open while a submenu is up: a submenu is a sibling overlay registered as a *child*
+of its opener in the shared host's chain (`AbstractElwhaOverlay`), so dismissal walks the chain
+top-down. Zero new theme tokens; the only asset add is `MaterialIcons.chevronRight()`.
+
 ## Trigger
 
 The menu **never mutates its trigger** — it opens and closes without touching the trigger's state.
@@ -159,12 +201,14 @@ family, #325) in light-dismiss + anchored mode. The menu has no scrim; it tops d
 | Standard / Grouped | `Layout.STANDARD` / `Layout.GROUPED` |
 | Gap / Divider | `Separator.GAP` / `Separator.DIVIDER` |
 | Standard / Vibrant color | `ColorStyle.STANDARD` / `ColorStyle.VIBRANT` |
+| Submenu / submenu item | nested `ElwhaMenu` / `ElwhaSubMenuItem` |
 
 ## Showcase
 
 The Elwha Showcase → Components → **Menu** leaf: a Workbench of live triggers configured by
-Layout / Separator / Color controls, and a Gallery of static `renderPreview()` snapshots (Standard
-and Vibrant).
+Layout / Separator / Color / Selection controls (one trigger's menu carries a **Share ›** submenu),
+and a Gallery of static `renderPreview()` snapshots (Standard and Vibrant, including a submenu-open
+snapshot).
 ```bash
 mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"
 ```

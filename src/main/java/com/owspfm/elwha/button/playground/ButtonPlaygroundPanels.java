@@ -6,6 +6,7 @@ import com.owspfm.elwha.button.ButtonShape;
 import com.owspfm.elwha.button.ButtonSize;
 import com.owspfm.elwha.button.ButtonVariant;
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import java.awt.Color;
@@ -17,7 +18,6 @@ import java.awt.Insets;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -40,7 +40,7 @@ import javax.swing.UIManager;
  * infra; components are validated visually and both playground entry points must not drift).
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.4.0
  * @since v0.2.0
  */
 public final class ButtonPlaygroundPanels {
@@ -289,7 +289,7 @@ public final class ButtonPlaygroundPanels {
    * text area shows the equivalent Java construction code, refreshed on every change.
    *
    * @return the live-control panel
-   * @version v0.2.0
+   * @version v0.4.0
    * @since v0.2.0
    */
   public static JPanel buildLivePanel() {
@@ -323,13 +323,15 @@ public final class ButtonPlaygroundPanels {
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
     addControlRow(controls, gbc, row++, "Border width (px)", borderWidth);
 
-    final JCheckBox iconBox = new JCheckBox("Leading icon");
+    final ElwhaCheckbox iconBox = new ElwhaCheckbox("Leading icon");
     addControlRow(controls, gbc, row++, "", iconBox);
 
-    final JCheckBox selectedBox = new JCheckBox("Selected");
+    final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
     addControlRow(controls, gbc, row++, "", selectedBox);
 
-    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
+
+    enabledBox.setChecked(true);
     addControlRow(controls, gbc, row++, "", enabledBox);
 
     final JPanel stage = new JPanel(new GridBagLayout());
@@ -348,9 +350,9 @@ public final class ButtonPlaygroundPanels {
           state.shape = (ButtonShape) shapeBox.getSelectedItem();
           state.surface = (SurfaceRoleChoice) surfaceBox.getSelectedItem();
           state.borderWidth = (Integer) borderWidth.getValue();
-          state.icon = iconBox.isSelected();
-          state.selected = selectedBox.isSelected();
-          state.enabled = enabledBox.isSelected();
+          state.icon = iconBox.isChecked();
+          state.selected = selectedBox.isChecked();
+          state.enabled = enabledBox.isChecked();
           // SELECTABLE + TEXT is illegal — guard the combo pairing so the demo never throws.
           if (state.mode == ButtonInteractionMode.SELECTABLE
               && state.variant == ButtonVariant.TEXT) {

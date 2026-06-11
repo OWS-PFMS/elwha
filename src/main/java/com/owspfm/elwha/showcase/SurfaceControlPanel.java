@@ -1,12 +1,12 @@
 package com.owspfm.elwha.showcase;
 
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
@@ -31,7 +31,7 @@ import javax.swing.SpinnerNumberModel;
  * change.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class SurfaceControlPanel {
@@ -47,7 +47,7 @@ public final class SurfaceControlPanel {
   private final JSpinner elevationSpinner =
       new JSpinner(new SpinnerNumberModel(0, 0, ElwhaSurface.MAX_ELEVATION, 1));
   private final JComboBox<StageSize> sizeBox = new JComboBox<>(StageSize.values());
-  private final JCheckBox visibleBox = new JCheckBox("Show surface", true);
+  private final ElwhaCheckbox visibleBox = new ElwhaCheckbox("Show surface");
 
   /**
    * Builds the control set into the given column and applies the initial configuration to a fresh
@@ -56,11 +56,12 @@ public final class SurfaceControlPanel {
    * @param into the controls column to populate
    * @param stage {@code true} to add the stage-only Size + visibility controls and default the fill
    *     to a container role; {@code false} for a bare surface configurator
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
   public SurfaceControlPanel(final WorkbenchControls into, final boolean stage) {
     this.stage = stage;
+    visibleBox.setChecked(true);
     roleBox.setSelectedItem(stage ? ColorRole.SURFACE_CONTAINER_HIGH : ColorRole.SURFACE);
     shapeBox.setSelectedItem(surface.getShape());
     sizeBox.setSelectedItem(StageSize.MEDIUM);
@@ -105,11 +106,11 @@ public final class SurfaceControlPanel {
    * mode it tracks the Show-surface toggle.
    *
    * @return {@code true} if the surface is visible
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
   public boolean isSurfaceVisible() {
-    return !stage || visibleBox.isSelected();
+    return !stage || visibleBox.isChecked();
   }
 
   /**
@@ -140,11 +141,11 @@ public final class SurfaceControlPanel {
    * Renders the equivalent Java for the current configuration.
    *
    * @return the equivalent-Java snippet
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
   public String code() {
-    if (stage && !visibleBox.isSelected()) {
+    if (stage && !visibleBox.isChecked()) {
       return "// Surface hidden — the component sits on the bare stage background.";
     }
     final StringBuilder code = new StringBuilder(224);

@@ -1,5 +1,6 @@
 package com.owspfm.elwha.showcase;
 
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.switches.ElwhaSwitch;
@@ -11,7 +12,6 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.util.List;
 import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -43,15 +43,18 @@ final class SwitchShowcasePanels {
   static JComponent buildWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JCheckBox selectedBox = new JCheckBox("Selected", true);
+    final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
+
+    selectedBox.setChecked(true);
     final ElwhaSelectField<IconMode> iconModeBox = ElwhaSelectField.outlined("Icon mode");
     iconModeBox.setOptions(List.of(IconMode.values()));
     iconModeBox.setSelectedValue(IconMode.NONE);
-    final JCheckBox customIconsBox = new JCheckBox("Custom icons (favorite pair)");
+    final ElwhaCheckbox customIconsBox = new ElwhaCheckbox("Custom icons (favorite pair)");
     final ElwhaTextField labelField = ElwhaTextField.outlined("");
     labelField.setText("Wi-Fi");
-    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
-    final JCheckBox rtlBox = new JCheckBox("Right-to-left");
+    final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
+    enabledBox.setChecked(true);
+    final ElwhaCheckbox rtlBox = new ElwhaCheckbox("Right-to-left");
 
     final ElwhaSwitch elwhaSwitch = new ElwhaSwitch(true);
     final JLabel stageLabel = new JLabel("Wi-Fi");
@@ -78,30 +81,30 @@ final class SwitchShowcasePanels {
           final IconMode mode = picked == null ? IconMode.NONE : picked;
           final boolean icons = mode == IconMode.BOTH_STATES;
           final boolean onlySelected = mode == IconMode.SELECTED_ONLY;
-          final boolean custom = customIconsBox.isSelected();
+          final boolean custom = customIconsBox.isChecked();
           customIconsBox.setEnabled(mode != IconMode.NONE);
-          elwhaSwitch.setSelected(selectedBox.isSelected());
+          elwhaSwitch.setSelected(selectedBox.isChecked());
           elwhaSwitch.setIconsVisible(icons);
           elwhaSwitch.setShowOnlySelectedIcon(onlySelected);
           elwhaSwitch.setSelectedIcon(custom ? MaterialIcons.favoriteFilled(16) : null);
           elwhaSwitch.setUnselectedIcon(custom ? MaterialIcons.favorite(16) : null);
           stageLabel.setText(labelField.getText());
-          elwhaSwitch.setEnabled(enabledBox.isSelected());
+          elwhaSwitch.setEnabled(enabledBox.isChecked());
           stageRow.applyComponentOrientation(
-              rtlBox.isSelected()
+              rtlBox.isChecked()
                   ? ComponentOrientation.RIGHT_TO_LEFT
                   : ComponentOrientation.LEFT_TO_RIGHT);
           stageRow.revalidate();
           stageRow.repaint();
           workbench.setCode(
               renderCode(
-                  selectedBox.isSelected(),
+                  selectedBox.isChecked(),
                   icons,
                   onlySelected,
                   custom,
                   labelField.getText(),
-                  enabledBox.isSelected(),
-                  rtlBox.isSelected()));
+                  enabledBox.isChecked(),
+                  rtlBox.isChecked()));
         };
 
     // The stage is set once — re-staging on every apply would re-parent the live switch and drop
@@ -113,7 +116,7 @@ final class SwitchShowcasePanels {
     // which fires no second change event, so the loop terminates.
     elwhaSwitch.addChangeListener(
         e -> {
-          selectedBox.setSelected(elwhaSwitch.isSelected());
+          selectedBox.setChecked(elwhaSwitch.isSelected());
           apply.run();
         });
 

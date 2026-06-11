@@ -42,6 +42,13 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
   /** Gap between the trigger's edge and the menu surface (M3 anchored offset). */
   static final int ANCHOR_GAP_PX = 4;
 
+  /**
+   * Side gap between a submenu's opener item and the submenu surface. {@code 0} so the surface
+   * bounds abut the item — the surfaces' own shadow reserve supplies the visual separation,
+   * matching the M3 "opens next to the parent item without overlapping" rule.
+   */
+  static final int SUBMENU_GAP_PX = 0;
+
   private final Consumer<MenuDismissCause> onClose;
   private MenuDismissCause lastCause;
 
@@ -93,13 +100,31 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
         || cause == MenuDismissCause.PROGRAMMATIC;
   }
 
-  // Esc is a host-level dismiss (S4 layers item navigation on top). Bound WHEN_IN_FOCUSED_WINDOW so
-  // it fires regardless of which item holds focus.
+  // Esc is a host-level dismiss (the menu layers item navigation on top). Bound WHEN_FOCUSED on the
+  // surface (the menu's single focus owner) rather than WHEN_IN_FOCUSED_WINDOW so that, in a
+  // submenu
+  // chain, Esc is owned by the focused (leaf) level only — closing one level at a time — instead of
+  // an ambiguous window-wide binding that could collapse the wrong level.
   @Override
   protected void installKeyBindings() {
-    final InputMap im = surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+    final InputMap im = surface.getInputMap(JComponent.WHEN_FOCUSED);
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-menu-dismiss");
     surface.getActionMap().put("elwha-menu-dismiss", action(() -> close(MenuDismissCause.ESCAPE)));
+  }
+
+  /**
+   * Closes the entire overlay chain this menu belongs to — from the root, with {@code cause} — so a
+   * selection or a press outside every level dismisses all open levels at once. For a chainless
+   * menu this is exactly {@link #close(MenuDismissCause)}.
+   *
+   * @param cause why the chain is closing
+   */
+  protected final void closeChain(final MenuDismissCause cause) {
+    if (chainRootOverlay() instanceof AbstractElwhaMenuOverlay root) {
+      root.close(cause);
+    } else {
+      close(cause);
+    }
   }
 
   // ------------------------------------------------------- close / cause
@@ -135,15 +160,67 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
    */
   @Override
   protected void layoutSurface(final int paneWidth, final int paneHeight) {
+    final Rectangle anchorBounds = anchorBoundsInPane(paneWidth, paneHeight);
+    final boolean rtl = !orientation.isLeftToRight();
     final Rectangle bounds =
-        placeAnchored(
-            anchorBoundsInPane(paneWidth, paneHeight),
-            surface.getPreferredSize(),
-            paneWidth,
-            paneHeight,
-            !orientation.isLeftToRight());
+        sideAnchored()
+            ? placeBeside(anchorBounds, surface.getPreferredSize(), paneWidth, paneHeight, rtl)
+            : placeAnchored(anchorBounds, surface.getPreferredSize(), paneWidth, paneHeight, rtl);
     surface.setBounds(bounds);
     surface.revalidate();
+  }
+
+  /**
+   * Whether this overlay anchors <em>beside</em> its anchor (a submenu, opening to the side) rather
+   * than below it (a root menu). Default {@code false}; {@link ElwhaMenu} returns {@code true} when
+   * it is itself a submenu in an overlay chain.
+   *
+   * @return {@code true} to place beside the anchor (M3 {@code START_END}), {@code false} to place
+   *     below it
+   */
+  protected boolean sideAnchored() {
+    return false;
+  }
+
+  /**
+   * Computes a submenu surface's bounds anchored <em>beside</em> its opener item (M3 {@code
+   * START_END}): top-aligned to the opener, opening to the trailing side, flipping to the leading
+   * side when the trailing side would clip the viewport, and shifted vertically to stay inside the
+   * {@code paneWidth × paneHeight} viewport. RTL mirrors leading/trailing. A pure function so the
+   * side-placement geometry is testable without a realized window.
+   *
+   * @param anchor the opener item bounds in pane coordinates
+   * @param pref the surface's preferred size
+   * @param paneWidth the viewport width
+   * @param paneHeight the viewport height
+   * @param rtl {@code true} when the orientation is right-to-left
+   * @return the surface bounds within the viewport
+   */
+  static Rectangle placeBeside(
+      final Rectangle anchor,
+      final Dimension pref,
+      final int paneWidth,
+      final int paneHeight,
+      final boolean rtl) {
+    final int w = Math.min(pref.width, paneWidth);
+    final int h = Math.min(pref.height, paneHeight);
+
+    final int trailingX =
+        rtl ? anchor.x - SUBMENU_GAP_PX - w : anchor.x + anchor.width + SUBMENU_GAP_PX;
+    final int leadingX =
+        rtl ? anchor.x + anchor.width + SUBMENU_GAP_PX : anchor.x - SUBMENU_GAP_PX - w;
+
+    final boolean trailingClips = rtl ? trailingX < 0 : trailingX + w > paneWidth;
+    final boolean leadingFits = rtl ? leadingX + w <= paneWidth : leadingX >= 0;
+    int x = trailingClips && leadingFits ? leadingX : trailingX;
+    x = Math.max(0, Math.min(x, paneWidth - w));
+
+    int y = anchor.y;
+    if (y + h > paneHeight) {
+      y = paneHeight - h;
+    }
+    y = Math.max(0, y);
+    return new Rectangle(x, y, w, h);
   }
 
   /**

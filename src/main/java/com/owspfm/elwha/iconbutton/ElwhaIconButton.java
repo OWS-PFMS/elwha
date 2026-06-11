@@ -83,7 +83,7 @@ import javax.swing.Timer;
  * }</pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.4.0
  * @since v0.1.0
  */
 public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badge.IconBearing {
@@ -921,7 +921,8 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
         new AbstractAction() {
           @Override
           public void actionPerformed(final ActionEvent e) {
-            if (!isEnabled()) {
+            // Outer-qualified — AbstractAction has its own always-true isEnabled() (#432).
+            if (!ElwhaIconButton.this.isEnabled()) {
               return;
             }
             startRipple(new Point(getWidth() / 2, getHeight() / 2));

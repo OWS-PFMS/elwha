@@ -192,3 +192,30 @@ Submenus are one cohesive arc → **one phase**, stories S1–S5; the final stor
   optional M3 *Specs*-page re-cap if exact dp is wanted.
 - Nesting-depth stress (3+ levels) is supported by the recursion but only smoke-tested at 2 in the
   Showcase.
+
+## §12. S1 spike outcome (locked)
+
+The host architecture (§2) is implemented and proven by `MenuChainDismissSmoke` (12 checks). The
+chain primitive lives in `AbstractElwhaOverlay`, reusable by the side-sheet (#308):
+
+- **Linear chain links** `chainParent`/`chainChild` on `AbstractElwhaOverlay`; a child mounts via
+  `showInChain(anchor, parent)` and is the topmost overlay (so only it reacts to focus escapes — the
+  parent stays open). One open child per level.
+- **Dismissal rule (pinned):** the **chain leaf** owns the outside-press decision
+  (`handleChainOutsidePress`) — a press inside the leaf is ignored; inside an ancestor closes only
+  the levels above it (that ancestor stays — *clicking a sibling item in the parent collapses just
+  the submenu*); outside every level closes the whole chain from the root. An ancestor's teardown
+  **cascades down** to its descendants; a leaf closing on its own **unlinks** and notifies the parent
+  via `onChainChildClosed()` (which re-arms the parent's roving focus on the opener item).
+- **Selection is chain-wide:** `AbstractElwhaMenuOverlay.closeChain(cause)` closes from the root, so
+  picking a leaf action item (or a fully-outside press) dismisses every level. For a chainless menu
+  it is exactly `close(cause)` — V1 behavior is unchanged (verified: all V1 menu smokes + the
+  motion-on `MenuDismissDiag`/`MenuOverDialogDiag` still pass).
+- **Esc scoping (pinned):** the menu host binds Escape `WHEN_FOCUSED` on the surface (not
+  `WHEN_IN_FOCUSED_WINDOW`), so in a chain only the focused (leaf) level's Esc fires — closing one
+  level at a time instead of an ambiguous window-wide binding collapsing the wrong level.
+- **`ElwhaMenuItem` is now `sealed permitting ElwhaSubMenuItem`** — the one sanctioned sibling
+  (was `final`).
+- **Keyboard (minimal in S1):** Right opens the focused item's submenu + focus in; Left closes a
+  submenu level back to its opener; Esc closes the leaf. Full per-level type-ahead/roving scoping is
+  S4.

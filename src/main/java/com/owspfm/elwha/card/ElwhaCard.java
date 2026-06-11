@@ -1277,7 +1277,8 @@ public class ElwhaCard extends ElwhaSurface {
         new AbstractAction() {
           @Override
           public void actionPerformed(final ActionEvent e) {
-            if (actionable && isEnabled()) {
+            // Outer-qualified — AbstractAction has its own always-true isEnabled() (#432).
+            if (actionable && ElwhaCard.this.isEnabled()) {
               startRipple(new Point(getWidth() / 2, getHeight() / 2));
               handleActivation();
             }

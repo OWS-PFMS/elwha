@@ -30,6 +30,7 @@ import com.owspfm.elwha.card.ExpansionOverflow;
 import com.owspfm.elwha.card.ThumbnailShape;
 import com.owspfm.elwha.card.playground.CursorReferencePanel;
 import com.owspfm.elwha.card.playground.GalleryPanel;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
@@ -49,6 +50,7 @@ import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.menu.ColorStyle;
 import com.owspfm.elwha.menu.ElwhaMenu;
 import com.owspfm.elwha.menu.ElwhaMenuItem;
+import com.owspfm.elwha.menu.ElwhaSubMenuItem;
 import com.owspfm.elwha.menu.Layout;
 import com.owspfm.elwha.menu.Separator;
 import com.owspfm.elwha.navrail.ElwhaNavRailDestination;
@@ -96,7 +98,6 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -269,7 +270,7 @@ public final class ElwhaShowcase {
     final JPanel root = new JPanel(new BorderLayout());
     root.add(contentWrapper, BorderLayout.CENTER);
 
-    // Populate the catalog of leaves + build all CardLayout cards (4 landings + 18 wrapped
+    // Populate the catalog of leaves + build all CardLayout cards (4 landings + 19 wrapped
     // leaves). Must run before the rail is built so the rail's primary action listeners can
     // resolve landing keys that already have cards registered.
     populateCatalog();
@@ -727,8 +728,8 @@ public final class ElwhaShowcase {
     register(
         new LeafEntry(
             "Menu",
-            "M3 Menu — anchored light-dismiss popover with ElwhaMenuItem rows, grouping, and"
-                + " keyboard navigation.",
+            "M3 Menu — anchored light-dismiss popover with ElwhaMenuItem rows, grouping, selection,"
+                + " keyboard navigation, and nested submenus.",
             AREA_COMPONENTS,
             buildMenuComponent()));
     register(
@@ -758,6 +759,20 @@ public final class ElwhaShowcase {
                 + " on-handle icons.",
             AREA_COMPONENTS,
             buildSwitchComponent()));
+    register(
+        new LeafEntry(
+            "Tabs",
+            "M3 tabs — primary/secondary bar of ElwhaTab primitives with the sliding indicator,"
+                + " fixed + scrollable modes, icons, and badges.",
+            AREA_COMPONENTS,
+            buildTabsComponent()));
+    register(
+        new LeafEntry(
+            "Checkbox",
+            "M3 checkbox — tri-state with indeterminate dash, error palette, label, and the"
+                + " cross-color pressed ripple.",
+            AREA_COMPONENTS,
+            buildCheckboxComponent()));
     register(
         new LeafEntry(
             "Radio button",
@@ -798,7 +813,7 @@ public final class ElwhaShowcase {
 
   // The four landing cards, populated into the CardLayout content panel. Each is a grid of
   // ElwhaCards — title + supporting text + an actionable click that routes to the leaf surface.
-  // Home is the master index (all 18 leaves, grouped by area heading); each area landing covers
+  // Home is the master index (all 19 leaves, grouped by area heading); each area landing covers
   // just its own leaves. ElwhaCard's actionable mode is the entire raison-d'être here: the cards
   // are the navigation surface, not decoration.
   private void populateLandingCards() {
@@ -1114,14 +1129,15 @@ public final class ElwhaShowcase {
     final JComboBox<ButtonShape> shapeBox = new JComboBox<>(ButtonShape.values());
     final JComboBox<ButtonSurfaceRole> surfaceBox = new JComboBox<>(ButtonSurfaceRole.values());
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
-    final JCheckBox iconBox = new JCheckBox("Leading icon");
-    final JCheckBox cornerRadiiBox = new JCheckBox("Per-corner radii override");
+    final ElwhaCheckbox iconBox = new ElwhaCheckbox("Leading icon");
+    final ElwhaCheckbox cornerRadiiBox = new ElwhaCheckbox("Per-corner radii override");
     final JSpinner topLeftSpinner = new JSpinner(new SpinnerNumberModel(12, 0, 60, 2));
     final JSpinner topRightSpinner = new JSpinner(new SpinnerNumberModel(12, 0, 60, 2));
     final JSpinner bottomRightSpinner = new JSpinner(new SpinnerNumberModel(12, 0, 60, 2));
     final JSpinner bottomLeftSpinner = new JSpinner(new SpinnerNumberModel(12, 0, 60, 2));
-    final JCheckBox selectedBox = new JCheckBox("Selected");
-    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
+    final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
+    enabledBox.setChecked(true);
     final ElwhaButton triggerPressButton =
         new ElwhaButton("Trigger press").setVariant(ButtonVariant.FILLED_TONAL);
     final ElwhaButton triggerSelectButton =
@@ -1168,13 +1184,13 @@ public final class ElwhaShowcase {
           final ButtonShape shape = (ButtonShape) shapeBox.getSelectedItem();
           final ButtonSurfaceRole surface = (ButtonSurfaceRole) surfaceBox.getSelectedItem();
           final int width = (Integer) borderWidth.getValue();
-          final boolean icon = iconBox.isSelected();
-          final boolean selected = selectedBox.isSelected();
-          final boolean enabled = enabledBox.isSelected();
+          final boolean icon = iconBox.isChecked();
+          final boolean selected = selectedBox.isChecked();
+          final boolean enabled = enabledBox.isChecked();
 
           // The per-corner override replaces the Shape-derived corner radius — disable the Shape
           // control while it is active so the override reads as the single corner-geometry source.
-          final boolean perCorner = cornerRadiiBox.isSelected();
+          final boolean perCorner = cornerRadiiBox.isChecked();
           shapeBox.setEnabled(!perCorner);
           topLeftSpinner.setEnabled(perCorner);
           topRightSpinner.setEnabled(perCorner);
@@ -1307,10 +1323,10 @@ public final class ElwhaShowcase {
   // observation. Listeners write directly to MorphAnimator globals — no stage rebuild needed
   // because the morphs read these on every tick.
   private static void installMorphControls(final WorkbenchControls controls) {
-    final JCheckBox reducedMotionBox = new JCheckBox("Reduced motion");
-    reducedMotionBox.setSelected(MorphAnimator.isReducedMotion());
+    final ElwhaCheckbox reducedMotionBox = new ElwhaCheckbox("Reduced motion");
+    reducedMotionBox.setChecked(MorphAnimator.isReducedMotion());
     reducedMotionBox.addActionListener(
-        e -> MorphAnimator.setReducedMotion(reducedMotionBox.isSelected()));
+        e -> MorphAnimator.setReducedMotion(reducedMotionBox.isChecked()));
 
     final JComboBox<MorphSpeed> speedBox = new JComboBox<>(MorphSpeed.values());
     speedBox.setSelectedItem(MorphSpeed.NORMAL);
@@ -1377,7 +1393,8 @@ public final class ElwhaShowcase {
               ButtonVariant.OUTLINED
             });
     variantBox.setSelectedItem(ButtonVariant.FILLED);
-    final JCheckBox mandatoryBox = new JCheckBox("Mandatory", true);
+    final ElwhaCheckbox mandatoryBox = new ElwhaCheckbox("Mandatory");
+    mandatoryBox.setChecked(true);
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Button group");
@@ -1387,7 +1404,7 @@ public final class ElwhaShowcase {
     final Runnable rebuild =
         () -> {
           final ButtonVariant variant = (ButtonVariant) variantBox.getSelectedItem();
-          final boolean mandatory = mandatoryBox.isSelected();
+          final boolean mandatory = mandatoryBox.isChecked();
           final JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
           final com.owspfm.elwha.button.ButtonGroup group =
               new com.owspfm.elwha.button.ButtonGroup().setMandatory(mandatory);
@@ -1446,13 +1463,14 @@ public final class ElwhaShowcase {
     padVBox.setSelectedItem(SpaceScale.XS);
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
     final JComboBox<LeadingSlot> leadingSlotBox = new JComboBox<>(LeadingSlot.values());
-    final JCheckBox leadingAffordanceActiveBox = new JCheckBox("Affordance active");
+    final ElwhaCheckbox leadingAffordanceActiveBox = new ElwhaCheckbox("Affordance active");
     leadingAffordanceActiveBox.setEnabled(false);
     final JComboBox<TrailingSlot> trailingSlotBox = new JComboBox<>(TrailingSlot.values());
-    final JCheckBox trailingAffordanceActiveBox = new JCheckBox("Affordance active");
+    final ElwhaCheckbox trailingAffordanceActiveBox = new ElwhaCheckbox("Affordance active");
     trailingAffordanceActiveBox.setEnabled(false);
-    final JCheckBox selectedBox = new JCheckBox("Selected");
-    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
+    final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
+    enabledBox.setChecked(true);
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Chip");
@@ -1473,6 +1491,9 @@ public final class ElwhaShowcase {
     controls.addControl("", selectedBox);
     controls.addControl("", enabledBox);
 
+    // The chip affordance callbacks toggle their checkbox then re-apply; the holder lets the
+    // apply lambda hand itself to the callbacks it builds.
+    final Runnable[] applyRef = new Runnable[1];
     final Runnable apply =
         () -> {
           final String text = textField.getText();
@@ -1485,17 +1506,17 @@ public final class ElwhaShowcase {
           final int width = (Integer) borderWidth.getValue();
           final LeadingSlot leadingSlot = (LeadingSlot) leadingSlotBox.getSelectedItem();
           leadingAffordanceActiveBox.setEnabled(leadingSlot == LeadingSlot.AFFORDANCE);
-          final boolean leadingAffordanceActive = leadingAffordanceActiveBox.isSelected();
+          final boolean leadingAffordanceActive = leadingAffordanceActiveBox.isChecked();
           final TrailingSlot trailingSlot = (TrailingSlot) trailingSlotBox.getSelectedItem();
           trailingAffordanceActiveBox.setEnabled(trailingSlot == TrailingSlot.AFFORDANCE);
-          final boolean trailingAffordanceActive = trailingAffordanceActiveBox.isSelected();
+          final boolean trailingAffordanceActive = trailingAffordanceActiveBox.isChecked();
           // GHOST does not render a selected state (issue #50) — reflect that in the control.
           final boolean ghost = variant == ChipVariant.GHOST;
           selectedBox.setEnabled(!ghost);
           selectedBox.setToolTipText(
               ghost ? "GHOST does not render a selected state (issue #50)." : null);
-          final boolean selected = selectedBox.isSelected();
-          final boolean enabled = enabledBox.isSelected();
+          final boolean selected = selectedBox.isChecked();
+          final boolean enabled = enabledBox.isChecked();
 
           final ElwhaChip chip = new ElwhaChip(text);
           chip.setVariant(variant)
@@ -1516,7 +1537,10 @@ public final class ElwhaShowcase {
                 leadingAffordanceActive,
                 false,
                 "Toggle",
-                leadingAffordanceActiveBox::doClick);
+                () -> {
+                  leadingAffordanceActiveBox.setChecked(!leadingAffordanceActiveBox.isChecked());
+                  applyRef[0].run();
+                });
           }
           if (trailingSlot == TrailingSlot.ICON) {
             // Display-only indicator — the M3 filter-chip dropdown caret; the chip body owns the
@@ -1534,7 +1558,10 @@ public final class ElwhaShowcase {
                 trailingAffordanceActive,
                 false,
                 "Toggle",
-                trailingAffordanceActiveBox::doClick);
+                () -> {
+                  trailingAffordanceActiveBox.setChecked(!trailingAffordanceActiveBox.isChecked());
+                  applyRef[0].run();
+                });
           }
           chip.setSelected(selected);
           chip.setEnabled(enabled);
@@ -1556,6 +1583,7 @@ public final class ElwhaShowcase {
                   selected,
                   enabled));
         };
+    applyRef[0] = apply;
 
     textField.getEditor().getDocument().addDocumentListener(new SimpleDocumentListener(apply));
     variantBox.addActionListener(event -> apply.run());
@@ -1730,8 +1758,9 @@ public final class ElwhaShowcase {
     final JComboBox<IconButtonSurfaceRole> surfaceBox =
         new JComboBox<>(IconButtonSurfaceRole.values());
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
-    final JCheckBox selectedBox = new JCheckBox("Selected");
-    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
+    final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
+    enabledBox.setChecked(true);
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Icon Button");
@@ -1760,8 +1789,8 @@ public final class ElwhaShowcase {
           final int width = (Integer) borderWidth.getValue();
           final boolean selectable = mode == IconButtonInteractionMode.SELECTABLE;
           selectedBox.setEnabled(selectable);
-          final boolean selected = selectedBox.isSelected();
-          final boolean enabled = enabledBox.isSelected();
+          final boolean selected = selectedBox.isChecked();
+          final boolean enabled = enabledBox.isChecked();
 
           final MaterialIcons.IconPair pair = icon.pair(size.iconPx());
           final ElwhaIconButton button = new ElwhaIconButton(pair.resting());
@@ -1878,6 +1907,19 @@ public final class ElwhaShowcase {
     }
   }
 
+  // ------------------------------------------------------------- Checkbox
+
+  private static JComponent buildCheckboxComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", CheckboxShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("States & configurations", CheckboxShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
   // ------------------------------------------------------------- Slider
 
   private static JComponent buildSliderComponent() {
@@ -1899,6 +1941,18 @@ public final class ElwhaShowcase {
         "Gallery",
         scroll(
             stack(gallerySection("States & configurations", SwitchShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- Tabs
+
+  private static JComponent buildTabsComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", TabsShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(gallerySection("States & configurations", TabsShowcasePanels.buildGallery()))));
     return tabs;
   }
 
@@ -1943,9 +1997,10 @@ public final class ElwhaShowcase {
     iconBox.setSelectedItem(FabIconChoice.ADD);
     final ElwhaTextField labelField = ElwhaTextField.outlined("");
     labelField.setText("Compose");
-    final JCheckBox hoveredBox = new JCheckBox("Hovered");
-    final JCheckBox pressedBox = new JCheckBox("Pressed");
-    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    final ElwhaCheckbox hoveredBox = new ElwhaCheckbox("Hovered");
+    final ElwhaCheckbox pressedBox = new ElwhaCheckbox("Pressed");
+    final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
+    enabledBox.setChecked(true);
     final ElwhaButton morphButton = ElwhaButton.filledTonalButton("Toggle Standard ↔ Extended");
 
     // Holder for the live FAB so the morph button can drive morphTo(...) on whatever stage
@@ -1976,9 +2031,9 @@ public final class ElwhaShowcase {
           final ElwhaFab.Color color = (ElwhaFab.Color) colorBox.getSelectedItem();
           final FabIconChoice iconChoice = (FabIconChoice) iconBox.getSelectedItem();
           final String label = labelField.getText() == null ? "" : labelField.getText();
-          final boolean hovered = hoveredBox.isSelected();
-          final boolean pressed = pressedBox.isSelected();
-          final boolean enabled = enabledBox.isSelected();
+          final boolean hovered = hoveredBox.isChecked();
+          final boolean pressed = pressedBox.isChecked();
+          final boolean enabled = enabledBox.isChecked();
 
           // Label text is only meaningful for the Extended forms — disable the field on Standard
           // so the operator sees that the value is currently ignored, but don't lose its content.
@@ -2148,7 +2203,8 @@ public final class ElwhaShowcase {
 
     final JComboBox<IconButtonVariant> variantBox = new JComboBox<>(IconButtonVariant.values());
     variantBox.setSelectedItem(IconButtonVariant.FILLED_TONAL);
-    final JCheckBox mandatoryBox = new JCheckBox("Mandatory", true);
+    final ElwhaCheckbox mandatoryBox = new ElwhaCheckbox("Mandatory");
+    mandatoryBox.setChecked(true);
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Icon Button group");
@@ -2158,7 +2214,7 @@ public final class ElwhaShowcase {
     final Runnable rebuild =
         () -> {
           final IconButtonVariant variant = (IconButtonVariant) variantBox.getSelectedItem();
-          final boolean mandatory = mandatoryBox.isSelected();
+          final boolean mandatory = mandatoryBox.isChecked();
           final JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
           final IconButtonGroup group = new IconButtonGroup(mandatory);
           for (final String[] entry :
@@ -2237,7 +2293,8 @@ public final class ElwhaShowcase {
     final JComboBox<SegmentContent> contentBox = new JComboBox<>(SegmentContent.values());
     final JSpinner countSpinner = new JSpinner(new SpinnerNumberModel(3, 2, 5, 1));
     final JSpinner maxWidthSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 600, 20));
-    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
+    enabledBox.setChecked(true);
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Button group");
@@ -2264,7 +2321,7 @@ public final class ElwhaShowcase {
           final SegmentContent content = (SegmentContent) contentBox.getSelectedItem();
           final int count = (Integer) countSpinner.getValue();
           final int maxWidth = (Integer) maxWidthSpinner.getValue();
-          final boolean enabled = enabledBox.isSelected();
+          final boolean enabled = enabledBox.isChecked();
 
           // The colour style, resize mode, and max-width clamp only act on the connected variant.
           final boolean connected = variant == ButtonGroupVariant.CONNECTED;
@@ -2551,20 +2608,24 @@ public final class ElwhaShowcase {
     final JComboBox<SpaceScale> padVBox = new JComboBox<>(SpaceScale.values());
     padVBox.setSelectedItem(SpaceScale.MD);
     final JComboBox<CardMediaSlot> mediaBox = new JComboBox<>(CardMediaSlot.values());
-    final JCheckBox headerBox = new JCheckBox("Header (title + subtitle)", true);
+    final ElwhaCheckbox headerBox = new ElwhaCheckbox("Header (title + subtitle)");
+    headerBox.setChecked(true);
     final JComboBox<CardHeaderLeading> headerLeadingBox =
         new JComboBox<>(CardHeaderLeading.values());
-    final JCheckBox bodyBox = new JCheckBox("Supporting text", true);
-    final JCheckBox dividerBox = new JCheckBox("Divider");
-    final JCheckBox actionsBox = new JCheckBox("Actions row");
-    final JCheckBox actionableBox = new JCheckBox("Actionable");
-    final JCheckBox selectableBox = new JCheckBox("Selectable");
-    final JCheckBox selectedBox = new JCheckBox("Selected");
-    final JCheckBox collapsibleBox = new JCheckBox("Collapsible");
-    final JCheckBox collapsedBox = new JCheckBox("Collapsed");
-    final JCheckBox animateBox = new JCheckBox("Animate collapse", true);
+    final ElwhaCheckbox bodyBox = new ElwhaCheckbox("Supporting text");
+    bodyBox.setChecked(true);
+    final ElwhaCheckbox dividerBox = new ElwhaCheckbox("Divider");
+    final ElwhaCheckbox actionsBox = new ElwhaCheckbox("Actions row");
+    final ElwhaCheckbox actionableBox = new ElwhaCheckbox("Actionable");
+    final ElwhaCheckbox selectableBox = new ElwhaCheckbox("Selectable");
+    final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
+    final ElwhaCheckbox collapsibleBox = new ElwhaCheckbox("Collapsible");
+    final ElwhaCheckbox collapsedBox = new ElwhaCheckbox("Collapsed");
+    final ElwhaCheckbox animateBox = new ElwhaCheckbox("Animate collapse");
+    animateBox.setChecked(true);
     final JComboBox<ExpansionOverflow> overflowBox = new JComboBox<>(ExpansionOverflow.values());
-    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
+    enabledBox.setChecked(true);
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Card");
@@ -2592,10 +2653,10 @@ public final class ElwhaShowcase {
 
     final Runnable apply =
         () -> {
-          headerLeadingBox.setEnabled(headerBox.isSelected());
-          selectedBox.setEnabled(selectableBox.isSelected());
-          collapsedBox.setEnabled(collapsibleBox.isSelected());
-          animateBox.setEnabled(collapsibleBox.isSelected());
+          headerLeadingBox.setEnabled(headerBox.isChecked());
+          selectedBox.setEnabled(selectableBox.isChecked());
+          collapsedBox.setEnabled(collapsibleBox.isChecked());
+          animateBox.setEnabled(collapsibleBox.isChecked());
           final CardConfig cfg =
               new CardConfig(
                   (CardVariant) variantBox.getSelectedItem(),
@@ -2603,19 +2664,19 @@ public final class ElwhaShowcase {
                   (SpaceScale) padHBox.getSelectedItem(),
                   (SpaceScale) padVBox.getSelectedItem(),
                   (CardMediaSlot) mediaBox.getSelectedItem(),
-                  headerBox.isSelected(),
+                  headerBox.isChecked(),
                   (CardHeaderLeading) headerLeadingBox.getSelectedItem(),
-                  bodyBox.isSelected(),
-                  dividerBox.isSelected(),
-                  actionsBox.isSelected(),
-                  actionableBox.isSelected(),
-                  selectableBox.isSelected(),
-                  selectedBox.isSelected(),
-                  collapsibleBox.isSelected(),
-                  collapsedBox.isSelected(),
-                  animateBox.isSelected(),
+                  bodyBox.isChecked(),
+                  dividerBox.isChecked(),
+                  actionsBox.isChecked(),
+                  actionableBox.isChecked(),
+                  selectableBox.isChecked(),
+                  selectedBox.isChecked(),
+                  collapsibleBox.isChecked(),
+                  collapsedBox.isChecked(),
+                  animateBox.isChecked(),
                   (ExpansionOverflow) overflowBox.getSelectedItem(),
-                  enabledBox.isSelected());
+                  enabledBox.isChecked());
           workbench.setStage(buildCard(cfg));
           workbench.setCode(renderCardCode(cfg));
         };
@@ -2901,7 +2962,7 @@ public final class ElwhaShowcase {
     // Host-specific controls the shared editor does NOT own (they're the Workbench's demo concerns,
     // not the badge's own axes): the anchor mode + RTL that drive which host composition is staged,
     // and the live host-accessible-name inspector that proves the push-model a11y splice.
-    final JCheckBox rtlBox = new JCheckBox("RTL");
+    final ElwhaCheckbox rtlBox = new ElwhaCheckbox("RTL");
     final JComboBox<ElwhaBadgeAnchor.AnchorMode> anchorModeBox =
         new JComboBox<>(ElwhaBadgeAnchor.AnchorMode.values());
     final JLabel a11yInspector = new JLabel("(detached)");
@@ -2930,8 +2991,7 @@ public final class ElwhaShowcase {
             liveBadge.set(badge);
             final boolean trailingEdge =
                 anchorModeBox.getSelectedItem() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE;
-            final JComponent host =
-                buildBadgeHost(trailingEdge, rtlBox.isSelected(), a11yInspector);
+            final JComponent host = buildBadgeHost(trailingEdge, rtlBox.isChecked(), a11yInspector);
             workbench.setStage(host);
             if (badge != null) {
               liveAttachment.set(
@@ -3201,31 +3261,35 @@ public final class ElwhaShowcase {
           railLog.setCaretPosition(railLog.getDocument().getLength());
         });
 
-    final JCheckBox surfaceFilled = new JCheckBox("Surface filled", true);
-    surfaceFilled.addActionListener(e -> rail.setSurfaceFilled(surfaceFilled.isSelected()));
-    final JCheckBox dividerBox = new JCheckBox("Divider");
-    dividerBox.addActionListener(e -> rail.setDivider(dividerBox.isSelected()));
-    final JCheckBox elevationBox = new JCheckBox("Elevation 1");
-    elevationBox.addActionListener(e -> rail.setElevation(elevationBox.isSelected() ? 1 : 0));
+    final ElwhaCheckbox surfaceFilled = new ElwhaCheckbox("Surface filled");
 
-    final JCheckBox menuBox = new JCheckBox("Menu button", true);
+    surfaceFilled.setChecked(true);
+    surfaceFilled.addActionListener(e -> rail.setSurfaceFilled(surfaceFilled.isChecked()));
+    final ElwhaCheckbox dividerBox = new ElwhaCheckbox("Divider");
+    dividerBox.addActionListener(e -> rail.setDivider(dividerBox.isChecked()));
+    final ElwhaCheckbox elevationBox = new ElwhaCheckbox("Elevation 1");
+    elevationBox.addActionListener(e -> rail.setElevation(elevationBox.isChecked() ? 1 : 0));
+
+    final ElwhaCheckbox menuBox = new ElwhaCheckbox("Menu button");
+
+    menuBox.setChecked(true);
     menuBox.addActionListener(
         e ->
             rail.setMenuButton(
-                menuBox.isSelected()
+                menuBox.isChecked()
                     ? new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.menu())
                     : null));
-    final JCheckBox fabBox = new JCheckBox("FAB");
+    final ElwhaCheckbox fabBox = new ElwhaCheckbox("FAB");
     fabBox.addActionListener(
         e ->
             rail.setFab(
-                fabBox.isSelected()
+                fabBox.isChecked()
                     ? com.owspfm.elwha.fab.ElwhaFab.extended(MaterialIcons.edit(), "Compose")
                     : null));
-    final JCheckBox trailingBox = new JCheckBox("Trailing actions");
+    final ElwhaCheckbox trailingBox = new ElwhaCheckbox("Trailing actions");
     trailingBox.addActionListener(
         e -> {
-          if (trailingBox.isSelected()) {
+          if (trailingBox.isChecked()) {
             final java.util.List<com.owspfm.elwha.iconbutton.ElwhaIconButton> actions =
                 new java.util.ArrayList<>();
             actions.add(new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.help()));
@@ -3269,10 +3333,10 @@ public final class ElwhaShowcase {
           widthLabel.setText(v + " px");
         });
 
-    final JCheckBox sectionsBox = new JCheckBox("Sections");
+    final ElwhaCheckbox sectionsBox = new ElwhaCheckbox("Sections");
     sectionsBox.addActionListener(
         e -> {
-          if (sectionsBox.isSelected()) {
+          if (sectionsBox.isChecked()) {
             rail.clearSections();
             final java.util.List<com.owspfm.elwha.navrail.ElwhaNavRailDestination> tools =
                 new java.util.ArrayList<>();
@@ -3593,7 +3657,9 @@ public final class ElwhaShowcase {
     duplicate.addActionListener(e -> status.setText("Activated: Duplicate"));
     final ElwhaMenuItem share = ElwhaMenuItem.of(MaterialIcons.star(20), "Add to favorites");
     share.addActionListener(e -> status.setText("Activated: Favorites"));
-    b.addItem(rename).addItem(duplicate).addItem(share);
+    // A nested submenu (V2): Share › Email / Copy link / Embed. The submenu opens to the side on
+    // hover / click / Right, inherits the menu's color style, and morphs the active-state corners.
+    b.addItem(rename).addItem(duplicate).addItem(buildShareSubMenuItem(status)).addItem(share);
     if (layout.getSelectedItem() == Layout.GROUPED) {
       b.addGroup();
       final ElwhaMenuItem delete = ElwhaMenuItem.of(MaterialIcons.delete(20), "Delete");
@@ -3613,6 +3679,20 @@ public final class ElwhaShowcase {
     return menu;
   }
 
+  // The V2 submenu sample for the Workbench: a "Share" trigger that opens a nested Email / Copy
+  // link / Embed menu to the side.
+  private static ElwhaSubMenuItem buildShareSubMenuItem(final JLabel status) {
+    final ElwhaMenuItem email = ElwhaMenuItem.of(MaterialIcons.add(20), "Email");
+    email.addActionListener(e -> status.setText("Activated: Share → Email"));
+    final ElwhaMenuItem copyLink = ElwhaMenuItem.of(MaterialIcons.anchor(20), "Copy link");
+    copyLink.addActionListener(e -> status.setText("Activated: Share → Copy link"));
+    final ElwhaMenuItem embed = ElwhaMenuItem.of(MaterialIcons.layers(20), "Embed");
+    embed.addActionListener(e -> status.setText("Activated: Share → Embed"));
+    final ElwhaMenu shareTargets =
+        ElwhaMenu.builder().addItem(email).addItem(copyLink).addItem(embed).build();
+    return ElwhaSubMenuItem.of(MaterialIcons.start(20), "Share", shareTargets);
+  }
+
   // Static, non-modal menu snapshots via renderPreview() — flat and the two grouped treatments,
   // rendered in the requested color style (Standard surface vs Vibrant tertiary-tinted).
   private static JComponent buildMenuGallery(final ColorStyle colorStyle) {
@@ -3623,7 +3703,49 @@ public final class ElwhaShowcase {
     addPreview(column, sampleMenu(Layout.STANDARD, Separator.GAP, colorStyle).renderPreview());
     addPreview(column, sampleMenu(Layout.GROUPED, Separator.GAP, colorStyle).renderPreview());
     addPreview(column, sampleMenu(Layout.GROUPED, Separator.DIVIDER, colorStyle).renderPreview());
+    addPreview(column, submenuSnapshot(colorStyle));
     return column;
+  }
+
+  // A static submenu-open snapshot (V2): the parent menu rendered with its "Share ›" caret beside
+  // the open submenu, top-aligned the way a live submenu side-anchors to its opener. The
+  // active-state corner morph (focused rounds up / unfocused squares off) is a live behavior — see
+  // the Workbench and MenuSubmenuMorphDemo; the static preview renders both at the rest shape.
+  private static JComponent submenuSnapshot(final ColorStyle colorStyle) {
+    final ElwhaMenu sub =
+        ElwhaMenu.builder()
+            .colorStyle(colorStyle)
+            .addItem(ElwhaMenuItem.of(MaterialIcons.add(20), "Email"))
+            .addItem(ElwhaMenuItem.of(MaterialIcons.anchor(20), "Copy link"))
+            .addItem(ElwhaMenuItem.of(MaterialIcons.layers(20), "Embed"))
+            .build();
+    final ElwhaSubMenuItem shareItem = ElwhaSubMenuItem.of(MaterialIcons.start(20), "Share", sub);
+    final ElwhaMenu parent =
+        ElwhaMenu.builder()
+            .colorStyle(colorStyle)
+            .addItem(ElwhaMenuItem.of(MaterialIcons.edit(20), "Rename"))
+            .addItem(shareItem)
+            .addItem(ElwhaMenuItem.of(MaterialIcons.delete(20), "Delete"))
+            .build();
+
+    final JPanel row = new JPanel();
+    row.setOpaque(false);
+    row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
+    final JComponent parentPrev = parent.renderPreview();
+    parentPrev.setAlignmentY(java.awt.Component.TOP_ALIGNMENT);
+    row.add(parentPrev);
+
+    final JPanel subWrap = new JPanel();
+    subWrap.setOpaque(false);
+    subWrap.setLayout(new BoxLayout(subWrap, BoxLayout.Y_AXIS));
+    subWrap.setAlignmentY(java.awt.Component.TOP_ALIGNMENT);
+    // Drop the submenu down ~one item row so its top sits beside the "Share" row of the parent.
+    subWrap.add(javax.swing.Box.createVerticalStrut(48));
+    final JComponent subPrev = sub.renderPreview();
+    subPrev.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+    subWrap.add(subPrev);
+    row.add(subWrap);
+    return row;
   }
 
   private static ElwhaMenu sampleMenu(
@@ -3650,11 +3772,15 @@ public final class ElwhaShowcase {
   private static JComponent buildDialogWorkbench() {
     final JComboBox<Integer> actionCount = new JComboBox<>(new Integer[] {1, 2, 3});
     actionCount.setSelectedItem(2);
-    final JCheckBox scrimDismiss = new JCheckBox("scrim-dismissible", true);
-    final JCheckBox escDismiss = new JCheckBox("Esc-dismissible", true);
-    final JCheckBox reducedMotion = new JCheckBox("reduced motion");
-    final JCheckBox fsConfirm = new JCheckBox("FS: confirm action", true);
-    final JCheckBox fsDivider = new JCheckBox("FS: divider", true);
+    final ElwhaCheckbox scrimDismiss = new ElwhaCheckbox("scrim-dismissible");
+    scrimDismiss.setChecked(true);
+    final ElwhaCheckbox escDismiss = new ElwhaCheckbox("Esc-dismissible");
+    escDismiss.setChecked(true);
+    final ElwhaCheckbox reducedMotion = new ElwhaCheckbox("reduced motion");
+    final ElwhaCheckbox fsConfirm = new ElwhaCheckbox("FS: confirm action");
+    fsConfirm.setChecked(true);
+    final ElwhaCheckbox fsDivider = new ElwhaCheckbox("FS: divider");
+    fsDivider.setChecked(true);
     final JLabel status = new JLabel("Configure, then open a dialog — it opens on this frame.");
 
     final ElwhaButton basic = ElwhaButton.filledButton("Open basic dialog");
@@ -3739,11 +3865,11 @@ public final class ElwhaShowcase {
       final Component parent,
       final DialogVariant variant,
       final JComboBox<Integer> actionCount,
-      final JCheckBox scrimDismiss,
-      final JCheckBox escDismiss,
-      final JCheckBox reducedMotion,
+      final ElwhaCheckbox scrimDismiss,
+      final ElwhaCheckbox escDismiss,
+      final ElwhaCheckbox reducedMotion,
       final JLabel status) {
-    MorphAnimator.setReducedMotion(reducedMotion.isSelected());
+    MorphAnimator.setReducedMotion(reducedMotion.isChecked());
 
     final ElwhaDialog.Builder builder = ElwhaDialog.builder();
     switch (variant) {
@@ -3775,8 +3901,8 @@ public final class ElwhaShowcase {
     }
 
     builder
-        .dismissibleByScrim(!destructive && scrimDismiss.isSelected())
-        .dismissibleByEsc(!destructive && escDismiss.isSelected())
+        .dismissibleByScrim(!destructive && scrimDismiss.isChecked())
+        .dismissibleByEsc(!destructive && escDismiss.isChecked())
         .onClose(cause -> status.setText("Last close: " + cause.name()))
         .build()
         .show(parent);
@@ -3803,20 +3929,20 @@ public final class ElwhaShowcase {
   // input use case the full-screen dialog targets. Esc + reduced-motion reuse the shared toggles.
   private static void openWorkbenchFullScreenDialog(
       final Component parent,
-      final JCheckBox fsConfirm,
-      final JCheckBox fsDivider,
-      final JCheckBox escDismiss,
-      final JCheckBox reducedMotion,
+      final ElwhaCheckbox fsConfirm,
+      final ElwhaCheckbox fsDivider,
+      final ElwhaCheckbox escDismiss,
+      final ElwhaCheckbox reducedMotion,
       final JLabel status) {
-    MorphAnimator.setReducedMotion(reducedMotion.isSelected());
+    MorphAnimator.setReducedMotion(reducedMotion.isChecked());
     final ElwhaFullScreenDialog.Builder builder =
         ElwhaFullScreenDialog.builder()
             .headline("New event")
             .content(buildFullScreenSampleForm())
-            .showDivider(fsDivider.isSelected())
-            .dismissibleByEsc(escDismiss.isSelected())
+            .showDivider(fsDivider.isChecked())
+            .dismissibleByEsc(escDismiss.isChecked())
             .onClose(cause -> status.setText("Last close: " + cause.name()));
-    if (fsConfirm.isSelected()) {
+    if (fsConfirm.isChecked()) {
       builder.confirmAction(ElwhaButton.textButton("Save"));
     }
     builder.build().show(parent);
