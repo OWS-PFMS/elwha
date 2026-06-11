@@ -141,7 +141,7 @@ import javax.swing.event.DocumentListener;
  * -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"}
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaShowcase {
@@ -780,6 +780,13 @@ public final class ElwhaShowcase {
                 + " arrow navigation, and a roving tab stop.",
             AREA_COMPONENTS,
             buildRadioButtonComponent()));
+    register(
+        new LeafEntry(
+            "Color picker",
+            "ElwhaColorPicker — the M3 picker grammar applied to color: swatches, spectrum, and"
+                + " slider/hex modes, opt-in alpha, and the pending-until-OK dialog.",
+            AREA_COMPONENTS,
+            buildColorPickerComponent()));
 
     register(
         new LeafEntry(
@@ -1967,6 +1974,20 @@ public final class ElwhaShowcase {
             stack(
                 gallerySection(
                     "States & configurations", RadioButtonShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- color picker
+
+  private static JComponent buildColorPickerComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", ColorPickerShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection(
+                    "Modes & configurations", ColorPickerShowcasePanels.buildGallery()))));
     return tabs;
   }
 
