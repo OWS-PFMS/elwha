@@ -35,6 +35,22 @@ abstract class ColorPickerPane extends JPanel {
     picker.commitFromPane(this, color, adjusting);
   }
 
+  @Override
+  public void setEnabled(final boolean enabled) {
+    super.setEnabled(enabled);
+    cascadeEnabled(this, enabled);
+    repaint();
+  }
+
+  private static void cascadeEnabled(final java.awt.Container container, final boolean enabled) {
+    for (final java.awt.Component child : container.getComponents()) {
+      child.setEnabled(enabled);
+      if (child instanceof java.awt.Container nested) {
+        cascadeEnabled(nested, enabled);
+      }
+    }
+  }
+
   /**
    * Adopts a color committed elsewhere (another pane, or {@link ElwhaColorPicker#setColor}). Never
    * called for this pane's own commits.

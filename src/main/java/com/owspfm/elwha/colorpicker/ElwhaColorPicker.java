@@ -56,7 +56,12 @@ import javax.swing.event.ChangeListener;
  */
 public class ElwhaColorPicker extends JComponent {
 
+  /** Most-recently-used colors retained for the SWATCHES pane's recent row. */
+  static final int RECENT_CAPACITY = 10;
+
   private static final int PREFERRED_WIDTH = 328;
+
+  private final java.util.List<Color> recent = new java.util.ArrayList<>();
 
   private final ColorPickerHeader header;
   private final ElwhaTabs tabs;
@@ -296,6 +301,14 @@ public class ElwhaColorPicker extends JComponent {
     commitInternal(source, normalize(next), adjusting);
   }
 
+  ColorPickerPane paneFor(final PickerMode mode) {
+    return panes.get(mode);
+  }
+
+  java.util.List<Color> recentColors() {
+    return java.util.Collections.unmodifiableList(recent);
+  }
+
   TypeRole headlineTypeRole() {
     return TypeRole.HEADLINE_LARGE;
   }
@@ -322,6 +335,13 @@ public class ElwhaColorPicker extends JComponent {
     try {
       this.color = next;
       this.adjusting = nowAdjusting;
+      if (!nowAdjusting) {
+        recent.removeIf(entry -> entry.equals(next));
+        recent.add(0, next);
+        while (recent.size() > RECENT_CAPACITY) {
+          recent.remove(recent.size() - 1);
+        }
+      }
       for (final ColorPickerPane pane : panes.values()) {
         if (pane != source) {
           pane.syncFromPicker(next);
@@ -375,7 +395,7 @@ public class ElwhaColorPicker extends JComponent {
 
   private ColorPickerPane createPane(final PickerMode mode) {
     return switch (mode) {
-      case SWATCHES -> new PlaceholderPane(this, mode);
+      case SWATCHES -> new SwatchesPane(this);
       case SPECTRUM -> new PlaceholderPane(this, mode);
       case SLIDERS -> new PlaceholderPane(this, mode);
     };
