@@ -1,5 +1,6 @@
 package com.owspfm.elwha.switches;
 
+import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.MorphAnimator;
@@ -23,7 +24,9 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
 import javax.swing.AbstractAction;
+import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 import javax.swing.Timer;
@@ -85,6 +88,17 @@ import javax.swing.event.EventListenerList;
  * while the switch is displayable and enabled — otherwise it snaps — and {@link
  * MorphAnimator#isReducedMotion() reduced motion} snaps everything globally.
  *
+ * <p><strong>Icons (research §A / §Mo).</strong> {@link #setIconsVisible(boolean)} shows a glyph on
+ * the handle in <em>both</em> states (M3's {@code icons} configuration); {@link
+ * #setShowOnlySelectedIcon(boolean)} shows one on the <em>selected</em> handle only — and wins when
+ * both are set. The defaults are {@link MaterialIcons#check(int) check} / {@link
+ * MaterialIcons#close(int) close} at {@value #ICON_SIZE_PX} px, replaceable per side via {@link
+ * #setSelectedIcon(Icon)} / {@link #setUnselectedIcon(Icon)} ({@code null} restores the default). A
+ * handle whose icon is enabled rides at {@value #HANDLE_WITH_ICON_PX} px; icons crossfade along the
+ * slide, and in selected-icon-only mode the glyph rotates &minus;45&deg; into view (material-web's
+ * flourish). Glyphs are recolored at paint time by compositing — no shared {@code FlatSVGIcon}
+ * color-filter mutation — so any {@link Icon} works.
+ *
  * <p><strong>Labelling.</strong> A switch never labels itself — M3 requires an adjacent label
  * naming what it toggles, and the accessible name must always be set: call {@code setLabel(String)}
  * or associate a {@link javax.swing.JLabel} via {@link javax.swing.JLabel#setLabelFor} (the a11y
@@ -115,6 +129,12 @@ public class ElwhaSwitch extends JComponent {
 
   /** Handle diameter while pressed or mid-drag — on either side of the toggle. */
   static final int HANDLE_PRESSED_PX = 28;
+
+  /** Handle diameter whenever its icon is shown ({@code with-icon-handle}). */
+  static final int HANDLE_WITH_ICON_PX = 24;
+
+  /** On-handle icon size. */
+  static final int ICON_SIZE_PX = 16;
 
   /** Diameter of the hover/focus/press state layer riding the handle. */
   static final int STATE_LAYER_SIZE_PX = 40;
@@ -152,6 +172,11 @@ public class ElwhaSwitch extends JComponent {
   private boolean dragging;
   private int pressX;
   private float dragFraction;
+
+  private boolean iconsVisible;
+  private boolean showOnlySelectedIcon;
+  private Icon selectedIcon = MaterialIcons.check(ICON_SIZE_PX);
+  private Icon unselectedIcon = MaterialIcons.close(ICON_SIZE_PX);
 
   private Point rippleOrigin;
   private float rippleProgress = 1f;
@@ -322,6 +347,132 @@ public class ElwhaSwitch extends JComponent {
     repaint();
   }
 
+  // --------------------------------------------------------------------- icons
+
+  /**
+   * Returns whether icons are shown on the handle in both states (M3's {@code icons}
+   * configuration).
+   *
+   * @return {@code true} if both handle icons are shown
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isIconsVisible() {
+    return iconsVisible;
+  }
+
+  /**
+   * Shows or hides the handle icons in <em>both</em> states — {@linkplain #getSelectedIcon() the
+   * selected glyph} on the selected handle and {@linkplain #getUnselectedIcon() the unselected
+   * glyph} on the unselected one. A handle whose icon shows rides at {@value #HANDLE_WITH_ICON_PX}
+   * px. Defaults to {@code false}; {@link #setShowOnlySelectedIcon(boolean)} wins when both are
+   * set.
+   *
+   * @param visible {@code true} to show icons in both states
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setIconsVisible(final boolean visible) {
+    if (this.iconsVisible == visible) {
+      return;
+    }
+    this.iconsVisible = visible;
+    syncMotion(animateAllowed());
+    repaint();
+  }
+
+  /**
+   * Returns whether only the selected handle shows its icon.
+   *
+   * @return {@code true} if the icon shows on the selected handle only
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isShowOnlySelectedIcon() {
+    return showOnlySelectedIcon;
+  }
+
+  /**
+   * Restricts the handle icon to the <em>selected</em> state (M3's {@code show-only-selected-icon}
+   * configuration) — the unselected handle returns to {@value #HANDLE_UNSELECTED_PX} px with no
+   * glyph, and the selected glyph rotates &minus;45&deg; into view on selection. Wins over {@link
+   * #setIconsVisible(boolean)} when both are set. Defaults to {@code false}.
+   *
+   * @param showOnlySelected {@code true} to show the icon on the selected handle only
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setShowOnlySelectedIcon(final boolean showOnlySelected) {
+    if (this.showOnlySelectedIcon == showOnlySelected) {
+      return;
+    }
+    this.showOnlySelectedIcon = showOnlySelected;
+    syncMotion(animateAllowed());
+    repaint();
+  }
+
+  /**
+   * Returns the selected-handle glyph — the custom icon if one was set, otherwise the {@link
+   * MaterialIcons#check(int) check} default.
+   *
+   * @return the selected-handle icon; never {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public Icon getSelectedIcon() {
+    return selectedIcon;
+  }
+
+  /**
+   * Replaces the selected-handle glyph. The icon is recolored to the state's role at paint time by
+   * compositing, so any {@link Icon} works; glyphs at {@value #ICON_SIZE_PX} px match the M3
+   * geometry.
+   *
+   * @param icon the new selected-handle icon, or {@code null} to restore the check default
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setSelectedIcon(final Icon icon) {
+    this.selectedIcon = icon != null ? icon : MaterialIcons.check(ICON_SIZE_PX);
+    repaint();
+  }
+
+  /**
+   * Returns the unselected-handle glyph — the custom icon if one was set, otherwise the {@link
+   * MaterialIcons#close(int) close} default.
+   *
+   * @return the unselected-handle icon; never {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public Icon getUnselectedIcon() {
+    return unselectedIcon;
+  }
+
+  /**
+   * Replaces the unselected-handle glyph. The icon is recolored to the state's role at paint time
+   * by compositing, so any {@link Icon} works; glyphs at {@value #ICON_SIZE_PX} px match the M3
+   * geometry.
+   *
+   * @param icon the new unselected-handle icon, or {@code null} to restore the close default
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setUnselectedIcon(final Icon icon) {
+    this.unselectedIcon = icon != null ? icon : MaterialIcons.close(ICON_SIZE_PX);
+    repaint();
+  }
+
+  /** Whether the selected handle's icon is enabled (either icons mode). */
+  private boolean selectedIconEnabled() {
+    return iconsVisible || showOnlySelectedIcon;
+  }
+
+  /** Whether the unselected handle's icon is enabled (both-icons mode only). */
+  private boolean unselectedIconEnabled() {
+    return iconsVisible && !showOnlySelectedIcon;
+  }
+
   // -------------------------------------------------------------------- sizing
 
   @Override
@@ -397,8 +548,14 @@ public class ElwhaSwitch extends JComponent {
   private void syncMotion(final boolean animate) {
     slideTween.retarget(selected ? 1f : 0f, SLIDE_MS, OVERSHOOT, animate);
     final boolean press = pressed || dragging;
-    final float diameter =
-        press ? HANDLE_PRESSED_PX : (selected ? HANDLE_SELECTED_PX : HANDLE_UNSELECTED_PX);
+    final float diameter;
+    if (press) {
+      diameter = HANDLE_PRESSED_PX;
+    } else if (selected) {
+      diameter = selectedIconEnabled() ? HANDLE_WITH_ICON_PX : HANDLE_SELECTED_PX;
+    } else {
+      diameter = unselectedIconEnabled() ? HANDLE_WITH_ICON_PX : HANDLE_UNSELECTED_PX;
+    }
     final boolean pressTransition = press || sizeTween.target() == HANDLE_PRESSED_PX;
     sizeTween.retarget(
         diameter,
@@ -423,6 +580,7 @@ public class ElwhaSwitch extends JComponent {
       paintStateLayer(g2);
       paintRipple(g2);
       paintHandle(g2);
+      paintIcons(g2);
     } finally {
       g2.dispose();
     }
@@ -549,6 +707,76 @@ public class ElwhaSwitch extends JComponent {
     final float y = handleCenterY() - diameter / 2f;
     g2.setColor(handleColor());
     g2.fill(new Ellipse2D.Float(x, y, diameter, diameter));
+  }
+
+  /**
+   * Paints the enabled handle glyphs, crossfaded along the slide: the selected icon's alpha rises
+   * with the progress (rotating &minus;45&deg;&rarr;0 in selected-icon-only mode — research §Mo),
+   * the unselected icon's falls. Disabled states paint their single icon at the 0.38 content
+   * opacity (research §T).
+   */
+  private void paintIcons(final Graphics2D g2) {
+    if (!selectedIconEnabled() && !unselectedIconEnabled()) {
+      return;
+    }
+    final float p = colorProgress();
+    final int cx = handleCenterX();
+    final int cy = handleCenterY();
+    final float disabledFactor = isEnabled() ? 1f : StateLayer.disabledContentOpacity();
+    if (selectedIconEnabled() && p > 0f) {
+      final Color color =
+          isEnabled() ? ColorRole.ON_PRIMARY_CONTAINER.resolve() : ColorRole.ON_SURFACE.resolve();
+      final double rotation = showOnlySelectedIcon ? Math.toRadians(-45.0 * (1.0 - p)) : 0.0;
+      paintGlyph(g2, selectedIcon, cx, cy, color, p * disabledFactor, rotation);
+    }
+    if (unselectedIconEnabled() && p < 1f) {
+      final Color color = ColorRole.SURFACE_CONTAINER_HIGHEST.resolve();
+      paintGlyph(g2, unselectedIcon, cx, cy, color, (1f - p) * disabledFactor, 0.0);
+    }
+  }
+
+  /**
+   * Paints one glyph centered at {@code (cx, cy)}, recolored by {@code SrcIn} compositing into an
+   * offscreen buffer — works for any {@link Icon} and never mutates a shared {@code FlatSVGIcon}
+   * color filter (the #197 lesson).
+   */
+  private void paintGlyph(
+      final Graphics2D g2,
+      final Icon icon,
+      final int cx,
+      final int cy,
+      final Color color,
+      final float alpha,
+      final double rotation) {
+    if (icon == null || alpha <= 0f) {
+      return;
+    }
+    final int w = icon.getIconWidth();
+    final int h = icon.getIconHeight();
+    if (w <= 0 || h <= 0) {
+      return;
+    }
+    final BufferedImage buffer = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D ig = buffer.createGraphics();
+    try {
+      ig.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      icon.paintIcon(this, ig, 0, 0);
+      ig.setComposite(AlphaComposite.SrcIn);
+      ig.setColor(color);
+      ig.fillRect(0, 0, w, h);
+    } finally {
+      ig.dispose();
+    }
+    final Graphics2D c = (Graphics2D) g2.create();
+    try {
+      c.setComposite(AlphaComposite.SrcOver.derive(clampF(alpha)));
+      if (rotation != 0.0) {
+        c.rotate(rotation, cx, cy);
+      }
+      c.drawImage(buffer, cx - w / 2, cy - h / 2, null);
+    } finally {
+      c.dispose();
+    }
   }
 
   // --------------------------------------------------------------------- color
