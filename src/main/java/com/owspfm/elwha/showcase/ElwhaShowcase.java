@@ -775,6 +775,13 @@ public final class ElwhaShowcase {
             buildCheckboxComponent()));
     register(
         new LeafEntry(
+            "Radio button",
+            "M3 radio button — the ring-and-dot single select, with ElwhaRadioGroup exclusion,"
+                + " arrow navigation, and a roving tab stop.",
+            AREA_COMPONENTS,
+            buildRadioButtonComponent()));
+    register(
+        new LeafEntry(
             "Progress",
             "M3 Expressive progress indicators — linear + circular, determinate + indeterminate,"
                 + " flat + wavy, with the track-active gap and stop dot.",
@@ -1953,6 +1960,20 @@ public final class ElwhaShowcase {
         "Gallery",
         scroll(
             stack(gallerySection("States & configurations", TabsShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- radio button
+
+  private static JComponent buildRadioButtonComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", RadioButtonShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection(
+                    "States & configurations", RadioButtonShowcasePanels.buildGallery()))));
     return tabs;
   }
 
