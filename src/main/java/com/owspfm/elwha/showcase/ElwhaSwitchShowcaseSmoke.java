@@ -1,5 +1,6 @@
 package com.owspfm.elwha.showcase;
 
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.switches.ElwhaSwitch;
 import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -10,7 +11,6 @@ import java.awt.Container;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 
 /**
@@ -44,9 +44,10 @@ public final class ElwhaSwitchShowcaseSmoke {
     final JComponent workbench = SwitchShowcasePanels.buildWorkbench();
     check("workbench builds", workbench != null);
     check("workbench hosts one live ElwhaSwitch", countSwitches(workbench) == 1);
+    // Two ElwhaTextFields: the label control + the one embedded in the icon-mode select field.
     check(
         "the label control is a dogfooded ElwhaTextField",
-        collect(workbench, ElwhaTextField.class).size() == 1);
+        collect(workbench, ElwhaTextField.class).size() == 2);
     final ElwhaSwitch staged = collect(workbench, ElwhaSwitch.class).get(0);
     check(
         "the visible stage label names the switch via labelFor",
@@ -59,14 +60,19 @@ public final class ElwhaSwitchShowcaseSmoke {
       clicked++;
     }
     check("every workbench checkbox exercises the apply path (x2)", clicked >= 4);
-    int comboStops = 0;
-    for (final JComboBox<?> combo : collect(workbench, JComboBox.class)) {
-      for (int i = 0; i < combo.getItemCount(); i++) {
-        combo.setSelectedItem(combo.getItemAt(i));
-        comboStops++;
-      }
+    check(
+        "the icon-mode selector is a dogfooded ElwhaSelectField",
+        collect(workbench, ElwhaSelectField.class).size() == 1);
+    @SuppressWarnings("unchecked")
+    final ElwhaSelectField<SwitchShowcasePanels.IconMode> modeField =
+        (ElwhaSelectField<SwitchShowcasePanels.IconMode>)
+            collect(workbench, ElwhaSelectField.class).get(0);
+    for (final SwitchShowcasePanels.IconMode mode : SwitchShowcasePanels.IconMode.values()) {
+      modeField.setSelectedValue(mode);
     }
-    check("the icon-mode combo exercises all three modes", comboStops >= 3);
+    check(
+        "the icon-mode select field exercises all three modes through the apply path",
+        modeField.getSelectedValue() == SwitchShowcasePanels.IconMode.SELECTED_ONLY);
     renderOnce(workbench);
     check("workbench lays out and paints headlessly", true);
 

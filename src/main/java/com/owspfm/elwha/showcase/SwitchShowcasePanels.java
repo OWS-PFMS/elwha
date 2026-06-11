@@ -1,6 +1,7 @@
 package com.owspfm.elwha.showcase;
 
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.switches.ElwhaSwitch;
 import com.owspfm.elwha.textfield.ElwhaTextField;
 import java.awt.ComponentOrientation;
@@ -8,9 +9,9 @@ import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -22,13 +23,13 @@ import javax.swing.event.DocumentListener;
  * ComponentWorkbench} stage with a live switch beside its visible {@code JLabel} (the M3
  * composition — a switch never paints its own label; {@code setLabelFor} feeds the accessible
  * name), a mutually-exclusive <strong>Icon mode</strong> selector (None / Both states / Selected
- * only — one choice, since the two spec flags cannot meaningfully combine) with an orthogonal
- * custom-glyph toggle, a dogfooded {@link ElwhaTextField} label input, and Enabled + RTL state
- * controls (RTL flips the whole label+switch row). The Selected control tracks user toggles back.
- * The state gallery matrix renders the four icon configurations across unselected / selected /
- * hover / focused / pressed / both disabled cells — the two disabled columns exist because the
- * spec's disabled treatment is asymmetric (opaque {@code SURFACE} handle when selected, 38% {@code
- * ON_SURFACE} when not).
+ * only — one choice, since the two spec flags cannot meaningfully combine; a dogfooded {@link
+ * ElwhaSelectField}) with an orthogonal custom-glyph toggle, a dogfooded {@link ElwhaTextField}
+ * label input, and Enabled + RTL state controls (RTL flips the whole label+switch row). The
+ * Selected control tracks user toggles back. The state gallery matrix renders the four icon
+ * configurations across unselected / selected / hover / focused / pressed / both disabled cells —
+ * the two disabled columns exist because the spec's disabled treatment is asymmetric (opaque {@code
+ * SURFACE} handle when selected, 38% {@code ON_SURFACE} when not).
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -43,7 +44,9 @@ final class SwitchShowcasePanels {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
     final JCheckBox selectedBox = new JCheckBox("Selected", true);
-    final JComboBox<IconMode> iconModeBox = new JComboBox<>(IconMode.values());
+    final ElwhaSelectField<IconMode> iconModeBox = ElwhaSelectField.outlined("Icon mode");
+    iconModeBox.setOptions(List.of(IconMode.values()));
+    iconModeBox.setSelectedValue(IconMode.NONE);
     final JCheckBox customIconsBox = new JCheckBox("Custom icons (favorite pair)");
     final ElwhaTextField labelField = ElwhaTextField.outlined("");
     labelField.setText("Wi-Fi");
@@ -63,7 +66,7 @@ final class SwitchShowcasePanels {
     controls.addControl("", selectedBox);
     controls.addControl("Label", labelField);
     controls.addSection("Icons");
-    controls.addControl("Icon mode", iconModeBox);
+    controls.addControl("", iconModeBox);
     controls.addControl("", customIconsBox);
     controls.addSection("State");
     controls.addControl("", enabledBox);
@@ -71,7 +74,8 @@ final class SwitchShowcasePanels {
 
     final Runnable apply =
         () -> {
-          final IconMode mode = (IconMode) iconModeBox.getSelectedItem();
+          final IconMode picked = iconModeBox.getSelectedValue();
+          final IconMode mode = picked == null ? IconMode.NONE : picked;
           final boolean icons = mode == IconMode.BOTH_STATES;
           final boolean onlySelected = mode == IconMode.SELECTED_ONLY;
           final boolean custom = customIconsBox.isSelected();
@@ -114,7 +118,7 @@ final class SwitchShowcasePanels {
         });
 
     selectedBox.addActionListener(e -> apply.run());
-    iconModeBox.addActionListener(e -> apply.run());
+    iconModeBox.addSelectionChangeListener(v -> apply.run());
     customIconsBox.addActionListener(e -> apply.run());
     enabledBox.addActionListener(e -> apply.run());
     rtlBox.addActionListener(e -> apply.run());
@@ -247,7 +251,7 @@ final class SwitchShowcasePanels {
    * expresses as the two spec flags ({@code setIconsVisible} / {@code setShowOnlySelectedIcon}),
    * because checking both at once is not a meaningful configuration.
    */
-  private enum IconMode {
+  enum IconMode {
     NONE("None"),
     BOTH_STATES("Both states"),
     SELECTED_ONLY("Selected only");
