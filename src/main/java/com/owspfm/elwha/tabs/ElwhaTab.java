@@ -7,9 +7,11 @@ import com.owspfm.elwha.badge.IconBearing;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.RipplePainter;
+import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -23,13 +25,26 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javax.accessibility.Accessible;
+import javax.accessibility.AccessibleAction;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
+import javax.accessibility.AccessibleState;
+import javax.accessibility.AccessibleStateSet;
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
@@ -87,7 +102,7 @@ import javax.swing.Timer;
  * @version v0.4.0
  * @since v0.4.0
  */
-public final class ElwhaTab extends JComponent implements IconBearing {
+public final class ElwhaTab extends JComponent implements IconBearing, Accessible {
 
   static final int H_PADDING_PX = 16;
   static final int INLINE_CONTENT_HEIGHT_PX = 48;
@@ -99,12 +114,15 @@ public final class ElwhaTab extends JComponent implements IconBearing {
   private static final int RIPPLE_TOTAL_MS = 400;
   private static final int RIPPLE_TICK_MS = 16;
   private static final int HOVER_POLL_INTERVAL_MS = 100;
+  private static final float FOCUS_RING_STROKE = 2f;
+  private static final String ACTION_ACTIVATE = "elwhaTab.activate";
 
   private final String label;
   private final Icon iconInactive;
   private final Icon iconActive;
-  private final String accessibleLabel;
   private final List<ActionListener> actionListeners = new ArrayList<>();
+
+  private String accessibleLabel;
 
   private final FlatSVGIcon.ColorFilter iconFilter =
       new FlatSVGIcon.ColorFilter(c -> contentColor());
@@ -135,6 +153,7 @@ public final class ElwhaTab extends JComponent implements IconBearing {
     applyIconColorFilter(iconInactive);
     applyIconColorFilter(iconActive);
     setOpaque(false);
+    setFocusable(true);
     initInteraction();
   }
 
@@ -382,7 +401,42 @@ public final class ElwhaTab extends JComponent implements IconBearing {
       return;
     }
     this.active = active;
+    if (accessibleContext != null) {
+      accessibleContext.firePropertyChange(
+          AccessibleContext.ACCESSIBLE_STATE_PROPERTY,
+          active ? null : AccessibleState.SELECTED,
+          active ? AccessibleState.SELECTED : null);
+    }
     repaint();
+  }
+
+  /**
+   * Overrides the tab's accessible name. The label text is the default name; icon-only tabs are
+   * seeded with their required accessible label at construction.
+   *
+   * @param accessibleLabel the screen-reader name, or {@code null} to fall back to the label
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setAccessibleLabel(final String accessibleLabel) {
+    final String old = getAccessibleContext().getAccessibleName();
+    this.accessibleLabel = accessibleLabel;
+    getAccessibleContext()
+        .firePropertyChange(
+            AccessibleContext.ACCESSIBLE_NAME_PROPERTY,
+            old,
+            getAccessibleContext().getAccessibleName());
+  }
+
+  /**
+   * The accessible-name override, or {@code null} when the label text is the name.
+   *
+   * @return the override, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getAccessibleLabel() {
+    return accessibleLabel;
   }
 
   void setVariant(final TabsVariant variant) {
@@ -396,10 +450,6 @@ public final class ElwhaTab extends JComponent implements IconBearing {
 
   TabsVariant getVariant() {
     return variant;
-  }
-
-  String getAccessibleLabel() {
-    return accessibleLabel;
   }
 
   void fireAction(final int modifiers) {
@@ -489,11 +539,14 @@ public final class ElwhaTab extends JComponent implements IconBearing {
       clusterWidth += ICON_SIZE_PX + (hasLabel() ? INLINE_GAP_PX : 0);
     }
     final int clusterX = (width - clusterWidth) / 2;
+    final boolean rtl = !getComponentOrientation().isLeftToRight();
     Rectangle icon = null;
     int textX = clusterX;
     if (hasIcon()) {
-      icon = new Rectangle(clusterX, (height - ICON_SIZE_PX) / 2, ICON_SIZE_PX, ICON_SIZE_PX);
-      textX = clusterX + ICON_SIZE_PX + (hasLabel() ? INLINE_GAP_PX : 0);
+      // The icon leads the label — leading is the right side under RTL.
+      final int iconX = rtl ? clusterX + clusterWidth - ICON_SIZE_PX : clusterX;
+      icon = new Rectangle(iconX, (height - ICON_SIZE_PX) / 2, ICON_SIZE_PX, ICON_SIZE_PX);
+      textX = rtl ? clusterX : clusterX + ICON_SIZE_PX + (hasLabel() ? INLINE_GAP_PX : 0);
     }
     final Rectangle text =
         hasLabel()
@@ -561,8 +614,40 @@ public final class ElwhaTab extends JComponent implements IconBearing {
       paintRippleLayer(g2);
       paintIcon(g2, geom);
       paintLabel(g2, geom);
+      paintFocusRing(g2);
     } finally {
       g2.dispose();
+    }
+  }
+
+  // Inward keyboard-focus ring (research §I: 8px shape; on the active tab the ring bottom sits
+  // 1px above the indicator). Mouse presses never request focus, so owning focus implies
+  // keyboard arrival — the M3 tablist keyboard-only focus affordance (the nav-rail mechanism).
+  private void paintFocusRing(final Graphics2D g2) {
+    if (!isFocusOwner() || !isEnabled()) {
+      return;
+    }
+    final Graphics2D f = (Graphics2D) g2.create();
+    try {
+      f.setStroke(new BasicStroke(FOCUS_RING_STROKE));
+      f.setColor(ColorRole.PRIMARY.resolve());
+      final float inset = FOCUS_RING_STROKE / 2f + 1f;
+      float bottomReserve = inset;
+      if (active && getParent() instanceof ElwhaTabs bar) {
+        bottomReserve =
+            Math.max(inset, bar.indicatorRestRect(this).height + 1 + FOCUS_RING_STROKE / 2f);
+      }
+      final float arc = 2f * ShapeScale.SM.px();
+      f.draw(
+          new RoundRectangle2D.Float(
+              inset,
+              inset,
+              getWidth() - 2f * inset,
+              getHeight() - inset - bottomReserve,
+              arc,
+              arc));
+    } finally {
+      f.dispose();
     }
   }
 
@@ -728,6 +813,48 @@ public final class ElwhaTab extends JComponent implements IconBearing {
           }
         };
     addMouseListener(ma);
+
+    addFocusListener(
+        new FocusAdapter() {
+          @Override
+          public void focusGained(final FocusEvent e) {
+            repaint();
+          }
+
+          @Override
+          public void focusLost(final FocusEvent e) {
+            pressed = false;
+            repaint();
+          }
+        });
+
+    // Space / Enter activate the focused tab. The enabled guard must qualify the COMPONENT's
+    // isEnabled — inside an AbstractAction a bare isEnabled() resolves to the Action's own and
+    // silently passes on a disabled bar (the #432 slider bug).
+    final Action activate =
+        new AbstractAction() {
+          @Override
+          public void actionPerformed(final ActionEvent e) {
+            if (!ElwhaTab.this.isEnabled()) {
+              return;
+            }
+            keyboardActivate();
+          }
+        };
+    getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), ACTION_ACTIVATE);
+    getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), ACTION_ACTIVATE);
+    getActionMap().put(ACTION_ACTIVATE, activate);
+  }
+
+  // User-gesture activation from the keyboard (Space/Enter, the a11y "click" action): seeds a
+  // content-centered ripple and routes through the bar like a click.
+  void keyboardActivate() {
+    if (getParent() instanceof ElwhaTabs bar) {
+      if (!isActive()) {
+        startRipple(new Point(getWidth() / 2, getHeight() / 2));
+      }
+      bar.userActivate(this, 0);
+    }
   }
 
   void startRipple(final Point origin) {
@@ -816,5 +943,80 @@ public final class ElwhaTab extends JComponent implements IconBearing {
       rippleTimer.stop();
     }
     super.removeNotify();
+  }
+
+  // ----------------------------------------------------------- accessibility
+
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaTab();
+    }
+    return accessibleContext;
+  }
+
+  /**
+   * The tab's accessible context — {@link AccessibleRole#PAGE_TAB} (pairing with the bar's {@code
+   * PAGE_TAB_LIST}, the ARIA {@code tablist}/{@code tab} mapping), {@link AccessibleState#SELECTED}
+   * while active (with a state-change event on every flip), one "click" action performing
+   * user-gesture activation, and the label text as the accessible name unless {@link
+   * ElwhaTab#setAccessibleLabel(String)} overrides it. Badge content fragments are spliced in by
+   * {@link ElwhaBadgeAnchor}'s push-model wiring.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected class AccessibleElwhaTab extends AccessibleJComponent implements AccessibleAction {
+
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.PAGE_TAB;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      final String override = super.getAccessibleName();
+      if (override != null && !override.isEmpty()) {
+        return override;
+      }
+      if (accessibleLabel != null && !accessibleLabel.isEmpty()) {
+        return accessibleLabel;
+      }
+      return label;
+    }
+
+    @Override
+    public AccessibleStateSet getAccessibleStateSet() {
+      final AccessibleStateSet states = super.getAccessibleStateSet();
+      if (active) {
+        states.add(AccessibleState.SELECTED);
+      }
+      return states;
+    }
+
+    @Override
+    public AccessibleAction getAccessibleAction() {
+      return this;
+    }
+
+    @Override
+    public int getAccessibleActionCount() {
+      return 1;
+    }
+
+    @Override
+    public String getAccessibleActionDescription(final int i) {
+      return i == 0 ? "click" : null;
+    }
+
+    @Override
+    public boolean doAccessibleAction(final int i) {
+      if (i != 0 || !ElwhaTab.this.isEnabled()) {
+        return false;
+      }
+      keyboardActivate();
+      return true;
+    }
   }
 }

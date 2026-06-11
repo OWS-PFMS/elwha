@@ -3,16 +3,28 @@ package com.owspfm.elwha.tabs;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.MorphAnimator;
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.FocusTraversalPolicy;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javax.accessibility.Accessible;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
+import javax.accessibility.AccessibleSelection;
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.JComponent;
+import javax.swing.KeyStroke;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -57,7 +69,7 @@ import javax.swing.event.ChangeListener;
  * @version v0.4.0
  * @since v0.4.0
  */
-public class ElwhaTabs extends JComponent {
+public class ElwhaTabs extends JComponent implements Accessible {
 
   static final int BAR_HEIGHT_INLINE_PX = 48;
   static final int DIVIDER_THICKNESS_PX = 1;
@@ -82,6 +94,7 @@ public class ElwhaTabs extends JComponent {
   private int scrollFrom;
   private int scrollTo;
 
+  private boolean autoActivate;
   private int activeTabIndex = -1;
 
   /**
@@ -104,6 +117,12 @@ public class ElwhaTabs extends JComponent {
   public ElwhaTabs(final TabsVariant variant) {
     this.variant = Objects.requireNonNull(variant, "variant");
     setOpaque(true);
+    setFocusable(false);
+    // The roving tab stop (research §I): the bar's traversal cycle exposes exactly one tab — the
+    // focused one, else the active one — so Tab enters the bar on the right tab and leaves it on
+    // the next press; arrows move within (the nav-rail mechanism).
+    setFocusTraversalPolicyProvider(true);
+    setFocusTraversalPolicy(new TabsFocusTraversalPolicy());
     scrollAnimator.addProgressListener(
         () -> {
           final float t = Easing.STANDARD.ease(scrollAnimator.progress());
@@ -170,6 +189,7 @@ public class ElwhaTabs extends JComponent {
     tab.setEnabled(isEnabled());
     tabs.add(tab);
     add(tab);
+    installKeyboardNavigation(tab);
     if (activeTabIndex < 0) {
       activate(0, true);
     }
@@ -210,6 +230,7 @@ public class ElwhaTabs extends JComponent {
     }
     tabs.remove(index);
     remove(tab);
+    uninstallKeyboardNavigation(tab);
     if (index == activeTabIndex) {
       activeTabIndex = -1;
       tab.setActive(false);
@@ -225,6 +246,29 @@ public class ElwhaTabs extends JComponent {
       keepActiveVisible();
     }
     repaint();
+  }
+
+  /**
+   * Whether moving the keyboard focus between tabs also activates them (the material-web {@code
+   * auto-activate} attribute). Off by default — arrows move focus only; Enter/Space activate.
+   *
+   * @param autoActivate {@code true} to select on focus move
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setAutoActivate(final boolean autoActivate) {
+    this.autoActivate = autoActivate;
+  }
+
+  /**
+   * Whether keyboard focus moves auto-activate tabs.
+   *
+   * @return the auto-activate flag
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isAutoActivate() {
+    return autoActivate;
   }
 
   /**
@@ -293,12 +337,22 @@ public class ElwhaTabs extends JComponent {
   }
 
   // The material-web scroll-to formula (research §I): keep the tab visible with SCROLL_MARGIN_PX
-  // of its neighbors showing on either side.
+  // of its neighbors showing on either side. Works in logical content coordinates so the same
+  // formula serves both component orientations.
   private int scrollTargetFor(final ElwhaTab tab) {
-    final int tabOffset = tab.getX() + scrollOffset;
+    final int tabOffset = contentXOf(tab);
     final int min = tabOffset - SCROLL_MARGIN_PX;
     final int max = tabOffset + tab.getWidth() - getWidth() + SCROLL_MARGIN_PX;
     return Math.min(min, Math.max(max, scrollOffset));
+  }
+
+  // A tab's position in logical content coordinates (0 = the leading edge of the first tab),
+  // derived from its on-screen bounds and the current offset under either orientation.
+  private int contentXOf(final ElwhaTab tab) {
+    if (getComponentOrientation().isLeftToRight()) {
+      return tab.getX() + scrollOffset;
+    }
+    return getWidth() - tab.getX() - tab.getWidth() + scrollOffset;
   }
 
   private int clampScroll(final int offset) {
@@ -525,28 +579,39 @@ public class ElwhaTabs extends JComponent {
     if (count == 0) {
       return;
     }
+    final boolean ltr = getComponentOrientation().isLeftToRight();
     final int height = getHeight();
+    final int width = getWidth();
     if (tabMode == TabMode.SCROLLABLE) {
       scrollOffset = clampScroll(scrollOffset);
-      int x = -scrollOffset;
+      int x = ltr ? -scrollOffset : width + scrollOffset;
       for (ElwhaTab tab : tabs) {
         final int w = clampedScrollableWidth(tab);
         final int tabHeight = Math.min(tab.getPreferredSize().height, height);
-        tab.setBounds(x, height - tabHeight, w, tabHeight);
-        x += w;
+        if (ltr) {
+          tab.setBounds(x, height - tabHeight, w, tabHeight);
+          x += w;
+        } else {
+          x -= w;
+          tab.setBounds(x, height - tabHeight, w, tabHeight);
+        }
       }
       return;
     }
-    final int width = getWidth();
     final int base = width / count;
     final int remainder = width % count;
-    int x = 0;
+    int x = ltr ? 0 : width;
     for (int i = 0; i < count; i++) {
       final ElwhaTab tab = tabs.get(i);
       final int w = base + (i < remainder ? 1 : 0);
       final int tabHeight = Math.min(tab.getPreferredSize().height, height);
-      tab.setBounds(x, height - tabHeight, w, tabHeight);
-      x += w;
+      if (ltr) {
+        tab.setBounds(x, height - tabHeight, w, tabHeight);
+        x += w;
+      } else {
+        x -= w;
+        tab.setBounds(x, height - tabHeight, w, tabHeight);
+      }
     }
   }
 
@@ -657,5 +722,201 @@ public class ElwhaTabs extends JComponent {
       return new Rectangle(tab.getX() + span.x, y, span.width, height);
     }
     return new Rectangle(tab.getX(), y, tab.getWidth(), height);
+  }
+
+  // ---------------------------------------------------------- keyboard navigation
+
+  private static final String ACTION_FOCUS_RIGHT = "elwhaTabs.focusRight";
+  private static final String ACTION_FOCUS_LEFT = "elwhaTabs.focusLeft";
+  private static final String ACTION_FOCUS_FIRST = "elwhaTabs.focusFirst";
+  private static final String ACTION_FOCUS_LAST = "elwhaTabs.focusLast";
+
+  private void installKeyboardNavigation(final ElwhaTab tab) {
+    tab.getInputMap(WHEN_FOCUSED)
+        .put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), ACTION_FOCUS_RIGHT);
+    tab.getInputMap(WHEN_FOCUSED)
+        .put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), ACTION_FOCUS_LEFT);
+    tab.getInputMap(WHEN_FOCUSED)
+        .put(KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0), ACTION_FOCUS_FIRST);
+    tab.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0), ACTION_FOCUS_LAST);
+    tab.getActionMap().put(ACTION_FOCUS_RIGHT, arrowAction(true));
+    tab.getActionMap().put(ACTION_FOCUS_LEFT, arrowAction(false));
+    tab.getActionMap().put(ACTION_FOCUS_FIRST, edgeAction(true));
+    tab.getActionMap().put(ACTION_FOCUS_LAST, edgeAction(false));
+  }
+
+  private void uninstallKeyboardNavigation(final ElwhaTab tab) {
+    tab.getInputMap(WHEN_FOCUSED).remove(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0));
+    tab.getInputMap(WHEN_FOCUSED).remove(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0));
+    tab.getInputMap(WHEN_FOCUSED).remove(KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0));
+    tab.getInputMap(WHEN_FOCUSED).remove(KeyStroke.getKeyStroke(KeyEvent.VK_END, 0));
+    tab.getActionMap().remove(ACTION_FOCUS_RIGHT);
+    tab.getActionMap().remove(ACTION_FOCUS_LEFT);
+    tab.getActionMap().remove(ACTION_FOCUS_FIRST);
+    tab.getActionMap().remove(ACTION_FOCUS_LAST);
+  }
+
+  private Action arrowAction(final boolean rightKey) {
+    return new AbstractAction() {
+      @Override
+      public void actionPerformed(final ActionEvent e) {
+        // The bar's enabled state, explicitly — a bare isEnabled() here is the Action's own and
+        // would silently pass on a disabled bar (the #432 slider bug).
+        if (!ElwhaTabs.this.isEnabled() || !(e.getSource() instanceof ElwhaTab from)) {
+          return;
+        }
+        // RTL flips which arrow is "forwards" (research §I).
+        final boolean forward =
+            getComponentOrientation().isLeftToRight() ? rightKey : !rightKey;
+        moveFocus(from, forward);
+      }
+    };
+  }
+
+  private Action edgeAction(final boolean first) {
+    return new AbstractAction() {
+      @Override
+      public void actionPerformed(final ActionEvent e) {
+        if (!ElwhaTabs.this.isEnabled() || tabs.isEmpty()) {
+          return;
+        }
+        focusTab(tabs.get(first ? 0 : tabs.size() - 1));
+      }
+    };
+  }
+
+  // Moves the roving focus one tab forward/backward with wrap-around (research §I).
+  void moveFocus(final ElwhaTab from, final boolean forward) {
+    final int count = tabs.size();
+    final int i = tabs.indexOf(from);
+    if (i < 0 || count < 2) {
+      return;
+    }
+    focusTab(tabs.get((i + (forward ? 1 : -1) + count) % count));
+  }
+
+  private void focusTab(final ElwhaTab target) {
+    target.requestFocusInWindow();
+    scrollToTab(target);
+    if (autoActivate) {
+      userActivate(target, 0);
+    }
+  }
+
+  // The roving tab stop: the focused tab, else the active tab, else the first.
+  private ElwhaTab currentTabStop() {
+    for (ElwhaTab tab : tabs) {
+      if (tab.isFocusOwner()) {
+        return tab;
+      }
+    }
+    if (activeTabIndex >= 0) {
+      return tabs.get(activeTabIndex);
+    }
+    return tabs.isEmpty() ? null : tabs.get(0);
+  }
+
+  /**
+   * The bar's traversal cycle exposes exactly one tab — the roving stop — so Tab enters on the
+   * focused-else-active tab and the next Tab press leaves the bar; arrow keys move within.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  private final class TabsFocusTraversalPolicy extends FocusTraversalPolicy {
+
+    @Override
+    public Component getComponentAfter(final Container root, final Component current) {
+      return null;
+    }
+
+    @Override
+    public Component getComponentBefore(final Container root, final Component current) {
+      return null;
+    }
+
+    @Override
+    public Component getFirstComponent(final Container root) {
+      return currentTabStop();
+    }
+
+    @Override
+    public Component getLastComponent(final Container root) {
+      return currentTabStop();
+    }
+
+    @Override
+    public Component getDefaultComponent(final Container root) {
+      return currentTabStop();
+    }
+  }
+
+  // ----------------------------------------------------------- accessibility
+
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaTabs();
+    }
+    return accessibleContext;
+  }
+
+  /**
+   * The bar's accessible context — {@link AccessibleRole#PAGE_TAB_LIST} (the ARIA {@code tablist}
+   * mapping) with an {@link AccessibleSelection} of exactly one selected child (the {@code
+   * JTabbedPane} shape): {@code addAccessibleSelection} activates a tab; removal/clearing are
+   * no-ops because the selection is mandatory.
+   *
+   * @author Charles Bryan
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected class AccessibleElwhaTabs extends AccessibleJComponent implements AccessibleSelection {
+
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.PAGE_TAB_LIST;
+    }
+
+    @Override
+    public AccessibleSelection getAccessibleSelection() {
+      return this;
+    }
+
+    @Override
+    public int getAccessibleSelectionCount() {
+      return activeTabIndex >= 0 ? 1 : 0;
+    }
+
+    @Override
+    public Accessible getAccessibleSelection(final int i) {
+      return i == 0 ? getActiveTab() : null;
+    }
+
+    @Override
+    public boolean isAccessibleChildSelected(final int i) {
+      return i == activeTabIndex;
+    }
+
+    @Override
+    public void addAccessibleSelection(final int i) {
+      setActiveTabIndex(i);
+    }
+
+    @Override
+    public void removeAccessibleSelection(final int i) {
+      // Mandatory selection — a tab cannot be deselected, only replaced.
+    }
+
+    @Override
+    public void clearAccessibleSelection() {
+      // Mandatory selection.
+    }
+
+    @Override
+    public void selectAllAccessibleSelection() {
+      // Single selection.
+    }
   }
 }
