@@ -15,6 +15,7 @@ import com.owspfm.elwha.theme.SurfacePainter;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -27,6 +28,7 @@ import java.awt.RenderingHints;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
 import javax.swing.BorderFactory;
@@ -94,6 +96,11 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
   private boolean open = true;
   private float openProgress = 1f;
   private MorphAnimator openAnimator;
+
+  private boolean dismissibleByEsc = true;
+  private boolean dismissibleByScrim = true;
+  private Consumer<SheetDismissCause> onClose;
+  private SideSheetOverlay overlay;
 
   private final JPanel body = new JPanel(new BorderLayout());
   private final JPanel header = new JPanel(new BorderLayout(SpaceScale.MD.px(), 0));
@@ -570,16 +577,166 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
         });
   }
 
+  // ------------------------------------------------------------ modal presentation
+
+  /**
+   * Presents this sheet modally over a scrim, mounted on the host frame's layered pane at {@code
+   * ElwhaLayers.OVERLAY_LAYER} (190) — below dialogs (200) and menus (300), so either may open
+   * above the sheet. Forces the type to {@link SheetType#MODAL} (the chrome contract) and snaps the
+   * sheet open. The sheet slides in from its resolved edge while the scrim fades (300ms emphasized;
+   * snaps under reduced motion); focus moves into the sheet, is trapped while it is up, and
+   * restores on close. Returns immediately; the outcome is reported through {@link
+   * #setOnClose(Consumer)}. A no-op while already shown.
+   *
+   * @param parent any component in the target window's tree; used to resolve the host frame and
+   *     restore focus on close
+   * @throws NullPointerException if {@code parent} is {@code null}
+   * @throws IllegalStateException if {@code parent} is not in a realized window
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void showModal(final Component parent) {
+    if (isModalShowing()) {
+      return;
+    }
+    setSheetType(SheetType.MODAL);
+    if (!open) {
+      open = true;
+      openProgress = 1f;
+      if (openAnimator != null) {
+        openAnimator.snapTo(1f);
+      }
+    }
+    overlay = new SideSheetOverlay(this);
+    overlay.show(parent);
+  }
+
+  /**
+   * Dismisses the modal presentation programmatically, reporting {@link
+   * SheetDismissCause#PROGRAMMATIC}. A no-op when not modally shown (an embedded standard sheet is
+   * closed with {@link #close()} instead).
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void dismiss() {
+    if (overlay != null) {
+      overlay.dismissSheet(SheetDismissCause.PROGRAMMATIC);
+    }
+  }
+
+  /**
+   * @return whether the sheet is currently presented modally (between {@link #showModal} and the
+   *     end of its teardown)
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isModalShowing() {
+    return overlay != null && overlay.showingNow();
+  }
+
+  /**
+   * Whether the Escape key dismisses the modal presentation (with {@link SheetDismissCause#ESC}).
+   * Default {@code true}; honored live, including toggles while shown.
+   *
+   * @param dismissible whether Esc dismisses
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setDismissibleByEsc(final boolean dismissible) {
+    this.dismissibleByEsc = dismissible;
+  }
+
+  /**
+   * @return whether Esc dismisses the modal presentation
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isDismissibleByEsc() {
+    return dismissibleByEsc;
+  }
+
+  /**
+   * Whether clicking the scrim dismisses the modal presentation (with {@link
+   * SheetDismissCause#SCRIM}). Default {@code true}; the scrim consumes the click either way (it
+   * always blocks the UI behind). Honored live, including toggles while shown.
+   *
+   * @param dismissible whether a scrim click dismisses
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setDismissibleByScrim(final boolean dismissible) {
+    this.dismissibleByScrim = dismissible;
+  }
+
+  /**
+   * @return whether a scrim click dismisses the modal presentation
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public boolean isDismissibleByScrim() {
+    return dismissibleByScrim;
+  }
+
+  /**
+   * Sets the close hook for the modal presentation — fired once per {@link #showModal}, after the
+   * exit motion and teardown complete, with the recorded {@link SheetDismissCause}.
+   *
+   * @param onClose the callback, or {@code null} for none
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setOnClose(final Consumer<SheetDismissCause> onClose) {
+    this.onClose = onClose;
+  }
+
+  /**
+   * @return the close hook, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public Consumer<SheetDismissCause> getOnClose() {
+    return onClose;
+  }
+
+  // The overlay's teardown completion: drop the live host and relay the cause to the consumer.
+  void modalClosed(final SheetDismissCause cause) {
+    overlay = null;
+    if (onClose != null) {
+      onClose.accept(cause);
+    }
+  }
+
   // ------------------------------------------------------------ affordance behavior
 
   void onBackActivated() {
     if (onBack != null) {
       onBack.run();
+      return;
+    }
+    if (isModalShowing()) {
+      overlay.dismissSheet(SheetDismissCause.BACK_AFFORDANCE);
+    } else {
+      close();
     }
   }
 
   void onCloseActivated() {
-    close();
+    if (isModalShowing()) {
+      overlay.dismissSheet(SheetDismissCause.CLOSE_AFFORDANCE);
+    } else {
+      close();
+    }
+  }
+
+  // Focus plumbing for the modal host: initial focus prefers the content slot, then the close
+  // affordance (design doc §10).
+  JPanel contentHolderPanel() {
+    return contentHolder;
+  }
+
+  ElwhaIconButton closeAffordanceButton() {
+    return closeButton;
   }
 
   // ------------------------------------------------------------ geometry & chrome
