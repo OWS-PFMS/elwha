@@ -53,7 +53,10 @@ final class ColorTrackSlider extends JComponent {
   static final int TRACK_HEIGHT = 16;
   static final int HANDLE_WIDTH = 6;
   static final int HANDLE_HEIGHT = 24;
-  static final int COMPONENT_HEIGHT = 28;
+
+  // Reserves room for the focus ring (3px offset + 2px stroke around the 24px handle, both
+  // axes) — at 28px the ring's arcs were flat-cut by the bounds (smoke-iterate finding).
+  static final int COMPONENT_HEIGHT = 32;
 
   private final int min;
   private final int max;
@@ -177,7 +180,7 @@ final class ColorTrackSlider extends JComponent {
   }
 
   private int inset() {
-    return HANDLE_WIDTH / 2 + 2;
+    return HANDLE_WIDTH / 2 + 4;
   }
 
   int valueAt(final int x) {
