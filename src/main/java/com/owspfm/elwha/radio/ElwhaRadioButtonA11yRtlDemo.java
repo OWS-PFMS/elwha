@@ -19,14 +19,21 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 /**
- * S6 a11y demo (story #422) — labeled groups two ways, with a live accessible-tree readout: focus
- * any radio and the bar shows its accessible name, role, CHECKED state, value, and MEMBER_OF target
- * count exactly as assistive tech would query them. Left pane: the built-in {@code setLabel} label
- * (clickable — it extends the click target). Right pane: the {@code JLabel.setLabelFor} fallback
- * under RTL orientation — it provides the accessible <em>name only</em>; an external label is
- * deliberately not part of the radio's click target. (Plain-text strings throughout — the bundled
- * Inter face has no Arabic glyphs, and RTL mirroring is driven by {@code ComponentOrientation}, not
- * the script.)
+ * S6 a11y demo (story #422) — three panes with a live accessible-tree readout (focus any radio and
+ * the bar shows its accessible name, role, CHECKED state, value, and MEMBER_OF target count exactly
+ * as assistive tech would query them):
+ *
+ * <ol>
+ *   <li><strong>Built-in label, LTR</strong> — {@code setLabel} text is part of the radio: it
+ *       extends the click target (click the words) and names the radio.
+ *   <li><strong>Built-in label, RTL</strong> — the same clickable label under a right-to-left
+ *       {@code ComponentOrientation}: the icon block pins to the right edge, the text paints to its
+ *       left, and the whole row stays clickable.
+ *   <li><strong>{@code JLabel.setLabelFor} fallback</strong> — an external label provides the
+ *       accessible <em>name only</em>; it is deliberately <em>not</em> part of the radio's click
+ *       target (Swing's {@code labelFor} has no click forwarding — the same contract as {@code
+ *       ElwhaCheckbox}).
+ * </ol>
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -56,40 +63,22 @@ public final class ElwhaRadioButtonA11yRtlDemo {
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     frame.setLayout(new BorderLayout(0, 8));
 
-    final JPanel panes = new JPanel(new GridLayout(1, 2, 12, 0));
-
-    final ElwhaRadioGroup named = new ElwhaRadioGroup();
-    final JPanel namedPane = new JPanel(new GridLayout(3, 1, 0, 4));
-    namedPane.setBorder(BorderFactory.createTitledBorder("Built-in label (clickable)"));
-    for (final String option : new String[] {"Comfortable", "Cozy", "Compact"}) {
-      final ElwhaRadioButton radio = new ElwhaRadioButton(option);
-      named.add(radio);
-      final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 0));
-      row.add(radio);
-      namedPane.add(row);
-    }
-    named.setSelected(named.getMembers().get(0));
-    panes.add(namedPane);
-
-    final ElwhaRadioGroup labeled = new ElwhaRadioGroup();
-    final JPanel labeledPane = new JPanel(new GridLayout(3, 1, 0, 4));
-    labeledPane.setBorder(
-        BorderFactory.createTitledBorder(
-            "JLabel.setLabelFor + RTL — name-only fallback (label NOT clickable)"));
-    for (final String option : new String[] {"First", "Middle", "Last"}) {
-      final ElwhaRadioButton radio = new ElwhaRadioButton();
-      radio.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
-      labeled.add(radio);
-      final JLabel rowLabel = new JLabel(option);
-      rowLabel.setLabelFor(radio);
-      final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 0));
-      row.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
-      row.add(radio);
-      row.add(rowLabel);
-      labeledPane.add(row);
-    }
-    labeled.setSelected(labeled.getMembers().get(0));
-    panes.add(labeledPane);
+    final JPanel panes = new JPanel(new GridLayout(1, 3, 12, 0));
+    panes.add(
+        builtInPane(
+            "Built-in label (clickable)",
+            ComponentOrientation.LEFT_TO_RIGHT,
+            "Comfortable",
+            "Cozy",
+            "Compact"));
+    panes.add(
+        builtInPane(
+            "Built-in label — RTL (clickable)",
+            ComponentOrientation.RIGHT_TO_LEFT,
+            "First",
+            "Middle",
+            "Last"));
+    panes.add(labelForPane());
 
     KeyboardFocusManager.getCurrentKeyboardFocusManager()
         .addPropertyChangeListener(
@@ -102,10 +91,49 @@ public final class ElwhaRadioButtonA11yRtlDemo {
 
     frame.add(panes, BorderLayout.CENTER);
     frame.add(readout, BorderLayout.SOUTH);
-    frame.setMinimumSize(new java.awt.Dimension(720, 300));
+    frame.setMinimumSize(new java.awt.Dimension(980, 300));
     frame.pack();
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
+  }
+
+  /** A group of radios carrying built-in (clickable) labels under the given orientation. */
+  private static JPanel builtInPane(
+      final String title, final ComponentOrientation orientation, final String... options) {
+    final ElwhaRadioGroup group = new ElwhaRadioGroup();
+    final JPanel pane = new JPanel(new GridLayout(options.length, 1, 0, 4));
+    pane.setBorder(BorderFactory.createTitledBorder(title));
+    for (final String option : options) {
+      final ElwhaRadioButton radio = new ElwhaRadioButton(option);
+      radio.setComponentOrientation(orientation);
+      group.add(radio);
+      final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 0));
+      row.setComponentOrientation(orientation);
+      row.add(radio);
+      pane.add(row);
+    }
+    group.setSelected(group.getMembers().get(0));
+    return pane;
+  }
+
+  /** The external-label fallback: names the radio for assistive tech, forwards no clicks. */
+  private JPanel labelForPane() {
+    final ElwhaRadioGroup group = new ElwhaRadioGroup();
+    final JPanel pane = new JPanel(new GridLayout(3, 1, 0, 4));
+    pane.setBorder(
+        BorderFactory.createTitledBorder("JLabel.setLabelFor — name only (NOT clickable)"));
+    for (final String option : new String[] {"Alpha", "Beta", "Gamma"}) {
+      final ElwhaRadioButton radio = new ElwhaRadioButton();
+      group.add(radio);
+      final JLabel rowLabel = new JLabel(option);
+      rowLabel.setLabelFor(radio);
+      final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 0));
+      row.add(radio);
+      row.add(rowLabel);
+      pane.add(row);
+    }
+    group.setSelected(group.getMembers().get(0));
+    return pane;
   }
 
   private void describe(final ElwhaRadioButton radio) {
