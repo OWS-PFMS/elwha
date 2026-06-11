@@ -1,6 +1,7 @@
 package com.owspfm.elwha.chip.playground;
 
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
@@ -22,7 +23,6 @@ import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -178,7 +178,7 @@ public final class ChipPlaygroundPanels {
 
     // Forward-declared so the variant listener can flip the selected-checkbox enable state when
     // the variant moves to or from GHOST.
-    final JCheckBox selectedBox = new JCheckBox("Selected");
+    final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
 
     bar.add(new JLabel("Variant:"));
     final JComboBox<ChipVariant> variantBox = new JComboBox<>(ChipVariant.values());
@@ -227,11 +227,11 @@ public final class ChipPlaygroundPanels {
 
     // Two-way binding: clicking the chip in SELECTABLE mode flips PROPERTY_SELECTED → checkbox
     // mirrors the chip state; clicking the checkbox calls setSelected → chip mirrors the checkbox.
-    selectedBox.setSelected(target.isSelected());
-    selectedBox.addActionListener(e -> target.setSelected(selectedBox.isSelected()));
+    selectedBox.setChecked(target.isSelected());
+    selectedBox.addActionListener(e -> target.setSelected(selectedBox.isChecked()));
     target.addPropertyChangeListener(
         ElwhaChip.PROPERTY_SELECTED,
-        evt -> selectedBox.setSelected(Boolean.TRUE.equals(evt.getNewValue())));
+        evt -> selectedBox.setChecked(Boolean.TRUE.equals(evt.getNewValue())));
     bar.add(selectedBox);
 
     bar.add(Box.createHorizontalStrut(16));

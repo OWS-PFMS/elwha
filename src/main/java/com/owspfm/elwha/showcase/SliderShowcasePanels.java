@@ -1,5 +1,6 @@
 package com.owspfm.elwha.showcase;
 
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.slider.ElwhaSlider;
 import java.awt.Dimension;
@@ -9,7 +10,6 @@ import java.awt.Insets;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -60,12 +60,15 @@ final class SliderShowcasePanels {
     final JSpinner originSpinner = new JSpinner(new SpinnerNumberModel(50, 0, 100, 5));
     final JSpinner lowerSpinner = new JSpinner(new SpinnerNumberModel(30, 0, 100, 5));
     final JSpinner upperSpinner = new JSpinner(new SpinnerNumberModel(70, 0, 100, 5));
-    final JCheckBox stopsBox = new JCheckBox("Stops");
+    final ElwhaCheckbox stopsBox = new ElwhaCheckbox("Stops");
     final JSpinner stepSpinner = new JSpinner(new SpinnerNumberModel(10, 1, 50, 1));
-    final JCheckBox valueIndicatorBox = new JCheckBox("Value indicator", true);
-    final JCheckBox endStopsBox = new JCheckBox("End stops", true);
-    final JCheckBox insetIconBox = new JCheckBox("Inset icon");
-    final JCheckBox enabledBox = new JCheckBox("Enabled", true);
+    final ElwhaCheckbox valueIndicatorBox = new ElwhaCheckbox("Value indicator");
+    valueIndicatorBox.setChecked(true);
+    final ElwhaCheckbox endStopsBox = new ElwhaCheckbox("End stops");
+    endStopsBox.setChecked(true);
+    final ElwhaCheckbox insetIconBox = new ElwhaCheckbox("Inset icon");
+    final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
+    enabledBox.setChecked(true);
 
     final ElwhaSlider slider = new ElwhaSlider(0, 100, 70);
     slider.setLabel("Workbench slider");
@@ -96,7 +99,7 @@ final class SliderShowcasePanels {
           final int origin = (Integer) originSpinner.getValue();
           final int lower = (Integer) lowerSpinner.getValue();
           final int upper = (Integer) upperSpinner.getValue();
-          final boolean stops = stopsBox.isSelected();
+          final boolean stops = stopsBox.isChecked();
           final int step = (Integer) stepSpinner.getValue();
           final ElwhaSlider.Size size = (ElwhaSlider.Size) sizeBox.getSelectedItem();
           final ElwhaSlider.Orientation orientation =
@@ -112,7 +115,7 @@ final class SliderShowcasePanels {
           insetIconBox.setEnabled(insetEligible);
           // Vertical range stays selectable (no-nanny doctrine, §10) but is doc-warned in place.
           verticalRangeWarn.setVisible(vertical && range);
-          final boolean inset = insetEligible && insetIconBox.isSelected();
+          final boolean inset = insetEligible && insetIconBox.isChecked();
           slider.setVariant(variant);
           slider.setOrientation(orientation);
           slider.setSizeVariant(size);
@@ -124,10 +127,10 @@ final class SliderShowcasePanels {
             slider.setUpperValue(upper);
           }
           slider.setStops(stops ? step : 0);
-          slider.setValueIndicatorEnabled(valueIndicatorBox.isSelected());
-          slider.setEndStopsVisible(endStopsBox.isSelected());
+          slider.setValueIndicatorEnabled(valueIndicatorBox.isChecked());
+          slider.setEndStopsVisible(endStopsBox.isChecked());
           slider.setInsetIcon(inset ? MaterialIcons.brightnessAuto() : null);
-          slider.setEnabled(enabledBox.isSelected());
+          slider.setEnabled(enabledBox.isChecked());
           workbench.setStage(stage(slider));
           workbench.setCode(
               renderCode(
@@ -137,12 +140,12 @@ final class SliderShowcasePanels {
                   upper,
                   stops,
                   step,
-                  valueIndicatorBox.isSelected(),
-                  endStopsBox.isSelected(),
+                  valueIndicatorBox.isChecked(),
+                  endStopsBox.isChecked(),
                   size,
                   orientation,
                   inset,
-                  enabledBox.isSelected()));
+                  enabledBox.isChecked()));
         };
 
     variantBox.addActionListener(e -> apply.run());
