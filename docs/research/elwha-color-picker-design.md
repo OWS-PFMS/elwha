@@ -110,6 +110,10 @@
 
 Each story: fresh demo class + headless smoke guard, `@version v0.5.0`, one commit.
 
+## §13.1 S1 spike outcome
+
+The composite architecture held as designed (header / `ElwhaTabs` / CardLayout host, single `commit(color, adjusting, source)` path with reentrancy guard, package-private `ColorPickerPane` base whose `syncFromPicker` never echoes the commit source). One deviation from the TL;DR notation: `PickerMode` shipped as a **top-level enum** in `colorpicker/` (the `TabMode`/`TabsVariant`/`MovementMode` house pattern), not nested inside `ElwhaColorPicker`. Mode-switch state lives entirely in `ElwhaTabs` — `getMode()` derives from the active tab index, so there is no second source of truth to drift.
+
 ## §14 Out of scope (→ #482 unless noted)
 
 Wheel mode · eyedropper (`Robot` + macOS screen-recording permission) · theme-palette swatch tiers (`Palette`/49 roles, `MaterialPalettes` tiers) · persistent favorites · docked/popover presentation (anchored, date-picker-docked analog) · HSL/CMYK sub-modes (not planned at all — survey shows no leading API leads with them).
