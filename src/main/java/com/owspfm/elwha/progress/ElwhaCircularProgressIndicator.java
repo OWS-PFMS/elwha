@@ -10,6 +10,7 @@ import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.Path2D;
 import javax.swing.BoundedRangeModel;
 import javax.swing.DefaultBoundedRangeModel;
 
@@ -23,7 +24,10 @@ import javax.swing.DefaultBoundedRangeModel;
  * <p>{@linkplain #setIndeterminate Indeterminate} drops the track and loops the current-M3
  * choreography: over a 6000ms cycle the arc grows and shrinks (standard easing) while the figure
  * rotates 1080° per cycle, plus a 360° advance kick every 1500ms over 300ms. The Expressive
- * {@linkplain #setWavy wavy} shape lands in S5 (story #473).
+ * {@linkplain #setWavy wavy} shape scallops the active arc with a radial sine (1.6px amplitude,
+ * 15px wavelength, integer wave count so closed rings have no seam) whose phase spins with the
+ * traveling-wave clock; the determinate amplitude ramp matches the linear bar and the track
+ * always stays flat.
  *
  * <p>Diameter follows the spec redlines: the {@linkplain #setIndicatorSize indicator size} (40px)
  * is the flat-default at 4px thickness; thickness past 4 grows it 1:1 (44 at 8px) and the wavy
@@ -54,6 +58,7 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
   private static final float ADDITIONAL_ROTATION_DEG = 360f;
   private static final float INDETERMINATE_MAX_TURN_FRACTION = 0.78f;
   private static final float MIN_VISIBLE_SWEEP_DEG = 6f;
+  private static final float MIN_VISIBLE_AMPLITUDE_PX = 0.25f;
 
   private int indicatorSize = SIZE_DEFAULT_PX;
 
@@ -264,7 +269,11 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
 
     if (activeSweep >= 359.5f) {
       g2.setColor(getIndicatorColorRole().resolve());
-      strokeFullRing(g2, cx, cy, radius, thickness);
+      if (waveAmplitudeNow() >= MIN_VISIBLE_AMPLITUDE_PX) {
+        strokeWavyRing(g2, cx, cy, radius, thickness);
+      } else {
+        strokeFullRing(g2, cx, cy, radius, thickness);
+      }
       return;
     }
     if (activeSweep < 0.5f) {
@@ -274,7 +283,7 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
     }
 
     g2.setColor(getIndicatorColorRole().resolve());
-    paintArcSpan(g2, cx, cy, radius, thickness, 90f, activeSweep, capDeg);
+    paintActiveArcSpan(g2, cx, cy, radius, thickness, 90f, activeSweep, capDeg);
 
     final float trackSweep = 360f - activeSweep - 2f * gapDeg;
     if (trackSweep > 1f) {
@@ -302,7 +311,82 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
 
     final float capDeg = (float) Math.toDegrees((thickness / 2f) / radius);
     g2.setColor(getIndicatorColorRole().resolve());
-    paintArcSpan(g2, cx, cy, radius, thickness, startAngle, sweep, capDeg);
+    paintActiveArcSpan(g2, cx, cy, radius, thickness, startAngle, sweep, capDeg);
+  }
+
+  private void paintActiveArcSpan(
+      final Graphics2D g2,
+      final float cx,
+      final float cy,
+      final float radius,
+      final float thickness,
+      final float visualStartDeg,
+      final float visualSweepDeg,
+      final float capDeg) {
+    final float amplitude = waveAmplitudeNow();
+    final float drawnSweep = visualSweepDeg - 2f * capDeg;
+    if (amplitude < MIN_VISIBLE_AMPLITUDE_PX || drawnSweep <= 2f) {
+      paintArcSpan(g2, cx, cy, radius, thickness, visualStartDeg, visualSweepDeg, capDeg);
+      return;
+    }
+    final Path2D.Float wave =
+        wavyArcPath(cx, cy, radius, amplitude, visualStartDeg - capDeg, drawnSweep, false);
+    final Stroke previous = g2.getStroke();
+    g2.setStroke(new BasicStroke(thickness, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    g2.draw(wave);
+    g2.setStroke(previous);
+  }
+
+  private void strokeWavyRing(
+      final Graphics2D g2, final float cx, final float cy, final float radius, final float thickness) {
+    final Path2D.Float wave =
+        wavyArcPath(cx, cy, radius, waveAmplitudeNow(), 90f, 360f, true);
+    final Stroke previous = g2.getStroke();
+    g2.setStroke(new BasicStroke(thickness, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    g2.draw(wave);
+    g2.setStroke(previous);
+  }
+
+  /**
+   * A radial-sine polyline along the ring — {@code r(θ) = R + amp·sin(waveCount·θ + phase)} with
+   * the wave count rounded to an integer so a closed loop has no seam (design §7); the phase
+   * spins with the traveling-wave clock.
+   */
+  private Path2D.Float wavyArcPath(
+      final float cx,
+      final float cy,
+      final float radius,
+      final float amplitude,
+      final float startDeg,
+      final float sweepDeg,
+      final boolean closed) {
+    final float wavelength = Math.max(1, currentWavelength());
+    final int waveCount = Math.max(1, Math.round((float) (2.0 * Math.PI * radius) / wavelength));
+    final double phase = (wavePhasePx() / wavelength) * 2.0 * Math.PI / waveCount;
+    final float stepDeg = Math.max(0.5f, (float) Math.toDegrees(1.5 / radius));
+    final Path2D.Float path = new Path2D.Float();
+    boolean first = true;
+    for (float a = 0f; a <= sweepDeg + 0.001f; a += stepDeg) {
+      final float deg = startDeg - Math.min(a, sweepDeg);
+      final double theta = Math.toRadians(deg);
+      final double r = radius + amplitude * Math.sin(waveCount * (theta + phase));
+      final float px = cx + (float) (r * Math.cos(theta));
+      final float py = cy - (float) (r * Math.sin(theta));
+      if (first) {
+        path.moveTo(px, py);
+        first = false;
+      } else {
+        path.lineTo(px, py);
+      }
+    }
+    if (closed) {
+      path.closePath();
+    }
+    return path;
+  }
+
+  private float waveAmplitudeNow() {
+    return amplitudeFraction() * getWaveAmplitude();
   }
 
   private static float additionalRotationDeg(final long elapsedMs) {
