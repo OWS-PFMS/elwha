@@ -1,14 +1,21 @@
 package com.owspfm.elwha.tooltip;
 
 import com.owspfm.elwha.overlay.AbstractElwhaOverlay;
+import java.awt.AWTEvent;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.event.AWTEventListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.util.Objects;
+import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JLayeredPane;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
 /**
@@ -19,9 +26,16 @@ import javax.swing.SwingUtilities;
  * consumer</em>: a tooltip never takes keyboard focus and never restores it — the anchor keeps
  * focus the entire time it is shown.
  *
- * <p>Construct via {@link #plain(String)}; show programmatically with {@link #show(Component)} and
- * dismiss with {@link #dismiss()}. The hover/focus trigger machinery arrives with {@code
- * attach(JComponent)} (epic #445 S2).
+ * <p>Construct via {@link #plain(String)}. {@link #attach(JComponent)} installs the desktop trigger
+ * machinery — hover dwell ({@link #setShowDelayMs(int)}, 500&nbsp;ms default), hide linger against
+ * the anchor&nbsp;∪&nbsp;surface hover union ({@link #setHideDelayMs(int)}, 600&nbsp;ms default),
+ * an immediate show on keyboard-caused focus, press-to-dismiss, and teardown when the anchor leaves
+ * the hierarchy. {@link #show(Component)} / {@link #dismiss()} stay available for programmatic
+ * control (timers are skipped). At most one tooltip is shown at a time across the application; Esc
+ * and mouse-wheel input dismiss a showing tooltip (WCAG 1.4.13).
+ *
+ * <p>{@code attach} neither reads nor clears an existing Swing {@code setToolTipText} — do not
+ * double-book an anchor with both mechanisms.
  *
  * <p>Placement prefers {@linkplain TooltipPlacement#ABOVE above} the anchor with a 4&nbsp;px gap,
  * flips below when the top would clip, aligns {@linkplain TooltipAlignment#CENTER flush
@@ -42,11 +56,26 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   /** Clamp margin between the tooltip body and every pane edge. */
   static final int EDGE_MARGIN_PX = 8;
 
+  /** Hover dwell before a trigger-initiated show (the MDC Web foundation default). */
+  static final int DEFAULT_SHOW_DELAY_MS = 500;
+
+  /** Hide linger after the pointer leaves the anchor ∪ surface union (MDC Web default). */
+  static final int DEFAULT_HIDE_DELAY_MS = 600;
+
+  // The one-at-a-time slot (Compose MutatorMutex / Swing ToolTipManager parity): showing any
+  // tooltip evicts the incumbent.
+  private static ElwhaTooltip shownTooltip;
+
   private final TooltipVariant variant;
   private String text;
   private TooltipPlacement preferredPlacement = TooltipPlacement.ABOVE;
   private TooltipAlignment alignment;
+  private int showDelayMs = DEFAULT_SHOW_DELAY_MS;
+  private int hideDelayMs = DEFAULT_HIDE_DELAY_MS;
   private TooltipSurface tooltipSurface;
+  private JComponent attachedAnchor;
+  private TooltipTrigger trigger;
+  private AWTEventListener wheelWatch;
 
   private ElwhaTooltip(final TooltipVariant variant, final String text) {
     this.variant = variant;
@@ -157,6 +186,115 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   }
 
   /**
+   * Installs the trigger machinery on {@code anchor}: hover dwell → show, hide linger against the
+   * anchor&nbsp;∪&nbsp;surface hover union, immediate show on keyboard-caused focus (mouse-click
+   * focus stays quiet), press-to-dismiss, and teardown when the anchor leaves the hierarchy. One
+   * anchor per tooltip — {@link #detach()} first to move it. Does not touch an existing Swing
+   * {@code setToolTipText} on the anchor; do not double-book.
+   *
+   * @param anchor the component this tooltip describes
+   * @return this tooltip, for chaining
+   * @throws NullPointerException if {@code anchor} is {@code null}
+   * @throws IllegalStateException if already attached
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaTooltip attach(final JComponent anchor) {
+    Objects.requireNonNull(anchor, "anchor");
+    if (attachedAnchor != null) {
+      throw new IllegalStateException("already attached to " + attachedAnchor + "; detach() first");
+    }
+    this.attachedAnchor = anchor;
+    this.trigger = new TooltipTrigger(this, anchor);
+    trigger.install();
+    return this;
+  }
+
+  /**
+   * Removes the trigger machinery from the attached anchor and dismisses a showing tooltip; a no-op
+   * when not attached.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void detach() {
+    if (trigger != null) {
+      trigger.uninstall();
+      trigger = null;
+    }
+    attachedAnchor = null;
+    if (isTooltipShowing()) {
+      dismiss();
+    }
+  }
+
+  /**
+   * The anchor this tooltip is attached to, or {@code null} when detached.
+   *
+   * @return the attached anchor, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public JComponent getAttachedAnchor() {
+    return attachedAnchor;
+  }
+
+  /**
+   * The hover dwell in milliseconds before a trigger-initiated show (default {@value
+   * #DEFAULT_SHOW_DELAY_MS}).
+   *
+   * @return the show delay
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public int getShowDelayMs() {
+    return showDelayMs;
+  }
+
+  /**
+   * Sets the hover dwell before a trigger-initiated show.
+   *
+   * @param showDelayMs the dwell in milliseconds
+   * @throws IllegalArgumentException if negative
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setShowDelayMs(final int showDelayMs) {
+    if (showDelayMs < 0) {
+      throw new IllegalArgumentException("showDelayMs must be >= 0: " + showDelayMs);
+    }
+    this.showDelayMs = showDelayMs;
+  }
+
+  /**
+   * The hide linger in milliseconds after the pointer leaves the anchor&nbsp;∪&nbsp;surface union
+   * (default {@value #DEFAULT_HIDE_DELAY_MS}) — long enough to cross the 4&nbsp;px gap onto the
+   * tooltip, which keeps it open.
+   *
+   * @return the hide delay
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public int getHideDelayMs() {
+    return hideDelayMs;
+  }
+
+  /**
+   * Sets the hide linger after the pointer leaves the anchor&nbsp;∪&nbsp;surface union.
+   *
+   * @param hideDelayMs the linger in milliseconds
+   * @throws IllegalArgumentException if negative
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setHideDelayMs(final int hideDelayMs) {
+    if (hideDelayMs < 0) {
+      throw new IllegalArgumentException("hideDelayMs must be >= 0: " + hideDelayMs);
+    }
+    this.hideDelayMs = hideDelayMs;
+  }
+
+  /**
    * Whether the tooltip is currently shown.
    *
    * @return {@code true} between {@link #show(Component)} and full teardown
@@ -181,8 +319,19 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
 
   @Override
   protected JComponent createSurface() {
+    claimExclusive();
+    installWheelWatch();
     this.tooltipSurface = new TooltipSurface(text);
     return tooltipSurface;
+  }
+
+  // Esc dismisses from anywhere in the focused window (the tooltip itself never has focus, so a
+  // surface-focused binding could never fire). WCAG 1.4.13 "dismissible".
+  @Override
+  protected void installKeyBindings() {
+    final InputMap im = surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-tooltip-dismiss");
+    surface.getActionMap().put("elwha-tooltip-dismiss", action(this::dismiss));
   }
 
   @Override
@@ -229,6 +378,52 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   @Override
   protected void clearTransientState() {
     tooltipSurface = null;
+    removeWheelWatch();
+    if (shownTooltip == this) {
+      shownTooltip = null;
+    }
+    if (trigger != null) {
+      trigger.onTooltipClosed();
+    }
+  }
+
+  // ------------------------------------------------------- shown-state watchers
+
+  private void claimExclusive() {
+    if (shownTooltip != null && shownTooltip != this) {
+      shownTooltip.dismiss();
+    }
+    shownTooltip = this;
+  }
+
+  // Wheel input anywhere dismisses: the anchor may scroll out from under the surface, and a stale
+  // tooltip floating over moved content is worse than no tooltip. Passive listener, never consumes.
+  private void installWheelWatch() {
+    removeWheelWatch();
+    wheelWatch =
+        (final AWTEvent event) -> {
+          if (event instanceof MouseEvent me
+              && me.getID() == MouseEvent.MOUSE_WHEEL
+              && !isClosing()) {
+            dismiss();
+          }
+        };
+    Toolkit.getDefaultToolkit().addAWTEventListener(wheelWatch, AWTEvent.MOUSE_WHEEL_EVENT_MASK);
+  }
+
+  private void removeWheelWatch() {
+    if (wheelWatch != null) {
+      Toolkit.getDefaultToolkit().removeAWTEventListener(wheelWatch);
+      wheelWatch = null;
+    }
+  }
+
+  // The surface bounds on screen, or null when not shown — the trigger's hover-union half.
+  Rectangle surfaceScreenBounds() {
+    if (surface == null || !surface.isShowing()) {
+      return null;
+    }
+    return new Rectangle(surface.getLocationOnScreen(), surface.getSize());
   }
 
   // ------------------------------------------------------- placement engine
