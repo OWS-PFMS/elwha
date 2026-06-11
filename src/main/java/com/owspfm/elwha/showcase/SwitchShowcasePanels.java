@@ -2,7 +2,9 @@ package com.owspfm.elwha.showcase;
 
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.switches.ElwhaSwitch;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import java.awt.ComponentOrientation;
+import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -11,19 +13,19 @@ import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 /**
  * The Elwha Showcase leaf surface for {@link ElwhaSwitch} (story #407): a {@link
- * ComponentWorkbench} stage with a live switch (click, drag, or Space it — the Selected control
- * tracks user toggles back), the icons configurations (both / selected-only / a custom
- * favorite-pair), an accessible-label input, and Enabled + RTL state controls. The state gallery
- * matrix renders the four icon configurations across unselected / selected / hover / focused /
- * pressed / both disabled cells — the two disabled columns exist because the spec's disabled
- * treatment is asymmetric (opaque {@code SURFACE} handle when selected, 38% {@code ON_SURFACE} when
- * not).
+ * ComponentWorkbench} stage with a live switch beside its visible {@code JLabel} (the M3
+ * composition — a switch never paints its own label; {@code setLabelFor} feeds the accessible
+ * name), the icons configurations (both / selected-only / a custom favorite-pair), a dogfooded
+ * {@link ElwhaTextField} label input, and Enabled + RTL state controls (RTL flips the whole
+ * label+switch row). The Selected control tracks user toggles back. The state gallery matrix
+ * renders the four icon configurations across unselected / selected / hover / focused / pressed /
+ * both disabled cells — the two disabled columns exist because the spec's disabled treatment is
+ * asymmetric (opaque {@code SURFACE} handle when selected, 38% {@code ON_SURFACE} when not).
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -41,11 +43,18 @@ final class SwitchShowcasePanels {
     final JCheckBox iconsBox = new JCheckBox("Icons (both states)");
     final JCheckBox onlySelectedIconBox = new JCheckBox("Show only selected icon");
     final JCheckBox customIconsBox = new JCheckBox("Custom icons (favorite pair)");
-    final JTextField labelField = new JTextField("Wi-Fi");
+    final ElwhaTextField labelField = ElwhaTextField.outlined("");
+    labelField.setText("Wi-Fi");
     final JCheckBox enabledBox = new JCheckBox("Enabled", true);
     final JCheckBox rtlBox = new JCheckBox("Right-to-left");
 
     final ElwhaSwitch elwhaSwitch = new ElwhaSwitch(true);
+    final JLabel stageLabel = new JLabel("Wi-Fi");
+    stageLabel.setLabelFor(elwhaSwitch);
+    final JPanel stageRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 16, 0));
+    stageRow.setOpaque(false);
+    stageRow.add(stageLabel);
+    stageRow.add(elwhaSwitch);
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Switch");
@@ -70,12 +79,14 @@ final class SwitchShowcasePanels {
           elwhaSwitch.setShowOnlySelectedIcon(onlySelected);
           elwhaSwitch.setSelectedIcon(custom ? MaterialIcons.favoriteFilled(16) : null);
           elwhaSwitch.setUnselectedIcon(custom ? MaterialIcons.favorite(16) : null);
-          elwhaSwitch.setLabel(labelField.getText());
+          stageLabel.setText(labelField.getText());
           elwhaSwitch.setEnabled(enabledBox.isSelected());
-          elwhaSwitch.setComponentOrientation(
+          stageRow.applyComponentOrientation(
               rtlBox.isSelected()
                   ? ComponentOrientation.RIGHT_TO_LEFT
                   : ComponentOrientation.LEFT_TO_RIGHT);
+          stageRow.revalidate();
+          stageRow.repaint();
           workbench.setCode(
               renderCode(
                   selectedBox.isSelected(),
@@ -89,7 +100,7 @@ final class SwitchShowcasePanels {
 
     // The stage is set once — re-staging on every apply would re-parent the live switch and drop
     // its focus mid-gesture; apply only writes properties + code.
-    workbench.setStage(stage(elwhaSwitch));
+    workbench.setStage(stage(stageRow));
 
     // A user toggle on the stage switch (click / drag / Space) tracks back into the Selected
     // control and refreshes the code panel; the re-entrant apply writes the same selected value,
@@ -107,6 +118,7 @@ final class SwitchShowcasePanels {
     enabledBox.addActionListener(e -> apply.run());
     rtlBox.addActionListener(e -> apply.run());
     labelField
+        .getEditor()
         .getDocument()
         .addDocumentListener(
             new DocumentListener() {
@@ -216,10 +228,10 @@ final class SwitchShowcasePanels {
     return s;
   }
 
-  private static JComponent stage(final ElwhaSwitch elwhaSwitch) {
+  private static JComponent stage(final JComponent content) {
     final JPanel panel = new JPanel(new GridBagLayout());
     panel.setOpaque(false);
-    panel.add(elwhaSwitch);
+    panel.add(content);
     return panel;
   }
 
@@ -249,13 +261,15 @@ final class SwitchShowcasePanels {
       code.append("wifi.setSelectedIcon(MaterialIcons.favoriteFilled(16));\n");
       code.append("wifi.setUnselectedIcon(MaterialIcons.favorite(16));\n");
     }
-    code.append("wifi.setLabel(\"").append(label).append("\");\n");
     if (!enabled) {
       code.append("wifi.setEnabled(false);\n");
     }
     if (rtl) {
       code.append("wifi.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);\n");
     }
+    code.append("// A switch never labels itself — pair it with an adjacent label.\n");
+    code.append("JLabel label = new JLabel(\"").append(label).append("\");\n");
+    code.append("label.setLabelFor(wifi); // feeds the accessible name\n");
     code.append("wifi.addActionListener(e -> apply(wifi.isSelected()));");
     return code.toString();
   }

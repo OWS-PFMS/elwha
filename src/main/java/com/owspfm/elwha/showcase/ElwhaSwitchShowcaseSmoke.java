@@ -1,6 +1,7 @@
 package com.owspfm.elwha.showcase;
 
 import com.owspfm.elwha.switches.ElwhaSwitch;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
@@ -42,6 +43,13 @@ public final class ElwhaSwitchShowcaseSmoke {
     final JComponent workbench = SwitchShowcasePanels.buildWorkbench();
     check("workbench builds", workbench != null);
     check("workbench hosts one live ElwhaSwitch", countSwitches(workbench) == 1);
+    check(
+        "the label control is a dogfooded ElwhaTextField",
+        collect(workbench, ElwhaTextField.class).size() == 1);
+    final ElwhaSwitch staged = collect(workbench, ElwhaSwitch.class).get(0);
+    check(
+        "the visible stage label names the switch via labelFor",
+        "Wi-Fi".equals(staged.getAccessibleContext().getAccessibleName()));
 
     int clicked = 0;
     for (final JCheckBox box : collect(workbench, JCheckBox.class)) {
