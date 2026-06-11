@@ -181,8 +181,8 @@ public final class ElwhaAppBarCollapseSmoke {
   }
 
   private static boolean bandHasColorNear(
-      final BufferedImage image, final int yFrom, final int yTo, final Color c) {
-    for (int y = yFrom; y <= yTo; y++) {
+      final BufferedImage image, final int rowFrom, final int rowTo, final Color c) {
+    for (int y = rowFrom; y <= rowTo; y++) {
       for (int x = 0; x < image.getWidth(); x++) {
         if (colorDistance(sample(image, x, y), c) < 60) {
           return true;
@@ -193,8 +193,8 @@ public final class ElwhaAppBarCollapseSmoke {
   }
 
   private static boolean bandIsColor(
-      final BufferedImage image, final int yFrom, final int yTo, final Color c) {
-    for (int y = yFrom; y <= yTo; y++) {
+      final BufferedImage image, final int rowFrom, final int rowTo, final Color c) {
+    for (int y = rowFrom; y <= rowTo; y++) {
       for (int x = 0; x < image.getWidth(); x++) {
         if (colorDistance(sample(image, x, y), c) > 12) {
           return false;

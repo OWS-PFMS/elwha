@@ -139,9 +139,10 @@ public final class ElwhaAppBarFlexibleSmoke {
     return new Color(image.getRGB(x, y), true);
   }
 
-  private static boolean bandIsSurface(final BufferedImage image, final int yFrom, final int yTo) {
+  private static boolean bandIsSurface(
+      final BufferedImage image, final int rowFrom, final int rowTo) {
     final Color surface = ColorRole.SURFACE.resolve();
-    for (int y = yFrom; y <= yTo; y++) {
+    for (int y = rowFrom; y <= rowTo; y++) {
       for (int x = 0; x < image.getWidth(); x++) {
         if (colorDistance(sample(image, x, y), surface) > 12) {
           return false;
@@ -152,8 +153,8 @@ public final class ElwhaAppBarFlexibleSmoke {
   }
 
   private static boolean bandHasColorNear(
-      final BufferedImage image, final int yFrom, final int yTo, final Color c) {
-    for (int y = yFrom; y <= yTo; y++) {
+      final BufferedImage image, final int rowFrom, final int rowTo, final Color c) {
+    for (int y = rowFrom; y <= rowTo; y++) {
       for (int x = 0; x < image.getWidth(); x++) {
         if (colorDistance(sample(image, x, y), c) < 60) {
           return true;
@@ -164,10 +165,10 @@ public final class ElwhaAppBarFlexibleSmoke {
   }
 
   private static int firstInkX(
-      final BufferedImage image, final int fromX, final int yFrom, final int yTo) {
+      final BufferedImage image, final int fromX, final int rowFrom, final int rowTo) {
     final Color surface = ColorRole.SURFACE.resolve();
     for (int x = fromX; x < image.getWidth(); x++) {
-      for (int y = yFrom; y <= yTo; y++) {
+      for (int y = rowFrom; y <= rowTo; y++) {
         if (colorDistance(sample(image, x, y), surface) > 60) {
           return x;
         }
@@ -176,10 +177,10 @@ public final class ElwhaAppBarFlexibleSmoke {
     return -1;
   }
 
-  private static int lastInkX(final BufferedImage image, final int yFrom, final int yTo) {
+  private static int lastInkX(final BufferedImage image, final int rowFrom, final int rowTo) {
     final Color surface = ColorRole.SURFACE.resolve();
     for (int x = image.getWidth() - 1; x >= 0; x--) {
-      for (int y = yFrom; y <= yTo; y++) {
+      for (int y = rowFrom; y <= rowTo; y++) {
         if (colorDistance(sample(image, x, y), surface) > 60) {
           return x;
         }
