@@ -88,14 +88,17 @@ public final class ElwhaBadgeAnchor {
   /** Large badge offset (icon top-trailing → badge bottom-leading), horizontal, in dp. */
   private static final int LARGE_OFFSET_X_DP = 12;
 
+  /** Gap between the anchor rect's trailing edge and the badge in LABEL_TRAILING mode, in dp. */
+  private static final int LABEL_TRAILING_GAP_DP = 4;
+
   /** Client-property key on the host marking the active attachment. */
   private static final String HOST_ATTACHMENT_KEY = "ElwhaBadgeAnchor.attachment";
 
   private ElwhaBadgeAnchor() {}
 
   /**
-   * Where the badge is pinned relative to its host — the two placements M3 documents (design doc §1
-   * / §14).
+   * Where the badge is pinned relative to its host — the placements M3 documents (design doc §1 /
+   * §14).
    *
    * @author Charles Bryan
    * @version v0.3.0
@@ -126,7 +129,20 @@ public final class ElwhaBadgeAnchor {
      * @version v0.3.0
      * @since v0.3.0
      */
-    TRAILING_EDGE
+    TRAILING_EDGE,
+
+    /**
+     * The badge flows inline immediately after the anchor rect's trailing edge — a small gap, then
+     * the badge, vertically centered on the rect — the M3 badge-spec "Label&nbsp;999+" placement
+     * row. Unlike {@link #TRAILING_EDGE} (which pins to the host's <em>bounds</em>), this mode
+     * reads the icon-bounds feed, so a host whose content is centered inside a wider cell (an
+     * {@code ElwhaTab} in a fixed bar) can hand it the label rect and the badge trails the
+     * <em>text</em>, not the cell. RTL mirrors to before the rect's leading edge.
+     *
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    LABEL_TRAILING
   }
 
   /**
@@ -479,6 +495,10 @@ public final class ElwhaBadgeAnchor {
         refreshTrailingEdge();
         return;
       }
+      if (mode == AnchorMode.LABEL_TRAILING) {
+        refreshLabelTrailing();
+        return;
+      }
       final Rectangle icon = iconBoundsSupplier.get();
       // Empty iconBounds — host has no icon currently installed. Without this guard the
       // anchor would still place the badge at (offsetY, -offsetX) relative to the host's
@@ -516,6 +536,33 @@ public final class ElwhaBadgeAnchor {
       final int badgeY = pinY - pref.height;
 
       badge.setBounds(badgeX, badgeY, pref.width, pref.height);
+      badge.revalidate();
+      badge.repaint();
+    }
+
+    // LABEL_TRAILING placement: a small gap after the anchor rect's trailing edge, vertically
+    // centered on the rect — the M3 badge-spec "Label 999+" row. Reads the icon-bounds feed (for
+    // a tab, the label rect) so centered content inside a wider cell anchors against the text,
+    // not the cell. RTL mirrors to before the rect's leading edge.
+    private void refreshLabelTrailing() {
+      final Rectangle rect = iconBoundsSupplier.get();
+      if (rect.width <= 0 || rect.height <= 0) {
+        badge.setVisible(false);
+        return;
+      }
+      syncBadgeVisibility();
+      final boolean ltr = host.getComponentOrientation().isLeftToRight();
+      final Dimension pref = badge.getPreferredSize();
+
+      final int badgeXInHost =
+          ltr
+              ? rect.x + rect.width + LABEL_TRAILING_GAP_DP
+              : rect.x - LABEL_TRAILING_GAP_DP - pref.width;
+      final int badgeYInHost = rect.y + (rect.height - pref.height) / 2;
+      final Point topLeftInLayered =
+          SwingUtilities.convertPoint(host, new Point(badgeXInHost, badgeYInHost), layeredPane);
+
+      badge.setBounds(topLeftInLayered.x, topLeftInLayered.y, pref.width, pref.height);
       badge.revalidate();
       badge.repaint();
     }

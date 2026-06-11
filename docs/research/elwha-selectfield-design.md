@@ -141,3 +141,32 @@ All four stories built on one stacked branch: S1 editable spike (#391) → S2 fi
 4. **Arrow close = the Phase-1 light-dismiss path.** The arrow sits outside the focus home (the editor), so pressing it while open still outside-press-dismisses and the existing toggle-reopen guard makes the same click read as a close — no new mechanism. Presses on the field chrome (outside the editor) likewise still light-dismiss; recorded as acceptable combobox behavior (the editor is the input surface).
 5. **`ElwhaMenu.close()`** (public, `PROGRAMMATIC` cause) added for owners that manage the menu lifecycle — a mode flip closes an open menu, and S3's free-text Enter commit needs it.
 6. **Zero new theme tokens (held).** All Phase 2 additions are behavior; no new paint, no new assets.
+
+## Phase 3 S1 spike outcome (#397 — 2026-06-10) — multi-select architecture LOCKED
+
+`setMultiSelect(boolean)` (default `false` = the shipped single select / editable combo) lifts the single-selection constraint behind the opt-in. The menu side needed **nothing new**: `SelectionMode.MULTI` (toggle-without-closing, reserved check column, checkbox `CHECKED` a11y) shipped with epic #298 and is reused as-is — the spike is select-field-side model + wiring. The coexistence questions the story asked to decide:
+
+1. **Opt-in shape = `setMultiSelect(boolean)` / `isMultiSelect()`** (the story's lean, adopted). When on, `rebuildMenu()` builds `SelectionMode.MULTI` and routes `onSelectionChange` to the multi toggle path; toggling never closes, Esc / outside-press / the arrow close (all existing menu paths — `keepOpen` is the MULTI mode's own semantic).
+2. **Value model:** `getSelectedValues()` / `setSelectedValues(Collection<T>)`. The canonical store is an **option-ordered** list, re-derived through one invariant funnel (`reorderMultiValues`): always a subset of the current options, option order regardless of toggle/collection order, duplicates collapsed, unknowns ignored (the lib's lenient house style — no exceptions). `setOptions` prunes the selection to the surviving options.
+3. **Single-value API in multi mode (decided + recorded):** `getSelectedValue()` returns the **first selected value in option order** (mirroring `JList.getSelectedValue`), `null` when empty — the internal `selectedValue` field always tracks `multiValues[0]`, so every Phase-1 read path stays meaningful. `setSelectedValue(v)` delegates to `setSelectedValues(List.of(v))` (null → clear) — the value becomes the entire selection. Symmetrically, `getSelectedValues()` works in single mode (empty/singleton mirror) and `setSelectedValues` in single mode leniently applies the first recognized value.
+4. **Editable + multi = mutually exclusive in V1 (decided + recorded).** A filterable multi-select is a real combinatorial surface (filter + toggle + summary + free text interactions) deferred per §10's discipline — documented, not silently cut. The exclusion **forces** rather than throws (lenient house style): `setMultiSelect(true)` on an editable combo first runs `setEditable(false)`, and `setEditable(true)` on a multi-select first runs `setMultiSelect(false)`.
+5. **Mode flips preserve what they can:** single→multi seeds the selection with the current single value; multi→single collapses to the first value in option order. Neither fires change listeners — `getSelectedValue()` is unchanged by either flip.
+6. **Provisional summary (S1):** display strings joined `", "` in option order, empty selection resting the floating label. The real summary format + overflow policy is S2 (#398).
+7. **Zero new theme tokens (held); zero new assets** — Phase 3 S1 is pure behavior over the shipped MULTI menu.
+
+## Phase 3 complete (#397–#400 — 2026-06-10) — multi-select shipped; V1 COMPLETE
+
+All four stories built on one stacked branch: S1 multi spike + value model (#397, `setMultiSelect` over the shipped `SelectionMode.MULTI`, option-ordered `getSelectedValues`/`setSelectedValues`, the editable exclusion) → S2 summary display (#398, join-up-to-`setSummaryLimit` then the `N selected` count form, per-toggle `addMultiSelectionChangeListener`) → S3 keyboard + a11y (#399, the shipped MULTI Enter/Space toggle-without-close + Esc focus-return locked in through the combo; CHECKED items, unchanged arrow announcements, summary on the accessible-text path) → S4 Showcase + docs (#400). Three fresh demos + four headless guards. **Zero new theme tokens held across all three phases; Phase 3 adds zero assets** (pure behavior over the #298 MULTI menu).
+
+**V1 completeness sweep (§10 re-asserted, nothing silently dropped):**
+- **Editable + multi-select combined** (filterable multi-select) — deferred by the Phase-3 S1 decision (mutually exclusive in V1, each setter forces the other off); future-owned.
+- **Async / remote option loading** — consumer-owned (`setOptions` is cheap and rebuild-on-change; a consumer loads then sets).
+- **Formatted / typed-value parsing** — consumer-owned via `setDisplayFunction` + their own `T`.
+- **Grouped / sectioned options** beyond the menu's `addGroup` — future-owned (the select field flattens; a grouped select would compose the menu's group API).
+- **`JComboBox` drop-in compatibility** — out by design; dedicated M3 primitive.
+- **Menu width-tracking** (Phase 1 S1 deferral) — still open as a possible `ElwhaMenu` enhancement; the visual gap has not warranted it through three phases.
+- **Anchored-menu height cap** — filed as [#396](https://github.com/OWS-PFMS/elwha/issues/396) (menu-side, operator-deferred).
+
+**Dogfood status (third look, unchanged conclusion):** the Showcase toolbar palette picker still needs per-option swatch icons + a toolbar-density anatomy before an `ElwhaSelectField` swap is honest; multi-select changes neither blocker. The Select Field leaf (Workbench + three gallery sections) is the genuine in-repo dogfood site.
+
+**Epic #331 closes with this phase's PR.** No follow-on epic; follow-ups live as individual issues (#396).

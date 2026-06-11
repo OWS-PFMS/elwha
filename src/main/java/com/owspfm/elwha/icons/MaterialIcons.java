@@ -674,6 +674,30 @@ public final class MaterialIcons {
   }
 
   /**
+   * Rightward chevron — the M3 submenu "has a nested menu" affordance, the trailing caret of an
+   * {@link com.owspfm.elwha.menu.ElwhaSubMenuItem}.
+   *
+   * @return the {@code chevron_right} glyph at {@link #DEFAULT_SIZE}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static FlatSVGIcon chevronRight() {
+    return chevronRight(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #chevronRight()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static FlatSVGIcon chevronRight(final int size) {
+    return load("chevron_right", size);
+  }
+
+  /**
    * Downward filled-triangle dropdown arrow — the M3 exposed-dropdown (select-field) trailing
    * affordance, signifying a field that opens a nested selection menu. Pairs with {@link
    * #arrowDropUp()} as the collapsed ↔ expanded cue.

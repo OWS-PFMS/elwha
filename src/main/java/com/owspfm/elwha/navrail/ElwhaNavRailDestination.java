@@ -864,7 +864,8 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
         new AbstractAction() {
           @Override
           public void actionPerformed(final ActionEvent e) {
-            if (!isEnabled()) {
+            // Outer-qualified — AbstractAction has its own always-true isEnabled() (#432).
+            if (!ElwhaNavRailDestination.this.isEnabled()) {
               return;
             }
             startRipple(pillCenter());

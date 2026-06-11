@@ -78,6 +78,26 @@ fruit.setFreeTextAllowed(true);          // optional: commit text that matches n
 
 ---
 
+## Multi-select — the summary display (Phase 3)
+
+`setMultiSelect(true)` lifts the single-selection constraint: the menu is built `SelectionMode.MULTI`, so toggling an option checks/unchecks it **without closing** (Esc, a press outside, or the arrow close it), and the field shows a **summary** of the selection.
+
+```java
+ElwhaSelectField<String> toppings = ElwhaSelectField.filled("Toppings");
+toppings.setOptions(List.of("Mushroom", "Pepperoni", "Onion", "Olive", "Basil"));
+toppings.setMultiSelect(true);
+toppings.setSelectedValues(List.of("Pepperoni", "Basil"));   // option-ordered, unknowns ignored
+toppings.addMultiSelectionChangeListener(values -> System.out.println(values));
+```
+
+- **Value model.** `getSelectedValues()` / `setSelectedValues(Collection<T>)` — the selection is always read back in **option order** (not toggle order), pruned to the current options, duplicates collapsed. `getSelectedValue()` returns the first selected value (mirroring `JList`); `setSelectedValue(v)` makes `v` the entire selection. `setOptions` prunes the selection to the surviving options.
+- **Summary display.** Up to `setSummaryLimit(int)` values (default 3) the field joins display strings in option order (`Pepperoni, Basil`); past it, the count form (`5 selected`) — a wide selection never blows out the field. The summary updates **live on every toggle** while the menu stays open; clearing rests the floating label.
+- **Listeners.** `addMultiSelectionChangeListener(Consumer<List<T>>)` fires per toggle and per effective programmatic set with the option-ordered snapshot. The single-value listeners don't fire in multi mode (and vice versa).
+- **Keyboard & a11y.** The pure-select open gestures are unchanged; with the menu open, **Enter/Space toggles the focused item without closing** and **Esc** closes + returns focus to the field. Items are checkbox-like (`AccessibleState.CHECKED` when on, with the check column reserved so toggling never reflows); the arrow's expanded/collapsed announcements are unchanged; the summary reaches the field's accessible-text path.
+- **Mutually exclusive with editable mode (V1).** Enabling one disables the other (`setMultiSelect(true)` forces non-editable; `setEditable(true)` forces single). A filterable multi-select is a documented deferral. Mode flips preserve what they can: multi-on seeds from the single value, multi-off collapses to the first selected value.
+
+---
+
 ## Keyboard & accessibility
 
 The ARIA **combobox** pattern, approximated in Swing. With the field focused and the menu closed (pure select):
@@ -106,4 +126,6 @@ The highlight navigation rides the menu's public combobox surface (`moveHighligh
 
 ## Scope
 
-Phase 1 (`S1`–`S5`, #374–#378) shipped the **non-editable (pure) select**; Phase 2 (#391–#394) shipped the **editable / filter-as-you-type combo**. The remaining V1 phase is **multi-select** (`SelectionMode.MULTI` + summary display, Phase 3) — filed when Phase 2 lands, not cut. Epic [#331](https://github.com/OWS-PFMS/elwha/issues/331).
+**V1 is complete.** Phase 1 (`S1`–`S5`, #374–#378) shipped the **non-editable (pure) select**; Phase 2 (#391–#394) shipped the **editable / filter-as-you-type combo**; Phase 3 (#397–#400) shipped the **multi-select + summary display**. Epic [#331](https://github.com/OWS-PFMS/elwha/issues/331).
+
+Documented deferrals (consumer- or future-owned, not silently cut — design doc §10): **editable + multi-select combined** (a filterable multi-select), **async / remote option loading**, **formatted/typed-value parsing**, **grouped/sectioned options** beyond the menu's `addGroup`, and **`JComboBox` drop-in compatibility** (this is a dedicated M3 primitive). Menu-side follow-up: capping the anchored menu's height ([#396](https://github.com/OWS-PFMS/elwha/issues/396)).
