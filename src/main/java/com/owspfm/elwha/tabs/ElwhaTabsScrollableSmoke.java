@@ -146,14 +146,16 @@ public final class ElwhaTabsScrollableSmoke {
     check("scroll tween passes through a mid offset", mid != null && mid > 0);
     check("scroll tween settles with the last tab visible", awaitVisible(bar, last));
 
+    // The tween keeps advancing on the EDT while this thread reads/dispatches, so exact offset
+    // arithmetic races — the meaningful assertion is that the offset is frozen after the wheel
+    // (an uncancelled 300ms tween would keep moving toward 0 for another ~250ms).
     bar.scrollToTab(bar.getTabAt(0));
     Thread.sleep(40);
-    final int beforeWheel = bar.getScrollOffset();
     wheel(bar, -1);
     final int afterWheel = bar.getScrollOffset();
-    Thread.sleep(80);
+    Thread.sleep(120);
     check("wheel cancels the in-flight tween",
-        bar.getScrollOffset() == afterWheel && afterWheel == Math.max(0, beforeWheel - 30));
+        afterWheel > 0 && bar.getScrollOffset() == afterWheel);
   }
 
   private static void checkActivationAutoScroll() throws Exception {
