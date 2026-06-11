@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Shape;
+import java.awt.TexturePaint;
+import java.awt.image.BufferedImage;
 
 /**
  * The transparency checkerboard backing alpha tracks and the preview swatch (design doc {@code
@@ -22,29 +24,39 @@ final class Checkerboard {
 
   private static final Color LIGHT = new Color(0xFFFFFF);
   private static final Color DARK = new Color(0xCCCCCC);
+  private static final BufferedImage PATTERN = pattern();
 
   private Checkerboard() {}
 
   /**
-   * Fills a shape with the checkerboard (clipped to it).
+   * Fills a shape with the checkerboard. A {@code TexturePaint} fill, not a clip — Java2D clipping
+   * is never antialiased, so clipped rounded corners stair-step.
    *
    * @param g2 the graphics to paint into
    * @param shape the shape to fill
    */
   static void fill(final Graphics2D g2, final Shape shape) {
-    final Graphics2D clipped = (Graphics2D) g2.create();
+    final Graphics2D scoped = (Graphics2D) g2.create();
     try {
-      clipped.clip(shape);
       final Rectangle bounds = shape.getBounds();
-      for (int y = bounds.y; y < bounds.y + bounds.height; y += SQUARE) {
-        for (int x = bounds.x; x < bounds.x + bounds.width; x += SQUARE) {
-          final boolean even = ((x - bounds.x) / SQUARE + (y - bounds.y) / SQUARE) % 2 == 0;
-          clipped.setColor(even ? LIGHT : DARK);
-          clipped.fillRect(x, y, SQUARE, SQUARE);
-        }
-      }
+      scoped.setPaint(
+          new TexturePaint(PATTERN, new Rectangle(bounds.x, bounds.y, SQUARE * 2, SQUARE * 2)));
+      scoped.fill(shape);
     } finally {
-      clipped.dispose();
+      scoped.dispose();
     }
+  }
+
+  private static BufferedImage pattern() {
+    final BufferedImage image =
+        new BufferedImage(SQUARE * 2, SQUARE * 2, BufferedImage.TYPE_INT_RGB);
+    final Graphics2D g2 = image.createGraphics();
+    g2.setColor(LIGHT);
+    g2.fillRect(0, 0, SQUARE * 2, SQUARE * 2);
+    g2.setColor(DARK);
+    g2.fillRect(SQUARE, 0, SQUARE, SQUARE);
+    g2.fillRect(0, SQUARE, SQUARE, SQUARE);
+    g2.dispose();
+    return image;
   }
 }

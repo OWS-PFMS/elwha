@@ -486,14 +486,20 @@ final class SwatchesPane extends ColorPickerPane {
     protected void paintComponent(final Graphics g) {
       final Graphics2D g2 = prepare(g);
       try {
-        g2.clip(
-            new RoundRectangle2D.Double(
-                0, 0, getWidth(), STRIP_HEIGHT, STRIP_HEIGHT, STRIP_HEIGHT));
+        // Segments are Area-intersected with the strip round-rect instead of clipped to it:
+        // Java2D clipping is never antialiased, so clipped end caps stair-step
+        // (smoke-iterate finding); Area fills honor the AA hint.
+        final java.awt.geom.Area stripShape =
+            new java.awt.geom.Area(
+                new RoundRectangle2D.Double(
+                    0, 0, getWidth(), STRIP_HEIGHT, STRIP_HEIGHT, STRIP_HEIGHT));
         for (int i = 0; i < count(); i++) {
           final Rectangle cell = cellRect(i);
           final Color base = cellColor(i);
+          final java.awt.geom.Area segment = new java.awt.geom.Area(cell);
+          segment.intersect(stripShape);
           g2.setColor(stateLayered(base, i));
-          g2.fillRect(cell.x, cell.y, cell.width, cell.height);
+          g2.fill(segment);
           if (matchesCurrent(base)) {
             // Check only — a ring gets clipped by the strip's rounded end caps
             // (smoke-iterate finding); the luminance check is the findable indicator.

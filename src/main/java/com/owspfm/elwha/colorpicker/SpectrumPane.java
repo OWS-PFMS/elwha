@@ -266,15 +266,17 @@ final class SpectrumPane extends ColorPickerPane {
           return;
         }
         final int arc = ShapeScale.SM.px();
-        final RoundRectangle2D.Double clip =
+        final RoundRectangle2D.Double box =
             new RoundRectangle2D.Double(0, 0, width, height, arc * 2.0, arc * 2.0);
-        final Graphics2D clipped = (Graphics2D) g2.create();
-        clipped.clip(clip);
-        clipped.drawImage(image(width, height), 0, 0, null);
-        clipped.dispose();
-        g2.setColor(ColorRole.OUTLINE_VARIANT.resolve());
+        // TexturePaint fill instead of a rounded clip — Java2D clipping is never antialiased,
+        // so clipped corners stair-step (the shade-strip smoke-iterate finding).
+        g2.setPaint(
+            new java.awt.TexturePaint(
+                image(width, height), new java.awt.geom.Rectangle2D.Double(0, 0, width, height)));
+        g2.fill(box);
+        g2.setPaint(ColorRole.OUTLINE_VARIANT.resolve());
         g2.setStroke(new BasicStroke(1f));
-        g2.draw(clip);
+        g2.draw(box);
         paintThumb(g2, width, height);
       } finally {
         g2.dispose();
