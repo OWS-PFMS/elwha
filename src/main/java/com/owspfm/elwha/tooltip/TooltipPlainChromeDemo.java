@@ -75,7 +75,9 @@ public final class TooltipPlainChromeDemo {
     final ElwhaButton overField = ElwhaButton.textButton("Show over the field");
     overField.addActionListener(
         e -> {
-          field.requestFocusInWindow();
+          // The composite's wrapper is not focusable — the caret lives in the inner editor, and
+          // only an explicit editor focus request brings it back after the button click took it.
+          field.getEditor().requestFocusInWindow();
           fieldTip.show(field);
         });
 
