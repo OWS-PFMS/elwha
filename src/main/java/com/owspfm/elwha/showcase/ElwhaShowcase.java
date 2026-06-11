@@ -751,6 +751,13 @@ public final class ElwhaShowcase {
                 + " options, with single-select write-back.",
             AREA_COMPONENTS,
             SelectFieldShowcasePanels.buildComponent()));
+    register(
+        new LeafEntry(
+            "Radio button",
+            "M3 radio button — the ring-and-dot single select, with ElwhaRadioGroup exclusion,"
+                + " arrow navigation, and a roving tab stop.",
+            AREA_COMPONENTS,
+            buildRadioButtonComponent()));
 
     register(
         new LeafEntry(
@@ -1873,6 +1880,20 @@ public final class ElwhaShowcase {
         "Gallery",
         scroll(
             stack(gallerySection("States & configurations", SliderShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- radio button
+
+  private static JComponent buildRadioButtonComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", RadioButtonShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection(
+                    "States & configurations", RadioButtonShowcasePanels.buildGallery()))));
     return tabs;
   }
 
