@@ -63,10 +63,10 @@ public final class ElwhaColorPickerDialogDemo {
         });
     instanceDialog.onCancel(() -> readout.setText(readout.getText() + " (cancelled)"));
 
-    final ElwhaButton open = ElwhaButton.filledButton("Pick color…");
+    final ElwhaButton open = ElwhaButton.filledButton("Open picker dialog");
     open.addActionListener(e -> instanceDialog.show(frame));
 
-    final ElwhaButton openStatic = ElwhaButton.filledTonalButton("Static show(…)");
+    final ElwhaButton openStatic = ElwhaButton.filledTonalButton("Static show convenience");
     openStatic.addActionListener(
         e ->
             ElwhaColorPickerDialog.show(
@@ -76,7 +76,7 @@ public final class ElwhaColorPickerDialogDemo {
     restricted.setTitle("Swatches + sliders only");
     restricted.setModes(PickerMode.SWATCHES, PickerMode.SLIDERS);
     restricted.onConfirm(tile::setColor);
-    final ElwhaButton openRestricted = ElwhaButton.outlinedButton("Restricted modes…");
+    final ElwhaButton openRestricted = ElwhaButton.outlinedButton("Swatches + sliders only");
     openRestricted.addActionListener(e -> restricted.show(frame));
 
     final JPanel content = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 16));

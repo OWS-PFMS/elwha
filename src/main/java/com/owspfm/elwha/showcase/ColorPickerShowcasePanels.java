@@ -78,7 +78,7 @@ final class ColorPickerShowcasePanels {
     final ElwhaTextField supportingField = ElwhaTextField.outlined("Supporting text");
     supportingField.setText("Select color");
 
-    final ElwhaButton dialogButton = ElwhaButton.filledTonalButton("Open dialog…");
+    final ElwhaButton dialogButton = ElwhaButton.filledTonalButton("Open dialog");
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Modes");
