@@ -467,14 +467,14 @@ public final class FoundationsPanels {
    *
    * @param refreshers registry the builder adds its token refreshers to
    * @return the type-scale panel
-   * @version v0.3.0
+   * @version v0.4.0
    * @since v0.3.0
    */
   public static JComponent buildTypeScale(final List<Runnable> refreshers) {
     final JPanel panel = new JPanel();
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
     panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-    panel.add(sectionLabel("The 12 type roles — bundled Inter (Regular / Medium)", refreshers));
+    panel.add(sectionLabel("The 15 type roles — bundled Inter (Regular / Medium)", refreshers));
     panel.add(Box.createVerticalStrut(12));
 
     for (final TypeRole role : TypeRole.values()) {

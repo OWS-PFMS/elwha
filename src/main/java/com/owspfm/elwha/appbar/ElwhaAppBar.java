@@ -464,11 +464,45 @@ public class ElwhaAppBar extends JComponent {
       g2.fillRect(0, 0, getWidth(), getHeight());
       g2.setRenderingHint(
           RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-      if (!variant.isFlexible()) {
+      if (variant.isFlexible()) {
+        paintExpandedHeadline(g2);
+      } else {
         paintStripText(g2);
       }
     } finally {
       g2.dispose();
+    }
+  }
+
+  // The flexible variants' expanded headline block: 16px margins, bottom-anchored at the
+  // variant's bottom padding, title over subtitle with zero gap (the v14.0.0 anatomy). The
+  // collapsed-title strip layer stays absent at rest (it fades in with the S4 collapse).
+  private void paintExpandedHeadline(final Graphics2D g2) {
+    if (title.isEmpty() && subtitle == null) {
+      return;
+    }
+    final Font titleFont = variant.expandedTitleRole().resolve();
+    final Font subtitleFont = variant.expandedSubtitleRole().resolve();
+    final FontMetrics titleFm = g2.getFontMetrics(titleFont);
+    final FontMetrics subtitleFm = g2.getFontMetrics(subtitleFont);
+    final int[] region = {EXPANDED_MARGIN_PX, getWidth() - EXPANDED_MARGIN_PX};
+    if (region[1] - region[0] <= 0) {
+      return;
+    }
+    final int blockBottom = getHeight() - variant.expandedBottomPaddingPx();
+    final int titleBaseline =
+        subtitle != null
+            ? blockBottom - subtitleFm.getHeight() - titleFm.getDescent()
+            : blockBottom - titleFm.getDescent();
+
+    g2.setColor(ColorRole.ON_SURFACE.resolve());
+    g2.setFont(titleFont);
+    drawClippedLine(g2, title, titleFm, region, titleBaseline);
+
+    if (subtitle != null) {
+      g2.setColor(ColorRole.ON_SURFACE_VARIANT.resolve());
+      g2.setFont(subtitleFont);
+      drawClippedLine(g2, subtitle, subtitleFm, region, blockBottom - subtitleFm.getDescent());
     }
   }
 
