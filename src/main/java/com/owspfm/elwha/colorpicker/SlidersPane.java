@@ -131,7 +131,7 @@ final class SlidersPane extends ColorPickerPane {
     } else {
       this.alphaRow = null;
     }
-    add(Box.createVerticalStrut(SpaceScale.MD.px()));
+    add(Box.createVerticalStrut(SpaceScale.SM.px()));
     add(hexField);
     refresh(picker.getColor());
   }
