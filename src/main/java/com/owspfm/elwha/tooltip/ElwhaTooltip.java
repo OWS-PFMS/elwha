@@ -1,5 +1,6 @@
 package com.owspfm.elwha.tooltip;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.overlay.AbstractElwhaOverlay;
 import java.awt.AWTEvent;
 import java.awt.Component;
@@ -9,8 +10,12 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.AWTEventListener;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
@@ -67,7 +72,11 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   private static ElwhaTooltip shownTooltip;
 
   private final TooltipVariant variant;
+  private final List<TooltipAction> actions;
   private String text;
+  private String subhead;
+  private String supportingText;
+  private boolean persistent;
   private TooltipPlacement preferredPlacement = TooltipPlacement.ABOVE;
   private TooltipAlignment alignment;
   private int showDelayMs = DEFAULT_SHOW_DELAY_MS;
@@ -80,7 +89,17 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   private ElwhaTooltip(final TooltipVariant variant, final String text) {
     this.variant = variant;
     this.text = text;
+    this.actions = List.of();
     this.alignment = TooltipAlignment.CENTER;
+  }
+
+  private ElwhaTooltip(final RichBuilder builder) {
+    this.variant = TooltipVariant.RICH;
+    this.subhead = builder.subhead;
+    this.supportingText = builder.supportingText;
+    this.actions = List.copyOf(builder.actions);
+    this.persistent = builder.persistent;
+    this.alignment = TooltipAlignment.END;
   }
 
   /**
@@ -98,6 +117,18 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   }
 
   /**
+   * Starts a rich tooltip — the surface-container card with an optional subhead, supporting text,
+   * and optional text-button actions.
+   *
+   * @return the rich builder
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static RichBuilder rich() {
+    return new RichBuilder();
+  }
+
+  /**
    * The tooltip's variant.
    *
    * @return the variant
@@ -109,9 +140,9 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   }
 
   /**
-   * The plain label text.
+   * The plain label text; {@code null} on a rich tooltip.
    *
-   * @return the label text
+   * @return the label text, or {@code null}
    * @version v0.4.0
    * @since v0.4.0
    */
@@ -124,14 +155,83 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
    *
    * @param text the new label text
    * @throws NullPointerException if {@code text} is {@code null}
+   * @throws IllegalStateException on a rich tooltip — rich content flows through {@link
+   *     #setSubhead(String)} / {@link #setSupportingText(String)}
    * @version v0.4.0
    * @since v0.4.0
    */
   public void setText(final String text) {
+    if (variant != TooltipVariant.PLAIN) {
+      throw new IllegalStateException(
+          "setText is plain-only; use setSubhead/setSupportingText on a rich tooltip");
+    }
     this.text = Objects.requireNonNull(text, "text");
     if (tooltipSurface != null) {
       tooltipSurface.setText(text);
       relayout();
+    }
+  }
+
+  /**
+   * The rich subhead; {@code null} on a plain tooltip or when no subhead was set.
+   *
+   * @return the subhead, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getSubhead() {
+    return subhead;
+  }
+
+  /**
+   * Replaces the rich subhead ({@code null} removes it); a showing tooltip re-flows immediately.
+   *
+   * @param subhead the new subhead, or {@code null} for none
+   * @throws IllegalStateException on a plain tooltip
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setSubhead(final String subhead) {
+    requireRich("setSubhead");
+    this.subhead = subhead;
+    if (tooltipSurface != null) {
+      tooltipSurface.setSubhead(subhead);
+      relayout();
+    }
+  }
+
+  /**
+   * The rich supporting text; {@code null} on a plain tooltip.
+   *
+   * @return the supporting text, or {@code null}
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public String getSupportingText() {
+    return supportingText;
+  }
+
+  /**
+   * Replaces the rich supporting text; a showing tooltip re-flows immediately.
+   *
+   * @param supportingText the new supporting text
+   * @throws NullPointerException if {@code supportingText} is {@code null}
+   * @throws IllegalStateException on a plain tooltip
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setSupportingText(final String supportingText) {
+    requireRich("setSupportingText");
+    this.supportingText = Objects.requireNonNull(supportingText, "supportingText");
+    if (tooltipSurface != null) {
+      tooltipSurface.setSupportingText(supportingText);
+      relayout();
+    }
+  }
+
+  private void requireRich(final String method) {
+    if (variant != TooltipVariant.RICH) {
+      throw new IllegalStateException(method + " is rich-only; this tooltip is " + variant);
     }
   }
 
@@ -321,7 +421,29 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
   protected JComponent createSurface() {
     claimExclusive();
     installWheelWatch();
-    this.tooltipSurface = new TooltipSurface(text);
+    this.tooltipSurface = new TooltipSurface(variant, text, subhead, supportingText);
+    for (final TooltipAction action : actions) {
+      final ElwhaButton button = ElwhaButton.textButton(action.label());
+      // Dismiss before firing: the consumer's handler may open a dialog, and a stale tooltip
+      // floating over it is exactly what the dismissal contract forbids (design §7).
+      button.addActionListener(
+          e -> {
+            dismiss();
+            action.listener().actionPerformed(e);
+          });
+      tooltipSurface.addActionButton(button);
+    }
+    // A press inside the contents dismisses a non-persistent tooltip (MDC default-rich; harmless
+    // and consistent on plain). The action buttons consume their own presses and never reach this.
+    tooltipSurface.addMouseListener(
+        new MouseAdapter() {
+          @Override
+          public void mousePressed(final MouseEvent e) {
+            if (!persistent) {
+              dismiss();
+            }
+          }
+        });
     return tooltipSurface;
   }
 
@@ -340,7 +462,7 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
         place(
             anchorBoundsInPane(),
             surface.getPreferredSize(),
-            new Insets(0, 0, 0, 0),
+            tooltipSurface != null ? tooltipSurface.halo() : new Insets(0, 0, 0, 0),
             paneWidth,
             paneHeight,
             preferredPlacement,
@@ -352,7 +474,10 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
 
   @Override
   protected String accessibleName() {
-    return text;
+    if (variant == TooltipVariant.PLAIN) {
+      return text;
+    }
+    return subhead == null || subhead.isEmpty() ? supportingText : subhead + ". " + supportingText;
   }
 
   @Override
@@ -496,5 +621,101 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
     }
     final Point origin = SwingUtilities.convertPoint(anchor, 0, 0, layeredPane);
     return new Rectangle(origin.x, origin.y, anchor.getWidth(), anchor.getHeight());
+  }
+
+  // A rich action: the text-button label and the consumer's listener.
+  private record TooltipAction(String label, ActionListener listener) {}
+
+  /**
+   * Fluent builder for a {@linkplain TooltipVariant#RICH rich} {@link ElwhaTooltip}. Supporting
+   * text is required; subhead, actions, and persistence are optional.
+   *
+   * @author Charles Bryan (cfb3@uw.edu)
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static final class RichBuilder {
+
+    private String subhead;
+    private String supportingText;
+    private final List<TooltipAction> actions = new ArrayList<>();
+    private boolean persistent;
+
+    private RichBuilder() {}
+
+    /**
+     * Sets the optional subhead — the {@code TITLE_SMALL} first line.
+     *
+     * @param subhead the subhead text
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public RichBuilder subhead(final String subhead) {
+      this.subhead = subhead;
+      return this;
+    }
+
+    /**
+     * Sets the supporting text — the {@code BODY_MEDIUM} paragraph. Required.
+     *
+     * @param supportingText the supporting text
+     * @return this builder
+     * @throws NullPointerException if {@code supportingText} is {@code null}
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public RichBuilder supportingText(final String supportingText) {
+      this.supportingText = Objects.requireNonNull(supportingText, "supportingText");
+      return this;
+    }
+
+    /**
+     * Adds an action — a {@code PRIMARY} text button on the bottom-start action row. Clicking an
+     * action dismisses the tooltip and then fires {@code onAction}.
+     *
+     * @param label the button label
+     * @param onAction the consumer's listener
+     * @return this builder
+     * @throws NullPointerException if either argument is {@code null}
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public RichBuilder action(final String label, final ActionListener onAction) {
+      actions.add(
+          new TooltipAction(
+              Objects.requireNonNull(label, "label"),
+              Objects.requireNonNull(onAction, "onAction")));
+      return this;
+    }
+
+    /**
+     * Marks the tooltip persistent — toggled by anchor click / Enter / Space instead of hover, and
+     * dismissed only by outside-press, Esc, wheel, an action click, or a re-toggle.
+     *
+     * @param persistent {@code true} for the persistent flavor
+     * @return this builder
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public RichBuilder persistent(final boolean persistent) {
+      this.persistent = persistent;
+      return this;
+    }
+
+    /**
+     * Builds the rich tooltip.
+     *
+     * @return the rich tooltip
+     * @throws IllegalStateException if no supporting text was set
+     * @version v0.4.0
+     * @since v0.4.0
+     */
+    public ElwhaTooltip build() {
+      if (supportingText == null) {
+        throw new IllegalStateException("supportingText is required on a rich tooltip");
+      }
+      return new ElwhaTooltip(this);
+    }
   }
 }
