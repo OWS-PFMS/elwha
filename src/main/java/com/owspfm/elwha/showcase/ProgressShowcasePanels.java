@@ -29,8 +29,8 @@ import javax.swing.Timer;
  * The Elwha Showcase leaf surface for the progress indicators (story #475): a {@link
  * ComponentWorkbench} staging one live indicator over a session-long shared {@link
  * javax.swing.BoundedRangeModel} — the value {@link ElwhaSlider} drives the same model the
- * indicator reads, dogfooding the shared-model design — with Variant / Thickness / Indeterminate
- * / Wavy / RTL controls (variant swaps the instance; everything else applies live so the 500ms
+ * indicator reads, dogfooding the shared-model design — with Variant / Thickness / Indeterminate /
+ * Wavy / RTL controls (variant swaps the instance; everything else applies live so the 500ms
  * amplitude crossfade is visible) and a "Simulate load" run that sweeps the model 0→100. The
  * gallery stacks the linear configurations and a circular row covering flat / wavy / thick /
  * indeterminate forms.
@@ -95,8 +95,7 @@ final class ProgressShowcasePanels {
               orDefault(variantBox.getSelectedValue(), ProgressVariant.LINEAR);
           final boolean linear = variant == ProgressVariant.LINEAR;
           final boolean variantChanged =
-              staged[0] == null
-                  || linear != (staged[0] instanceof ElwhaLinearProgressIndicator);
+              staged[0] == null || linear != (staged[0] instanceof ElwhaLinearProgressIndicator);
           if (variantChanged) {
             staged[0] =
                 linear
@@ -245,12 +244,14 @@ final class ProgressShowcasePanels {
       final boolean indeterminate,
       final boolean wavy,
       final boolean rtl) {
-    final String type =
-        linear ? "ElwhaLinearProgressIndicator" : "ElwhaCircularProgressIndicator";
+    final String type = linear ? "ElwhaLinearProgressIndicator" : "ElwhaCircularProgressIndicator";
     final StringBuilder code = new StringBuilder();
     code.append("// the slider and the indicator share one model\n")
         .append("BoundedRangeModel model = new DefaultBoundedRangeModel(60, 0, 0, 100);\n")
-        .append(type).append(" indicator = new ").append(type).append("(model);\n");
+        .append(type)
+        .append(" indicator = new ")
+        .append(type)
+        .append("(model);\n");
     if (thickness != 4) {
       code.append("indicator.setTrackThickness(").append(thickness).append(");\n");
     }

@@ -45,15 +45,21 @@ public final class ElwhaCircularProgressSmoke {
     check("50%: active (PRIMARY) on the right (3 o'clock)", ring[0] == 'p');
     check("50%: track on the left (9 o'clock)", ring[180] == 't');
     check("50%: exactly two gaps separate active and track", emptyRuns(ring) == 2);
-    check("50%: active occupies roughly half the ring", countOf(ring, 'p') > 130 && countOf(ring, 'p') < 190);
+    check(
+        "50%: active occupies roughly half the ring",
+        countOf(ring, 'p') > 130 && countOf(ring, 'p') < 190);
 
     final ElwhaCircularProgressIndicator zero = new ElwhaCircularProgressIndicator(0, 100, 0);
     final char[] zeroRing = ringClasses(paint(zero), primary, track);
-    check("0%: full seamless track ring", countOf(zeroRing, 't') >= 355 && countOf(zeroRing, 'p') == 0);
+    check(
+        "0%: full seamless track ring",
+        countOf(zeroRing, 't') >= 355 && countOf(zeroRing, 'p') == 0);
 
     final ElwhaCircularProgressIndicator full = new ElwhaCircularProgressIndicator(0, 100, 100);
     final char[] fullRing = ringClasses(paint(full), primary, track);
-    check("100%: full seamless active ring", countOf(fullRing, 'p') >= 355 && countOf(fullRing, 't') == 0);
+    check(
+        "100%: full seamless active ring",
+        countOf(fullRing, 'p') >= 355 && countOf(fullRing, 't') == 0);
 
     final ElwhaCircularProgressIndicator base = new ElwhaCircularProgressIndicator();
     check("flat default diameter = 40", base.getPreferredSize().width == 40);
@@ -112,10 +118,11 @@ public final class ElwhaCircularProgressSmoke {
   }
 
   /**
-   * Classifies the stroke-center circle at every whole degree (0 = 3 o'clock, counterclockwise
-   * like {@link java.awt.geom.Arc2D}): {@code 'p'} primary, {@code 't'} track, {@code '.'} empty.
+   * Classifies the stroke-center circle at every whole degree (0 = 3 o'clock, counterclockwise like
+   * {@link java.awt.geom.Arc2D}): {@code 'p'} primary, {@code 't'} track, {@code '.'} empty.
    */
-  private static char[] ringClasses(final BufferedImage img, final Color primary, final Color track) {
+  private static char[] ringClasses(
+      final BufferedImage img, final Color primary, final Color track) {
     final float c = img.getWidth() / 2f;
     final float radius = (img.getWidth() - 4) / 2f;
     final char[] classes = new char[360];
@@ -123,8 +130,10 @@ public final class ElwhaCircularProgressSmoke {
       final double rad = Math.toRadians(a);
       final int x = Math.round(c + (float) (radius * Math.cos(rad)));
       final int y = Math.round(c - (float) (radius * Math.sin(rad)));
-      final int argb = img.getRGB(Math.min(img.getWidth() - 1, Math.max(0, x)),
-          Math.min(img.getHeight() - 1, Math.max(0, y)));
+      final int argb =
+          img.getRGB(
+              Math.min(img.getWidth() - 1, Math.max(0, x)),
+              Math.min(img.getHeight() - 1, Math.max(0, y)));
       if (nearColor(argb, primary)) {
         classes[a] = 'p';
       } else if (nearColor(argb, track)) {

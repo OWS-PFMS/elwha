@@ -15,12 +15,12 @@ import javax.swing.JProgressBar;
 
 /**
  * Headless S6 parity guard (story #474) — pins the progress indicators' accessibility contract
- * against {@link JProgressBar}'s: same {@code PROGRESS_BAR} role, same model-backed
- * current/min/max values (extent-aware maximum), same writable {@code AccessibleValue}, and not
- * focusable. Documents the one intentional divergence: while indeterminate, Elwha withholds the
- * current value ({@code null}, plus the BUSY state) where {@code JProgressBar} keeps reporting a
- * stale number — the M3/Compose semantics. Also re-verifies RTL mirroring for the wavy and
- * indeterminate linear paints that the S1 chrome smoke doesn't cover. Runs in CI's headless JVM.
+ * against {@link JProgressBar}'s: same {@code PROGRESS_BAR} role, same model-backed current/min/max
+ * values (extent-aware maximum), same writable {@code AccessibleValue}, and not focusable.
+ * Documents the one intentional divergence: while indeterminate, Elwha withholds the current value
+ * ({@code null}, plus the BUSY state) where {@code JProgressBar} keeps reporting a stale number —
+ * the M3/Compose semantics. Also re-verifies RTL mirroring for the wavy and indeterminate linear
+ * paints that the S1 chrome smoke doesn't cover. Runs in CI's headless JVM.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -49,7 +49,8 @@ public final class ElwhaProgressBarParityGuard {
 
     for (final AbstractElwhaProgressIndicator indicator :
         new AbstractElwhaProgressIndicator[] {
-          new ElwhaLinearProgressIndicator(0, 100, 60), new ElwhaCircularProgressIndicator(0, 100, 60)
+          new ElwhaLinearProgressIndicator(0, 100, 60),
+          new ElwhaCircularProgressIndicator(0, 100, 60)
         }) {
       final String kind = indicator.getClass().getSimpleName();
       check(
@@ -58,8 +59,7 @@ public final class ElwhaProgressBarParityGuard {
               && reference.getAccessibleContext().getAccessibleRole()
                   == AccessibleRole.PROGRESS_BAR);
       final AccessibleValue value = indicator.getAccessibleContext().getAccessibleValue();
-      final AccessibleValue referenceValue =
-          reference.getAccessibleContext().getAccessibleValue();
+      final AccessibleValue referenceValue = reference.getAccessibleContext().getAccessibleValue();
       check(
           kind + ": current value matches",
           value.getCurrentAccessibleValue().intValue()

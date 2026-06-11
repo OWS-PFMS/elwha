@@ -15,10 +15,10 @@ import javax.swing.BoundedRangeModel;
 import javax.swing.DefaultBoundedRangeModel;
 
 /**
- * The Elwha Material 3 Expressive <strong>circular progress indicator</strong> — a fixed-size
- * ring painting the updated-M3 anatomy: a {@code primary} active arc sweeping clockwise from 12
- * o'clock over a visible {@code secondaryContainer} track, separated by the 4px track-active gap
- * at <em>both</em> arc ends (cap-aware — the round caps don't eat the gap). At 0% the track is a
+ * The Elwha Material 3 Expressive <strong>circular progress indicator</strong> — a fixed-size ring
+ * painting the updated-M3 anatomy: a {@code primary} active arc sweeping clockwise from 12 o'clock
+ * over a visible {@code secondaryContainer} track, separated by the 4px track-active gap at
+ * <em>both</em> arc ends (cap-aware — the round caps don't eat the gap). At 0% the track is a
  * seamless full ring; at 100% the active arc is.
  *
  * <p>{@linkplain #setIndeterminate Indeterminate} drops the track and loops the current-M3
@@ -26,8 +26,8 @@ import javax.swing.DefaultBoundedRangeModel;
  * rotates 1080° per cycle, plus a 360° advance kick every 1500ms over 300ms. The Expressive
  * {@linkplain #setWavy wavy} shape scallops the active arc with a radial sine (1.6px amplitude,
  * 15px wavelength, integer wave count so closed rings have no seam) whose phase spins with the
- * traveling-wave clock; the determinate amplitude ramp matches the linear bar and the track
- * always stays flat.
+ * traveling-wave clock; the determinate amplitude ramp matches the linear bar and the track always
+ * stays flat.
  *
  * <p>Diameter follows the spec redlines: the {@linkplain #setIndicatorSize indicator size} (40px)
  * is the flat-default at 4px thickness; thickness past 4 grows it 1:1 (44 at 8px) and the wavy
@@ -136,8 +136,8 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
   }
 
   /**
-   * The flat-default diameter at 4px thickness (M3 {@code indicatorSize}, 40px) — thickness and
-   * the wavy shape grow the painted diameter from here (design §5).
+   * The flat-default diameter at 4px thickness (M3 {@code indicatorSize}, 40px) — thickness and the
+   * wavy shape grow the painted diameter from here (design §5).
    *
    * @return the base diameter, px
    * @version v0.4.0
@@ -221,8 +221,8 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
   }
 
   /**
-   * Paints the ring (design §5–§6): determinate active arc + cap-aware double-gapped track, or
-   * the indeterminate grow/shrink rotation.
+   * Paints the ring (design §5–§6): determinate active arc + cap-aware double-gapped track, or the
+   * indeterminate grow/shrink rotation.
    *
    * @param g the graphics
    * @version v0.4.0
@@ -260,12 +260,15 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
   }
 
   private void paintDeterminate(
-      final Graphics2D g2, final float cx, final float cy, final float radius, final float thickness) {
+      final Graphics2D g2,
+      final float cx,
+      final float cy,
+      final float radius,
+      final float thickness) {
     final float fraction = getProgressFraction();
     final float activeSweep = fraction * 360f;
     final float capDeg = (float) Math.toDegrees((thickness / 2f) / radius);
-    final float gapDeg =
-        (float) Math.toDegrees((getIndicatorTrackGapSize() + thickness) / radius);
+    final float gapDeg = (float) Math.toDegrees((getIndicatorTrackGapSize() + thickness) / radius);
 
     if (activeSweep >= 359.5f) {
       g2.setColor(getIndicatorColorRole().resolve());
@@ -293,7 +296,11 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
   }
 
   private void paintIndeterminate(
-      final Graphics2D g2, final float cx, final float cy, final float radius, final float thickness) {
+      final Graphics2D g2,
+      final float cx,
+      final float cy,
+      final float radius,
+      final float thickness) {
     final long elapsed = indeterminateElapsedMs();
     final float cycleT = (elapsed % INDETERMINATE_CYCLE_MS) / (float) INDETERMINATE_CYCLE_MS;
     final float head = Easing.STANDARD.ease(Math.min(1f, cycleT * 2f));
@@ -338,9 +345,12 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
   }
 
   private void strokeWavyRing(
-      final Graphics2D g2, final float cx, final float cy, final float radius, final float thickness) {
-    final Path2D.Float wave =
-        wavyArcPath(cx, cy, radius, waveAmplitudeNow(), 90f, 360f, true);
+      final Graphics2D g2,
+      final float cx,
+      final float cy,
+      final float radius,
+      final float thickness) {
+    final Path2D.Float wave = wavyArcPath(cx, cy, radius, waveAmplitudeNow(), 90f, 360f, true);
     final Stroke previous = g2.getStroke();
     g2.setStroke(new BasicStroke(thickness, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
     g2.draw(wave);
@@ -349,8 +359,8 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
 
   /**
    * A radial-sine polyline along the ring — {@code r(θ) = R + amp·sin(waveCount·θ + phase)} with
-   * the wave count rounded to an integer so a closed loop has no seam (design §7); the phase
-   * spins with the traveling-wave clock.
+   * the wave count rounded to an integer so a closed loop has no seam (design §7); the phase spins
+   * with the traveling-wave clock.
    */
   private Path2D.Float wavyArcPath(
       final float cx,
@@ -394,7 +404,8 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
     float total = 0f;
     for (long i = 1; i <= kicks; i++) {
       final float t =
-          Math.min(1f, (elapsedMs - i * ADDITIONAL_ROTATION_DELAY_MS) / (float) ADDITIONAL_ROTATION_MS);
+          Math.min(
+              1f, (elapsedMs - i * ADDITIONAL_ROTATION_DELAY_MS) / (float) ADDITIONAL_ROTATION_MS);
       total += Easing.STANDARD.ease(t) * ADDITIONAL_ROTATION_DEG;
     }
     return total;
@@ -418,8 +429,7 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
       final double midDeg = Math.toRadians(visualStartDeg - visualSweepDeg / 2f);
       final float px = cx + (float) (radius * Math.cos(midDeg));
       final float py = cy - (float) (radius * Math.sin(midDeg));
-      g2.fill(
-          new Ellipse2D.Float(px - thickness / 2f, py - thickness / 2f, thickness, thickness));
+      g2.fill(new Ellipse2D.Float(px - thickness / 2f, py - thickness / 2f, thickness, thickness));
       return;
     }
     final Stroke previous = g2.getStroke();
@@ -437,7 +447,11 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
   }
 
   private void strokeFullRing(
-      final Graphics2D g2, final float cx, final float cy, final float radius, final float thickness) {
+      final Graphics2D g2,
+      final float cx,
+      final float cy,
+      final float radius,
+      final float thickness) {
     final Stroke previous = g2.getStroke();
     g2.setStroke(new BasicStroke(thickness, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
     g2.draw(new Ellipse2D.Float(cx - radius, cy - radius, radius * 2f, radius * 2f));

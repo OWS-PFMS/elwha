@@ -19,9 +19,9 @@ import javax.swing.WindowConstants;
 
 /**
  * Throwaway S4 playground (story #472) — proves the {@link ElwhaCircularProgressIndicator} flat
- * ring: the determinate active arc + double-gapped track across values (seamless full rings at
- * the 0%/100% edges), the 44px/8px thick reference, the 6000ms indeterminate grow/shrink +
- * rotation choreography, and a scrub row sharing one model with an {@code ElwhaSlider}.
+ * ring: the determinate active arc + double-gapped track across values (seamless full rings at the
+ * 0%/100% edges), the 44px/8px thick reference, the 6000ms indeterminate grow/shrink + rotation
+ * choreography, and a scrub row sharing one model with an {@code ElwhaSlider}.
  *
  * @author Charles Bryan
  * @version v0.4.0

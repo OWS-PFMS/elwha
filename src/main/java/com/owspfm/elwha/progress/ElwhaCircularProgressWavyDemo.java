@@ -20,9 +20,9 @@ import javax.swing.WindowConstants;
 /**
  * Throwaway S5 playground (story #473) — proves the {@link ElwhaCircularProgressIndicator}
  * Expressive wavy shape: the radial-sine scallop on the active arc (15px wavelength, 1.6px
- * amplitude, spinning phase), the flat track behind it, the seamless closed wavy ring at 100%,
- * the amplitude ramp flattening at ≥95%, the 48/52px wavy diameters, and the wavy indeterminate
- * spin. The scrub row shares one model with an {@code ElwhaSlider} — ride it through the ramp.
+ * amplitude, spinning phase), the flat track behind it, the seamless closed wavy ring at 100%, the
+ * amplitude ramp flattening at ≥95%, the 48/52px wavy diameters, and the wavy indeterminate spin.
+ * The scrub row shares one model with an {@code ElwhaSlider} — ride it through the ramp.
  *
  * @author Charles Bryan
  * @version v0.4.0

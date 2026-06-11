@@ -19,8 +19,8 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 /**
- * Throwaway S6 playground (story #474) — proves the progress-indicator accessibility contract
- * live: the {@code PROGRESS_BAR} role, the model-backed {@code AccessibleValue} readout (and its
+ * Throwaway S6 playground (story #474) — proves the progress-indicator accessibility contract live:
+ * the {@code PROGRESS_BAR} role, the model-backed {@code AccessibleValue} readout (and its
  * disappearance while indeterminate — the BUSY state stands in), accessible naming, and RTL
  * mirroring across flat/wavy linear bars. The readout label re-reads the accessible context on
  * every change, so what you see is literally what assistive tech is told.

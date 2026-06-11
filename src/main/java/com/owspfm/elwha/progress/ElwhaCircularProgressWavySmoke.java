@@ -10,8 +10,8 @@ import java.awt.image.BufferedImage;
 
 /**
  * Headless guard for the S5 {@link ElwhaCircularProgressIndicator} wavy shape (story #473).
- * Measures the active arc's stroke-centroid radial profile around the ring and asserts: the wavy arc
- * scallops (crest-to-trough radial variance ≥ 2px) while a flat ring stays even, the track
+ * Measures the active arc's stroke-centroid radial profile around the ring and asserts: the wavy
+ * arc scallops (crest-to-trough radial variance ≥ 2px) while a flat ring stays even, the track
  * behind a wavy arc stays flat, the ≥95% amplitude ramp flattens, the 100% closed wavy ring has
  * full coverage with scallops, the wavy diameters follow the redlines (48/52), and the wavy
  * indeterminate arc spins. Runs in CI's headless JVM.
@@ -45,16 +45,18 @@ public final class ElwhaCircularProgressWavySmoke {
     check("wavy diameter = 48", wavy.getPreferredSize().width == 48);
     final BufferedImage img = paint(wavy);
     check("wavy active arc scallops (≥2px radial variance)", outerVariance(img, primary) >= 2f);
-    check("track behind the wavy arc stays flat (<1.75px centroid)", outerVariance(img, track) < 1.75f);
+    check(
+        "track behind the wavy arc stays flat (<1.75px centroid)",
+        outerVariance(img, track) < 1.75f);
 
     final ElwhaCircularProgressIndicator flat = new ElwhaCircularProgressIndicator(0, 100, 50);
-    check("flat active arc stays even (<1.75px centroid)", outerVariance(paint(flat), primary) < 1.75f);
+    check(
+        "flat active arc stays even (<1.75px centroid)",
+        outerVariance(paint(flat), primary) < 1.75f);
 
     final ElwhaCircularProgressIndicator high = ElwhaCircularProgressIndicator.wavy();
     high.setValue(97);
-    check(
-        "ramp: ≥95% paints flat",
-        outerVarianceInWindow(paint(high), primary, 135, 405) < 1.75f);
+    check("ramp: ≥95% paints flat", outerVarianceInWindow(paint(high), primary, 135, 405) < 1.75f);
 
     final ElwhaCircularProgressIndicator closed = ElwhaCircularProgressIndicator.wavy();
     closed.setValue(100);

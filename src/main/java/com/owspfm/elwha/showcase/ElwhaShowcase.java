@@ -1965,8 +1965,7 @@ public final class ElwhaShowcase {
         "Gallery",
         scroll(
             stack(
-                gallerySection(
-                    "States & configurations", ProgressShowcasePanels.buildGallery()))));
+                gallerySection("States & configurations", ProgressShowcasePanels.buildGallery()))));
     return tabs;
   }
 

@@ -18,9 +18,9 @@ import javax.swing.WindowConstants;
 
 /**
  * Throwaway S1 playground (story #469) — proves the {@link ElwhaLinearProgressIndicator}
- * determinate chrome renders the updated-M3 anatomy across values: active/track split with the
- * 4px gap, the trailing stop dot (and its hide-on-arrival), the 8px thick reference with 2px
- * inner corners, RTL mirroring, and light/dark theming with zero new tokens.
+ * determinate chrome renders the updated-M3 anatomy across values: active/track split with the 4px
+ * gap, the trailing stop dot (and its hide-on-arrival), the 8px thick reference with 2px inner
+ * corners, RTL mirroring, and light/dark theming with zero new tokens.
  *
  * @author Charles Bryan
  * @version v0.4.0

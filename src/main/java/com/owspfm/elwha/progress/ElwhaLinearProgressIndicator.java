@@ -17,17 +17,17 @@ import javax.swing.DefaultBoundedRangeModel;
 
 /**
  * The Elwha Material 3 Expressive <strong>linear progress indicator</strong> — a horizontal bar
- * painting the updated-M3 anatomy: a {@code primary} active indicator, a {@code
- * secondaryContainer} track separated by the 4px track-active gap, and the 4px {@code primary}
- * stop-indicator dot at the track's trailing end (determinate only; it hides once the active head
- * reaches it). Outer ends are full-round; the gap-facing inner ends hold the spec's 2px radius.
+ * painting the updated-M3 anatomy: a {@code primary} active indicator, a {@code secondaryContainer}
+ * track separated by the 4px track-active gap, and the 4px {@code primary} stop-indicator dot at
+ * the track's trailing end (determinate only; it hides once the active head reaches it). Outer ends
+ * are full-round; the gap-facing inner ends hold the spec's 2px radius.
  *
  * <p>Determinate fills toward {@link #getProgressFraction()}; {@linkplain #setIndeterminate
  * indeterminate} loops the current-M3 two-line cycle — a 1750ms timeline whose two
  * emphasized-accelerate [tail, head] line spans sweep the run while the track fills the
  * complementary spans (gap on each side; no stop dot). The Expressive {@linkplain #setWavy wavy}
- * shape strokes the active spans as a traveling sine (amplitude 3px; wavelength 40px determinate
- * / 20px indeterminate; one wavelength per second) — the determinate amplitude ramps flat outside
+ * shape strokes the active spans as a traveling sine (amplitude 3px; wavelength 40px determinate /
+ * 20px indeterminate; one wavelength per second) — the determinate amplitude ramps flat outside
  * {@code (10%, 95%)} progress, and the track always stays flat. Direction follows {@link
  * java.awt.ComponentOrientation} — RTL mirrors the fill and the stop dot.
  *
@@ -90,8 +90,8 @@ public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator
   }
 
   /**
-   * A determinate linear indicator over a caller-supplied model (shareable with other
-   * range-driven components, e.g. an {@code ElwhaSlider}).
+   * A determinate linear indicator over a caller-supplied model (shareable with other range-driven
+   * components, e.g. an {@code ElwhaSlider}).
    *
    * @param model the value model (never {@code null})
    * @version v0.4.0

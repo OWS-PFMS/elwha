@@ -21,8 +21,8 @@ import javax.swing.JComponent;
  * ProgressShowcasePanels} Workbench + Gallery without a display, asserting the workbench stages
  * exactly one live indicator sharing its {@code BoundedRangeModel} with the value {@link
  * ElwhaSlider} (writes through the indicator land in the slider), exercising every Workbench
- * checkbox through its live apply path via {@code doClick} (the staged instance survives — only
- * the variant swap rebuilds), counting the gallery's thirteen configurations (seven linear + six
+ * checkbox through its live apply path via {@code doClick} (the staged instance survives — only the
+ * variant swap rebuilds), counting the gallery's thirteen configurations (seven linear + six
  * circular), and laying out + painting both surfaces into a {@link BufferedImage}.
  *
  * @author Charles Bryan

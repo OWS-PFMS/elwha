@@ -18,12 +18,12 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 /**
- * Throwaway S3 playground (story #471) — proves the {@link ElwhaLinearProgressIndicator}
- * Expressive wavy shape: the traveling sine on the active span (40px wavelength determinate, 20px
- * indeterminate, one wavelength/s), the amplitude ramp flattening outside (10%, 95%) progress,
- * the flat track + stop dot, the 14px-tall thick reference, and RTL travel. The scrub row shares
- * one {@code BoundedRangeModel} between an {@code ElwhaSlider} and the bar — drag the slider
- * through the ramp edges (≤10, ≥95) to watch the 500ms amplitude transition.
+ * Throwaway S3 playground (story #471) — proves the {@link ElwhaLinearProgressIndicator} Expressive
+ * wavy shape: the traveling sine on the active span (40px wavelength determinate, 20px
+ * indeterminate, one wavelength/s), the amplitude ramp flattening outside (10%, 95%) progress, the
+ * flat track + stop dot, the 14px-tall thick reference, and RTL travel. The scrub row shares one
+ * {@code BoundedRangeModel} between an {@code ElwhaSlider} and the bar — drag the slider through
+ * the ramp edges (≤10, ≥95) to watch the 500ms amplitude transition.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -62,7 +62,9 @@ public final class ElwhaLinearProgressWavyDemo {
     grid.add(labeled("wavy thick 8px @ 60 (14px tall)", wavyAt(60, 8, false)));
     grid.add(labeled("wavy RTL @ 60", wavyAt(60, 4, true)));
     grid.add(
-        labeled("wavy indeterminate (20px wavelength)", ElwhaLinearProgressIndicator.wavyIndeterminate()));
+        labeled(
+            "wavy indeterminate (20px wavelength)",
+            ElwhaLinearProgressIndicator.wavyIndeterminate()));
 
     final ElwhaLinearProgressIndicator scrubbed = ElwhaLinearProgressIndicator.wavy();
     scrubbed.setValue(60);

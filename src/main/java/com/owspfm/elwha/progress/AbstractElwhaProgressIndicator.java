@@ -16,27 +16,27 @@ import javax.swing.Timer;
 import javax.swing.event.ChangeListener;
 
 /**
- * The shared base of the Elwha Material 3 <strong>progress indicator</strong> family — value
- * model, mode, color roles, geometry knobs, and the animation clock that {@link
+ * The shared base of the Elwha Material 3 <strong>progress indicator</strong> family — value model,
+ * mode, color roles, geometry knobs, and the animation clock that {@link
  * ElwhaLinearProgressIndicator} and {@link ElwhaCircularProgressIndicator} paint from.
  *
  * <p><strong>Architecture (load-bearing, locked by the S1 spike — design doc {@code
  * elwha-progress-indicator-design.md} §2).</strong> Progress indicators are dedicated {@link
  * JComponent}s backed by a {@link BoundedRangeModel} ({@link DefaultBoundedRangeModel}) — the
  * {@code ElwhaSlider} precedent — <em>not</em> {@code JProgressBar} subclasses and <em>not</em>
- * {@code ProgressBarUI} delegates: the updated-M3 anatomy (track-active gap, stop indicator,
- * wavy active path) has no counterpart in {@code BasicProgressBarUI}'s box-fill layout, and the
- * shared model means a consumer can drive a slider and a progress readout off one instance.
+ * {@code ProgressBarUI} delegates: the updated-M3 anatomy (track-active gap, stop indicator, wavy
+ * active path) has no counterpart in {@code BasicProgressBarUI}'s box-fill layout, and the shared
+ * model means a consumer can drive a slider and a progress readout off one instance.
  *
  * <p><strong>Modes.</strong> Determinate (the default) fills toward {@link #getProgressFraction()}
  * of the run; {@linkplain #setIndeterminate(boolean) indeterminate} loops the current-M3
  * choreography (design §6). <strong>Shapes.</strong> {@linkplain #setWavy(boolean) Wavy} turns the
  * active indicator into a traveling sine wave (Expressive); the track always stays flat.
  *
- * <p><strong>Animation clock.</strong> One {@link Timer} ticks at ~60fps <em>only while
- * something animates</em> — indeterminate mode, a moving wave, or an amplitude transition — and
- * only while the component is showing (hierarchy-gated; stopped on {@link #removeNotify()}).
- * Determinate flat indicators never run the clock.
+ * <p><strong>Animation clock.</strong> One {@link Timer} ticks at ~60fps <em>only while something
+ * animates</em> — indeterminate mode, a moving wave, or an amplitude transition — and only while
+ * the component is showing (hierarchy-gated; stopped on {@link #removeNotify()}). Determinate flat
+ * indicators never run the clock.
  *
  * <p>Progress indicators are <strong>non-interactive</strong>: no hover/focus/pressed states, not
  * focusable. Name the activity for assistive tech via {@code
@@ -231,8 +231,8 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
   }
 
   /**
-   * Whether the indicator loops the indeterminate choreography instead of filling toward the
-   * model value.
+   * Whether the indicator loops the indeterminate choreography instead of filling toward the model
+   * value.
    *
    * @return {@code true} when indeterminate
    * @version v0.4.0
@@ -384,8 +384,8 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
   }
 
   /**
-   * Switches the active indicator between flat and wavy. The amplitude transition animates (500ms
-   * — design §6); preferred size grows to reserve the wave band, so this revalidates.
+   * Switches the active indicator between flat and wavy. The amplitude transition animates (500ms —
+   * design §6); preferred size grows to reserve the wave band, so this revalidates.
    *
    * @param wavy {@code true} for the wavy shape
    * @version v0.4.0
@@ -536,8 +536,8 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
   }
 
   /**
-   * The animated wave-amplitude fraction in {@code [0, 1]} — ramps with determinate progress
-   * (zero outside {@code (0.10, 0.95)}) and crossfades flat↔wavy (design §6).
+   * The animated wave-amplitude fraction in {@code [0, 1]} — ramps with determinate progress (zero
+   * outside {@code (0.10, 0.95)}) and crossfades flat↔wavy (design §6).
    *
    * @return the amplitude fraction
    * @version v0.4.0
@@ -594,7 +594,8 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
   final void updateAnimationDemand() {
     final boolean waveMoving = wavy && getWaveSpeed() > 0f && amplitudeTargetNow() > 0f;
     final boolean transition =
-        amplitudeAnimStartNanos >= 0L || Math.abs(amplitudeFraction - amplitudeTargetNow()) > 0.001f;
+        amplitudeAnimStartNanos >= 0L
+            || Math.abs(amplitudeFraction - amplitudeTargetNow()) > 0.001f;
     final boolean needed = isShowing() && (indeterminate || waveMoving || transition);
     if (needed) {
       if (!clock.isRunning()) {

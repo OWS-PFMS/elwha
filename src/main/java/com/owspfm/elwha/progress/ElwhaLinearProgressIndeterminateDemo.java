@@ -18,9 +18,9 @@ import javax.swing.WindowConstants;
 
 /**
  * Throwaway S2 playground (story #470) — proves the {@link ElwhaLinearProgressIndicator}
- * indeterminate motion: the 1750ms two-line cycle with track spans + gaps around each moving
- * line, no stop dot, thickness/RTL parity with determinate, and a clean
- * determinate↔indeterminate round-trip (value preserved; the clock stops with the mode).
+ * indeterminate motion: the 1750ms two-line cycle with track spans + gaps around each moving line,
+ * no stop dot, thickness/RTL parity with determinate, and a clean determinate↔indeterminate
+ * round-trip (value preserved; the clock stops with the mode).
  *
  * @author Charles Bryan
  * @version v0.4.0

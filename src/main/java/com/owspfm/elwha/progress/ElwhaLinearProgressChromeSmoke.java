@@ -10,11 +10,11 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
 /**
- * Headless render guard for the S1 {@link ElwhaLinearProgressIndicator} chrome (story #469).
- * Paints determinate bars offscreen and asserts the updated-M3 anatomy: active ({@code PRIMARY})
- * on the leading side, track ({@code SECONDARY_CONTAINER}) on the trailing side, an empty
- * track-active gap, the trailing {@code PRIMARY} stop dot, its hide-on-arrival at 100%, and RTL
- * mirroring. Runs in CI's headless JVM.
+ * Headless render guard for the S1 {@link ElwhaLinearProgressIndicator} chrome (story #469). Paints
+ * determinate bars offscreen and asserts the updated-M3 anatomy: active ({@code PRIMARY}) on the
+ * leading side, track ({@code SECONDARY_CONTAINER}) on the trailing side, an empty track-active
+ * gap, the trailing {@code PRIMARY} stop dot, its hide-on-arrival at 100%, and RTL mirroring. Runs
+ * in CI's headless JVM.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -46,14 +46,18 @@ public final class ElwhaLinearProgressChromeSmoke {
     final int midY = 2;
 
     check("active (PRIMARY) on the leading side", nearColor(img.getRGB(8, midY), primary));
-    check("track (SECONDARY_CONTAINER) on the trailing side", nearColor(img.getRGB(200, midY), track));
+    check(
+        "track (SECONDARY_CONTAINER) on the trailing side",
+        nearColor(img.getRGB(200, midY), track));
     final int head = (int) (0.60f * W);
     check("track-active gap is empty", isClear(img.getRGB(head + 2, midY)));
     check("stop dot (PRIMARY) at the trailing end", nearColor(img.getRGB(W - 2, midY), primary));
 
     final ElwhaLinearProgressIndicator full = new ElwhaLinearProgressIndicator(0, 100, 100);
     final BufferedImage fullImg = paint(full, 4);
-    check("100%: bar is all active at the trailing end", nearColor(fullImg.getRGB(W - 8, midY), primary));
+    check(
+        "100%: bar is all active at the trailing end",
+        nearColor(fullImg.getRGB(W - 8, midY), primary));
     boolean anyTrack = false;
     for (int x = 0; x < W; x += 2) {
       anyTrack |= nearColor(fullImg.getRGB(x, midY), track);
@@ -80,9 +84,7 @@ public final class ElwhaLinearProgressChromeSmoke {
     thick.setTrackThickness(8);
     final BufferedImage thickImg = paint(thick, 8);
     check("thick 8px: active paints at full thickness", nearColor(thickImg.getRGB(8, 1), primary));
-    check(
-        "thick 8px: preferred height follows thickness",
-        thick.getPreferredSize().height == 8);
+    check("thick 8px: preferred height follows thickness", thick.getPreferredSize().height == 8);
 
     check("fraction clamps on a degenerate range", degenerateFractionIsZero());
 

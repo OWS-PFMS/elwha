@@ -10,11 +10,10 @@ import java.awt.image.BufferedImage;
 
 /**
  * Headless guard for the S3 {@link ElwhaLinearProgressIndicator} wavy shape (story #471). Paints
- * wavy bars offscreen and asserts: the active span displaces above and below the centerline
- * (crest + trough) while the track stays flat, the determinate amplitude ramp flattens at ≤10%
- * and ≥95% progress, the wave band grows the preferred height (10px / 14px thick), the
- * indeterminate wave renders, and the wavelength/speed knobs hold their contracts. Runs in CI's
- * headless JVM.
+ * wavy bars offscreen and asserts: the active span displaces above and below the centerline (crest
+ * + trough) while the track stays flat, the determinate amplitude ramp flattens at ≤10% and ≥95%
+ * progress, the wave band grows the preferred height (10px / 14px thick), the indeterminate wave
+ * renders, and the wavelength/speed knobs hold their contracts. Runs in CI's headless JVM.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -58,16 +57,13 @@ public final class ElwhaLinearProgressWavySmoke {
     final ElwhaLinearProgressIndicator low = ElwhaLinearProgressIndicator.wavy();
     low.setValue(5);
     final BufferedImage lowImg = paint(low, H);
-    check(
-        "ramp: ≤10% paints flat",
-        colorWithinBand(lowImg, primary, 0, 24, MID_Y - 2, MID_Y + 2));
+    check("ramp: ≤10% paints flat", colorWithinBand(lowImg, primary, 0, 24, MID_Y - 2, MID_Y + 2));
 
     final ElwhaLinearProgressIndicator high = ElwhaLinearProgressIndicator.wavy();
     high.setValue(97);
     final BufferedImage highImg = paint(high, H);
     check(
-        "ramp: ≥95% paints flat",
-        colorWithinBand(highImg, primary, 0, 220, MID_Y - 2, MID_Y + 2));
+        "ramp: ≥95% paints flat", colorWithinBand(highImg, primary, 0, 220, MID_Y - 2, MID_Y + 2));
 
     final ElwhaLinearProgressIndicator thick = ElwhaLinearProgressIndicator.wavy();
     thick.setTrackThickness(8);

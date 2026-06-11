@@ -9,11 +9,11 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
 /**
- * Headless guard for the S2 {@link ElwhaLinearProgressIndicator} indeterminate motion (story
- * #470). Samples the 1750ms two-line cycle offscreen and asserts: the paint moves between
- * samples, a two-line moment occurs, lines stay separated from track spans by empty gaps, the
- * animation clock never runs while the component is hidden, and the determinate↔indeterminate
- * round-trip restores the value chrome (stop dot included). Runs in CI's headless JVM.
+ * Headless guard for the S2 {@link ElwhaLinearProgressIndicator} indeterminate motion (story #470).
+ * Samples the 1750ms two-line cycle offscreen and asserts: the paint moves between samples, a
+ * two-line moment occurs, lines stay separated from track spans by empty gaps, the animation clock
+ * never runs while the component is hidden, and the determinate↔indeterminate round-trip restores
+ * the value chrome (stop dot included). Runs in CI's headless JVM.
  *
  * @author Charles Bryan
  * @version v0.4.0
@@ -50,7 +50,8 @@ public final class ElwhaLinearProgressIndeterminateSmoke {
     int framesWithLine = 0;
     int frames = 0;
     int[] previousSegments = null;
-    for (long deadline = System.currentTimeMillis() + 1900; System.currentTimeMillis() < deadline; ) {
+    for (long deadline = System.currentTimeMillis() + 1900;
+        System.currentTimeMillis() < deadline; ) {
       final BufferedImage img = paint(bar);
       final int[] segments = primarySegments(img, primary);
       frames++;
@@ -61,7 +62,8 @@ public final class ElwhaLinearProgressIndeterminateSmoke {
         twoLineMoments++;
       }
       if (previousSegments != null
-          && (segments[0] != previousSegments[0] || Math.abs(segments[1] - previousSegments[1]) > 2)) {
+          && (segments[0] != previousSegments[0]
+              || Math.abs(segments[1] - previousSegments[1]) > 2)) {
         movingSamples++;
       }
       previousSegments = segments;
