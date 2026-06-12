@@ -79,6 +79,8 @@ public class ElwhaColorPicker extends JComponent {
   private boolean committing;
   private boolean rebuilding;
   private boolean alphaEnabled;
+  private boolean eyedropperEnabled;
+  private ScreenSampler sampler;
   private String supportingText = "Select color";
 
   /**
@@ -324,6 +326,61 @@ public class ElwhaColorPicker extends JComponent {
   }
 
   /**
+   * Opts the picker into the <strong>eyedropper</strong> (V2 design doc {@code
+   * elwha-color-picker-v2-design.md} §4): a colorize icon button at the header's trailing edge
+   * opens a frozen-capture screen sampler — click or Enter picks any on-screen pixel as a settled
+   * commit (current alpha preserved when alpha is enabled), Esc cancels, arrows nudge by one pixel.
+   *
+   * <p><strong>macOS requires the Screen Recording permission</strong> for captures to include
+   * other applications' windows, and a denial is not detectable in code (the capture silently shows
+   * only the wallpaper and this JVM's windows) — which is why the affordance is opt-in. Headless
+   * environments and {@code Robot} construction failures hide the affordance automatically.
+   *
+   * @param eyedropperEnabled whether the header offers the eyedropper
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setEyedropperEnabled(final boolean eyedropperEnabled) {
+    if (this.eyedropperEnabled == eyedropperEnabled) {
+      return;
+    }
+    this.eyedropperEnabled = eyedropperEnabled;
+    header.refreshEyedropper();
+  }
+
+  /**
+   * Answers whether the eyedropper affordance is enabled.
+   *
+   * @return {@code true} when the header offers the eyedropper
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public boolean isEyedropperEnabled() {
+    return eyedropperEnabled;
+  }
+
+  void openEyedropper() {
+    if (!isEnabled() || !eyedropperEnabled || sampler != null) {
+      return;
+    }
+    sampler =
+        new ScreenSampler(
+            sampled ->
+                commitInternal(
+                    null,
+                    alphaEnabled
+                        ? new Color(
+                            sampled.getRed(),
+                            sampled.getGreen(),
+                            sampled.getBlue(),
+                            color.getAlpha())
+                        : sampled,
+                    false),
+            () -> sampler = null);
+    sampler.open();
+  }
+
+  /**
    * Returns the user's saved swatches in grid order. Never {@code null}; an immutable snapshot.
    *
    * @return the saved colors
@@ -514,6 +571,7 @@ public class ElwhaColorPicker extends JComponent {
     for (final ColorPickerPane pane : panes.values()) {
       pane.setEnabled(enabled);
     }
+    header.refreshEyedropper();
     repaint();
   }
 

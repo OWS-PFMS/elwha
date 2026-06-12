@@ -15,10 +15,12 @@ import java.awt.RenderingHints;
 import javax.swing.JComponent;
 
 /**
- * The picker's M3 header (design doc {@code elwha-color-picker-design.md} §4): supporting text
- * naming the task, a headline row rendering the pending selection — a bordered preview swatch
- * beside the uppercase hex readout — and the divider that closes the header, mirroring the M3
- * date/time-picker header anatomy. Display-only; hex <em>entry</em> lives in the SLIDERS pane.
+ * The picker's M3 header (design docs {@code elwha-color-picker-design.md} §4 and V2 {@code
+ * elwha-color-picker-v2-design.md} §4): supporting text naming the task, a headline row rendering
+ * the pending selection — a bordered preview swatch beside the uppercase hex readout, with the
+ * opt-in eyedropper icon button at the trailing edge — and the divider that closes the header,
+ * mirroring the M3 date/time-picker header anatomy. Display-only beyond the eyedropper; hex
+ * <em>entry</em> lives in the SLIDERS pane.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -29,10 +31,44 @@ final class ColorPickerHeader extends JComponent {
   private static final int SWATCH_SIZE = 40;
 
   private final ElwhaColorPicker picker;
+  private final com.owspfm.elwha.iconbutton.ElwhaIconButton eyedropper;
 
   ColorPickerHeader(final ElwhaColorPicker picker) {
     this.picker = picker;
     setOpaque(false);
+    this.eyedropper =
+        com.owspfm.elwha.iconbutton.ElwhaIconButton.standardIconButton(
+            com.owspfm.elwha.icons.MaterialIcons.colorize(20));
+    eyedropper.getAccessibleContext().setAccessibleName("Pick color from screen");
+    eyedropper.addActionListener(e -> picker.openEyedropper());
+    eyedropper.setVisible(false);
+    add(eyedropper);
+  }
+
+  void refreshEyedropper() {
+    eyedropper.setVisible(picker.isEyedropperEnabled() && ScreenSampler.isSupported());
+    eyedropper.setEnabled(picker.isEnabled());
+    revalidate();
+    repaint();
+  }
+
+  boolean isEyedropperShowing() {
+    return eyedropper.isVisible();
+  }
+
+  @Override
+  public void doLayout() {
+    if (!eyedropper.isVisible()) {
+      return;
+    }
+    final int pad = SpaceScale.LG.px();
+    int y = pad;
+    if (picker.getSupportingText() != null) {
+      y += fontHeight(TypeRole.LABEL_LARGE.resolve()) + SpaceScale.MD.px();
+    }
+    final Dimension size = eyedropper.getPreferredSize();
+    final int x = getComponentOrientation().isLeftToRight() ? getWidth() - pad - size.width : pad;
+    eyedropper.setBounds(x, y + (SWATCH_SIZE - size.height) / 2, size.width, size.height);
   }
 
   @Override
