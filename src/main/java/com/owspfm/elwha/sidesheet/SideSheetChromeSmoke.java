@@ -44,14 +44,56 @@ public final class SideSheetChromeSmoke {
     checkApiDefaults();
     checkSlots();
     checkIcon();
+    checkFooterWrap();
     checkChromePixels();
     ElwhaTheme.install(
         ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(Mode.DARK).build());
     checkChromePixels();
 
     System.out.println(
-        "SideSheetChromeSmoke: OK (API defaults, slots, arrowBack glyph, light+dark"
+        "SideSheetChromeSmoke: OK (API defaults, slots, arrowBack glyph, footer wrap, light+dark"
             + " standard/modal chrome pixels, both edges)");
+  }
+
+  // Two actions too wide for one 256px row must wrap to a second row that the footer GROWS to
+  // contain — the stock-FlowLayout failure mode clipped the wrapped row off the sheet's bottom
+  // edge (#464 smoke loop).
+  private static void checkFooterWrap() {
+    final ElwhaSideSheet sheet = ElwhaSideSheet.modalSheet("Wrap");
+    final ElwhaButton first = ElwhaButton.filledButton("Apply & dismiss");
+    final ElwhaButton second = ElwhaButton.textButton("Stay open");
+    sheet.setActions(first, second);
+    sheet.setSize(256, 480);
+    layoutTree(sheet);
+
+    check("wide action pair wraps to a second row", second.getY() > first.getY());
+    final int secondBottomInSheet = bottomInSheet(second, sheet);
+    check(
+        "wrapped action stays fully inside the sheet",
+        secondBottomInSheet > 0 && secondBottomInSheet <= 480);
+
+    final ElwhaButton shortOne = ElwhaButton.filledButton("Save");
+    final ElwhaButton shortTwo = ElwhaButton.outlinedButton("Cancel");
+    sheet.setActions(shortOne, shortTwo);
+    layoutTree(sheet);
+    check("short action pair stays on one row", shortOne.getY() == shortTwo.getY());
+  }
+
+  private static int bottomInSheet(final java.awt.Component c, final ElwhaSideSheet sheet) {
+    int y = c.getHeight();
+    for (java.awt.Component walk = c; walk != null && walk != sheet; walk = walk.getParent()) {
+      y += walk.getY();
+    }
+    return y;
+  }
+
+  private static void layoutTree(final java.awt.Container root) {
+    root.doLayout();
+    for (final java.awt.Component child : root.getComponents()) {
+      if (child instanceof java.awt.Container nested) {
+        layoutTree(nested);
+      }
+    }
   }
 
   private static void checkApiDefaults() {

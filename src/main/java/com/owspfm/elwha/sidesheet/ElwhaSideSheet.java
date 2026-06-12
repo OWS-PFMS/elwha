@@ -15,6 +15,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.ComponentOrientation;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -109,7 +110,7 @@ public final class ElwhaSideSheet extends JComponent {
   private final JPanel footer = new JPanel(new BorderLayout());
   private final FooterDivider footerDivider = new FooterDivider();
   private final JPanel actionsRow =
-      new JPanel(new FlowLayout(FlowLayout.LEADING, SpaceScale.MD.px(), 0));
+      new JPanel(new WrapFlowLayout(FlowLayout.LEADING, SpaceScale.MD.px(), SpaceScale.SM.px()));
 
   /**
    * Creates a {@link SheetType#STANDARD} sheet with the given headline — the convenience
@@ -154,9 +155,11 @@ public final class ElwhaSideSheet extends JComponent {
     contentHolder.setOpaque(false);
 
     actionsRow.setOpaque(false);
+    // The flow layout contributes its own hgap/vgap at the row edges, so the border carries the
+    // remainder of the 16/24/24 redline paddings (border + gap = the design values).
     actionsRow.setBorder(
         BorderFactory.createEmptyBorder(
-            SpaceScale.LG.px(), SpaceScale.XL.px(), SpaceScale.XL.px(), SpaceScale.XL.px()));
+            SpaceScale.SM.px(), SpaceScale.MD.px(), SpaceScale.LG.px(), SpaceScale.MD.px()));
     footer.setOpaque(false);
     footer.add(footerDivider, BorderLayout.NORTH);
     footer.add(actionsRow, BorderLayout.CENTER);
@@ -912,6 +915,71 @@ public final class ElwhaSideSheet extends JComponent {
     @Override
     public Color getForeground() {
       return ColorRole.ON_SURFACE.resolve();
+    }
+  }
+
+  // A FlowLayout whose preferred/minimum size accounts for wrapping at the row's realized width.
+  // The stock FlowLayout always reports the single-row size, so a fixed-width sheet whose actions
+  // overflow the row would wrap them during layout but never grow the footer — clipping the
+  // wrapped row off the sheet's bottom edge (found in the #464 smoke loop).
+  private static final class WrapFlowLayout extends FlowLayout {
+
+    WrapFlowLayout(final int align, final int hgap, final int vgap) {
+      super(align, hgap, vgap);
+    }
+
+    @Override
+    public Dimension preferredLayoutSize(final Container target) {
+      return wrappedSize(target, true);
+    }
+
+    @Override
+    public Dimension minimumLayoutSize(final Container target) {
+      return wrappedSize(target, false);
+    }
+
+    private Dimension wrappedSize(final Container target, final boolean preferred) {
+      synchronized (target.getTreeLock()) {
+        // The row's own width is 0 until its first layout pass; the nearest sized ancestor (the
+        // sheet body, whose bounds are set before its children are laid out) stands in so the
+        // very first pass already wraps at the real width.
+        int targetWidth = 0;
+        for (Container walk = target; walk != null; walk = walk.getParent()) {
+          if (walk.getWidth() > 0) {
+            targetWidth = walk.getWidth();
+            break;
+          }
+        }
+        if (targetWidth == 0) {
+          targetWidth = Integer.MAX_VALUE;
+        }
+        final Insets insets = target.getInsets();
+        final int maxRowWidth = targetWidth - insets.left - insets.right - getHgap() * 2;
+        int rowWidth = 0;
+        int rowHeight = 0;
+        int width = 0;
+        int height = insets.top + insets.bottom + getVgap() * 2;
+        boolean firstInRow = true;
+        for (final Component child : target.getComponents()) {
+          if (!child.isVisible()) {
+            continue;
+          }
+          final Dimension d = preferred ? child.getPreferredSize() : child.getMinimumSize();
+          if (!firstInRow && rowWidth + getHgap() + d.width > maxRowWidth) {
+            width = Math.max(width, rowWidth);
+            height += rowHeight + getVgap();
+            rowWidth = 0;
+            rowHeight = 0;
+            firstInRow = true;
+          }
+          rowWidth += (firstInRow ? 0 : getHgap()) + d.width;
+          rowHeight = Math.max(rowHeight, d.height);
+          firstInRow = false;
+        }
+        width = Math.max(width, rowWidth);
+        height += rowHeight;
+        return new Dimension(width + insets.left + insets.right + getHgap() * 2, height);
+      }
     }
   }
 
