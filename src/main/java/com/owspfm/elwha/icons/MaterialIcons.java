@@ -44,7 +44,7 @@ import javax.swing.UIManager;
  * components.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public final class MaterialIcons {
@@ -407,6 +407,53 @@ public final class MaterialIcons {
    */
   public static FlatSVGIcon check(final int size) {
     return load("check", size);
+  }
+
+  /**
+   * Gradient glyph (outline) — the color picker's spectrum-mode tab.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon gradient() {
+    return gradient(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #gradient()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon gradient(final int size) {
+    return load("gradient", size);
+  }
+
+  /**
+   * Tune / sliders glyph — the color picker's sliders-mode tab. Pure linework: the fill axis adds
+   * nothing, so no filled companion is bundled.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon tune() {
+    return tune(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #tune()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon tune(final int size) {
+    return load("tune", size);
   }
 
   /**
