@@ -118,7 +118,25 @@ final class SlidersPane extends ColorPickerPane {
             });
 
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-    add(modelToggle);
+    // The toggle and hex field share one header row: the hex field's always-reserved
+    // supporting-text line then sits mid-pane instead of hovering above the dialog's action row
+    // (smoke-iterate finding), and the pane loses a full row of height.
+    final JPanel toggleWrap = new JPanel(new java.awt.BorderLayout());
+    toggleWrap.setOpaque(false);
+    toggleWrap.setBorder(javax.swing.BorderFactory.createEmptyBorder(SpaceScale.XS.px(), 0, 0, 0));
+    toggleWrap.add(modelToggle, java.awt.BorderLayout.NORTH);
+    final JPanel headerRow =
+        new JPanel(new java.awt.BorderLayout(SpaceScale.SM.px(), 0)) {
+          @Override
+          public java.awt.Dimension getMaximumSize() {
+            return new java.awt.Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+          }
+        };
+    headerRow.setOpaque(false);
+    headerRow.setAlignmentX(LEFT_ALIGNMENT);
+    headerRow.add(toggleWrap, java.awt.BorderLayout.LINE_START);
+    headerRow.add(hexField, java.awt.BorderLayout.CENTER);
+    add(headerRow);
     add(Box.createVerticalStrut(SpaceScale.SM.px()));
     add(rowsHost);
     if (picker.isAlphaEnabled()) {
@@ -130,8 +148,6 @@ final class SlidersPane extends ColorPickerPane {
     } else {
       this.alphaRow = null;
     }
-    add(Box.createVerticalStrut(SpaceScale.SM.px()));
-    add(hexField);
     refresh(picker.getColor());
   }
 

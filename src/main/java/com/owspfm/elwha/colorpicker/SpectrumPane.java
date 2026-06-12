@@ -40,7 +40,9 @@ import javax.swing.KeyStroke;
  */
 final class SpectrumPane extends ColorPickerPane {
 
-  private static final int SV_BOX_HEIGHT = 168;
+  // 146 equalizes the spectrum and sliders cards (230px with alpha, 198 without) so the
+  // CardLayout host never pads the shorter one with dead space before the dialog's action row.
+  private static final int SV_BOX_HEIGHT = 146;
 
   private final SvBox svBox;
   private final ColorTrackSlider hueSlider;

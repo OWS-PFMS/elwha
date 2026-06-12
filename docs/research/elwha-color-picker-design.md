@@ -51,14 +51,14 @@
 
 ## §6 SPECTRUM pane (S3)
 
-- **SV box**: full pane width, 168px tall, SM-corner clip, 1px OUTLINE_VARIANT border. x = saturation 0→1, y = value 1→0. Backing `BufferedImage` cached per (hue, size). Thumb = 16px ring (2px SURFACE ring + 1px OUTLINE inner ring) centered on (s,v); press/drag anywhere repositions (adjusting during drag).
+- **SV box**: full pane width, 146px tall (build amendment: equalizes the spectrum/sliders card heights so the mode host never pads before the dialog action row; was 168), SM-corner clip, 1px OUTLINE_VARIANT border. x = saturation 0→1, y = value 1→0. Backing `BufferedImage` cached per (hue, size). Thumb = 16px ring (2px SURFACE ring + 1px OUTLINE inner ring) centered on (s,v); press/drag anywhere repositions (adjusting during drag).
 - **Hue `ColorTrackSlider`** below (0–360, six-stop rainbow gradient). Alpha track appended when enabled (S6).
 - **Hue preservation**: pane owns float `h,s,v` while it is the commit source; external `setColor` resyncs h/s/v from the Color (s=0 keeps previous h; v=0 keeps previous h,s). The SV box hue never snaps to red when dragging through greys.
 - Keyboard: SV box focusable — arrows ±0.01 s/v, PgUp/PgDn ±0.10; sliders per §7 bindings.
 
 ## §7 SLIDERS pane (S4)
 
-- Sub-toggle: connected `ElwhaButtonGroup`, segments "RGB" / "HSV", single-mandatory, default RGB.
+- Header row (build amendment): the connected `ElwhaButtonGroup` sub-toggle ("RGB" / "HSV", single-mandatory, default RGB) and the hex field share one row — the field's reserved supporting-text line then sits mid-pane instead of above the dialog's action row.
 - `ColorTrackSlider` rows: label (LABEL_LARGE, 16px col) + track + value (BODY_MEDIUM, right-aligned 40px col). RGB: R/G/B 0–255, each track sweeps its channel with the others held current. HSV: H 0–360 rainbow, S 0–100 (grey→full at current h,v), V 0–100 (black→full at current h,s).
 - Slider bindings: Left/Right ±1 · PgUp/PgDn ±10 · Home/End min/max. Drag = adjusting; release commits.
 - **Hex `ElwhaTextField`** (outlined, label "Hex"): accepts `#RRGGBB`, `#RGB` (expanded), + `#RRGGBBAA`/`#RGBA` when alpha enabled; '#' optional on entry, normalized uppercase-with-# on commit. Commit on Enter and focus-loss; invalid → error state + supporting text (`Use #RRGGBB` / `Use #RRGGBB or #RRGGBBAA`), reverts on focus-loss if still invalid.
