@@ -141,7 +141,7 @@ import javax.swing.event.DocumentListener;
  * -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"}
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaShowcase {
@@ -782,6 +782,20 @@ public final class ElwhaShowcase {
             buildRadioButtonComponent()));
     register(
         new LeafEntry(
+            "Color picker",
+            "ElwhaColorPicker — the M3 picker grammar applied to color: swatches, spectrum, and"
+                + " slider/hex modes, opt-in alpha, and the pending-until-OK dialog.",
+            AREA_COMPONENTS,
+            buildColorPickerComponent()));
+    register(
+        new LeafEntry(
+            "Tooltip",
+            "M3 tooltips — plain inverse-surface labels and rich cards with subhead, supporting"
+                + " text, and actions; hover/focus triggers, persistent flavor.",
+            AREA_COMPONENTS,
+            TooltipShowcasePanels.buildComponent()));
+    register(
+        new LeafEntry(
             "Side Sheet",
             "M3 side sheet — standard (docked, reflowing) + modal (scrim overlay) supplementary"
                 + " surface with header, content, and action footer.",
@@ -820,7 +834,7 @@ public final class ElwhaShowcase {
 
   // The four landing cards, populated into the CardLayout content panel. Each is a grid of
   // ElwhaCards — title + supporting text + an actionable click that routes to the leaf surface.
-  // Home is the master index (all 19 leaves, grouped by area heading); each area landing covers
+  // Home is the master index (all 21 leaves, grouped by area heading); each area landing covers
   // just its own leaves. ElwhaCard's actionable mode is the entire raison-d'être here: the cards
   // are the navigation surface, not decoration.
   private void populateLandingCards() {
@@ -1985,6 +1999,20 @@ public final class ElwhaShowcase {
             stack(
                 gallerySection(
                     "States & configurations", RadioButtonShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- color picker
+
+  private static JComponent buildColorPickerComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", ColorPickerShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection(
+                    "Modes & configurations", ColorPickerShowcasePanels.buildGallery()))));
     return tabs;
   }
 
