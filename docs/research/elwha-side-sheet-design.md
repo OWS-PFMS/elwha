@@ -11,7 +11,7 @@
 
 1. **One component, two presentation paths.** `ElwhaSideSheet` is a single surface component (`com.owspfm.elwha.sidesheet`). **Standard** = the consumer embeds it in their layout and toggles `open()`/`close()` (content reflows — Swing embedding gives M3's *coplanar* behavior by construction). **Modal** = `showModal(parent)` mounts it through an internal `AbstractElwhaOverlay` host with scrim, slide-in, focus trap. (§2, §3)
 2. **Modal z-band = `ElwhaLayers.OVERLAY_LAYER` (190)** — below dialogs (200), below menus (300): a dialog or menu opened *from* a sheet stacks above it. Pre-decided by #221 + menu design doc §12. (§2)
-3. **Type-derived chrome, zero new tokens.** `SheetType.STANDARD`: `SURFACE`, elevation 0, square corners, optional 1px `OUTLINE_VARIANT` edge divider. `SheetType.MODAL`: `SURFACE_CONTAINER_LOW`, elevation 1 shadow, `ShapeScale.LG` (16px) on the **content-facing corners only**. (§6, §7)
+3. **Type-derived chrome, zero new tokens.** `SheetType.STANDARD`: `SURFACE`, square corners, optional 1px `OUTLINE_VARIANT` edge divider. `SheetType.MODAL`: `SURFACE_CONTAINER_LOW`, `ShapeScale.LG` (16px) on the **content-facing corners only**. **Neither type paints a drop shadow** — the spec renders show the modal sheet flat over its scrim; the `container.elevation level1` token is not expressed as a shadow (research §B correction, locked in the 2026-06-11 smoke loop). (§6, §7)
 4. **Anatomy slots:** header (optional back affordance · `TITLE_LARGE` headline · optional close affordance), content slot, optional footer (divider + `ElwhaButton` actions). All M3 nouns. (§7, §8)
 5. **Width 256px default** (`docked.container.width`), `setSheetWidth(int)`; modal clamps to the window, spec max 400 documented not enforced. (§4)
 6. **Edge anchoring:** `SheetEdge.TRAILING` (default) / `LEADING`, resolved against `ComponentOrientation` — drives corner asymmetry, divider edge, slide direction. (§11)
@@ -44,7 +44,7 @@ The side sheet is unchanged by the Expressive pass (no deprecated baseline form,
 
 **One surface component + an internal modal overlay host.**
 
-- `ElwhaSideSheet extends JComponent` — the sheet surface itself: chrome painting (container color, asymmetric corners, shadow, edge divider) + header/content/footer assembly. It is a real component, so the **standard** path is plain Swing embedding (`BorderLayout.LINE_END`, a split layout, etc.).
+- `ElwhaSideSheet extends JComponent` — the sheet surface itself: chrome painting (container color, asymmetric corners, edge divider) + header/content/footer assembly. It is a real component, so the **standard** path is plain Swing embedding (`BorderLayout.LINE_END`, a split layout, etc.).
 - `SideSheetOverlay` (package-private) `extends AbstractElwhaOverlay` — the **modal** path. Pins: `overlayLayer() = ElwhaLayers.OVERLAY_LAYER` (190); `lightDismiss() = false` (focus-trap posture; scrim-click dismissal is an explicit backdrop listener honoring `isDismissibleByScrim()`, dialog precedent); `createBackdrop()` = the 32% `SCRIM` veil reusing the dialog's scrim treatment; `createSurface()` = the sheet instance; `layoutSurface()` = full-height band hugged to the resolved edge, width = `min(sheetWidth, paneWidth)`; Esc binding honoring `isDismissibleByEsc()`.
 - Why not extend `AbstractElwhaDialog`: it's package-private in `dialog/` and contributes only the modal posture + the *dialog's* cause vocabulary — everything load-bearing already lives in `AbstractElwhaOverlay`, whose own Javadoc names #308 as its second consumer. The sheet host re-pins the same posture in ~the same line count without a cross-package dependency.
 - Why 190 not 200: a modal sheet is less interruptive than a dialog — M3 lets a dialog (confirmation) open *from* a sheet (filters). 190/200/300 gives sheet < dialog < menu, and `AbstractElwhaOverlay`'s topmost-overlay focus arbitration handles the rest.
@@ -76,9 +76,9 @@ The side sheet is unchanged by the Expressive pass (no deprecated baseline form,
 | | STANDARD | MODAL |
 |---|---|---|
 | Container | `ColorRole.SURFACE` | `ColorRole.SURFACE_CONTAINER_LOW` |
-| Elevation | 0 (no shadow) | 1 (`ShadowPainter`, shadow reserve per the `ShadowBearing` contract) |
+| Elevation | flat — no shadow | flat — no shadow (the `level1` token is not expressed as a drop shadow in the spec renders; research §B correction) |
 | Corners | `ShapeScale.NONE` (square) | `ShapeScale.LG` (16px) on the two content-facing corners; square on the window-edge corners |
-| Edge divider | 1px `OUTLINE_VARIANT` on the content-facing edge, default **visible** (`setEdgeDividerVisible`) — square-cornered surface-on-surface needs the boundary | none (corners + shadow + scrim carry the boundary) |
+| Edge divider | 1px `OUTLINE_VARIANT` on the content-facing edge, default **visible** (`setEdgeDividerVisible`) — square-cornered surface-on-surface needs the boundary | none (corners + scrim carry the boundary) |
 | Scrim | — | `ColorRole.SCRIM` @ **0.32f** (identical to the dialog scrim — reuse, don't re-derive) |
 
 Headline `ON_SURFACE`; affordance glyphs `ON_SURFACE_VARIANT` (the `ElwhaIconButton` standard-variant default).
@@ -144,7 +144,7 @@ public enum SheetDismissCause { CLOSE_AFFORDANCE, BACK_AFFORDANCE, SCRIM, ESC, P
 `STANDARD` · `TRAILING` · width 256 · open · close affordance on · back affordance off · dividers on (where applicable) · Esc + scrim dismissible · no actions · no content.
 
 ### §8.2 Convention adherence
-Effective-value getters only; per-variant static factories + single-arg convenience constructor; no `setBorderRole` (chrome is type-derived); `getShadowInsets()` via `ShadowBearing` (modal elevation 1); no `getMaximumSize = getPreferredSize` override (the #199 trap); `@author/@version v0.4.0/@since v0.4.0` Javadoc throughout; no comments unless a *why* demands it.
+Effective-value getters only; per-variant static factories + single-arg convenience constructor; no `setBorderRole` (chrome is type-derived); no `ShadowBearing` (both types render flat — research §B correction); no `getMaximumSize = getPreferredSize` override (the #199 trap); `@author/@version v0.4.0/@since v0.4.0` Javadoc throughout; no comments unless a *why* demands it.
 
 ## §9. Scrim & dismiss semantics (modal) [LOCKED]
 
@@ -209,6 +209,7 @@ Each story = fresh demo class ([[feedback_fresh_demo_per_story]]); a11y acceptan
 - **Hard 400px modal clamp rejected:** spec range documented instead — desktop detail panes legitimately exceed it; pre-1.0 no invented constraints; clamping to the window is the only structural limit.
 - **`setVisible(false)` for closed standard sheets rejected:** width-0 keeps animation symmetric and consumer layout code branch-free.
 - **275ms motion rejected** in favor of the lib-wide 300ms (`MEDIUM2_MS`) — see §13.
+- **Painted level-1 modal shadow removed (2026-06-11 smoke loop):** the initial build expressed the `container.elevation level1` token as a `ShadowPainter` shadow; the operator's spec-render screenshots show the modal sheet flat over its scrim — no shadow in any render. The shadow, the reserve machinery, and `ShadowBearing` were removed; separation is scrim + corners, per spec.
 - **Auto-dismiss on footer actions rejected** — see §5.
 
 ## Appendix B — Token reference

@@ -18,8 +18,9 @@ import javax.swing.SwingUtilities;
 /**
  * S1 visual smoke for {@link ElwhaSideSheet} static chrome (#459): a configuration matrix of
  * embedded sheets — standard (square, SURFACE, edge divider) vs modal chrome
- * (SURFACE_CONTAINER_LOW, level-1 shadow, 16px content-facing corners), close/back affordances,
- * footer actions with divider — plus a light/dark toggle to eyeball token-correctness.
+ * (SURFACE_CONTAINER_LOW, 16px content-facing corners, flat — no shadow per the spec renders),
+ * close/back affordances, footer actions with divider — plus a light/dark toggle to eyeball
+ * token-correctness.
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.4.0
@@ -47,10 +48,10 @@ public final class SideSheetAnatomyDemo {
     frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
     final ElwhaSideSheet standard = ElwhaSideSheet.standardSheet("Standard");
-    standard.setContent(filler("SURFACE · elev 0 · square · edge divider"));
+    standard.setContent(filler("SURFACE · square · edge divider"));
 
     final ElwhaSideSheet modal = ElwhaSideSheet.modalSheet("Modal chrome");
-    modal.setContent(filler("SURFACE_CONTAINER_LOW · elev 1 · 16px inner corners"));
+    modal.setContent(filler("SURFACE_CONTAINER_LOW · 16px inner corners · no shadow"));
     modal.setActions(ElwhaButton.filledButton("Save"), ElwhaButton.outlinedButton("Cancel"));
 
     final ElwhaSideSheet backFlow = ElwhaSideSheet.modalSheet("Step 2 of 3");

@@ -7,8 +7,6 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.MorphAnimator;
-import com.owspfm.elwha.theme.ShadowBearing;
-import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.SurfacePainter;
@@ -47,9 +45,10 @@ import javax.swing.JPanel;
  * ordinary page furniture: embed it in your layout (typically {@code BorderLayout.LINE_END}) where
  * it coexists with the main UI. A {@link SheetType#MODAL} sheet is presented over a scrim with
  * {@code showModal(parent)} and dismissed by Esc / scrim click / its affordances. The chrome —
- * container color, elevation, corner shape, edge divider — derives from the type ({@code SURFACE} /
- * flat / square / divider vs {@code SURFACE_CONTAINER_LOW} / level-1 shadow / 16px content-facing
- * corners / scrim); there are no raw chrome setters.
+ * container color, corner shape, edge divider — derives from the type ({@code SURFACE} / square /
+ * divider vs {@code SURFACE_CONTAINER_LOW} / 16px content-facing corners / scrim); there are no raw
+ * chrome setters, and neither type paints a drop shadow (the spec renders show the modal sheet flat
+ * over its scrim).
  *
  * <p><strong>Edge anchoring.</strong> {@link SheetEdge#TRAILING} (the M3 default) or {@link
  * SheetEdge#LEADING}, resolved against the component orientation at paint/layout time — the
@@ -72,13 +71,10 @@ import javax.swing.JPanel;
  * @version v0.4.0
  * @since v0.4.0
  */
-public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
+public final class ElwhaSideSheet extends JComponent {
 
   /** M3 docked side sheet container width ({@code md.comp.sheet.side.docked.container.width}). */
   public static final int SHEET_WIDTH_PX = 256;
-
-  /** M3 modal side sheet container elevation — Level 1 (research doc §B). */
-  static final int MODAL_ELEVATION = 1;
 
   private SheetType sheetType;
   private SheetEdge sheetEdge = SheetEdge.TRAILING;
@@ -749,10 +745,6 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
     return (sheetEdge == SheetEdge.TRAILING) == getComponentOrientation().isLeftToRight();
   }
 
-  private int elevation() {
-    return sheetType == SheetType.MODAL ? MODAL_ELEVATION : 0;
-  }
-
   private ColorRole containerRole() {
     return sheetType == SheetType.MODAL ? ColorRole.SURFACE_CONTAINER_LOW : ColorRole.SURFACE;
   }
@@ -766,33 +758,8 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
   }
 
   /**
-   * @return the chassis insets — the shadow-halo reserve required by the type's elevation (zero for
-   *     a standard sheet)
-   * @version v0.4.0
-   * @since v0.4.0
-   */
-  @Override
-  public Insets getInsets() {
-    return ShadowPainter.shadowInsets(elevation());
-  }
-
-  /**
-   * Returns this sheet's shadow-halo reserve — non-zero only for the modal type's level-1 shadow. A
-   * fresh copy each call, per the {@link ShadowBearing} contract.
-   *
-   * @return a fresh copy of the reserved halo insets
-   * @version v0.4.0
-   * @since v0.4.0
-   */
-  @Override
-  public Insets getShadowInsets() {
-    final Insets insets = getInsets();
-    return new Insets(insets.top, insets.left, insets.bottom, insets.right);
-  }
-
-  /**
-   * @return the current size — the sheet width scaled by the open/close animation progress, plus
-   *     the shadow reserve, at the anatomy's natural height
+   * @return the current size — the sheet width scaled by the open/close animation progress, at the
+   *     anatomy's natural height
    * @version v0.4.0
    * @since v0.4.0
    */
@@ -808,10 +775,10 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
   }
 
   /**
-   * Lays the anatomy body across the visible chassis (inside the shadow reserve). While the
-   * open/close animation is mid-flight the body stays pinned at the full sheet width — anchored so
-   * the visible portion is the one nearest the main content — and the shrinking chassis clips it:
-   * children keep their open-width layout instead of re-wrapping every tick (design doc §14).
+   * Lays the anatomy body across the chassis. While the open/close animation is mid-flight the body
+   * stays pinned at the full sheet width — anchored so the visible portion is the one nearest the
+   * main content — and the shrinking chassis clips it: children keep their open-width layout
+   * instead of re-wrapping every tick (design doc §14).
    *
    * @version v0.4.0
    * @since v0.4.0
@@ -827,9 +794,11 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
   }
 
   /**
-   * Paints the type-derived chrome: the level-1 shadow (modal), the container fill with the
-   * content-facing corners rounded (modal) or square (standard), and the content-facing edge
-   * divider (standard).
+   * Paints the type-derived chrome: the container fill with the content-facing corners rounded
+   * (modal) or square (standard), and the content-facing edge divider (standard). No shadow on
+   * either type — the M3 spec renders show the modal sheet flat over its scrim (the
+   * container-elevation token is not expressed as a drop shadow; research doc §B correction,
+   * 2026-06-11).
    *
    * @param g the graphics context
    * @version v0.4.0
@@ -848,19 +817,6 @@ public final class ElwhaSideSheet extends JComponent implements ShadowBearing {
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      if (elevation() > 0) {
-        // The shadow silhouette is a uniform-arc round rect while the body squares its window-edge
-        // corners; those corners sit flush against (or beyond) the window edge in every docked
-        // presentation, so the mismatch has nowhere to show. Revisit if a detached variant (#458)
-        // ever floats this chrome free of the edge.
-        final Graphics2D shadow = (Graphics2D) g2.create();
-        try {
-          shadow.translate(bodyX, bodyY);
-          ShadowPainter.paint(shadow, bodyW, bodyH, ShapeScale.LG.px(), elevation());
-        } finally {
-          shadow.dispose();
-        }
-      }
       final Graphics2D bodyG = (Graphics2D) g2.create(bodyX, bodyY, bodyW, bodyH);
       try {
         SurfacePainter.paint(bodyG, bodyW, bodyH, cornerRadii(), containerRole(), null, null, 0f);

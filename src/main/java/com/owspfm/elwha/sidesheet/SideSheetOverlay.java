@@ -8,7 +8,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -26,9 +25,9 @@ import javax.swing.KeyStroke;
  * AbstractElwhaOverlay} subclass behind {@link ElwhaSideSheet#showModal(Component)}. Pins the modal
  * side-sheet posture: {@code ElwhaLayers.OVERLAY_LAYER} (190, below dialogs and menus per #221), a
  * 32% {@code SCRIM} backdrop (the dialog's scrim treatment), the focus-trap dismiss policy, an
- * edge-docked full-height placement that hangs the shadow reserve off-pane so the body sits flush
- * against the window edge, and the slide-from-edge entrance/exit synchronized with the scrim fade.
- * One host instance serves one {@code showModal(...)}; the sheet constructs a fresh one per show.
+ * edge-docked full-height placement flush against the resolved window edge, and the slide-from-edge
+ * entrance/exit synchronized with the scrim fade. One host instance serves one {@code
+ * showModal(...)}; the sheet constructs a fresh one per show.
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.4.0
@@ -93,17 +92,12 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
     return sheet.isCloseAffordanceVisible() ? sheet.closeAffordanceButton() : null;
   }
 
-  // Docks the surface full-height against the resolved edge. The window-edge, top, and bottom
-  // shadow reserves hang off the pane so the visible body sits flush against the window edges;
-  // only the content-facing reserve stays on-pane, where the level-1 shadow actually shows.
+  // Docks the surface full-height, flush against the resolved window edge.
   @Override
   protected void layoutSurface(final int paneWidth, final int paneHeight) {
-    final Insets reserve = sheet.getShadowInsets();
     final int bodyW = Math.min(sheet.getSheetWidth(), paneWidth);
-    final int w = bodyW + reserve.left + reserve.right;
-    final int h = paneHeight + reserve.top + reserve.bottom;
-    final int x = sheet.isDockedRight() ? paneWidth - bodyW - reserve.left : -reserve.left;
-    surface.setBounds(x, -reserve.top, w, h);
+    final int x = sheet.isDockedRight() ? paneWidth - bodyW : 0;
+    surface.setBounds(x, 0, bodyW, paneHeight);
     surface.validate();
   }
 

@@ -80,22 +80,17 @@ public final class SideSheetChromeSmoke {
         "accessible name follows setHeadline",
         "Renamed".equals(sheet.getAccessibleContext().getAccessibleName()));
 
-    final Insets standardReserve = sheet.getShadowInsets();
-    check(
-        "standard sheet has no shadow reserve",
-        standardReserve.top == 0
-            && standardReserve.left == 0
-            && standardReserve.bottom == 0
-            && standardReserve.right == 0);
     sheet.setSheetType(SheetType.MODAL);
-    final Insets modalReserve = sheet.getShadowInsets();
+    final Insets modalInsets = sheet.getInsets();
     check(
-        "modal sheet reserves shadow halo",
-        modalReserve.top > 0 || modalReserve.left > 0 || modalReserve.bottom > 0);
+        "no chassis insets on either type (flat, no shadow reserve)",
+        modalInsets.top == 0
+            && modalInsets.left == 0
+            && modalInsets.bottom == 0
+            && modalInsets.right == 0);
     check(
-        "preferred width = sheet width + reserve",
-        sheet.getPreferredSize().width
-            == ElwhaSideSheet.SHEET_WIDTH_PX + modalReserve.left + modalReserve.right);
+        "preferred width = sheet width",
+        sheet.getPreferredSize().width == ElwhaSideSheet.SHEET_WIDTH_PX);
 
     sheet.setSheetWidth(-10);
     check("negative width clamps to 0", sheet.getSheetWidth() == 0);
@@ -147,28 +142,21 @@ public final class SideSheetChromeSmoke {
         rgbEquals(standard, 0, 0, ColorRole.OUTLINE_VARIANT.resolve()));
 
     final ElwhaSideSheet modalSheet = configured(SheetType.MODAL, SheetEdge.TRAILING, true);
-    final Insets reserve = modalSheet.getShadowInsets();
-    final int mw = W + reserve.left + reserve.right;
-    final int mh = H + reserve.top + reserve.bottom;
-    final BufferedImage modal = render(modalSheet, mw, mh);
+    final BufferedImage modal = render(modalSheet);
     final Color low = ColorRole.SURFACE_CONTAINER_LOW.resolve();
-    check("modal fill is SURFACE_CONTAINER_LOW", rgbEquals(modal, mw / 2, mh / 2, low));
+    check("modal fill is SURFACE_CONTAINER_LOW", rgbEquals(modal, W / 2, H / 2, low));
     check(
         "modal content-facing top corner rounded (transparent at the corner)",
-        alpha(modal, reserve.left, reserve.top) < 255);
-    check(
-        "modal window-edge top corner square (filled)",
-        rgbEquals(modal, mw - reserve.right - 1, reserve.top, low));
-    check(
-        "modal content-facing bottom corner rounded",
-        alpha(modal, reserve.left, mh - reserve.bottom - 1) < 255);
+        alpha(modal, 0, 0) < 255);
+    check("modal window-edge top corner square (filled)", rgbEquals(modal, W - 1, 0, low));
+    check("modal content-facing bottom corner rounded", alpha(modal, 0, H - 1) < 255);
+    check("no shadow halo painted outside the corner curve", alpha(modal, 2, H / 2) == 255);
 
     final ElwhaSideSheet leading = configured(SheetType.MODAL, SheetEdge.LEADING, true);
-    final BufferedImage leadingImg = render(leading, mw, mh);
+    final BufferedImage leadingImg = render(leading);
     check(
         "leading-edge sheet rounds the trailing-side corners instead",
-        alpha(leadingImg, mw - reserve.right - 1, reserve.top) < 255
-            && rgbEquals(leadingImg, reserve.left, reserve.top, low));
+        alpha(leadingImg, W - 1, 0) < 255 && rgbEquals(leadingImg, 0, 0, low));
 
     final ElwhaSideSheet rtl = configured(SheetType.STANDARD, SheetEdge.TRAILING, true);
     rtl.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);

@@ -30,7 +30,7 @@
 **Settled (canonical token set, §B):**
 - **Width 256dp** (`docked.container.width`); modal max **400dp** (§E redline, MEDIUM confidence).
 - **Standard:** container `surface`, elevation **level0**, shape **Corner.None** (square — it sits on the content plane).
-- **Modal:** container `surface-container-low`, elevation **level1**, shape **Corner.Large (16dp)** on the **content-facing corners only** (MDC pairs the shape macro with `ShapeAppearanceOverlay…Corner.Left` for an end-docked sheet); **scrim 32%**.
+- **Modal:** container `surface-container-low`, elevation token **level1** (⚠️ *not* a drop shadow — renders show the sheet flat over the scrim; §B correction), shape **Corner.Large (16dp)** on the **content-facing corners only** (MDC pairs the shape macro with `ShapeAppearanceOverlay…Corner.Left` for an end-docked sheet); **scrim 32%**.
 - **Detached** (floating, 16dp margin, 16dp all corners) exists in the token set — **excluded from V1**, filed as the V2 epic (no silent cut).
 - **Motion:** slide-translate 100% from the anchored edge, **275ms, emphasized easing, both directions** (MDC anim XML).
 - **Sheet edge:** default **end/trailing**; left/right variants ship in MDC (RTL-aware).
@@ -41,7 +41,7 @@
 - Content/footer horizontal padding **24dp**, header trails at 16dp next to the close button's 48dp target; footer = filled confirm + outlined dismiss, 12dp gap, divider above (MEDIUM — Flutter impl + spec-figure recall).
 - Icon buttons 24dp glyphs in **48dp targets** (HIGH — M3 global a11y minimum, MDC doc repeats it).
 
-**Elwha mapping: zero new theme tokens** (§F). Surface roles, `ShapeScale.LG` (16px), `SpaceScale`, `TypeRole.TITLE_LARGE`, `StateLayer`, scrim + 32% (dialog already does exactly this), `MorphAnimator` + `Easing.EMPHASIZED`, `ShadowPainter` elevation 1, `ElwhaLayers.OVERLAY_LAYER`.
+**Elwha mapping: zero new theme tokens** (§F). Surface roles, `ShapeScale.LG` (16px), `SpaceScale`, `TypeRole.TITLE_LARGE`, `StateLayer`, scrim + 32% (dialog already does exactly this), `MorphAnimator` + `Easing.EMPHASIZED`, `ElwhaLayers.OVERLAY_LAYER`; **no `ShadowPainter`** — both types render flat (§B correction).
 
 **Open questions → resolved in the design doc:** host architecture (one surface, two presentation paths), z-band (190), standard-mode reflow semantics (Swing-native ≈ M3 coplanar), 275→300ms adaptation, modal-width clamping. See `elwha-side-sheet-design.md` TL;DR for the locks.
 
@@ -69,7 +69,7 @@
 | `docked.standard.container.color` | `colorSurface` | [CODE] |
 | `docked.standard.container.elevation` | `m3_sys_elevation_level0` (0dp) | [CODE] |
 | `docked.modal.container.color` | `colorSurfaceContainerLow` | [CODE] |
-| `docked.modal.container.elevation` | `m3_sys_elevation_level1` (1dp) | [CODE] |
+| `docked.modal.container.elevation` | `m3_sys_elevation_level1` (1dp) | ⚠️ [DOC — **not a drop shadow**; correction below] |
 | `docked.container.shape` (standard) | `Corner.None` — **square** | [CODE] |
 | `docked.modal.container.shape` | `shapeAppearanceCornerLarge` (16dp), paired with `ShapeAppearanceOverlay.Material3.Corner.Left` — i.e. **rounded on the content-facing corners only** for an end-docked sheet | [CODE] |
 | `detached.container.shape` | `shapeAppearanceCornerLarge` (16dp), all corners | [CODE-V2] |
@@ -78,6 +78,8 @@
 | scrim (Compose `ScrimTokens`) | color `scrim`, opacity **0.32f** | [CODE] |
 
 ⚠️ **Token-table ghost check:** the `md.comp.sheet.side` set contains *no* header/headline/typography/padding tokens at all — the header anatomy is redline-only (§E). Don't invent token names for it.
+
+⚠️ **CORRECTION — modal elevation is not a drop shadow (operator screenshots, 2026-06-11 smoke loop):** the `container.elevation level1` token exists, but the m3.material.io renders (the modal-sheet-with-filters example and the modal anatomy redline) show the sheet **flat over its scrim** — no shadow halo anywhere; separation comes from the scrim contrast and the content-facing corner rounding. The elevation token is the *ghost* here: present in the set, expressed in no render. **Elwha paints both types flat** (no `ShadowPainter`, no shadow reserve, no `ShadowBearing`); the initial V1 build had derived a level-1 painted shadow from the token value and was corrected during smoke. The same renders also confirm the footer pairing: **filled confirm + outlined dismiss**, leading-aligned.
 
 ## §C. Anatomy (MDC `SideSheet.md`, numbered as the spec figures)
 
@@ -126,7 +128,7 @@ Notes:
 | scrim | `ColorRole.SCRIM` @ 0.32f | identical to `ElwhaDialog`'s scrim — reuse, don't re-derive |
 | corner large 16dp | `ShapeScale.LG` (16px) | applied per-corner (content-facing only) via the existing per-corner radii path |
 | square | `ShapeScale.NONE` | |
-| elevation level1 (modal) | `ShadowPainter` elevation 1 | standard = 0, no shadow |
+| elevation level1 (modal) | — rendered flat | ⚠️ the token is not expressed as a drop shadow in the spec renders (§B correction); standard also flat |
 | edge / footer divider | `ColorRole.OUTLINE_VARIANT`, 1px | same treatment as existing internal dividers |
 | paddings 24 / 16 / 12 | `SpaceScale.XL` (24) / `LG` (16) / `MD` (12) | |
 | motion | `MorphAnimator` (`MEDIUM2_MS` 300) + `Easing.EMPHASIZED` family | 275→300 adaptation, design doc §13 |

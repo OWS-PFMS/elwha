@@ -176,11 +176,11 @@ final class SideSheetShowcasePanels {
     row.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
     final ElwhaSideSheet standard = ElwhaSideSheet.standardSheet("Standard");
-    standard.setContent(galleryFiller("SURFACE · elev 0 · square · edge divider"));
+    standard.setContent(galleryFiller("SURFACE · square · edge divider"));
     row.add(galleryCell("Standard (docked)", standard));
 
     final ElwhaSideSheet modal = ElwhaSideSheet.modalSheet("Modal chrome");
-    modal.setContent(galleryFiller("SURFACE_CONTAINER_LOW · elev 1 · 16px inner corners"));
+    modal.setContent(galleryFiller("SURFACE_CONTAINER_LOW · 16px inner corners · no shadow"));
     modal.setActions(ElwhaButton.filledButton("Save"), ElwhaButton.outlinedButton("Cancel"));
     row.add(galleryCell("Modal chrome (static)", modal));
 
@@ -233,10 +233,13 @@ final class SideSheetShowcasePanels {
   }
 
   private static ElwhaButton[] footerActions(final int count) {
+    // Filled confirm + outlined dismiss — the action pairing the spec renders show.
     return switch (count) {
       case 1 -> new ElwhaButton[] {ElwhaButton.filledButton("Apply")};
       case 2 ->
-          new ElwhaButton[] {ElwhaButton.filledButton("Apply"), ElwhaButton.textButton("Reset")};
+          new ElwhaButton[] {
+            ElwhaButton.filledButton("Apply"), ElwhaButton.outlinedButton("Cancel")
+          };
       default -> new ElwhaButton[0];
     };
   }
