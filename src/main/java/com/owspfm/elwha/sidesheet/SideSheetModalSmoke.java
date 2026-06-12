@@ -113,9 +113,13 @@ public final class SideSheetModalSmoke {
       check("Esc ignored while not dismissible", sheet.isModalShowing());
       onEdt(() -> sheet.setDismissibleByEsc(true));
       onEdt(() -> fireEscBinding(lp));
-      waitFor("Esc dismisses", () -> !sheet.isModalShowing());
-      check("ESC cause reported", lastCause.get() == SheetDismissCause.ESC);
-      check("onClose fired once", closeFires[0] == 1);
+      // Poll on the onClose-recorded cause, not isModalShowing(): teardown clears the live state
+      // (so isModalShowing flips false) a few statements BEFORE onClosed() relays the cause —
+      // polling the earlier signal races the cause assertion (flaked once on a loaded machine).
+      // The cause landing is the authoritative end of a dismissal.
+      waitFor(
+          "Esc dismisses with ESC cause",
+          () -> lastCause.get() == SheetDismissCause.ESC && closeFires[0] == 1);
       check("layered pane clean after teardown", overlayBandCount(lp) == 0);
 
       // --- scrim press: blocked toggle, then SCRIM cause
@@ -126,16 +130,16 @@ public final class SideSheetModalSmoke {
       check("scrim press ignored while not dismissible", sheet.isModalShowing());
       onEdt(() -> sheet.setDismissibleByScrim(true));
       onEdt(() -> pressScrim(lp));
-      waitFor("scrim press dismisses", () -> !sheet.isModalShowing());
-      check("SCRIM cause reported", lastCause.get() == SheetDismissCause.SCRIM);
-      check("onClose fired once per show", closeFires[0] == 2);
+      waitFor(
+          "scrim press dismisses with SCRIM cause",
+          () -> lastCause.get() == SheetDismissCause.SCRIM && closeFires[0] == 2);
 
       // --- close affordance
       onEdt(() -> sheet.showModal(frame.getContentPane()));
       onEdt(sheet::onCloseActivated);
-      waitFor("close affordance dismisses", () -> !sheet.isModalShowing());
-      check(
-          "CLOSE_AFFORDANCE cause reported", lastCause.get() == SheetDismissCause.CLOSE_AFFORDANCE);
+      waitFor(
+          "close affordance dismisses with CLOSE_AFFORDANCE cause",
+          () -> lastCause.get() == SheetDismissCause.CLOSE_AFFORDANCE);
 
       // --- back affordance: onBack overrides, default dismisses
       final boolean[] backRan = {false};
@@ -146,16 +150,18 @@ public final class SideSheetModalSmoke {
       check("onBack handler overrides the dismiss default", backRan[0] && sheet.isModalShowing());
       sheet.setOnBack(null);
       onEdt(sheet::onBackActivated);
-      waitFor("back affordance default dismisses", () -> !sheet.isModalShowing());
-      check("BACK_AFFORDANCE cause reported", lastCause.get() == SheetDismissCause.BACK_AFFORDANCE);
+      waitFor(
+          "back affordance dismisses with BACK_AFFORDANCE cause",
+          () -> lastCause.get() == SheetDismissCause.BACK_AFFORDANCE);
 
       // --- programmatic + re-show no-op
       onEdt(() -> sheet.showModal(frame.getContentPane()));
       onEdt(() -> sheet.showModal(frame.getContentPane()));
       check("re-show while shown is a no-op", overlayBandCount(lp) == 2);
       onEdt(sheet::dismiss);
-      waitFor("dismiss() tears down", () -> !sheet.isModalShowing());
-      check("PROGRAMMATIC cause reported", lastCause.get() == SheetDismissCause.PROGRAMMATIC);
+      waitFor(
+          "dismiss() tears down with PROGRAMMATIC cause",
+          () -> lastCause.get() == SheetDismissCause.PROGRAMMATIC);
       check("layered pane clean at the end", overlayBandCount(lp) == 0);
     } finally {
       onEdt(frame::dispose);
