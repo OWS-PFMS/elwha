@@ -3,6 +3,7 @@ package com.owspfm.elwha.colorpicker;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.dialog.DismissCause;
 import com.owspfm.elwha.dialog.ElwhaDialog;
+import com.owspfm.elwha.dialog.ElwhaFullScreenDialog;
 import java.awt.Color;
 import java.awt.Component;
 import java.util.function.Consumer;
@@ -19,6 +20,12 @@ import java.util.function.Consumer;
  * <p>Non-blocking, like every Elwha overlay: {@link #show} returns immediately and the outcome
  * arrives through the callbacks — the in-window translation of {@code JColorChooser.showDialog}. A
  * confirmed color becomes the next show's staged color; a cancelled one is forgotten.
+ *
+ * <p><strong>Two presentations, one semantics.</strong> {@link #show} presents the M3 basic modal;
+ * {@link #showFullScreen} presents the same staged pick in the M3 full-screen dialog (#494) — the
+ * top app bar's <em>Save</em> confirms, the leading ✕ and Esc discard. The presentations share the
+ * staging, the callbacks, and the close routing, and guard each other: while one is showing the
+ * other will not open.
  *
  * <pre>{@code
  * ElwhaColorPickerDialog.show(button, "Accent color", current, chosen -> apply(chosen));
@@ -37,6 +44,7 @@ public class ElwhaColorPickerDialog {
   private Consumer<Color> onConfirm;
   private Runnable onCancel;
   private ElwhaDialog dialog;
+  private ElwhaFullScreenDialog fullScreenDialog;
 
   /**
    * Creates a dialog offering all three picker modes, staged on white.
@@ -154,7 +162,7 @@ public class ElwhaColorPickerDialog {
    * @since v0.5.0
    */
   public void show(final Component parent) {
-    if (dialog != null) {
+    if (dialog != null || fullScreenDialog != null) {
       return;
     }
     stage();
@@ -171,7 +179,26 @@ public class ElwhaColorPickerDialog {
   }
 
   /**
-   * Closes the dialog programmatically, discarding the pending color (the cancel path).
+   * Stages the initial color and presents the pick as an M3 <strong>full-screen dialog</strong> —
+   * the top app bar's <em>Save</em> confirms, the leading ✕ and Esc discard; staging, callbacks,
+   * and reopen memory match {@link #show}. Non-blocking; ignored while either presentation is
+   * showing.
+   *
+   * @param parent any component inside the host frame
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void showFullScreen(final Component parent) {
+    if (dialog != null || fullScreenDialog != null) {
+      return;
+    }
+    stage();
+    fullScreenDialog = buildFullScreen();
+    fullScreenDialog.show(parent);
+  }
+
+  /**
+   * Closes whichever presentation is showing, discarding the pending color (the cancel path).
    *
    * @version v0.5.0
    * @since v0.5.0
@@ -179,6 +206,9 @@ public class ElwhaColorPickerDialog {
   public void dismiss() {
     if (dialog != null) {
       dialog.dismiss();
+    }
+    if (fullScreenDialog != null) {
+      fullScreenDialog.dismiss();
     }
   }
 
@@ -215,12 +245,24 @@ public class ElwhaColorPickerDialog {
     return picker;
   }
 
+  ElwhaFullScreenDialog buildFullScreen() {
+    return ElwhaFullScreenDialog.builder()
+        .headline(title)
+        .content(picker)
+        .confirmAction(ElwhaButton.textButton("Save"))
+        .contentMaxWidth(picker.getPreferredSize().width)
+        .dismissibleByEsc(true)
+        .onClose(this::handleClose)
+        .build();
+  }
+
   void stage() {
     picker.setColor(initialColor);
   }
 
   void handleClose(final DismissCause cause) {
     dialog = null;
+    fullScreenDialog = null;
     if (cause == DismissCause.CONFIRM) {
       initialColor = picker.getColor();
       if (onConfirm != null) {
