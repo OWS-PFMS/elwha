@@ -79,6 +79,8 @@ final class ColorPickerShowcasePanels {
     supportingField.setText("Select color");
 
     final ElwhaButton dialogButton = ElwhaButton.filledTonalButton("Open dialog");
+    final ElwhaSwitch fullScreenSwitch = new ElwhaSwitch();
+    fullScreenSwitch.setLabel("Full-screen");
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Modes");
@@ -93,6 +95,7 @@ final class ColorPickerShowcasePanels {
     controls.addControl("", supportingField);
     controls.addSection("Dialog");
     controls.addControl("", dialogButton);
+    controls.addControl("", fullScreenSwitch);
 
     final JLabel readout = new JLabel("getColor() → #FF7043FF (adjusting)", SwingConstants.CENTER);
     final Dimension readoutPref = readout.getPreferredSize();
@@ -113,7 +116,11 @@ final class ColorPickerShowcasePanels {
         e -> {
           dialog.setInitialColor(picker.getColor());
           dialog.setAlphaEnabled(picker.isAlphaEnabled());
-          dialog.show(workbench);
+          if (fullScreenSwitch.isSelected()) {
+            dialog.showFullScreen(workbench);
+          } else {
+            dialog.show(workbench);
+          }
         });
 
     final Runnable apply =
@@ -142,7 +149,12 @@ final class ColorPickerShowcasePanels {
           final String supporting = supportingField.getText().trim();
           picker.setSupportingText(supporting.isEmpty() ? null : supporting);
           workbench.setCode(
-              renderCode(modes, alphaBox.isChecked(), enabledSwitch.isSelected(), supporting));
+              renderCode(
+                  modes,
+                  alphaBox.isChecked(),
+                  enabledSwitch.isSelected(),
+                  supporting,
+                  fullScreenSwitch.isSelected()));
           picker.revalidate();
           picker.repaint();
         };
@@ -162,6 +174,7 @@ final class ColorPickerShowcasePanels {
     if (supportingField.getEditor() instanceof JTextField textField) {
       textField.addActionListener(e -> apply.run());
     }
+    fullScreenSwitch.addActionListener(e -> apply.run());
     apply.run();
     return workbench;
   }
@@ -256,7 +269,8 @@ final class ColorPickerShowcasePanels {
       final List<PickerMode> modes,
       final boolean alpha,
       final boolean enabled,
-      final String supporting) {
+      final String supporting,
+      final boolean fullScreen) {
     final StringBuilder code = new StringBuilder(280);
     code.append("ElwhaColorPicker picker = new ElwhaColorPicker(new Color(0xFF7043));\n");
     if (modes.size() < 3) {
@@ -281,7 +295,10 @@ final class ColorPickerShowcasePanels {
       code.append("picker.setEnabled(false);\n");
     }
     code.append("picker.addChangeListener(e -> apply(picker.getColor()));\n");
-    code.append("// Modal: ElwhaColorPickerDialog.show(parent, \"Pick a color\", current, c -> …)");
+    code.append(
+        fullScreen
+            ? "// Full-screen: new ElwhaColorPickerDialog().showFullScreen(parent) — Save confirms"
+            : "// Modal: ElwhaColorPickerDialog.show(parent, \"Pick a color\", current, c -> …)");
     return code.toString();
   }
 }
