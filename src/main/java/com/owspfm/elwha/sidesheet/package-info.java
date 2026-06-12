@@ -9,7 +9,7 @@
  * docs/research/elwha-side-sheet-research.md}; decisions: {@code elwha-side-sheet-design.md}.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 package com.owspfm.elwha.sidesheet;

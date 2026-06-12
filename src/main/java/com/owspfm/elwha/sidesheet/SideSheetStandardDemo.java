@@ -27,8 +27,8 @@ import javax.swing.SwingUtilities;
  * setSheetWidth} live; the close affordance in the header collapses the sheet too.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public final class SideSheetStandardDemo {
 
@@ -38,8 +38,8 @@ public final class SideSheetStandardDemo {
    * Launches the demo frame.
    *
    * @param args unused
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static void main(final String[] args) {
     ElwhaTheme.install(

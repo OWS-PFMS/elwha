@@ -10,8 +10,8 @@ package com.owspfm.elwha.sidesheet;
  * §3/§6.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public enum SheetType {
 
@@ -20,8 +20,8 @@ public enum SheetType {
    * container, square corners, an optional 1px {@code OUTLINE_VARIANT} divider on the
    * content-facing edge.
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   STANDARD,
 
@@ -31,8 +31,8 @@ public enum SheetType {
    * window-edge corners), no edge divider, no drop shadow (the spec renders show the sheet flat
    * over its scrim).
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   MODAL
 }

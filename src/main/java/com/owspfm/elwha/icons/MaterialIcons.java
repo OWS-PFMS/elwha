@@ -749,8 +749,8 @@ public final class MaterialIcons {
    * ElwhaSideSheet} header's optional back icon button (#308).
    *
    * @return the icon at {@link #DEFAULT_SIZE}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static FlatSVGIcon arrowBack() {
     return arrowBack(DEFAULT_SIZE);
@@ -761,8 +761,8 @@ public final class MaterialIcons {
    *
    * @param size pixel size for the returned icon
    * @return the icon at the requested size
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static FlatSVGIcon arrowBack(final int size) {
     return load("arrow_back", size);

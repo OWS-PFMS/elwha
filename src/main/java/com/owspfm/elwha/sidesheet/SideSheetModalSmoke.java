@@ -24,8 +24,8 @@ import javax.swing.SwingUtilities;
  * teardown. Exits non-zero on any failed assertion.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public final class SideSheetModalSmoke {
 
@@ -38,8 +38,8 @@ public final class SideSheetModalSmoke {
    *
    * @param args unused
    * @throws Exception on EDT plumbing failures
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static void main(final String[] args) throws Exception {
     ElwhaTheme.install(

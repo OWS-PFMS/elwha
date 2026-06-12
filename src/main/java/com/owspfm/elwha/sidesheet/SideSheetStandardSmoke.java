@@ -18,8 +18,8 @@ import javax.swing.SwingUtilities;
  * layout.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public final class SideSheetStandardSmoke {
 
@@ -32,8 +32,8 @@ public final class SideSheetStandardSmoke {
    *
    * @param args unused
    * @throws Exception on EDT plumbing failures
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static void main(final String[] args) throws Exception {
     System.setProperty("java.awt.headless", "true");

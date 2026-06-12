@@ -1,6 +1,6 @@
 # ElwhaSideSheet — Design Decisions
 
-**Status:** LOCKED (Phase 0) — the build contract for epic [#308](https://github.com/OWS-PFMS/elwha/issues/308), `v0.4.0`. Captured detail lives in [`elwha-side-sheet-research.md`](elwha-side-sheet-research.md); this doc records the decisions. Mirrors [`elwha-dialog-design.md`](elwha-dialog-design.md).
+**Status:** LOCKED (Phase 0) — the build contract for epic [#308](https://github.com/OWS-PFMS/elwha/issues/308), `v0.5.0`. Captured detail lives in [`elwha-side-sheet-research.md`](elwha-side-sheet-research.md); this doc records the decisions. Mirrors [`elwha-dialog-design.md`](elwha-dialog-design.md).
 
 **Drafted:** 2026-06-11. **Author:** Charles Bryan (`cfb3@uw.edu`).
 **Parents:** decision #232 (generic side sheet, not NavigationDrawer) · z-band #221 (`ElwhaLayers.OVERLAY_LAYER` = 190) · host extraction #325 (`AbstractElwhaOverlay`, which names #308 as its second consumer).

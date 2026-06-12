@@ -1,6 +1,6 @@
 # ElwhaSideSheet — M3 Spec Capture (research scratch)
 
-**Status:** CAPTURED — source material for epic [#308](https://github.com/OWS-PFMS/elwha/issues/308) (ElwhaSideSheet stub, `v0.4.0`). Companion to [`elwha-side-sheet-design.md`](elwha-side-sheet-design.md) (the decisions); mirrors [`elwha-menu-research.md`](elwha-menu-research.md).
+**Status:** CAPTURED — source material for epic [#308](https://github.com/OWS-PFMS/elwha/issues/308) (ElwhaSideSheet stub, `v0.5.0`). Companion to [`elwha-side-sheet-design.md`](elwha-side-sheet-design.md) (the decisions); mirrors [`elwha-menu-research.md`](elwha-menu-research.md).
 
 **Captured:** 2026-06-11. **Author:** Charles Bryan (`cfb3@uw.edu`).
 

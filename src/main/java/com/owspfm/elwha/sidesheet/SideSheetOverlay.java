@@ -30,8 +30,8 @@ import javax.swing.KeyStroke;
  * showModal(...)}; the sheet constructs a fresh one per show.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 final class SideSheetOverlay extends AbstractElwhaOverlay {
 

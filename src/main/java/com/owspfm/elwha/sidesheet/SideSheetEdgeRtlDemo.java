@@ -24,8 +24,8 @@ import javax.swing.SwingUtilities;
  * edge), and the rounded content-facing corners all flip together.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public final class SideSheetEdgeRtlDemo {
 
@@ -35,8 +35,8 @@ public final class SideSheetEdgeRtlDemo {
    * Launches the demo frame.
    *
    * @param args unused
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static void main(final String[] args) {
     ElwhaTheme.install(

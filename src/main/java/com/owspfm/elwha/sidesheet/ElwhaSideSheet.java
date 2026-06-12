@@ -68,8 +68,8 @@ import javax.swing.JPanel;
  * command lists (the menu). Keep headlines short; prefer one sheet at a time per edge.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public final class ElwhaSideSheet extends JComponent {
 
@@ -116,8 +116,8 @@ public final class ElwhaSideSheet extends JComponent {
    * constructor.
    *
    * @param headline the header headline; also the sheet's accessible name
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public ElwhaSideSheet(final String headline) {
     this(SheetType.STANDARD, headline);
@@ -177,8 +177,8 @@ public final class ElwhaSideSheet extends JComponent {
    *
    * @param headline the header headline; also the sheet's accessible name
    * @return a new standard sheet
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static ElwhaSideSheet standardSheet(final String headline) {
     return new ElwhaSideSheet(SheetType.STANDARD, headline);
@@ -189,8 +189,8 @@ public final class ElwhaSideSheet extends JComponent {
    *
    * @param headline the header headline; also the sheet's accessible name
    * @return a new modal sheet
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static ElwhaSideSheet modalSheet(final String headline) {
     return new ElwhaSideSheet(SheetType.MODAL, headline);
@@ -203,8 +203,8 @@ public final class ElwhaSideSheet extends JComponent {
    *
    * @param type the sheet type
    * @throws NullPointerException if {@code type} is {@code null}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setSheetType(final SheetType type) {
     final SheetType next = Objects.requireNonNull(type, "type");
@@ -218,8 +218,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return the sheet type
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public SheetType getSheetType() {
     return sheetType;
@@ -232,8 +232,8 @@ public final class ElwhaSideSheet extends JComponent {
    *
    * @param edge the anchor edge
    * @throws NullPointerException if {@code edge} is {@code null}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setSheetEdge(final SheetEdge edge) {
     final SheetEdge next = Objects.requireNonNull(edge, "edge");
@@ -246,8 +246,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return the logical anchor edge
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public SheetEdge getSheetEdge() {
     return sheetEdge;
@@ -259,8 +259,8 @@ public final class ElwhaSideSheet extends JComponent {
    * run wider). A modal presentation additionally clamps to the host window's width.
    *
    * @param px the open width in pixels (clamped to {@code >= 0})
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setSheetWidth(final int px) {
     final int next = Math.max(0, px);
@@ -274,8 +274,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return the open width in pixels
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public int getSheetWidth() {
     return sheetWidth;
@@ -289,8 +289,8 @@ public final class ElwhaSideSheet extends JComponent {
    * text.
    *
    * @param headline the headline text, or {@code null} for none
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setHeadline(final String headline) {
     this.headline = headline;
@@ -302,8 +302,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return the headline text, or {@code null}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public String getHeadline() {
     return headline;
@@ -316,8 +316,8 @@ public final class ElwhaSideSheet extends JComponent {
    * javax.swing.JScrollPane} yourself.
    *
    * @param content the content component, or {@code null} for none
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setContent(final JComponent content) {
     if (this.content != null) {
@@ -334,8 +334,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return the content component, or {@code null}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public JComponent getContent() {
     return content;
@@ -348,8 +348,8 @@ public final class ElwhaSideSheet extends JComponent {
    * footer entirely. Actions do <strong>not</strong> auto-dismiss — see the class doc.
    *
    * @param actions the footer action buttons, leading-first; empty for no footer
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setActions(final ElwhaButton... actions) {
     this.actions.clear();
@@ -369,8 +369,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return the footer action buttons, leading-first; empty when the footer is absent
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public List<ElwhaButton> getActions() {
     return List.copyOf(actions);
@@ -380,8 +380,8 @@ public final class ElwhaSideSheet extends JComponent {
    * Shows or hides the header's trailing close icon button. Visible by default.
    *
    * @param visible whether the close affordance shows
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setCloseAffordanceVisible(final boolean visible) {
     if (visible == this.closeAffordanceVisible) {
@@ -395,8 +395,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return whether the close affordance shows
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isCloseAffordanceVisible() {
     return closeAffordanceVisible;
@@ -407,8 +407,8 @@ public final class ElwhaSideSheet extends JComponent {
    * flows. Hidden by default. Activating it runs {@link #setOnBack(Runnable) onBack} when set.
    *
    * @param visible whether the back affordance shows
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setBackAffordanceVisible(final boolean visible) {
     if (visible == this.backAffordanceVisible) {
@@ -422,8 +422,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return whether the back affordance shows
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isBackAffordanceVisible() {
     return backAffordanceVisible;
@@ -434,8 +434,8 @@ public final class ElwhaSideSheet extends JComponent {
    * affordance falls back to dismissing/closing the sheet.
    *
    * @param onBack the handler, or {@code null} for the dismiss default
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setOnBack(final Runnable onBack) {
     this.onBack = onBack;
@@ -443,8 +443,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return the back handler, or {@code null}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public Runnable getOnBack() {
     return onBack;
@@ -456,8 +456,8 @@ public final class ElwhaSideSheet extends JComponent {
    * default; painted only while the type is {@link SheetType#STANDARD}.
    *
    * @param visible whether the edge divider paints
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setEdgeDividerVisible(final boolean visible) {
     if (visible == this.edgeDividerVisible) {
@@ -469,8 +469,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return whether the edge divider paints (on a standard sheet)
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isEdgeDividerVisible() {
     return edgeDividerVisible;
@@ -481,8 +481,8 @@ public final class ElwhaSideSheet extends JComponent {
    * default; rendered only while the footer exists (i.e. {@link #setActions} was given buttons).
    *
    * @param visible whether the footer divider shows
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setFooterDividerVisible(final boolean visible) {
     if (visible == this.footerDividerVisible) {
@@ -496,8 +496,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return whether the footer divider shows (when the footer exists)
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isFooterDividerVisible() {
     return footerDividerVisible;
@@ -511,8 +511,8 @@ public final class ElwhaSideSheet extends JComponent {
    * revalidating per tick so sibling content reflows: the M3 coplanar squash. A no-op when already
    * open.
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void open() {
     setOpen(true);
@@ -523,8 +523,8 @@ public final class ElwhaSideSheet extends JComponent {
    * width to 0 while the component stays in the hierarchy (so the animation is symmetric and the
    * consumer's layout code stays branch-free). A no-op when already closed.
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void close() {
     setOpen(false);
@@ -534,8 +534,8 @@ public final class ElwhaSideSheet extends JComponent {
    * Sets the open state, animating toward it — see {@link #open()} / {@link #close()}.
    *
    * @param open the target state
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setOpen(final boolean open) {
     if (open == this.open) {
@@ -553,8 +553,8 @@ public final class ElwhaSideSheet extends JComponent {
   /**
    * @return the target open state ({@code true} from construction); flips immediately on {@link
    *     #setOpen} while the width animation catches up
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isOpen() {
     return open;
@@ -588,8 +588,8 @@ public final class ElwhaSideSheet extends JComponent {
    *     restore focus on close
    * @throws NullPointerException if {@code parent} is {@code null}
    * @throws IllegalStateException if {@code parent} is not in a realized window
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void showModal(final Component parent) {
     if (isModalShowing()) {
@@ -612,8 +612,8 @@ public final class ElwhaSideSheet extends JComponent {
    * SheetDismissCause#PROGRAMMATIC}. A no-op when not modally shown (an embedded standard sheet is
    * closed with {@link #close()} instead).
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void dismiss() {
     if (overlay != null) {
@@ -624,8 +624,8 @@ public final class ElwhaSideSheet extends JComponent {
   /**
    * @return whether the sheet is currently presented modally (between {@link #showModal} and the
    *     end of its teardown)
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isModalShowing() {
     return overlay != null && overlay.showingNow();
@@ -636,8 +636,8 @@ public final class ElwhaSideSheet extends JComponent {
    * Default {@code true}; honored live, including toggles while shown.
    *
    * @param dismissible whether Esc dismisses
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setDismissibleByEsc(final boolean dismissible) {
     this.dismissibleByEsc = dismissible;
@@ -645,8 +645,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return whether Esc dismisses the modal presentation
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isDismissibleByEsc() {
     return dismissibleByEsc;
@@ -658,8 +658,8 @@ public final class ElwhaSideSheet extends JComponent {
    * always blocks the UI behind). Honored live, including toggles while shown.
    *
    * @param dismissible whether a scrim click dismisses
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setDismissibleByScrim(final boolean dismissible) {
     this.dismissibleByScrim = dismissible;
@@ -667,8 +667,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return whether a scrim click dismisses the modal presentation
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isDismissibleByScrim() {
     return dismissibleByScrim;
@@ -679,8 +679,8 @@ public final class ElwhaSideSheet extends JComponent {
    * exit motion and teardown complete, with the recorded {@link SheetDismissCause}.
    *
    * @param onClose the callback, or {@code null} for none
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setOnClose(final Consumer<SheetDismissCause> onClose) {
     this.onClose = onClose;
@@ -688,8 +688,8 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * @return the close hook, or {@code null}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public Consumer<SheetDismissCause> getOnClose() {
     return onClose;
@@ -760,8 +760,8 @@ public final class ElwhaSideSheet extends JComponent {
   /**
    * @return the current size — the sheet width scaled by the open/close animation progress, at the
    *     anatomy's natural height
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   @Override
   public Dimension getPreferredSize() {
@@ -780,8 +780,8 @@ public final class ElwhaSideSheet extends JComponent {
    * main content — and the shrinking chassis clips it: children keep their open-width layout
    * instead of re-wrapping every tick (design doc §14).
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   @Override
   public void doLayout() {
@@ -801,8 +801,8 @@ public final class ElwhaSideSheet extends JComponent {
    * 2026-06-11).
    *
    * @param g the graphics context
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   @Override
   protected void paintComponent(final Graphics g) {
@@ -837,8 +837,8 @@ public final class ElwhaSideSheet extends JComponent {
    * the component orientation changes.
    *
    * @param orientation the new orientation
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   @Override
   public void setComponentOrientation(final ComponentOrientation orientation) {
@@ -878,8 +878,8 @@ public final class ElwhaSideSheet extends JComponent {
    * the headline.
    *
    * @return the accessible context
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   @Override
   public AccessibleContext getAccessibleContext() {

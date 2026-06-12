@@ -31,8 +31,8 @@ import javax.swing.SwingConstants;
  * needed; modal-chrome instances render without scrim or motion.
  *
  * @author Charles Bryan
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 final class SideSheetShowcasePanels {
 
@@ -48,7 +48,7 @@ final class SideSheetShowcasePanels {
 
     final ElwhaSideSheet sheet = ElwhaSideSheet.standardSheet("Filters");
     sheet.setContent(sheetContent());
-    sheet.setActions(ElwhaButton.filledButton("Apply"), ElwhaButton.textButton("Reset"));
+    sheet.setActions(footerActions(2));
 
     final JPanel stage = new JPanel(new BorderLayout());
     stage.setOpaque(false);
@@ -158,7 +158,7 @@ final class SideSheetShowcasePanels {
         """
         ElwhaSideSheet sheet = ElwhaSideSheet.standardSheet("Filters");
         sheet.setContent(filterForm);
-        sheet.setActions(ElwhaButton.filledButton("Apply"), ElwhaButton.textButton("Reset"));
+        sheet.setActions(ElwhaButton.filledButton("Apply"), ElwhaButton.outlinedButton("Cancel"));
         frame.add(sheet, BorderLayout.LINE_END);   // standard: embed + open()/close()
 
         ElwhaSideSheet modal = ElwhaSideSheet.modalSheet("Filters");
