@@ -215,6 +215,13 @@ Dependency order: S3 ← S2 (the toggle host lands in S2); S6 ← S1–S5; S7 �
 independent. Each story: fresh demo class + headless smoke guard, `@version v0.5.0`, one commit
 ([[feedback_fresh_demo_per_story]] cadence).
 
+## §9.1 Build amendments
+
+- **Eyedropper traversal position:** the affordance is a header child, so it precedes the tabs in
+  the natural focus order — header → tabs → pane, matching the visual reading order. §6's
+  "joins after the tabs" is superseded; a custom FocusTraversalPolicy for one button is not
+  warranted.
+
 ## §10 Open for the build / smoke loop
 
 - Four stacked tabs at 328px (§2) — verified visually in the smoke loop; fallback is
