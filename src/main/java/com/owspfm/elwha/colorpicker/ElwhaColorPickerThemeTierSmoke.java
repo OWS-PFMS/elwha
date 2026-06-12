@@ -48,8 +48,8 @@ public final class ElwhaColorPickerThemeTierSmoke {
   private static void checkContract() {
     final ElwhaColorPicker picker = new ElwhaColorPicker(new Color(0x123456));
     check(
-        "default offers Material then Theme",
-        java.util.List.of(SwatchSource.MATERIAL, SwatchSource.THEME)
+        "default offers Material, Theme, Saved",
+        java.util.List.of(SwatchSource.MATERIAL, SwatchSource.THEME, SwatchSource.SAVED)
             .equals(picker.getSwatchSources()));
     check("default active source", picker.getSwatchSource() == SwatchSource.MATERIAL);
 

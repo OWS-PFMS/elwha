@@ -54,9 +54,14 @@ public class ElwhaColorPicker extends JComponent {
   /** Most-recently-used colors retained for the SWATCHES pane's recent row. */
   static final int RECENT_CAPACITY = 10;
 
+  /** Capacity of the SAVED tier's favorites grid — three rows of ten (design §3). */
+  static final int FAVORITES_CAPACITY = 30;
+
   private static final int PREFERRED_WIDTH = 328;
 
   private final java.util.List<Color> recent = new java.util.ArrayList<>();
+  private final java.util.List<Color> favorites = new java.util.ArrayList<>();
+  private final java.util.List<ChangeListener> favoritesListeners = new java.util.ArrayList<>();
 
   private final ColorPickerHeader header;
   private final ElwhaTabs tabs;
@@ -66,7 +71,8 @@ public class ElwhaColorPicker extends JComponent {
 
   private List<PickerMode> modes =
       List.of(PickerMode.SWATCHES, PickerMode.SPECTRUM, PickerMode.WHEEL, PickerMode.SLIDERS);
-  private List<SwatchSource> swatchSources = List.of(SwatchSource.MATERIAL, SwatchSource.THEME);
+  private List<SwatchSource> swatchSources =
+      List.of(SwatchSource.MATERIAL, SwatchSource.THEME, SwatchSource.SAVED);
   private SwatchSource swatchSource = SwatchSource.MATERIAL;
   private Color color;
   private boolean adjusting;
@@ -314,6 +320,122 @@ public class ElwhaColorPicker extends JComponent {
     this.swatchSource = source;
     if (panes.get(PickerMode.SWATCHES) instanceof SwatchesPane pane) {
       pane.showSource(source);
+    }
+  }
+
+  /**
+   * Returns the user's saved swatches in grid order. Never {@code null}; an immutable snapshot.
+   *
+   * @return the saved colors
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public List<Color> getFavorites() {
+    return List.copyOf(favorites);
+  }
+
+  /**
+   * Replaces the saved swatches — the restore half of the client-owned persistence round-trip
+   * (design doc {@code elwha-color-picker-v2-design.md} §3). The library never persists favorites
+   * itself; clients store the list wherever they already keep settings:
+   *
+   * <pre>{@code
+   * picker.setFavorites(loadFavoriteColors());
+   * picker.addFavoritesListener(e -> storeFavoriteColors(picker.getFavorites()));
+   * }</pre>
+   *
+   * <p>The list is copied, deduplicated, and truncated to {@code FAVORITES_CAPACITY} (30).
+   * Favorites listeners fire on every call.
+   *
+   * @param favorites the saved colors, in grid order
+   * @throws IllegalArgumentException if {@code favorites} is {@code null} or contains {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setFavorites(final List<Color> favorites) {
+    if (favorites == null) {
+      throw new IllegalArgumentException("favorites must not be null or contain null");
+    }
+    for (final Color candidate : favorites) {
+      if (candidate == null) {
+        throw new IllegalArgumentException("favorites must not be null or contain null");
+      }
+    }
+    this.favorites.clear();
+    for (final Color candidate : favorites) {
+      if (!this.favorites.contains(candidate)) {
+        this.favorites.add(candidate);
+        if (this.favorites.size() == FAVORITES_CAPACITY) {
+          break;
+        }
+      }
+    }
+    favoritesChanged();
+  }
+
+  /**
+   * Appends a color to the saved swatches. A color already saved, or an add past the capacity of
+   * 30, is a silent no-op — listeners fire only on an actual mutation.
+   *
+   * @param color the color to save
+   * @throws IllegalArgumentException if {@code color} is {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void addFavorite(final Color color) {
+    if (color == null) {
+      throw new IllegalArgumentException("color must not be null");
+    }
+    if (favorites.contains(color) || favorites.size() >= FAVORITES_CAPACITY) {
+      return;
+    }
+    favorites.add(color);
+    favoritesChanged();
+  }
+
+  /**
+   * Removes a color from the saved swatches; a color not present is a silent no-op.
+   *
+   * @param color the color to remove
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void removeFavorite(final Color color) {
+    if (favorites.remove(color)) {
+      favoritesChanged();
+    }
+  }
+
+  /**
+   * Registers a listener fired on every favorites mutation — the store half of the client-owned
+   * persistence round-trip (see {@link #setFavorites}).
+   *
+   * @param listener the listener to add
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void addFavoritesListener(final ChangeListener listener) {
+    favoritesListeners.add(listener);
+  }
+
+  /**
+   * Removes a previously registered favorites listener.
+   *
+   * @param listener the listener to remove
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void removeFavoritesListener(final ChangeListener listener) {
+    favoritesListeners.remove(listener);
+  }
+
+  private void favoritesChanged() {
+    if (panes.get(PickerMode.SWATCHES) instanceof SwatchesPane pane) {
+      pane.favoritesChanged();
+    }
+    final ChangeEvent event = new ChangeEvent(this);
+    for (final ChangeListener listener : List.copyOf(favoritesListeners)) {
+      listener.stateChanged(event);
     }
   }
 

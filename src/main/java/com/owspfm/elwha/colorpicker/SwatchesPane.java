@@ -61,6 +61,7 @@ final class SwatchesPane extends ColorPickerPane {
   private final HueGrid hueGrid;
   private final ShadeStrip shadeStrip;
   private final RecentRow recentRow;
+  private FavoritesGrid favoritesGrid;
 
   private int activeHue;
 
@@ -114,11 +115,36 @@ final class SwatchesPane extends ColorPickerPane {
           switch (source) {
             case MATERIAL -> materialCard;
             case THEME -> new ThemeGrid();
+            case SAVED -> savedCard();
           },
           source.name());
     }
     add(sourceHost);
     showSource(picker.getSwatchSource());
+  }
+
+  private javax.swing.JPanel savedCard() {
+    this.favoritesGrid = new FavoritesGrid();
+    final javax.swing.JPanel card = new javax.swing.JPanel();
+    card.setOpaque(false);
+    card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+    card.add(favoritesGrid);
+    card.add(Box.createVerticalStrut(SpaceScale.SM.px()));
+    final com.owspfm.elwha.button.ElwhaButton save =
+        com.owspfm.elwha.button.ElwhaButton.textButton("Save current")
+            .setIcon(com.owspfm.elwha.icons.MaterialIcons.star(20))
+            .setButtonSize(com.owspfm.elwha.button.ButtonSize.XS);
+    save.setAlignmentX(LEFT_ALIGNMENT);
+    save.addActionListener(e -> picker().addFavorite(picker().getColor()));
+    card.add(save);
+    return card;
+  }
+
+  void favoritesChanged() {
+    if (favoritesGrid != null) {
+      favoritesGrid.clampCursor();
+      favoritesGrid.repaint();
+    }
   }
 
   void showSource(final SwatchSource source) {
@@ -234,7 +260,7 @@ final class SwatchesPane extends ColorPickerPane {
 
             @Override
             public void mousePressed(final MouseEvent e) {
-              if (!isInteractive()) {
+              if (!isInteractive() || !javax.swing.SwingUtilities.isLeftMouseButton(e)) {
                 return;
               }
               final int index = indexAt(e.getPoint());
@@ -363,7 +389,7 @@ final class SwatchesPane extends ColorPickerPane {
       }
     }
 
-    private int indexAt(final Point point) {
+    int indexAt(final Point point) {
       for (int i = 0; i < count(); i++) {
         if (cellRect(i).contains(point)) {
           return i;
@@ -749,6 +775,160 @@ final class SwatchesPane extends ColorPickerPane {
           g2.setColor(ColorRole.OUTLINE_VARIANT.resolve());
           g2.drawOval(x, y, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
           if (matchesCurrent(base)) {
+            g2.setColor(ColorRole.PRIMARY.resolve());
+            g2.setStroke(new BasicStroke(2f));
+            g2.drawOval(x - 2, y - 2, CIRCLE_DIAMETER + 4, CIRCLE_DIAMETER + 4);
+            paintCheck(
+                g2,
+                new Rectangle(x + 5, y + 5, CIRCLE_DIAMETER - 10, CIRCLE_DIAMETER - 10),
+                contrastTint(base));
+          }
+        }
+      } finally {
+        g2.dispose();
+      }
+    }
+  }
+
+  private final class FavoritesGrid extends CellStrip {
+
+    private static final int ROWS = 3;
+
+    FavoritesGrid() {
+      bindRemoveKey(KeyEvent.VK_DELETE);
+      bindRemoveKey(KeyEvent.VK_BACK_SPACE);
+      addMouseListener(
+          new MouseAdapter() {
+            @Override
+            public void mousePressed(final MouseEvent e) {
+              maybeShowMenu(e);
+            }
+
+            @Override
+            public void mouseReleased(final MouseEvent e) {
+              maybeShowMenu(e);
+            }
+          });
+    }
+
+    void clampCursor() {
+      cursor = Math.min(cursor, count() - 1);
+    }
+
+    private void bindRemoveKey(final int keyCode) {
+      final KeyStroke stroke = KeyStroke.getKeyStroke(keyCode, 0);
+      getInputMap(WHEN_FOCUSED).put(stroke, stroke.toString());
+      getActionMap()
+          .put(
+              stroke.toString(),
+              new AbstractAction() {
+                @Override
+                public void actionPerformed(final java.awt.event.ActionEvent e) {
+                  if (isInteractive() && cursor >= 0 && cursor < count()) {
+                    picker().removeFavorite(cellColor(cursor));
+                  }
+                }
+              });
+    }
+
+    private void maybeShowMenu(final MouseEvent e) {
+      if (!isInteractive() || !e.isPopupTrigger()) {
+        return;
+      }
+      final int index = indexAt(e.getPoint());
+      if (index < 0) {
+        return;
+      }
+      cursor = index;
+      repaint();
+      final Color target = cellColor(index);
+      final com.owspfm.elwha.menu.ElwhaMenuItem remove =
+          com.owspfm.elwha.menu.ElwhaMenuItem.of("Remove from saved");
+      remove.addActionListener(menuEvent -> picker().removeFavorite(target));
+      com.owspfm.elwha.menu.ElwhaMenu.builder().addItem(remove).build().open(this);
+    }
+
+    @Override
+    int count() {
+      return picker().getFavorites().size();
+    }
+
+    @Override
+    int columns() {
+      return GRID_COLUMNS;
+    }
+
+    @Override
+    Rectangle cellRect(final int index) {
+      final int pitchX = Math.max(1, getWidth() / GRID_COLUMNS);
+      int col = index % GRID_COLUMNS;
+      if (!ltr()) {
+        col = GRID_COLUMNS - 1 - col;
+      }
+      final int row = index / GRID_COLUMNS;
+      return new Rectangle(col * pitchX, row * GRID_ROW_PITCH, pitchX, GRID_ROW_PITCH);
+    }
+
+    @Override
+    Color cellColor(final int index) {
+      return picker().getFavorites().get(index);
+    }
+
+    @Override
+    void activate(final int index) {
+      commit(cellColor(index), false);
+      repaint();
+    }
+
+    @Override
+    String stripName() {
+      return "Saved colors";
+    }
+
+    @Override
+    String cellName(final int index) {
+      return ColorHex.format(cellColor(index), picker().isAlphaEnabled());
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+      return new Dimension(0, ROWS * GRID_ROW_PITCH);
+    }
+
+    @Override
+    public Dimension getMaximumSize() {
+      return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+    }
+
+    @Override
+    protected void paintComponent(final Graphics g) {
+      final Graphics2D g2 = prepare(g);
+      try {
+        if (count() == 0) {
+          g2.setRenderingHint(
+              RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+          final Font hintFont = TypeRole.LABEL_MEDIUM.resolve();
+          g2.setFont(hintFont);
+          g2.setColor(ColorRole.ON_SURFACE_VARIANT.resolve());
+          g2.drawString(
+              "No saved colors yet — Save current adds this color",
+              0,
+              g2.getFontMetrics(hintFont).getAscent() + 4);
+          return;
+        }
+        for (int i = 0; i < count(); i++) {
+          final Rectangle cell = cellRect(i);
+          final Color base = cellColor(i);
+          final int x = cell.x + (cell.width - CIRCLE_DIAMETER) / 2;
+          final int y = cell.y + (cell.height - CIRCLE_DIAMETER) / 2;
+          if (picker().isAlphaEnabled() && base.getAlpha() < 255) {
+            Checkerboard.fill(g2, new java.awt.geom.Ellipse2D.Double(x, y, 24, 24));
+          }
+          g2.setColor(stateLayered(base, i));
+          g2.fillOval(x, y, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
+          g2.setColor(ColorRole.OUTLINE_VARIANT.resolve());
+          g2.drawOval(x, y, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
+          if (base.equals(picker().getColor())) {
             g2.setColor(ColorRole.PRIMARY.resolve());
             g2.setStroke(new BasicStroke(2f));
             g2.drawOval(x - 2, y - 2, CIRCLE_DIAMETER + 4, CIRCLE_DIAMETER + 4);

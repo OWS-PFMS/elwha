@@ -19,7 +19,13 @@ public enum SwatchSource {
    * The live theme's color roles — every {@code ColorRole}, resolved against the installed palette
    * and mode at paint time, for theme-consistent picks.
    */
-  THEME("Theme");
+  THEME("Theme"),
+
+  /**
+   * The user's saved swatches — the picker's favorites model (the NSColorPanel favorites-bar
+   * analog). Persistence is client-owned; see {@link ElwhaColorPicker#setFavorites}.
+   */
+  SAVED("Saved");
 
   private final String label;
 
