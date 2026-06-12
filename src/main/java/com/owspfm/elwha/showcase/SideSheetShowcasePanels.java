@@ -26,9 +26,11 @@ import javax.swing.SwingConstants;
  * the component demos itself on the stage, with Open / Edge / Width / affordance / footer / divider
  * / RTL controls applied live — plus an "Open modal side sheet" trigger that presents the
  * <em>modal</em> half on the real Showcase frame with the same configuration (the dialog-leaf
- * trigger pattern), echoing each {@code SheetDismissCause} to the status line. The Gallery embeds
- * static configurations directly — the sheet is an ordinary component, so no preview shim is
- * needed; modal-chrome instances render without scrim or motion.
+ * trigger pattern), echoing each {@code SheetDismissCause} to the status line. The Width control is
+ * live on both halves: it reflows the staged standard sheet and re-docks an open modal in place
+ * (200 forces the footer-action wrap). The Gallery embeds static configurations directly — the
+ * sheet is an ordinary component, so no preview shim is needed; modal-chrome instances render
+ * without scrim or motion.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -74,10 +76,23 @@ final class SideSheetShowcasePanels {
           stage.repaint();
         });
 
+    // One live modal at a time; held so the width control can re-dock it while shown (the
+    // ModalDemo behavior). Cleared on close.
+    final ElwhaSideSheet[] liveModal = new ElwhaSideSheet[1];
+
+    // Live width: applies to the staged standard sheet AND re-docks an open modal in place.
+    // 200 forces the footer-action wrap; widening un-wraps.
     final ElwhaSelectField<Integer> widthBox = ElwhaSelectField.outlined("Width");
-    widthBox.setOptions(List.of(256, 320, 400));
+    widthBox.setOptions(List.of(200, 256, 320, 400));
     widthBox.setSelectedValue(256);
-    widthBox.addSelectionChangeListener(w -> sheet.setSheetWidth(w != null ? w : 256));
+    widthBox.addSelectionChangeListener(
+        w -> {
+          final int width = w != null ? w : 256;
+          sheet.setSheetWidth(width);
+          if (liveModal[0] != null) {
+            liveModal[0].setSheetWidth(width);
+          }
+        });
 
     final ElwhaCheckbox closeBox = new ElwhaCheckbox("Close affordance");
     closeBox.setChecked(true);
@@ -128,7 +143,12 @@ final class SideSheetShowcasePanels {
           modal.setFooterDividerVisible(footerDividerBox.isChecked());
           modal.setDismissibleByEsc(escBox.isChecked());
           modal.setDismissibleByScrim(scrimBox.isChecked());
-          modal.setOnClose(cause -> status.setText("Modal closed: " + cause));
+          modal.setOnClose(
+              cause -> {
+                liveModal[0] = null;
+                status.setText("Modal closed: " + cause);
+              });
+          liveModal[0] = modal;
           modal.showModal(stage);
           status.setText("Modal open…");
         });
