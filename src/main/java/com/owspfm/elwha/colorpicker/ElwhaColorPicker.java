@@ -66,6 +66,8 @@ public class ElwhaColorPicker extends JComponent {
 
   private List<PickerMode> modes =
       List.of(PickerMode.SWATCHES, PickerMode.SPECTRUM, PickerMode.WHEEL, PickerMode.SLIDERS);
+  private List<SwatchSource> swatchSources = List.of(SwatchSource.MATERIAL, SwatchSource.THEME);
+  private SwatchSource swatchSource = SwatchSource.MATERIAL;
   private Color color;
   private boolean adjusting;
   private boolean committing;
@@ -240,6 +242,79 @@ public class ElwhaColorPicker extends JComponent {
       throw new IllegalArgumentException("mode " + mode + " is not offered — see setModes");
     }
     tabs.setActiveTabIndex(index);
+  }
+
+  /**
+   * Restricts (or reorders) the SWATCHES mode's swatch sources — the same closed-set contract as
+   * {@link #setModes}: any non-empty, duplicate-free subset of {@link SwatchSource} in any order.
+   * The first source becomes active; a single source hides the source toggle. The current color and
+   * the recent row are preserved.
+   *
+   * @param sources the sources to offer, in toggle order
+   * @throws IllegalArgumentException if {@code sources} is null, empty, or contains nulls or
+   *     duplicates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setSwatchSources(final SwatchSource... sources) {
+    if (sources == null || sources.length == 0) {
+      throw new IllegalArgumentException("at least one swatch source is required");
+    }
+    final List<SwatchSource> next = Arrays.asList(sources);
+    if (next.contains(null)) {
+      throw new IllegalArgumentException("swatch sources must not contain null");
+    }
+    if (next.stream().distinct().count() != next.size()) {
+      throw new IllegalArgumentException("swatch sources must not repeat");
+    }
+    this.swatchSources = List.copyOf(next);
+    this.swatchSource = swatchSources.get(0);
+    rebuildModes();
+  }
+
+  /**
+   * Returns the offered swatch sources in toggle order.
+   *
+   * @return an immutable source list
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public List<SwatchSource> getSwatchSources() {
+    return swatchSources;
+  }
+
+  /**
+   * Returns the active swatch source.
+   *
+   * @return the source whose card the SWATCHES pane shows
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public SwatchSource getSwatchSource() {
+    return swatchSource;
+  }
+
+  /**
+   * Activates a swatch source's card in the SWATCHES pane. Never mutates the color. The choice is
+   * retained even while SWATCHES is not among {@link #getModes()}.
+   *
+   * @param source the source to activate
+   * @throws IllegalArgumentException if {@code source} is not among {@link #getSwatchSources()}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setSwatchSource(final SwatchSource source) {
+    if (!swatchSources.contains(source)) {
+      throw new IllegalArgumentException(
+          "source " + source + " is not offered — see setSwatchSources");
+    }
+    if (this.swatchSource == source) {
+      return;
+    }
+    this.swatchSource = source;
+    if (panes.get(PickerMode.SWATCHES) instanceof SwatchesPane pane) {
+      pane.showSource(source);
+    }
   }
 
   /**

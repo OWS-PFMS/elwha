@@ -90,8 +90,9 @@ public final class ElwhaColorPickerA11ySmoke {
     final SwatchesPane swatches = (SwatchesPane) picker.paneFor(PickerMode.SWATCHES);
     final List<String> listNames = new ArrayList<>();
     collectNamesByRole(swatches, AccessibleRole.LIST, listNames);
-    check("three strips expose LIST", listNames.size() == 3);
+    check("four strips expose LIST", listNames.size() == 4);
     check("hue grid named", listNames.contains("Hue swatches"));
+    check("theme grid named", listNames.contains("Theme colors"));
     check("shade strip names its hue", listNames.contains("Shades of Red"));
     check("recent row named", listNames.contains("Recent colors"));
 

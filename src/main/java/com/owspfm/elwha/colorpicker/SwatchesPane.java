@@ -29,12 +29,17 @@ import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 
 /**
- * The SWATCHES pane (design doc {@code elwha-color-picker-design.md} §5): the Material hue grid
- * (twenty circular cells showing each hue's 500 shade), the active hue's shade strip (one connected
- * full-corner segmented run, 50–900), and the recent-colors row fed by the picker's non-adjusting
- * commits. The cell equal to the picker's current color carries the selection indicator — a 2px
- * primary ring plus a luminance-picked check, the M3 selected-day treatment translated to cells
- * that are themselves colored.
+ * The SWATCHES pane (design docs {@code elwha-color-picker-design.md} §5 and V2 {@code
+ * elwha-color-picker-v2-design.md} §3): a {@link SwatchSource} sub-toggle (connected button group,
+ * the SLIDERS RGB/HSV precedent) over per-source cards — MATERIAL is the V1 stack (the Material hue
+ * grid, the active hue's shade strip, and the recent-colors row fed by the picker's non-adjusting
+ * commits), THEME is the live theme's color-role grid. The cell equal to the picker's current color
+ * carries the selection indicator — a 2px primary ring plus a luminance-picked check, the M3
+ * selected-day treatment translated to cells that are themselves colored.
+ *
+ * <p>The recent row lives in the MATERIAL card only — a layout decision, not a cut: every source
+ * card must stay inside the V1 height budget so the CardLayout host never pads the other modes
+ * (design §3).
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -50,6 +55,9 @@ final class SwatchesPane extends ColorPickerPane {
   private static final int RECENT_PITCH = 28;
   private static final int RING_MARGIN = 4;
 
+  private final com.owspfm.elwha.buttongroup.ElwhaButtonGroup sourceToggle;
+  private final java.awt.CardLayout sourceCards;
+  private final javax.swing.JPanel sourceHost;
   private final HueGrid hueGrid;
   private final ShadeStrip shadeStrip;
   private final RecentRow recentRow;
@@ -64,11 +72,67 @@ final class SwatchesPane extends ColorPickerPane {
     final int[] found = MaterialSwatchCatalog.find(picker.getColor());
     this.activeHue = found != null ? found[0] : 0;
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-    add(hueGrid);
-    add(Box.createVerticalStrut(SpaceScale.MD.px()));
-    add(shadeStrip);
-    add(Box.createVerticalStrut(SpaceScale.MD.px()));
-    add(recentRow);
+
+    final List<SwatchSource> sources = picker.getSwatchSources();
+    if (sources.size() > 1) {
+      this.sourceToggle =
+          com.owspfm.elwha.buttongroup.ElwhaButtonGroup.connected()
+              .add(sources.stream().map(SwatchSource::label).toArray(String[]::new))
+              .setSelectionMode(com.owspfm.elwha.buttongroup.SelectionMode.REQUIRED)
+              .setButtonSize(com.owspfm.elwha.button.ButtonSize.XS);
+      sourceToggle.setSelectedIndex(Math.max(0, sources.indexOf(picker.getSwatchSource())));
+      sourceToggle.setAlignmentX(LEFT_ALIGNMENT);
+      sourceToggle.addSelectionListener(
+          group -> {
+            final int index = group.getSelectedIndex();
+            if (index >= 0 && index < sources.size()) {
+              picker.setSwatchSource(sources.get(index));
+            }
+          });
+      add(sourceToggle);
+    } else {
+      this.sourceToggle = null;
+    }
+
+    final javax.swing.JPanel materialCard = new javax.swing.JPanel();
+    materialCard.setOpaque(false);
+    materialCard.setLayout(new BoxLayout(materialCard, BoxLayout.Y_AXIS));
+    // SM struts (V1 used MD): the V2 source toggle joins the pane, and every card must stay
+    // inside the V1 height budget so the mode host never regrows the dead band (design §3).
+    materialCard.add(hueGrid);
+    materialCard.add(Box.createVerticalStrut(SpaceScale.SM.px()));
+    materialCard.add(shadeStrip);
+    materialCard.add(Box.createVerticalStrut(SpaceScale.SM.px()));
+    materialCard.add(recentRow);
+
+    this.sourceCards = new java.awt.CardLayout();
+    this.sourceHost = new javax.swing.JPanel(sourceCards);
+    sourceHost.setOpaque(false);
+    sourceHost.setAlignmentX(LEFT_ALIGNMENT);
+    for (final SwatchSource source : sources) {
+      sourceHost.add(
+          switch (source) {
+            case MATERIAL -> materialCard;
+            case THEME -> new ThemeGrid();
+          },
+          source.name());
+    }
+    add(sourceHost);
+    showSource(picker.getSwatchSource());
+  }
+
+  void showSource(final SwatchSource source) {
+    final List<SwatchSource> sources = picker().getSwatchSources();
+    final int index = sources.indexOf(source);
+    if (index < 0) {
+      return;
+    }
+    sourceCards.show(sourceHost, source.name());
+    if (sourceToggle != null) {
+      sourceToggle.setSelectedIndex(index);
+    }
+    revalidate();
+    repaint();
   }
 
   @Override
@@ -610,5 +674,104 @@ final class SwatchesPane extends ColorPickerPane {
         g2.dispose();
       }
     }
+  }
+
+  private final class ThemeGrid extends CellStrip {
+
+    private final ColorRole[] roles = ColorRole.values();
+
+    @Override
+    int count() {
+      return roles.length;
+    }
+
+    @Override
+    int columns() {
+      return GRID_COLUMNS;
+    }
+
+    @Override
+    Rectangle cellRect(final int index) {
+      final int pitchX = Math.max(1, getWidth() / GRID_COLUMNS);
+      int col = index % GRID_COLUMNS;
+      if (!ltr()) {
+        col = GRID_COLUMNS - 1 - col;
+      }
+      final int row = index / GRID_COLUMNS;
+      return new Rectangle(col * pitchX, row * GRID_ROW_PITCH, pitchX, GRID_ROW_PITCH);
+    }
+
+    @Override
+    Color cellColor(final int index) {
+      // Resolved at paint/use time so a palette or mode switch re-themes the grid for free; the
+      // plain copy keeps the ColorUIResource resolve() returns out of the commit path (#495).
+      return new Color(roles[index].resolve().getRGB(), true);
+    }
+
+    @Override
+    void activate(final int index) {
+      commit(preserveAlpha(cellColor(index)), false);
+      repaint();
+    }
+
+    @Override
+    String stripName() {
+      return "Theme colors";
+    }
+
+    @Override
+    String cellName(final int index) {
+      return displayName(roles[index]) + " · " + ColorHex.format(cellColor(index), false);
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+      final int rows = (count() + GRID_COLUMNS - 1) / GRID_COLUMNS;
+      return new Dimension(0, rows * GRID_ROW_PITCH);
+    }
+
+    @Override
+    public Dimension getMaximumSize() {
+      return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+    }
+
+    @Override
+    protected void paintComponent(final Graphics g) {
+      final Graphics2D g2 = prepare(g);
+      try {
+        for (int i = 0; i < count(); i++) {
+          final Rectangle cell = cellRect(i);
+          final Color base = cellColor(i);
+          final int x = cell.x + (cell.width - CIRCLE_DIAMETER) / 2;
+          final int y = cell.y + (cell.height - CIRCLE_DIAMETER) / 2;
+          g2.setColor(stateLayered(base, i));
+          g2.fillOval(x, y, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
+          g2.setColor(ColorRole.OUTLINE_VARIANT.resolve());
+          g2.drawOval(x, y, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
+          if (matchesCurrent(base)) {
+            g2.setColor(ColorRole.PRIMARY.resolve());
+            g2.setStroke(new BasicStroke(2f));
+            g2.drawOval(x - 2, y - 2, CIRCLE_DIAMETER + 4, CIRCLE_DIAMETER + 4);
+            paintCheck(
+                g2,
+                new Rectangle(x + 5, y + 5, CIRCLE_DIAMETER - 10, CIRCLE_DIAMETER - 10),
+                contrastTint(base));
+          }
+        }
+      } finally {
+        g2.dispose();
+      }
+    }
+  }
+
+  private static String displayName(final ColorRole role) {
+    final String[] words = role.name().toLowerCase(java.util.Locale.ROOT).split("_");
+    final StringBuilder name =
+        new StringBuilder(words[0].substring(0, 1).toUpperCase(java.util.Locale.ROOT))
+            .append(words[0].substring(1));
+    for (int i = 1; i < words.length; i++) {
+      name.append(' ').append(words[i]);
+    }
+    return name.toString();
   }
 }
