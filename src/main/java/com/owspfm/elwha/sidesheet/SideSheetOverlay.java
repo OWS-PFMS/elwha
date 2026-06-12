@@ -115,6 +115,12 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
     return isShowing();
   }
 
+  // Re-docks the surface after a config change that moves its geometry (a live setSheetWidth) —
+  // the base only re-lays on host resize.
+  void relayoutHost() {
+    relayout();
+  }
+
   @Override
   protected void onClosed() {
     sheet.modalClosed(exitCause);

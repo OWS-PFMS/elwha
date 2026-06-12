@@ -3,11 +3,13 @@ package com.owspfm.elwha.sidesheet;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.dialog.ElwhaDialog;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -21,9 +23,10 @@ import javax.swing.SwingUtilities;
  * S3 visual smoke for the modal {@link ElwhaSideSheet} presentation (#464): every dismiss path —
  * Esc, scrim click, close affordance, back affordance, programmatic, footer action calling {@code
  * dismiss()} — with the recorded {@link SheetDismissCause} echoed to the status line and stdout;
- * Esc/scrim dismissibility toggles applied live; initial focus landing in the content field; and
- * the z-band proof: a dialog opened <em>from inside the sheet</em> stacks above it (dialogs 200
- * &gt; sheets 190).
+ * Esc/scrim dismissibility toggles applied live; a live Width control re-docking the shown sheet
+ * (at 200 the footer actions wrap to a second row and the footer grows; widening un-wraps); initial
+ * focus landing in the content field; and the z-band proof: a dialog opened <em>from inside the
+ * sheet</em> stacks above it (dialogs 200 &gt; sheets 190).
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.5.0
@@ -107,9 +110,17 @@ public final class SideSheetModalDemo {
     final ElwhaCheckbox back = new ElwhaCheckbox("Back affordance");
     back.addActionListener(e -> sheet.setBackAffordanceVisible(back.isChecked()));
 
+    // Live width: applies immediately to the shown sheet (the overlay re-docks at the new width).
+    // At 200 the footer actions wrap to a second row and the footer grows; widening un-wraps.
+    final ElwhaSelectField<Integer> width = ElwhaSelectField.outlined("Width");
+    width.setOptions(List.of(200, 256, 320, 400));
+    width.setSelectedValue(256);
+    width.addSelectionChangeListener(w -> sheet.setSheetWidth(w != null ? w : 256));
+
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 12, 12));
     controls.add(openTrailing);
     controls.add(openLeading);
+    controls.add(width);
     controls.add(esc);
     controls.add(scrim);
     controls.add(back);

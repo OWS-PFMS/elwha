@@ -106,6 +106,12 @@ public final class SideSheetModalSmoke {
       final JLayeredPane lp = frame.getRootPane().getLayeredPane();
       check("scrim + surface mounted at OVERLAY_LAYER (190)", overlayBandCount(lp) == 2);
 
+      // --- live width: a shown sheet re-docks at the new width without a re-show
+      onEdt(() -> sheet.setSheetWidth(320));
+      check("live setSheetWidth re-docks the shown surface", surfaceWidth(lp) == 320);
+      onEdt(() -> sheet.setSheetWidth(256));
+      check("live width change back re-docks again", surfaceWidth(lp) == 256);
+
       // --- Esc honored live: disabled → no-op; enabled → ESC cause
       onEdt(() -> sheet.setDismissibleByEsc(false));
       onEdt(() -> fireEscBinding(lp));
@@ -166,6 +172,17 @@ public final class SideSheetModalSmoke {
     } finally {
       onEdt(frame::dispose);
     }
+  }
+
+  private static int surfaceWidth(final JLayeredPane lp) {
+    for (final Component c : lp.getComponents()) {
+      if (lp.getLayer(c) == ElwhaLayers.OVERLAY_LAYER
+          && c instanceof javax.swing.JComponent jc
+          && jc.getActionMap().get("elwha-sidesheet-esc") != null) {
+        return c.getWidth();
+      }
+    }
+    return -1;
   }
 
   private static int overlayBandCount(final JLayeredPane lp) {

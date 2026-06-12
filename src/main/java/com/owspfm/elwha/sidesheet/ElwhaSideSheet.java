@@ -259,7 +259,9 @@ public final class ElwhaSideSheet extends JComponent {
   /**
    * Sets the sheet's open width in pixels. The M3 docked width is {@link #SHEET_WIDTH_PX} (256);
    * the spec caps modal sheets at 400 — documented, not enforced (desktop detail panes legitimately
-   * run wider). A modal presentation additionally clamps to the host window's width.
+   * run wider). A modal presentation additionally clamps to the host window's width. Applies live:
+   * an embedded sheet reflows its host layout, and a currently-shown modal presentation re-docks at
+   * the new width.
    *
    * @param px the open width in pixels (clamped to {@code >= 0})
    * @version v0.5.0
@@ -273,6 +275,9 @@ public final class ElwhaSideSheet extends JComponent {
     this.sheetWidth = next;
     revalidate();
     repaint();
+    if (isModalShowing()) {
+      overlay.relayoutHost();
+    }
   }
 
   /**
