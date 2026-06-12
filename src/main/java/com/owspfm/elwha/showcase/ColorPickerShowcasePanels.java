@@ -73,14 +73,14 @@ final class ColorPickerShowcasePanels {
 
     final ElwhaCheckbox alphaBox = new ElwhaCheckbox("Alpha enabled");
     final ElwhaSwitch enabledSwitch = new ElwhaSwitch(true);
-    enabledSwitch.setLabel("Enabled");
+    enabledSwitch.getAccessibleContext().setAccessibleName("Picker enabled");
 
     final ElwhaTextField supportingField = ElwhaTextField.outlined("Supporting text");
     supportingField.setText("Select color");
 
     final ElwhaButton dialogButton = ElwhaButton.filledTonalButton("Open dialog");
     final ElwhaSwitch fullScreenSwitch = new ElwhaSwitch();
-    fullScreenSwitch.setLabel("Full-screen");
+    fullScreenSwitch.getAccessibleContext().setAccessibleName("Full-screen dialog");
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Modes");
@@ -91,11 +91,11 @@ final class ColorPickerShowcasePanels {
     controls.addControl("", presetField);
     controls.addControl("", alphaBox);
     controls.addSection("Context");
-    controls.addControl("", enabledSwitch);
+    controls.addControl("Enabled", enabledSwitch);
     controls.addControl("", supportingField);
     controls.addSection("Dialog");
     controls.addControl("", dialogButton);
-    controls.addControl("", fullScreenSwitch);
+    controls.addControl("Full-screen", fullScreenSwitch);
 
     final JLabel readout = new JLabel("getColor() → #FF7043FF (adjusting)", SwingConstants.CENTER);
     final Dimension readoutPref = readout.getPreferredSize();
