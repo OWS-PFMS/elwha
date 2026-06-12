@@ -359,6 +359,10 @@ public class ElwhaColorPicker extends JComponent {
     return eyedropperEnabled;
   }
 
+  boolean isSamplerOpen() {
+    return sampler != null;
+  }
+
   void openEyedropper() {
     if (!isEnabled() || !eyedropperEnabled || sampler != null) {
       return;
