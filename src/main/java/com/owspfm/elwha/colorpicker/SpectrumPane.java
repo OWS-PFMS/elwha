@@ -62,14 +62,13 @@ final class SpectrumPane extends ColorPickerPane {
     hueSlider.setListener((degrees, adjusting) -> hueTo(degrees, adjusting));
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     add(svBox);
-    add(Box.createVerticalStrut(SpaceScale.MD.px()));
+    add(Box.createVerticalStrut(SpaceScale.SM.px()));
     add(hueSlider);
     if (picker.isAlphaEnabled()) {
       this.alphaSlider = new ColorTrackSlider(0, 255, alpha);
       alphaSlider.setCheckerboardBacking(true);
       alphaSlider.setAccessibleChannelName("Alpha");
       alphaSlider.setListener(this::alphaTo);
-      add(Box.createVerticalStrut(SpaceScale.SM.px()));
       add(alphaSlider);
       updateAlphaTrack();
     } else {

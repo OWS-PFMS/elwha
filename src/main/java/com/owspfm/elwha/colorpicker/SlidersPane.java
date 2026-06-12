@@ -119,14 +119,13 @@ final class SlidersPane extends ColorPickerPane {
 
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     add(modelToggle);
-    add(Box.createVerticalStrut(SpaceScale.MD.px()));
+    add(Box.createVerticalStrut(SpaceScale.SM.px()));
     add(rowsHost);
     if (picker.isAlphaEnabled()) {
       this.alphaRow = new ChannelRow("A", 0, 255, this::alphaFromUser);
       alphaRow.slider.setAccessibleChannelName("Alpha");
       alphaRow.slider.setCheckerboardBacking(true);
       alphaRow.setAlignmentX(LEFT_ALIGNMENT);
-      add(Box.createVerticalStrut(SpaceScale.SM.px()));
       add(alphaRow);
     } else {
       this.alphaRow = null;
@@ -288,12 +287,11 @@ final class SlidersPane extends ColorPickerPane {
     final JPanel panel = new JPanel();
     panel.setOpaque(false);
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-    for (int i = 0; i < rows.length; i++) {
-      if (i > 0) {
-        panel.add(Box.createVerticalStrut(SpaceScale.SM.px()));
-      }
-      rows[i].setAlignmentX(LEFT_ALIGNMENT);
-      panel.add(rows[i]);
+    // No inter-row struts: each 32px row already carries 8px of focus-ring air around its
+    // 16px track, so tracks sit 16px apart unaided.
+    for (final ChannelRow row : rows) {
+      row.setAlignmentX(LEFT_ALIGNMENT);
+      panel.add(row);
     }
     return panel;
   }

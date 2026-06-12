@@ -22,11 +22,12 @@ abstract class ColorPickerPane extends JPanel {
   ColorPickerPane(final ElwhaColorPicker picker) {
     this.picker = picker;
     setOpaque(false);
-    // Bottom inset is SM, not LG: the dialog host supplies its own content-to-actions gap, and
-    // the hex field already reserves a supporting-text row (smoke-iterate trim).
+    // Vertical insets are deliberately tight (SM top, XS bottom): the dialog host supplies its
+    // own content-to-actions gap, the hex field reserves a supporting-text row, and every slider
+    // row already carries focus-ring air (smoke-iterate trims).
     setBorder(
         BorderFactory.createEmptyBorder(
-            SpaceScale.MD.px(), SpaceScale.LG.px(), SpaceScale.SM.px(), SpaceScale.LG.px()));
+            SpaceScale.SM.px(), SpaceScale.LG.px(), SpaceScale.XS.px(), SpaceScale.LG.px()));
   }
 
   final ElwhaColorPicker picker() {
