@@ -65,7 +65,7 @@ public class ElwhaColorPicker extends JComponent {
   private final Map<PickerMode, ColorPickerPane> panes = new EnumMap<>(PickerMode.class);
 
   private List<PickerMode> modes =
-      List.of(PickerMode.SWATCHES, PickerMode.SPECTRUM, PickerMode.SLIDERS);
+      List.of(PickerMode.SWATCHES, PickerMode.SPECTRUM, PickerMode.WHEEL, PickerMode.SLIDERS);
   private Color color;
   private boolean adjusting;
   private boolean committing;
@@ -74,8 +74,7 @@ public class ElwhaColorPicker extends JComponent {
   private String supportingText = "Select color";
 
   /**
-   * Creates a picker with all three modes and an initial color of white (the JColorChooser
-   * default).
+   * Creates a picker with all four modes and an initial color of white (the JColorChooser default).
    *
    * @version v0.5.0
    * @since v0.5.0
@@ -85,7 +84,7 @@ public class ElwhaColorPicker extends JComponent {
   }
 
   /**
-   * Creates a picker with all three modes, staged on the given color.
+   * Creates a picker with all four modes, staged on the given color.
    *
    * @param initialColor the starting color
    * @throws IllegalArgumentException if {@code initialColor} is {@code null}
@@ -491,6 +490,7 @@ public class ElwhaColorPicker extends JComponent {
     return switch (mode) {
       case SWATCHES -> new SwatchesPane(this);
       case SPECTRUM -> new SpectrumPane(this);
+      case WHEEL -> new WheelPane(this);
       case SLIDERS -> new SlidersPane(this);
     };
   }
