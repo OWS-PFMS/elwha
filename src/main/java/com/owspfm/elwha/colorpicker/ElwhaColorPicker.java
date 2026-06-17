@@ -54,9 +54,14 @@ public class ElwhaColorPicker extends JComponent {
   /** Most-recently-used colors retained for the SWATCHES pane's recent row. */
   static final int RECENT_CAPACITY = 10;
 
+  /** Capacity of the SAVED tier's favorites grid — three rows of ten (design §3). */
+  static final int FAVORITES_CAPACITY = 30;
+
   private static final int PREFERRED_WIDTH = 328;
 
   private final java.util.List<Color> recent = new java.util.ArrayList<>();
+  private final java.util.List<Color> favorites = new java.util.ArrayList<>();
+  private final java.util.List<ChangeListener> favoritesListeners = new java.util.ArrayList<>();
 
   private final ColorPickerHeader header;
   private final ElwhaTabs tabs;
@@ -65,17 +70,21 @@ public class ElwhaColorPicker extends JComponent {
   private final Map<PickerMode, ColorPickerPane> panes = new EnumMap<>(PickerMode.class);
 
   private List<PickerMode> modes =
-      List.of(PickerMode.SWATCHES, PickerMode.SPECTRUM, PickerMode.SLIDERS);
+      List.of(PickerMode.SWATCHES, PickerMode.SPECTRUM, PickerMode.WHEEL, PickerMode.SLIDERS);
+  private List<SwatchSource> swatchSources =
+      List.of(SwatchSource.MATERIAL, SwatchSource.THEME, SwatchSource.SAVED);
+  private SwatchSource swatchSource = SwatchSource.MATERIAL;
   private Color color;
   private boolean adjusting;
   private boolean committing;
   private boolean rebuilding;
   private boolean alphaEnabled;
+  private boolean eyedropperEnabled;
+  private ScreenSampler sampler;
   private String supportingText = "Select color";
 
   /**
-   * Creates a picker with all three modes and an initial color of white (the JColorChooser
-   * default).
+   * Creates a picker with all four modes and an initial color of white (the JColorChooser default).
    *
    * @version v0.5.0
    * @since v0.5.0
@@ -85,7 +94,7 @@ public class ElwhaColorPicker extends JComponent {
   }
 
   /**
-   * Creates a picker with all three modes, staged on the given color.
+   * Creates a picker with all four modes, staged on the given color.
    *
    * @param initialColor the starting color
    * @throws IllegalArgumentException if {@code initialColor} is {@code null}
@@ -244,6 +253,254 @@ public class ElwhaColorPicker extends JComponent {
   }
 
   /**
+   * Restricts (or reorders) the SWATCHES mode's swatch sources — the same closed-set contract as
+   * {@link #setModes}: any non-empty, duplicate-free subset of {@link SwatchSource} in any order.
+   * The first source becomes active; a single source hides the source toggle. The current color and
+   * the recent row are preserved.
+   *
+   * @param sources the sources to offer, in toggle order
+   * @throws IllegalArgumentException if {@code sources} is null, empty, or contains nulls or
+   *     duplicates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setSwatchSources(final SwatchSource... sources) {
+    if (sources == null || sources.length == 0) {
+      throw new IllegalArgumentException("at least one swatch source is required");
+    }
+    final List<SwatchSource> next = Arrays.asList(sources);
+    if (next.contains(null)) {
+      throw new IllegalArgumentException("swatch sources must not contain null");
+    }
+    if (next.stream().distinct().count() != next.size()) {
+      throw new IllegalArgumentException("swatch sources must not repeat");
+    }
+    this.swatchSources = List.copyOf(next);
+    this.swatchSource = swatchSources.get(0);
+    rebuildModes();
+  }
+
+  /**
+   * Returns the offered swatch sources in toggle order.
+   *
+   * @return an immutable source list
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public List<SwatchSource> getSwatchSources() {
+    return swatchSources;
+  }
+
+  /**
+   * Returns the active swatch source.
+   *
+   * @return the source whose card the SWATCHES pane shows
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public SwatchSource getSwatchSource() {
+    return swatchSource;
+  }
+
+  /**
+   * Activates a swatch source's card in the SWATCHES pane. Never mutates the color. The choice is
+   * retained even while SWATCHES is not among {@link #getModes()}.
+   *
+   * @param source the source to activate
+   * @throws IllegalArgumentException if {@code source} is not among {@link #getSwatchSources()}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setSwatchSource(final SwatchSource source) {
+    if (!swatchSources.contains(source)) {
+      throw new IllegalArgumentException(
+          "source " + source + " is not offered — see setSwatchSources");
+    }
+    if (this.swatchSource == source) {
+      return;
+    }
+    this.swatchSource = source;
+    if (panes.get(PickerMode.SWATCHES) instanceof SwatchesPane pane) {
+      pane.showSource(source);
+    }
+  }
+
+  /**
+   * Opts the picker into the <strong>eyedropper</strong> (V2 design doc {@code
+   * elwha-color-picker-v2-design.md} §4): a colorize icon button at the header's trailing edge
+   * opens a frozen-capture screen sampler — click or Enter picks any on-screen pixel as a settled
+   * commit (current alpha preserved when alpha is enabled), Esc cancels, arrows nudge by one pixel.
+   *
+   * <p><strong>macOS requires the Screen Recording permission</strong> for captures to include
+   * other applications' windows, and a denial is not detectable in code (the capture silently shows
+   * only the wallpaper and this JVM's windows) — which is why the affordance is opt-in. Headless
+   * environments and {@code Robot} construction failures hide the affordance automatically.
+   *
+   * @param eyedropperEnabled whether the header offers the eyedropper
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setEyedropperEnabled(final boolean eyedropperEnabled) {
+    if (this.eyedropperEnabled == eyedropperEnabled) {
+      return;
+    }
+    this.eyedropperEnabled = eyedropperEnabled;
+    header.refreshEyedropper();
+  }
+
+  /**
+   * Answers whether the eyedropper affordance is enabled.
+   *
+   * @return {@code true} when the header offers the eyedropper
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public boolean isEyedropperEnabled() {
+    return eyedropperEnabled;
+  }
+
+  boolean isSamplerOpen() {
+    return sampler != null;
+  }
+
+  void openEyedropper() {
+    if (!isEnabled() || !eyedropperEnabled || sampler != null) {
+      return;
+    }
+    sampler =
+        new ScreenSampler(
+            sampled ->
+                commitInternal(
+                    null,
+                    alphaEnabled
+                        ? new Color(
+                            sampled.getRed(),
+                            sampled.getGreen(),
+                            sampled.getBlue(),
+                            color.getAlpha())
+                        : sampled,
+                    false),
+            () -> sampler = null);
+    sampler.open();
+  }
+
+  /**
+   * Returns the user's saved swatches in grid order. Never {@code null}; an immutable snapshot.
+   *
+   * @return the saved colors
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public List<Color> getFavorites() {
+    return List.copyOf(favorites);
+  }
+
+  /**
+   * Replaces the saved swatches — the restore half of the client-owned persistence round-trip
+   * (design doc {@code elwha-color-picker-v2-design.md} §3). The library never persists favorites
+   * itself; clients store the list wherever they already keep settings:
+   *
+   * <pre>{@code
+   * picker.setFavorites(loadFavoriteColors());
+   * picker.addFavoritesListener(e -> storeFavoriteColors(picker.getFavorites()));
+   * }</pre>
+   *
+   * <p>The list is copied, deduplicated, and truncated to {@code FAVORITES_CAPACITY} (30).
+   * Favorites listeners fire on every call.
+   *
+   * @param favorites the saved colors, in grid order
+   * @throws IllegalArgumentException if {@code favorites} is {@code null} or contains {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setFavorites(final List<Color> favorites) {
+    if (favorites == null) {
+      throw new IllegalArgumentException("favorites must not be null or contain null");
+    }
+    for (final Color candidate : favorites) {
+      if (candidate == null) {
+        throw new IllegalArgumentException("favorites must not be null or contain null");
+      }
+    }
+    this.favorites.clear();
+    for (final Color candidate : favorites) {
+      if (!this.favorites.contains(candidate)) {
+        this.favorites.add(candidate);
+        if (this.favorites.size() == FAVORITES_CAPACITY) {
+          break;
+        }
+      }
+    }
+    favoritesChanged();
+  }
+
+  /**
+   * Appends a color to the saved swatches. A color already saved, or an add past the capacity of
+   * 30, is a silent no-op — listeners fire only on an actual mutation.
+   *
+   * @param color the color to save
+   * @throws IllegalArgumentException if {@code color} is {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void addFavorite(final Color color) {
+    if (color == null) {
+      throw new IllegalArgumentException("color must not be null");
+    }
+    if (favorites.contains(color) || favorites.size() >= FAVORITES_CAPACITY) {
+      return;
+    }
+    favorites.add(color);
+    favoritesChanged();
+  }
+
+  /**
+   * Removes a color from the saved swatches; a color not present is a silent no-op.
+   *
+   * @param color the color to remove
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void removeFavorite(final Color color) {
+    if (favorites.remove(color)) {
+      favoritesChanged();
+    }
+  }
+
+  /**
+   * Registers a listener fired on every favorites mutation — the store half of the client-owned
+   * persistence round-trip (see {@link #setFavorites}).
+   *
+   * @param listener the listener to add
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void addFavoritesListener(final ChangeListener listener) {
+    favoritesListeners.add(listener);
+  }
+
+  /**
+   * Removes a previously registered favorites listener.
+   *
+   * @param listener the listener to remove
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void removeFavoritesListener(final ChangeListener listener) {
+    favoritesListeners.remove(listener);
+  }
+
+  private void favoritesChanged() {
+    if (panes.get(PickerMode.SWATCHES) instanceof SwatchesPane pane) {
+      pane.favoritesChanged();
+    }
+    final ChangeEvent event = new ChangeEvent(this);
+    for (final ChangeListener listener : List.copyOf(favoritesListeners)) {
+      listener.stateChanged(event);
+    }
+  }
+
+  /**
    * Sets the supporting text naming the task (the M3 header's first line). {@code null} hides the
    * line — the form `ElwhaColorPickerDialog` uses, since the dialog headline already names the
    * task.
@@ -318,6 +575,7 @@ public class ElwhaColorPicker extends JComponent {
     for (final ColorPickerPane pane : panes.values()) {
       pane.setEnabled(enabled);
     }
+    header.refreshEyedropper();
     repaint();
   }
 
@@ -491,6 +749,7 @@ public class ElwhaColorPicker extends JComponent {
     return switch (mode) {
       case SWATCHES -> new SwatchesPane(this);
       case SPECTRUM -> new SpectrumPane(this);
+      case WHEEL -> new WheelPane(this);
       case SLIDERS -> new SlidersPane(this);
     };
   }

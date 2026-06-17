@@ -4,7 +4,9 @@ import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.colorpicker.ElwhaColorPicker;
 import com.owspfm.elwha.colorpicker.ElwhaColorPickerDialog;
+import com.owspfm.elwha.colorpicker.ElwhaColorPickerPopover;
 import com.owspfm.elwha.colorpicker.PickerMode;
+import com.owspfm.elwha.colorpicker.SwatchSource;
 import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.switches.ElwhaSwitch;
 import com.owspfm.elwha.textfield.ElwhaTextField;
@@ -25,12 +27,13 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
 /**
- * The Elwha Showcase leaf surface for {@link ElwhaColorPicker} + {@link ElwhaColorPickerDialog}
- * (story #490): a {@link ComponentWorkbench} stage hosting one persistent live picker with
- * mode-subset, preset-color, alpha, enabled, and supporting-text knobs plus a dialog launcher and a
- * generated construction snippet — every knob an Elwha control (the #424 dogfood direction); and a
- * gallery of single-mode pickers, the alpha-enabled spectrum, a populated recent row, and the
- * disabled treatment.
+ * The Elwha Showcase leaf surface for {@link ElwhaColorPicker} + {@link ElwhaColorPickerDialog} +
+ * {@link ElwhaColorPickerPopover} (stories #490 and V2 #503): a {@link ComponentWorkbench} stage
+ * hosting one persistent live picker with mode-subset (incl. WHEEL), swatch-source-subset,
+ * preset-color, alpha, eyedropper, enabled, and supporting-text knobs plus dialog and popover
+ * launchers and a generated construction snippet — every knob an Elwha control (the #424 dogfood
+ * direction); and a gallery of single-mode pickers (wheel included), the alpha-enabled spectrum, a
+ * populated recent row, the THEME and SAVED swatch tiers, and the disabled treatment.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -62,16 +65,27 @@ final class ColorPickerShowcasePanels {
 
     final ElwhaCheckbox swatchesBox = new ElwhaCheckbox("Swatches");
     final ElwhaCheckbox spectrumBox = new ElwhaCheckbox("Spectrum");
+    final ElwhaCheckbox wheelBox = new ElwhaCheckbox("Wheel");
     final ElwhaCheckbox slidersBox = new ElwhaCheckbox("Sliders");
     swatchesBox.setChecked(true);
     spectrumBox.setChecked(true);
+    wheelBox.setChecked(true);
     slidersBox.setChecked(true);
+
+    final ElwhaCheckbox materialSourceBox = new ElwhaCheckbox("Material");
+    final ElwhaCheckbox themeSourceBox = new ElwhaCheckbox("Theme");
+    final ElwhaCheckbox savedSourceBox = new ElwhaCheckbox("Saved");
+    materialSourceBox.setChecked(true);
+    themeSourceBox.setChecked(true);
+    savedSourceBox.setChecked(true);
+    picker.setFavorites(List.of(new Color(0x6750A4), new Color(0x2E7D32)));
 
     final ElwhaSelectField<String> presetField = new ElwhaSelectField<>("Preset");
     presetField.setOptions(List.copyOf(PRESETS.keySet()));
     presetField.setSelectedValue("Deep Orange 400");
 
     final ElwhaCheckbox alphaBox = new ElwhaCheckbox("Alpha enabled");
+    final ElwhaCheckbox eyedropperBox = new ElwhaCheckbox("Eyedropper");
     final ElwhaSwitch enabledSwitch = new ElwhaSwitch(true);
     enabledSwitch.getAccessibleContext().setAccessibleName("Picker enabled");
 
@@ -81,21 +95,29 @@ final class ColorPickerShowcasePanels {
     final ElwhaButton dialogButton = ElwhaButton.filledTonalButton("Open dialog");
     final ElwhaSwitch fullScreenSwitch = new ElwhaSwitch();
     fullScreenSwitch.getAccessibleContext().setAccessibleName("Full-screen dialog");
+    final ElwhaButton popoverButton = ElwhaButton.filledTonalButton("Open popover");
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Modes");
     controls.addControl("", swatchesBox);
     controls.addControl("", spectrumBox);
+    controls.addControl("", wheelBox);
     controls.addControl("", slidersBox);
+    controls.addSection("Swatch sources");
+    controls.addControl("", materialSourceBox);
+    controls.addControl("", themeSourceBox);
+    controls.addControl("", savedSourceBox);
     controls.addSection("Color");
     controls.addControl("", presetField);
     controls.addControl("", alphaBox);
     controls.addSection("Context");
     controls.addControl("Enabled", enabledSwitch);
+    controls.addControl("", eyedropperBox);
     controls.addControl("", supportingField);
-    controls.addSection("Dialog");
+    controls.addSection("Presentations");
     controls.addControl("", dialogButton);
     controls.addControl("Full-screen", fullScreenSwitch);
+    controls.addControl("", popoverButton);
 
     final JLabel readout = new JLabel("getColor() → #FF7043FF (adjusting)", SwingConstants.CENTER);
     final Dimension readoutPref = readout.getPreferredSize();
@@ -123,6 +145,16 @@ final class ColorPickerShowcasePanels {
           }
         });
 
+    final ElwhaColorPickerPopover popover = new ElwhaColorPickerPopover();
+    popover.addChangeListener(e -> picker.setColor(popover.getColor()));
+    popoverButton.addActionListener(
+        e -> {
+          popover.setInitialColor(picker.getColor());
+          popover.setAlphaEnabled(picker.isAlphaEnabled());
+          popover.setEyedropperEnabled(picker.isEyedropperEnabled());
+          popover.show(popoverButton);
+        });
+
     final Runnable apply =
         () -> {
           final List<PickerMode> modes = new ArrayList<>();
@@ -131,6 +163,9 @@ final class ColorPickerShowcasePanels {
           }
           if (spectrumBox.isChecked()) {
             modes.add(PickerMode.SPECTRUM);
+          }
+          if (wheelBox.isChecked()) {
+            modes.add(PickerMode.WHEEL);
           }
           if (slidersBox.isChecked()) {
             modes.add(PickerMode.SLIDERS);
@@ -142,8 +177,28 @@ final class ColorPickerShowcasePanels {
           if (!picker.getModes().equals(modes)) {
             picker.setModes(modes.toArray(new PickerMode[0]));
           }
+          final List<SwatchSource> sources = new ArrayList<>();
+          if (materialSourceBox.isChecked()) {
+            sources.add(SwatchSource.MATERIAL);
+          }
+          if (themeSourceBox.isChecked()) {
+            sources.add(SwatchSource.THEME);
+          }
+          if (savedSourceBox.isChecked()) {
+            sources.add(SwatchSource.SAVED);
+          }
+          if (sources.isEmpty()) {
+            materialSourceBox.setChecked(true);
+            sources.add(SwatchSource.MATERIAL);
+          }
+          if (!picker.getSwatchSources().equals(sources)) {
+            picker.setSwatchSources(sources.toArray(new SwatchSource[0]));
+          }
           if (picker.isAlphaEnabled() != alphaBox.isChecked()) {
             picker.setAlphaEnabled(alphaBox.isChecked());
+          }
+          if (picker.isEyedropperEnabled() != eyedropperBox.isChecked()) {
+            picker.setEyedropperEnabled(eyedropperBox.isChecked());
           }
           picker.setEnabled(enabledSwitch.isSelected());
           final String supporting = supportingField.getText().trim();
@@ -151,7 +206,9 @@ final class ColorPickerShowcasePanels {
           workbench.setCode(
               renderCode(
                   modes,
+                  sources,
                   alphaBox.isChecked(),
+                  eyedropperBox.isChecked(),
                   enabledSwitch.isSelected(),
                   supporting,
                   fullScreenSwitch.isSelected()));
@@ -161,8 +218,13 @@ final class ColorPickerShowcasePanels {
 
     swatchesBox.addActionListener(e -> apply.run());
     spectrumBox.addActionListener(e -> apply.run());
+    wheelBox.addActionListener(e -> apply.run());
     slidersBox.addActionListener(e -> apply.run());
+    materialSourceBox.addActionListener(e -> apply.run());
+    themeSourceBox.addActionListener(e -> apply.run());
+    savedSourceBox.addActionListener(e -> apply.run());
     alphaBox.addActionListener(e -> apply.run());
+    eyedropperBox.addActionListener(e -> apply.run());
     enabledSwitch.addActionListener(e -> apply.run());
     presetField.addSelectionChangeListener(
         name -> {
@@ -212,6 +274,25 @@ final class ColorPickerShowcasePanels {
     disabledPicker.setEnabled(false);
     second.add(titled("Disabled", disabledPicker));
     stack.add(second);
+
+    final JPanel third = row();
+    third.add(titled("Wheel only", singleMode(PickerMode.WHEEL, new Color(0x00897B))));
+
+    final ElwhaColorPicker themePicker = new ElwhaColorPicker(new Color(0x6750A4));
+    themePicker.setModes(PickerMode.SWATCHES);
+    themePicker.setSwatchSource(SwatchSource.THEME);
+    themePicker.setSupportingText("Live theme roles");
+    third.add(titled("Theme swatches", themePicker));
+
+    final ElwhaColorPicker savedPicker = new ElwhaColorPicker(new Color(0x2E7D32));
+    savedPicker.setModes(PickerMode.SWATCHES);
+    savedPicker.setFavorites(
+        List.of(new Color(0x6750A4), new Color(0x2E7D32), new Color(0xFFB300)));
+    savedPicker.setSwatchSource(SwatchSource.SAVED);
+    savedPicker.setSupportingText("Saved swatches + eyedropper");
+    savedPicker.setEyedropperEnabled(true);
+    third.add(titled("Saved swatches", savedPicker));
+    stack.add(third);
 
     return stack;
   }
@@ -267,13 +348,15 @@ final class ColorPickerShowcasePanels {
 
   private static String renderCode(
       final List<PickerMode> modes,
+      final List<SwatchSource> sources,
       final boolean alpha,
+      final boolean eyedropper,
       final boolean enabled,
       final String supporting,
       final boolean fullScreen) {
-    final StringBuilder code = new StringBuilder(280);
+    final StringBuilder code = new StringBuilder(320);
     code.append("ElwhaColorPicker picker = new ElwhaColorPicker(new Color(0xFF7043));\n");
-    if (modes.size() < 3) {
+    if (modes.size() < 4) {
       code.append("picker.setModes(");
       for (int i = 0; i < modes.size(); i++) {
         if (i > 0) {
@@ -283,8 +366,21 @@ final class ColorPickerShowcasePanels {
       }
       code.append(");\n");
     }
+    if (sources.size() < 3) {
+      code.append("picker.setSwatchSources(");
+      for (int i = 0; i < sources.size(); i++) {
+        if (i > 0) {
+          code.append(", ");
+        }
+        code.append("SwatchSource.").append(sources.get(i).name());
+      }
+      code.append(");\n");
+    }
     if (alpha) {
       code.append("picker.setAlphaEnabled(true);\n");
+    }
+    if (eyedropper) {
+      code.append("picker.setEyedropperEnabled(true);\n");
     }
     if (!"Select color".equals(supporting)) {
       code.append("picker.setSupportingText(")
@@ -299,6 +395,7 @@ final class ColorPickerShowcasePanels {
         fullScreen
             ? "// Full-screen: new ElwhaColorPickerDialog().showFullScreen(parent) — Save confirms"
             : "// Modal: ElwhaColorPickerDialog.show(parent, \"Pick a color\", current, c -> …)");
+    code.append("\n// Docked: new ElwhaColorPickerPopover().show(anchor) — live, light-dismiss");
     return code.toString();
   }
 }

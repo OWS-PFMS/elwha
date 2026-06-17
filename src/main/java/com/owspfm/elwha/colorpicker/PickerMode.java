@@ -19,6 +19,14 @@ public enum PickerMode {
   /** Freeform pick — the saturation/value square with a hue slider. */
   SPECTRUM("Spectrum", "gradient"),
 
+  /**
+   * Freeform pick — the hue/saturation wheel with a value slider (V2, design doc {@code
+   * elwha-color-picker-v2-design.md} §2).
+   *
+   * @since v0.5.0
+   */
+  WHEEL("Wheel", "colors"),
+
   /** Precise definition — RGB/HSV channel sliders and a hex field. */
   SLIDERS("Sliders", "tune");
 
