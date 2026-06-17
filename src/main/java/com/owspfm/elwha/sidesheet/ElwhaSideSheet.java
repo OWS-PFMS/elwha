@@ -16,6 +16,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Container;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -24,6 +25,8 @@ import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -80,6 +83,10 @@ public final class ElwhaSideSheet extends JComponent {
   /** M3 detached side sheet margin ({@code m3_side_sheet_margin_detached}). */
   public static final int DETACHED_MARGIN_PX = SpaceScale.LG.px();
 
+  // Release past this fraction of the sheet width (dragged toward the anchored edge) dismisses;
+  // under it settles back. A position threshold reads clearly with a mouse (design doc §1/§4).
+  private static final float DRAG_DISMISS_THRESHOLD = 0.5f;
+
   private SheetType sheetType;
   private SheetEdge sheetEdge = SheetEdge.TRAILING;
   private SheetPosture sheetPosture = SheetPosture.DOCKED;
@@ -91,6 +98,7 @@ public final class ElwhaSideSheet extends JComponent {
   private boolean backAffordanceVisible;
   private boolean edgeDividerVisible = true;
   private boolean footerDividerVisible = true;
+  private boolean dragToDismissEnabled;
   private JComponent content;
   private final List<ElwhaButton> actions = new ArrayList<>();
 
@@ -155,6 +163,15 @@ public final class ElwhaSideSheet extends JComponent {
     header.add(backWrap, BorderLayout.LINE_START);
     header.add(headlineLabel, BorderLayout.CENTER);
     header.add(closeWrap, BorderLayout.LINE_END);
+
+    // Drag-to-dismiss lives on the header band; Swing routes mouse events to the deepest hit
+    // component (no bubbling), so the handler is registered on the header and the headline label it
+    // covers — the affordance buttons keep their own click/cursor and are excluded by construction.
+    final HeaderDragHandler dragHandler = new HeaderDragHandler();
+    header.addMouseListener(dragHandler);
+    header.addMouseMotionListener(dragHandler);
+    headlineLabel.addMouseListener(dragHandler);
+    headlineLabel.addMouseMotionListener(dragHandler);
 
     contentHolder.setOpaque(false);
 
@@ -548,6 +565,91 @@ public final class ElwhaSideSheet extends JComponent {
    */
   public boolean isFooterDividerVisible() {
     return footerDividerVisible;
+  }
+
+  // ------------------------------------------------------------ drag gestures
+
+  /**
+   * Enables drag-to-dismiss — dragging the header toward the anchored edge dismisses the sheet once
+   * the drag passes the halfway threshold, and settles it back otherwise. The desktop pointer
+   * mapping of M3's swipe-to-dismiss: the header shows a move cursor while enabled, a modal drag
+   * scrubs the slide + scrim live (releasing past the threshold reports {@link
+   * SheetDismissCause#DRAG}), and a standard drag scrubs the open/close width (the coplanar
+   * squash), closing or re-opening on release. <strong>Off by default</strong> — opt in
+   * deliberately; on the desktop a header that dismisses on drag is non-obvious and can fight
+   * selection.
+   *
+   * @param enabled whether the header drags to dismiss
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setDragToDismissEnabled(final boolean enabled) {
+    this.dragToDismissEnabled = enabled;
+    updateDragAffordance();
+  }
+
+  /**
+   * @return whether drag-to-dismiss is enabled
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public boolean isDragToDismissEnabled() {
+    return dragToDismissEnabled;
+  }
+
+  private void updateDragAffordance() {
+    final Cursor move =
+        dragToDismissEnabled ? Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR) : null;
+    header.setCursor(move);
+    headlineLabel.setCursor(move);
+  }
+
+  // Linear (un-eased) scrub of the open/close width for a standard drag — the body narrows 1:1 with
+  // the pointer (the coplanar squash). The animator is synced so a release reverse()/start()
+  // continues from here; the raw assignment overrides the eased value the snapTo listener set.
+  private void scrubOpen(final float progress) {
+    final float p = Math.max(0f, Math.min(1f, progress));
+    ensureOpenAnimator();
+    openAnimator.snapTo(p);
+    openProgress = p;
+    revalidate();
+  }
+
+  private void releaseStandardDrag(final boolean dismiss) {
+    ensureOpenAnimator();
+    if (dismiss) {
+      open = false;
+      openAnimator.reverse();
+    } else {
+      openAnimator.start();
+    }
+  }
+
+  // Applies a live drag fraction (0 = docked, 1 = fully toward the edge): a modal scrubs the slide
+  // + scrim, a standard sheet scrubs its open width. Package-private so the headless guard can
+  // drive the gesture without a synthetic mouse event.
+  void applyDragFraction(final float fraction) {
+    final float f = Math.max(0f, Math.min(1f, fraction));
+    if (isModalShowing()) {
+      overlay.dragTo(f);
+    } else {
+      scrubOpen(1f - f);
+    }
+  }
+
+  // Commits a released drag: past the threshold dismisses (modal: DRAG cause continuing from the
+  // dragged position; standard: close()), under it settles back open.
+  void releaseDrag(final float fraction) {
+    final boolean dismiss = fraction >= DRAG_DISMISS_THRESHOLD;
+    if (isModalShowing()) {
+      if (dismiss) {
+        overlay.dragDismiss();
+      } else {
+        overlay.dragSettle();
+      }
+    } else {
+      releaseStandardDrag(dismiss);
+    }
   }
 
   // ------------------------------------------------------------ standard presentation
@@ -968,6 +1070,46 @@ public final class ElwhaSideSheet extends JComponent {
     final JPanel wrap = new JPanel(new GridBagLayout());
     wrap.setOpaque(false);
     return wrap;
+  }
+
+  // Translates a header press-drag into a dismiss fraction (toward the resolved edge, clamped so a
+  // drag away from the edge does nothing) and feeds it to the live scrub. Uses absolute screen X so
+  // the delta is stable even as the modal surface slides out from under the docked hit target
+  // (Swing's mouse capture keeps delivering drags to the header that received the press).
+  private final class HeaderDragHandler extends MouseAdapter {
+    private boolean dragging;
+    private int pressScreenX;
+    private float lastFraction;
+
+    @Override
+    public void mousePressed(final MouseEvent e) {
+      if (!dragToDismissEnabled) {
+        return;
+      }
+      dragging = true;
+      pressScreenX = e.getXOnScreen();
+      lastFraction = 0f;
+    }
+
+    @Override
+    public void mouseDragged(final MouseEvent e) {
+      if (!dragging) {
+        return;
+      }
+      final int delta = e.getXOnScreen() - pressScreenX;
+      final int towardEdge = Math.max(0, isDockedRight() ? delta : -delta);
+      lastFraction = Math.min(1f, towardEdge / (float) Math.max(1, sheetWidth));
+      applyDragFraction(lastFraction);
+    }
+
+    @Override
+    public void mouseReleased(final MouseEvent e) {
+      if (!dragging) {
+        return;
+      }
+      dragging = false;
+      releaseDrag(lastFraction);
+    }
   }
 
   // The headline: TITLE_LARGE / ON_SURFACE resolved per paint so a runtime theme/mode switch

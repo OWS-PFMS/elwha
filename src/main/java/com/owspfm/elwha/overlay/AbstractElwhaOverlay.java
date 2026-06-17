@@ -58,7 +58,7 @@ import javax.swing.SwingUtilities;
  * surface <em>dismisses</em> the overlay, and no backdrop is required.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public abstract class AbstractElwhaOverlay {
@@ -509,6 +509,50 @@ public abstract class AbstractElwhaOverlay {
     } else {
       performTeardown();
     }
+  }
+
+  /**
+   * Interactively scrubs the entrance/exit motion to a raw progress value — the hook a drag gesture
+   * uses to drive the slide/fade 1:1 with the pointer. Unlike the eased animation ticks, {@link
+   * #motionProgress} is set <em>linearly</em> so the surface tracks the pointer without the easing
+   * lag; the animator's internal progress is synced too, so a subsequent {@link #beginClose()}
+   * (release past the threshold) or {@link #settleMotion()} (release under it) continues smoothly
+   * from the scrubbed position rather than snapping. A no-op when not shown or already closing.
+   *
+   * @param progress the raw target progress, clamped to {@code [0, 1]} ({@code 1} = fully shown)
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  protected final void scrubMotion(final float progress) {
+    if (layeredPane == null || closing) {
+      return;
+    }
+    final float p = Math.max(0f, Math.min(1f, progress));
+    if (entrance != null) {
+      entrance.snapTo(p);
+    }
+    motionProgress = p;
+    if (backdrop != null) {
+      backdrop.repaint();
+    }
+    if (surface != null) {
+      surface.repaint();
+    }
+  }
+
+  /**
+   * Settles the motion back to fully shown after an interactive {@link #scrubMotion(float)} that
+   * did not cross the dismiss threshold — animates the entrance from the scrubbed position back to
+   * 1 (eased; snaps under reduced motion). A no-op when not shown or already closing.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  protected final void settleMotion() {
+    if (layeredPane == null || closing || entrance == null) {
+      return;
+    }
+    entrance.start();
   }
 
   // Per-tick motion update: ease the linear progress, repaint a present backdrop (the surface is

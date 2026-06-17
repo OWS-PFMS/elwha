@@ -52,5 +52,15 @@ public enum SheetDismissCause {
    * @version v0.5.0
    * @since v0.5.0
    */
-  PROGRAMMATIC
+  PROGRAMMATIC,
+
+  /**
+   * The sheet was dragged past the dismiss threshold (toward its anchored edge) while {@link
+   * ElwhaSideSheet#isDragToDismissEnabled()} was {@code true} — the desktop pointer mapping of M3's
+   * swipe-to-dismiss.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  DRAG
 }

@@ -124,6 +124,21 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
     relayout();
   }
 
+  // Drag-to-dismiss: the sheet's header drag maps a [0,1] dismiss fraction onto the slide motion
+  // (fraction 0 = docked, 1 = fully off-edge), the scrim dimming with it. Release routes to a
+  // threshold dismiss (DRAG cause, the exit continues from the dragged position) or a settle back.
+  void dragTo(final float dismissFraction) {
+    scrubMotion(1f - dismissFraction);
+  }
+
+  void dragSettle() {
+    settleMotion();
+  }
+
+  void dragDismiss() {
+    dismissSheet(SheetDismissCause.DRAG);
+  }
+
   @Override
   protected void onClosed() {
     sheet.modalClosed(exitCause);
