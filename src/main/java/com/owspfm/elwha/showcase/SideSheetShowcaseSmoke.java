@@ -1,5 +1,6 @@
 package com.owspfm.elwha.showcase;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.sidesheet.ElwhaSideSheet;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -16,11 +17,12 @@ import javax.swing.JComponent;
 /**
  * Headless guard for the Showcase Side Sheet leaf (story #466). Builds the {@link
  * SideSheetShowcasePanels} Workbench + Gallery without a display, asserting the workbench stages
- * exactly one live docked {@link ElwhaSideSheet}, exercising every Workbench checkbox through
- * {@code doClick} (open/close, affordances, dividers, RTL, modal dismissibility — each applies
- * without throwing; the modal trigger itself needs a realized window and is exercised by {@code
- * SideSheetModalSmoke}), counting the gallery's five configuration sheets, and laying out +
- * painting both surfaces into a {@link BufferedImage}.
+ * exactly one live docked {@link ElwhaSideSheet}, that the open/close toggle button round-trips the
+ * sheet's open state (the #506 desync guard — a stateful checkbox can't, so the control is a
+ * button), exercising every Workbench checkbox through {@code doClick} (affordances, dividers, RTL,
+ * modal dismissibility — each applies without throwing; the modal trigger itself needs a realized
+ * window and is exercised by {@code SideSheetModalSmoke}), counting the gallery's five
+ * configuration sheets, and laying out + painting both surfaces into a {@link BufferedImage}.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -46,7 +48,23 @@ public final class SideSheetShowcaseSmoke {
     check("workbench builds", workbench != null);
     final List<ElwhaSideSheet> staged = collect(workbench, ElwhaSideSheet.class);
     check("workbench stages exactly one live sheet", staged.size() == 1);
-    check("staged sheet is open", staged.get(0).isOpen());
+    final ElwhaSideSheet live = staged.get(0);
+    check("staged sheet is open", live.isOpen());
+
+    // #506 desync guard: the open/close control is a button (not a checkbox) so it can't sit in a
+    // checked state that contradicts a sheet self-closed via its X. Driving it must flip isOpen().
+    ElwhaButton openToggle = null;
+    for (final ElwhaButton button : collect(workbench, ElwhaButton.class)) {
+      if ("Close sheet".equals(button.getText()) || "Open sheet".equals(button.getText())) {
+        openToggle = button;
+        break;
+      }
+    }
+    check("workbench exposes the open/close toggle button", openToggle != null);
+    openToggle.doClick();
+    check("toggle closes the staged sheet", !live.isOpen());
+    openToggle.doClick();
+    check("toggle reopens the staged sheet", live.isOpen());
 
     for (final ElwhaCheckbox box : collect(workbench, ElwhaCheckbox.class)) {
       box.doClick();
@@ -68,8 +86,8 @@ public final class SideSheetShowcaseSmoke {
     paint(gallery, 1480, 480);
 
     System.out.println(
-        "SideSheetShowcaseSmoke: OK (workbench stages one live sheet, checkbox round-trips,"
-            + " 5-sheet gallery, both surfaces paint headless)");
+        "SideSheetShowcaseSmoke: OK (workbench stages one live sheet, open/close toggle"
+            + " round-trips, checkbox round-trips, 5-sheet gallery, both surfaces paint headless)");
   }
 
   private static <T> List<T> collect(final Container root, final Class<T> type) {

@@ -11,6 +11,8 @@ import java.awt.BorderLayout;
 import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -21,15 +23,16 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
 /**
- * The Elwha Showcase leaf surface for {@link ElwhaSideSheet} (story #466). The Workbench stages a
- * live <em>standard</em> sheet docked beside reflowing placeholder content — the embeddable half of
- * the component demos itself on the stage, with Open / Edge / Width / affordance / footer / divider
- * / RTL controls applied live — plus an "Open modal side sheet" trigger that presents the
- * <em>modal</em> half on the real Showcase frame with the same configuration (the dialog-leaf
- * trigger pattern), echoing each {@code SheetDismissCause} to the status line. The Width control is
- * live on both halves: it reflows the staged standard sheet and re-docks an open modal in place
- * (200 forces the footer-action wrap). The Gallery embeds static configurations directly — the
- * sheet is an ordinary component, so no preview shim is needed; modal-chrome instances render
+ * The Elwha Showcase leaf surface for {@link ElwhaSideSheet} (story #466). The Workbench switcher
+ * carries two presentation facets so it is unambiguous which controls drive which presentation. The
+ * {@code Component} segment stages a live <em>standard</em> sheet docked beside reflowing content,
+ * with an open/close toggle plus edge / width / affordance / footer / divider / RTL controls
+ * applied live. The {@code Modal} facet is a self-contained editor for the <em>modal</em>
+ * presentation — its own edge / width / affordance / footer configuration and the modal-only
+ * dismissal toggles — whose trigger presents the sheet on the real Showcase frame and echoes each
+ * {@code SheetDismissCause} to the status line; the facet's width control re-docks an open modal in
+ * place (200 forces the footer-action wrap). The Gallery embeds static configurations directly —
+ * the sheet is an ordinary component, so no preview shim is needed; modal-chrome instances render
  * without scrim or motion.
  *
  * @author Charles Bryan
@@ -44,7 +47,11 @@ final class SideSheetShowcasePanels {
 
   private SideSheetShowcasePanels() {}
 
-  /** Builds the interactive Workbench (live docked sheet + reflowing stage + modal trigger). */
+  /**
+   * Builds the interactive Workbench: the {@code Component} segment configures the live docked
+   * <em>standard</em> sheet; a {@code Modal} facet (added by {@link #buildModalFacet}) is a
+   * self-contained editor for the scrim-presented sheet.
+   */
   static JComponent buildWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
@@ -58,9 +65,20 @@ final class SideSheetShowcasePanels {
     stage.add(sheet, BorderLayout.LINE_END);
     stage.setPreferredSize(new Dimension(820, 480));
 
-    final ElwhaCheckbox openBox = new ElwhaCheckbox("Open");
-    openBox.setChecked(true);
-    openBox.addActionListener(e -> sheet.setOpen(openBox.isChecked()));
+    // A checkbox advertises persistent state, but the header close affordance is a second close
+    // path it never hears about, so it desyncs (#506). A button carries no contradictory state:
+    // toggling off the live isOpen() always does the right thing, and the close animation's resize
+    // lets us re-label after an in-sheet X close.
+    final ElwhaButton openToggle =
+        ElwhaButton.filledTonalButton(sheet.isOpen() ? "Close sheet" : "Open sheet");
+    openToggle.addActionListener(e -> sheet.setOpen(!sheet.isOpen()));
+    sheet.addComponentListener(
+        new ComponentAdapter() {
+          @Override
+          public void componentResized(final ComponentEvent e) {
+            openToggle.setText(sheet.isOpen() ? "Close sheet" : "Open sheet");
+          }
+        });
 
     final ElwhaSelectField<SheetEdge> edgeBox = ElwhaSelectField.outlined("Edge");
     edgeBox.setOptions(List.of(SheetEdge.values()));
@@ -76,23 +94,10 @@ final class SideSheetShowcasePanels {
           stage.repaint();
         });
 
-    // One live modal at a time; held so the width control can re-dock it while shown (the
-    // ModalDemo behavior). Cleared on close.
-    final ElwhaSideSheet[] liveModal = new ElwhaSideSheet[1];
-
-    // Live width: applies to the staged standard sheet AND re-docks an open modal in place.
-    // 200 forces the footer-action wrap; widening un-wraps.
     final ElwhaSelectField<Integer> widthBox = ElwhaSelectField.outlined("Width");
     widthBox.setOptions(List.of(200, 256, 320, 400));
     widthBox.setSelectedValue(256);
-    widthBox.addSelectionChangeListener(
-        w -> {
-          final int width = w != null ? w : 256;
-          sheet.setSheetWidth(width);
-          if (liveModal[0] != null) {
-            liveModal[0].setSheetWidth(width);
-          }
-        });
+    widthBox.addSelectionChangeListener(w -> sheet.setSheetWidth(w != null ? w : 256));
 
     final ElwhaCheckbox closeBox = new ElwhaCheckbox("Close affordance");
     closeBox.setChecked(true);
@@ -124,6 +129,73 @@ final class SideSheetShowcasePanels {
           stage.repaint();
         });
 
+    final WorkbenchControls controls = workbench.controls();
+    controls.addSection("Standard side sheet");
+    controls.addControl("", openToggle);
+    controls.addControl("", edgeBox);
+    controls.addControl("", widthBox);
+    controls.addSection("Header");
+    controls.addControl("", closeBox);
+    controls.addControl("", backBox);
+    controls.addSection("Footer & dividers");
+    controls.addControl("", actionsBox);
+    controls.addControl("", footerDividerBox);
+    controls.addControl("", edgeDividerBox);
+    controls.addSection("Behavior");
+    controls.addControl("", rtlBox);
+
+    workbench.setStage(stage);
+    workbench.setCode(
+        """
+        ElwhaSideSheet sheet = ElwhaSideSheet.standardSheet("Filters");
+        sheet.setContent(filterForm);
+        sheet.setActions(ElwhaButton.filledButton("Apply"), ElwhaButton.outlinedButton("Cancel"));
+        frame.add(sheet, BorderLayout.LINE_END);   // embed beside content
+
+        sheet.open();    // animate width 0 -> sheetWidth; siblings reflow
+        sheet.close();   // reverse; the sheet stays in the hierarchy
+        """);
+
+    buildModalFacet(workbench, stage);
+    return workbench;
+  }
+
+  // The Modal facet is a self-contained editor for the scrim-presented sheet, kept separate
+  // from the standard controls so it is clear which presentation each control drives (a smoke
+  // finding). It owns its edge / width / affordance / footer config plus the modal-only
+  // dismissal toggles; the trigger presents the sheet over the shared stage and echoes the
+  // SheetDismissCause. One live modal at a time, held so the width control can re-dock it while
+  // shown; cleared on close.
+  private static void buildModalFacet(final ComponentWorkbench workbench, final JPanel stage) {
+    final WorkbenchControls controls = new WorkbenchControls();
+    final ElwhaSideSheet[] liveModal = new ElwhaSideSheet[1];
+
+    final ElwhaSelectField<SheetEdge> edgeBox = ElwhaSelectField.outlined("Edge");
+    edgeBox.setOptions(List.of(SheetEdge.values()));
+    edgeBox.setSelectedValue(SheetEdge.TRAILING);
+
+    // 200 forces the footer-action wrap; widening un-wraps. Live on an open modal.
+    final ElwhaSelectField<Integer> widthBox = ElwhaSelectField.outlined("Width");
+    widthBox.setOptions(List.of(200, 256, 320, 400));
+    widthBox.setSelectedValue(256);
+    widthBox.addSelectionChangeListener(
+        w -> {
+          if (liveModal[0] != null) {
+            liveModal[0].setSheetWidth(w != null ? w : 256);
+          }
+        });
+
+    final ElwhaCheckbox closeBox = new ElwhaCheckbox("Close affordance");
+    closeBox.setChecked(true);
+    final ElwhaCheckbox backBox = new ElwhaCheckbox("Back affordance");
+
+    final ElwhaSelectField<Integer> actionsBox = ElwhaSelectField.outlined("Actions");
+    actionsBox.setOptions(List.of(0, 1, 2));
+    actionsBox.setSelectedValue(2);
+
+    final ElwhaCheckbox footerDividerBox = new ElwhaCheckbox("Footer divider");
+    footerDividerBox.setChecked(true);
+
     final ElwhaCheckbox escBox = new ElwhaCheckbox("Esc dismisses");
     escBox.setChecked(true);
     final ElwhaCheckbox scrimBox = new ElwhaCheckbox("Scrim dismisses");
@@ -153,9 +225,7 @@ final class SideSheetShowcasePanels {
           status.setText("Modal open…");
         });
 
-    final WorkbenchControls controls = workbench.controls();
-    controls.addSection("Side sheet");
-    controls.addControl("", openBox);
+    controls.addSection("Modal side sheet");
     controls.addControl("", edgeBox);
     controls.addControl("", widthBox);
     controls.addSection("Header");
@@ -164,29 +234,24 @@ final class SideSheetShowcasePanels {
     controls.addSection("Footer & dividers");
     controls.addControl("", actionsBox);
     controls.addControl("", footerDividerBox);
-    controls.addControl("", edgeDividerBox);
-    controls.addSection("Behavior");
-    controls.addControl("", rtlBox);
-    controls.addSection("Modal");
+    controls.addSection("Dismissal");
     controls.addControl("", escBox);
     controls.addControl("", scrimBox);
+    controls.addSection("Present");
     controls.addControl("", openModal);
     controls.addControl("", status);
 
-    workbench.setStage(stage);
-    workbench.setCode(
+    final ComponentWorkbench.Facet facet = workbench.addFacet("Modal", controls);
+    facet.setCode(
         """
-        ElwhaSideSheet sheet = ElwhaSideSheet.standardSheet("Filters");
-        sheet.setContent(filterForm);
-        sheet.setActions(ElwhaButton.filledButton("Apply"), ElwhaButton.outlinedButton("Cancel"));
-        frame.add(sheet, BorderLayout.LINE_END);   // standard: embed + open()/close()
-
         ElwhaSideSheet modal = ElwhaSideSheet.modalSheet("Filters");
         modal.setContent(filterForm);
+        modal.setActions(ElwhaButton.filledButton("Apply"), ElwhaButton.outlinedButton("Cancel"));
+        modal.setDismissibleByEsc(true);
+        modal.setDismissibleByScrim(true);
         modal.setOnClose(cause -> handle(cause)); // SheetDismissCause
-        modal.showModal(frame);                   // modal: scrim + slide-in
+        modal.showModal(frame);                   // scrim + slide-in over the host frame
         """);
-    return workbench;
   }
 
   /** Builds the static configuration gallery — direct embeds, no live overlays. */
