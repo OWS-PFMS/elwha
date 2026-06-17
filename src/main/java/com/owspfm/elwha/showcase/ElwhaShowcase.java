@@ -141,7 +141,7 @@ import javax.swing.event.DocumentListener;
  * -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"}
  *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ElwhaShowcase {
