@@ -200,10 +200,10 @@ final class RoundedPolygonShape {
       final double[] prev = verts[(i - 1 + n) % n];
       final double[] cur = verts[i];
       final double[] next = verts[(i + 1) % n];
-      final double tPrev = 0.5 * dist(cur, prev) * k;
-      final double tNext = 0.5 * dist(cur, next) * k;
-      final double[] a = along(cur, prev, tPrev);
-      final double[] b = along(cur, next, tNext);
+      final double trimPrev = 0.5 * dist(cur, prev) * k;
+      final double trimNext = 0.5 * dist(cur, next) * k;
+      final double[] a = along(cur, prev, trimPrev);
+      final double[] b = along(cur, next, trimNext);
       if (i == 0) {
         path.moveTo(a[0], a[1]);
       } else {

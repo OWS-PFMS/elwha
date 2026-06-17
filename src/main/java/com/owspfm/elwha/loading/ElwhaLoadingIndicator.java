@@ -11,6 +11,12 @@ import java.awt.RenderingHints;
 import java.awt.event.HierarchyEvent;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
+import javax.accessibility.Accessible;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
+import javax.accessibility.AccessibleState;
+import javax.accessibility.AccessibleStateSet;
+import javax.accessibility.AccessibleValue;
 import javax.swing.BoundedRangeModel;
 import javax.swing.DefaultBoundedRangeModel;
 import javax.swing.JComponent;
@@ -41,11 +47,17 @@ import javax.swing.event.ChangeListener;
  * MorphAnimator#isReducedMotion() reduced motion} freezes the spinner on a static shape. The
  * indicator is non-interactive — not focusable, no hover/press.
  *
+ * <p><strong>Accessibility.</strong> Reports {@link AccessibleRole#PROGRESS_BAR} with an {@link
+ * AccessibleValue} (the current value while determinate; {@code null} plus {@link
+ * AccessibleState#BUSY} while indeterminate). Name the activity for assistive tech via {@code
+ * getAccessibleContext().setAccessibleName("Loading…")}. For the contained variant keep the active
+ * indicator and container at ≥ 3:1 contrast (M3 guidance).
+ *
  * @author Charles Bryan
  * @version v0.5.0
  * @since v0.5.0
  */
-public class ElwhaLoadingIndicator extends JComponent {
+public class ElwhaLoadingIndicator extends JComponent implements Accessible {
 
   /** The M3 {@code ActiveSize} — the active indicator's box, px. */
   public static final int INDICATOR_SIZE_DEFAULT_PX = 38;
@@ -107,7 +119,7 @@ public class ElwhaLoadingIndicator extends JComponent {
     setFocusable(false);
     this.clock = new Timer(CLOCK_FRAME_MS, e -> repaint());
     this.clock.setRepeats(true);
-    model.addChangeListener(e -> repaint());
+    model.addChangeListener(e -> onModelChange());
     addHierarchyListener(
         e -> {
           if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0) {
@@ -665,6 +677,141 @@ public class ElwhaLoadingIndicator extends JComponent {
       g2.fill(path);
     } finally {
       g2.dispose();
+    }
+  }
+
+  private void onModelChange() {
+    repaint();
+    if (accessibleContext != null && !indeterminate) {
+      accessibleContext.firePropertyChange(
+          AccessibleContext.ACCESSIBLE_VALUE_PROPERTY, null, model.getValue());
+    }
+  }
+
+  /**
+   * The accessible context — {@link AccessibleRole#PROGRESS_BAR} backed by the value model.
+   *
+   * @return the accessible context
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public AccessibleContext getAccessibleContext() {
+    if (accessibleContext == null) {
+      accessibleContext = new AccessibleElwhaLoadingIndicator();
+    }
+    return accessibleContext;
+  }
+
+  /**
+   * Accessibility for the loading indicator — a {@link AccessibleRole#PROGRESS_BAR} whose value is
+   * withheld ({@code null}) and which advertises {@link AccessibleState#BUSY} while indeterminate.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  protected class AccessibleElwhaLoadingIndicator extends AccessibleJComponent
+      implements AccessibleValue {
+
+    /**
+     * Creates the context.
+     *
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    protected AccessibleElwhaLoadingIndicator() {}
+
+    /**
+     * The role — {@link AccessibleRole#PROGRESS_BAR}.
+     *
+     * @return the role
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    @Override
+    public AccessibleRole getAccessibleRole() {
+      return AccessibleRole.PROGRESS_BAR;
+    }
+
+    /**
+     * Adds {@link AccessibleState#BUSY} while indeterminate.
+     *
+     * @return the state set
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    @Override
+    public AccessibleStateSet getAccessibleStateSet() {
+      final AccessibleStateSet states = super.getAccessibleStateSet();
+      if (isIndeterminate()) {
+        states.add(AccessibleState.BUSY);
+      }
+      return states;
+    }
+
+    /**
+     * This context is its own value model.
+     *
+     * @return {@code this}
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    @Override
+    public AccessibleValue getAccessibleValue() {
+      return this;
+    }
+
+    /**
+     * The model value — {@code null} while indeterminate.
+     *
+     * @return the current value, or {@code null}
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    @Override
+    public Number getCurrentAccessibleValue() {
+      return isIndeterminate() ? null : getModel().getValue();
+    }
+
+    /**
+     * Sets the model value.
+     *
+     * @param n the new value
+     * @return {@code true} when applied; {@code false} for {@code null}
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    @Override
+    public boolean setCurrentAccessibleValue(final Number n) {
+      if (n == null) {
+        return false;
+      }
+      setValue(n.intValue());
+      return true;
+    }
+
+    /**
+     * The model minimum.
+     *
+     * @return the minimum
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    @Override
+    public Number getMinimumAccessibleValue() {
+      return getModel().getMinimum();
+    }
+
+    /**
+     * The model maximum less the extent (the largest reachable value).
+     *
+     * @return the maximum
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    @Override
+    public Number getMaximumAccessibleValue() {
+      return getModel().getMaximum() - getModel().getExtent();
     }
   }
 
