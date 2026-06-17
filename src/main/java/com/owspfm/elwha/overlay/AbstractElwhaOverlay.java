@@ -195,6 +195,22 @@ public abstract class AbstractElwhaOverlay {
     return true;
   }
 
+  /**
+   * Whether the overlay participates in keyboard focus at all. {@code true} (default) moves initial
+   * focus into the surface, installs the focus-escape listener, and restores focus on close — the
+   * menu/dialog contract. A <em>passive</em> overlay (a tooltip, epic #445) returns {@code false}:
+   * the component that triggered it keeps focus the whole time — no initial-focus grab, no
+   * focus-escape reaction, no restore-on-close — because yanking focus out from under a hovering
+   * pointer would interrupt typing in the very control the overlay describes.
+   *
+   * @return {@code true} (default) when the overlay takes focus while shown
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  protected boolean takesFocus() {
+    return true;
+  }
+
   /** Installs key bindings on {@link #surface}'s input/action maps. Default no-op. */
   protected void installKeyBindings() {}
 
@@ -286,6 +302,12 @@ public abstract class AbstractElwhaOverlay {
    */
   public final void show(final Component parent) {
     Objects.requireNonNull(parent, "parent");
+    // Re-entry guard: a second show() while mounted would overwrite the live host fields and
+    // strand the first surface (and its listeners) on the pane. Double-show is always a caller
+    // bug; degrade to a no-op rather than leak.
+    if (isShowing()) {
+      return;
+    }
     final JRootPane root = SwingUtilities.getRootPane(parent);
     if (root == null) {
       throw new IllegalStateException("parent is not in a realized window with a root pane");
@@ -328,7 +350,9 @@ public abstract class AbstractElwhaOverlay {
     if (chainParent != null) {
       chainParent.chainChild = this;
     }
-    installFocusListener();
+    if (takesFocus()) {
+      installFocusListener();
+    }
     if (lightDismiss()) {
       installOutsidePressListener();
     }
@@ -343,7 +367,9 @@ public abstract class AbstractElwhaOverlay {
     layeredPane.revalidate();
     layeredPane.repaint();
 
-    SwingUtilities.invokeLater(this::focusInitial);
+    if (takesFocus()) {
+      SwingUtilities.invokeLater(this::focusInitial);
+    }
   }
 
   /**
@@ -543,7 +569,7 @@ public abstract class AbstractElwhaOverlay {
     layeredPane.revalidate();
     layeredPane.repaint();
 
-    final boolean restore = restoreFocusOnClose();
+    final boolean restore = takesFocus() && restoreFocusOnClose();
     final Component toRestore = focusOwnerBeforeShow;
     final JLayeredPane closed = layeredPane;
     // Detach from a still-open parent (a self-initiated close — Esc/Left/focus loss). Captured for
