@@ -11,8 +11,11 @@ import java.awt.RenderingHints;
 import java.awt.event.HierarchyEvent;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
+import javax.swing.BoundedRangeModel;
+import javax.swing.DefaultBoundedRangeModel;
 import javax.swing.JComponent;
 import javax.swing.Timer;
+import javax.swing.event.ChangeListener;
 
 /**
  * The Elwha Material 3 Expressive <strong>loading indicator</strong> — a filled rounded-polygon
@@ -73,20 +76,38 @@ public class ElwhaLoadingIndicator extends JComponent {
   private boolean indeterminate = true;
   private boolean contained;
 
+  private final BoundedRangeModel model;
   private final Timer clock;
   private long cycleAnchorNanos;
 
   /**
-   * A standard, indeterminate loading indicator.
+   * A standard, indeterminate loading indicator over the default {@code [0, 100]} model.
    *
    * @version v0.5.0
    * @since v0.5.0
    */
   public ElwhaLoadingIndicator() {
+    this(new DefaultBoundedRangeModel(0, 0, 0, 100));
+  }
+
+  /**
+   * A loading indicator over a caller-supplied progress model (used in determinate mode; ignored
+   * while indeterminate). Defaults to indeterminate mode.
+   *
+   * @param model the value model (never {@code null})
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public ElwhaLoadingIndicator(final BoundedRangeModel model) {
+    if (model == null) {
+      throw new NullPointerException("model");
+    }
+    this.model = model;
     setOpaque(false);
     setFocusable(false);
     this.clock = new Timer(CLOCK_FRAME_MS, e -> repaint());
     this.clock.setRepeats(true);
+    model.addChangeListener(e -> repaint());
     addHierarchyListener(
         e -> {
           if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0) {
@@ -109,6 +130,49 @@ public class ElwhaLoadingIndicator extends JComponent {
     indicator.contained = true;
     indicator.indicatorColorRole = ColorRole.ON_PRIMARY_CONTAINER;
     indicator.containerColorRole = ColorRole.PRIMARY_CONTAINER;
+    return indicator;
+  }
+
+  /**
+   * Factory — a standard determinate loading indicator: the shape morphs {@code Circle → SoftBurst}
+   * as the progress fraction advances (M3 {@code DeterminateIndicatorPolygons}), with no continuous
+   * spin.
+   *
+   * @return the indicator
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static ElwhaLoadingIndicator determinate() {
+    final ElwhaLoadingIndicator indicator = new ElwhaLoadingIndicator();
+    indicator.setIndeterminate(false);
+    return indicator;
+  }
+
+  /**
+   * Factory — a determinate loading indicator over a caller-supplied model (the slider/progress
+   * sharing precedent).
+   *
+   * @param model the value model (never {@code null})
+   * @return the indicator
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static ElwhaLoadingIndicator determinate(final BoundedRangeModel model) {
+    final ElwhaLoadingIndicator indicator = new ElwhaLoadingIndicator(model);
+    indicator.setIndeterminate(false);
+    return indicator;
+  }
+
+  /**
+   * Factory — a contained determinate loading indicator.
+   *
+   * @return the indicator
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static ElwhaLoadingIndicator containedDeterminate() {
+    final ElwhaLoadingIndicator indicator = contained();
+    indicator.setIndeterminate(false);
     return indicator;
   }
 
@@ -272,6 +336,122 @@ public class ElwhaLoadingIndicator extends JComponent {
   }
 
   /**
+   * The progress value model (drives determinate mode; ignored while indeterminate).
+   *
+   * @return the model
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public BoundedRangeModel getModel() {
+    return model;
+  }
+
+  /**
+   * The model's current value.
+   *
+   * @return the value
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int getValue() {
+    return model.getValue();
+  }
+
+  /**
+   * Sets the model's value (the model clamps into its range). Meaningful in determinate mode.
+   *
+   * @param value the new value
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setValue(final int value) {
+    model.setValue(value);
+  }
+
+  /**
+   * The model's minimum.
+   *
+   * @return the minimum
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int getMinimum() {
+    return model.getMinimum();
+  }
+
+  /**
+   * Sets the model's minimum.
+   *
+   * @param minimum the new minimum
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setMinimum(final int minimum) {
+    model.setMinimum(minimum);
+  }
+
+  /**
+   * The model's maximum.
+   *
+   * @return the maximum
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int getMaximum() {
+    return model.getMaximum();
+  }
+
+  /**
+   * Sets the model's maximum.
+   *
+   * @param maximum the new maximum
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setMaximum(final int maximum) {
+    model.setMaximum(maximum);
+  }
+
+  /**
+   * The progress fraction in {@code [0, 1]} (extent-aware) — the determinate morph and rotation are
+   * driven by this.
+   *
+   * @return the clamped progress fraction
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public float getProgressFraction() {
+    final int span = model.getMaximum() - model.getMinimum() - model.getExtent();
+    if (span <= 0) {
+      return 0f;
+    }
+    final float f = (model.getValue() - model.getMinimum()) / (float) span;
+    return Math.max(0f, Math.min(1f, f));
+  }
+
+  /**
+   * Registers a listener notified when the value model changes.
+   *
+   * @param listener the listener
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void addChangeListener(final ChangeListener listener) {
+    model.addChangeListener(listener);
+  }
+
+  /**
+   * Removes a value-model change listener.
+   *
+   * @param listener the listener
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void removeChangeListener(final ChangeListener listener) {
+    model.removeChangeListener(listener);
+  }
+
+  /**
    * Whether the animation clock is currently scheduled.
    *
    * @return {@code true} while animating
@@ -326,20 +506,52 @@ public class ElwhaLoadingIndicator extends JComponent {
     return Easing.EMPHASIZED.ease(raw);
   }
 
+  /**
+   * The determinate morph profile at progress {@code fraction} — {@code Circle → SoftBurst}.
+   *
+   * @param fraction the progress fraction in {@code [0, 1]}
+   * @return the interpolated radius profile
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  static float[] determinateProfile(final float fraction) {
+    return ShapeMorph.lerp(
+        LoadingShapes.DETERMINATE[0].radii(), LoadingShapes.DETERMINATE[1].radii(), fraction);
+  }
+
+  /**
+   * The determinate rotation at progress {@code fraction} — a single progress-mapped −180° sweep
+   * (M3), no continuous spin.
+   *
+   * @param fraction the progress fraction in {@code [0, 1]}
+   * @return the rotation, radians
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  static double determinateRotationRad(final float fraction) {
+    return Math.toRadians(-fraction * 180.0);
+  }
+
   /** The radius profile to paint this frame. */
   private float[] currentProfile() {
-    if (indeterminate && !MorphAnimator.isReducedMotion()) {
-      return indeterminateProfile(elapsedMs());
+    if (!indeterminate) {
+      return determinateProfile(getProgressFraction());
     }
-    return LoadingShapes.INDETERMINATE[0].radii();
+    if (MorphAnimator.isReducedMotion()) {
+      return LoadingShapes.INDETERMINATE[0].radii();
+    }
+    return indeterminateProfile(elapsedMs());
   }
 
   /** The rotation to apply this frame, radians. */
   private double currentRotationRad() {
-    if (indeterminate && !MorphAnimator.isReducedMotion()) {
-      return indeterminateRotationRad(elapsedMs());
+    if (!indeterminate) {
+      return determinateRotationRad(getProgressFraction());
     }
-    return 0.0;
+    if (MorphAnimator.isReducedMotion()) {
+      return 0.0;
+    }
+    return indeterminateRotationRad(elapsedMs());
   }
 
   /** Wall-clock ms since the indeterminate timeline anchor (lazily set). */
