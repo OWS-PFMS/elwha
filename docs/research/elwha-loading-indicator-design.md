@@ -187,3 +187,20 @@ Fresh demo per story + headless smoke per story (lib rule).
 3. Whether the rotating morph stays inside the 38 box at every phase, or needs a small safety inset
    (profiles are max-radius-1 normalized, so in principle yes — verify the scalloped shapes don't clip).
 4. The `MORPH_MS` settle duration + easing that best matches the Compose spring's feel at 650 ms steps.
+
+### S1 spike outcome (2026-06-17)
+
+1. §12.1 → **N = 180** (2° steps). At 38–64 px the polyline chord is sub-pixel; static build cost
+   (8 shapes × 180 rays × ~200 segments) is negligible — locked.
+2. §12.2 → **quadratic fillet** (one `quadTo` per corner, trim = `roundness · ½·shorterEdge`). Reads
+   cleanly at 38 px; rounding is captured into the radial profile, so the rendered polyline reproduces
+   it. The `roundness` knob is a `[0,1]` fraction of the shorter adjacent edge — intuitive and bounded
+   (M3's absolute `CornerRounding.radius` is reconstructed by eye, not ported).
+3. §12.3 → no clipping. Profiles normalize to max-radius 1; render scale = `box/2 − 1` (1 px margin).
+   Verified visually — all 8 shapes + the SoftBurst→Cookie9 morph filmstrip sit inside the box.
+4. Engine **validated by `LoadingShapeEngineSmoke` + the contact-sheet PNG**: the radial-`r(θ)` lerp is
+   seamless and every shape is faithful after one tuning pass (Cookie4Sided softened: inner-ratio
+   0.52 → 0.68 — the deep-star reconstruction read too pointy vs M3's cushion). The two new engine
+   classes (`RoundedPolygonShape` profile + ray-cast sampler, `ShapeMorph` lerp + `toPath`) held with
+   no architecture fights — **locked for S2–S6.** `MORPH_MS`/easing (§12.4) deferred to S2 where the
+   clock lands; the contact-sheet harness is the tuning instrument.
