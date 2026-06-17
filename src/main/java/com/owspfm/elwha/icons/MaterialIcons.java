@@ -769,6 +769,30 @@ public final class MaterialIcons {
   }
 
   /**
+   * Leading back arrow "←" — M3's back-navigation affordance for multi-step surfaces; the {@code
+   * ElwhaSideSheet} header's optional back icon button (#308).
+   *
+   * @return the icon at {@link #DEFAULT_SIZE}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon arrowBack() {
+    return arrowBack(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #arrowBack()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon arrowBack(final int size) {
+    return load("arrow_back", size);
+  }
+
+  /**
    * Downward filled-triangle dropdown arrow — the M3 exposed-dropdown (select-field) trailing
    * affordance, signifying a field that opens a nested selection menu. Pairs with {@link
    * #arrowDropUp()} as the collapsed ↔ expanded cue.
