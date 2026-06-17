@@ -145,7 +145,7 @@ Layout regions (flexible, fraction *f*):
 
 ## §10. Showcase pattern
 
-`AppBarShowcasePanels` + registration under **Containers** as **"App Bar"** (`LeafEntry` + Workbench/Gallery, the Tabs shape):
+`AppBarShowcasePanels` + registration under **Components** as **"App Bar"** (`LeafEntry` + Workbench/Gallery, the Tabs shape — ⚠️ corrected at smoke: the app bar is a single-instance primitive like Tabs/Switch/Checkbox, not a multi-instance container like Chip List or the mutex Groups; the Showcase's *Containers* area is reserved for the latter):
 
 - **Workbench:** stage hosts a live `ElwhaAppBar` in `BorderLayout.NORTH` over a **scrollable content stub** (the stub epic's requirement) wired as scroll source. Controls: Variant · Subtitle on/off · Title centered · Nav icon on/off · Action count 0–4 · Overflow-menu demo action (dogfoods `ElwhaMenu`) · Lift on scroll · Enabled · RTL. Code panel re-renders the construction snippet.
 - **Gallery:** static matrix — rows: Small / Small+subtitle / Small centered / Medium flexible expanded / +subtitle / Large flexible expanded / +subtitle / collapsed flexible / lifted small (via the gallery hooks); columns capture rest vs lifted where meaningful.

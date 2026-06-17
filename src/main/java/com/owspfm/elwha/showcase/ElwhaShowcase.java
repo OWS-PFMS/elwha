@@ -780,6 +780,13 @@ public final class ElwhaShowcase {
                 + " arrow navigation, and a roving tab stop.",
             AREA_COMPONENTS,
             buildRadioButtonComponent()));
+    register(
+        new LeafEntry(
+            "App Bar",
+            "M3 Expressive app bar — nav icon, title + subtitle, trailing actions; lift-on-scroll"
+                + " and the flexible variants' scroll-driven collapse.",
+            AREA_COMPONENTS,
+            buildAppBarComponent()));
 
     register(
         new LeafEntry(
@@ -805,13 +812,6 @@ public final class ElwhaShowcase {
             "Icon-only mutex group — toolbar-style segmented control with single selection.",
             AREA_CONTAINERS,
             buildIconButtonGroupContainer()));
-    register(
-        new LeafEntry(
-            "App Bar",
-            "M3 Expressive app bar — nav icon, title + subtitle, trailing actions; lift-on-scroll"
-                + " and the flexible variants' scroll-driven collapse.",
-            AREA_CONTAINERS,
-            buildAppBarComponent()));
   }
 
   // ------------------------------------------------------------- App Bar
