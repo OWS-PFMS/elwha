@@ -225,6 +225,9 @@ final class SideSheetShowcasePanels {
           status.setText("Modal open…");
         });
 
+    controls.addSection("Present");
+    controls.addControl("", openModal);
+    controls.addControl("", status);
     controls.addSection("Modal side sheet");
     controls.addControl("", edgeBox);
     controls.addControl("", widthBox);
@@ -237,9 +240,6 @@ final class SideSheetShowcasePanels {
     controls.addSection("Dismissal");
     controls.addControl("", escBox);
     controls.addControl("", scrimBox);
-    controls.addSection("Present");
-    controls.addControl("", openModal);
-    controls.addControl("", status);
 
     final ComponentWorkbench.Facet facet = workbench.addFacet("Modal", controls);
     facet.setCode(
