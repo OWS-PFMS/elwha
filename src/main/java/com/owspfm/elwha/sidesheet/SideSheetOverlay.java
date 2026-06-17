@@ -92,10 +92,13 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
     return sheet.isCloseAffordanceVisible() ? sheet.closeAffordanceButton() : null;
   }
 
-  // Docks the surface full-height, flush against the resolved window edge.
+  // Docks the surface full-height, flush against the resolved window edge. The band is the sheet's
+  // FOOTPRINT (sheet width plus its own detached margin), so a detached sheet's border floats the
+  // painted body off all four window edges and the slide carries the whole floating card; a docked
+  // sheet has a zero margin, so the footprint is just the sheet width (V1 behavior verbatim).
   @Override
   protected void layoutSurface(final int paneWidth, final int paneHeight) {
-    final int bodyW = Math.min(sheet.getSheetWidth(), paneWidth);
+    final int bodyW = Math.min(sheet.modalFootprintWidth(), paneWidth);
     final int x = sheet.isDockedRight() ? paneWidth - bodyW : 0;
     surface.setBounds(x, 0, bodyW, paneHeight);
     surface.validate();
