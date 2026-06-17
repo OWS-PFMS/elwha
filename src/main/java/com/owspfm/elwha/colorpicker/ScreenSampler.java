@@ -13,6 +13,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.awt.KeyEventDispatcher;
+import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
@@ -24,10 +26,8 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.JWindow;
-import javax.swing.KeyStroke;
 
 /**
  * The eyedropper's <strong>frozen-capture screen sampler</strong> (V2 design doc {@code
@@ -63,6 +63,8 @@ final class ScreenSampler {
   private final Consumer<Color> onPick;
   private final Runnable onClosed;
   private final List<SamplerWindow> windows = new ArrayList<>();
+  private KeyEventDispatcher keyDispatcher;
+  private SamplerWindow activeWindow;
   private boolean done;
 
   ScreenSampler(final Consumer<Color> onPick, final Runnable onClosed) {
@@ -134,8 +136,35 @@ final class ScreenSampler {
       window.setVisible(true);
     }
     if (!windows.isEmpty()) {
+      // Key handling routes through a global dispatcher, not the surface's input map: an
+      // undecorated full-screen JWindow does not reliably acquire keyboard focus (notably on
+      // macOS), so WHEN_IN_FOCUSED_WINDOW bindings — Esc, Enter, the arrow nudges — never fired.
+      // The dispatcher catches keys regardless of which window (if any) holds focus and targets
+      // the window the pointer last moved over.
+      activeWindow = windows.get(0);
+      keyDispatcher = this::dispatchKey;
+      KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyDispatcher);
       windows.get(0).requestFocus();
     }
+  }
+
+  private boolean dispatchKey(final KeyEvent e) {
+    if (e.getID() != KeyEvent.KEY_PRESSED || activeWindow == null) {
+      return false;
+    }
+    switch (e.getKeyCode()) {
+      case KeyEvent.VK_ESCAPE -> finish(null);
+      case KeyEvent.VK_ENTER -> finish(activeWindow.sampleAtPointer());
+      case KeyEvent.VK_LEFT -> activeWindow.nudge(-1, 0);
+      case KeyEvent.VK_RIGHT -> activeWindow.nudge(1, 0);
+      case KeyEvent.VK_UP -> activeWindow.nudge(0, -1);
+      case KeyEvent.VK_DOWN -> activeWindow.nudge(0, 1);
+      default -> {
+        return false;
+      }
+    }
+    e.consume();
+    return true;
   }
 
   boolean isOpen() {
@@ -151,6 +180,11 @@ final class ScreenSampler {
       return;
     }
     done = true;
+    if (keyDispatcher != null) {
+      KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(keyDispatcher);
+      keyDispatcher = null;
+    }
+    activeWindow = null;
     for (final SamplerWindow window : windows) {
       window.dispose();
     }
@@ -175,16 +209,11 @@ final class ScreenSampler {
       final SamplerSurface surface = new SamplerSurface();
       setContentPane(surface);
       surface.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-      bind(surface, KeyEvent.VK_ESCAPE, 0, () -> finish(null));
-      bind(surface, KeyEvent.VK_ENTER, 0, () -> finish(sampleAtPointer()));
-      bind(surface, KeyEvent.VK_LEFT, 0, () -> nudge(-1, 0));
-      bind(surface, KeyEvent.VK_RIGHT, 0, () -> nudge(1, 0));
-      bind(surface, KeyEvent.VK_UP, 0, () -> nudge(0, -1));
-      bind(surface, KeyEvent.VK_DOWN, 0, () -> nudge(0, 1));
       final MouseAdapter mouse =
           new MouseAdapter() {
             @Override
             public void mouseMoved(final MouseEvent e) {
+              activeWindow = SamplerWindow.this;
               pointer.setLocation(e.getPoint());
               repaint();
             }
@@ -208,22 +237,6 @@ final class ScreenSampler {
       pointer.x = Math.max(0, Math.min(getWidth() - 1, pointer.x));
       pointer.y = Math.max(0, Math.min(getHeight() - 1, pointer.y));
       repaint();
-    }
-
-    private void bind(
-        final JComponent surface, final int keyCode, final int modifiers, final Runnable body) {
-      final KeyStroke stroke = KeyStroke.getKeyStroke(keyCode, modifiers);
-      surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(stroke, stroke.toString());
-      surface
-          .getActionMap()
-          .put(
-              stroke.toString(),
-              new AbstractAction() {
-                @Override
-                public void actionPerformed(final java.awt.event.ActionEvent e) {
-                  body.run();
-                }
-              });
     }
 
     /** Paints the frozen capture plus the loupe. */
