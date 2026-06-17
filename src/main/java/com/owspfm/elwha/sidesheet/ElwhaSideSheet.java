@@ -87,6 +87,9 @@ public final class ElwhaSideSheet extends JComponent {
   // under it settles back. A position threshold reads clearly with a mouse (design doc §1/§4).
   private static final float DRAG_DISMISS_THRESHOLD = 0.5f;
 
+  // Width of the content-facing edge hot zone the resize gesture grabs (design doc §5).
+  private static final int RESIZE_STRIP_PX = 8;
+
   private SheetType sheetType;
   private SheetEdge sheetEdge = SheetEdge.TRAILING;
   private SheetPosture sheetPosture = SheetPosture.DOCKED;
@@ -99,6 +102,9 @@ public final class ElwhaSideSheet extends JComponent {
   private boolean edgeDividerVisible = true;
   private boolean footerDividerVisible = true;
   private boolean dragToDismissEnabled;
+  private boolean resizable;
+  private int minSheetWidth = 200;
+  private int maxSheetWidth = 600;
   private JComponent content;
   private final List<ElwhaButton> actions = new ArrayList<>();
 
@@ -123,6 +129,7 @@ public final class ElwhaSideSheet extends JComponent {
   private final FooterDivider footerDivider = new FooterDivider();
   private final JPanel actionsRow =
       new JPanel(new WrapFlowLayout(FlowLayout.LEADING, SpaceScale.MD.px(), SpaceScale.SM.px()));
+  private final ResizeStrip resizeStrip = new ResizeStrip();
 
   /**
    * Creates a {@link SheetType#STANDARD} sheet with the given headline — the convenience
@@ -190,6 +197,10 @@ public final class ElwhaSideSheet extends JComponent {
     body.add(contentHolder, BorderLayout.CENTER);
     body.add(footer, BorderLayout.SOUTH);
     add(body);
+    // The resize hot zone sits over the body's content-facing edge; z-order 0 keeps it the topmost
+    // hit target there (it is transparent, so it changes nothing visually).
+    add(resizeStrip);
+    setComponentZOrder(resizeStrip, 0);
 
     headlineLabel.setText(headline);
     getAccessibleContext().setAccessibleName(headline);
@@ -652,6 +663,92 @@ public final class ElwhaSideSheet extends JComponent {
     }
   }
 
+  /**
+   * Enables drag-to-resize — an 8px hot zone on the sheet's content-facing (inner) edge shows a
+   * horizontal-resize cursor and a press-drag there changes {@link #getSheetWidth() the sheet
+   * width} live, clamped to {@code [getMinSheetWidth(), getMaxSheetWidth()]}. A standard sheet
+   * reflows its host as it resizes; a shown modal re-docks. Independent of {@link
+   * #setDragToDismissEnabled(boolean) drag-to-dismiss} — they use different zones and may both be
+   * on. <strong>Off by default</strong>.
+   *
+   * @param resizable whether the content-facing edge resizes the sheet
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setResizable(final boolean resizable) {
+    this.resizable = resizable;
+    resizeStrip.setVisible(resizable);
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * @return whether drag-to-resize is enabled
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public boolean isResizable() {
+    return resizable;
+  }
+
+  /**
+   * Sets the lower bound the resize gesture clamps to (default 200). Raising it above the current
+   * {@link #getSheetWidth() width} grows the sheet to the new minimum; it never exceeds {@link
+   * #getMaxSheetWidth()} (the max is pushed up to match if needed).
+   *
+   * @param px the minimum resize width (clamped to {@code >= 0})
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setMinSheetWidth(final int px) {
+    this.minSheetWidth = Math.max(0, px);
+    if (maxSheetWidth < minSheetWidth) {
+      maxSheetWidth = minSheetWidth;
+    }
+    if (sheetWidth < minSheetWidth) {
+      setSheetWidth(minSheetWidth);
+    }
+  }
+
+  /**
+   * @return the minimum resize width
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int getMinSheetWidth() {
+    return minSheetWidth;
+  }
+
+  /**
+   * Sets the upper bound the resize gesture clamps to (default 600). Lowering it below the current
+   * {@link #getSheetWidth() width} shrinks the sheet to the new maximum; it never drops below
+   * {@link #getMinSheetWidth()}.
+   *
+   * @param px the maximum resize width (clamped to {@code >= getMinSheetWidth()})
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setMaxSheetWidth(final int px) {
+    this.maxSheetWidth = Math.max(minSheetWidth, px);
+    if (sheetWidth > maxSheetWidth) {
+      setSheetWidth(maxSheetWidth);
+    }
+  }
+
+  /**
+   * @return the maximum resize width
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int getMaxSheetWidth() {
+    return maxSheetWidth;
+  }
+
+  // The resize gesture's clamped width application — the strip and the headless guard share it.
+  void resizeWidthTo(final int target) {
+    setSheetWidth(Math.max(minSheetWidth, Math.min(maxSheetWidth, target)));
+  }
+
   // ------------------------------------------------------------ standard presentation
 
   /**
@@ -880,6 +977,13 @@ public final class ElwhaSideSheet extends JComponent {
     return contentHolder;
   }
 
+  // The anatomy body panel (header/content/footer). Package-private so guards can assert its
+  // mid-flight bounds without depending on child index order — the resize strip now sits at
+  // z-order 0 (the topmost hit target), so it, not the body, is getComponent(0).
+  JComponent bodyComponent() {
+    return body;
+  }
+
   ElwhaIconButton closeAffordanceButton() {
     return closeButton;
   }
@@ -954,6 +1058,10 @@ public final class ElwhaSideSheet extends JComponent {
     final int bodyW = openProgress < 1f ? Math.max(availW, sheetWidth) : availW;
     final int x = isDockedRight() ? s.left : getWidth() - s.right - bodyW;
     body.setBounds(x, s.top, bodyW, availH);
+    if (resizeStrip.isVisible()) {
+      final int stripX = isDockedRight() ? s.left : getWidth() - s.right - RESIZE_STRIP_PX;
+      resizeStrip.setBounds(stripX, s.top, RESIZE_STRIP_PX, availH);
+    }
   }
 
   /**
@@ -1109,6 +1217,41 @@ public final class ElwhaSideSheet extends JComponent {
       }
       dragging = false;
       releaseDrag(lastFraction);
+    }
+  }
+
+  // A transparent hot zone over the body's content-facing edge: it reports a horizontal-resize
+  // cursor and a press-drag changes the sheet width live (clamped to [min, max]). Absolute screen X
+  // keeps the delta stable as the body reflows under the pointer during the resize.
+  private final class ResizeStrip extends JComponent {
+    private int pressScreenX;
+    private int startWidth;
+
+    ResizeStrip() {
+      setOpaque(false);
+      setVisible(false);
+      final MouseAdapter handler =
+          new MouseAdapter() {
+            @Override
+            public void mousePressed(final MouseEvent e) {
+              pressScreenX = e.getXOnScreen();
+              startWidth = sheetWidth;
+            }
+
+            @Override
+            public void mouseDragged(final MouseEvent e) {
+              final int delta = e.getXOnScreen() - pressScreenX;
+              resizeWidthTo(startWidth + (isDockedRight() ? -delta : delta));
+            }
+          };
+      addMouseListener(handler);
+      addMouseMotionListener(handler);
+    }
+
+    @Override
+    public Cursor getCursor() {
+      return Cursor.getPredefinedCursor(
+          isDockedRight() ? Cursor.W_RESIZE_CURSOR : Cursor.E_RESIZE_CURSOR);
     }
   }
 
