@@ -9,6 +9,7 @@ import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.HierarchyEvent;
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import javax.swing.JComponent;
 import javax.swing.Timer;
@@ -46,6 +47,9 @@ public class ElwhaLoadingIndicator extends JComponent {
   /** The M3 {@code ActiveSize} — the active indicator's box, px. */
   public static final int INDICATOR_SIZE_DEFAULT_PX = 38;
 
+  /** The M3 {@code ContainerSize} — the contained variant's container circle, px. */
+  public static final int CONTAINER_SIZE_DEFAULT_PX = 48;
+
   /** The morph-step period — one shape advance per this interval, ms (M3 {@code MorphInterval}). */
   static final int STEP_MS = 650;
 
@@ -63,8 +67,11 @@ public class ElwhaLoadingIndicator extends JComponent {
   private static final int CLOCK_FRAME_MS = 16;
 
   private int indicatorSize = INDICATOR_SIZE_DEFAULT_PX;
+  private int containerSize = CONTAINER_SIZE_DEFAULT_PX;
   private ColorRole indicatorColorRole = ColorRole.PRIMARY;
+  private ColorRole containerColorRole = ColorRole.PRIMARY_CONTAINER;
   private boolean indeterminate = true;
+  private boolean contained;
 
   private final Timer clock;
   private long cycleAnchorNanos;
@@ -86,6 +93,23 @@ public class ElwhaLoadingIndicator extends JComponent {
             updateAnimationDemand();
           }
         });
+  }
+
+  /**
+   * Factory — a contained loading indicator: the active shape ({@link
+   * ColorRole#ON_PRIMARY_CONTAINER}) on a filled {@link ColorRole#PRIMARY_CONTAINER} container
+   * circle (the M3 contained color pairing).
+   *
+   * @return the indicator
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static ElwhaLoadingIndicator contained() {
+    final ElwhaLoadingIndicator indicator = new ElwhaLoadingIndicator();
+    indicator.contained = true;
+    indicator.indicatorColorRole = ColorRole.ON_PRIMARY_CONTAINER;
+    indicator.containerColorRole = ColorRole.PRIMARY_CONTAINER;
+    return indicator;
   }
 
   /**
@@ -117,6 +141,62 @@ public class ElwhaLoadingIndicator extends JComponent {
   }
 
   /**
+   * Whether the active shape sits on a filled container circle (the M3 <em>contained</em> variant).
+   *
+   * @return {@code true} when contained
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public boolean isContained() {
+    return contained;
+  }
+
+  /**
+   * Sets whether the active shape sits on a filled container circle. This toggles only whether the
+   * container paints; it does <em>not</em> change the color roles. For the M3 contained color
+   * pairing ({@link ColorRole#ON_PRIMARY_CONTAINER} on {@link ColorRole#PRIMARY_CONTAINER}) use the
+   * {@link #contained()} factory.
+   *
+   * @param value {@code true} to paint the container circle
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setContained(final boolean value) {
+    if (this.contained == value) {
+      return;
+    }
+    this.contained = value;
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * The container circle's color role (contained variant).
+   *
+   * @return the container color role
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public ColorRole getContainerColorRole() {
+    return containerColorRole;
+  }
+
+  /**
+   * Sets the container circle's color role.
+   *
+   * @param role the color role (never {@code null})
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setContainerColorRole(final ColorRole role) {
+    if (role == null) {
+      throw new NullPointerException("role");
+    }
+    this.containerColorRole = role;
+    repaint();
+  }
+
+  /**
    * The active indicator's box size, px.
    *
    * @return the indicator size
@@ -136,6 +216,31 @@ public class ElwhaLoadingIndicator extends JComponent {
    */
   public void setIndicatorSize(final int size) {
     this.indicatorSize = Math.max(8, size);
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * The container circle's box size, px (contained variant).
+   *
+   * @return the container size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int getContainerSize() {
+    return containerSize;
+  }
+
+  /**
+   * Sets the container circle's box size. The active shape holds the M3 active-to-container ratio
+   * within it.
+   *
+   * @param size the size, px (clamped to ≥ 8)
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setContainerSize(final int size) {
+    this.containerSize = Math.max(8, size);
     revalidate();
     repaint();
   }
@@ -273,7 +378,8 @@ public class ElwhaLoadingIndicator extends JComponent {
       return super.getPreferredSize();
     }
     final Insets in = getInsets();
-    return new Dimension(indicatorSize + in.left + in.right, indicatorSize + in.top + in.bottom);
+    final int box = contained ? containerSize : indicatorSize;
+    return new Dimension(box + in.left + in.right, box + in.top + in.bottom);
   }
 
   /**
@@ -319,10 +425,25 @@ public class ElwhaLoadingIndicator extends JComponent {
       if (availW < 6f || availH < 6f) {
         return;
       }
-      final float box = Math.min(Math.min(availW, availH), indicatorSize);
+      final float avail = Math.min(availW, availH);
       final float cx = in.left + availW / 2f;
       final float cy = in.top + availH / 2f;
-      final float scale = box / 2f - 1f;
+
+      float activeBox = Math.min(avail, indicatorSize);
+      if (contained) {
+        final float containerDiameter = Math.min(avail, containerSize);
+        g2.setColor(containerColorRole.resolve());
+        g2.fill(
+            new Ellipse2D.Float(
+                cx - containerDiameter / 2f,
+                cy - containerDiameter / 2f,
+                containerDiameter,
+                containerDiameter));
+        // Hold the M3 38/48 active-to-container ratio even if the container was shrunk to fit.
+        activeBox = containerDiameter * (indicatorSize / (float) containerSize);
+      }
+
+      final float scale = activeBox / 2f - 1f;
       if (scale <= 1f) {
         return;
       }
