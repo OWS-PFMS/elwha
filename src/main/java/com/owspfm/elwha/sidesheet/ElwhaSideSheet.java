@@ -77,8 +77,12 @@ public final class ElwhaSideSheet extends JComponent {
   /** M3 docked side sheet container width ({@code md.comp.sheet.side.docked.container.width}). */
   public static final int SHEET_WIDTH_PX = 256;
 
+  /** M3 detached side sheet margin ({@code m3_side_sheet_margin_detached}). */
+  public static final int DETACHED_MARGIN_PX = SpaceScale.LG.px();
+
   private SheetType sheetType;
   private SheetEdge sheetEdge = SheetEdge.TRAILING;
+  private SheetPosture sheetPosture = SheetPosture.DOCKED;
   private int sheetWidth = SHEET_WIDTH_PX;
 
   private String headline;
@@ -254,6 +258,41 @@ public final class ElwhaSideSheet extends JComponent {
    */
   public SheetEdge getSheetEdge() {
     return sheetEdge;
+  }
+
+  /**
+   * Sets the posture — {@link SheetPosture#DOCKED} (flush to the edge) or {@link
+   * SheetPosture#DETACHED} (floating, inset by a {@value #DETACHED_MARGIN_PX}px margin on all sides
+   * with all four corners rounded and no edge divider). Default {@link SheetPosture#DOCKED} — a
+   * docked sheet is exactly the V1 sheet. Applies live: an embedded sheet reflows its host, and a
+   * currently-shown modal presentation re-docks at the new footprint.
+   *
+   * @param posture the posture
+   * @throws NullPointerException if {@code posture} is {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setSheetPosture(final SheetPosture posture) {
+    final SheetPosture next = Objects.requireNonNull(posture, "posture");
+    if (next == this.sheetPosture) {
+      return;
+    }
+    this.sheetPosture = next;
+    refreshChrome();
+    revalidate();
+    repaint();
+    if (isModalShowing()) {
+      overlay.relayoutHost();
+    }
+  }
+
+  /**
+   * @return the posture
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public SheetPosture getSheetPosture() {
+    return sheetPosture;
   }
 
   /**
@@ -753,11 +792,22 @@ public final class ElwhaSideSheet extends JComponent {
     return (sheetEdge == SheetEdge.TRAILING) == getComponentOrientation().isLeftToRight();
   }
 
+  // The modal host's slide-band width: the sheet width plus its own (detached) margin, so the
+  // sheet's border floats the painted body off the window edges without the host re-adding the
+  // margin (design doc §3). Equal to sheetWidth for a docked sheet.
+  int modalFootprintWidth() {
+    final Insets s = getInsets();
+    return sheetWidth + s.left + s.right;
+  }
+
   private ColorRole containerRole() {
     return sheetType == SheetType.MODAL ? ColorRole.SURFACE_CONTAINER_LOW : ColorRole.SURFACE;
   }
 
   private CornerRadii cornerRadii() {
+    if (sheetPosture == SheetPosture.DETACHED) {
+      return CornerRadii.uniform(ShapeScale.LG.px());
+    }
     if (sheetType != SheetType.MODAL) {
       return CornerRadii.uniform(0);
     }
@@ -777,8 +827,11 @@ public final class ElwhaSideSheet extends JComponent {
       return super.getPreferredSize();
     }
     final Insets s = getInsets();
+    final int scaledW = Math.round(sheetWidth * openProgress);
+    // A fully-collapsed sheet reports width 0, not just the margins — a closed detached sheet must
+    // leave no 2*margin sliver behind in the host layout.
     return new Dimension(
-        Math.round(sheetWidth * openProgress) + s.left + s.right,
+        scaledW == 0 ? 0 : scaledW + s.left + s.right,
         body.getPreferredSize().height + s.top + s.bottom);
   }
 
@@ -831,7 +884,9 @@ public final class ElwhaSideSheet extends JComponent {
       } finally {
         bodyG.dispose();
       }
-      if (sheetType == SheetType.STANDARD && edgeDividerVisible) {
+      if (sheetType == SheetType.STANDARD
+          && sheetPosture == SheetPosture.DOCKED
+          && edgeDividerVisible) {
         g2.setColor(ColorRole.OUTLINE_VARIANT.resolve());
         g2.fillRect(isDockedRight() ? bodyX : bodyX + bodyW - 1, bodyY, 1, bodyH);
       }
@@ -860,6 +915,12 @@ public final class ElwhaSideSheet extends JComponent {
   // and content paddings (24px sides, 12px beside a visible icon affordance whose 48px target
   // carries the rest of the optical gap), and footer presence.
   private void refreshChrome() {
+    // The detached margin is carried as the sheet's own border, so every inset-aware path
+    // (getPreferredSize / doLayout / paintComponent) floats the body and rounds the corners with no
+    // extra geometry. The modal host reads this margin off the footprint width, never re-adds it.
+    final int margin = sheetPosture == SheetPosture.DETACHED ? DETACHED_MARGIN_PX : 0;
+    setBorder(margin == 0 ? null : BorderFactory.createEmptyBorder(margin, margin, margin, margin));
+
     backWrap.setVisible(backAffordanceVisible);
     closeWrap.setVisible(closeAffordanceVisible);
 
