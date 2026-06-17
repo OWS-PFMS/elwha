@@ -141,7 +141,7 @@ import javax.swing.event.DocumentListener;
  * -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"}
  *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v0.4.0
  * @since v0.3.0
  */
 public final class ElwhaShowcase {
@@ -801,6 +801,13 @@ public final class ElwhaShowcase {
                 + " surface with header, content, and action footer.",
             AREA_COMPONENTS,
             buildSideSheetComponent()));
+    register(
+        new LeafEntry(
+            "Progress",
+            "M3 Expressive progress indicators — linear + circular, determinate + indeterminate,"
+                + " flat + wavy, with the track-active gap and stop dot.",
+            AREA_COMPONENTS,
+            buildProgressComponent()));
 
     register(
         new LeafEntry(
@@ -2013,6 +2020,19 @@ public final class ElwhaShowcase {
             stack(
                 gallerySection(
                     "Modes & configurations", ColorPickerShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- Progress
+
+  private static JComponent buildProgressComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", ProgressShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("States & configurations", ProgressShowcasePanels.buildGallery()))));
     return tabs;
   }
 
