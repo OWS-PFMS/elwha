@@ -92,10 +92,13 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
     return sheet.isCloseAffordanceVisible() ? sheet.closeAffordanceButton() : null;
   }
 
-  // Docks the surface full-height, flush against the resolved window edge.
+  // Docks the surface full-height, flush against the resolved window edge. The band is the sheet's
+  // FOOTPRINT (sheet width plus its own detached margin), so a detached sheet's border floats the
+  // painted body off all four window edges and the slide carries the whole floating card; a docked
+  // sheet has a zero margin, so the footprint is just the sheet width (V1 behavior verbatim).
   @Override
   protected void layoutSurface(final int paneWidth, final int paneHeight) {
-    final int bodyW = Math.min(sheet.getSheetWidth(), paneWidth);
+    final int bodyW = Math.min(sheet.modalFootprintWidth(), paneWidth);
     final int x = sheet.isDockedRight() ? paneWidth - bodyW : 0;
     surface.setBounds(x, 0, bodyW, paneHeight);
     surface.validate();
@@ -119,6 +122,21 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
   // the base only re-lays on host resize.
   void relayoutHost() {
     relayout();
+  }
+
+  // Drag-to-dismiss: the sheet's header drag maps a [0,1] dismiss fraction onto the slide motion
+  // (fraction 0 = docked, 1 = fully off-edge), the scrim dimming with it. Release routes to a
+  // threshold dismiss (DRAG cause, the exit continues from the dragged position) or a settle back.
+  void dragTo(final float dismissFraction) {
+    scrubMotion(1f - dismissFraction);
+  }
+
+  void dragSettle() {
+    settleMotion();
+  }
+
+  void dragDismiss() {
+    dismissSheet(SheetDismissCause.DRAG);
   }
 
   @Override
