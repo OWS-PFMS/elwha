@@ -798,7 +798,8 @@ public final class ElwhaShowcase {
         new LeafEntry(
             "Side Sheet",
             "M3 side sheet — standard (docked, reflowing) + modal (scrim overlay) supplementary"
-                + " surface with header, content, and action footer.",
+                + " surface with header, content, and action footer; docked or detached posture,"
+                + " optional drag-to-dismiss and drag-to-resize.",
             AREA_COMPONENTS,
             buildSideSheetComponent()));
     register(

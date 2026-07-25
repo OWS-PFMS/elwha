@@ -106,7 +106,8 @@ public final class SideSheetEdgeRtlSmoke {
 
   private static Component findByName(final Container root, final String accessibleName) {
     for (final Component child : root.getComponents()) {
-      if (accessibleName.equals(child.getAccessibleContext().getAccessibleName())) {
+      final javax.accessibility.AccessibleContext ac = child.getAccessibleContext();
+      if (ac != null && accessibleName.equals(ac.getAccessibleName())) {
         return child;
       }
       if (child instanceof Container nested) {

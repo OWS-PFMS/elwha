@@ -113,7 +113,7 @@ public final class SideSheetStandardSmoke {
           trailing.setSize(120, 300);
           trailing.doLayout();
         });
-    final Component body = trailing.getComponents()[0];
+    final Component body = trailing.bodyComponent();
     if (prefWidth(trailing) < 256) {
       check("mid-flight body pinned to full width", body.getWidth() == 256);
       check("right-docked body pinned at the leading edge", body.getX() == 0);
@@ -130,7 +130,7 @@ public final class SideSheetStandardSmoke {
           leading.setSize(120, 300);
           leading.doLayout();
         });
-    final Component leadingBody = leading.getComponents()[0];
+    final Component leadingBody = leading.bodyComponent();
     if (prefWidth(leading) < 256) {
       check(
           "left-docked body pinned at the trailing edge (clip on the window side)",

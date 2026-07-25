@@ -16,6 +16,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Container;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -24,6 +25,8 @@ import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -77,8 +80,19 @@ public final class ElwhaSideSheet extends JComponent {
   /** M3 docked side sheet container width ({@code md.comp.sheet.side.docked.container.width}). */
   public static final int SHEET_WIDTH_PX = 256;
 
+  /** M3 detached side sheet margin ({@code m3_side_sheet_margin_detached}). */
+  public static final int DETACHED_MARGIN_PX = SpaceScale.LG.px();
+
+  // Release past this fraction of the sheet width (dragged toward the anchored edge) dismisses;
+  // under it settles back. A position threshold reads clearly with a mouse (design doc §1/§4).
+  private static final float DRAG_DISMISS_THRESHOLD = 0.5f;
+
+  // Width of the content-facing edge hot zone the resize gesture grabs (design doc §5).
+  private static final int RESIZE_STRIP_PX = 8;
+
   private SheetType sheetType;
   private SheetEdge sheetEdge = SheetEdge.TRAILING;
+  private SheetPosture sheetPosture = SheetPosture.DOCKED;
   private int sheetWidth = SHEET_WIDTH_PX;
 
   private String headline;
@@ -87,6 +101,10 @@ public final class ElwhaSideSheet extends JComponent {
   private boolean backAffordanceVisible;
   private boolean edgeDividerVisible = true;
   private boolean footerDividerVisible = true;
+  private boolean dragToDismissEnabled;
+  private boolean resizable;
+  private int minSheetWidth = 200;
+  private int maxSheetWidth = 600;
   private JComponent content;
   private final List<ElwhaButton> actions = new ArrayList<>();
 
@@ -111,6 +129,7 @@ public final class ElwhaSideSheet extends JComponent {
   private final FooterDivider footerDivider = new FooterDivider();
   private final JPanel actionsRow =
       new JPanel(new WrapFlowLayout(FlowLayout.LEADING, SpaceScale.MD.px(), SpaceScale.SM.px()));
+  private final ResizeStrip resizeStrip = new ResizeStrip();
 
   /**
    * Creates a {@link SheetType#STANDARD} sheet with the given headline — the convenience
@@ -152,6 +171,15 @@ public final class ElwhaSideSheet extends JComponent {
     header.add(headlineLabel, BorderLayout.CENTER);
     header.add(closeWrap, BorderLayout.LINE_END);
 
+    // Drag-to-dismiss lives on the header band; Swing routes mouse events to the deepest hit
+    // component (no bubbling), so the handler is registered on the header and the headline label it
+    // covers — the affordance buttons keep their own click/cursor and are excluded by construction.
+    final HeaderDragHandler dragHandler = new HeaderDragHandler();
+    header.addMouseListener(dragHandler);
+    header.addMouseMotionListener(dragHandler);
+    headlineLabel.addMouseListener(dragHandler);
+    headlineLabel.addMouseMotionListener(dragHandler);
+
     contentHolder.setOpaque(false);
 
     actionsRow.setOpaque(false);
@@ -169,6 +197,10 @@ public final class ElwhaSideSheet extends JComponent {
     body.add(contentHolder, BorderLayout.CENTER);
     body.add(footer, BorderLayout.SOUTH);
     add(body);
+    // The resize hot zone sits over the body's content-facing edge; z-order 0 keeps it the topmost
+    // hit target there (it is transparent, so it changes nothing visually).
+    add(resizeStrip);
+    setComponentZOrder(resizeStrip, 0);
 
     headlineLabel.setText(headline);
     getAccessibleContext().setAccessibleName(headline);
@@ -254,6 +286,41 @@ public final class ElwhaSideSheet extends JComponent {
    */
   public SheetEdge getSheetEdge() {
     return sheetEdge;
+  }
+
+  /**
+   * Sets the posture — {@link SheetPosture#DOCKED} (flush to the edge) or {@link
+   * SheetPosture#DETACHED} (floating, inset by a {@value #DETACHED_MARGIN_PX}px margin on all sides
+   * with all four corners rounded and no edge divider). Default {@link SheetPosture#DOCKED} — a
+   * docked sheet is exactly the V1 sheet. Applies live: an embedded sheet reflows its host, and a
+   * currently-shown modal presentation re-docks at the new footprint.
+   *
+   * @param posture the posture
+   * @throws NullPointerException if {@code posture} is {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setSheetPosture(final SheetPosture posture) {
+    final SheetPosture next = Objects.requireNonNull(posture, "posture");
+    if (next == this.sheetPosture) {
+      return;
+    }
+    this.sheetPosture = next;
+    refreshChrome();
+    revalidate();
+    repaint();
+    if (isModalShowing()) {
+      overlay.relayoutHost();
+    }
+  }
+
+  /**
+   * @return the posture
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public SheetPosture getSheetPosture() {
+    return sheetPosture;
   }
 
   /**
@@ -511,6 +578,177 @@ public final class ElwhaSideSheet extends JComponent {
     return footerDividerVisible;
   }
 
+  // ------------------------------------------------------------ drag gestures
+
+  /**
+   * Enables drag-to-dismiss — dragging the header toward the anchored edge dismisses the sheet once
+   * the drag passes the halfway threshold, and settles it back otherwise. The desktop pointer
+   * mapping of M3's swipe-to-dismiss: the header shows a move cursor while enabled, a modal drag
+   * scrubs the slide + scrim live (releasing past the threshold reports {@link
+   * SheetDismissCause#DRAG}), and a standard drag scrubs the open/close width (the coplanar
+   * squash), closing or re-opening on release. <strong>Off by default</strong> — opt in
+   * deliberately; on the desktop a header that dismisses on drag is non-obvious and can fight
+   * selection.
+   *
+   * @param enabled whether the header drags to dismiss
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setDragToDismissEnabled(final boolean enabled) {
+    this.dragToDismissEnabled = enabled;
+    updateDragAffordance();
+  }
+
+  /**
+   * @return whether drag-to-dismiss is enabled
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public boolean isDragToDismissEnabled() {
+    return dragToDismissEnabled;
+  }
+
+  private void updateDragAffordance() {
+    final Cursor move =
+        dragToDismissEnabled ? Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR) : null;
+    header.setCursor(move);
+    headlineLabel.setCursor(move);
+  }
+
+  // Linear (un-eased) scrub of the open/close width for a standard drag — the body narrows 1:1 with
+  // the pointer (the coplanar squash). The animator is synced so a release reverse()/start()
+  // continues from here; the raw assignment overrides the eased value the snapTo listener set.
+  private void scrubOpen(final float progress) {
+    final float p = Math.max(0f, Math.min(1f, progress));
+    ensureOpenAnimator();
+    openAnimator.snapTo(p);
+    openProgress = p;
+    revalidate();
+  }
+
+  private void releaseStandardDrag(final boolean dismiss) {
+    ensureOpenAnimator();
+    if (dismiss) {
+      open = false;
+      openAnimator.reverse();
+    } else {
+      openAnimator.start();
+    }
+  }
+
+  // Applies a live drag fraction (0 = docked, 1 = fully toward the edge): a modal scrubs the slide
+  // + scrim, a standard sheet scrubs its open width. Package-private so the headless guard can
+  // drive the gesture without a synthetic mouse event.
+  void applyDragFraction(final float fraction) {
+    final float f = Math.max(0f, Math.min(1f, fraction));
+    if (isModalShowing()) {
+      overlay.dragTo(f);
+    } else {
+      scrubOpen(1f - f);
+    }
+  }
+
+  // Commits a released drag: past the threshold dismisses (modal: DRAG cause continuing from the
+  // dragged position; standard: close()), under it settles back open.
+  void releaseDrag(final float fraction) {
+    final boolean dismiss = fraction >= DRAG_DISMISS_THRESHOLD;
+    if (isModalShowing()) {
+      if (dismiss) {
+        overlay.dragDismiss();
+      } else {
+        overlay.dragSettle();
+      }
+    } else {
+      releaseStandardDrag(dismiss);
+    }
+  }
+
+  /**
+   * Enables drag-to-resize — an 8px hot zone on the sheet's content-facing (inner) edge shows a
+   * horizontal-resize cursor and a press-drag there changes {@link #getSheetWidth() the sheet
+   * width} live, clamped to {@code [getMinSheetWidth(), getMaxSheetWidth()]}. A standard sheet
+   * reflows its host as it resizes; a shown modal re-docks. Independent of {@link
+   * #setDragToDismissEnabled(boolean) drag-to-dismiss} — they use different zones and may both be
+   * on. <strong>Off by default</strong>.
+   *
+   * @param resizable whether the content-facing edge resizes the sheet
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setResizable(final boolean resizable) {
+    this.resizable = resizable;
+    resizeStrip.setVisible(resizable);
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * @return whether drag-to-resize is enabled
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public boolean isResizable() {
+    return resizable;
+  }
+
+  /**
+   * Sets the lower bound the resize gesture clamps to (default 200). Raising it above the current
+   * {@link #getSheetWidth() width} grows the sheet to the new minimum; it never exceeds {@link
+   * #getMaxSheetWidth()} (the max is pushed up to match if needed).
+   *
+   * @param px the minimum resize width (clamped to {@code >= 0})
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setMinSheetWidth(final int px) {
+    this.minSheetWidth = Math.max(0, px);
+    if (maxSheetWidth < minSheetWidth) {
+      maxSheetWidth = minSheetWidth;
+    }
+    if (sheetWidth < minSheetWidth) {
+      setSheetWidth(minSheetWidth);
+    }
+  }
+
+  /**
+   * @return the minimum resize width
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int getMinSheetWidth() {
+    return minSheetWidth;
+  }
+
+  /**
+   * Sets the upper bound the resize gesture clamps to (default 600). Lowering it below the current
+   * {@link #getSheetWidth() width} shrinks the sheet to the new maximum; it never drops below
+   * {@link #getMinSheetWidth()}.
+   *
+   * @param px the maximum resize width (clamped to {@code >= getMinSheetWidth()})
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setMaxSheetWidth(final int px) {
+    this.maxSheetWidth = Math.max(minSheetWidth, px);
+    if (sheetWidth > maxSheetWidth) {
+      setSheetWidth(maxSheetWidth);
+    }
+  }
+
+  /**
+   * @return the maximum resize width
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int getMaxSheetWidth() {
+    return maxSheetWidth;
+  }
+
+  // The resize gesture's clamped width application — the strip and the headless guard share it.
+  void resizeWidthTo(final int target) {
+    setSheetWidth(Math.max(minSheetWidth, Math.min(maxSheetWidth, target)));
+  }
+
   // ------------------------------------------------------------ standard presentation
 
   /**
@@ -739,6 +977,13 @@ public final class ElwhaSideSheet extends JComponent {
     return contentHolder;
   }
 
+  // The anatomy body panel (header/content/footer). Package-private so guards can assert its
+  // mid-flight bounds without depending on child index order — the resize strip now sits at
+  // z-order 0 (the topmost hit target), so it, not the body, is getComponent(0).
+  JComponent bodyComponent() {
+    return body;
+  }
+
   ElwhaIconButton closeAffordanceButton() {
     return closeButton;
   }
@@ -753,11 +998,22 @@ public final class ElwhaSideSheet extends JComponent {
     return (sheetEdge == SheetEdge.TRAILING) == getComponentOrientation().isLeftToRight();
   }
 
+  // The modal host's slide-band width: the sheet width plus its own (detached) margin, so the
+  // sheet's border floats the painted body off the window edges without the host re-adding the
+  // margin (design doc §3). Equal to sheetWidth for a docked sheet.
+  int modalFootprintWidth() {
+    final Insets s = getInsets();
+    return sheetWidth + s.left + s.right;
+  }
+
   private ColorRole containerRole() {
     return sheetType == SheetType.MODAL ? ColorRole.SURFACE_CONTAINER_LOW : ColorRole.SURFACE;
   }
 
   private CornerRadii cornerRadii() {
+    if (sheetPosture == SheetPosture.DETACHED) {
+      return CornerRadii.uniform(ShapeScale.LG.px());
+    }
     if (sheetType != SheetType.MODAL) {
       return CornerRadii.uniform(0);
     }
@@ -777,8 +1033,11 @@ public final class ElwhaSideSheet extends JComponent {
       return super.getPreferredSize();
     }
     final Insets s = getInsets();
+    final int scaledW = Math.round(sheetWidth * openProgress);
+    // A fully-collapsed sheet reports width 0, not just the margins — a closed detached sheet must
+    // leave no 2*margin sliver behind in the host layout.
     return new Dimension(
-        Math.round(sheetWidth * openProgress) + s.left + s.right,
+        scaledW == 0 ? 0 : scaledW + s.left + s.right,
         body.getPreferredSize().height + s.top + s.bottom);
   }
 
@@ -799,6 +1058,10 @@ public final class ElwhaSideSheet extends JComponent {
     final int bodyW = openProgress < 1f ? Math.max(availW, sheetWidth) : availW;
     final int x = isDockedRight() ? s.left : getWidth() - s.right - bodyW;
     body.setBounds(x, s.top, bodyW, availH);
+    if (resizeStrip.isVisible()) {
+      final int stripX = isDockedRight() ? s.left : getWidth() - s.right - RESIZE_STRIP_PX;
+      resizeStrip.setBounds(stripX, s.top, RESIZE_STRIP_PX, availH);
+    }
   }
 
   /**
@@ -831,7 +1094,9 @@ public final class ElwhaSideSheet extends JComponent {
       } finally {
         bodyG.dispose();
       }
-      if (sheetType == SheetType.STANDARD && edgeDividerVisible) {
+      if (sheetType == SheetType.STANDARD
+          && sheetPosture == SheetPosture.DOCKED
+          && edgeDividerVisible) {
         g2.setColor(ColorRole.OUTLINE_VARIANT.resolve());
         g2.fillRect(isDockedRight() ? bodyX : bodyX + bodyW - 1, bodyY, 1, bodyH);
       }
@@ -860,6 +1125,12 @@ public final class ElwhaSideSheet extends JComponent {
   // and content paddings (24px sides, 12px beside a visible icon affordance whose 48px target
   // carries the rest of the optical gap), and footer presence.
   private void refreshChrome() {
+    // The detached margin is carried as the sheet's own border, so every inset-aware path
+    // (getPreferredSize / doLayout / paintComponent) floats the body and rounds the corners with no
+    // extra geometry. The modal host reads this margin off the footprint width, never re-adds it.
+    final int margin = sheetPosture == SheetPosture.DETACHED ? DETACHED_MARGIN_PX : 0;
+    setBorder(margin == 0 ? null : BorderFactory.createEmptyBorder(margin, margin, margin, margin));
+
     backWrap.setVisible(backAffordanceVisible);
     closeWrap.setVisible(closeAffordanceVisible);
 
@@ -907,6 +1178,81 @@ public final class ElwhaSideSheet extends JComponent {
     final JPanel wrap = new JPanel(new GridBagLayout());
     wrap.setOpaque(false);
     return wrap;
+  }
+
+  // Translates a header press-drag into a dismiss fraction (toward the resolved edge, clamped so a
+  // drag away from the edge does nothing) and feeds it to the live scrub. Uses absolute screen X so
+  // the delta is stable even as the modal surface slides out from under the docked hit target
+  // (Swing's mouse capture keeps delivering drags to the header that received the press).
+  private final class HeaderDragHandler extends MouseAdapter {
+    private boolean dragging;
+    private int pressScreenX;
+    private float lastFraction;
+
+    @Override
+    public void mousePressed(final MouseEvent e) {
+      if (!dragToDismissEnabled) {
+        return;
+      }
+      dragging = true;
+      pressScreenX = e.getXOnScreen();
+      lastFraction = 0f;
+    }
+
+    @Override
+    public void mouseDragged(final MouseEvent e) {
+      if (!dragging) {
+        return;
+      }
+      final int delta = e.getXOnScreen() - pressScreenX;
+      final int towardEdge = Math.max(0, isDockedRight() ? delta : -delta);
+      lastFraction = Math.min(1f, towardEdge / (float) Math.max(1, sheetWidth));
+      applyDragFraction(lastFraction);
+    }
+
+    @Override
+    public void mouseReleased(final MouseEvent e) {
+      if (!dragging) {
+        return;
+      }
+      dragging = false;
+      releaseDrag(lastFraction);
+    }
+  }
+
+  // A transparent hot zone over the body's content-facing edge: it reports a horizontal-resize
+  // cursor and a press-drag changes the sheet width live (clamped to [min, max]). Absolute screen X
+  // keeps the delta stable as the body reflows under the pointer during the resize.
+  private final class ResizeStrip extends JComponent {
+    private int pressScreenX;
+    private int startWidth;
+
+    ResizeStrip() {
+      setOpaque(false);
+      setVisible(false);
+      final MouseAdapter handler =
+          new MouseAdapter() {
+            @Override
+            public void mousePressed(final MouseEvent e) {
+              pressScreenX = e.getXOnScreen();
+              startWidth = sheetWidth;
+            }
+
+            @Override
+            public void mouseDragged(final MouseEvent e) {
+              final int delta = e.getXOnScreen() - pressScreenX;
+              resizeWidthTo(startWidth + (isDockedRight() ? -delta : delta));
+            }
+          };
+      addMouseListener(handler);
+      addMouseMotionListener(handler);
+    }
+
+    @Override
+    public Cursor getCursor() {
+      return Cursor.getPredefinedCursor(
+          isDockedRight() ? Cursor.W_RESIZE_CURSOR : Cursor.E_RESIZE_CURSOR);
+    }
   }
 
   // The headline: TITLE_LARGE / ON_SURFACE resolved per paint so a runtime theme/mode switch

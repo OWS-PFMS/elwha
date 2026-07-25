@@ -5,6 +5,7 @@ import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.sidesheet.ElwhaSideSheet;
 import com.owspfm.elwha.sidesheet.SheetEdge;
+import com.owspfm.elwha.sidesheet.SheetPosture;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.BorderLayout;
@@ -31,9 +32,10 @@ import javax.swing.SwingConstants;
  * presentation — its own edge / width / affordance / footer configuration and the modal-only
  * dismissal toggles — whose trigger presents the sheet on the real Showcase frame and echoes each
  * {@code SheetDismissCause} to the status line; the facet's width control re-docks an open modal in
- * place (200 forces the footer-action wrap). The Gallery embeds static configurations directly —
- * the sheet is an ordinary component, so no preview shim is needed; modal-chrome instances render
- * without scrim or motion.
+ * place (200 forces the footer-action wrap). Both facets also carry the V2 axes — a docked/detached
+ * posture selector and the opt-in drag-to-dismiss / resizable toggles. The Gallery embeds static
+ * configurations directly (including detached standard + modal cells) — the sheet is an ordinary
+ * component, so no preview shim is needed; modal-chrome instances render without scrim or motion.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -129,11 +131,31 @@ final class SideSheetShowcasePanels {
           stage.repaint();
         });
 
+    final ElwhaSelectField<SheetPosture> postureBox = ElwhaSelectField.outlined("Posture");
+    postureBox.setOptions(List.of(SheetPosture.values()));
+    postureBox.setSelectedValue(SheetPosture.DOCKED);
+    postureBox.addSelectionChangeListener(
+        p -> {
+          sheet.setSheetPosture(p != null ? p : SheetPosture.DOCKED);
+          stage.revalidate();
+          stage.repaint();
+        });
+
+    final ElwhaCheckbox dragDismissBox = new ElwhaCheckbox("Drag-to-dismiss");
+    dragDismissBox.addActionListener(
+        e -> sheet.setDragToDismissEnabled(dragDismissBox.isChecked()));
+    final ElwhaCheckbox resizableBox = new ElwhaCheckbox("Resizable");
+    resizableBox.addActionListener(e -> sheet.setResizable(resizableBox.isChecked()));
+
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Standard side sheet");
     controls.addControl("", openToggle);
     controls.addControl("", edgeBox);
     controls.addControl("", widthBox);
+    controls.addSection("Posture & gestures");
+    controls.addControl("", postureBox);
+    controls.addControl("", dragDismissBox);
+    controls.addControl("", resizableBox);
     controls.addSection("Header");
     controls.addControl("", closeBox);
     controls.addControl("", backBox);
@@ -151,6 +173,10 @@ final class SideSheetShowcasePanels {
         sheet.setContent(filterForm);
         sheet.setActions(ElwhaButton.filledButton("Apply"), ElwhaButton.outlinedButton("Cancel"));
         frame.add(sheet, BorderLayout.LINE_END);   // embed beside content
+
+        sheet.setSheetPosture(SheetPosture.DETACHED); // float: 16dp margin, all corners rounded
+        sheet.setDragToDismissEnabled(true);          // drag the header toward the edge to dismiss
+        sheet.setResizable(true);                     // drag the inner edge to resize live
 
         sheet.open();    // animate width 0 -> sheetWidth; siblings reflow
         sheet.close();   // reverse; the sheet stays in the hierarchy
@@ -200,6 +226,19 @@ final class SideSheetShowcasePanels {
     escBox.setChecked(true);
     final ElwhaCheckbox scrimBox = new ElwhaCheckbox("Scrim dismisses");
     scrimBox.setChecked(true);
+
+    final ElwhaSelectField<SheetPosture> postureBox = ElwhaSelectField.outlined("Posture");
+    postureBox.setOptions(List.of(SheetPosture.values()));
+    postureBox.setSelectedValue(SheetPosture.DOCKED);
+    postureBox.addSelectionChangeListener(
+        p -> {
+          if (liveModal[0] != null) {
+            liveModal[0].setSheetPosture(p != null ? p : SheetPosture.DOCKED);
+          }
+        });
+    final ElwhaCheckbox dragDismissBox = new ElwhaCheckbox("Drag-to-dismiss");
+    final ElwhaCheckbox resizableBox = new ElwhaCheckbox("Resizable");
+
     final JLabel status = new JLabel("Modal not opened yet.");
 
     final ElwhaButton openModal = ElwhaButton.filledButton("Open modal side sheet");
@@ -215,6 +254,9 @@ final class SideSheetShowcasePanels {
           modal.setFooterDividerVisible(footerDividerBox.isChecked());
           modal.setDismissibleByEsc(escBox.isChecked());
           modal.setDismissibleByScrim(scrimBox.isChecked());
+          modal.setSheetPosture(orDefault(postureBox.getSelectedValue(), SheetPosture.DOCKED));
+          modal.setDragToDismissEnabled(dragDismissBox.isChecked());
+          modal.setResizable(resizableBox.isChecked());
           modal.setOnClose(
               cause -> {
                 liveModal[0] = null;
@@ -240,6 +282,10 @@ final class SideSheetShowcasePanels {
     controls.addSection("Dismissal");
     controls.addControl("", escBox);
     controls.addControl("", scrimBox);
+    controls.addSection("Posture & gestures");
+    controls.addControl("", postureBox);
+    controls.addControl("", dragDismissBox);
+    controls.addControl("", resizableBox);
 
     final ComponentWorkbench.Facet facet = workbench.addFacet("Modal", controls);
     facet.setCode(
@@ -285,6 +331,18 @@ final class SideSheetShowcasePanels {
     bare.setEdgeDividerVisible(false);
     bare.setContent(galleryFiller("no affordances, no dividers"));
     row.add(galleryCell("Headline only", bare));
+
+    final ElwhaSideSheet detachedStd = ElwhaSideSheet.standardSheet("Detached");
+    detachedStd.setSheetPosture(SheetPosture.DETACHED);
+    detachedStd.setContent(galleryFiller("16dp margin, all corners rounded, no edge divider"));
+    row.add(galleryCell("Detached (standard)", detachedStd));
+
+    final ElwhaSideSheet detachedModal = ElwhaSideSheet.modalSheet("Detached modal");
+    detachedModal.setSheetPosture(SheetPosture.DETACHED);
+    detachedModal.setContent(galleryFiller("floats off the scrim on all four edges"));
+    detachedModal.setActions(
+        ElwhaButton.filledButton("Save"), ElwhaButton.outlinedButton("Cancel"));
+    row.add(galleryCell("Detached modal chrome", detachedModal));
 
     return row;
   }

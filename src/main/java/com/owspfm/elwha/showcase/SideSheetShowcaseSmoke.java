@@ -2,7 +2,9 @@ package com.owspfm.elwha.showcase;
 
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.sidesheet.ElwhaSideSheet;
+import com.owspfm.elwha.sidesheet.SheetPosture;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
@@ -19,9 +21,10 @@ import javax.swing.JComponent;
  * SideSheetShowcasePanels} Workbench + Gallery without a display, asserting the workbench stages
  * exactly one live docked {@link ElwhaSideSheet}, that the open/close toggle button round-trips the
  * sheet's open state (the #506 desync guard — a stateful checkbox can't, so the control is a
- * button), exercising every Workbench checkbox through {@code doClick} (affordances, dividers, RTL,
- * modal dismissibility — each applies without throwing; the modal trigger itself needs a realized
- * window and is exercised by {@code SideSheetModalSmoke}), counting the gallery's five
+ * button), driving the posture selector to detach + re-dock the staged sheet, exercising every
+ * Workbench checkbox through {@code doClick} (affordances, dividers, RTL, drag-to-dismiss,
+ * resizable, modal dismissibility — each applies without throwing; the modal trigger itself needs a
+ * realized window and is exercised by {@code SideSheetModalSmoke}), counting the gallery's seven
  * configuration sheets, and laying out + painting both surfaces into a {@link BufferedImage}.
  *
  * @author Charles Bryan
@@ -66,6 +69,27 @@ public final class SideSheetShowcaseSmoke {
     openToggle.doClick();
     check("toggle reopens the staged sheet", live.isOpen());
 
+    // V2: the posture selector detaches/re-docks the staged sheet live (setSelectedValue fires the
+    // change listener on an actual change).
+    ElwhaSelectField<?> postureField = null;
+    for (final ElwhaSelectField<?> field : collect(workbench, ElwhaSelectField.class)) {
+      if (field.getSelectedValue() instanceof SheetPosture) {
+        postureField = field;
+        break;
+      }
+    }
+    check("workbench exposes the posture selector", postureField != null);
+    @SuppressWarnings("unchecked")
+    final ElwhaSelectField<SheetPosture> posture = (ElwhaSelectField<SheetPosture>) postureField;
+    posture.setSelectedValue(SheetPosture.DETACHED);
+    check(
+        "posture selector detaches the staged sheet",
+        live.getSheetPosture() == SheetPosture.DETACHED);
+    posture.setSelectedValue(SheetPosture.DOCKED);
+    check(
+        "posture selector re-docks the staged sheet",
+        live.getSheetPosture() == SheetPosture.DOCKED);
+
     for (final ElwhaCheckbox box : collect(workbench, ElwhaCheckbox.class)) {
       box.doClick();
       box.doClick();
@@ -80,14 +104,15 @@ public final class SideSheetShowcaseSmoke {
 
     final JComponent gallery = SideSheetShowcasePanels.buildGallery();
     final List<ElwhaSideSheet> sheets = collect(gallery, ElwhaSideSheet.class);
-    check("gallery embeds the five configuration sheets", sheets.size() == 5);
-    gallery.setSize(1480, 480);
+    check("gallery embeds the seven configuration sheets", sheets.size() == 7);
+    gallery.setSize(1680, 480);
     layoutTree(gallery);
     paint(gallery, 1480, 480);
 
     System.out.println(
         "SideSheetShowcaseSmoke: OK (workbench stages one live sheet, open/close toggle"
-            + " round-trips, checkbox round-trips, 5-sheet gallery, both surfaces paint headless)");
+            + " round-trips, posture selector detaches/re-docks, checkbox round-trips, 7-sheet"
+            + " gallery, both surfaces paint headless)");
   }
 
   private static <T> List<T> collect(final Container root, final Class<T> type) {
