@@ -64,6 +64,44 @@ The margin must not be applied twice (once by the sheet's border, once by the ho
 
 **Affordance.** The drag zone is the **header band** (the title row), excluding the back/close icon buttons (they keep their own hand cursor and click semantics). While `dragToDismissEnabled` and the pointer is over the draggable header, the cursor is `Cursor.MOVE_CURSOR`. This maps M3's touch swipe-to-dismiss to the desktop title-bar-drag idiom without a dedicated glyph (M3 side sheets — unlike bottom sheets — have no drag-handle in the anatomy).
 
+> ### ⚠️ DIVERGENCE FROM M3 — drag zone is the header, not the whole sheet
+>
+> **This is a deliberate, argued departure. Do not "correct" it toward M3 without reading the constraint below.**
+>
+> **What M3 specifies.** The *whole modal side sheet* is the drag target. MDC's `SideSheetBehavior` drives
+> `STATE_DRAGGING` / `STATE_SETTLING` at the **behavior** level (not on a title-bar sub-region), and
+> `SideSheetDialog` auto-cancels once the sheet is swiped off-screen. The scrim is a separate surface that
+> covers the **main content area, not the sheet**, and tapping it dismisses — the standard modal contract
+> shared with dialogs and menus.
+>
+> **The affordance debt this creates.** M3 can omit a drag handle on side sheets *because the whole sheet is
+> the grab target* — "grab the thing" is the affordance. Elwha inherits the **no-handle** rule but *also*
+> narrows the target to the header, so it has neither a handle nor a large target. Recorded plainly: the
+> original §4 rationale ("no drag-handle glyph — M3 side sheets have no drag handle in the anatomy") is
+> **not sufficient on its own** to justify header-only; it borrows a constraint without the compensating
+> affordance that made the constraint acceptable.
+>
+> **Why header-only is still the right call on desktop.** Android arbitrates "drag the sheet" vs "interact
+> with content" through the **nested-scroll protocol**. Swing has no equivalent, and Swing delivers a press
+> to the *deepest* component — so a listener on the sheet body would only ever see presses landing on dead
+> space between children, never over a text field, slider, or list. Making the whole sheet draggable would
+> require a glass pane or `AWTEventListener` intercepting presses over arbitrary **consumer** content and
+> then heuristically deciding drag-vs-interact. A side sheet's body is precisely where consumers put filters
+> and form controls, so that arbitration would be load-bearing and fragile.
+>
+> **Why the affordance debt is tolerable.** Both V2 gestures ship **off by default** (§1 / Appendix A), so
+> drag-to-dismiss is never a primary dismiss path — close affordance, Esc, and scrim are. A consumer enabling
+> it is opting into a secondary power-user shortcut, and a shortcut need not be self-advertising.
+>
+> **If a consumer ever needs M3 fidelity**, the additive escape hatch is a drag-zone axis
+> (`setDragZone(HEADER | SURFACE)`, default `HEADER`) rather than widening the default — `SURFACE` is safe
+> only when the consumer knows its own content is inert. Not built in V2; no issue filed.
+>
+> Established during the 2026-07-25 operator smoke of the merged V2. A `Robot` sweep on the modal header
+> confirmed the shipped gesture is correct as specced — 0/10/30/60/100 px releases settle, 140 px
+> (fraction 0.547) and 200 px dismiss with `SheetDismissCause.DRAG` — so this entry is a **scope** decision,
+> not a bug record.
+
 **Direction & fraction.** Only motion *toward the anchored edge* dismisses (dragging away is clamped to 0 offset — a docked sheet can't over-extend). The drag fraction = `min(1, offsetTowardEdge / visibleWidth)`.
 
 **Modal — scrub the entrance motion.** The modal host already animates `motionProgress` 1↔0 (docked↔off-edge) and the scrim alpha tracks it. Drag maps straight onto it:
@@ -134,7 +172,7 @@ Each story = a fresh demo class ([[feedback_fresh_demo_per_story]]); a11y/edge c
 - **Drag scrubs the entrance animation rather than a parallel drag animator:** the modal slide + scrim-dim are already a 1↔0 progress curve; `snapTo` lets the pointer drive it and `reverse()`/`start()` continue smoothly from the dragged position. A separate drag-offset transform would duplicate the snapshot/translate/scrim logic and risk a snap-jump at release.
 - **Opt-in gestures (default off):** MDC defaults `behavior_draggable=true`, but that's a touch default. On desktop, header-drag-to-dismiss is non-obvious and can fight selection; resize changes layout. Off-by-default preserves V1 behavior on upgrade; consumers opt in. Revisit defaults at 1.0 if a consumer wants them on.
 - **Position threshold, not velocity fling:** a 50%-of-visible-width release threshold is legible with a mouse; momentum flinging is a touch nicety deferred (§1) unless smoke disagrees.
-- **No drag-handle glyph:** M3 side sheets have no drag handle in the anatomy (bottom sheets do). The MOVE cursor on the header is the desktop affordance.
+- **No drag-handle glyph:** M3 side sheets have no drag handle in the anatomy (bottom sheets do). The MOVE cursor on the header is the desktop affordance. ⚠️ **Amended 2026-07-25** — this rationale is incomplete on its own: M3 omits the handle *because the whole sheet is the drag target*, so "no handle" cannot be borrowed while also narrowing the target to the header. The header-only zone stands on the Swing nested-scroll argument instead; see the divergence callout in §4.
 
 ## Appendix B — Token reference
 
