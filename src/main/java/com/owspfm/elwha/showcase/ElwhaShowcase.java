@@ -141,7 +141,7 @@ import javax.swing.event.DocumentListener;
  * -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"}
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaShowcase {
@@ -808,6 +808,13 @@ public final class ElwhaShowcase {
                 + " flat + wavy, with the track-active gap and stop dot.",
             AREA_COMPONENTS,
             buildProgressComponent()));
+    register(
+        new LeafEntry(
+            "Loading",
+            "M3 Expressive loading indicator — the shape-morph spinner; standard + contained,"
+                + " indeterminate (7-shape loop) + determinate (Circle → SoftBurst).",
+            AREA_COMPONENTS,
+            buildLoadingComponent()));
 
     register(
         new LeafEntry(
@@ -2033,6 +2040,19 @@ public final class ElwhaShowcase {
         scroll(
             stack(
                 gallerySection("States & configurations", ProgressShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- Loading
+
+  private static JComponent buildLoadingComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", LoadingShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("States & configurations", LoadingShowcasePanels.buildGallery()))));
     return tabs;
   }
 
