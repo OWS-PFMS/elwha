@@ -802,6 +802,20 @@ public final class ElwhaShowcase {
                 + " optional drag-to-dismiss and drag-to-resize.",
             AREA_COMPONENTS,
             buildSideSheetComponent()));
+    register(
+        new LeafEntry(
+            "Progress",
+            "M3 Expressive progress indicators — linear + circular, determinate + indeterminate,"
+                + " flat + wavy, with the track-active gap and stop dot.",
+            AREA_COMPONENTS,
+            buildProgressComponent()));
+    register(
+        new LeafEntry(
+            "Loading",
+            "M3 Expressive loading indicator — the shape-morph spinner; standard + contained,"
+                + " indeterminate (7-shape loop) + determinate (Circle → SoftBurst).",
+            AREA_COMPONENTS,
+            buildLoadingComponent()));
 
     register(
         new LeafEntry(
@@ -2014,6 +2028,32 @@ public final class ElwhaShowcase {
             stack(
                 gallerySection(
                     "Modes & configurations", ColorPickerShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- Progress
+
+  private static JComponent buildProgressComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", ProgressShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("States & configurations", ProgressShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
+  // ------------------------------------------------------------- Loading
+
+  private static JComponent buildLoadingComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", LoadingShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(
+                gallerySection("States & configurations", LoadingShowcasePanels.buildGallery()))));
     return tabs;
   }
 

@@ -1,0 +1,451 @@
+package com.owspfm.elwha.progress;
+
+import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Easing;
+import java.awt.BasicStroke;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.RenderingHints;
+import java.awt.Stroke;
+import java.awt.geom.Arc2D;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Path2D;
+import javax.swing.BoundedRangeModel;
+import javax.swing.DefaultBoundedRangeModel;
+
+/**
+ * The Elwha Material 3 Expressive <strong>linear progress indicator</strong> — a horizontal bar
+ * painting the updated-M3 anatomy: a {@code primary} active indicator, a {@code secondaryContainer}
+ * track separated by the 4px track-active gap, and the 4px {@code primary} stop-indicator dot at
+ * the track's trailing end (determinate only; it hides once the active head reaches it). Outer ends
+ * are full-round; the gap-facing inner ends hold the spec's 2px radius.
+ *
+ * <p>Determinate fills toward {@link #getProgressFraction()}; {@linkplain #setIndeterminate
+ * indeterminate} loops the current-M3 two-line cycle — a 1750ms timeline whose two
+ * emphasized-accelerate [tail, head] line spans sweep the run while the track fills the
+ * complementary spans (gap on each side; no stop dot). The Expressive {@linkplain #setWavy wavy}
+ * shape strokes the active spans as a traveling sine (amplitude 3px; wavelength 40px determinate /
+ * 20px indeterminate; one wavelength per second) — the determinate amplitude ramps flat outside
+ * {@code (10%, 95%)} progress, and the track always stays flat. Direction follows {@link
+ * java.awt.ComponentOrientation} — RTL mirrors the fill and the stop dot.
+ *
+ * <p>The bar stretches to its layout width (preferred 240px); height is the chrome height (track
+ * thickness, plus the wave band when wavy). See {@code elwha-progress-indicator-design.md} §5.
+ *
+ * @author Charles Bryan
+ * @version v0.4.0
+ * @since v0.4.0
+ */
+public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator {
+
+  /** The M3 default layout width, px (the Compose default). */
+  public static final int PREFERRED_WIDTH_PX = 240;
+
+  /** The M3 {@code StopSize} — the stop-indicator dot diameter, px. */
+  public static final int STOP_SIZE_DEFAULT_PX = 4;
+
+  /** The M3 determinate wave wavelength, px. */
+  public static final int WAVELENGTH_DETERMINATE_PX = 40;
+
+  /** The M3 indeterminate wave wavelength, px. */
+  public static final int WAVELENGTH_INDETERMINATE_PX = 20;
+
+  /** The M3 linear wave amplitude, px. */
+  public static final float WAVE_AMPLITUDE_PX = 3f;
+
+  private static final int MIN_WIDTH_PX = 48;
+  private static final int INDETERMINATE_CYCLE_MS = 1750;
+  private static final int FIRST_LINE_MS = 1000;
+  private static final int FIRST_LINE_TAIL_DELAY_MS = 250;
+  private static final int SECOND_LINE_MS = 850;
+  private static final int SECOND_LINE_HEAD_DELAY_MS = 650;
+  private static final int SECOND_LINE_TAIL_DELAY_MS = 900;
+
+  private int trackStopIndicatorSize = STOP_SIZE_DEFAULT_PX;
+  private ColorRole stopIndicatorColorRole = ColorRole.PRIMARY;
+
+  /**
+   * A determinate linear indicator over the default {@code [0, 100]} model at zero.
+   *
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaLinearProgressIndicator() {
+    this(new DefaultBoundedRangeModel(0, 0, 0, 100));
+  }
+
+  /**
+   * A determinate linear indicator over a fresh model.
+   *
+   * @param min the model minimum
+   * @param max the model maximum
+   * @param value the starting value
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaLinearProgressIndicator(final int min, final int max, final int value) {
+    this(new DefaultBoundedRangeModel(value, 0, min, max));
+  }
+
+  /**
+   * A determinate linear indicator over a caller-supplied model (shareable with other range-driven
+   * components, e.g. an {@code ElwhaSlider}).
+   *
+   * @param model the value model (never {@code null})
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ElwhaLinearProgressIndicator(final BoundedRangeModel model) {
+    super(model, WAVELENGTH_DETERMINATE_PX, WAVELENGTH_INDETERMINATE_PX, WAVE_AMPLITUDE_PX);
+  }
+
+  /**
+   * Factory — an indeterminate linear indicator.
+   *
+   * @return the indicator
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static ElwhaLinearProgressIndicator indeterminate() {
+    final ElwhaLinearProgressIndicator indicator = new ElwhaLinearProgressIndicator();
+    indicator.setIndeterminate(true);
+    return indicator;
+  }
+
+  /**
+   * Factory — a determinate linear indicator with the Expressive wavy shape.
+   *
+   * @return the indicator
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static ElwhaLinearProgressIndicator wavy() {
+    final ElwhaLinearProgressIndicator indicator = new ElwhaLinearProgressIndicator();
+    indicator.setWavy(true);
+    return indicator;
+  }
+
+  /**
+   * Factory — an indeterminate linear indicator with the Expressive wavy shape.
+   *
+   * @return the indicator
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public static ElwhaLinearProgressIndicator wavyIndeterminate() {
+    final ElwhaLinearProgressIndicator indicator = wavy();
+    indicator.setIndeterminate(true);
+    return indicator;
+  }
+
+  /**
+   * The stop-indicator dot diameter, px (M3 {@code StopSize} 4; {@code 0} hides it).
+   *
+   * @return the dot diameter
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public int getTrackStopIndicatorSize() {
+    return trackStopIndicatorSize;
+  }
+
+  /**
+   * Sets the stop-indicator dot diameter; {@code 0} hides the dot.
+   *
+   * @param size the diameter, px (clamped to ≥ 0)
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setTrackStopIndicatorSize(final int size) {
+    this.trackStopIndicatorSize = Math.max(0, size);
+    repaint();
+  }
+
+  /**
+   * The color role of the stop-indicator dot (M3: {@code primary}).
+   *
+   * @return the stop role
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public ColorRole getStopIndicatorColorRole() {
+    return stopIndicatorColorRole;
+  }
+
+  /**
+   * Re-roles the stop-indicator dot.
+   *
+   * @param role the new role (never {@code null})
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  public void setStopIndicatorColorRole(final ColorRole role) {
+    this.stopIndicatorColorRole = role;
+    repaint();
+  }
+
+  /**
+   * Preferred size — 240px wide by the chrome height (thickness, plus the reserved wave band when
+   * wavy), plus insets.
+   *
+   * @return the preferred size
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
+    final Insets in = getInsets();
+    return new Dimension(
+        PREFERRED_WIDTH_PX + in.left + in.right, chromeHeight() + in.top + in.bottom);
+  }
+
+  /**
+   * Minimum size — a short run at full chrome height.
+   *
+   * @return the minimum size
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
+    final Insets in = getInsets();
+    return new Dimension(MIN_WIDTH_PX + in.left + in.right, chromeHeight() + in.top + in.bottom);
+  }
+
+  /**
+   * Maximum size — unbounded width (the bar stretches to its layout), height capped at the chrome
+   * height.
+   *
+   * @return the maximum size
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
+    return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+  }
+
+  private int chromeHeight() {
+    final int waveBand = isWavy() ? 2 * Math.round(getWaveAmplitude()) : 0;
+    return getTrackThickness() + waveBand;
+  }
+
+  /**
+   * Paints the linear chrome (design §5): active capsule, gap, track capsule, stop dot — mirrored
+   * under RTL.
+   *
+   * @param g the graphics
+   * @version v0.4.0
+   * @since v0.4.0
+   */
+  @Override
+  protected void paintComponent(final Graphics g) {
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+      final Insets in = getInsets();
+      final boolean ltr = getComponentOrientation().isLeftToRight();
+      if (!ltr) {
+        g2.translate(getWidth(), 0);
+        g2.scale(-1, 1);
+      }
+      final float runX = ltr ? in.left : in.right;
+      final float runW = getWidth() - in.left - in.right;
+      final float midY = in.top + (getHeight() - in.top - in.bottom) / 2f;
+      if (runW <= 0f) {
+        return;
+      }
+      if (isIndeterminate()) {
+        paintIndeterminate(g2, runX, runW, midY);
+      } else {
+        paintDeterminate(g2, runX, runW, midY);
+      }
+    } finally {
+      g2.dispose();
+    }
+  }
+
+  private void paintDeterminate(
+      final Graphics2D g2, final float runX, final float runW, final float midY) {
+    final float thickness = getTrackThickness();
+    final float halfT = thickness / 2f;
+    final float top = midY - halfT;
+    final float innerR = Math.min(INNER_CORNER_RADIUS_PX, halfT);
+    final float gap = getIndicatorTrackGapSize();
+    final float fraction = getProgressFraction();
+    final float activeW = fraction * runW;
+    final boolean hasActive = activeW >= 0.5f;
+
+    float head = runX;
+    if (hasActive) {
+      final float capsuleW = Math.min(Math.max(activeW, thickness), runW);
+      head = runX + capsuleW;
+      g2.setColor(getIndicatorColorRole().resolve());
+      paintActiveSpan(g2, runX, head, midY, thickness, halfT, innerR);
+    }
+
+    final float trackStart = hasActive ? head + gap : runX;
+    final float trackEnd = runX + runW;
+    final float trackW = trackEnd - trackStart;
+    if (trackW >= 1f) {
+      g2.setColor(getTrackColorRole().resolve());
+      g2.fill(capsule(trackStart, top, trackW, thickness, hasActive ? innerR : halfT, halfT));
+    }
+
+    final float stopD = Math.min(trackStopIndicatorSize, thickness);
+    if (stopD > 0f && trackW >= 1f) {
+      final float stopX = trackEnd - stopD;
+      if (head + gap <= stopX) {
+        g2.setColor(stopIndicatorColorRole.resolve());
+        g2.fill(new Ellipse2D.Float(stopX, midY - stopD / 2f, stopD, stopD));
+      }
+    }
+  }
+
+  private void paintIndeterminate(
+      final Graphics2D g2, final float runX, final float runW, final float midY) {
+    final float thickness = getTrackThickness();
+    final float halfT = thickness / 2f;
+    final float top = midY - halfT;
+    final float innerR = Math.min(INNER_CORNER_RADIUS_PX, halfT);
+    final float gap = getIndicatorTrackGapSize();
+    final float runEnd = runX + runW;
+
+    final long ms = indeterminateElapsedMs() % INDETERMINATE_CYCLE_MS;
+    final float[][] lines = {
+      {channel(ms, FIRST_LINE_TAIL_DELAY_MS, FIRST_LINE_MS), channel(ms, 0, FIRST_LINE_MS)},
+      {
+        channel(ms, SECOND_LINE_TAIL_DELAY_MS, SECOND_LINE_MS),
+        channel(ms, SECOND_LINE_HEAD_DELAY_MS, SECOND_LINE_MS)
+      }
+    };
+    if (lines[0][0] > lines[1][0]) {
+      final float[] first = lines[0];
+      lines[0] = lines[1];
+      lines[1] = first;
+    }
+
+    float cursor = runX;
+    for (final float[] line : lines) {
+      final float x0 = runX + line[0] * runW;
+      final float x1 = runX + line[1] * runW;
+      if (x1 - x0 < 0.5f) {
+        continue;
+      }
+      final float segEnd = x0 - gap;
+      if (segEnd - cursor >= 1f) {
+        g2.setColor(getTrackColorRole().resolve());
+        g2.fill(
+            capsule(
+                cursor,
+                top,
+                segEnd - cursor,
+                thickness,
+                cursor <= runX + 0.5f ? halfT : innerR,
+                innerR));
+      }
+      g2.setColor(getIndicatorColorRole().resolve());
+      paintActiveSpan(
+          g2,
+          x0,
+          x1,
+          midY,
+          thickness,
+          x0 <= runX + 0.5f ? halfT : innerR,
+          x1 >= runEnd - 0.5f ? halfT : innerR);
+      cursor = x1 + gap;
+    }
+    if (runEnd - cursor >= 1f) {
+      g2.setColor(getTrackColorRole().resolve());
+      g2.fill(
+          capsule(
+              cursor,
+              top,
+              runEnd - cursor,
+              thickness,
+              cursor <= runX + 0.5f ? halfT : innerR,
+              halfT));
+    }
+  }
+
+  private static float channel(final long cycleMs, final int delayMs, final int durationMs) {
+    final float raw = Math.max(0f, Math.min(1f, (cycleMs - delayMs) / (float) durationMs));
+    return Easing.EMPHASIZED_ACCELERATE.ease(raw);
+  }
+
+  private void paintActiveSpan(
+      final Graphics2D g2,
+      final float x0,
+      final float x1,
+      final float midY,
+      final float thickness,
+      final float leftRadius,
+      final float rightRadius) {
+    final float amplitude = amplitudeFraction() * getWaveAmplitude();
+    final float halfT = thickness / 2f;
+    if (amplitude < 0.25f || x1 - x0 < thickness * 2f) {
+      g2.fill(capsule(x0, midY - halfT, x1 - x0, thickness, leftRadius, rightRadius));
+      return;
+    }
+    final float wavelength = Math.max(1, currentWavelength());
+    final float phase = wavePhasePx();
+    final float start = x0 + halfT;
+    final float end = x1 - halfT;
+    final float step = Math.min(2f, wavelength / 8f);
+    final Path2D.Float wave = new Path2D.Float();
+    wave.moveTo(start, waveY(start, midY, amplitude, wavelength, phase));
+    for (float x = start + step; x < end; x += step) {
+      wave.lineTo(x, waveY(x, midY, amplitude, wavelength, phase));
+    }
+    wave.lineTo(end, waveY(end, midY, amplitude, wavelength, phase));
+    final Stroke previous = g2.getStroke();
+    g2.setStroke(new BasicStroke(thickness, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    g2.draw(wave);
+    g2.setStroke(previous);
+  }
+
+  private static float waveY(
+      final float x,
+      final float midY,
+      final float amplitude,
+      final float wavelength,
+      final float phase) {
+    return midY + amplitude * (float) Math.sin(2.0 * Math.PI * (x - phase) / wavelength);
+  }
+
+  static Path2D.Float capsule(
+      final float x,
+      final float y,
+      final float w,
+      final float h,
+      final float leftRadius,
+      final float rightRadius) {
+    final float rl = Math.min(leftRadius, Math.min(w / 2f, h / 2f));
+    final float rr = Math.min(rightRadius, Math.min(w / 2f, h / 2f));
+    final Path2D.Float p = new Path2D.Float();
+    p.moveTo(x + rl, y);
+    p.lineTo(x + w - rr, y);
+    p.append(new Arc2D.Float(x + w - 2 * rr, y, 2 * rr, 2 * rr, 90, -90, Arc2D.OPEN), true);
+    p.lineTo(x + w, y + h - rr);
+    p.append(
+        new Arc2D.Float(x + w - 2 * rr, y + h - 2 * rr, 2 * rr, 2 * rr, 0, -90, Arc2D.OPEN), true);
+    p.lineTo(x + rl, y + h);
+    p.append(new Arc2D.Float(x, y + h - 2 * rl, 2 * rl, 2 * rl, 270, -90, Arc2D.OPEN), true);
+    p.lineTo(x, y + rl);
+    p.append(new Arc2D.Float(x, y, 2 * rl, 2 * rl, 180, -90, Arc2D.OPEN), true);
+    p.closePath();
+    return p;
+  }
+}

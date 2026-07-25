@@ -16,10 +16,10 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 
 /**
- * S8 headless guard for the Color picker Showcase surface (#490): the Workbench builds with one
- * persistent live picker whose commits drive the readout label, the gallery builds its six
- * configured pickers (three single-mode, alpha-enabled, recent-populated, disabled), and both
- * panels lay out and paint in light and dark without throwing.
+ * Headless guard for the Color picker Showcase surface (#490, extended by V2 #503): the Workbench
+ * builds with one persistent live picker (favorites pre-seeded) whose commits drive the readout
+ * label, the gallery builds its nine configured pickers (wheel/theme/saved tiles joined the V1
+ * six), and both panels lay out and paint in light and dark without throwing.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -59,6 +59,9 @@ public final class ColorPickerShowcaseSmoke {
     check("workbench hosts one live picker", pickers.size() == 1);
 
     final ElwhaColorPicker picker = pickers.get(0);
+    check("workbench picker offers four modes", picker.getModes().size() == 4);
+    check("workbench picker offers three sources", picker.getSwatchSources().size() == 3);
+    check("workbench favorites pre-seeded", picker.getFavorites().size() == 2);
     picker.setColor(new Color(0x00FF00));
     final List<JLabel> labels = new ArrayList<>();
     collect(workbench, JLabel.class, labels);
@@ -76,7 +79,7 @@ public final class ColorPickerShowcaseSmoke {
     final JComponent gallery = ColorPickerShowcasePanels.buildGallery();
     final List<ElwhaColorPicker> pickers = new ArrayList<>();
     collect(gallery, ElwhaColorPicker.class, pickers);
-    check("gallery hosts six pickers", pickers.size() == 6);
+    check("gallery hosts nine pickers", pickers.size() == 9);
 
     int singleMode = 0;
     int alphaEnabled = 0;
@@ -92,7 +95,7 @@ public final class ColorPickerShowcaseSmoke {
         disabled++;
       }
     }
-    check("five single-mode pickers", singleMode == 5);
+    check("eight single-mode pickers", singleMode == 8);
     check("one alpha-enabled picker", alphaEnabled == 1);
     check("one disabled picker", disabled == 1);
   }

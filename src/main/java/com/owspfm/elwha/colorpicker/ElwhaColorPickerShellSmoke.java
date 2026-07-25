@@ -90,7 +90,7 @@ public final class ElwhaColorPickerShellSmoke {
     final ElwhaColorPicker picker = new ElwhaColorPicker();
     check(
         "default mode order",
-        List.of(PickerMode.SWATCHES, PickerMode.SPECTRUM, PickerMode.SLIDERS)
+        List.of(PickerMode.SWATCHES, PickerMode.SPECTRUM, PickerMode.WHEEL, PickerMode.SLIDERS)
             .equals(picker.getModes()));
     check("default active mode", picker.getMode() == PickerMode.SWATCHES);
 

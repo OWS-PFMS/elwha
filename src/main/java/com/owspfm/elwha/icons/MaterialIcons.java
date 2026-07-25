@@ -410,6 +410,30 @@ public final class MaterialIcons {
   }
 
   /**
+   * Colors glyph (outline) — the color picker's wheel-mode tab. Ships with a fill-1 companion for
+   * the active-tab state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon colors() {
+    return colors(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #colors()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon colors(final int size) {
+    return load("colors", size);
+  }
+
+  /**
    * Gradient glyph (outline) — the color picker's spectrum-mode tab.
    *
    * @return the icon at the default size
