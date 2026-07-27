@@ -69,8 +69,8 @@ import javax.swing.JScrollPane;
  * elwha-appbar-research.md}.
  *
  * @author Charles Bryan
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public class ElwhaAppBar extends JComponent implements Accessible {
 
@@ -101,8 +101,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
   /**
    * Constructs a {@link AppBarVariant#SMALL} app bar.
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public ElwhaAppBar() {
     this(AppBarVariant.SMALL);
@@ -112,8 +112,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * Constructs an app bar of the given variant.
    *
    * @param variant the M3 variant; required
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public ElwhaAppBar(final AppBarVariant variant) {
     this.variant = Objects.requireNonNull(variant, "variant");
@@ -131,8 +131,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * Constructs a small app bar — the single-row regular bar.
    *
    * @return a new {@link AppBarVariant#SMALL} bar
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static ElwhaAppBar small() {
     return new ElwhaAppBar(AppBarVariant.SMALL);
@@ -142,8 +142,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * Constructs a medium flexible app bar — a larger headline that collapses on scroll.
    *
    * @return a new {@link AppBarVariant#MEDIUM_FLEXIBLE} bar
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static ElwhaAppBar mediumFlexible() {
     return new ElwhaAppBar(AppBarVariant.MEDIUM_FLEXIBLE);
@@ -153,8 +153,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * Constructs a large flexible app bar — emphasizes the page headline; collapses on scroll.
    *
    * @return a new {@link AppBarVariant#LARGE_FLEXIBLE} bar
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static ElwhaAppBar largeFlexible() {
     return new ElwhaAppBar(AppBarVariant.LARGE_FLEXIBLE);
@@ -164,8 +164,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * The bar's M3 variant.
    *
    * @return the variant, never {@code null}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public AppBarVariant getVariant() {
     return variant;
@@ -182,8 +182,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * #setNavigationIcon(Icon, String, ActionListener)} convenience, which does.
    *
    * @param button the navigation button, or {@code null} to clear
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setNavigationIcon(final ElwhaIconButton button) {
     if (navigationIcon != null) {
@@ -209,8 +209,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * @param accessibleName the accessible name (also the tooltip); required
    * @param listener the action listener; null is allowed
    * @return the created button, for further configuration
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public ElwhaIconButton setNavigationIcon(
       final Icon icon, final String accessibleName, final ActionListener listener) {
@@ -223,8 +223,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * The leading navigation button, or {@code null} when none is installed.
    *
    * @return the navigation button
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public ElwhaIconButton getNavigationIcon() {
     return navigationIcon;
@@ -239,8 +239,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    *
    * @param action the action button; required
    * @return {@code action}, for chaining
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public ElwhaIconButton addAction(final ElwhaIconButton action) {
     Objects.requireNonNull(action, "action");
@@ -261,8 +261,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * @param accessibleName the accessible name (also the tooltip); required
    * @param listener the action listener; null is allowed
    * @return the created button
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public ElwhaIconButton addAction(
       final Icon icon, final String accessibleName, final ActionListener listener) {
@@ -273,8 +273,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * Removes a previously added action.
    *
    * @param action the action to remove; unknown actions are ignored
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void removeAction(final ElwhaIconButton action) {
     if (actions.remove(action)) {
@@ -290,8 +290,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * The action buttons, in add order.
    *
    * @return a snapshot of the actions; never {@code null}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public List<ElwhaIconButton> getActions() {
     return new ArrayList<>(actions);
@@ -304,8 +304,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    *
    * @param element the element to add; required
    * @return {@code element}, for chaining
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public JComponent addTrailingElement(final JComponent element) {
     Objects.requireNonNull(element, "element");
@@ -321,8 +321,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * Removes a previously added trailing element (or action).
    *
    * @param element the element to remove; unknown elements are ignored
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void removeTrailingElement(final JComponent element) {
     if (trailingElements.remove(element)) {
@@ -342,8 +342,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * doctrine.
    *
    * @param enabled the new enabled state
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   @Override
   public void setEnabled(final boolean enabled) {
@@ -403,8 +403,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * line; ellipsized at the slot edges.
    *
    * @param title the title text; {@code null} is treated as empty
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setTitle(final String title) {
     final String old = accessibleNameNow();
@@ -418,8 +418,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * The title text.
    *
    * @return the title; never {@code null}, possibly empty
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public String getTitle() {
     return title;
@@ -430,8 +430,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * empty clears it — flexible variants drop to the no-subtitle expanded height.
    *
    * @param subtitle the subtitle text, or {@code null} to clear
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setSubtitle(final String subtitle) {
     final String old = accessibleNameNow();
@@ -448,8 +448,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * The subtitle text, or {@code null} when none is set.
    *
    * @return the subtitle
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public String getSubtitle() {
     return subtitle;
@@ -461,8 +461,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * when space runs out.
    *
    * @param titleCentered {@code true} to center
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setTitleCentered(final boolean titleCentered) {
     if (this.titleCentered != titleCentered) {
@@ -475,8 +475,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * Whether the title is center-aligned.
    *
    * @return the centered flag
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isTitleCentered() {
     return titleCentered;
@@ -495,8 +495,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * responds — the M3 read (bar reacting as content slides under) is preserved.
    *
    * @param source the scroll source, or {@code null}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setScrollSource(final JScrollPane source) {
     if (source == scrollSource) {
@@ -516,8 +516,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * The scroll source, or {@code null} when none is set.
    *
    * @return the scroll source
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public JScrollPane getScrollSource() {
     return scrollSource;
@@ -529,8 +529,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * {@code liftOnScroll} default); the lift is tonal only, no shadow (Compose parity).
    *
    * @param liftOnScroll {@code false} to keep the container at {@code SURFACE} regardless
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setLiftOnScroll(final boolean liftOnScroll) {
     if (this.liftOnScroll == liftOnScroll) {
@@ -544,8 +544,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * Whether lift-on-scroll is enabled.
    *
    * @return the lift-on-scroll flag
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isLiftOnScroll() {
     return liftOnScroll;
@@ -555,8 +555,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * Whether the container is currently lifted.
    *
    * @return {@code true} while lifted
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isLifted() {
     return lifted;
@@ -568,8 +568,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * its next scroll event.
    *
    * @param lifted the forced lift state
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setLifted(final boolean lifted) {
     updateLift(lifted);
@@ -581,8 +581,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * 0} for {@link AppBarVariant#SMALL}.
    *
    * @return the collapse fraction in {@code [0, 1]}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public float getCollapsedFraction() {
     return collapsedFraction;
@@ -594,8 +594,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * the forced value on its next scroll event.
    *
    * @param fraction the forced fraction, clamped to {@code [0, 1]}
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setCollapsedFraction(final float fraction) {
     if (variant.isFlexible()) {
@@ -944,8 +944,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * their roles and actions.
    *
    * @author Charles Bryan
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   protected class AccessibleElwhaAppBar extends AccessibleJComponent {
 

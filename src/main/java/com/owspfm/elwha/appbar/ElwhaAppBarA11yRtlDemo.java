@@ -23,8 +23,8 @@ import javax.swing.SwingUtilities;
  * accessible-name readout, and Tab traversal order (nav → actions).
  *
  * @author Charles Bryan
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public final class ElwhaAppBarA11yRtlDemo {
 
@@ -34,8 +34,8 @@ public final class ElwhaAppBarA11yRtlDemo {
    * Launches the demo frame.
    *
    * @param args unused
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static void main(final String[] args) {
     ElwhaTheme.install(

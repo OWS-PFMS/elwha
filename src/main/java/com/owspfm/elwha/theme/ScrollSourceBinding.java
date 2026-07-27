@@ -22,8 +22,8 @@ import javax.swing.event.ChangeListener;
  * decides whether to re-attach.
  *
  * @author Charles Bryan
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public final class ScrollSourceBinding {
 
@@ -31,8 +31,8 @@ public final class ScrollSourceBinding {
    * Receives scroll updates from the bound model.
    *
    * @author Charles Bryan
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   @FunctionalInterface
   public interface ScrollListener {
@@ -42,8 +42,8 @@ public final class ScrollSourceBinding {
      *
      * @param value the new scroll value
      * @param delta the change from the previous value; never zero
-     * @version v0.4.0
-     * @since v0.4.0
+     * @version v0.5.0
+     * @since v0.5.0
      */
     void scrolled(int value, int delta);
   }
@@ -59,8 +59,8 @@ public final class ScrollSourceBinding {
    * Creates a binding delivering updates to the given listener.
    *
    * @param listener the scroll listener; required
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public ScrollSourceBinding(final ScrollListener listener) {
     this.listener = Objects.requireNonNull(listener, "listener");
@@ -71,8 +71,8 @@ public final class ScrollSourceBinding {
    * decides via {@link #attach()}.
    *
    * @param source the scroll source, or {@code null} to clear
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void setSource(final JScrollPane source) {
     if (source == this.source) {
@@ -86,8 +86,8 @@ public final class ScrollSourceBinding {
    * The current scroll source, or {@code null}.
    *
    * @return the source
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public JScrollPane getSource() {
     return source;
@@ -97,8 +97,8 @@ public final class ScrollSourceBinding {
    * Attaches to the source's vertical scrollbar model. No-op without a source or when already
    * attached; the attach itself fires no update (the next model change does).
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void attach() {
     if (source == null || attachedModel != null) {
@@ -112,8 +112,8 @@ public final class ScrollSourceBinding {
   /**
    * Detaches from the bound model, if attached.
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public void detach() {
     if (attachedModel != null) {
@@ -126,8 +126,8 @@ public final class ScrollSourceBinding {
    * Whether the binding is currently attached to a model.
    *
    * @return {@code true} while attached
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isAttached() {
     return attachedModel != null;
@@ -138,8 +138,8 @@ public final class ScrollSourceBinding {
    * {@code 0} without a source.
    *
    * @return the scroll value
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public int value() {
     if (attachedModel != null) {

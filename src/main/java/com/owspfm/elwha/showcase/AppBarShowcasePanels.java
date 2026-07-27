@@ -35,8 +35,8 @@ import javax.swing.JScrollPane;
  * listener opens a menu anchored to the button — the class-Javadoc overflow recipe, live.
  *
  * @author Charles Bryan
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 final class AppBarShowcasePanels {
 

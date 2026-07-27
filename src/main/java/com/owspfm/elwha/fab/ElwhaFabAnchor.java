@@ -63,7 +63,7 @@ import javax.swing.Timer;
  * §4.4), and multi-FAB placement (FAB Menu, #185) are out of scope.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaFabAnchor extends JLayeredPane {

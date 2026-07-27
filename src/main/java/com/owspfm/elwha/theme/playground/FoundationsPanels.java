@@ -69,7 +69,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
  * switch.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class FoundationsPanels {
@@ -467,7 +467,7 @@ public final class FoundationsPanels {
    *
    * @param refreshers registry the builder adds its token refreshers to
    * @return the type-scale panel
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public static JComponent buildTypeScale(final List<Runnable> refreshers) {

@@ -25,7 +25,7 @@ import javax.swing.UIManager;
  * faithful weight rendering is {@link Typography}'s job — see {@code elwha-token-taxonomy.md} §2.2.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public enum TypeRole {
@@ -34,22 +34,22 @@ public enum TypeRole {
    * Display, large (57pt, regular) — the largest text on the screen; reserved for short, key
    * moments.
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   DISPLAY_LARGE("displayLarge", 57, false),
   /**
    * Display, medium (45pt, regular) — oversized hero text.
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   DISPLAY_MEDIUM("displayMedium", 45, false),
   /**
    * Display, small (36pt, regular) — the {@code ElwhaAppBar} large-flexible expanded headline.
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   DISPLAY_SMALL("displaySmall", 36, false),
   /**

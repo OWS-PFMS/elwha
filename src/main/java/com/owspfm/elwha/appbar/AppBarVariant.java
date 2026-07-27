@@ -13,8 +13,8 @@ import com.owspfm.elwha.theme.TypeRole;
  * ContainerHeight} and the with-subtitle {@code LargeContainerHeight} pair per variant.
  *
  * @author Charles Bryan
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public enum AppBarVariant {
 
@@ -22,8 +22,8 @@ public enum AppBarVariant {
    * The single-row regular bar — 64&nbsp;px, title {@code TITLE_LARGE} — for dense layouts or
    * scrolled pages.
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   SMALL(64, 64, TypeRole.TITLE_LARGE, TypeRole.LABEL_MEDIUM, 0),
 
@@ -31,8 +31,8 @@ public enum AppBarVariant {
    * The medium collapsing bar — expands to 112&nbsp;px (136 with a subtitle) to display a larger
    * headline; collapses to the small bar on scroll.
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   MEDIUM_FLEXIBLE(112, 136, TypeRole.HEADLINE_MEDIUM, TypeRole.LABEL_LARGE, 24),
 
@@ -40,8 +40,8 @@ public enum AppBarVariant {
    * The large collapsing bar — expands to 120&nbsp;px (152 with a subtitle) to emphasize the page
    * headline; collapses to the small bar on scroll.
    *
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   LARGE_FLEXIBLE(120, 152, TypeRole.DISPLAY_SMALL, TypeRole.TITLE_MEDIUM, 28);
 
@@ -70,8 +70,8 @@ public enum AppBarVariant {
    * @param withSubtitle whether the bar currently shows a subtitle (flexible variants are taller
    *     with one; {@code SMALL} is 64 either way)
    * @return the expanded height in px
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public int expandedHeightPx(final boolean withSubtitle) {
     return withSubtitle ? expandedWithSubtitleHeightPx : expandedHeightPx;
@@ -81,8 +81,8 @@ public enum AppBarVariant {
    * Whether this is a collapsing (two-row) variant.
    *
    * @return {@code true} for the flexible variants
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isFlexible() {
     return this != SMALL;
@@ -93,8 +93,8 @@ public enum AppBarVariant {
    * strip, so its roles are the strip roles).
    *
    * @return the expanded title role
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public TypeRole expandedTitleRole() {
     return expandedTitleRole;
@@ -104,8 +104,8 @@ public enum AppBarVariant {
    * The type role of the expanded subtitle.
    *
    * @return the expanded subtitle role
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public TypeRole expandedSubtitleRole() {
     return expandedSubtitleRole;
@@ -116,8 +116,8 @@ public enum AppBarVariant {
    * 24 / large 28), tuned visually rather than token-locked.
    *
    * @return the bottom padding in px
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public int expandedBottomPaddingPx() {
     return expandedBottomPaddingPx;

@@ -23,8 +23,8 @@ import javax.swing.JScrollPane;
  * row lifted), and laying out + painting both surfaces into a {@link BufferedImage}.
  *
  * @author Charles Bryan
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public final class ElwhaAppBarShowcaseSmoke {
 
@@ -34,8 +34,8 @@ public final class ElwhaAppBarShowcaseSmoke {
    * Runs the guard. Exits non-zero on any failed assertion.
    *
    * @param args unused
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static void main(final String[] args) {
     System.setProperty("java.awt.headless", "true");

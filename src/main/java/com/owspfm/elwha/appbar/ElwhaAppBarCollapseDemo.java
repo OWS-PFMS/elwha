@@ -25,8 +25,8 @@ import javax.swing.Timer;
  * fraction readout, and light/dark.
  *
  * @author Charles Bryan
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 public final class ElwhaAppBarCollapseDemo {
 
@@ -36,8 +36,8 @@ public final class ElwhaAppBarCollapseDemo {
    * Launches the demo frame.
    *
    * @param args unused
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public static void main(final String[] args) {
     ElwhaTheme.install(

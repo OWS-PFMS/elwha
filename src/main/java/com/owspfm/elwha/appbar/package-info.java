@@ -7,7 +7,7 @@
  * elwha-appbar-research.md}. Epic <a href="https://github.com/OWS-PFMS/elwha/issues/287">#287</a>.
  *
  * @author Charles Bryan
- * @version v0.4.0
- * @since v0.4.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
 package com.owspfm.elwha.appbar;
