@@ -76,18 +76,33 @@ validates by eye** before the rest of the catalog is committed.
 ## §3. The shapes (reconstructed; tuned at S1/smoke)
 
 Visually-faithful radial-profile reconstructions of the M3 shapes (R§D byte-exact vertex lists not captured —
-documented faithful-interpretation):
+documented faithful-interpretation).
 
-| Shape | Reconstruction | Notes |
+**These are the shipped, post-tuning values — the table mirrors `LoadingShapes` verbatim.** The shapes were
+retuned by PNG readback during the S1 spike and the smoke loop (the contact sheet / filmstrip harness); the
+figures below are the constants that survived, not the pre-spike sketch. Keep this table and
+`loading/LoadingShapes.java` in lockstep — a reader re-tuning shapes or porting the engine trusts it.
+
+| Shape | Shipped construction (`LoadingShapes`) | Notes |
 |---|---|---|
-| **Circle** | regular 10-gon (≈ circle) | determinate start |
-| **Sunny** | 8-point star, inner 0.8, corner round 0.15 | gentle 8-petal |
-| **Cookie9Sided** | 9-point star, inner 0.8, corner round 0.5, rot −90° | scalloped |
-| **Cookie4Sided** | 4-point star, inner ≈0.55, heavy round | deep 4-scallop |
-| **Pentagon** | 5-gon, corner round ≈0.17 | rounded pentagon |
-| **Pill** | rounded rect ≈1.0×0.66, full end-round | capsule |
-| **Sunny/Oval** | circle scaled (1, 0.64), rot −45° | tilted oval |
-| **SoftBurst** | 10-point star, inner ≈0.85, high round | soft 10-lobe burst |
+| **Circle** | `circle()` | constant profile (every radius 1) — a true circle, not an n-gon; determinate start |
+| **Sunny** | `star(8, 0.80, 0.55, 0.0)` | gentle 8-petal — 8 points, inner 0.80, round 0.55 |
+| **Cookie9Sided** | `star(9, 0.80, 1.0, -90.0)` | scalloped — 9 points, inner 0.80, **full** round, rot −90° |
+| **Cookie4Sided** | `star(4, 0.68, 1.0, 0.0)` | deep 4-scallop cushion — inner 0.68, **full** round |
+| **Pentagon** | `polygon(5, 0.45, 0.0)` | rounded pentagon — 5 sides, round 0.45 |
+| **Pill** | `roundedRect(2.0, 1.22, 0.61, 0.0)` | capsule — aspect 1.22/2.0 = **0.61**, corner radius = half the height (full end-round) |
+| **Oval** | `ellipse(1.0, 0.64, -45.0)` | tilted oval — semi-axes 1 × 0.64, rot −45° |
+| **SoftBurst** | `star(10, 0.85, 0.85, 0.0)` | soft 10-lobe burst — inner 0.85, round 0.85 |
+
+Two things that make the raw numbers read oddly if taken at face value:
+
+- **Absolute size is irrelevant — only proportion survives.** `RoundedPolygonShape.fromOutline` normalizes
+  every profile to max-radius 1 (§2), so `roundedRect(2.0, 1.22, …)` and a `1.0 × 0.61` rect produce an
+  identical profile. Pill is expressed at scale 2.0 purely so its corner radius (0.61 = half of 1.22) is
+  legible as "fully rounded ends".
+- **`roundness` is a fraction of the shorter adjacent edge, not a pixel radius**, and it is applied *before*
+  normalization — so heavy rounding trims the outer tips inward and the shape is then scaled back up. That is
+  why `1.0` (Cookie9Sided / Cookie4Sided) yields a soft scallop rather than a degenerate blob.
 
 Indeterminate sequence (R§C): `SoftBurst → Cookie9Sided → Pentagon → Pill → Sunny → Cookie4Sided → Oval →`
 (wrap to SoftBurst). Determinate sequence: `Circle → SoftBurst`.
