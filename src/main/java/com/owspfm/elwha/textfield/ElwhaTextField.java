@@ -54,7 +54,7 @@ import javax.swing.text.JTextComponent;
  * its companion {@code elwha-textfield-research.md}.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public class ElwhaTextField extends JComponent {
@@ -257,12 +257,53 @@ public class ElwhaTextField extends JComponent {
     return area;
   }
 
+  // Editor properties are set as PLAIN (non-UIResource) values: theme resolves return
+  // ColorUIResource/FontUIResource, which the text UI's installDefaults would clobber with LAF
+  // defaults on the editor's own updateUI — running AFTER this field's updateUI in the
+  // updateComponentTreeUI parent-first walk (#495, the caret half of the bug).
   private void configureEditorStyle(final JTextComponent ed) {
     ed.setBorder(BorderFactory.createEmptyBorder());
     ed.setOpaque(false);
-    ed.setForeground(ColorRole.ON_SURFACE.resolve());
-    ed.setFont(TypeRole.BODY_LARGE.resolve());
-    ed.setCaretColor((error ? ColorRole.ERROR : ColorRole.PRIMARY).resolve());
+    ed.setForeground(plain(ColorRole.ON_SURFACE.resolve()));
+    final java.awt.Font font = TypeRole.BODY_LARGE.resolve();
+    ed.setFont(font.deriveFont(font.getStyle(), font.getSize2D()));
+    ed.setCaretColor(plain((error ? ColorRole.ERROR : ColorRole.PRIMARY).resolve()));
+  }
+
+  private static Color plain(final Color color) {
+    return new Color(color.getRGB(), true);
+  }
+
+  /**
+   * Re-resolves the editor's text, caret, and font under the current theme after a LAF switch.
+   * {@code ElwhaTheme.install}'s {@code updateComponentTreeUI} pass lands here for in-hierarchy
+   * fields; without the re-apply the text UI swaps the caret to the LAF default (losing the M3
+   * PRIMARY / ERROR stroke) on every switch (#495).
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void updateUI() {
+    super.updateUI();
+    if (editor != null) {
+      configureEditorStyle(editor);
+    }
+  }
+
+  /**
+   * Re-resolves the editor's colors when the field joins a hierarchy. Fields built while detached
+   * (an unopened dialog's content, a lazily-mounted pane) are never visited by {@code
+   * updateComponentTreeUI}, so a theme switch between construction and mount would otherwise show
+   * the old mode's text color (#495 — the color-picker hex-field finding).
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void addNotify() {
+    super.addNotify();
+    configureEditorStyle(editor);
   }
 
   private void wireEditor(final JTextComponent ed) {
@@ -978,7 +1019,7 @@ public class ElwhaTextField extends JComponent {
 
   /** Caret follows the active stroke: error&#8594;{@code error}, otherwise {@code primary}. */
   private void updateCaretColor() {
-    editor.setCaretColor((error ? ColorRole.ERROR : ColorRole.PRIMARY).resolve());
+    editor.setCaretColor(plain((error ? ColorRole.ERROR : ColorRole.PRIMARY).resolve()));
   }
 
   /**

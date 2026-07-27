@@ -44,7 +44,7 @@ import javax.swing.UIManager;
  * components.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public final class MaterialIcons {
@@ -410,6 +410,77 @@ public final class MaterialIcons {
   }
 
   /**
+   * Colors glyph (outline) — the color picker's wheel-mode tab. Ships with a fill-1 companion for
+   * the active-tab state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon colors() {
+    return colors(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #colors()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon colors(final int size) {
+    return load("colors", size);
+  }
+
+  /**
+   * Gradient glyph (outline) — the color picker's spectrum-mode tab.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon gradient() {
+    return gradient(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #gradient()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon gradient(final int size) {
+    return load("gradient", size);
+  }
+
+  /**
+   * Tune / sliders glyph — the color picker's sliders-mode tab. Pure linework: the fill axis adds
+   * nothing, so no filled companion is bundled.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon tune() {
+    return tune(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #tune()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon tune(final int size) {
+    return load("tune", size);
+  }
+
+  /**
    * Close / dismiss "✕" glyph — M3's leading close affordance for full-screen dialogs and the
    * trailing dismiss affordance for chips, banners, and snackbars.
    *
@@ -695,6 +766,30 @@ public final class MaterialIcons {
    */
   public static FlatSVGIcon chevronRight(final int size) {
     return load("chevron_right", size);
+  }
+
+  /**
+   * Leading back arrow "←" — M3's back-navigation affordance for multi-step surfaces; the {@code
+   * ElwhaSideSheet} header's optional back icon button (#308).
+   *
+   * @return the icon at {@link #DEFAULT_SIZE}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon arrowBack() {
+    return arrowBack(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #arrowBack()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon arrowBack(final int size) {
+    return load("arrow_back", size);
   }
 
   /**
