@@ -163,6 +163,8 @@ This is the "trim components, not vocabulary" principle in practice — see the 
 
 ## 2. Type roles — 12 for v1
 
+> **Amendment (2026-06-11, epic #287):** the `display` tier ships as of `v0.4.0` — `DISPLAY_LARGE` 57 / `DISPLAY_MEDIUM` 45 / `DISPLAY_SMALL` 36, all Regular — because the M3 Expressive app bar's large-flexible expanded headline is `display-small`. The scale is now the full 15. The v1 table below is preserved as written.
+
 Each role resolves to a `java.awt.Font`. M3's full scale is 15 (5 sizes × display/headline/title/body/label); the `display` tier is dropped.
 
 | Enum | Key | Size (pt) | Weight | FlatComp components that use it |

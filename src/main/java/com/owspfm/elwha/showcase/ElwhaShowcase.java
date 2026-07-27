@@ -816,6 +816,13 @@ public final class ElwhaShowcase {
                 + " indeterminate (7-shape loop) + determinate (Circle → SoftBurst).",
             AREA_COMPONENTS,
             buildLoadingComponent()));
+    register(
+        new LeafEntry(
+            "App Bar",
+            "M3 Expressive app bar — nav icon, title + subtitle, trailing actions; lift-on-scroll"
+                + " and the flexible variants' scroll-driven collapse.",
+            AREA_COMPONENTS,
+            buildAppBarComponent()));
 
     register(
         new LeafEntry(
@@ -843,13 +850,25 @@ public final class ElwhaShowcase {
             buildIconButtonGroupContainer()));
   }
 
+  // ------------------------------------------------------------- App Bar
+
+  private static JComponent buildAppBarComponent() {
+    final JTabbedPane tabs = new JTabbedPane();
+    tabs.addTab("Workbench", AppBarShowcasePanels.buildWorkbench());
+    tabs.addTab(
+        "Gallery",
+        scroll(
+            stack(gallerySection("States & configurations", AppBarShowcasePanels.buildGallery()))));
+    return tabs;
+  }
+
   private void register(final LeafEntry entry) {
     leaves.put(entry.label, entry);
   }
 
   // The four landing cards, populated into the CardLayout content panel. Each is a grid of
   // ElwhaCards — title + supporting text + an actionable click that routes to the leaf surface.
-  // Home is the master index (all 21 leaves, grouped by area heading); each area landing covers
+  // Home is the master index (all 33 leaves, grouped by area heading); each area landing covers
   // just its own leaves. ElwhaCard's actionable mode is the entire raison-d'être here: the cards
   // are the navigation surface, not decoration.
   private void populateLandingCards() {
