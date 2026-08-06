@@ -20,6 +20,22 @@ mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.playground.ElwhaCa
 
 **No tests yet.** The lib has zero JUnit tests today — components are validated visually via the two playground apps above. There's no test infrastructure to lean on; if you change behavior, exercise the playground.
 
+### The build runs on JDK 21 — not optional
+
+All four CI workflows pin temurin 21, so a local build on anything else is testing something other than what gates merges. Concretely, Spotless' google-java-format (1.27.0, the version Spotless 2.46.1 resolves) calls javac internals, and on **JDK 25** it dies with `NoSuchMethodError: Log$DeferredDiagnosticHandler.getDiagnostics()`. That's a *signature* change, not module encapsulation — `--add-exports` in `.mvn/jvm.config` cannot fix it. Plain `mvn compile` works on any JDK; only the Spotless step breaks, which makes the failure look unrelated to your change.
+
+`.envrc` handles this: with [direnv](https://direnv.net) installed (`brew install direnv` + `eval "$(direnv hook zsh)"` last in your shell rc), entering the repo exports `JAVA_HOME` for JDK 21 and leaving reverts it, so a newer JDK can stay your global default. First time in a fresh clone, run `direnv allow .`.
+
+Without direnv, prefix Maven invocations manually:
+
+```bash
+JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn verify
+```
+
+**Agents and scripts:** direnv hooks fire on shell prompt / `chpwd`, so non-interactive shells do **not** pick this up. Export `JAVA_HOME` explicitly or wrap with `direnv exec . mvn …`.
+
+This is independent of `maven.compiler.release=21`, which governs bytecode output and holds regardless of which JVM runs Maven — see the JDK target convention below.
+
 ## Source layout
 
 Java sources follow the standard Maven layout: code under `src/main/java/com/owspfm/...`, bundled resources under `src/main/resources/com/owspfm/...`. `pom.xml` uses Maven's default `<sourceDirectory>` — no override. (The tree was migrated from a flat `src/` layout in [#60](https://github.com/OWS-PFMS/elwha/issues/60); `git log --follow` traverses the move, so blame is preserved.)
@@ -59,7 +75,7 @@ The pre-extraction audit confirmed **zero coupling sites** between these compone
 - **No backwards-compat shims pre-1.0.** Format-breaking changes are free until 1.0.0; don't add deprecation layers or legacy aliases.
 - **No code comments by default.** Add one only when the *why* is non-obvious (hidden constraint, subtle invariant, workaround). Don't explain *what* — identifiers cover that.
 - **Material Symbols icon house style:** Rounded / weight 400 / fill 0 / 20px. Override only when fill1 is semantically needed for a "selected/active" state. Source from `gstatic` for crisp variants. Use `MaterialIcons` helper, not raw `FlatSVGIcon`.
-- **JDK target:** 21 (`maven.compiler.release=21`). Stays at 21 until OWS-tool migrates off 21 — bumping prematurely cuts off consumers.
+- **JDK target:** 21 (`maven.compiler.release=21`). Stays at 21 until OWS-tool migrates off 21 — bumping prematurely cuts off consumers. This governs *bytecode output* and is unaffected by which JVM runs Maven; the separate requirement to *build* on JDK 21 is a Spotless constraint — see "The build runs on JDK 21" above.
 - **PRs need a milestone at creation.** The Validate `@version` workflow hard-fails without one.
 - **Branch protection:** `main` requires `build`, `Validate @version and @since tags`, `Validate formatting (Spotless)`, and `Validate naming (Checkstyle)`; force-push and deletion are blocked.
 
