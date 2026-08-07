@@ -126,11 +126,7 @@ public class ElwhaSelectField<T> extends JComponent {
     this.arrow.setButtonSize(IconButtonSize.S);
     this.field.setTrailingIconButton(arrow);
     this.arrowAnim = new MorphAnimator(arrow, ROTATE_MS);
-    this.arrowAnim.addProgressListener(
-        () -> {
-          arrowIcon.setAngle(arrowAnim.progress() * 180f);
-          arrow.repaint();
-        });
+    this.arrowAnim.addProgressListener(this::syncArrowRotation);
 
     setLayout(new BorderLayout());
     setOpaque(false);
@@ -1023,6 +1019,39 @@ public class ElwhaSelectField<T> extends JComponent {
     }
     updateArrowA11y(expand);
     updateEditorA11y(expand);
+  }
+
+  private void syncArrowRotation() {
+    arrowIcon.setAngle(arrowAnim.progress() * 180f);
+    arrow.repaint();
+  }
+
+  /**
+   * Re-syncs the arrow to the expanded state. {@code stop()} resets the animator to 0 while {@code
+   * expanded} survives the teardown, so without this a field torn down while open would come back
+   * pointing the wrong way.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void addNotify() {
+    super.addNotify();
+    arrowAnim.snapTo(expanded ? 1f : 0f);
+    syncArrowRotation();
+  }
+
+  /**
+   * Stops the arrow-rotation animation. Every sibling in the family stops its animators here; this
+   * one was the exception, leaving a Timer repainting a detached field for the rest of its tween.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void removeNotify() {
+    arrowAnim.stop();
+    super.removeNotify();
   }
 
   /** The arrow's current rotation in degrees — the smoke's reduced-motion-instant probe. */

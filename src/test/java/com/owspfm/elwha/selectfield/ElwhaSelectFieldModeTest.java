@@ -293,6 +293,25 @@ class ElwhaSelectFieldModeTest {
         .isEqualTo(ElwhaTextField.Variant.OUTLINED);
   }
 
+  // ---------------------------------------------------------------- teardown
+
+  @Test
+  void aSelectReAddedWhileExpandedStillPointsItsArrowUp() {
+    final ElwhaSelectField<String> select = new ElwhaSelectField<String>(null, "Planet");
+    select.addNotify();
+    select.applyExpandedState(true);
+    final float openAngle = select.arrowAngle();
+    assertThat(openAngle).as("an open select points its arrow up").isEqualTo(180f);
+
+    select.removeNotify();
+    select.addNotify();
+
+    assertThat(select.arrowAngle())
+        .as("#641 — stopping arrowAnim resets it to 0 while `expanded` survives, so without a "
+            + "resync the arrow comes back pointing down over an open menu")
+        .isEqualTo(openAngle);
+  }
+
   @Test
   void aNullVariantOrLabelFallsBackRatherThanThrowing() {
     final ElwhaSelectField<String> select = new ElwhaSelectField<>(null, null);

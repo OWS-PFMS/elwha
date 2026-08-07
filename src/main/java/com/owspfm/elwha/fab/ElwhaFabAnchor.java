@@ -329,7 +329,50 @@ public final class ElwhaFabAnchor extends JLayeredPane {
     return getPreferredSize();
   }
 
+  /**
+   * Arms the scroll binding and re-pins the FAB. A response set (or a source pointed at) before the
+   * anchor was displayed attaches here rather than at the setter, so the subscription can never
+   * outlive the one thing that releases it.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void addNotify() {
+    super.addNotify();
+    if (scrollResponse != ScrollResponse.NONE) {
+      attachScrollListener();
+    }
+    // stop() resets the animator to 0 but `hidden` survives the teardown, and onScroll only flips
+    // the flag on a direction change — so without this a FAB hidden at teardown would come back
+    // painted visible yet still flagged hidden, unable to hide again until an upward scroll.
+    hideAnim.snapTo(hidden ? 1f : 0f);
+    revalidate();
+  }
+
+  /**
+   * Releases the scroll subscription and stops the motion the anchor drives. {@code
+   * ScrollSourceBinding}'s contract puts detach here, and it matters most when the source is an
+   * *external* JScrollPane: the pane's model would otherwise hold a `ChangeListener` capturing the
+   * anchor, keeping it and its whole content subtree alive after removal.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void removeNotify() {
+    detachScrollListener();
+    hideAnim.stop();
+    if (shrinkTracker != null) {
+      shrinkTracker.stop();
+    }
+    super.removeNotify();
+  }
+
   private void attachScrollListener() {
+    if (!isDisplayable()) {
+      return;
+    }
     scrollBinding.setSource(scrollSource);
     scrollBinding.attach();
   }

@@ -284,10 +284,17 @@ class ElwhaFabAnchorTest {
     return pane;
   }
 
+  /**
+   * A laid-out, <em>displayed</em> anchor bound to {@code pane}. Since #652 the scroll binding
+   * attaches only while the anchor is displayable — {@code removeNotify} is the sole detach path,
+   * so attaching from an undisplayed anchor strands the subscription on the pane's model — which
+   * makes the {@code addNotify} part of the setup rather than an incidental detail.
+   */
   private static ElwhaFabAnchor scrollAnchor(
       final JScrollPane pane, final ElwhaFab fab, final ElwhaFabAnchor.ScrollResponse response) {
     final ElwhaFabAnchor anchor = new ElwhaFabAnchor(pane, fab);
     anchor.setSize(WIDTH, HEIGHT);
+    anchor.addNotify();
     anchor.setScrollResponse(response);
     anchor.doLayout();
     return anchor;
@@ -507,5 +514,72 @@ class ElwhaFabAnchorTest {
     assertThat(anchor.getFab().getY())
         .as("and the old source no longer drives the FAB")
         .isEqualTo(restingY);
+  }
+
+  // ---------------------------------------------------------------- teardown
+
+  /** Change listeners on the pane's vertical model — what a leaked binding leaves behind. */
+  private static int modelListenerCount(final JScrollPane pane) {
+    return ((javax.swing.DefaultBoundedRangeModel) pane.getVerticalScrollBar().getModel())
+        .getChangeListeners()
+        .length;
+  }
+
+  @Test
+  void leavingTheHierarchyReleasesTheScrollSource() {
+    final JScrollPane pane = scrollable();
+    final int baseline = modelListenerCount(pane);
+    final ElwhaFabAnchor anchor =
+        scrollAnchor(
+            pane, ElwhaFab.standard(MaterialIcons.add()), ElwhaFabAnchor.ScrollResponse.HIDE);
+    assertThat(modelListenerCount(pane)).as("the anchor is subscribed while displayed").isEqualTo(
+        baseline + 1);
+
+    anchor.removeNotify();
+
+    assertThat(modelListenerCount(pane))
+        .as("#652 — an external scroll pane would otherwise hold the anchor and its whole "
+            + "content subtree alive after removal")
+        .isEqualTo(baseline);
+  }
+
+  @Test
+  void anUndisplayedAnchorDoesNotSubscribe() {
+    final JScrollPane pane = scrollable();
+    final int baseline = modelListenerCount(pane);
+    final ElwhaFabAnchor anchor = new ElwhaFabAnchor(pane, ElwhaFab.standard(MaterialIcons.add()));
+
+    anchor.setScrollResponse(ElwhaFabAnchor.ScrollResponse.HIDE);
+
+    assertThat(modelListenerCount(pane))
+        .as("#652 — removeNotify is the only detach path, and it never fires for an anchor that "
+            + "was never added")
+        .isEqualTo(baseline);
+  }
+
+  @Test
+  void aReAddedAnchorIsSubscribedOnceAndStillPaintsItsHiddenState() {
+    final JScrollPane pane = scrollable();
+    final int baseline = modelListenerCount(pane);
+    final ElwhaFabAnchor anchor =
+        scrollAnchor(
+            pane, ElwhaFab.standard(MaterialIcons.add()), ElwhaFabAnchor.ScrollResponse.HIDE);
+    final int restingY = anchor.getFab().getY();
+    pane.getVerticalScrollBar().setValue(200);
+    relaidOut(anchor);
+    final int hiddenY = anchor.getFab().getY();
+    assertThat(hiddenY).as("the FAB is off its edge before the swap").isNotEqualTo(restingY);
+
+    anchor.removeNotify();
+    anchor.addNotify();
+    relaidOut(anchor);
+
+    assertThat(modelListenerCount(pane))
+        .as("a stage swap re-arms the subscription exactly once")
+        .isEqualTo(baseline + 1);
+    assertThat(anchor.getFab().getY())
+        .as("hideAnim.stop() resets progress to 0 while `hidden` survives, so without a resync "
+            + "the FAB comes back painted home yet still flagged hidden — unable to hide again")
+        .isEqualTo(hiddenY);
   }
 }
