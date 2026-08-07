@@ -25,7 +25,15 @@ jobs:
         # real display (Cacio segfaults there — see docs/research/elwha-test-suite-research.md §5),
         # so the linux-gui-native Maven profile selects the native toolkit and Xvfb provides the
         # display. Preinstalled on ubuntu runner images. Headless Tier A is unaffected.
-        run: xvfb-run -a -s "-screen 0 1920x1080x24" bash -c 'for i in $(seq 1 15); do xset r off 2>/dev/null && break; sleep 1; done; xset q | grep -Eq "auto repeat: +off" || { echo "FATAL: X autorepeat could not be disabled - failing fast instead of flaking"; exit 1; }; exec mvn -B clean package --file pom.xml'
+        run: |
+          xvfb-run -a -s "-screen 0 1920x1080x24" bash -c '
+            for i in $(seq 1 15); do xset r off 2>/dev/null && break; sleep 1; done
+            if ! xset q | grep -Eq "auto repeat.+off"; then
+              echo "FATAL - X autorepeat could not be disabled; failing fast instead of flaking"
+              exit 1
+            fi
+            exec mvn -B clean package --file pom.xml
+          '
 
       - name: Upload test reports and crash dumps
         if: failure()
