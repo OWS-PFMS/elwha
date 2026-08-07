@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<body>
+<h1>Elwha</h1>
+
+<p><strong>Elwha</strong> is a Swing component library built on
+<a href="https://www.formdev.com/flatlaf/">FlatLaf</a>, implementing
+<strong>Material 3 Expressive</strong> as a design system for desktop Java: a design-token
+foundation plus the component catalog and the containers, overlays, and anchors around it.
+Runtime dependencies are Swing + FlatLaf only.</p>
+
+<h2>Quick start</h2>
+
+<p>Install the theme once, before building UI; every component resolves its tokens at paint time,
+so a later theme or light/dark switch re-skins the running UI live:</p>
+
+<pre>{@code
+ElwhaTheme.install(
+    ElwhaTheme.config()
+        .theme(MaterialPalettes.baseline())
+        .mode(Mode.SYSTEM)
+        .build());
+
+ElwhaButton save = ElwhaButton.filledButton("Save");
+ElwhaSwitch wifi = new ElwhaSwitch(true);
+}</pre>
+
+<p>Start at {@link com.owspfm.elwha.theme} — the token vocabulary
+({@link com.owspfm.elwha.theme.ColorRole}, {@link com.owspfm.elwha.theme.ShapeScale},
+{@link com.owspfm.elwha.theme.SpaceScale}, {@link com.owspfm.elwha.theme.TypeRole},
+{@link com.owspfm.elwha.theme.StateLayer}) is how every component documents its bindings.</p>
+
+<h2>The catalog</h2>
+
+<table border="1">
+<caption>Component packages by family</caption>
+<tr><th>Family</th><th>Packages</th></tr>
+<tr><td>Foundation</td>
+    <td>{@link com.owspfm.elwha.theme} &middot; {@link com.owspfm.elwha.surface} &middot;
+        {@link com.owspfm.elwha.icons}</td></tr>
+<tr><td>Actions</td>
+    <td>{@link com.owspfm.elwha.button} &middot; {@link com.owspfm.elwha.iconbutton} &middot;
+        {@link com.owspfm.elwha.buttongroup} &middot; {@link com.owspfm.elwha.fab}</td></tr>
+<tr><td>Selection controls</td>
+    <td>{@link com.owspfm.elwha.checkbox} &middot; {@link com.owspfm.elwha.radio} &middot;
+        {@link com.owspfm.elwha.switches} &middot; {@link com.owspfm.elwha.chip}</td></tr>
+<tr><td>Fields</td>
+    <td>{@link com.owspfm.elwha.textfield} &middot; {@link com.owspfm.elwha.selectfield} &middot;
+        {@link com.owspfm.elwha.slider} &middot; {@link com.owspfm.elwha.colorpicker}</td></tr>
+<tr><td>Containers &amp; lists</td>
+    <td>{@link com.owspfm.elwha.card} &middot; {@link com.owspfm.elwha.card.list} &middot;
+        {@link com.owspfm.elwha.chip.list} &middot; {@link com.owspfm.elwha.list}</td></tr>
+<tr><td>Overlays</td>
+    <td>{@link com.owspfm.elwha.overlay} &middot; {@link com.owspfm.elwha.menu} &middot;
+        {@link com.owspfm.elwha.tooltip} &middot; {@link com.owspfm.elwha.dialog} &middot;
+        {@link com.owspfm.elwha.sidesheet}</td></tr>
+<tr><td>Navigation</td>
+    <td>{@link com.owspfm.elwha.navrail} &middot; {@link com.owspfm.elwha.appbar} &middot;
+        {@link com.owspfm.elwha.tabs}</td></tr>
+<tr><td>Status &amp; feedback</td>
+    <td>{@link com.owspfm.elwha.badge} &middot; {@link com.owspfm.elwha.progress} &middot;
+        {@link com.owspfm.elwha.loading}</td></tr>
+</table>
+
+<h2>Conventions worth knowing</h2>
+
+<ul>
+<li><strong>Anchors:</strong> badges and FABs attach to hosts through dedicated anchor primitives
+    ({@link com.owspfm.elwha.badge.ElwhaBadgeAnchor}, {@link com.owspfm.elwha.fab.ElwhaFabAnchor})
+    rather than subclassing.</li>
+<li><strong>Elevation:</strong> every shadowed primitive reserves halo space and exposes it via
+    {@link com.owspfm.elwha.theme.ShadowBearing#getShadowInsets()}.</li>
+<li><strong>Motion:</strong> shared engines in {@link com.owspfm.elwha.theme}
+    (ripple, shape morph, content morph); the global
+    {@link com.owspfm.elwha.theme.MorphAnimator#setReducedMotion(boolean) reduced-motion switch}
+    snaps everything.</li>
+<li><strong>Icons:</strong> use {@link com.owspfm.elwha.icons.MaterialIcons}, never raw
+    {@code FlatSVGIcon} — house cut is Material Symbols Rounded / 400 / fill&nbsp;0.</li>
+</ul>
+
+<p>Design rationale per component lives in the repository's
+<a href="https://github.com/OWS-PFMS/elwha/tree/main/docs/research">docs/research</a> design
+documents; development conventions in
+<a href="https://github.com/OWS-PFMS/elwha/tree/main/docs/development">docs/development</a>.</p>
+</body>
+</html>

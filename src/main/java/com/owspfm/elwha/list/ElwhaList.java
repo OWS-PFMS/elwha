@@ -6,8 +6,9 @@ import java.util.function.Predicate;
 import javax.swing.JComponent;
 
 /**
- * The shared contract implemented by every {@code ElwhaList} component family member — {@code
- * ElwhaCardList}, {@code ElwhaChipList}, and any future siblings (e.g. {@code FlatTagList}).
+ * The shared contract implemented by every {@code ElwhaList} component family member — {@link
+ * com.owspfm.elwha.card.list.ElwhaCardList} and {@link com.owspfm.elwha.chip.list.ElwhaChipList}
+ * today, with the unified {@code ElwhaItemList} replacing both under epic #67.
  *
  * <p>Extracted in story #237 so consumers can write orientation-agnostic and family-agnostic code:
  *
@@ -39,7 +40,7 @@ import javax.swing.JComponent;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public interface ElwhaList<T> {

@@ -4,6 +4,7 @@ import static com.owspfm.elwha.testkit.WaitFor.onEdt;
 import static com.owspfm.elwha.testkit.WaitFor.waitFor;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.owspfm.elwha.testkit.GuiSteps;
 import com.owspfm.elwha.testkit.GuiToolkit;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
@@ -47,6 +48,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(GuiToolkit.class)
 class ElwhaSwitchGuiTest {
 
+  private static final java.util.concurrent.atomic.AtomicInteger FRAME_SLOT =
+      new java.util.concurrent.atomic.AtomicInteger();
+
   private JFrame frame;
   private ElwhaSwitch first;
   private ElwhaSwitch second;
@@ -55,6 +59,10 @@ class ElwhaSwitchGuiTest {
   @BeforeEach
   void showTwoSwitches() throws Exception {
     robot = new Robot();
+    // Each test's frame gets its own screen slot: under bare Xvfb the previous test's window can
+    // still be tearing down at the shared position, and events aimed there go to the dying window.
+    final int slot = FRAME_SLOT.getAndIncrement();
+    final int frameX = 100 + slot * 320;
     // Paces every synthetic event: under X/XTEST an unthrottled press+release can outrun the
     // app's event processing (observed on CI as a click that never toggles). No-op cost on Cacio.
     robot.setAutoDelay(50);
@@ -71,7 +79,7 @@ class ElwhaSwitchGuiTest {
           frame.add(first);
           frame.add(second);
           frame.pack();
-          frame.setLocation(100, 100);
+          frame.setLocation(frameX, 100);
           frame.setVisible(true);
         });
     robot.waitForIdle();
@@ -88,21 +96,24 @@ class ElwhaSwitchGuiTest {
     SwingUtilities.invokeAndWait(() -> first.requestFocusInWindow());
     waitFor("first switch owns focus", () -> first.isFocusOwner());
 
-    robot.keyPress(KeyEvent.VK_SPACE);
-    robot.keyRelease(KeyEvent.VK_SPACE);
-    robot.waitForIdle();
-    waitFor("Space through the real pipeline toggles the focused switch", () -> first.isSelected());
+    GuiSteps.keyUntil(
+        robot,
+        KeyEvent.VK_SPACE,
+        "Space through the real pipeline toggles the focused switch",
+        () -> first.isSelected());
 
-    robot.keyPress(KeyEvent.VK_TAB);
-    robot.keyRelease(KeyEvent.VK_TAB);
-    robot.waitForIdle();
-    waitFor("Tab moves real focus to the second switch", () -> second.isFocusOwner());
+    GuiSteps.keyUntil(
+        robot,
+        KeyEvent.VK_TAB,
+        "Tab moves real focus to the second switch",
+        () -> second.isFocusOwner());
     assertThat(onEdt(() -> first.isFocusOwner())).as("first switch released focus").isFalse();
 
-    robot.keyPress(KeyEvent.VK_SPACE);
-    robot.keyRelease(KeyEvent.VK_SPACE);
-    robot.waitForIdle();
-    waitFor("Space toggles the newly focused switch", () -> second.isSelected());
+    GuiSteps.keyUntil(
+        robot,
+        KeyEvent.VK_SPACE,
+        "Space toggles the newly focused switch",
+        () -> second.isSelected());
     assertThat(
             onEdt(
                 () ->
@@ -113,26 +124,65 @@ class ElwhaSwitchGuiTest {
   }
 
   @Test
-  void robotClickTogglesAndTheFramebufferShowsPrimaryTrack() throws Exception {
-    final Point center = onEdtPoint(() -> centerOnScreen(first));
-    robot.mouseMove(center.x, center.y);
-    robot.waitForIdle();
-    robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-    robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-    robot.waitForIdle();
-    waitFor("Robot click through the real pipeline toggles", () -> first.isSelected());
+  void robotClickTogglesAndTheFramebufferShowsTheToggledTrack() throws Exception {
+    final java.util.concurrent.atomic.AtomicInteger toggles =
+        new java.util.concurrent.atomic.AtomicInteger();
+    SwingUtilities.invokeAndWait(() -> first.addActionListener(e -> toggles.incrementAndGet()));
 
+    // Under X/Xvfb a click can be lost against a freshly-mapped window even after the focus wait
+    // (observed on CI as a click that never arrives, ~1-in-5 after event pacing alone). The
+    // re-click is guarded on "nothing arrived yet", so a slow-but-delivered click is never
+    // doubled by the guard; the assertions below are count-parity-based so even a late arrival
+    // after a re-click cannot produce a false pass or a false fail.
+    for (int attempt = 0; attempt < 3 && toggles.get() == 0; attempt++) {
+      final Point center = onEdtPoint(() -> centerOnScreen(first));
+      robot.mouseMove(center.x, center.y);
+      robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+      robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+      robot.waitForIdle();
+      final long deadline = System.currentTimeMillis() + 1500;
+      while (System.currentTimeMillis() < deadline && toggles.get() == 0) {
+        Thread.sleep(20);
+      }
+    }
+    if (toggles.get() == 0) {
+      dumpScreen("click-delivery-failure");
+    }
+    waitFor("Robot click through the real pipeline toggles", () -> toggles.get() > 0);
     waitFor(
-        "virtual framebuffer shows the PRIMARY selected track",
+        "selection state agrees with the delivered toggle count",
+        () -> first.isSelected() == (toggles.get() % 2 == 1));
+
+    // Park the pointer off the frame so the hover state layer can't tint the probed pixel.
+    robot.mouseMove(0, 0);
+    robot.waitForIdle();
+    waitFor(
+        "virtual framebuffer shows the toggled state's track color",
         () -> {
           final Rectangle bounds = boundsOnScreen(first);
           final BufferedImage shot = robot.createScreenCapture(bounds);
-          final Color want = ColorRole.PRIMARY.resolve();
+          final Color want =
+              first.isSelected()
+                  ? ColorRole.PRIMARY.resolve()
+                  : ColorRole.SURFACE_CONTAINER_HIGHEST.resolve();
           final Color got = new Color(shot.getRGB(9, first.getHeight() / 2), true);
           return Math.abs(got.getRed() - want.getRed()) <= 10
               && Math.abs(got.getGreen() - want.getGreen()) <= 10
               && Math.abs(got.getBlue() - want.getBlue()) <= 10;
         });
+  }
+
+  /** Captures the whole virtual screen into surefire-reports so the CI artifact carries it. */
+  private void dumpScreen(final String label) {
+    try {
+      final Rectangle screen = new Rectangle(java.awt.Toolkit.getDefaultToolkit().getScreenSize());
+      final java.io.File dir = new java.io.File("target/surefire-reports");
+      dir.mkdirs();
+      javax.imageio.ImageIO.write(
+          robot.createScreenCapture(screen), "png", new java.io.File(dir, label + ".png"));
+    } catch (final Exception e) {
+      System.err.println("screen dump failed: " + e);
+    }
   }
 
   private static Point centerOnScreen(final ElwhaSwitch s) {
