@@ -55,6 +55,58 @@ public final class GuiSteps {
   }
 
   /**
+   * Types {@code text} one character at a time, confirming each character's arrival in the supplied
+   * live text read before moving on. Delivery is judged content-agnostically — the text changed
+   * <em>and</em> now ends with the typed character — so it holds whether the editor appends or
+   * replaces a selection (a combo's select-on-focus makes the first keystroke replace). A character
+   * is re-pressed only while the text is completely unchanged (nothing arrived — the X
+   * lost-delivery race), so a slow-but-delivered character is never doubled.
+   *
+   * @param robot the tier's robot
+   * @param text the characters to type
+   * @param read live text read, evaluated on the EDT (e.g. the editor document's text)
+   * @param what plain-English description of the typing step (the assertion label)
+   * @throws Exception if the EDT round-trip is interrupted
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void typeUntil(
+      final Robot robot,
+      final String text,
+      final java.util.function.Supplier<String> read,
+      final String what)
+      throws Exception {
+    for (final char c : text.toCharArray()) {
+      final String before = onEdtGet(read);
+      final String suffix = String.valueOf(c);
+      // WaitFor evaluates its condition ON the EDT — read directly there, never invokeAndWait.
+      final BooleanSupplier delivered =
+          () -> {
+            final String now = read.get();
+            return !now.equals(before) && now.endsWith(suffix);
+          };
+      for (int attempt = 0; attempt < ATTEMPTS && before.equals(onEdtGet(read)); attempt++) {
+        final int keyCode = java.awt.event.KeyEvent.getExtendedKeyCodeForChar(c);
+        robot.keyPress(keyCode);
+        robot.keyRelease(keyCode);
+        robot.waitForIdle();
+        final long deadline = System.currentTimeMillis() + EFFECT_WINDOW_MS;
+        while (System.currentTimeMillis() < deadline && before.equals(onEdtGet(read))) {
+          Thread.sleep(20);
+        }
+      }
+      WaitFor.waitFor(what + " — '" + c + "' delivered", delivered);
+    }
+  }
+
+  private static String onEdtGet(final java.util.function.Supplier<String> read) throws Exception {
+    final java.util.concurrent.atomic.AtomicReference<String> value =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    javax.swing.SwingUtilities.invokeAndWait(() -> value.set(read.get()));
+    return value.get();
+  }
+
+  /**
    * Clicks at the supplied point until {@code effect} reports true, with the same lost-delivery
    * guard as {@link #keyUntil} plus two X-specific hardenings: the host window's focus is restored
    * before each attempt (under a WM-less Xvfb the window can silently lose focus between steps, and

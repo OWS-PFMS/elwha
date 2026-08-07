@@ -48,6 +48,14 @@ statements ("Space release commits the toggle") so a CI failure reads as a spec 
   sleeps; no wall-clock sampling of live animations (the incumbent's one flake was exactly that).
 - **`GuiToolkit`** — the per-platform display-stack switch; test code never references Cacio
   directly.
+- **`GuiSteps`** — delivery-hardened Robot steps (`keyUntil` / `clickUntil`). Every Robot input in
+  Tier B goes through these; a raw press loop is how a lost event becomes a flake.
+- **`PaintLog`** — a recording `Graphics2D`. The sanctioned oracle for anything text-bearing, and
+  for stroked chrome whose exact pixels are eye-tuned rather than contract.
+- **`HeadlessHost`** — a sized, laid-out `JRootPane` standing in for a window, so in-window overlays
+  (dialog, menu, tooltip, side sheet) can be mounted under `headless=true` where a `JFrame` throws.
+  Nothing in it is *showing*, so anchored placement degrades to a zero-rect anchor and no focus is
+  arbitrated — assert placement through the engines' pure functions and focus in the gui tier.
 
 ## Determinism rules (zero flake budget — the suite gates merges)
 
