@@ -702,6 +702,38 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   }
 
   /**
+   * Removes a child and forgets its collapse rule. The rule map is keyed by identity and written
+   * from three places — the public setter and both self-anchoring affordances — with no other
+   * removal path, so without this a card that cycles its content (a detail pane rebuilt per
+   * selection) would hold every child it has ever contained.
+   *
+   * @param index the index of the child to remove
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void remove(final int index) {
+    collapseConstraints.remove(getComponent(index));
+    super.remove(index);
+  }
+
+  /**
+   * Removes every child and forgets their collapse rules. Only the children actually being removed
+   * are forgotten: in {@link ExpansionOverflow#SCROLL} mode the content lives in an inner body that
+   * this call does not touch, and its rules have to survive.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void removeAll() {
+    for (final Component child : getComponents()) {
+      collapseConstraints.remove(child);
+    }
+    super.removeAll();
+  }
+
+  /**
    * Adds a listener notified on every {@link #PROPERTY_COLLAPSED} change.
    *
    * @param listener the listener
@@ -721,6 +753,30 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    */
   public void removeExpansionChangeListener(final PropertyChangeListener listener) {
     expansionChange.removePropertyChangeListener(listener);
+  }
+
+  /**
+   * How many expansion-change listeners are registered. A package-private seam for the disclosure
+   * affordances' teardown contract; not API.
+   *
+   * @return the registered listener count
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  int expansionListenerCount() {
+    return expansionChange.getPropertyChangeListeners().length;
+  }
+
+  /**
+   * How many children carry an explicit collapse rule. A package-private seam for the rule-map
+   * pruning contract; not API.
+   *
+   * @return the number of stored collapse rules
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  int collapseConstraintCount() {
+    return collapseConstraints.size();
   }
 
   // ---------------------------------------------------- expansion overflow

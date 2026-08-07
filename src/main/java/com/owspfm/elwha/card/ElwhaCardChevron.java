@@ -3,6 +3,7 @@ package com.owspfm.elwha.card;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.icons.MaterialIcons;
+import java.beans.PropertyChangeListener;
 import java.util.Objects;
 
 /**
@@ -41,6 +42,11 @@ public final class ElwhaCardChevron extends ElwhaIconButton {
 
   private final ElwhaCard card;
 
+  /** Held as a field, not a bare lambda, so {@link #removeNotify()} can unregister it. */
+  private final PropertyChangeListener expansionSync = e -> syncGlyph();
+
+  private boolean subscribed;
+
   /**
    * Creates a chevron bound to the given card. Registers an expansion-change listener and a click
    * listener that toggles the card's collapsed state.
@@ -54,7 +60,24 @@ public final class ElwhaCardChevron extends ElwhaIconButton {
     setButtonSize(IconButtonSize.S);
     syncGlyph();
     addActionListener(e -> card.setCollapsed(!card.isCollapsed()));
-    card.addExpansionChangeListener(e -> syncGlyph());
+    subscribe();
+  }
+
+  // Idempotent so the constructor and addNotify can both ask for it: a chevron tracks its card
+  // from birth (an unparented one still reports the right glyph), and re-add after a detach has to
+  // restore the subscription without stacking a second copy.
+  private void subscribe() {
+    if (!subscribed) {
+      card.addExpansionChangeListener(expansionSync);
+      subscribed = true;
+    }
+  }
+
+  private void unsubscribe() {
+    if (subscribed) {
+      card.removeExpansionChangeListener(expansionSync);
+      subscribed = false;
+    }
   }
 
   /**
@@ -78,12 +101,17 @@ public final class ElwhaCardChevron extends ElwhaIconButton {
    * Javadoc for rationale (the #23 footgun). Defensive: silently does nothing if the chevron is
    * added outside the card's subtree (consumer error; chevron just doesn't drive survival).
    *
-   * @version v0.2.0
+   * <p>Also subscribes the glyph to the card's expansion state and resyncs it, since the card can
+   * have been toggled while the chevron was detached.
+   *
+   * @version v0.5.0
    * @since v0.2.0
    */
   @Override
   public void addNotify() {
     super.addNotify();
+    subscribe();
+    syncGlyph();
     // Walk up to find the direct child of `card` that contains us — anchor THAT child as
     // ALWAYS_VISIBLE. If we're directly added to the card (uncommon — chevron usually lives in
     // a header), `cursor` starts at `this` and the loop exits immediately, anchoring this. If
@@ -95,5 +123,19 @@ public final class ElwhaCardChevron extends ElwhaIconButton {
     if (cursor != null) {
       card.setCollapseConstraint(cursor, CollapseRule.ALWAYS_VISIBLE);
     }
+  }
+
+  /**
+   * Unsubscribes from the card's expansion state. The card's {@code PropertyChangeSupport} holds
+   * its listeners strongly, so a chevron whose header is swapped out would otherwise stay alive —
+   * and keep reacting — for the card's whole lifetime.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void removeNotify() {
+    unsubscribe();
+    super.removeNotify();
   }
 }
