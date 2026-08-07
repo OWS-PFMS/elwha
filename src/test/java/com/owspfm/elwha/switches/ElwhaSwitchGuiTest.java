@@ -58,6 +58,10 @@ class ElwhaSwitchGuiTest {
   @BeforeEach
   void showTwoSwitches() throws Exception {
     robot = new Robot();
+    // Paces every synthetic event: under X/XTEST an unthrottled press+release can outrun the
+    // app's event processing (observed on CI as a click that never toggles). No-op cost on Cacio.
+    robot.setAutoDelay(50);
+    robot.setAutoWaitForIdle(true);
     SwingUtilities.invokeAndWait(
         () -> {
           MorphAnimator.setReducedMotion(true);
