@@ -57,7 +57,7 @@ class MaterialIconsTest {
   // -------------------------------------------------------- the default size
 
   @Test
-  void theDefaultSizeIsTheM3IconButtonSize() {
+  void defaultSizeIsTheM3IconButtonSize() {
     assertThat(MaterialIcons.DEFAULT_SIZE)
         .as("Material Symbols are drawn on the 20-dp optical axis and render at 24 px")
         .isEqualTo(24);
@@ -66,7 +66,7 @@ class MaterialIconsTest {
   // ------------------------------------------------------------ the sweep
 
   @Test
-  void theBundleShipsAGenerousSetOfLookups() {
+  void bundleShipsAGenerousSetOfLookups() {
     assertThat(factories())
         .as("a reflective sweep that found almost nothing would silently assert nothing")
         .hasSizeGreaterThan(30);

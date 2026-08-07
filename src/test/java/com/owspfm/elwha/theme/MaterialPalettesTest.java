@@ -27,7 +27,7 @@ class MaterialPalettesTest {
   // ------------------------------------------------------------- baseline
 
   @Test
-  void theBaselineLoadsAsACompleteTwoSchemeTheme() {
+  void baselineLoadsAsACompleteTwoSchemeTheme() {
     final Theme baseline = MaterialPalettes.baseline();
 
     assertThat(baseline.name()).as("the baseline names itself").isEqualTo("Material Baseline");
@@ -38,14 +38,14 @@ class MaterialPalettesTest {
   }
 
   @Test
-  void theBaselineIsLoadedOnceAndShared() {
+  void baselineIsLoadedOnceAndShared() {
     assertThat(MaterialPalettes.baseline())
         .as("the baseline is parsed once and cached, not re-read per call")
         .isSameAs(MaterialPalettes.baseline());
   }
 
   @Test
-  void theBaselineIsAMemberOfThePrimaryTier() {
+  void baselineIsAMemberOfThePrimaryTier() {
     assertThat(names(MaterialPalettes.primary()))
         .as("the baseline ships inside the curated tier rather than beside it")
         .contains("Material Baseline");
@@ -95,14 +95,14 @@ class MaterialPalettesTest {
   // ------------------------------------------------------- tier disjointness
 
   @Test
-  void theTwoTiersShareNoTheme() {
+  void twoTiersShareNoTheme() {
     assertThat(names(MaterialPalettes.primary()))
         .as("the tiers are additive — a theme belongs to exactly one of them")
         .doesNotContainAnyElementsOf(names(MaterialPalettes.secondary()));
   }
 
   @Test
-  void theTwoTiersShareNoPrimaryColor() {
+  void twoTiersShareNoPrimaryColor() {
     final List<Color> primaryTierColors =
         MaterialPalettes.primary().stream()
             .map(theme -> theme.light().get(ColorRole.PRIMARY))

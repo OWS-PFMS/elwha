@@ -46,7 +46,7 @@ class ElwhaSurfaceElevationTest {
   }
 
   @Test
-  void theCeilingMatchesTheSharedPainterCeiling() {
+  void ceilingMatchesTheSharedPainterCeiling() {
     assertThat(ElwhaSurface.MAX_ELEVATION)
         .as("the surface and the shared shadow painter must agree on where the ladder stops")
         .isEqualTo(ShadowPainter.MAX_ELEVATION);
@@ -78,14 +78,14 @@ class ElwhaSurfaceElevationTest {
   }
 
   @Test
-  void theHaloGrowsWithTheLevel() {
+  void haloGrowsWithTheLevel() {
     assertThat(new ElwhaSurface().setElevation(5).getShadowInsets().bottom)
         .as("a higher elevation drops a longer shadow and needs more room for it")
         .isGreaterThan(new ElwhaSurface().setElevation(1).getShadowInsets().bottom);
   }
 
   @Test
-  void theDropIsDirectionalSoTheBottomReserveLeadsTheTop() {
+  void dropIsDirectionalSoTheBottomReserveLeadsTheTop() {
     final Insets reserve = new ElwhaSurface().setElevation(3).getShadowInsets();
 
     assertThat(reserve.bottom)
@@ -94,7 +94,7 @@ class ElwhaSurfaceElevationTest {
   }
 
   @Test
-  void theReportedHaloIsAFreshCopyCallersCannotMutate() {
+  void reportedHaloIsAFreshCopyCallersCannotMutate() {
     final ElwhaSurface surface = new ElwhaSurface().setElevation(3);
     final Insets first = surface.getShadowInsets();
 
@@ -118,7 +118,7 @@ class ElwhaSurfaceElevationTest {
   // ---------------------------------------------------------------- paint
 
   @Test
-  void theVisibleBodyIsPaintedInsideTheReserve() {
+  void visibleBodyIsPaintedInsideTheReserve() {
     final ElwhaSurface surface = new ElwhaSurface().setElevation(3);
     final Insets reserve = surface.getShadowInsets();
 
@@ -139,7 +139,7 @@ class ElwhaSurfaceElevationTest {
   }
 
   @Test
-  void theShadowPaintsIntoTheReserveThatAFlatSurfaceLeavesClear() {
+  void shadowPaintsIntoTheReserveThatAFlatSurfaceLeavesClear() {
     final ElwhaSurface elevated = new ElwhaSurface().setElevation(5);
     final int probeY = HEIGHT / 2;
 

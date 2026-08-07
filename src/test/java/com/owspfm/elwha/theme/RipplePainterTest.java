@@ -62,7 +62,7 @@ class RipplePainterTest {
   }
 
   @Test
-  void thePeakOpacityIsTheDocumentedPressTint() {
+  void peakOpacityIsTheDocumentedPressTint() {
     assertThat(RipplePainter.PEAK_OPACITY)
         .as("the press state layer peaks at 10 percent, surfaced for variants that tune it")
         .isEqualTo(0.10f);
@@ -83,14 +83,14 @@ class RipplePainterTest {
   }
 
   @Test
-  void theRippleExpandsAsProgressAdvances() {
+  void rippleExpandsAsProgressAdvances() {
     assertThat(tintedPixelCount(rippleAt(0.4f)))
         .as("a later phase in the expand window covers more of the body")
         .isGreaterThan(tintedPixelCount(rippleAt(0.1f)));
   }
 
   @Test
-  void theTintFadesOutBeforeTheEnd() {
+  void tintFadesOutBeforeTheEnd() {
     final Color early = new Color(rippleAt(0.05f).getRGB(ORIGIN.x, ORIGIN.y));
     final Color late = new Color(rippleAt(0.95f).getRGB(ORIGIN.x, ORIGIN.y));
 
@@ -117,7 +117,7 @@ class RipplePainterTest {
   }
 
   @Test
-  void theRippleStaysInsideTheHostsCornerRadius() {
+  void rippleStaysInsideTheHostsCornerRadius() {
     final BufferedImage image = rippleAt(0.9f);
 
     assertThat(new Color(image.getRGB(0, 0)))
@@ -126,7 +126,7 @@ class RipplePainterTest {
   }
 
   @Test
-  void theCallersGraphicsIsNotLeftMutated() {
+  void callersGraphicsIsNotLeftMutated() {
     final BufferedImage image = blank();
     final Graphics2D g = image.createGraphics();
     try {
@@ -148,7 +148,7 @@ class RipplePainterTest {
   }
 
   @Test
-  void thePerCornerOverloadPaintsAndSuppressesTheSameWay() {
+  void perCornerOverloadPaintsAndSuppressesTheSameWay() {
     final CornerRadii radii = CornerRadii.of(12, 0, 12, 0);
     final BufferedImage image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB);
     final Graphics2D g = image.createGraphics();

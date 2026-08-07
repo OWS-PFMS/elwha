@@ -65,7 +65,7 @@ class PaletteTest {
   }
 
   @Test
-  void theBuilderRejectsNullArguments() {
+  void builderRejectsNullArguments() {
     assertThatThrownBy(() -> Palette.builder().set(null, Color.RED))
         .as("a null role has no key to store under")
         .isInstanceOf(NullPointerException.class);

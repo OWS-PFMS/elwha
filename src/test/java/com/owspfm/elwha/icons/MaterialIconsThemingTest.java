@@ -75,14 +75,14 @@ class MaterialIconsThemingTest {
   }
 
   @Test
-  void theLabelForegroundIsItselfBridgedToTheOnSurfaceRole() {
+  void labelForegroundIsItselfBridgedToTheOnSurfaceRole() {
     assertThat(UIManager.getColor("Label.foreground"))
         .as("icons follow Label.foreground, which the bridge maps onto the token vocabulary")
         .isEqualTo(ColorRole.ON_SURFACE.resolve());
   }
 
   @Test
-  void theSameIconInstanceRepaintsInTheNewThemeAfterAModeFlip() {
+  void sameIconInstanceRepaintsInTheNewThemeAfterAModeFlip() {
     final FlatSVGIcon icon = denseGlyph();
     final Set<Color> light = opaqueColors(icon);
 
@@ -120,7 +120,7 @@ class MaterialIconsThemingTest {
   }
 
   @Test
-  void theSizedOverloadPaintsTheSameSingleColor() {
+  void sizedOverloadPaintsTheSameSingleColor() {
     assertThat(opaqueColors(MaterialIcons.pushPinFilled(16)))
         .as("the filter is size-independent")
         .containsExactly(new Color(UIManager.getColor("Label.foreground").getRGB(), false));

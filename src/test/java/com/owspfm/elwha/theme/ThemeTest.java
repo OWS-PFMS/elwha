@@ -51,7 +51,7 @@ class ThemeTest {
   }
 
   @Test
-  void theTwoSchemesAreDistinctObjects() {
+  void twoSchemesAreDistinctObjects() {
     assertThat(baseline().light())
         .as("light and dark are separate palettes, not one shared map")
         .isNotSameAs(baseline().dark());

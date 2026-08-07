@@ -24,14 +24,14 @@ class MorphAnimatorTest {
   }
 
   @Test
-  void theFixtureLeavesReducedMotionPinnedOn() {
+  void fixtureLeavesReducedMotionPinnedOn() {
     assertThat(MorphAnimator.isReducedMotion())
         .as("an unpinned run reads the host OS accessibility setting and stops being reproducible")
         .isTrue();
   }
 
   @Test
-  void theReducedMotionFlagIsAGlobalReadBack() {
+  void reducedMotionFlagIsAGlobalReadBack() {
     MorphAnimator.setReducedMotion(false);
     assertThat(MorphAnimator.isReducedMotion())
         .as("the toggle is one JVM-wide switch, not per-animator state")
@@ -42,14 +42,14 @@ class MorphAnimatorTest {
   }
 
   @Test
-  void theDurationMultiplierDefaultsToRealTime() {
+  void durationMultiplierDefaultsToRealTime() {
     assertThat(MorphAnimator.durationMultiplier())
         .as("the §3 durations are pinned values, so the multiplier starts at one")
         .isEqualTo(1f, within(0.0001f));
   }
 
   @Test
-  void theDurationMultiplierRoundTrips() {
+  void durationMultiplierRoundTrips() {
     MorphAnimator.setDurationMultiplier(5f);
 
     assertThat(MorphAnimator.durationMultiplier())
@@ -58,7 +58,7 @@ class MorphAnimatorTest {
   }
 
   @Test
-  void theDurationMultiplierRefusesAZeroOrNegativeTickStep() {
+  void durationMultiplierRefusesAZeroOrNegativeTickStep() {
     MorphAnimator.setDurationMultiplier(0f);
     assertThat(MorphAnimator.durationMultiplier())
         .as("a zero multiplier would divide the tick step by nothing, so it clamps")
@@ -71,7 +71,7 @@ class MorphAnimatorTest {
   }
 
   @Test
-  void theMotionDurationsAreTheLockedM3Tokens() {
+  void motionDurationsAreTheLockedM3Tokens() {
     assertThat(MorphAnimator.SHORT3_MS).as("short3 is 150ms").isEqualTo(150);
     assertThat(MorphAnimator.MEDIUM2_MS).as("medium2 is 300ms").isEqualTo(300);
     assertThat(MorphAnimator.MEDIUM3_MS).as("medium3 is 350ms").isEqualTo(350);

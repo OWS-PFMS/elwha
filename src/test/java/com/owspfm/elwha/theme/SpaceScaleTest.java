@@ -34,7 +34,7 @@ class SpaceScaleTest {
   }
 
   @Test
-  void theLadderHasTheSixLockedStepsAndStopsAtDoubleExtraLarge() {
+  void ladderHasTheSixLockedStepsAndStopsAtDoubleExtraLarge() {
     assertThat(SpaceScale.values())
         .as("the scale stops at XXL — Q2 locked no XXXL")
         .containsExactly(

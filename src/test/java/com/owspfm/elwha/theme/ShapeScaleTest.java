@@ -34,7 +34,7 @@ class ShapeScaleTest {
   }
 
   @Test
-  void theLadderHasTheSevenLockedSteps() {
+  void ladderHasTheSevenLockedSteps() {
     assertThat(ShapeScale.values())
         .as("the shape scale is seven steps, none to full")
         .containsExactly(
@@ -56,7 +56,7 @@ class ShapeScaleTest {
   }
 
   @Test
-  void theLadderIsMonotonic() {
+  void ladderIsMonotonic() {
     int previous = -1;
     for (final ShapeScale step : ShapeScale.values()) {
       assertThat(step.px())

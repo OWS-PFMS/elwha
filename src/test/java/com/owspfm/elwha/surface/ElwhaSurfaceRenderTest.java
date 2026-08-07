@@ -64,7 +64,7 @@ class ElwhaSurfaceRenderTest {
   }
 
   @Test
-  void theDefaultLookIsASurfaceFilledRoundRectWithNoBorder() {
+  void defaultLookIsASurfaceFilledRoundRectWithNoBorder() {
     final BufferedImage image = render(new ElwhaSurface());
 
     Pixels.assertPixelNear(
@@ -77,7 +77,7 @@ class ElwhaSurfaceRenderTest {
   // ---------------------------------------------------------- typed setters
 
   @Test
-  void theSettersAreFluentAndReturnTheSurface() {
+  void settersAreFluentAndReturnTheSurface() {
     final ElwhaSurface surface = new ElwhaSurface();
 
     final ElwhaSurface chained =
@@ -95,7 +95,7 @@ class ElwhaSurfaceRenderTest {
   }
 
   @Test
-  void theSurfaceRoleDrivesTheFill() {
+  void surfaceRoleDrivesTheFill() {
     final BufferedImage image =
         render(new ElwhaSurface().setSurfaceRole(ColorRole.PRIMARY_CONTAINER));
 
@@ -108,7 +108,7 @@ class ElwhaSurfaceRenderTest {
   }
 
   @Test
-  void theBorderRoleDrivesTheStrokeAndNullSuppressesIt() {
+  void borderRoleDrivesTheStrokeAndNullSuppressesIt() {
     final BufferedImage outlined =
         render(new ElwhaSurface().setBorderRole(ColorRole.ERROR).setBorderWidth(4));
 
@@ -149,7 +149,7 @@ class ElwhaSurfaceRenderTest {
   }
 
   @Test
-  void theShapeStepDrivesTheCornerCut() {
+  void shapeStepDrivesTheCornerCut() {
     Pixels.assertPixelNear(
         render(new ElwhaSurface().setShape(ShapeScale.NONE)),
         0,
@@ -189,7 +189,7 @@ class ElwhaSurfaceRenderTest {
   }
 
   @Test
-  void theTypedSettersRejectNullTokens() {
+  void typedSettersRejectNullTokens() {
     final ElwhaSurface surface = new ElwhaSurface();
 
     assertThatThrownBy(() -> surface.setSurfaceRole(null))
@@ -223,7 +223,7 @@ class ElwhaSurfaceRenderTest {
   }
 
   @Test
-  void theReskinActuallyChangesThePaintedColor() {
+  void reskinActuallyChangesThePaintedColor() {
     final ElwhaSurface surface = new ElwhaSurface();
     final int lightCentre = render(surface).getRGB(WIDTH / 2, HEIGHT / 2);
 

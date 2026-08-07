@@ -19,7 +19,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 class ModeTest {
 
   @Test
-  void theModelIsTwoConcreteModesAndOneFollowTheOs() {
+  void modelIsTwoConcreteModesAndOneFollowTheOs() {
     assertThat(Mode.values())
         .as("light, dark, and follow-the-OS")
         .containsExactly(Mode.LIGHT, Mode.DARK, Mode.SYSTEM);

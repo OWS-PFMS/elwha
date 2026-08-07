@@ -169,7 +169,7 @@ class ElwhaThemeInstallTest {
   }
 
   @Test
-  void theBaseLookAndFeelTracksTheResolvedMode() {
+  void baseLookAndFeelTracksTheResolvedMode() {
     ThemeExtension.install(Mode.DARK);
 
     assertThat(UIManager.getLookAndFeel().getName())

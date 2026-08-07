@@ -58,7 +58,7 @@ class ElwhaSurfaceClipTest {
   // ----------------------------------------------------------- the flag
 
   @Test
-  void theClipIsOffByDefault() {
+  void clipIsOffByDefault() {
     assertThat(new ElwhaSurface().getClipChildrenToCorners())
         .as(
             "most surfaces inset their children, so the offscreen buffer would only cost paint"
@@ -67,7 +67,7 @@ class ElwhaSurfaceClipTest {
   }
 
   @Test
-  void theFlagRoundTripsBothWays() {
+  void flagRoundTripsBothWays() {
     final ElwhaSurface surface = new ElwhaSurface();
 
     assertThat(surface.setClipChildrenToCorners(true).getClipChildrenToCorners())
@@ -126,7 +126,7 @@ class ElwhaSurfaceClipTest {
   }
 
   @Test
-  void theFoldedFillStillPaintsUnderTheChildrenWhenTheClipRuns() {
+  void foldedFillStillPaintsUnderTheChildrenWhenTheClipRuns() {
     final ElwhaSurface surface = new ElwhaSurface().setSurfaceRole(ColorRole.PRIMARY_CONTAINER);
     surface.setLayout(new BorderLayout());
     final JPanel inset = new JPanel();
@@ -143,7 +143,7 @@ class ElwhaSurfaceClipTest {
   }
 
   @Test
-  void theBorderSurvivesTheClipPath() {
+  void borderSurvivesTheClipPath() {
     final ElwhaSurface surface =
         surfaceWithChild()
             .setBorderRole(ColorRole.ERROR)

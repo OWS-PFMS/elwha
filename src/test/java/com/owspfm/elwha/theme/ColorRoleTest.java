@@ -65,14 +65,14 @@ class ColorRoleTest {
   // ------------------------------------------------------------- the role set
 
   @Test
-  void theRoleSetIsTheFullM3Scheme() {
+  void roleSetIsTheFullM3Scheme() {
     assertThat(ColorRole.values())
         .as("the taxonomy locks the complete standard M3 scheme at 49 roles")
         .hasSize(49);
   }
 
   @Test
-  void theRoleSetSplitsIntoThirtySevenModeVaryingAndTwelveFixed() {
+  void roleSetSplitsIntoThirtySevenModeVaryingAndTwelveFixed() {
     assertThat(FIXED_ACCENTS)
         .as("twelve accents are mode-invariant, leaving thirty-seven mode-varying roles")
         .hasSize(12);

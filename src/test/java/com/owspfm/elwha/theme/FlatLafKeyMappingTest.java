@@ -46,7 +46,7 @@ class FlatLafKeyMappingTest {
   }
 
   @Test
-  void theCuratedKeysCarryTheirMappedRole() {
+  void curatedKeysCarryTheirMappedRole() {
     loadBearingStaticKeys()
         .forEach(
             (key, role) ->
@@ -65,14 +65,14 @@ class FlatLafKeyMappingTest {
   }
 
   @Test
-  void theGlobalCornerArcComesFromTheShapeLadder() {
+  void globalCornerArcComesFromTheShapeLadder() {
     assertThat(UIManager.get("Component.arc"))
         .as("raw Swing's default corner radius is the small shape step, not a magic number")
         .isEqualTo(ShapeScale.SM.px());
   }
 
   @Test
-  void theFocusRingIsTheFocusCueSoFocusedFillsMatchRestingOnes() {
+  void focusRingIsTheFocusCueSoFocusedFillsMatchRestingOnes() {
     assertThat(UIManager.getInt("Component.focusWidth"))
         .as("a visible focus ring is the whole focus model, so the width is raised off zero")
         .isPositive();
@@ -85,7 +85,7 @@ class FlatLafKeyMappingTest {
   }
 
   @Test
-  void theRadioIconTakesItsOwnFlatLafStyleSoTheSharedIconPaletteCanSplit() {
+  void radioIconTakesItsOwnFlatLafStyleSoTheSharedIconPaletteCanSplit() {
     assertThat(UIManager.getString("RadioButton.icon.style"))
         .as("the radio needs the outlined style to get the M3 ring while the checkbox stays filled")
         .isEqualTo("outlined");
@@ -116,7 +116,7 @@ class FlatLafKeyMappingTest {
   }
 
   @Test
-  void theEmphasisButtonBakesAgainstItsOwnRolePair() {
+  void emphasisButtonBakesAgainstItsOwnRolePair() {
     assertThat(UIManager.getColor("Button.default.hoverBackground"))
         .as("a primary-filled button tints with its own foreground, not the surface foreground")
         .isEqualTo(StateLayer.HOVER.over(ColorRole.PRIMARY.resolve(), ColorRole.ON_PRIMARY));
@@ -139,7 +139,7 @@ class FlatLafKeyMappingTest {
   // ------------------------------------------------------------ mode switch
 
   @Test
-  void theBridgeFollowsAModeSwitch() {
+  void bridgeFollowsAModeSwitch() {
     ThemeExtension.install(Mode.LIGHT);
     final Color lightPanel = UIManager.getColor("Panel.background");
     final Color lightHover = UIManager.getColor("Button.hoverBackground");
@@ -156,7 +156,7 @@ class FlatLafKeyMappingTest {
   }
 
   @Test
-  void theBridgeFollowsAThemeSwitch() {
+  void bridgeFollowsAThemeSwitch() {
     final Theme other = MaterialPalettes.secondary().get(0);
 
     ElwhaTheme.install(ElwhaTheme.config().theme(other).mode(Mode.LIGHT).build());

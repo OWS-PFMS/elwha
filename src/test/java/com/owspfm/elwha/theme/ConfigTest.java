@@ -46,7 +46,7 @@ class ConfigTest {
   }
 
   @Test
-  void theBuilderRejectsNullsForEveryTypedField() {
+  void builderRejectsNullsForEveryTypedField() {
     assertThatThrownBy(() -> ElwhaTheme.config().theme(null))
         .as("a null theme is rejected at the setter, not deferred to build()")
         .isInstanceOf(NullPointerException.class);
@@ -69,7 +69,7 @@ class ConfigTest {
   }
 
   @Test
-  void theBuilderIsChainable() {
+  void builderIsChainable() {
     final Config config =
         ElwhaTheme.config()
             .theme(MaterialPalettes.baseline())
@@ -143,7 +143,7 @@ class ConfigTest {
   }
 
   @Test
-  void theDerivationsRejectNullsForTheirTypedFields() {
+  void derivationsRejectNullsForTheirTypedFields() {
     final Config original = builder().build();
 
     assertThatThrownBy(() -> original.withTheme(null))

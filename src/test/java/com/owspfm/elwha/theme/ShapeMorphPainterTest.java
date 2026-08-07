@@ -56,7 +56,7 @@ class ShapeMorphPainterTest {
   // ----------------------------------------------------------- interpolation
 
   @Test
-  void theEndpointsRenderTheirOwnGeometryExactly() {
+  void endpointsRenderTheirOwnGeometryExactly() {
     assertThat(ShapeMorphPainter.interpolate(SQUARE, ROUND, 0f, Easing.LINEAR))
         .as("a steady-state component at rest reports exactly its from-geometry")
         .isEqualTo(SQUARE);
@@ -66,7 +66,7 @@ class ShapeMorphPainterTest {
   }
 
   @Test
-  void theMidpointSitsBetweenTheEndpoints() {
+  void midpointSitsBetweenTheEndpoints() {
     final CornerRadii middle = ShapeMorphPainter.interpolate(SQUARE, ROUND, 0.5f, Easing.LINEAR);
 
     assertThat(middle.topLeftPx())
@@ -82,7 +82,7 @@ class ShapeMorphPainterTest {
   }
 
   @Test
-  void theEasingIsComposedOnTopOfTheCallersProgress() {
+  void easingIsComposedOnTopOfTheCallersProgress() {
     final CornerRadii eased = ShapeMorphPainter.interpolate(SQUARE, ROUND, 0.25f, Easing.STANDARD);
 
     assertThat(eased)
@@ -150,7 +150,7 @@ class ShapeMorphPainterTest {
   }
 
   @Test
-  void thePaintedCornerFollowsTheInterpolatedGeometry() {
+  void paintedCornerFollowsTheInterpolatedGeometry() {
     assertThat(new Color(morphAt(0f).getRGB(0, 0)))
         .as("at rest the square end-state fills the corner")
         .isEqualTo(ColorRole.PRIMARY.resolve());
@@ -160,7 +160,7 @@ class ShapeMorphPainterTest {
   }
 
   @Test
-  void theBodyCentreIsFilledAtEveryPhase() {
+  void bodyCentreIsFilledAtEveryPhase() {
     for (final float progress : new float[] {0f, 0.25f, 0.5f, 0.75f, 1f}) {
       assertThat(new Color(morphAt(progress).getRGB(WIDTH / 2, HEIGHT / 2)))
           .as("the morph changes the outline, never whether the surface paints")

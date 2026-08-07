@@ -55,7 +55,7 @@ class TypeRoleTest {
   }
 
   @Test
-  void theScaleIsTheFullFifteenRoleM3Ladder() {
+  void scaleIsTheFullFifteenRoleM3Ladder() {
     assertThat(TypeRole.values())
         .as("five sizes across display, headline, title, body, and label")
         .hasSize(15);
@@ -86,7 +86,7 @@ class TypeRoleTest {
 
   @ParameterizedTest
   @EnumSource(TypeRole.class)
-  void theWeightSplitFollowsTheM3Table(final TypeRole role) {
+  void weightSplitFollowsTheM3Table(final TypeRole role) {
     assertThat(role.medium())
         .as("%s is a %s-weight role", role, MEDIUM_WEIGHT_ROLES.contains(role) ? "500" : "400")
         .isEqualTo(MEDIUM_WEIGHT_ROLES.contains(role));
@@ -120,7 +120,7 @@ class TypeRoleTest {
   }
 
   @Test
-  void theBundledFamilyIsInter() {
+  void bundledFamilyIsInter() {
     assertThat(Typography.defaults().familyName())
         .as("Elwha ships Inter so the M3 400/500 weight distinction has real faces")
         .isEqualTo("Inter");

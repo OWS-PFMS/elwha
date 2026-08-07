@@ -22,7 +22,7 @@ class ContentMorphPainterTest {
   // ------------------------------------------------------------- icon travel
 
   @Test
-  void theIconTravelsLinearlyBetweenItsAnchors() {
+  void iconTravelsLinearlyBetweenItsAnchors() {
     assertThat(ContentMorphPainter.iconX(10, 50, 0f))
         .as("at rest the icon sits at its start anchor")
         .isEqualTo(10);
@@ -35,14 +35,14 @@ class ContentMorphPainterTest {
   }
 
   @Test
-  void theIconPositionRoundsToWholePixels() {
+  void iconPositionRoundsToWholePixels() {
     assertThat(ContentMorphPainter.iconX(0, 5, 0.5f))
         .as("a sub-pixel anchor is rounded rather than truncated")
         .isEqualTo(3);
   }
 
   @Test
-  void theIconIsNotClampedBecauseSpringsOvershoot() {
+  void iconIsNotClampedBecauseSpringsOvershoot() {
     assertThat(ContentMorphPainter.iconX(0, 100, 1.1f))
         .as("M3 spring motion overshoots on purpose — clamping here would flatten it")
         .isEqualTo(110);
@@ -54,14 +54,14 @@ class ContentMorphPainterTest {
   // ---------------------------------------------------------- label crossfade
 
   @Test
-  void theDefaultInflectionIsTheContainerEmphasizedMidpoint() {
+  void defaultInflectionIsTheContainerEmphasizedMidpoint() {
     assertThat(ContentMorphPainter.DEFAULT_LABEL_CROSSFADE_INFLECTION)
         .as("M3's container-emphasized pattern crosses over at the half-way mark")
         .isEqualTo(0.5f);
   }
 
   @Test
-  void theLabelStaysInvisibleUntilTheInflection() {
+  void labelStaysInvisibleUntilTheInflection() {
     assertThat(ContentMorphPainter.labelAlpha(0f))
         .as("no label while the body is still growing")
         .isZero();
@@ -77,7 +77,7 @@ class ContentMorphPainterTest {
   }
 
   @Test
-  void theDefaultOverloadMatchesTheExplicitOne() {
+  void defaultOverloadMatchesTheExplicitOne() {
     assertThat(ContentMorphPainter.labelAlpha(0.8f))
         .as("the no-inflection form is the same curve at the documented default")
         .isEqualTo(
@@ -96,7 +96,7 @@ class ContentMorphPainterTest {
   }
 
   @Test
-  void theAlphaIsClampedToTheUnitInterval() {
+  void alphaIsClampedToTheUnitInterval() {
     assertThat(ContentMorphPainter.labelAlpha(2f))
         .as("an overshooting phase does not over-paint")
         .isEqualTo(1f);
@@ -121,7 +121,7 @@ class ContentMorphPainterTest {
   // -------------------------------------------------------- container width
 
   @Test
-  void theContainerWidthShortCircuitsAtTheEndpoints() {
+  void containerWidthShortCircuitsAtTheEndpoints() {
     assertThat(ContentMorphPainter.containerWidth(56, 140, 0f))
         .as("a steady-state component reports exactly its resting width, not a rounded estimate")
         .isEqualTo(56);
@@ -131,14 +131,14 @@ class ContentMorphPainterTest {
   }
 
   @Test
-  void theContainerWidthInterpolatesInBetween() {
+  void containerWidthInterpolatesInBetween() {
     assertThat(ContentMorphPainter.containerWidth(56, 140, 0.5f))
         .as("half way through the morph the container is half way between its two widths")
         .isEqualTo(98);
   }
 
   @Test
-  void theContainerWidthTreatsOvershootAsAnEndpoint() {
+  void containerWidthTreatsOvershootAsAnEndpoint() {
     assertThat(ContentMorphPainter.containerWidth(56, 140, 1.2f))
         .as("layout width is not allowed to overshoot the way a painted position may")
         .isEqualTo(140);

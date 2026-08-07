@@ -35,7 +35,7 @@ class StateLayerTest {
   }
 
   @Test
-  void theModelHasTheFiveLockedLayers() {
+  void modelHasTheFiveLockedLayers() {
     assertThat(StateLayer.values())
         .as("hover, focus, pressed, dragged, and the Elwha-invented selected layer")
         .containsExactly(
@@ -115,7 +115,7 @@ class StateLayerTest {
   }
 
   @Test
-  void theBlendResultIsFullyOpaque() {
+  void blendResultIsFullyOpaque() {
     final Color blended =
         StateLayer.PRESSED.over(new Color(0x12, 0x34, 0x56), new Color(0xAB, 0xCD, 0xEF));
 
