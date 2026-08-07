@@ -194,6 +194,10 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
   public ElwhaChip(final String text) {
     super(new BorderLayout());
     setOpaque(false);
+    // The default mode is STATIC, and setInteractionMode short-circuits when the mode is unchanged
+    // — so without this the initial focusability would be JPanel's inherited true, making an inert
+    // chip a tab stop until some other mode was set and set back.
+    setFocusable(false);
 
     leadingButton = new LeadingButton();
     leadingButton.setVisible(false);
