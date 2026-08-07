@@ -15,7 +15,6 @@ import java.awt.FlowLayout;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Robot;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -143,22 +142,21 @@ class ElwhaButtonGuiTest {
 
   /** Presses the button through the real pipeline until it owns focus, guarded on that effect. */
   private void clickUntilFocused(final ElwhaButton button) throws Exception {
-    for (int attempt = 0; attempt < 3 && !onEdt(button::isFocusOwner); attempt++) {
-      final Point center = centerOnScreen(button);
-      robot.mouseMove(center.x, center.y);
-      robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-      robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-      robot.waitForIdle();
-      final long deadline = System.currentTimeMillis() + 1500;
-      while (System.currentTimeMillis() < deadline && !onEdt(button::isFocusOwner)) {
-        Thread.sleep(20);
-      }
-    }
-    waitFor("the clicked button owns focus", () -> button.isFocusOwner());
+    GuiSteps.clickUntil(
+        robot,
+        frame,
+        () -> {
+          try {
+            return centerOnScreen(button);
+          } catch (final Exception e) {
+            throw new IllegalStateException(e);
+          }
+        },
+        "the clicked button owns focus",
+        button::isFocusOwner);
     // Park the pointer off the frame so a lingering hover layer cannot tint the probed pixel.
     robot.mouseMove(0, 0);
     robot.waitForIdle();
-    waitFor("hover clears after the pointer leaves", () -> true);
   }
 
   private void assertRing(final ElwhaButton button, final boolean expected, final String what)

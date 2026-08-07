@@ -53,4 +53,50 @@ public final class GuiSteps {
     }
     WaitFor.waitFor(what, effect);
   }
+
+  /**
+   * Clicks at the supplied point until {@code effect} reports true, with the same lost-delivery
+   * guard as {@link #keyUntil} plus two X-specific hardenings: the host window's focus is restored
+   * before each attempt (under a WM-less Xvfb the window can silently lose focus between steps, and
+   * focus-on-click semantics need a focused window), and the target point is re-derived per attempt
+   * so a late window move cannot stale it.
+   *
+   * @param robot the tier's robot
+   * @param window the window hosting the click target
+   * @param target supplier of the click point in screen coordinates, re-read per attempt
+   * @param what plain-English description of the expected effect (the assertion label)
+   * @param effect the step's observable effect, evaluated on the EDT
+   * @throws Exception if the EDT round-trip is interrupted
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void clickUntil(
+      final Robot robot,
+      final java.awt.Window window,
+      final java.util.function.Supplier<java.awt.Point> target,
+      final String what,
+      final BooleanSupplier effect)
+      throws Exception {
+    for (int attempt = 0; attempt < ATTEMPTS && !WaitFor.onEdt(effect); attempt++) {
+      if (!WaitFor.onEdt(window::isFocused)) {
+        javax.swing.SwingUtilities.invokeAndWait(
+            () -> {
+              window.toFront();
+              window.requestFocus();
+            });
+        robot.waitForIdle();
+      }
+      final java.awt.Point point = target.get();
+      robot.mouseMove(point.x, point.y);
+      robot.waitForIdle();
+      robot.mousePress(java.awt.event.InputEvent.BUTTON1_DOWN_MASK);
+      robot.mouseRelease(java.awt.event.InputEvent.BUTTON1_DOWN_MASK);
+      robot.waitForIdle();
+      final long deadline = System.currentTimeMillis() + EFFECT_WINDOW_MS;
+      while (System.currentTimeMillis() < deadline && !WaitFor.onEdt(effect)) {
+        Thread.sleep(20);
+      }
+    }
+    WaitFor.waitFor(what, effect);
+  }
 }
