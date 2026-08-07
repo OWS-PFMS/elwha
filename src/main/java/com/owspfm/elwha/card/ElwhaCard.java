@@ -2,6 +2,7 @@ package com.owspfm.elwha.card;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.list.ElwhaListItemView;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.RipplePainter;
@@ -87,7 +88,7 @@ import javax.swing.Timer;
  * @version v0.5.0
  * @since v0.2.0
  */
-public class ElwhaCard extends ElwhaSurface {
+public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
 
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
@@ -117,6 +118,8 @@ public class ElwhaCard extends ElwhaSurface {
   private boolean collapsed;
   private boolean animateCollapse = !GraphicsEnvironment.isHeadless();
   private boolean dragged;
+  private boolean listInteractive;
+  private Boolean preListActionable;
 
   /** 250 ms M3 collapse-tween duration. */
   private static final int COLLAPSE_ANIMATION_MS = 250;
@@ -457,15 +460,17 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
-   * Sets the selected state. No-op when {@link #isSelectable()} is {@code false}.
+   * Sets the selected state. No-op when {@link #isSelectable()} is {@code false} — unless the card
+   * is under list-driven interaction, in which case the host list owns selection and writes it here
+   * regardless of the card's own selectable flag.
    *
    * @param newSelected the new selected state
    * @return {@code this} for fluent chaining
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public ElwhaCard setSelected(final boolean newSelected) {
-    if (!selectable || this.selected == newSelected) {
+    if ((!selectable && !listInteractive) || this.selected == newSelected) {
       return this;
     }
     final boolean old = this.selected;
@@ -861,6 +866,35 @@ public class ElwhaCard extends ElwhaSurface {
     clickCanceled = true;
     pressed = false;
     repaint();
+    return this;
+  }
+
+  /**
+   * Hands interaction ownership to a hosting {@code ElwhaItemList}, or takes it back.
+   *
+   * <p>While list-interactive the card is actionable, so it responds to clicks and keyboard
+   * activation, but it stops toggling its own selected state — the list writes that through {@link
+   * #setSelected(boolean)}, which is also permitted past {@link #isSelectable()} for the duration.
+   * Passing {@code false} restores the actionability the card carried before the list claimed it.
+   *
+   * @param interactive true to hand interaction to the list, false to take it back
+   * @return {@code this} for fluent chaining
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public ElwhaCard setListInteractive(final boolean interactive) {
+    if (interactive) {
+      if (preListActionable == null) {
+        preListActionable = actionable;
+      }
+      listInteractive = true;
+      setActionable(true);
+    } else if (preListActionable != null) {
+      listInteractive = false;
+      setActionable(preListActionable);
+      preListActionable = null;
+    }
     return this;
   }
 
@@ -1310,7 +1344,9 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   private void handleActivation() {
-    if (selectable) {
+    // Under list-driven interaction the host list owns selection — self-toggling here would race
+    // the state the list pushes back through setSelected.
+    if (selectable && !listInteractive) {
       setSelected(!selected);
     }
     if (actionable) {
