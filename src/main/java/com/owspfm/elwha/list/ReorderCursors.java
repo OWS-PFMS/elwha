@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.GraphicsEnvironment;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
@@ -66,6 +67,9 @@ final class ReorderCursors {
    * @since v0.5.0
    */
   static Cursor grab() {
+    if (GraphicsEnvironment.isHeadless()) {
+      return Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
+    }
     refreshIfThemeChanged();
     if (grabCached == null) {
       grabCached = loadCursor("grab", isDarkTheme(), new Point(15, 8), "ElwhaItemList.grab", true);
@@ -81,6 +85,9 @@ final class ReorderCursors {
    * @since v0.5.0
    */
   static Cursor grabbing() {
+    if (GraphicsEnvironment.isHeadless()) {
+      return Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
+    }
     refreshIfThemeChanged();
     if (grabbingCached == null) {
       grabbingCached =
@@ -129,9 +136,14 @@ final class ReorderCursors {
   }
 
   private static Dimension bestCursorSize() {
-    final Dimension best = Toolkit.getDefaultToolkit().getBestCursorSize(DESIGN_SIZE, DESIGN_SIZE);
-    if (best.width > 0 && best.height > 0) {
-      return best;
+    try {
+      final Dimension best =
+          Toolkit.getDefaultToolkit().getBestCursorSize(DESIGN_SIZE, DESIGN_SIZE);
+      if (best.width > 0 && best.height > 0) {
+        return best;
+      }
+    } catch (final Exception | Error ignore) {
+      // Toolkits without a display, and some remote ones, refuse to answer at all.
     }
     return new Dimension(DESIGN_SIZE, DESIGN_SIZE);
   }

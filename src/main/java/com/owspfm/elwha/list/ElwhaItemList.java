@@ -1228,10 +1228,37 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
 
   private void onModelChanged(final ElwhaListDataEvent<T> event) {
     rebuildVisibleItems();
+    if (event.getType() == ElwhaListDataEvent.Type.REMOVED
+        || event.getType() == ElwhaListDataEvent.Type.STRUCTURE) {
+      pruneSelectionToModel();
+    }
     // Mandatory mode has to re-assert "never empty" after a removal emptied the selection. Runs
     // after the visible rebuild so the replacement lands on an item that is actually showing.
     ensureMandatorySelection();
     rebuildContent(animateChanges);
+  }
+
+  /**
+   * Drops selection entries whose items have left the model.
+   *
+   * <p>Only removals and wholesale replacements prune. Filtering and sorting deliberately do not: a
+   * filtered-out item is hidden, not gone, and the family contract is that it comes back still
+   * selected. An item deleted from the model has no such future.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  private void pruneSelectionToModel() {
+    final List<T> selected = selectionModel.getSelected();
+    final List<T> retained = new ArrayList<>();
+    for (final T item : selected) {
+      if (model.contains(item)) {
+        retained.add(item);
+      }
+    }
+    if (retained.size() != selected.size()) {
+      selectionModel.setSelected(retained);
+    }
   }
 
   private void onSelectionChanged(final ElwhaSelectionEvent<T> event) {
