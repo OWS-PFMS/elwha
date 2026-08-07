@@ -85,7 +85,7 @@ import javax.swing.SwingUtilities;
  * same click while the new one opens — no explicit bookkeeping, no focus hand-off churn.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
@@ -741,6 +741,16 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
   @Override
   protected void clearTransientState() {
+    // A whole-chain teardown (an outside press, a selection) unlinks each level before closing it,
+    // so onChainChildClosed never fires and this level's opener bookkeeping would survive its own
+    // menu. A stale expanded flag outlives the surface: the row keeps reporting EXPANDED with
+    // nothing open, and its hover-intent gate (which only arms while collapsed) never opens the
+    // submenu again.
+    if (openerSubItem != null) {
+      openerSubItem.setExpanded(false);
+    }
+    openChildMenu = null;
+    openerSubItem = null;
     groupPanels = null;
     effectiveGroups = null;
     itemOrder = null;
