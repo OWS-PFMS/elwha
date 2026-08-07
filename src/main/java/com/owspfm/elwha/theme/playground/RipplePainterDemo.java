@@ -34,7 +34,7 @@ import javax.swing.Timer;
  * -Dexec.mainClass="com.owspfm.elwha.theme.playground.RipplePainterDemo"}.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class RipplePainterDemo {
@@ -43,6 +43,13 @@ public final class RipplePainterDemo {
 
   private RipplePainterDemo() {}
 
+  /**
+   * Launches the demo.
+   *
+   * @param args unused
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static void main(String[] args) {
     ElwhaTheme.install(
         ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(Mode.LIGHT).build());

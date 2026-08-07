@@ -28,7 +28,7 @@ import java.util.stream.Stream;
  * wrong working directory fails loudly rather than passing vacuously).
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class JButtonSweepGuard {
@@ -52,6 +52,14 @@ public final class JButtonSweepGuard {
 
   private JButtonSweepGuard() {}
 
+  /**
+   * Runs the guard; exits non-zero on any failed check.
+   *
+   * @param args unused
+   * @throws IOException if the run fails
+   * @version v0.5.0
+   * @since v0.4.0
+   */
   public static void main(final String[] args) throws IOException {
     final Path base = Path.of("src/main/java/com/owspfm/elwha");
     if (!Files.isDirectory(base)) {

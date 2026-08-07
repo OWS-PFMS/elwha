@@ -87,6 +87,7 @@ import javax.swing.event.EventListenerList;
  * ColorRole#ON_SURFACE} at the M3 content (0.38) / container (0.12) opacities. Resolved at paint
  * time so runtime theme + light/dark switching re-skins the slider live.
  *
+ * @serial exclude
  * @author Charles Bryan
  * @version v0.5.0
  * @since v0.4.0
@@ -2376,6 +2377,14 @@ public class ElwhaSlider extends JComponent {
    * @since v0.4.0
    */
   protected class AccessibleElwhaSlider extends AccessibleJComponent implements AccessibleValue {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.4.0
+     */
+    protected AccessibleElwhaSlider() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {

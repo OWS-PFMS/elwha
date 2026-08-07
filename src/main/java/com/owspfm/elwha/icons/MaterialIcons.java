@@ -84,7 +84,13 @@ public final class MaterialIcons {
     // utility
   }
 
-  /** Pushpin glyph (outline) — used for pinned-item affordance. */
+  /**
+   * Pushpin glyph (outline) — used for pinned-item affordance.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon pushPin() {
     return pushPin(DEFAULT_SIZE);
   }
@@ -101,7 +107,13 @@ public final class MaterialIcons {
     return load("push_pin", size);
   }
 
-  /** Pushpin glyph (filled / solid) — pairs with {@link #pushPin()} as the "active" state. */
+  /**
+   * Pushpin glyph (filled / solid) — pairs with {@link #pushPin()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon pushPinFilled() {
     return pushPinFilled(DEFAULT_SIZE);
   }
@@ -118,7 +130,13 @@ public final class MaterialIcons {
     return load("push_pin_fill", size);
   }
 
-  /** Trash / delete glyph (outline). */
+  /**
+   * Trash / delete glyph (outline).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon delete() {
     return delete(DEFAULT_SIZE);
   }
@@ -135,7 +153,13 @@ public final class MaterialIcons {
     return load("delete", size);
   }
 
-  /** Trash / delete glyph (filled / solid) — pairs with {@link #delete()} as the "active" state. */
+  /**
+   * Trash / delete glyph (filled / solid) — pairs with {@link #delete()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon deleteFilled() {
     return deleteFilled(DEFAULT_SIZE);
   }
@@ -152,7 +176,13 @@ public final class MaterialIcons {
     return load("delete_fill", size);
   }
 
-  /** Pencil / edit glyph (outline). */
+  /**
+   * Pencil / edit glyph (outline).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon edit() {
     return edit(DEFAULT_SIZE);
   }
@@ -169,7 +199,13 @@ public final class MaterialIcons {
     return load("edit", size);
   }
 
-  /** Pencil / edit glyph (filled / solid) — pairs with {@link #edit()} as the "active" state. */
+  /**
+   * Pencil / edit glyph (filled / solid) — pairs with {@link #edit()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon editFilled() {
     return editFilled(DEFAULT_SIZE);
   }
@@ -186,7 +222,13 @@ public final class MaterialIcons {
     return load("edit_fill", size);
   }
 
-  /** Info "i" glyph (outline). */
+  /**
+   * Info "i" glyph (outline).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon info() {
     return info(DEFAULT_SIZE);
   }
@@ -203,7 +245,13 @@ public final class MaterialIcons {
     return load("info", size);
   }
 
-  /** Info "i" glyph (filled / solid) — pairs with {@link #info()} as the "active" state. */
+  /**
+   * Info "i" glyph (filled / solid) — pairs with {@link #info()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon infoFilled() {
     return infoFilled(DEFAULT_SIZE);
   }
@@ -220,7 +268,13 @@ public final class MaterialIcons {
     return load("info_fill", size);
   }
 
-  /** Help "?" glyph (outline). */
+  /**
+   * Help "?" glyph (outline).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon help() {
     return help(DEFAULT_SIZE);
   }
@@ -237,7 +291,13 @@ public final class MaterialIcons {
     return load("help", size);
   }
 
-  /** Help "?" glyph (filled / solid) — pairs with {@link #help()} as the "active" state. */
+  /**
+   * Help "?" glyph (filled / solid) — pairs with {@link #help()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon helpFilled() {
     return helpFilled(DEFAULT_SIZE);
   }
@@ -254,7 +314,13 @@ public final class MaterialIcons {
     return load("help_fill", size);
   }
 
-  /** House / home glyph (outline). */
+  /**
+   * House / home glyph (outline).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon home() {
     return home(DEFAULT_SIZE);
   }
@@ -271,7 +337,13 @@ public final class MaterialIcons {
     return load("home", size);
   }
 
-  /** House / home glyph (filled / solid) — pairs with {@link #home()} as the "active" state. */
+  /**
+   * House / home glyph (filled / solid) — pairs with {@link #home()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon homeFilled() {
     return homeFilled(DEFAULT_SIZE);
   }
@@ -288,7 +360,13 @@ public final class MaterialIcons {
     return load("home_fill", size);
   }
 
-  /** Heart / favorite glyph (outline). */
+  /**
+   * Heart / favorite glyph (outline).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon favorite() {
     return favorite(DEFAULT_SIZE);
   }
@@ -307,6 +385,10 @@ public final class MaterialIcons {
 
   /**
    * Heart / favorite glyph (filled / solid) — pairs with {@link #favorite()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
    */
   public static FlatSVGIcon favoriteFilled() {
     return favoriteFilled(DEFAULT_SIZE);
@@ -324,7 +406,13 @@ public final class MaterialIcons {
     return load("favorite_fill", size);
   }
 
-  /** Five-point star glyph (outline). */
+  /**
+   * Five-point star glyph (outline).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon star() {
     return star(DEFAULT_SIZE);
   }
@@ -341,7 +429,13 @@ public final class MaterialIcons {
     return load("star", size);
   }
 
-  /** Five-point star glyph (filled / solid) — pairs with {@link #star()} as the "active" state. */
+  /**
+   * Five-point star glyph (filled / solid) — pairs with {@link #star()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon starFilled() {
     return starFilled(DEFAULT_SIZE);
   }
@@ -358,7 +452,13 @@ public final class MaterialIcons {
     return load("star_fill", size);
   }
 
-  /** Plus / add glyph. */
+  /**
+   * Plus / add glyph.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon add() {
     return add(DEFAULT_SIZE);
   }
@@ -375,7 +475,13 @@ public final class MaterialIcons {
     return load("add", size);
   }
 
-  /** Minus / remove glyph (horizontal bar). */
+  /**
+   * Minus / remove glyph (horizontal bar).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon remove() {
     return remove(DEFAULT_SIZE);
   }
@@ -392,7 +498,13 @@ public final class MaterialIcons {
     return load("remove", size);
   }
 
-  /** Checkmark glyph. */
+  /**
+   * Checkmark glyph.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon check() {
     return check(DEFAULT_SIZE);
   }
@@ -528,7 +640,13 @@ public final class MaterialIcons {
     return load("error", size);
   }
 
-  /** Eye / visibility glyph (outline). */
+  /**
+   * Eye / visibility glyph (outline).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon visibility() {
     return visibility(DEFAULT_SIZE);
   }
@@ -548,6 +666,10 @@ public final class MaterialIcons {
   /**
    * Eye / visibility glyph (filled / solid) — pairs with {@link #visibility()} as the "active"
    * state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
    */
   public static FlatSVGIcon visibilityFilled() {
     return visibilityFilled(DEFAULT_SIZE);
@@ -565,7 +687,13 @@ public final class MaterialIcons {
     return load("visibility_fill", size);
   }
 
-  /** Anchor glyph (outline) — used for "fixed/locked to position" affordances. */
+  /**
+   * Anchor glyph (outline) — used for "fixed/locked to position" affordances.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon anchor() {
     return anchor(DEFAULT_SIZE);
   }
@@ -582,7 +710,13 @@ public final class MaterialIcons {
     return load("anchor", size);
   }
 
-  /** Anchor glyph (filled / solid) — pairs with {@link #anchor()} as the "active" state. */
+  /**
+   * Anchor glyph (filled / solid) — pairs with {@link #anchor()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon anchorFilled() {
     return anchorFilled(DEFAULT_SIZE);
   }
@@ -599,7 +733,13 @@ public final class MaterialIcons {
     return load("anchor_fill", size);
   }
 
-  /** Grid-view (cards/tiles) glyph. */
+  /**
+   * Grid-view (cards/tiles) glyph.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon gridView() {
     return gridView(DEFAULT_SIZE);
   }
@@ -616,7 +756,13 @@ public final class MaterialIcons {
     return load("grid_view", size);
   }
 
-  /** Generic table glyph. */
+  /**
+   * Generic table glyph.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon table() {
     return table(DEFAULT_SIZE);
   }
@@ -633,7 +779,13 @@ public final class MaterialIcons {
     return load("table", size);
   }
 
-  /** Fine background-grid glyph — pairs well as a "show grid overlay" toggle. */
+  /**
+   * Fine background-grid glyph — pairs well as a "show grid overlay" toggle.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon backgroundGridSmall() {
     return backgroundGridSmall(DEFAULT_SIZE);
   }
@@ -650,7 +802,13 @@ public final class MaterialIcons {
     return load("background_grid_small", size);
   }
 
-  /** Select-all glyph. */
+  /**
+   * Select-all glyph.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon selectAll() {
     return selectAll(DEFAULT_SIZE);
   }
@@ -667,7 +825,13 @@ public final class MaterialIcons {
     return load("select_all", size);
   }
 
-  /** Deselect glyph (counterpart to select-all). */
+  /**
+   * Deselect glyph (counterpart to select-all).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.1.0
+   */
   public static FlatSVGIcon deselect() {
     return deselect(DEFAULT_SIZE);
   }
@@ -710,7 +874,13 @@ public final class MaterialIcons {
     return load(name, size);
   }
 
-  /** Downward chevron — disclosure / dropdown / expand indicator. */
+  /**
+   * Downward chevron — disclosure / dropdown / expand indicator.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static FlatSVGIcon expandMore() {
     return expandMore(DEFAULT_SIZE);
   }
@@ -727,7 +897,13 @@ public final class MaterialIcons {
     return load("expand_more", size);
   }
 
-  /** Upward chevron — collapse indicator (pairs with {@link #expandMore()}). */
+  /**
+   * Upward chevron — collapse indicator (pairs with {@link #expandMore()}).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static FlatSVGIcon expandLess() {
     return expandLess(DEFAULT_SIZE);
   }
@@ -894,6 +1070,10 @@ public final class MaterialIcons {
   /**
    * Vertical 3-dot overflow glyph — M3 standard for "more actions" affordance in headers, app bars,
    * list items, and card trailing-actions slots.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.2.0
    */
   public static FlatSVGIcon moreVert() {
     return moreVert(DEFAULT_SIZE);
@@ -911,7 +1091,13 @@ public final class MaterialIcons {
     return load("more_vert", size);
   }
 
-  /** Rotate 90° counter-clockwise glyph. */
+  /**
+   * Rotate 90° counter-clockwise glyph.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static FlatSVGIcon rotate90DegreesCcw() {
     return rotate90DegreesCcw(DEFAULT_SIZE);
   }
@@ -928,7 +1114,13 @@ public final class MaterialIcons {
     return load("rotate_90_degrees_ccw", size);
   }
 
-  /** Rotate 90° clockwise glyph — pairs with {@link #rotate90DegreesCcw()}. */
+  /**
+   * Rotate 90° clockwise glyph — pairs with {@link #rotate90DegreesCcw()}.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static FlatSVGIcon rotate90DegreesCw() {
     return rotate90DegreesCw(DEFAULT_SIZE);
   }
@@ -945,7 +1137,13 @@ public final class MaterialIcons {
     return load("rotate_90_degrees_cw", size);
   }
 
-  /** Rotate-left glyph (curved arrow). */
+  /**
+   * Rotate-left glyph (curved arrow).
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static FlatSVGIcon rotateLeft() {
     return rotateLeft(DEFAULT_SIZE);
   }
@@ -962,7 +1160,13 @@ public final class MaterialIcons {
     return load("rotate_left", size);
   }
 
-  /** Rotate-right glyph (curved arrow) — pairs with {@link #rotateLeft()}. */
+  /**
+   * Rotate-right glyph (curved arrow) — pairs with {@link #rotateLeft()}.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static FlatSVGIcon rotateRight() {
     return rotateRight(DEFAULT_SIZE);
   }
@@ -979,7 +1183,13 @@ public final class MaterialIcons {
     return load("rotate_right", size);
   }
 
-  /** Auto-renew glyph (two-arrow loop) — refresh / sync affordance. */
+  /**
+   * Auto-renew glyph (two-arrow loop) — refresh / sync affordance.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static FlatSVGIcon autorenew() {
     return autorenew(DEFAULT_SIZE);
   }
@@ -998,6 +1208,10 @@ public final class MaterialIcons {
 
   /**
    * Cached glyph (single-arrow loop) — alternate refresh styling, pairs with {@link #autorenew()}.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.2.0
    */
   public static FlatSVGIcon cached() {
     return cached(DEFAULT_SIZE);
@@ -1015,7 +1229,13 @@ public final class MaterialIcons {
     return load("cached", size);
   }
 
-  /** Start / play glyph. */
+  /**
+   * Start / play glyph.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static FlatSVGIcon start() {
     return start(DEFAULT_SIZE);
   }
@@ -1032,7 +1252,13 @@ public final class MaterialIcons {
     return load("start", size);
   }
 
-  /** Keyboard-tab glyph — tab-advance affordance, pairs with {@link #start()}. */
+  /**
+   * Keyboard-tab glyph — tab-advance affordance, pairs with {@link #start()}.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static FlatSVGIcon keyboardTab() {
     return keyboardTab(DEFAULT_SIZE);
   }
@@ -1049,7 +1275,13 @@ public final class MaterialIcons {
     return load("keyboard_tab", size);
   }
 
-  /** Light-mode glyph (outline) — a sun; the "light theme" affordance. */
+  /**
+   * Light-mode glyph (outline) — a sun; the "light theme" affordance.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon lightMode() {
     return lightMode(DEFAULT_SIZE);
   }
@@ -1066,7 +1298,13 @@ public final class MaterialIcons {
     return load("light_mode", size);
   }
 
-  /** Light-mode glyph (filled / solid) — pairs with {@link #lightMode()} as the "active" state. */
+  /**
+   * Light-mode glyph (filled / solid) — pairs with {@link #lightMode()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon lightModeFilled() {
     return lightModeFilled(DEFAULT_SIZE);
   }
@@ -1083,7 +1321,13 @@ public final class MaterialIcons {
     return load("light_mode_fill", size);
   }
 
-  /** Dark-mode glyph (outline) — a crescent moon; the "dark theme" affordance. */
+  /**
+   * Dark-mode glyph (outline) — a crescent moon; the "dark theme" affordance.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon darkMode() {
     return darkMode(DEFAULT_SIZE);
   }
@@ -1100,7 +1344,13 @@ public final class MaterialIcons {
     return load("dark_mode", size);
   }
 
-  /** Dark-mode glyph (filled / solid) — pairs with {@link #darkMode()} as the "active" state. */
+  /**
+   * Dark-mode glyph (filled / solid) — pairs with {@link #darkMode()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon darkModeFilled() {
     return darkModeFilled(DEFAULT_SIZE);
   }
@@ -1120,6 +1370,10 @@ public final class MaterialIcons {
   /**
    * Brightness-auto glyph (outline) — an "A" inside a sun; the "follow the system theme"
    * affordance.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
    */
   public static FlatSVGIcon brightnessAuto() {
     return brightnessAuto(DEFAULT_SIZE);
@@ -1140,6 +1394,10 @@ public final class MaterialIcons {
   /**
    * Brightness-auto glyph (filled / solid) — pairs with {@link #brightnessAuto()} as the "active"
    * state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
    */
   public static FlatSVGIcon brightnessAutoFilled() {
     return brightnessAutoFilled(DEFAULT_SIZE);
@@ -1157,7 +1415,13 @@ public final class MaterialIcons {
     return load("brightness_auto_fill", size);
   }
 
-  /** Artist-palette glyph (outline) — a colour / theme affordance. */
+  /**
+   * Artist-palette glyph (outline) — a colour / theme affordance.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon palette() {
     return palette(DEFAULT_SIZE);
   }
@@ -1176,6 +1440,10 @@ public final class MaterialIcons {
 
   /**
    * Artist-palette glyph (filled / solid) — pairs with {@link #palette()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
    */
   public static FlatSVGIcon paletteFilled() {
     return paletteFilled(DEFAULT_SIZE);
@@ -1193,7 +1461,13 @@ public final class MaterialIcons {
     return load("palette_fill", size);
   }
 
-  /** Eyedropper / colorize glyph (outline) — a colour-pick affordance. */
+  /**
+   * Eyedropper / colorize glyph (outline) — a colour-pick affordance.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon colorize() {
     return colorize(DEFAULT_SIZE);
   }
@@ -1210,7 +1484,13 @@ public final class MaterialIcons {
     return load("colorize", size);
   }
 
-  /** Eyedropper / colorize glyph (filled / solid) — pairs with {@link #colorize()} as "active". */
+  /**
+   * Eyedropper / colorize glyph (filled / solid) — pairs with {@link #colorize()} as "active".
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon colorizeFilled() {
     return colorizeFilled(DEFAULT_SIZE);
   }
@@ -1227,7 +1507,13 @@ public final class MaterialIcons {
     return load("colorize_fill", size);
   }
 
-  /** Widgets / four-square cluster glyph (outline) — the M3 "components / building blocks" mark. */
+  /**
+   * Widgets / four-square cluster glyph (outline) — the M3 "components / building blocks" mark.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon widgets() {
     return widgets(DEFAULT_SIZE);
   }
@@ -1244,7 +1530,13 @@ public final class MaterialIcons {
     return load("widgets", size);
   }
 
-  /** Widgets glyph (filled / solid) — pairs with {@link #widgets()} as the "active" state. */
+  /**
+   * Widgets glyph (filled / solid) — pairs with {@link #widgets()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon widgetsFilled() {
     return widgetsFilled(DEFAULT_SIZE);
   }
@@ -1261,7 +1553,13 @@ public final class MaterialIcons {
     return load("widgets_fill", size);
   }
 
-  /** Layers / stacked-surfaces glyph (outline) — the M3 "layered surface" mark. */
+  /**
+   * Layers / stacked-surfaces glyph (outline) — the M3 "layered surface" mark.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon layers() {
     return layers(DEFAULT_SIZE);
   }
@@ -1278,7 +1576,13 @@ public final class MaterialIcons {
     return load("layers", size);
   }
 
-  /** Layers glyph (filled / solid) — pairs with {@link #layers()} as the "active" state. */
+  /**
+   * Layers glyph (filled / solid) — pairs with {@link #layers()} as the "active" state.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public static FlatSVGIcon layersFilled() {
     return layersFilled(DEFAULT_SIZE);
   }
@@ -1408,12 +1712,24 @@ public final class MaterialIcons {
       this.name = name;
     }
 
-    /** Bare glyph name (no path, no extension, no {@code _fill} suffix). */
+    /**
+     * Bare glyph name (no path, no extension, no {@code _fill} suffix).
+     *
+     * @return the bare glyph name
+     * @version v0.5.0
+     * @since v0.3.0
+     */
     public String name() {
       return name;
     }
 
-    /** Unselected glyph (fill-0) at {@link #DEFAULT_SIZE}. */
+    /**
+     * Unselected glyph (fill-0) at {@link #DEFAULT_SIZE}.
+     *
+     * @return the icon at the default size
+     * @version v0.5.0
+     * @since v0.3.0
+     */
     public FlatSVGIcon unselected() {
       return unselected(DEFAULT_SIZE);
     }
@@ -1434,6 +1750,10 @@ public final class MaterialIcons {
      * Selected glyph (fill-1) at {@link #DEFAULT_SIZE}; falls back to the unfilled glyph if the
      * bundle doesn't ship a fill variant for this symbol — see class-level note on graceful
      * fallback.
+     *
+     * @return the icon at the default size
+     * @version v0.5.0
+     * @since v0.3.0
      */
     public FlatSVGIcon selected() {
       return selected(DEFAULT_SIZE);

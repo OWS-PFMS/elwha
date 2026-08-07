@@ -32,13 +32,20 @@ import javax.swing.JLabel;
  * Exits non-zero on any failed assertion.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class MenuItemSmoke {
 
   private MenuItemSmoke() {}
 
+  /**
+   * Runs the smoke; exits non-zero on any failed check.
+   *
+   * @param args unused
+   * @version v0.5.0
+   * @since v0.4.0
+   */
   public static void main(final String[] args) {
     System.setProperty("java.awt.headless", "true");
     ElwhaTheme.install(

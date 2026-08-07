@@ -20,7 +20,7 @@ import javax.swing.SwingUtilities;
  * headless; exits non-zero if the chain over-collapses.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class MenuSubmenuFocusDiag {
@@ -34,6 +34,14 @@ public final class MenuSubmenuFocusDiag {
   private static ElwhaMenu advancedMenu;
   private static ElwhaSubMenuItem share;
 
+  /**
+   * Runs the diagnostic.
+   *
+   * @param args unused
+   * @throws Exception if the run fails
+   * @version v0.5.0
+   * @since v0.4.0
+   */
   public static void main(final String[] args) throws Exception {
     if (GraphicsEnvironment.isHeadless()) {
       System.out.println("skip (headless) — focus diagnostic needs a display");

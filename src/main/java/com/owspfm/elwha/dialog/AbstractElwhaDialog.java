@@ -29,7 +29,7 @@ import javax.swing.JLayeredPane;
  * layered-pane glue.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 abstract class AbstractElwhaDialog extends AbstractElwhaOverlay {
@@ -101,6 +101,8 @@ abstract class AbstractElwhaDialog extends AbstractElwhaOverlay {
   }
 
   /**
+   * Returns whether the Escape key dismisses this dialog (set at build time).
+   *
    * @return whether the Escape key dismisses this dialog (set at build time)
    */
   protected final boolean isDismissibleByEsc() {

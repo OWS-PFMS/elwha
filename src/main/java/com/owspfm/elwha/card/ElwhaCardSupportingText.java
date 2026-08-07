@@ -20,8 +20,9 @@ import javax.swing.SwingConstants;
  *
  * <p>See {@code docs/research/elwha-card-v3-spec.md} §4.3.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardSupportingText extends JLabel {
@@ -89,6 +90,8 @@ public final class ElwhaCardSupportingText extends JLabel {
   }
 
   /**
+   * Returns the active type role.
+   *
    * @return the active type role
    * @version v0.2.0
    * @since v0.2.0
@@ -113,6 +116,8 @@ public final class ElwhaCardSupportingText extends JLabel {
   }
 
   /**
+   * Returns the active foreground color role.
+   *
    * @return the active foreground color role
    * @version v0.2.0
    * @since v0.2.0

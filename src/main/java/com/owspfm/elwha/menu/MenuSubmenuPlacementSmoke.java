@@ -21,13 +21,21 @@ import javax.swing.SwingUtilities;
  * lands beside (not below) its opener. Exits non-zero on any failed assertion.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class MenuSubmenuPlacementSmoke {
 
   private MenuSubmenuPlacementSmoke() {}
 
+  /**
+   * Runs the smoke; exits non-zero on any failed check.
+   *
+   * @param args unused
+   * @throws Exception if the run fails
+   * @version v0.5.0
+   * @since v0.4.0
+   */
   public static void main(final String[] args) throws Exception {
     final boolean headless = GraphicsEnvironment.isHeadless();
     if (headless) {

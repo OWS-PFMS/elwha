@@ -32,8 +32,9 @@ import java.util.Objects;
  *
  * <p>See {@code docs/research/elwha-card-v3-spec.md} §6.1.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardChevron extends ElwhaIconButton {
@@ -57,6 +58,8 @@ public final class ElwhaCardChevron extends ElwhaIconButton {
   }
 
   /**
+   * Returns the card this chevron drives.
+   *
    * @return the card this chevron drives
    * @version v0.2.0
    * @since v0.2.0

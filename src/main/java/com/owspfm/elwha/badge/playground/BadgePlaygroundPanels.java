@@ -41,7 +41,7 @@ import javax.swing.UIManager;
  * lives in a sibling package; consumers must not depend on this type.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class BadgePlaygroundPanels {
@@ -268,6 +268,8 @@ public final class BadgePlaygroundPanels {
    */
   public interface BadgeSlot {
     /**
+     * The badge currently in the slot.
+     *
      * @return the badge currently in the slot, or {@code null} if none
      */
     ElwhaBadge get();

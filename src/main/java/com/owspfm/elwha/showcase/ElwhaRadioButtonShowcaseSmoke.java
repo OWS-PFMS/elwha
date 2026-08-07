@@ -20,7 +20,7 @@ import javax.swing.SwingUtilities;
  * control to prove the control rail applies to the live group.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaRadioButtonShowcaseSmoke {
@@ -33,6 +33,7 @@ public final class ElwhaRadioButtonShowcaseSmoke {
    * @param args unused
    * @version v0.4.0
    * @since v0.4.0
+   * @throws Exception if the run fails
    */
   public static void main(final String[] args) throws Exception {
     System.setProperty("java.awt.headless", "true");

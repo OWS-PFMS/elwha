@@ -28,8 +28,9 @@ import javax.swing.JPanel;
  * repeated {@link #addTrailing} calls — header trailing is polymorphic across icon buttons, chips,
  * and overflow triggers.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardHeader extends JComponent {
@@ -194,6 +195,8 @@ public final class ElwhaCardHeader extends JComponent {
   }
 
   /**
+   * Returns the leading component, or {@code null} if none.
+   *
    * @return the leading component, or {@code null} if none
    * @version v0.2.0
    * @since v0.2.0
@@ -257,6 +260,8 @@ public final class ElwhaCardHeader extends JComponent {
   }
 
   /**
+   * Returns the current title atom, or {@code null} if none.
+   *
    * @return the current title atom, or {@code null} if none
    * @version v0.2.0
    * @since v0.2.0
@@ -301,6 +306,8 @@ public final class ElwhaCardHeader extends JComponent {
   }
 
   /**
+   * Returns the current subtitle atom, or {@code null} if none.
+   *
    * @return the current subtitle atom, or {@code null} if none
    * @version v0.2.0
    * @since v0.2.0
@@ -346,6 +353,8 @@ public final class ElwhaCardHeader extends JComponent {
   }
 
   /**
+   * Returns an unmodifiable snapshot of the trailing affordances in insertion order.
+   *
    * @return an unmodifiable snapshot of the trailing affordances in insertion order
    * @version v0.2.0
    * @since v0.2.0

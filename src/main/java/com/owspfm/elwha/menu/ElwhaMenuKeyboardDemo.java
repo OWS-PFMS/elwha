@@ -30,13 +30,20 @@ import javax.swing.SwingUtilities;
  * the dismiss cause.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaMenuKeyboardDemo {
 
   private ElwhaMenuKeyboardDemo() {}
 
+  /**
+   * Launches the demo.
+   *
+   * @param args unused
+   * @version v0.5.0
+   * @since v0.4.0
+   */
   public static void main(final String[] args) {
     final boolean dark = args.length > 0 && "dark".equalsIgnoreCase(args[0]);
     ElwhaTheme.install(

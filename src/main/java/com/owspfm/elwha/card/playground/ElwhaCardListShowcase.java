@@ -33,8 +33,9 @@ import javax.swing.JTextArea;
  * <p>Use Cmd+↑ / Cmd+↓ to reorder, Delete / Cmd+Backspace to remove, right-click for the context
  * menu, click + drag to reorder with the mouse.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardListShowcase extends JPanel {

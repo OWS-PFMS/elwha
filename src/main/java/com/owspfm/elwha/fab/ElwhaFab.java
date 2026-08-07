@@ -76,8 +76,9 @@ import javax.swing.Timer;
  * RipplePainter} (press ripple) → icon glyph. Per design doc §6.4 the icon, label, and state-layer
  * overlay all share the active style's on-container color.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaFab extends JComponent implements ShadowBearing {
@@ -1295,6 +1296,14 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
    * @since v0.3.0
    */
   protected class AccessibleElwhaFab extends AccessibleJComponent {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.3.0
+     */
+    protected AccessibleElwhaFab() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {

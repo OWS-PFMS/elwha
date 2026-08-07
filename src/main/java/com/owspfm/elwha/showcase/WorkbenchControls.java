@@ -18,8 +18,9 @@ import javax.swing.JPanel;
  * checkbox, …), then drop it in with {@link #addControl(String, JComponent)}; group related
  * controls under {@link #addSection(String)}.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class WorkbenchControls extends JPanel {

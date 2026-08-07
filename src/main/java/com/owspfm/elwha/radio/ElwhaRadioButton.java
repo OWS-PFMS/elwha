@@ -105,8 +105,9 @@ import javax.swing.event.EventListenerList;
  * (programmatic semantics), and an {@link AccessibleRelation#MEMBER_OF} relation answering the
  * current {@link ElwhaRadioGroup} membership.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public class ElwhaRadioButton extends JComponent {
@@ -790,6 +791,14 @@ public class ElwhaRadioButton extends JComponent {
    */
   protected class AccessibleElwhaRadioButton extends AccessibleJComponent
       implements AccessibleAction, AccessibleValue {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.4.0
+     */
+    protected AccessibleElwhaRadioButton() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {

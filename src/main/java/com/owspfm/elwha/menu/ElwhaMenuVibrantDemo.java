@@ -28,13 +28,20 @@ import javax.swing.SwingUtilities;
  * free via {@link ElwhaTheme}.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaMenuVibrantDemo {
 
   private ElwhaMenuVibrantDemo() {}
 
+  /**
+   * Launches the demo.
+   *
+   * @param args unused
+   * @version v0.5.0
+   * @since v0.4.0
+   */
   public static void main(final String[] args) {
     final boolean dark = args.length > 0 && "dark".equalsIgnoreCase(args[0]);
     ElwhaTheme.install(

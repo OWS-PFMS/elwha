@@ -34,8 +34,9 @@ import javax.swing.KeyStroke;
  *
  * <p>See {@code docs/research/elwha-card-v3-spec.md} §6.2.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardExpandLink extends JLabel {
@@ -74,6 +75,8 @@ public final class ElwhaCardExpandLink extends JLabel {
   }
 
   /**
+   * Returns the card this link drives.
+   *
    * @return the card this link drives
    * @version v0.2.0
    * @since v0.2.0
@@ -83,6 +86,8 @@ public final class ElwhaCardExpandLink extends JLabel {
   }
 
   /**
+   * Returns the text shown when the card is collapsed.
+   *
    * @return the text shown when the card is collapsed
    * @version v0.2.0
    * @since v0.2.0
@@ -92,6 +97,8 @@ public final class ElwhaCardExpandLink extends JLabel {
   }
 
   /**
+   * Returns the text shown when the card is expanded.
+   *
    * @return the text shown when the card is expanded
    * @version v0.2.0
    * @since v0.2.0
@@ -116,6 +123,8 @@ public final class ElwhaCardExpandLink extends JLabel {
   }
 
   /**
+   * Returns the active color role.
+   *
    * @return the active color role
    * @version v0.2.0
    * @since v0.2.0

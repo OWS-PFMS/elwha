@@ -63,6 +63,14 @@ import javax.swing.SwingUtilities;
  */
 public abstract class AbstractElwhaOverlay {
 
+  /**
+   * Creates the overlay host; subclasses configure their surface via the template hooks.
+   *
+   * @version v0.5.0
+   * @since v0.4.0
+   */
+  protected AbstractElwhaOverlay() {}
+
   /** Entrance / exit duration — M3 medium2 (300 ms). */
   protected static final int MOTION_MS = MorphAnimator.MEDIUM2_MS;
 
@@ -648,8 +656,13 @@ public abstract class AbstractElwhaOverlay {
     }
   }
 
-  // Stretches the backdrop over the full layered pane, then delegates surface sizing/placement to
-  // the subclass. Re-run on host resize.
+  /**
+   * Stretches the backdrop over the full layered pane, then delegates surface sizing/placement to
+   * the subclass. Re-run on host resize.
+   *
+   * @version v0.5.0
+   * @since v0.4.0
+   */
   protected final void relayout() {
     if (layeredPane == null) {
       return;

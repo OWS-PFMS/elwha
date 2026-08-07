@@ -34,8 +34,9 @@ import javax.swing.JComponent;
  *
  * <p>See {@code docs/research/elwha-card-v3-spec.md} §5.3.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardActions extends JComponent {
@@ -85,6 +86,8 @@ public final class ElwhaCardActions extends JComponent {
   }
 
   /**
+   * Returns an unmodifiable snapshot of the leading actions in insertion order.
+   *
    * @return an unmodifiable snapshot of the leading actions in insertion order
    * @version v0.2.0
    * @since v0.2.0
@@ -129,6 +132,8 @@ public final class ElwhaCardActions extends JComponent {
   }
 
   /**
+   * Returns an unmodifiable snapshot of the trailing actions in insertion order.
+   *
    * @return an unmodifiable snapshot of the trailing actions in insertion order
    * @version v0.2.0
    * @since v0.2.0

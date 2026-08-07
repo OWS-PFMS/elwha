@@ -38,8 +38,9 @@ import javax.swing.Timer;
  * — and the item is added to a parent menu through the usual {@link ElwhaMenu.Builder#addItem},
  * since an {@code ElwhaSubMenuItem} <em>is an</em> {@link ElwhaMenuItem}.
  *
+ * @serial exclude
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaSubMenuItem extends ElwhaMenuItem {

@@ -60,6 +60,15 @@ The genuine in-scope debt, all warning types:
   precise per-entity `@version` bumps throughout. Skips: `card/v1` (#96 deletes), the list
   families (#70 deletes — their replacement `ElwhaItemList` is documented to the house style as
   new code under #69).
+
+  **S1 executed (2026-08-07) — amendment:** the sweep went wider than planned (demos/smokes
+  included — 33 cheap sites) and landed at **zero doclint warnings outside `card/v1`** (122
+  remain there). The `failOnWarnings` flip therefore **rides #96's deletion PR** — it cannot flip
+  while `card/v1` exists, and once v1 is gone the flip is a two-line pom change against an
+  already-clean tree. The list families were swept too (they were in the serialized-form bucket;
+  the tags die with #70's deletions — no cost). Surprise from the sweep: the true remaining
+  no-comment API gaps were `ElwhaButton.startWidthBorrow` and `AbstractElwhaOverlay.relayout`, not
+  the four sites the first classification estimated — same order of magnitude, different names.
 - **S2 — consumer usability.** `package-info.java` for `theme` / `tabs` / `icons`; the overview
   page decision for the published javadoc jar; cross-reference audit (anchors ↔ hosts, list
   families ↔ `ElwhaList<T>`, `ElwhaSurface` ↔ subclasses); class-doc spot-audit against the style

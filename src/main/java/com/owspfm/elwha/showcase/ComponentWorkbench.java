@@ -60,8 +60,9 @@ import javax.swing.UIManager;
  * the active segment. The {@code Surface} segment stays scaffold-special (it reconfigures the
  * stage) and is not a {@link Facet}.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ComponentWorkbench extends JPanel {

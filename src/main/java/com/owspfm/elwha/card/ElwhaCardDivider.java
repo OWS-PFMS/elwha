@@ -13,8 +13,9 @@ import javax.swing.JComponent;
  *
  * <p>See {@code docs/research/elwha-card-v3-spec.md} §5.4.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardDivider extends JComponent {
@@ -45,6 +46,8 @@ public final class ElwhaCardDivider extends JComponent {
   }
 
   /**
+   * Returns the divider style.
+   *
    * @return the divider style
    * @version v0.2.0
    * @since v0.2.0

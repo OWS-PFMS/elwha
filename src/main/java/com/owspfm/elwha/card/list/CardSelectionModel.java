@@ -11,12 +11,21 @@ import java.util.function.Consumer;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class CardSelectionModel<T> {
 
   private CardSelectionMode mode = CardSelectionMode.NONE;
+
+  /**
+   * Creates a selection model in {@link CardSelectionMode#NONE} with an empty selection.
+   *
+   * @version v0.5.0
+   * @since v0.2.0
+   */
+  public CardSelectionModel() {}
+
   private final Set<T> selected = new LinkedHashSet<>();
   private final java.util.List<Consumer<CardSelectionModel<T>>> listeners =
       new java.util.ArrayList<>();
@@ -38,6 +47,8 @@ public final class CardSelectionModel<T> {
   }
 
   /**
+   * Returns the active selection mode.
+   *
    * @return the active selection mode
    * @version v0.2.0
    * @since v0.2.0
@@ -61,6 +72,8 @@ public final class CardSelectionModel<T> {
   }
 
   /**
+   * Returns an unmodifiable snapshot of the selected set, insertion-ordered.
+   *
    * @return an unmodifiable snapshot of the selected set, insertion-ordered
    * @version v0.2.0
    * @since v0.2.0
@@ -114,9 +127,11 @@ public final class CardSelectionModel<T> {
   }
 
   /**
+   * Returns whether the item is currently selected.
+   *
    * @param item the item
    * @return whether the item is currently selected
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public boolean isSelected(final T item) {

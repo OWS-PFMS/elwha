@@ -23,8 +23,9 @@ import javax.swing.JComponent;
  * thumbnail carries no event surface — it's decoration. See {@code
  * docs/research/elwha-card-v3-spec.md} §4.5.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardThumbnail extends JComponent {
@@ -65,6 +66,8 @@ public final class ElwhaCardThumbnail extends JComponent {
   }
 
   /**
+   * Returns the active thumbnail shape.
+   *
    * @return the active thumbnail shape
    * @version v0.2.0
    * @since v0.2.0
@@ -93,6 +96,9 @@ public final class ElwhaCardThumbnail extends JComponent {
   }
 
   /**
+   * Returns the thumbnail size in dp (named {@code getSizeDp} rather than {@code getSize} to avoid
+   * a clash with {@link java.awt.Component#getSize()}, which returns {@link Dimension}).
+   *
    * @return the thumbnail size in dp (named {@code getSizeDp} rather than {@code getSize} to avoid
    *     a clash with {@link java.awt.Component#getSize()}, which returns {@link Dimension})
    * @version v0.2.0

@@ -67,13 +67,20 @@ import javax.swing.WindowConstants;
  * on JDK 21.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class CardFixesDemo {
 
   private CardFixesDemo() {}
 
+  /**
+   * Launches the demo.
+   *
+   * @param args unused
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static void main(final String[] args) {
     SwingUtilities.invokeLater(CardFixesDemo::launch);
   }

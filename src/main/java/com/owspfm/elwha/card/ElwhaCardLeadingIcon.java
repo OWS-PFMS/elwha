@@ -19,8 +19,9 @@ import javax.swing.JLabel;
  *
  * <p>See {@code docs/research/elwha-card-v3-spec.md} §4.4.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardLeadingIcon extends JLabel {
@@ -64,6 +65,8 @@ public final class ElwhaCardLeadingIcon extends JLabel {
   }
 
   /**
+   * Returns the active color role.
+   *
    * @return the active color role
    * @version v0.2.0
    * @since v0.2.0

@@ -99,8 +99,9 @@ import javax.swing.Timer;
  * ElwhaButtonGroup} can size segments to fill and butt them edge-to-edge. Clearing the override
  * ({@code setCornerRadii(null)}) returns the button to ordinary content-hugging rendering.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public class ElwhaButton extends JComponent implements ShadowBearing {
@@ -1352,6 +1353,16 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
     release.start();
   }
 
+  /**
+   * Starts a group-driven width-ripple borrow — the painted width morphs toward the natural width
+   * scaled by {@code factor} ({@code > 0} grows, {@code < 0} lends width to the pressed neighbor).
+   * Called by the hosting {@code ElwhaButtonGroup} on each segment when a segment is pressed; a
+   * factor of {@code 0} delegates to {@link #releaseWidthBorrow()}.
+   *
+   * @param factor the borrow factor, clamped to {@code [-1, 1]}
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public void startWidthBorrow(final float factor) {
     final float clamped = Math.max(-1f, Math.min(1f, factor));
     if (clamped == 0f) {
@@ -1684,6 +1695,14 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
    * @since v0.2.0
    */
   protected class AccessibleElwhaButton extends AccessibleJComponent {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.2.0
+     */
+    protected AccessibleElwhaButton() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {

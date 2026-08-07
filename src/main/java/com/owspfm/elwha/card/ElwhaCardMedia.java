@@ -26,8 +26,9 @@ import javax.swing.JComponent;
  *
  * <p>See {@code docs/research/elwha-card-v3-spec.md} §5.2.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardMedia extends JComponent {
@@ -109,6 +110,8 @@ public final class ElwhaCardMedia extends JComponent {
   }
 
   /**
+   * Returns the active aspect ratio.
+   *
    * @return the active aspect ratio
    * @version v0.2.0
    * @since v0.2.0
@@ -133,6 +136,8 @@ public final class ElwhaCardMedia extends JComponent {
   }
 
   /**
+   * Returns the explicit preferred height in dp, or {@code -1} if aspect-ratio sizing is in effect.
+   *
    * @return the explicit preferred height in dp, or {@code -1} if aspect-ratio sizing is in effect
    * @version v0.2.0
    * @since v0.2.0
@@ -166,6 +171,8 @@ public final class ElwhaCardMedia extends JComponent {
   }
 
   /**
+   * Returns whether the media is marked decorative (hidden from AT).
+   *
    * @return whether the media is marked decorative (hidden from AT)
    * @version v0.2.0
    * @since v0.2.0
@@ -191,6 +198,8 @@ public final class ElwhaCardMedia extends JComponent {
   }
 
   /**
+   * Returns the alt-text description, or {@code null} if none.
+   *
    * @return the alt-text description, or {@code null} if none
    * @version v0.2.0
    * @since v0.2.0

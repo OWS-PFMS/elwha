@@ -65,8 +65,9 @@ import javax.swing.Timer;
  * ElwhaSubMenuItem} — the one sanctioned sibling (a menu item that hosts a nested {@link
  * ElwhaMenu}; design §3, research §Q′). It is otherwise closed to extension.
  *
+ * @serial exclude
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
@@ -180,6 +181,8 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
   // ------------------------------------------------------------- slots
 
   /**
+   * Returns the leading icon, or {@code null}.
+   *
    * @return the leading icon, or {@code null}
    */
   public Icon getLeadingIcon() {
@@ -201,6 +204,8 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
   }
 
   /**
+   * Returns the item label.
+   *
    * @return the item label
    */
   public String getLabel() {
@@ -221,6 +226,8 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
   }
 
   /**
+   * Returns the supporting (second-line) text, or {@code null}.
+   *
    * @return the supporting (second-line) text, or {@code null}
    */
   public String getSupportingText() {
@@ -241,6 +248,8 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
   }
 
   /**
+   * Returns the trailing text (e.g. a keyboard shortcut), or {@code null}.
+   *
    * @return the trailing text (e.g. a keyboard shortcut), or {@code null}
    */
   public String getTrailingText() {
@@ -262,6 +271,8 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
   }
 
   /**
+   * Returns the trailing icon, or {@code null}.
+   *
    * @return the trailing icon, or {@code null}
    */
   public Icon getTrailingIcon() {
@@ -283,6 +294,8 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
   }
 
   /**
+   * Returns the swapped-in content slot, or {@code null}.
+   *
    * @return the swapped-in content slot, or {@code null}
    */
   public JComponent getSlot() {
@@ -311,6 +324,8 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
   }
 
   /**
+   * Returns the trailing badge, or {@code null}.
+   *
    * @return the trailing badge, or {@code null}
    */
   public ElwhaBadge getBadge() {
@@ -340,6 +355,8 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
   // -------------------------------------------------------- pushed state
 
   /**
+   * Returns whether this item paints in its selected form.
+   *
    * @return whether this item paints in its selected form
    */
   public boolean isSelected() {
@@ -903,6 +920,14 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
    * @since v0.4.0
    */
   protected final class AccessibleElwhaMenuItem extends AccessibleJComponent {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.4.0
+     */
+    protected AccessibleElwhaMenuItem() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {

@@ -41,8 +41,9 @@ import javax.swing.JComponent;
  * resolved container color) → label glyph (Large only, resolved {@link TypeRole#LABEL_SMALL} font
  * at paint time).
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaBadge extends JComponent {

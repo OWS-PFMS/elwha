@@ -36,13 +36,20 @@ import javax.swing.SwingUtilities;
  * -Dexec.mainClass="com.owspfm.elwha.theme.playground.ShadowPainterDemo"}.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ShadowPainterDemo {
 
   private ShadowPainterDemo() {}
 
+  /**
+   * Launches the demo.
+   *
+   * @param args unused
+   * @version v0.5.0
+   * @since v0.2.0
+   */
   public static void main(String[] args) {
     ElwhaTheme.install(
         ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(Mode.LIGHT).build());

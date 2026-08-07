@@ -19,8 +19,9 @@ import java.util.EventObject;
  *   <li>{@link Type#MOVED} — exactly one item moved from {@code index0} to {@code index1}
  * </ul>
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public class ChipListDataEvent extends EventObject {

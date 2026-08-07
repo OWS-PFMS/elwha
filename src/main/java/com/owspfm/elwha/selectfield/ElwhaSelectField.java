@@ -65,8 +65,9 @@ import javax.swing.event.DocumentListener;
  * Showcase, editable combo, multi-select).
  *
  * @param <T> the option value type
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public class ElwhaSelectField<T> extends JComponent {

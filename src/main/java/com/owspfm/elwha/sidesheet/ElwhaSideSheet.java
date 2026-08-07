@@ -71,6 +71,7 @@ import javax.swing.JPanel;
  * (that's the navigation rail), not interruptive confirmation (the dialog), and not transient
  * command lists (the menu). Keep headlines short; prefer one sheet at a time per edge.
  *
+ * @serial exclude
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.5.0
  * @since v0.5.0
@@ -252,6 +253,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the sheet type.
+   *
    * @return the sheet type
    * @version v0.5.0
    * @since v0.5.0
@@ -280,6 +283,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the logical anchor edge.
+   *
    * @return the logical anchor edge
    * @version v0.5.0
    * @since v0.5.0
@@ -315,6 +320,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the posture.
+   *
    * @return the posture
    * @version v0.5.0
    * @since v0.5.0
@@ -348,6 +355,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the open width in pixels.
+   *
    * @return the open width in pixels
    * @version v0.5.0
    * @since v0.5.0
@@ -376,6 +385,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the headline text, or {@code null}.
+   *
    * @return the headline text, or {@code null}
    * @version v0.5.0
    * @since v0.5.0
@@ -408,6 +419,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the content component, or {@code null}.
+   *
    * @return the content component, or {@code null}
    * @version v0.5.0
    * @since v0.5.0
@@ -443,6 +456,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the footer action buttons, leading-first.
+   *
    * @return the footer action buttons, leading-first; empty when the footer is absent
    * @version v0.5.0
    * @since v0.5.0
@@ -469,6 +484,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns whether the close affordance shows.
+   *
    * @return whether the close affordance shows
    * @version v0.5.0
    * @since v0.5.0
@@ -496,6 +513,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns whether the back affordance shows.
+   *
    * @return whether the back affordance shows
    * @version v0.5.0
    * @since v0.5.0
@@ -517,6 +536,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the back handler, or {@code null}.
+   *
    * @return the back handler, or {@code null}
    * @version v0.5.0
    * @since v0.5.0
@@ -543,6 +564,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns whether the edge divider paints (on a standard sheet).
+   *
    * @return whether the edge divider paints (on a standard sheet)
    * @version v0.5.0
    * @since v0.5.0
@@ -570,6 +593,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns whether the footer divider shows (when the footer exists).
+   *
    * @return whether the footer divider shows (when the footer exists)
    * @version v0.5.0
    * @since v0.5.0
@@ -600,6 +625,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns whether drag-to-dismiss is enabled.
+   *
    * @return whether drag-to-dismiss is enabled
    * @version v0.5.0
    * @since v0.5.0
@@ -683,6 +710,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns whether drag-to-resize is enabled.
+   *
    * @return whether drag-to-resize is enabled
    * @version v0.5.0
    * @since v0.5.0
@@ -711,6 +740,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the minimum resize width.
+   *
    * @return the minimum resize width
    * @version v0.5.0
    * @since v0.5.0
@@ -736,6 +767,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the maximum resize width.
+   *
    * @return the maximum resize width
    * @version v0.5.0
    * @since v0.5.0
@@ -797,6 +830,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the target open state ({@code true} from construction).
+   *
    * @return the target open state ({@code true} from construction); flips immediately on {@link
    *     #setOpen} while the width animation catches up
    * @version v0.5.0
@@ -868,6 +903,9 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns whether the sheet is currently presented modally (between {@link #showModal} and the
+   * end of its teardown).
+   *
    * @return whether the sheet is currently presented modally (between {@link #showModal} and the
    *     end of its teardown)
    * @version v0.5.0
@@ -890,6 +928,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns whether Esc dismisses the modal presentation.
+   *
    * @return whether Esc dismisses the modal presentation
    * @version v0.5.0
    * @since v0.5.0
@@ -912,6 +952,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns whether a scrim click dismisses the modal presentation.
+   *
    * @return whether a scrim click dismisses the modal presentation
    * @version v0.5.0
    * @since v0.5.0
@@ -933,6 +975,8 @@ public final class ElwhaSideSheet extends JComponent {
   }
 
   /**
+   * Returns the close hook, or {@code null}.
+   *
    * @return the close hook, or {@code null}
    * @version v0.5.0
    * @since v0.5.0

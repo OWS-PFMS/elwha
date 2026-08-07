@@ -9,7 +9,7 @@ import java.util.function.Consumer;
  *
  * @param <T> the item type
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public interface CardListModel<T> {
@@ -24,6 +24,8 @@ public interface CardListModel<T> {
   void setItems(List<T> items);
 
   /**
+   * Returns an unmodifiable snapshot of the current items.
+   *
    * @return an unmodifiable snapshot of the current items
    * @version v0.2.0
    * @since v0.2.0

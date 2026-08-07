@@ -103,8 +103,9 @@ import javax.swing.Timer;
  * <p>Colors resolve at paint time (the binding rule) — see {@code
  * docs/research/elwha-tabs-design.md} §4–§5.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaTab extends JComponent implements IconBearing, Accessible {
@@ -1038,6 +1039,14 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
    * @since v0.4.0
    */
   protected class AccessibleElwhaTab extends AccessibleJComponent implements AccessibleAction {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.4.0
+     */
+    protected AccessibleElwhaTab() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {

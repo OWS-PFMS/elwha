@@ -83,8 +83,9 @@ import javax.swing.Timer;
  * chip.addActionListener(evt -> System.out.println("toggled: " + chip.isSelected()));
  * }</pre>
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public class ElwhaChip extends JPanel {
@@ -1434,6 +1435,15 @@ public class ElwhaChip extends JPanel {
    * @since v0.1.0
    */
   protected class AccessibleElwhaChip extends AccessibleJPanel {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.1.0
+     */
+    protected AccessibleElwhaChip() {}
+
     @Override
     public AccessibleRole getAccessibleRole() {
       return interactionMode == ChipInteractionMode.SELECTABLE
