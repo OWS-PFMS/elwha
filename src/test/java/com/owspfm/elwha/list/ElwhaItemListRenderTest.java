@@ -101,7 +101,7 @@ class ElwhaItemListRenderTest {
   // ------------------------------------------------------- ElwhaList contract
 
   @Test
-  void theListImplementsTheCrossCuttingContract() {
+  void listImplementsTheCrossCuttingContract() {
     listOf("a");
 
     assertThat(list).as("the list honors the family contract").isInstanceOf(ElwhaList.class);
@@ -379,7 +379,7 @@ class ElwhaItemListRenderTest {
   // ------------------------------------------------------ anchor partition
 
   @Test
-  void theAnchoredItemLeadsAndIsReported() {
+  void anchoredItemLeadsAndIsReported() {
     listOf("a", "b", "c").setAnchorPredicate("b"::equals);
 
     assertThat(list.getMovementMode())
