@@ -1,11 +1,12 @@
 package com.owspfm.elwha.switches;
 
+import static com.owspfm.elwha.testkit.WaitFor.onEdt;
+import static com.owspfm.elwha.testkit.WaitFor.waitFor;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.testkit.GuiToolkit;
+import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
-import com.owspfm.elwha.theme.ElwhaTheme;
-import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Color;
@@ -17,9 +18,7 @@ import java.awt.Robot;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BooleanSupplier;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.AfterEach;
@@ -48,8 +47,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(GuiToolkit.class)
 class ElwhaSwitchGuiTest {
 
-  private static final int TIMEOUT_MS = 4000;
-
   private JFrame frame;
   private ElwhaSwitch first;
   private ElwhaSwitch second;
@@ -65,8 +62,7 @@ class ElwhaSwitchGuiTest {
     SwingUtilities.invokeAndWait(
         () -> {
           MorphAnimator.setReducedMotion(true);
-          ElwhaTheme.install(
-              ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(Mode.LIGHT).build());
+          ThemeExtension.install(Mode.LIGHT);
           first = new ElwhaSwitch();
           second = new ElwhaSwitch();
           frame = new JFrame("ElwhaSwitchGuiTest");
@@ -149,27 +145,9 @@ class ElwhaSwitchGuiTest {
     return new Rectangle(p.x, p.y, s.getWidth(), s.getHeight());
   }
 
-  private static boolean onEdt(final BooleanSupplier read) throws Exception {
-    final AtomicBoolean value = new AtomicBoolean();
-    SwingUtilities.invokeAndWait(() -> value.set(read.getAsBoolean()));
-    return value.get();
-  }
-
   private static Point onEdtPoint(final java.util.function.Supplier<Point> read) throws Exception {
     final AtomicReference<Point> value = new AtomicReference<>();
     SwingUtilities.invokeAndWait(() -> value.set(read.get()));
     return value.get();
-  }
-
-  /** Polls the condition on the EDT every 20ms until true or {@link #TIMEOUT_MS} elapses. */
-  private static void waitFor(final String what, final BooleanSupplier condition) throws Exception {
-    final long deadline = System.currentTimeMillis() + TIMEOUT_MS;
-    while (System.currentTimeMillis() < deadline) {
-      if (onEdt(condition)) {
-        return;
-      }
-      Thread.sleep(20);
-    }
-    assertThat(onEdt(condition)).as(what).isTrue();
   }
 }

@@ -206,6 +206,19 @@ def changed_java_files(base_ref: str) -> Tuple[List[Path], List[Path]]:
         "--", "src/", "test/",
     )
 
+    def in_scope(path: str) -> bool:
+        """Whether the @version/@since convention applies to this file.
+
+        Test sources are exempt EXCEPT the shared testkit fixture library,
+        which is API-like and keeps the discipline (#529 triage §7 / #536).
+        Per-test classes would otherwise pay a re-tag tax on every touch.
+        """
+        if not path.endswith(".java"):
+            return False
+        if path.startswith("src/test/"):
+            return "/elwha/testkit/" in path
+        return True
+
     modified: List[Path] = []
     added: List[Path] = []
     for line in raw.splitlines():
@@ -217,15 +230,15 @@ def changed_java_files(base_ref: str) -> Tuple[List[Path], List[Path]]:
         if code == "R":
             similarity = int(status[1:]) if status[1:].isdigit() else 0
             new_path = parts[2]
-            if similarity < 100 and new_path.endswith(".java"):
+            if similarity < 100 and in_scope(new_path):
                 modified.append(Path(new_path))
         elif code in ("A", "C"):
             path = parts[-1]
-            if path.endswith(".java"):
+            if in_scope(path):
                 added.append(Path(path))
         elif code == "M":
             path = parts[1]
-            if path.endswith(".java"):
+            if in_scope(path):
                 modified.append(Path(path))
         # D (deletion) -> excluded
 

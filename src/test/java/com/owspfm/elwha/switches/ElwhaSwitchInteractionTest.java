@@ -3,21 +3,16 @@ package com.owspfm.elwha.switches;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.testkit.EdtInterceptor;
+import com.owspfm.elwha.testkit.Input;
 import com.owspfm.elwha.testkit.Pixels;
+import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
-import com.owspfm.elwha.theme.ElwhaTheme;
-import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.StateLayer;
-import java.awt.event.ActionEvent;
-import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
 import javax.accessibility.AccessibleState;
-import javax.swing.JComponent;
-import javax.swing.KeyStroke;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,18 +32,12 @@ import org.junit.jupiter.params.provider.EnumSource;
  * @version v0.5.0
  * @since v0.5.0
  */
-@ExtendWith(EdtInterceptor.class)
+@ExtendWith({EdtInterceptor.class, ThemeExtension.class})
 class ElwhaSwitchInteractionTest {
 
   private static final int W = 60;
   private static final int H = 40;
   private static final int CY = 20;
-
-  @BeforeEach
-  void installBaselineLight() {
-    ElwhaTheme.install(
-        ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(Mode.LIGHT).build());
-  }
 
   @Test
   void clickTogglesAndFiresEachListenerOnce() {
@@ -63,8 +52,8 @@ class ElwhaSwitchInteractionTest {
         });
     s.addChangeListener(e -> changes[0]++);
 
-    press(s, 30, CY);
-    release(s, 30, CY);
+    Input.press(s, 30, CY);
+    Input.release(s, 30, CY);
 
     assertThat(s.isSelected()).as("click toggles on").isTrue();
     assertThat(actions[0]).as("ActionListener fires once").isEqualTo(1);
@@ -81,8 +70,8 @@ class ElwhaSwitchInteractionTest {
     s.addActionListener(e -> events[0]++);
     s.addChangeListener(e -> events[0]++);
 
-    press(s, 30, CY);
-    release(s, 200, CY);
+    Input.press(s, 30, CY);
+    Input.release(s, 200, CY);
 
     assertThat(s.isSelected()).as("state unchanged after outside release").isTrue();
     assertThat(events[0]).as("cancelled click fires no events").isZero();
@@ -108,21 +97,21 @@ class ElwhaSwitchInteractionTest {
     final int[] actions = {0};
     s.addActionListener(e -> actions[0]++);
 
-    press(s, 20, CY);
-    drag(s, 40, CY);
-    release(s, 40, CY);
+    Input.press(s, 20, CY);
+    Input.drag(s, 40, CY);
+    Input.release(s, 40, CY);
     assertThat(s.isSelected()).as("drag to the far end commits selected").isTrue();
     assertThat(actions[0]).as("committed drag fires once").isEqualTo(1);
 
-    press(s, 40, CY);
-    drag(s, 24, CY);
-    release(s, 24, CY);
+    Input.press(s, 40, CY);
+    Input.drag(s, 24, CY);
+    Input.release(s, 24, CY);
     assertThat(s.isSelected()).as("drag past the midpoint back commits unselected").isFalse();
     assertThat(actions[0]).as("each committed drag fires once").isEqualTo(2);
 
-    press(s, 20, CY);
-    drag(s, 26, CY);
-    release(s, 26, CY);
+    Input.press(s, 20, CY);
+    Input.drag(s, 26, CY);
+    Input.release(s, 26, CY);
     assertThat(s.isSelected()).as("scrub landing on the starting half commits nothing").isFalse();
     assertThat(actions[0]).as("uncommitted drag fires no events").isEqualTo(2);
   }
@@ -130,20 +119,10 @@ class ElwhaSwitchInteractionTest {
   @Test
   void spaceIsBoundWhenFocusedAndTogglesOnRelease() {
     final ElwhaSwitch s = sized(new ElwhaSwitch());
-    final var inputMap = s.getInputMap(JComponent.WHEN_FOCUSED);
 
-    final Object pressKey = inputMap.get(KeyStroke.getKeyStroke("pressed SPACE"));
-    final Object releaseKey = inputMap.get(KeyStroke.getKeyStroke("released SPACE"));
-    assertThat(pressKey)
-        .as("pressed SPACE is bound in WHEN_FOCUSED")
-        .isEqualTo("elwhaSwitch.press");
-    assertThat(releaseKey)
-        .as("released SPACE is bound in WHEN_FOCUSED")
-        .isEqualTo("elwhaSwitch.release");
-
-    invokeAction(s, pressKey);
+    Input.pressBoundKey(s, "pressed SPACE", "elwhaSwitch.press");
     assertThat(s.isSelected()).as("Space press alone does not toggle").isFalse();
-    invokeAction(s, releaseKey);
+    Input.pressBoundKey(s, "released SPACE", "elwhaSwitch.release");
     assertThat(s.isSelected()).as("Space release commits the toggle").isTrue();
   }
 
@@ -155,10 +134,10 @@ class ElwhaSwitchInteractionTest {
     s.addActionListener(e -> events[0]++);
     s.addChangeListener(e -> events[0]++);
 
-    press(s, 30, CY);
-    release(s, 30, CY);
-    invokeAction(s, "elwhaSwitch.press");
-    invokeAction(s, "elwhaSwitch.release");
+    Input.press(s, 30, CY);
+    Input.release(s, 30, CY);
+    Input.pressBoundKey(s, "pressed SPACE", "elwhaSwitch.press");
+    Input.pressBoundKey(s, "released SPACE", "elwhaSwitch.release");
 
     assertThat(s.isSelected()).as("disabled switch never toggles").isFalse();
     assertThat(events[0]).as("disabled switch fires no events").isZero();
@@ -223,7 +202,7 @@ class ElwhaSwitchInteractionTest {
       value = Mode.class,
       names = {"LIGHT", "DARK"})
   void selectedTrackResolvesPrimaryInBothModes(final Mode mode) {
-    ElwhaTheme.install(ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(mode).build());
+    ThemeExtension.install(mode);
     final ElwhaSwitch s = sized(new ElwhaSwitch(true));
     final BufferedImage img = Pixels.render(s, W, H);
 
@@ -238,32 +217,5 @@ class ElwhaSwitchInteractionTest {
   private static ElwhaSwitch sized(final ElwhaSwitch s) {
     s.setSize(W, H);
     return s;
-  }
-
-  private static void press(final ElwhaSwitch s, final int x, final int y) {
-    mouse(s, MouseEvent.MOUSE_PRESSED, x, y);
-  }
-
-  private static void drag(final ElwhaSwitch s, final int x, final int y) {
-    mouse(s, MouseEvent.MOUSE_DRAGGED, x, y);
-  }
-
-  private static void release(final ElwhaSwitch s, final int x, final int y) {
-    mouse(s, MouseEvent.MOUSE_RELEASED, x, y);
-  }
-
-  private static void mouse(final ElwhaSwitch s, final int id, final int x, final int y) {
-    final int modifiers = (id == MouseEvent.MOUSE_RELEASED) ? 0 : MouseEvent.BUTTON1_DOWN_MASK;
-    // Explicit-abs-coords ctor: the (x,y)-only ctor calls getLocationOnScreen, which NPEs on an
-    // unrealized (peerless) component in headless mode.
-    s.dispatchEvent(
-        new MouseEvent(
-            s, id, System.nanoTime(), modifiers, x, y, x, y, 1, false, MouseEvent.BUTTON1));
-  }
-
-  private static void invokeAction(final ElwhaSwitch s, final Object actionKey) {
-    s.getActionMap()
-        .get(actionKey)
-        .actionPerformed(new ActionEvent(s, ActionEvent.ACTION_PERFORMED, "space"));
   }
 }
