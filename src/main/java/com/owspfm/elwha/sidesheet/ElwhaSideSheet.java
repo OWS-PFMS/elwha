@@ -290,7 +290,7 @@ public final class ElwhaSideSheet extends JComponent {
 
   /**
    * Sets the posture — {@link SheetPosture#DOCKED} (flush to the edge) or {@link
-   * SheetPosture#DETACHED} (floating, inset by a {@value #DETACHED_MARGIN_PX}px margin on all sides
+   * SheetPosture#DETACHED} (floating, inset by the {@link #DETACHED_MARGIN_PX} margin on all sides
    * with all four corners rounded and no edge divider). Default {@link SheetPosture#DOCKED} — a
    * docked sheet is exactly the V1 sheet. Applies live: an embedded sheet reflows its host, and a
    * currently-shown modal presentation re-docks at the new footprint.

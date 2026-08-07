@@ -66,8 +66,8 @@ import javax.swing.event.EventListenerList;
  * constants below are the {@code XS} (default) preset (M3's only off-Android code preset; §M /
  * §Cfg).
  *
- * <p><strong>Interaction & motion (research §S / §TS / §B).</strong> Drag the handle or click the
- * track to jump; the value updates live and a {@link ChangeListener} fires on every change with
+ * <p><strong>Interaction &amp; motion (research §S / §TS / §B).</strong> Drag the handle or click
+ * the track to jump; the value updates live and a {@link ChangeListener} fires on every change with
  * {@link #getValueIsAdjusting()} true mid-drag. Hover paints {@link StateLayer#HOVER} (0.08), focus
  * {@link StateLayer#FOCUS} (0.10); a press shows a {@link RipplePainter} ripple. The handle
  * <strong>narrows {@value #HANDLE_WIDTH_PX}&rarr;{@value #NARROW_HANDLE_WIDTH_PX} dp on
@@ -88,7 +88,7 @@ import javax.swing.event.EventListenerList;
  * time so runtime theme + light/dark switching re-skins the slider live.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public class ElwhaSlider extends JComponent {
@@ -158,15 +158,14 @@ public class ElwhaSlider extends JComponent {
   /**
    * The slider's size preset — the M3 track-thickness scale {@code XS} &le; {@code S} &le; {@code
    * M} &le; {@code L} &le; {@code XL} (research §M / §GD5). Each size scales the three geometry
-   * values the M3 measurements table varies — {@linkplain #trackHeight() track height}, {@linkplain
-   * #handleHeight() handle height}, and the {@linkplain #outerCorner() outer corner radius} — plus
-   * the {@linkplain #insetIconSize() inset-icon size}; the handle width, handle&harr;track gap,
-   * stop dot, inner corner, and value bubble are constant across sizes (M3 §M). {@code XS} is the
-   * default and M3's only off-Android code preset; larger sizes give a bigger touch target and more
-   * visual emphasis ({@code XL} for hero moments).
+   * values the M3 measurements table varies — the track height, the handle height, and the outer
+   * corner radius — plus the inset-icon size; the handle width, handle&harr;track gap, stop dot,
+   * inner corner, and value bubble are constant across sizes (M3 §M). {@code XS} is the default and
+   * M3's only off-Android code preset; larger sizes give a bigger touch target and more visual
+   * emphasis ({@code XL} for hero moments).
    *
    * @author Charles Bryan
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public enum Size {

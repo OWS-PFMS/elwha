@@ -56,8 +56,9 @@ import javax.swing.JPanel;
  * <p>Design decisions and Card V2 composition relationship: {@code
  * docs/research/elwha-surface-design.md}.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public class ElwhaSurface extends JPanel implements ShadowBearing {
@@ -308,8 +309,10 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
   }
 
   /**
+   * Returns the resting M3 elevation level.
+   *
    * @return the current elevation level (0..{@link #MAX_ELEVATION})
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public int getElevation() {
@@ -332,10 +335,11 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
   }
 
   /**
-   * @return the chassis insets, including the shadow reserve required by {@link #elevation}. Layout
-   *     managers reading this position children inside the visible card body, away from the
-   *     reserved shadow halo.
-   * @version v0.2.0
+   * Returns the chassis insets, including the shadow reserve required by {@link #elevation}.
+   *
+   * @return the chassis insets; layout managers reading this position children inside the visible
+   *     card body, away from the reserved shadow halo
+   * @version v0.5.0
    * @since v0.2.0
    */
   @Override
