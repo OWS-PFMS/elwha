@@ -22,8 +22,8 @@ import javax.swing.SwingUtilities;
 /**
  * S1 visual smoke for the detached <em>standard</em> {@link ElwhaSideSheet} posture (#508): a
  * BorderLayout stage with a standard sheet docked at the trailing edge whose {@link SheetPosture}
- * toggles live. Verify the detached chrome against the docked baseline — a {@value
- * ElwhaSideSheet#DETACHED_MARGIN_PX}px margin appears on all four sides, all four corners round
+ * toggles live. Verify the detached chrome against the docked baseline — the {@link
+ * ElwhaSideSheet#DETACHED_MARGIN_PX} margin appears on all four sides, all four corners round
  * (16px), and the edge divider disappears (a rounded float reads as a panel without it) — and that
  * the open/close squash and the edge / RTL resolution still hold in the detached posture (the float
  * mirrors to the leading edge under RTL).

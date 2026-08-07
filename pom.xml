@@ -189,8 +189,11 @@
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>3.10.1</version>
         <configuration>
-          <doclint>none</doclint>
-          <failOnError>false</failOnError>
+          <!-- Ratchet (#529 Phase 0): errors are zero and stay zero — doclint on, failures fatal.
+               Warnings still print (the missing-docs debt is tracked by the #529 stories) but do
+               not fail the build until the epic's final failOnWarnings flip. -->
+          <doclint>all</doclint>
+          <failOnError>true</failOnError>
         </configuration>
         <executions>
           <execution>

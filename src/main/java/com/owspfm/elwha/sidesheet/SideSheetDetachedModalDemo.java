@@ -21,10 +21,10 @@ import javax.swing.SwingUtilities;
 /**
  * S2 visual smoke for the detached <em>modal</em> {@link ElwhaSideSheet} presentation (#509): a
  * trigger frame that opens docked and detached modal sheets on either edge over the same scrim.
- * Verify the detached modal floats {@value ElwhaSideSheet#DETACHED_MARGIN_PX}px off all four window
- * edges with all corners rounded (the scrim shows through every margin), the docked modal still
- * sits flush, and the slide-in carries the whole floating card on/off screen from the resolved
- * edge. The posture toggle on an open sheet re-docks it in place.
+ * Verify the detached modal floats the {@link ElwhaSideSheet#DETACHED_MARGIN_PX} margin off all
+ * four window edges with all corners rounded (the scrim shows through every margin), the docked
+ * modal still sits flush, and the slide-in carries the whole floating card on/off screen from the
+ * resolved edge. The posture toggle on an open sheet re-docks it in place.
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.5.0

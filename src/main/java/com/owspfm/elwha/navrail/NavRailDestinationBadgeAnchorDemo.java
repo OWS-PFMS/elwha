@@ -25,15 +25,15 @@ import javax.swing.SwingUtilities;
  * <ul>
  *   <li><strong>Collapsed</strong> → the badge's bottom-leading corner pins to the icon's
  *       top-trailing corner offset inward by the Large badge offsets ({@link
- *       ElwhaBadgeAnchor.AnchorMode#ICON_CORNER}).
+ *       com.owspfm.elwha.badge.ElwhaBadgeAnchor.AnchorMode#ICON_CORNER}).
  *   <li><strong>Expanded</strong> (after a variant toggle on the <em>same</em> destination, with
  *       the badge already attached) → the badge re-pins to the row's trailing edge, vertically
- *       centered ({@link ElwhaBadgeAnchor.AnchorMode#TRAILING_EDGE}) — proving the re-anchor fires
- *       on the variant change, not only at {@code setBadge()} time.
+ *       centered ({@link com.owspfm.elwha.badge.ElwhaBadgeAnchor.AnchorMode#TRAILING_EDGE}) —
+ *       proving the re-anchor fires on the variant change, not only at {@code setBadge()} time.
  * </ul>
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class NavRailDestinationBadgeAnchorDemo {
