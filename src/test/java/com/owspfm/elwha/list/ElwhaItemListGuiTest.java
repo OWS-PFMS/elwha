@@ -3,6 +3,7 @@ package com.owspfm.elwha.list;
 import static com.owspfm.elwha.testkit.WaitFor.onEdt;
 import static com.owspfm.elwha.testkit.WaitFor.waitFor;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.testkit.GuiToolkit;
@@ -12,12 +13,15 @@ import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Robot;
 import java.awt.event.InputEvent;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowFocusListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -365,5 +369,94 @@ class ElwhaItemListGuiTest {
         .isEqualTo(before);
     assertThat(events).isEmpty();
     assertThat(onEdt(() -> true)).isTrue();
+  }
+
+  // -------------------------------------------------------- cursor refresh #556
+
+  @Test
+  void aShownListBindsItsCursorRefreshToTheHostWindow() throws Exception {
+    assertThat(read(list::getTrackedWindow))
+        .as("#556 — the refresh rides the host window's focus, so it has to find that window")
+        .isSameAs(frame);
+  }
+
+  @Test
+  void aListTakenOutOfItsWindowReleasesTheBinding() throws Exception {
+    SwingUtilities.invokeAndWait(
+        () -> {
+          frame.remove(list);
+          frame.validate();
+        });
+
+    assertThat(read(list::getTrackedWindow))
+        .as("a list that outlives its window must not leave a listener on it")
+        .isNull();
+  }
+
+  /**
+   * Notifies the window's focus listeners the way a Spaces return does.
+   *
+   * <p>Not {@code frame.dispatchEvent}: the focus manager intercepts {@code WINDOW_GAINED_FOCUS}
+   * and drops it as redundant when the window is already focused — which it is here, and which is
+   * the only state this fixture can be in. Delivering to the registered listeners keeps what the
+   * test is actually about, that the list put a listener on its window and that the listener does
+   * the re-install. AWT delivering the event on a real Spaces return is platform contract.
+   */
+  private void simulateWindowRegain() throws Exception {
+    SwingUtilities.invokeAndWait(
+        () -> {
+          final WindowEvent regain = new WindowEvent(frame, WindowEvent.WINDOW_GAINED_FOCUS);
+          for (final WindowFocusListener listener : frame.getWindowFocusListeners()) {
+            listener.windowGainedFocus(regain);
+          }
+        });
+  }
+
+  @Test
+  void aWindowFocusRegainReinstallsTheDragCursor() throws Exception {
+    // A sentinel rather than the default pointer: the virtual toolkit this tier can run on hands
+    // back a default-typed cursor from createCustomCursor, so "is it the default" proves nothing.
+    // "Is it still the thing we stomped it with" holds whatever grab() degrades to.
+    SwingUtilities.invokeAndWait(
+        () ->
+            list.getComponentFor("Bravo")
+                .setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR)));
+
+    simulateWindowRegain();
+
+    assertThat(read(() -> list.getComponentFor("Bravo").getCursor().getType()))
+        .as("#556 — the window coming back is the signal that re-installs the cursor")
+        .isNotEqualTo(Cursor.TEXT_CURSOR);
+  }
+
+  @Test
+  void aRegainLeavesAStaticListsPointerAlone() throws Exception {
+    SwingUtilities.invokeAndWait(
+        () -> {
+          list.setMovementMode(MovementMode.STATIC);
+          list.getComponentFor("Bravo").setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
+        });
+
+    simulateWindowRegain();
+
+    assertThat(read(() -> list.getComponentFor("Bravo").getCursor().getType()))
+        .as("a list with no drag to advertise must not acquire a cursor on reactivation")
+        .isEqualTo(Cursor.TEXT_CURSOR);
+  }
+
+  @Test
+  void aRegainRebuildsTheCursorRatherThanReapplyingTheDeadOne() throws Exception {
+    final Cursor installed = read(() -> list.getComponentFor("Bravo").getCursor());
+    // Toolkits that refuse createCustomCursor hand back a shared predefined instance, where
+    // identity says nothing. The bug being guarded is macOS-only, and macOS builds a real one.
+    assumeTrue(installed.getType() == Cursor.CUSTOM_CURSOR, "no custom cursor on this toolkit");
+
+    simulateWindowRegain();
+
+    assertThat(read(() -> list.getComponentFor("Bravo").getCursor()))
+        .as(
+            "macOS keeps the Cursor object and drops only its OS-side association, so re-applying"
+                + " the same instance would restore nothing")
+        .isNotSameAs(installed);
   }
 }

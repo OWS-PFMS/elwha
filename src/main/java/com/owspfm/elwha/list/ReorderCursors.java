@@ -96,6 +96,22 @@ final class ReorderCursors {
     return grabbingCached;
   }
 
+  /**
+   * Drops the cached cursors so the next {@link #grab()} or {@link #grabbing()} builds fresh ones.
+   *
+   * <p>macOS drops the OS-side association for {@code createCustomCursor} cursors across a Spaces
+   * or Mission Control transition. The cached {@link Cursor} objects survive the transition but
+   * stop rendering, so re-applying the same instances changes nothing — they have to be rebuilt
+   * (#556).
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  static void invalidate() {
+    grabCached = null;
+    grabbingCached = null;
+  }
+
   private static void refreshIfThemeChanged() {
     final boolean dark = isDarkTheme();
     if (cachedDark == null || cachedDark != dark) {
