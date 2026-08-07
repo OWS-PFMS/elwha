@@ -65,7 +65,7 @@ class ElwhaSelectFieldModeTest {
   }
 
   @Test
-  void theExclusionForcesRatherThanThrowsSoSetterOrderNeverMatters() {
+  void exclusionForcesRatherThanThrowsSoSetterOrderNeverMatters() {
     final ElwhaSelectField<String> select = planets();
 
     assertThatCode(
@@ -97,7 +97,7 @@ class ElwhaSelectFieldModeTest {
   // ------------------------------------------------------- editability
 
   @Test
-  void thePureSelectKeepsItsEmbeddedFieldReadOnly() {
+  void pureSelectKeepsItsEmbeddedFieldReadOnly() {
     final ElwhaSelectField<String> select = planets();
 
     assertThat(embedded(select).isReadOnly())
@@ -202,7 +202,7 @@ class ElwhaSelectFieldModeTest {
   }
 
   @Test
-  void theArrowRenamesItselfWithTheExpandedState() {
+  void arrowRenamesItselfWithTheExpandedState() {
     final ElwhaSelectField<String> select = planets();
 
     assertThat(arrow(select).getAccessibleContext().getAccessibleName())
@@ -219,7 +219,7 @@ class ElwhaSelectFieldModeTest {
   // -------------------------------------------------------- delegation
 
   @Test
-  void thePreferredSizeIsTheEmbeddedFieldsOwn() {
+  void preferredSizeIsTheEmbeddedFieldsOwn() {
     final ElwhaSelectField<String> select = planets();
 
     assertThat(select.getPreferredSize())
@@ -228,7 +228,7 @@ class ElwhaSelectFieldModeTest {
   }
 
   @Test
-  void theLabelSupportingTextAndPlaceholderDelegateToTheField() {
+  void labelSupportingTextAndPlaceholderDelegateToTheField() {
     final ElwhaSelectField<String> select = planets();
 
     select.setLabel("Destination");
@@ -245,7 +245,7 @@ class ElwhaSelectFieldModeTest {
   }
 
   @Test
-  void theErrorStateDelegatesToTheFieldsChrome() {
+  void errorStateDelegatesToTheFieldsChrome() {
     final ElwhaSelectField<String> select = planets();
 
     select.setErrorText("Choose a destination");
@@ -261,7 +261,7 @@ class ElwhaSelectFieldModeTest {
   }
 
   @Test
-  void theLeadingIconSlotIsAvailableToConsumers() {
+  void leadingIconSlotIsAvailableToConsumers() {
     final ElwhaSelectField<String> select = planets();
 
     select.setLeadingIcon(MaterialIcons.info(24));
@@ -272,7 +272,7 @@ class ElwhaSelectFieldModeTest {
   }
 
   @Test
-  void theTrailingSlotStaysOwnedByTheArrow() {
+  void trailingSlotStaysOwnedByTheArrow() {
     final ElwhaSelectField<String> select = planets();
 
     assertThat(arrow(select))
@@ -284,7 +284,7 @@ class ElwhaSelectFieldModeTest {
   }
 
   @Test
-  void theVariantFactoriesReachTheEmbeddedFieldsChrome() {
+  void variantFactoriesReachTheEmbeddedFieldsChrome() {
     assertThat(embedded(ElwhaSelectField.filled("Planet")).getVariant())
         .as("filled()")
         .isEqualTo(ElwhaTextField.Variant.FILLED);

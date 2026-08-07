@@ -95,7 +95,7 @@ class ElwhaTextFieldLabelTest {
   }
 
   @Test
-  void theFilledFloatedLabelLandsInsideTheTopOfItsFill() {
+  void filledFloatedLabelLandsInsideTheTopOfItsFill() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
     field.setText("ada@x.io");
 
@@ -108,7 +108,7 @@ class ElwhaTextFieldLabelTest {
   }
 
   @Test
-  void theOutlinedFloatedLabelStraddlesTheTopStroke() {
+  void outlinedFloatedLabelStraddlesTheTopStroke() {
     final ElwhaTextField field = new ElwhaTextField(Variant.OUTLINED, "Email");
     field.setText("ada@x.io");
 
@@ -163,7 +163,7 @@ class ElwhaTextFieldLabelTest {
   // ----------------------------------------------------------- anchoring
 
   @Test
-  void theLabelSharesTheInputsLeadingEdge() {
+  void labelSharesTheInputsLeadingEdge() {
     final ElwhaTextField bare = new ElwhaTextField(Variant.FILLED, "Email");
     assertThat(label(bare, "Email").x())
         .as("a bare label starts at the 16dp text edge")
@@ -177,7 +177,7 @@ class ElwhaTextFieldLabelTest {
   }
 
   @Test
-  void theLabelMirrorsUnderRightToLeft() {
+  void labelMirrorsUnderRightToLeft() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
     field.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
     field.setText("ada@x.io");
@@ -221,7 +221,7 @@ class ElwhaTextFieldLabelTest {
   @EnumSource(
       value = Mode.class,
       names = {"LIGHT", "DARK"})
-  void theRestingLabelIsOnSurfaceVariant(final Mode mode) {
+  void restingLabelIsOnSurfaceVariant(final Mode mode) {
     ThemeExtension.install(mode);
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
 
@@ -271,7 +271,7 @@ class ElwhaTextFieldLabelTest {
   // -------------------------------------------------------------- notch
 
   @Test
-  void theOutlinedStrokeIsUnbrokenWhileTheLabelRests() {
+  void outlinedStrokeIsUnbrokenWhileTheLabelRests() {
     final ElwhaTextField field = new ElwhaTextField(Variant.OUTLINED, "Email");
 
     final PaintLog.Painted stroke = outlinedStroke(field);
@@ -294,7 +294,7 @@ class ElwhaTextFieldLabelTest {
   }
 
   @Test
-  void theNotchBracketsTheFloatedLabelWithFourPixelsOfAir() {
+  void notchBracketsTheFloatedLabelWithFourPixelsOfAir() {
     final ElwhaTextField field = new ElwhaTextField(Variant.OUTLINED, "Email");
     field.setText("ada@x.io");
 
@@ -322,7 +322,7 @@ class ElwhaTextFieldLabelTest {
   }
 
   @Test
-  void theNotchTracksTheLeadingIconSlot() {
+  void notchTracksTheLeadingIconSlot() {
     final ElwhaTextField field = new ElwhaTextField(Variant.OUTLINED, "Email");
     field.setLeadingIcon(MaterialIcons.info(ElwhaTextField.ICON_GLYPH));
     field.setText("ada@x.io");
@@ -406,7 +406,7 @@ class ElwhaTextFieldLabelTest {
   }
 
   @Test
-  void thePlaceholderSurvivesAnEditorSwap() {
+  void placeholderSurvivesAnEditorSwap() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "");
     field.setPlaceholder("Search");
 

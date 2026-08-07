@@ -49,7 +49,7 @@ class ElwhaTextFieldAccessibilityTest {
   // ------------------------------------------------------------------ role
 
   @Test
-  void theEditorCarriesTheTextboxRole() {
+  void editorCarriesTheTextboxRole() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
 
     assertThat(context(field).getAccessibleRole())
@@ -73,7 +73,7 @@ class ElwhaTextFieldAccessibilityTest {
   // ------------------------------------------------------------------ name
 
   @Test
-  void theAccessibleNameIsTheLabel() {
+  void accessibleNameIsTheLabel() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
 
     assertThat(context(field).getAccessibleName())
@@ -135,7 +135,7 @@ class ElwhaTextFieldAccessibilityTest {
   }
 
   @Test
-  void theNameSurvivesAnEditorSwap() {
+  void nameSurvivesAnEditorSwap() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Notes");
     field.setSupportingText("Up to 500 words");
 
@@ -149,7 +149,7 @@ class ElwhaTextFieldAccessibilityTest {
   // ----------------------------------------------------------- description
 
   @Test
-  void theDescriptionIsTheSupportingText() {
+  void descriptionIsTheSupportingText() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
     field.setSupportingText("We never share it");
 
@@ -191,7 +191,7 @@ class ElwhaTextFieldAccessibilityTest {
   }
 
   @Test
-  void theCounterIsAnnouncedInWords() {
+  void counterIsAnnouncedInWords() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Bio");
     field.setMaxLength(20);
     field.setText("hello");
@@ -202,7 +202,7 @@ class ElwhaTextFieldAccessibilityTest {
   }
 
   @Test
-  void theAnnouncedCountTracksEveryKeystroke() {
+  void announcedCountTracksEveryKeystroke() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Bio");
     field.setMaxLength(20);
     field.setText("hello");
@@ -215,7 +215,7 @@ class ElwhaTextFieldAccessibilityTest {
   }
 
   @Test
-  void theCounterTrailsTheSupportingTextInTheDescription() {
+  void counterTrailsTheSupportingTextInTheDescription() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Bio");
     field.setSupportingText("Tell us about yourself");
     field.setMaxLength(20);
@@ -242,7 +242,7 @@ class ElwhaTextFieldAccessibilityTest {
   }
 
   @Test
-  void theAlertIsFiredFromAClearedValueSoRepeatsAreStillAnnounced() {
+  void alertIsFiredFromAClearedValueSoRepeatsAreStillAnnounced() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
     field.setErrorText("Required");
     field.setError(true);
@@ -266,7 +266,7 @@ class ElwhaTextFieldAccessibilityTest {
   }
 
   @Test
-  void theAlertComposesSupportingTextAheadOfTheError() {
+  void alertComposesSupportingTextAheadOfTheError() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
     field.setSupportingText("We never share it");
     field.setErrorText("Enter a valid address");

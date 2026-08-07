@@ -63,7 +63,7 @@ class ElwhaSelectFieldAccessibilityTest {
   // ---------------------------------------------------------- the arrow
 
   @Test
-  void theArrowIsARealButtonSoItBringsItsOwnRole() {
+  void arrowIsARealButtonSoItBringsItsOwnRole() {
     final ElwhaSelectField<String> select = planets();
 
     assertThat(arrow(select).getAccessibleContext().getAccessibleRole())
@@ -97,7 +97,7 @@ class ElwhaSelectFieldAccessibilityTest {
   // --------------------------------------------------------- the editor
 
   @Test
-  void theEditableComboDescribesItsOwnKeyboardContract() {
+  void editableComboDescribesItsOwnKeyboardContract() {
     final ElwhaSelectField<String> select = planets();
 
     select.setEditable(true);
@@ -147,7 +147,7 @@ class ElwhaSelectFieldAccessibilityTest {
   // ---------------------------------------------------------- the items
 
   @Test
-  void theOptionsAnnounceAsMenuItems() {
+  void optionsAnnounceAsMenuItems() {
     final ElwhaSelectField<String> select = planets();
 
     assertThat(select.optionsMenu().getItems().get(0).getAccessibleContext().getAccessibleRole())
@@ -156,7 +156,7 @@ class ElwhaSelectFieldAccessibilityTest {
   }
 
   @Test
-  void theSelectedOptionCarriesTheSelectedState() {
+  void selectedOptionCarriesTheSelectedState() {
     final ElwhaSelectField<String> select = planets();
 
     select.setSelectedValue("Mars");

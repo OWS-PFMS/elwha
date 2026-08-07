@@ -108,7 +108,7 @@ class ElwhaSliderGeometryTest {
   }
 
   @Test
-  void theReservedBandIsHeldWhetherOrNotTheBubbleIsShowing() {
+  void reservedBandIsHeldWhetherOrNotTheBubbleIsShowing() {
     final ElwhaSlider slider = new ElwhaSlider(0, 100, 50);
     slider.setValueIndicatorEnabled(true);
     final int resting = slider.getPreferredSize().height;
@@ -121,7 +121,7 @@ class ElwhaSliderGeometryTest {
   }
 
   @Test
-  void theHandleWidthAndTrackGapDoNotScaleWithTheSizePreset() {
+  void handleWidthAndTrackGapDoNotScaleWithTheSizePreset() {
     final ElwhaSlider extraSmall = new ElwhaSlider(0, 100, 0);
     final ElwhaSlider extraLarge = new ElwhaSlider(0, 100, 0);
     extraLarge.setSizeVariant(Size.XL);
@@ -134,14 +134,14 @@ class ElwhaSliderGeometryTest {
   }
 
   @Test
-  void thePreferredLongExtentIsTheDefaultTrackLength() {
+  void preferredLongExtentIsTheDefaultTrackLength() {
     assertThat(new ElwhaSlider(0, 100, 50).getPreferredSize().width)
         .as("a slider asks for the default track length when the layout offers it a choice")
         .isEqualTo(ElwhaSlider.DEFAULT_TRACK_LENGTH_PX);
   }
 
   @Test
-  void theMaximumSizeStretchesAlongTheTrackButNeverAcrossIt() {
+  void maximumSizeStretchesAlongTheTrackButNeverAcrossIt() {
     final ElwhaSlider slider = new ElwhaSlider(0, 100, 50);
 
     assertThat(slider.getMaximumSize().width)
@@ -172,7 +172,7 @@ class ElwhaSliderGeometryTest {
   }
 
   @Test
-  void theMinimumAndMaximumSizesTransposeToo() {
+  void minimumAndMaximumSizesTransposeToo() {
     final ElwhaSlider slider = new ElwhaSlider(0, 100, 50);
     final Dimension horizontalMin = slider.getMinimumSize();
 
@@ -219,7 +219,7 @@ class ElwhaSliderGeometryTest {
   @EnumSource(
       value = Size.class,
       names = {"M", "L", "XL"})
-  void theBiggerSizesAcceptAnInsetIcon(final Size size) {
+  void biggerSizesAcceptAnInsetIcon(final Size size) {
     final ElwhaSlider slider = new ElwhaSlider(0, 100, 80);
     slider.setSizeVariant(size);
 
@@ -234,7 +234,7 @@ class ElwhaSliderGeometryTest {
   @EnumSource(
       value = Size.class,
       names = {"XS", "S"})
-  void theThinSizesKeepTheIconButPaintNothing(final Size size) {
+  void thinSizesKeepTheIconButPaintNothing(final Size size) {
     final ElwhaSlider slider = new ElwhaSlider(0, 100, 80);
     slider.setSizeVariant(size);
     slider.setInsetIcon(MaterialIcons.star(24));
@@ -261,14 +261,14 @@ class ElwhaSliderGeometryTest {
   // ---------------------------------------------------------- the origin
 
   @Test
-  void theDefaultOriginIsZeroWhenZeroLiesInTheRange() {
+  void defaultOriginIsZeroWhenZeroLiesInTheRange() {
     assertThat(new ElwhaSlider(-50, 50, 0).getOrigin())
         .as("a signed range grows its centered fill out of zero")
         .isZero();
   }
 
   @Test
-  void theDefaultOriginIsTheMidpointWhenZeroIsOutOfRange() {
+  void defaultOriginIsTheMidpointWhenZeroIsOutOfRange() {
     assertThat(new ElwhaSlider(20, 80, 40).getOrigin())
         .as("with no zero to anchor on, the midpoint is the sensible fill origin")
         .isEqualTo(50);
@@ -286,7 +286,7 @@ class ElwhaSliderGeometryTest {
   }
 
   @Test
-  void theVariantAndSizeRoundTrip() {
+  void variantAndSizeRoundTrip() {
     final ElwhaSlider slider = new ElwhaSlider(0, 100, 50);
 
     assertThat(slider.getVariant()).as("STANDARD is the default").isEqualTo(Variant.STANDARD);

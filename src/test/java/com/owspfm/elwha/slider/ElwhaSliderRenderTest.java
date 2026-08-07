@@ -68,7 +68,7 @@ class ElwhaSliderRenderTest {
   @EnumSource(
       value = Mode.class,
       names = {"LIGHT", "DARK"})
-  void theTrackCarriesBothRolesAtOnce(final Mode mode) {
+  void trackCarriesBothRolesAtOnce(final Mode mode) {
     ThemeExtension.install(mode);
     final ElwhaSlider slider = percent(50);
 
@@ -83,7 +83,7 @@ class ElwhaSliderRenderTest {
   }
 
   @Test
-  void theStandardVariantFillsFromTheLeadingEdgeToTheHandle() {
+  void standardVariantFillsFromTheLeadingEdgeToTheHandle() {
     final ElwhaSlider slider = percent(50);
 
     final PaintLog log = capture(slider);
@@ -99,7 +99,7 @@ class ElwhaSliderRenderTest {
   }
 
   @Test
-  void theCenteredVariantLeavesInactiveTrackOnBothSidesOfTheFill() {
+  void centeredVariantLeavesInactiveTrackOnBothSidesOfTheFill() {
     final ElwhaSlider slider = new ElwhaSlider(-50, 50, 25);
     slider.setVariant(Variant.CENTERED);
     slider.setSize(240, slider.getPreferredSize().height);
@@ -120,7 +120,7 @@ class ElwhaSliderRenderTest {
   }
 
   @Test
-  void theRangeVariantFillsBetweenItsTwoHandles() {
+  void rangeVariantFillsBetweenItsTwoHandles() {
     final ElwhaSlider slider = ElwhaSlider.range(0, 100, 30, 70);
     slider.setSize(240, slider.getPreferredSize().height);
 
@@ -236,7 +236,7 @@ class ElwhaSliderRenderTest {
   // ---------------------------------------------------------------- a11y
 
   @Test
-  void theSliderAnnouncesAsASliderWithItsValueAndBounds() {
+  void sliderAnnouncesAsASliderWithItsValueAndBounds() {
     final ElwhaSlider slider = percent(37);
     final AccessibleContext context = slider.getAccessibleContext();
 
@@ -248,7 +248,7 @@ class ElwhaSliderRenderTest {
   }
 
   @Test
-  void theLabelNamesTheSlider() {
+  void labelNamesTheSlider() {
     final ElwhaSlider slider = percent(50);
 
     slider.setLabel("Volume");

@@ -33,7 +33,7 @@ class ElwhaSliderRangeTest {
   // ------------------------------------------------------- the value model
 
   @Test
-  void theRangeFactoryBuildsARangeSliderWithBothHandlesPlaced() {
+  void rangeFactoryBuildsARangeSliderWithBothHandlesPlaced() {
     final ElwhaSlider slider = span();
 
     assertThat(slider.getVariant()).as("the factory names the variant").isEqualTo(Variant.RANGE);
@@ -42,7 +42,7 @@ class ElwhaSliderRangeTest {
   }
 
   @Test
-  void theLowerHandleCannotCrossTheUpperOne() {
+  void lowerHandleCannotCrossTheUpperOne() {
     final ElwhaSlider slider = span();
 
     slider.setLowerValue(95);
@@ -54,7 +54,7 @@ class ElwhaSliderRangeTest {
   }
 
   @Test
-  void theUpperHandleCannotCrossTheLowerOne() {
+  void upperHandleCannotCrossTheLowerOne() {
     final ElwhaSlider slider = span();
 
     slider.setUpperValue(5);
@@ -207,7 +207,7 @@ class ElwhaSliderRangeTest {
   // --------------------------------------------------------- focus model
 
   @Test
-  void theRangeVariantDelegatesItsFocusToTwoHandleProxies() {
+  void rangeVariantDelegatesItsFocusToTwoHandleProxies() {
     final ElwhaSlider slider = span();
 
     assertThat(slider.isFocusable())

@@ -64,7 +64,7 @@ class ElwhaSliderInteractionTest {
   }
 
   @Test
-  void theAdjustingFlagBracketsTheWholeGesture() {
+  void adjustingFlagBracketsTheWholeGesture() {
     final ElwhaSlider slider = percent();
 
     assertThat(slider.getValueIsAdjusting()).as("a resting slider is not adjusting").isFalse();
@@ -177,7 +177,7 @@ class ElwhaSliderInteractionTest {
   // ------------------------------------------------------------ keyboard
 
   @Test
-  void theArrowKeysAreBoundAndStepByTheUnitIncrement() {
+  void arrowKeysAreBoundAndStepByTheUnitIncrement() {
     final ElwhaSlider slider = percent();
     slider.setUnitIncrement(5);
 
@@ -195,7 +195,7 @@ class ElwhaSliderInteractionTest {
   }
 
   @Test
-  void thePageKeysAreBoundAndStepByTheBlockIncrement() {
+  void pageKeysAreBoundAndStepByTheBlockIncrement() {
     final ElwhaSlider slider = percent();
     slider.setBlockIncrement(20);
 
@@ -233,7 +233,7 @@ class ElwhaSliderInteractionTest {
   }
 
   @Test
-  void theLeftAndRightArrowsMirrorUnderRightToLeftButUpAndDownNever() {
+  void leftAndRightArrowsMirrorUnderRightToLeftButUpAndDownNever() {
     final ElwhaSlider slider = percent();
     slider.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
 

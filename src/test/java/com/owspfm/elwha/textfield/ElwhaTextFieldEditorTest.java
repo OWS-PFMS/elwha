@@ -61,7 +61,7 @@ class ElwhaTextFieldEditorTest {
   }
 
   @Test
-  void theCaretKeepsTheM3StrokeAcrossATreeUiUpdate() {
+  void caretKeepsTheM3StrokeAcrossATreeUiUpdate() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
     field.addNotify();
 
@@ -74,7 +74,7 @@ class ElwhaTextFieldEditorTest {
   }
 
   @Test
-  void theCaretFollowsTheErrorState() {
+  void caretFollowsTheErrorState() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
     assertThat(field.getEditor().getCaretColor())
         .as("a resting caret matches the focus indicator")
@@ -135,7 +135,7 @@ class ElwhaTextFieldEditorTest {
   }
 
   @Test
-  void theCaretIsReResolvedOnMountToo() {
+  void caretIsReResolvedOnMountToo() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Hex");
     final Color lightCaret = ColorRole.PRIMARY.resolve();
 
@@ -154,7 +154,7 @@ class ElwhaTextFieldEditorTest {
   @EnumSource(
       value = Mode.class,
       names = {"LIGHT", "DARK"})
-  void theEditorTextResolvesOnSurfaceInEitherMode(final Mode mode) {
+  void editorTextResolvesOnSurfaceInEitherMode(final Mode mode) {
     ThemeExtension.install(mode);
 
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
@@ -187,7 +187,7 @@ class ElwhaTextFieldEditorTest {
   // ------------------------------------------------- decorator plumbing
 
   @Test
-  void theEditorIsTheOnlyChildOfABareField() {
+  void editorIsTheOnlyChildOfABareField() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
 
     assertThat(field.getComponents())

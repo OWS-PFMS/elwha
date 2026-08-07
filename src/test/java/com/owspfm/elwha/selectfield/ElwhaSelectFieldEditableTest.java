@@ -77,7 +77,7 @@ class ElwhaSelectFieldEditableTest {
   }
 
   @Test
-  void theFilterIsCaseInsensitive() {
+  void filterIsCaseInsensitive() {
     final ElwhaSelectField<String> select = combo();
 
     editor(select).setText("MARS");
@@ -88,7 +88,7 @@ class ElwhaSelectFieldEditableTest {
   }
 
   @Test
-  void theFilterMatchesSubstringsNotJustPrefixes() {
+  void filterMatchesSubstringsNotJustPrefixes() {
     final ElwhaSelectField<String> select = combo();
 
     editor(select).setText("art");
@@ -110,7 +110,7 @@ class ElwhaSelectFieldEditableTest {
   }
 
   @Test
-  void theNoMatchesRowIsNotSelectable() {
+  void noMatchesRowIsNotSelectable() {
     final ElwhaSelectField<String> select = combo();
     editor(select).setText("zzz");
 
@@ -160,7 +160,7 @@ class ElwhaSelectFieldEditableTest {
   }
 
   @Test
-  void theNoMatchesRowExistsOnlyInEditableMode() {
+  void noMatchesRowExistsOnlyInEditableMode() {
     final ElwhaSelectField<String> pure = ElwhaSelectField.filled("Planet");
     pure.setOptions(PLANETS);
 

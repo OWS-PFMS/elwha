@@ -48,7 +48,7 @@ class ElwhaSliderValueSpaceTest {
   // ----------------------------------------------------- forward mapping
 
   @Test
-  void theMinimumParksTheHandleAtTheTravelStart() {
+  void minimumParksTheHandleAtTheTravelStart() {
     final ElwhaSlider slider = percent();
 
     slider.setValue(0);
@@ -59,7 +59,7 @@ class ElwhaSliderValueSpaceTest {
   }
 
   @Test
-  void theMaximumParksTheHandleAtTheTravelEnd() {
+  void maximumParksTheHandleAtTheTravelEnd() {
     final ElwhaSlider slider = percent();
 
     slider.setValue(100);
@@ -70,7 +70,7 @@ class ElwhaSliderValueSpaceTest {
   }
 
   @Test
-  void theMidpointLandsHalfwayAlongTheTravel() {
+  void midpointLandsHalfwayAlongTheTravel() {
     final ElwhaSlider slider = percent();
 
     slider.setValue(50);
@@ -183,7 +183,7 @@ class ElwhaSliderValueSpaceTest {
   }
 
   @Test
-  void theModelIsTheSingleSourceOfTruth() {
+  void modelIsTheSingleSourceOfTruth() {
     final ElwhaSlider slider = percent();
 
     slider.getModel().setValue(23);
@@ -281,7 +281,7 @@ class ElwhaSliderValueSpaceTest {
   // ----------------------------------------------------------- increments
 
   @Test
-  void theIncrementDefaultsAreTheDocumentedOnes() {
+  void incrementDefaultsAreTheDocumentedOnes() {
     final ElwhaSlider slider = percent();
 
     assertThat(slider.getUnitIncrement()).as("one unit per arrow").isEqualTo(1);
@@ -290,7 +290,7 @@ class ElwhaSliderValueSpaceTest {
 
   @ParameterizedTest
   @EnumSource(Orientation.class)
-  void theOrientationRoundTrips(final Orientation orientation) {
+  void orientationRoundTrips(final Orientation orientation) {
     final ElwhaSlider slider = percent();
 
     slider.setOrientation(orientation);

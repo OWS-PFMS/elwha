@@ -205,7 +205,7 @@ class ElwhaTextFieldSupportingTextTest {
   }
 
   @Test
-  void theCounterReportsTheLiveDocumentLengthOverTheLimit() {
+  void counterReportsTheLiveDocumentLengthOverTheLimit() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Label");
     field.setMaxLength(20);
     field.setText("abc");
@@ -221,7 +221,7 @@ class ElwhaTextFieldSupportingTextTest {
   }
 
   @Test
-  void theCounterIsRightAlignedInTheSupportingRow() {
+  void counterIsRightAlignedInTheSupportingRow() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Label");
     field.setMaxLength(20);
     field.setText("abc");
@@ -235,7 +235,7 @@ class ElwhaTextFieldSupportingTextTest {
   }
 
   @Test
-  void theCounterSharesTheSupportingTextsBaseline() {
+  void counterSharesTheSupportingTextsBaseline() {
     final ElwhaTextField field = supported("Helper text");
     field.setMaxLength(20);
     field.setText("abc");
@@ -319,7 +319,7 @@ class ElwhaTextFieldSupportingTextTest {
   }
 
   @Test
-  void theCounterAndSupportingTextCoexistOnTheSameRow() {
+  void counterAndSupportingTextCoexistOnTheSameRow() {
     final ElwhaTextField field = supported("Helper text");
     field.setMaxLength(20);
     field.setText("abc");

@@ -85,7 +85,7 @@ class ElwhaSelectFieldModelTest {
   }
 
   @Test
-  void theOptionListIsCopiedDefensively() {
+  void optionListIsCopiedDefensively() {
     final List<String> mutable = new ArrayList<>(PLANETS);
     final ElwhaSelectField<String> select = ElwhaSelectField.filled("Planet");
     select.setOptions(mutable);
@@ -98,7 +98,7 @@ class ElwhaSelectFieldModelTest {
   }
 
   @Test
-  void theDisplayFunctionRendersTheFieldTextAndTheMenuLabels() {
+  void displayFunctionRendersTheFieldTextAndTheMenuLabels() {
     final ElwhaSelectField<String> select = planets();
     select.setDisplayFunction(String::toUpperCase);
 
@@ -202,7 +202,7 @@ class ElwhaSelectFieldModelTest {
   // ---------------------------------------------------------- listeners
 
   @Test
-  void theSelectionListenerFiresOnceWithTheNewValue() {
+  void selectionListenerFiresOnceWithTheNewValue() {
     final ElwhaSelectField<String> select = planets();
     final List<String> heard = new ArrayList<>();
     select.addSelectionChangeListener(heard::add);
@@ -325,7 +325,7 @@ class ElwhaSelectFieldModelTest {
   }
 
   @Test
-  void theMultiSnapshotIsUnmodifiable() {
+  void multiSnapshotIsUnmodifiable() {
     final ElwhaSelectField<String> select = planets();
     select.setMultiSelect(true);
     select.setSelectedValues(List.of("Mars"));
@@ -336,7 +336,7 @@ class ElwhaSelectFieldModelTest {
   }
 
   @Test
-  void theSingleValueListenerIsSilentInMultiMode() {
+  void singleValueListenerIsSilentInMultiMode() {
     final ElwhaSelectField<String> select = planets();
     select.setMultiSelect(true);
     final List<String> single = new ArrayList<>();

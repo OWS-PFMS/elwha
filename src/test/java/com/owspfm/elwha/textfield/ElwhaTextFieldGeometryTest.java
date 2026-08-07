@@ -52,7 +52,7 @@ class ElwhaTextFieldGeometryTest {
 
   @ParameterizedTest
   @EnumSource(Variant.class)
-  void thePreferredSizeIsTheContainerPlusTheAlwaysReservedSupportingRow(final Variant variant) {
+  void preferredSizeIsTheContainerPlusTheAlwaysReservedSupportingRow(final Variant variant) {
     final ElwhaTextField field = new ElwhaTextField(variant, "Label");
 
     final int containerTop =
@@ -68,7 +68,7 @@ class ElwhaTextFieldGeometryTest {
   }
 
   @Test
-  void theOutlinedVariantReservesABandAboveItsStrokeForTheFloatedLabel() {
+  void outlinedVariantReservesABandAboveItsStrokeForTheFloatedLabel() {
     final ElwhaTextField filled = new ElwhaTextField(Variant.FILLED, "Label");
     final ElwhaTextField outlined = new ElwhaTextField(Variant.OUTLINED, "Label");
 
@@ -78,7 +78,7 @@ class ElwhaTextFieldGeometryTest {
   }
 
   @Test
-  void theSupportingRowIsReservedEvenWithNoSupportingContent() {
+  void supportingRowIsReservedEvenWithNoSupportingContent() {
     final ElwhaTextField bare = new ElwhaTextField(Variant.FILLED, "Label");
     final ElwhaTextField supported = new ElwhaTextField(Variant.FILLED, "Label");
     supported.setSupportingText("Helper text");
@@ -97,7 +97,7 @@ class ElwhaTextFieldGeometryTest {
   // ------------------------------------------------------- editor placement
 
   @Test
-  void theFilledEditorSitsInTheLowerBandSoTheFloatedLabelClearsIt() {
+  void filledEditorSitsInTheLowerBandSoTheFloatedLabelClearsIt() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Label");
 
     final Rectangle bounds = editorBounds(field);
@@ -107,7 +107,7 @@ class ElwhaTextFieldGeometryTest {
   }
 
   @Test
-  void theOutlinedEditorIsVerticallyCenteredInItsContainer() {
+  void outlinedEditorIsVerticallyCenteredInItsContainer() {
     final ElwhaTextField field = new ElwhaTextField(Variant.OUTLINED, "Label");
 
     final Rectangle bounds = editorBounds(field);
@@ -158,7 +158,7 @@ class ElwhaTextFieldGeometryTest {
   }
 
   @Test
-  void theAutoErrorIconClaimsTheTrailingSlotOnlyWhileNoConsumerIconIsSet() {
+  void autoErrorIconClaimsTheTrailingSlotOnlyWhileNoConsumerIconIsSet() {
     final ElwhaTextField auto = new ElwhaTextField(Variant.FILLED, "Label");
     auto.setError(true);
     assertThat(auto.getPreferredSize().width - rightEdgeGap(auto))
@@ -234,7 +234,7 @@ class ElwhaTextFieldGeometryTest {
   }
 
   @Test
-  void theTrailingButtonCentersItsGlyphWhereAStaticIconWouldSit() {
+  void trailingButtonCentersItsGlyphWhereAStaticIconWouldSit() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Label");
     final ElwhaIconButton button =
         new ElwhaIconButton(MaterialIcons.close(ElwhaTextField.ICON_GLYPH));
@@ -292,7 +292,7 @@ class ElwhaTextFieldGeometryTest {
   }
 
   @Test
-  void theEditorSwapPreservesEnabledAndReadOnlyState() {
+  void editorSwapPreservesEnabledAndReadOnlyState() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Notes");
     field.setEnabled(false);
     field.setReadOnly(true);
@@ -304,7 +304,7 @@ class ElwhaTextFieldGeometryTest {
   }
 
   @Test
-  void theTextAreaModeHostsTheEditorInAScrollPaneAtItsRowCount() {
+  void textAreaModeHostsTheEditorInAScrollPaneAtItsRowCount() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Notes");
     field.setInputMode(InputMode.TEXT_AREA);
     field.setRows(4);
@@ -373,7 +373,7 @@ class ElwhaTextFieldGeometryTest {
   }
 
   @Test
-  void theMultiLineTextAreaKeepsTabAsATraversalKeyNotAnEditingKey() {
+  void multiLineTextAreaKeepsTabAsATraversalKeyNotAnEditingKey() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Notes");
     field.setInputMode(InputMode.MULTI_LINE);
 

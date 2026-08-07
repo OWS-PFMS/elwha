@@ -165,7 +165,7 @@ class ElwhaTextFieldRenderTest {
 
   @ParameterizedTest
   @MethodSource("variantsInBothModes")
-  void theRestingIndicatorRoleIsPerVariant(final Variant variant, final Mode mode) {
+  void restingIndicatorRoleIsPerVariant(final Variant variant, final Mode mode) {
     ThemeExtension.install(mode);
     final ElwhaTextField field = chromeOnly(variant);
 
@@ -255,7 +255,7 @@ class ElwhaTextFieldRenderTest {
   }
 
   @Test
-  void theRestingIndicatorIsOneDeviceIndependentPixelTall() {
+  void restingIndicatorIsOneDeviceIndependentPixelTall() {
     final PaintLog log = PaintLog.capture(chromeOnly(Variant.FILLED));
 
     final Rectangle2D bar = indicator(log).orElseThrow().bounds();
@@ -268,7 +268,7 @@ class ElwhaTextFieldRenderTest {
   }
 
   @Test
-  void theFilledContainerIsTopRoundedAndSpansTheFullWidth() {
+  void filledContainerIsTopRoundedAndSpansTheFullWidth() {
     final ElwhaTextField field = chromeOnly(Variant.FILLED);
     final PaintLog log = PaintLog.capture(field);
 
@@ -289,7 +289,7 @@ class ElwhaTextFieldRenderTest {
   }
 
   @Test
-  void theOutlinedStrokeIsSampleableOnItsStraightLeftEdge() {
+  void outlinedStrokeIsSampleableOnItsStraightLeftEdge() {
     final ElwhaTextField field = chromeOnly(Variant.OUTLINED);
 
     final Dimension pref = size(field);
