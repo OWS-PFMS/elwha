@@ -42,8 +42,10 @@ import javax.swing.SwingUtilities;
  *
  * <p><strong>Bounds geometry.</strong> The badge's bottom-leading corner is pinned a variant-
  * dependent offset from the icon's top-trailing corner — Small 6 × 6 dp, Large 14 × 12 dp (design
- * doc §5.1). As Large content widens via {@link ElwhaBadge#setContent(String)} the container grows
- * leading-ward, keeping the pin glued in place (design doc §5.2). The anchor reads {@code
+ * doc §5.1). As Large content widens via {@link ElwhaBadge#setContent(String)} the pinned corner
+ * stays glued in place and the container's <em>trailing</em> edge moves outward — rightward in LTR,
+ * leftward in RTL — so a {@code "999+"} badge extends past the icon's trailing edge rather than
+ * fanning back across the icon body (design doc §5.2). The anchor reads {@code
  * host.getComponentOrientation()} at every bounds computation and at any {@code
  * componentOrientation} property change on the host, so RTL hosts mirror the badge to the icon's
  * upper-leading corner automatically — design doc §11.
@@ -71,7 +73,7 @@ import javax.swing.SwingUtilities;
  * accessible action — AT users address the badge by navigating to the host destination.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaBadgeAnchor {

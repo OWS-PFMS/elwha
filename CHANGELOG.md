@@ -15,6 +15,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **`ElwhaNavigationRail` and `ElwhaNavRailDestination` NPE'd / silently dropped text unparented**
+  (#543's suite) — both derived their font from `getFont()`, null on a component never added to a
+  container (an offscreen render's state: gallery previews, drag images). An Expanded
+  destination's hug-width measurement threw; section headers silently skipped painting. Each
+  class now routes measurement and paint through one font accessor falling back to a resolved
+  `TypeRole` (`LABEL_MEDIUM` labels, `TITLE_SMALL` headers), matching the #540 `ElwhaSlider` fix —
+  reserved space can no longer disagree with painted glyphs, and the magic 14px header-height
+  fallback is replaced by a measured height. Rendering unchanged wherever a font is inherited.
 - **A submenu trigger stayed marked expanded after a whole-chain dismissal** (#542's suite) — an
   outside press or a selection unlinks each chain level before closing it, so the opener's
   bookkeeping survived its own menu: the row kept reporting `EXPANDED` with nothing open, and

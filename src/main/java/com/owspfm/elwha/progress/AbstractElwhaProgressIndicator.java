@@ -549,6 +549,23 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
   }
 
   /**
+   * The nanosecond time source every timeline in this class reads — the indeterminate cycle anchor,
+   * the traveling-wave integrator, and the amplitude transition.
+   *
+   * <p>Package-private and overridable so the suite can pin a frame: the choreography here is a
+   * pure function of elapsed time, but it reads that time inline, so without a seam an assertion
+   * about "what the indeterminate bar looks like 400ms in" would have to sample a live animation
+   * against the wall clock — the exact pattern that made the incumbent indeterminate smoke flaky.
+   * Mirrors the loading indicator's elapsed-ms choreography functions. Not public API, and the
+   * default is plain {@link System#nanoTime()}, so production behavior is unchanged.
+   *
+   * @return the current time in nanoseconds
+   */
+  long nowNanos() {
+    return System.nanoTime();
+  }
+
+  /**
    * Position inside a looping indeterminate timeline.
    *
    * @param cycleMs the cycle length, ms
@@ -557,10 +574,7 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
    * @since v0.4.0
    */
   protected final float indeterminateCycleT(final int cycleMs) {
-    if (cycleAnchorNanos == 0L) {
-      cycleAnchorNanos = System.nanoTime();
-    }
-    final long elapsedMs = (System.nanoTime() - cycleAnchorNanos) / 1_000_000L;
+    final long elapsedMs = indeterminateElapsedMs();
     return (elapsedMs % cycleMs) / (float) cycleMs;
   }
 
@@ -574,9 +588,9 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
    */
   protected final long indeterminateElapsedMs() {
     if (cycleAnchorNanos == 0L) {
-      cycleAnchorNanos = System.nanoTime();
+      cycleAnchorNanos = nowNanos();
     }
-    return (System.nanoTime() - cycleAnchorNanos) / 1_000_000L;
+    return (nowNanos() - cycleAnchorNanos) / 1_000_000L;
   }
 
   /**
@@ -600,7 +614,7 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
     final boolean needed = isShowing() && (indeterminate || waveMoving || transition);
     if (needed) {
       if (!clock.isRunning()) {
-        lastTickNanos = System.nanoTime();
+        lastTickNanos = nowNanos();
         startAmplitudeAnimationIfNeeded();
         clock.start();
       }
@@ -631,12 +645,12 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
         && (amplitudeAnimStartNanos < 0L || Math.abs(target - amplitudeAnimTarget) > 0.001f)) {
       amplitudeAnimFrom = amplitudeFraction;
       amplitudeAnimTarget = target;
-      amplitudeAnimStartNanos = System.nanoTime();
+      amplitudeAnimStartNanos = nowNanos();
     }
   }
 
   private void tick() {
-    final long now = System.nanoTime();
+    final long now = nowNanos();
     final float dtSeconds = (now - lastTickNanos) / 1_000_000_000f;
     lastTickNanos = now;
 
