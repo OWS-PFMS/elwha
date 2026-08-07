@@ -631,7 +631,8 @@ public class ElwhaCheckbox extends JComponent {
         new AbstractAction() {
           @Override
           public void actionPerformed(final ActionEvent e) {
-            if (!isEnabled()) {
+            // Outer-qualified — AbstractAction has its own always-true isEnabled() (#432).
+            if (!ElwhaCheckbox.this.isEnabled()) {
               return;
             }
             startRipple();
@@ -730,7 +731,7 @@ public class ElwhaCheckbox extends JComponent {
     final float by = cy - CONTAINER_SIZE / 2f;
     final float fill = Easing.STANDARD.ease(fillAnimator.progress());
     if (fill < 1f) {
-      g2.setColor(withAlpha(outlineColor(), 1f - fill));
+      g2.setColor(scaleAlpha(outlineColor(), 1f - fill));
       g2.setStroke(new BasicStroke(OUTLINE_WIDTH));
       final float inset = OUTLINE_WIDTH / 2f;
       g2.draw(
@@ -745,7 +746,7 @@ public class ElwhaCheckbox extends JComponent {
     if (fill <= 0f) {
       return;
     }
-    g2.setColor(withAlpha(containerFillColor(), fill));
+    g2.setColor(scaleAlpha(containerFillColor(), fill));
     g2.fill(
         new RoundRectangle2D.Float(
             bx, by, CONTAINER_SIZE, CONTAINER_SIZE, CONTAINER_ARC, CONTAINER_ARC));
@@ -912,6 +913,17 @@ public class ElwhaCheckbox extends JComponent {
   private static Color withAlpha(final Color base, final float alpha) {
     final float clamped = Math.max(0f, Math.min(1f, alpha));
     return new Color(base.getRed(), base.getGreen(), base.getBlue(), Math.round(clamped * 255f));
+  }
+
+  /**
+   * Multiplies a color's existing alpha by {@code factor} rather than replacing it, so the
+   * cross-fade can dim a role that is already translucent. Replacing would restore the disabled
+   * roles (which carry the 0.38 content opacity) to full opacity at the fade's end points.
+   */
+  private static Color scaleAlpha(final Color base, final float factor) {
+    final float clamped = Math.max(0f, Math.min(1f, factor));
+    return new Color(
+        base.getRed(), base.getGreen(), base.getBlue(), Math.round(base.getAlpha() * clamped));
   }
 
   // ---------------------------------------------------------------- a11y

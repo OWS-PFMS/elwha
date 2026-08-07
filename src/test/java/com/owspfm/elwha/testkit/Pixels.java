@@ -96,6 +96,86 @@ public final class Pixels {
   }
 
   /**
+   * Asserts at least one pixel inside the disc of {@code radius} around {@code (cx, cy)} is within
+   * ±10 per channel of {@code want} — the region probe for hand-painted chrome whose exact stroke
+   * pixels are eye-tuned geometry rather than contract (a checkbox mark, a radio dot, a switch
+   * glyph). The scan is a disc, not a square, so it never pokes past a small round part onto the
+   * chrome behind it.
+   *
+   * @param image the raster to probe
+   * @param cx disc center x
+   * @param cy disc center y
+   * @param radius disc radius in px
+   * @param want the expected color
+   * @param what human-readable description of what the probe verifies
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void assertAnyPixelNear(
+      final BufferedImage image,
+      final int cx,
+      final int cy,
+      final int radius,
+      final Color want,
+      final String what) {
+    assertThat(anyPixelNear(image, cx, cy, radius, want))
+        .as(
+            "%s — expected some pixel near %s within %dpx of (%d,%d)",
+            what, hex(want), radius, cx, cy)
+        .isTrue();
+  }
+
+  /**
+   * The negative of {@link #assertAnyPixelNear} — asserts no pixel in the disc matches, proving a
+   * mark is <em>absent</em> (an unchecked container carries no glyph, a selected-icon-only switch
+   * leaves its unselected handle bare).
+   *
+   * @param image the raster to probe
+   * @param cx disc center x
+   * @param cy disc center y
+   * @param radius disc radius in px
+   * @param want the color that must not appear
+   * @param what human-readable description of what the probe verifies
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void assertNoPixelNear(
+      final BufferedImage image,
+      final int cx,
+      final int cy,
+      final int radius,
+      final Color want,
+      final String what) {
+    assertThat(anyPixelNear(image, cx, cy, radius, want))
+        .as(
+            "%s — expected no pixel near %s within %dpx of (%d,%d)",
+            what, hex(want), radius, cx, cy)
+        .isFalse();
+  }
+
+  private static boolean anyPixelNear(
+      final BufferedImage image, final int cx, final int cy, final int radius, final Color want) {
+    for (int y = Math.max(0, cy - radius); y <= Math.min(image.getHeight() - 1, cy + radius); y++) {
+      for (int x = Math.max(0, cx - radius);
+          x <= Math.min(image.getWidth() - 1, cx + radius);
+          x++) {
+        final int dx = x - cx;
+        final int dy = y - cy;
+        if (dx * dx + dy * dy > radius * radius) {
+          continue;
+        }
+        final Color got = new Color(image.getRGB(x, y), true);
+        if (Math.abs(got.getRed() - want.getRed()) <= TOLERANCE
+            && Math.abs(got.getGreen() - want.getGreen()) <= TOLERANCE
+            && Math.abs(got.getBlue() - want.getBlue()) <= TOLERANCE) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
    * Source-over blend of {@code over} at {@code alpha} onto an opaque {@code base} — the expected
    * result of painting an M3 state layer over a surface.
    *
