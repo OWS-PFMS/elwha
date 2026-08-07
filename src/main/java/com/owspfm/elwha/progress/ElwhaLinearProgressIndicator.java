@@ -34,8 +34,9 @@ import javax.swing.DefaultBoundedRangeModel;
  * <p>The bar stretches to its layout width (preferred 240px); height is the chrome height (track
  * thickness, plus the wave band when wavy). See {@code elwha-progress-indicator-design.md} §5.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator {

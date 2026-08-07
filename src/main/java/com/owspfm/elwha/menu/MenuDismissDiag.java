@@ -25,7 +25,7 @@ import javax.swing.SwingUtilities;
  * Needs a display.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class MenuDismissDiag {
@@ -38,6 +38,14 @@ public final class MenuDismissDiag {
   private static int failures;
   private static final MenuDismissCause[] SWITCH_CAUSE = {null};
 
+  /**
+   * Runs the diagnostic.
+   *
+   * @param args unused
+   * @throws Exception if the run fails
+   * @version v0.5.0
+   * @since v0.4.0
+   */
   public static void main(final String[] args) throws Exception {
     if (GraphicsEnvironment.isHeadless()) {
       System.out.println("needs a display; skipping");

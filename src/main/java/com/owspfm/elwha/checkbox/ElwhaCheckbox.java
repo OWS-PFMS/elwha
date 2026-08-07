@@ -75,8 +75,9 @@ import javax.swing.Timer;
  * {@link #setIndeterminate(boolean)} on the parent when the children disagree, and {@link
  * #setChecked(boolean)} when they agree.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public class ElwhaCheckbox extends JComponent {

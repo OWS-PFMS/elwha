@@ -65,8 +65,9 @@ import javax.swing.event.MouseInputAdapter;
  * <p>Inter-card gap defaults to {@link SpaceScale#SM} (8 dp per M3 measurement spec frame).
  *
  * @param <T> the item type
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
@@ -122,6 +123,8 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
   }
 
   /**
+   * Returns the backing data model.
+   *
    * @return the backing data model
    * @version v0.2.0
    * @since v0.2.0
@@ -131,6 +134,8 @@ public final class ElwhaCardList<T> extends JPanel implements ElwhaList<T> {
   }
 
   /**
+   * Returns the selection model.
+   *
    * @return the selection model
    * @version v0.2.0
    * @since v0.2.0

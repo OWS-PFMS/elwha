@@ -7,8 +7,9 @@ import java.util.List;
  * Fired when the selection of a {@link ElwhaChipList} changes.
  *
  * @param <T> the item type
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public class ChipSelectionEvent<T> extends EventObject {

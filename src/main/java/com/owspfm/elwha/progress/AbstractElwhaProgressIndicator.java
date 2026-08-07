@@ -42,8 +42,9 @@ import javax.swing.event.ChangeListener;
  * focusable. Name the activity for assistive tech via {@code
  * getAccessibleContext().setAccessibleName("Download progress")}.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public abstract class AbstractElwhaProgressIndicator extends JComponent implements Accessible {

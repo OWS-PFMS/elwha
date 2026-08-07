@@ -72,8 +72,9 @@ import javax.swing.event.MouseInputAdapter;
  * }</pre>
  *
  * @param <T> the item type
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T> {
@@ -2507,6 +2508,15 @@ public class ElwhaChipList<T> extends JPanel implements Accessible, ElwhaList<T>
 
   /** Accessible role of the list itself; rendered chips expose their own roles. */
   protected class AccessibleElwhaChipList extends AccessibleJPanel {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    protected AccessibleElwhaChipList() {}
+
     @Override
     public AccessibleRole getAccessibleRole() {
       return AccessibleRole.LIST;

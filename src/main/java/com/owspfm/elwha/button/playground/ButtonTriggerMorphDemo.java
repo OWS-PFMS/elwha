@@ -21,7 +21,7 @@ import javax.swing.SwingUtilities;
  * the select morph, and that the press trigger still fires on a CLICKABLE button.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ButtonTriggerMorphDemo {
@@ -34,6 +34,7 @@ public final class ButtonTriggerMorphDemo {
    * Runs the verification and exits non-zero if any check fails.
    *
    * @param args ignored
+   * @throws Exception if the run fails
    */
   public static void main(final String[] args) throws Exception {
     System.setProperty("java.awt.headless", "true");

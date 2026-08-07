@@ -24,8 +24,9 @@ import javax.swing.SwingConstants;
  * a runtime theme switch re-skins the title on the next repaint without consumer code. See {@code
  * docs/research/elwha-card-v3-spec.md} §4.1.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardTitle extends JLabel {
@@ -103,6 +104,8 @@ public final class ElwhaCardTitle extends JLabel {
   }
 
   /**
+   * Returns the active type role.
+   *
    * @return the active type role
    * @version v0.2.0
    * @since v0.2.0
@@ -127,6 +130,8 @@ public final class ElwhaCardTitle extends JLabel {
   }
 
   /**
+   * Returns the active foreground color role.
+   *
    * @return the active foreground color role
    * @version v0.2.0
    * @since v0.2.0

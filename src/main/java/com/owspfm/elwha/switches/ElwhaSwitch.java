@@ -115,8 +115,9 @@ import javax.swing.event.EventListenerList;
  * AccessibleState#CHECKED} while selected, one "click" {@link AccessibleAction} (a user-gesture
  * toggle), and an {@link AccessibleValue} of 0/1.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public class ElwhaSwitch extends JComponent {
@@ -882,6 +883,14 @@ public class ElwhaSwitch extends JComponent {
    */
   protected class AccessibleElwhaSwitch extends AccessibleJComponent
       implements AccessibleAction, AccessibleValue {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.4.0
+     */
+    protected AccessibleElwhaSwitch() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {

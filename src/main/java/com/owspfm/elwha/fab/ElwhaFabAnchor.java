@@ -62,6 +62,7 @@ import javax.swing.Timer;
  * <p><strong>Scope.</strong> A full M3 Scaffold with named slots, adjacent-UI gaps (20 / 28 dp,
  * §4.4), and multi-FAB placement (FAB Menu, #185) are out of scope.
  *
+ * @serial exclude
  * @author Charles Bryan
  * @version v0.5.0
  * @since v0.3.0

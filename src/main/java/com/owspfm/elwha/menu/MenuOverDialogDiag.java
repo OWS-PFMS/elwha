@@ -26,13 +26,21 @@ import javax.swing.SwingUtilities;
  * topmost overlay react to focus escapes. Needs a display (Robot); skips headless.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class MenuOverDialogDiag {
 
   private MenuOverDialogDiag() {}
 
+  /**
+   * Runs the diagnostic.
+   *
+   * @param args unused
+   * @throws Exception if the run fails
+   * @version v0.5.0
+   * @since v0.4.0
+   */
   public static void main(final String[] args) throws Exception {
     if (GraphicsEnvironment.isHeadless()) {
       System.out.println("needs a display; skipping");

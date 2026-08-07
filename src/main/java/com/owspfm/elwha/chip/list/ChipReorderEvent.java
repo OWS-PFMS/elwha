@@ -9,8 +9,9 @@ import java.util.EventObject;
  * DefaultChipListModel#move(int, int)}.
  *
  * @param <T> the item type
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public class ChipReorderEvent<T> extends EventObject {

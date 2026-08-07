@@ -97,8 +97,9 @@ import javax.swing.KeyStroke;
  * focused destination (selection only changes on activation, never on focus traversal). Escape is
  * intentionally not consumed.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaNavigationRail extends JComponent {
@@ -132,12 +133,24 @@ public final class ElwhaNavigationRail extends JComponent {
       this.destinations = List.copyOf(destinations);
     }
 
-    /** Returns the section header label. */
+    /**
+     * Returns the section header label.
+     *
+     * @return the header label
+     * @version v0.5.0
+     * @since v0.3.0
+     */
     public String getHeader() {
       return header;
     }
 
-    /** Returns the section's secondary destinations as an unmodifiable list. */
+    /**
+     * Returns the section's secondary destinations as an unmodifiable list.
+     *
+     * @return the destinations, unmodifiable
+     * @version v0.5.0
+     * @since v0.3.0
+     */
     public List<ElwhaNavRailDestination> getDestinations() {
       return destinations;
     }
@@ -1253,6 +1266,14 @@ public final class ElwhaNavigationRail extends JComponent {
    * @since v0.3.0
    */
   protected class AccessibleElwhaNavigationRail extends AccessibleJComponent {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.3.0
+     */
+    protected AccessibleElwhaNavigationRail() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {

@@ -32,13 +32,20 @@ import javax.swing.JComponent;
  * assertion.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class MenuVibrantSmoke {
 
   private MenuVibrantSmoke() {}
 
+  /**
+   * Runs the smoke; exits non-zero on any failed check.
+   *
+   * @param args unused
+   * @version v0.5.0
+   * @since v0.4.0
+   */
   public static void main(final String[] args) {
     System.setProperty("java.awt.headless", "true");
     MorphAnimator.setReducedMotion(true);

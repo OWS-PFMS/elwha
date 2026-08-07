@@ -82,8 +82,9 @@ import javax.swing.Timer;
  * pin.addActionListener(evt -> System.out.println("pinned: " + pin.isSelected()));
  * }</pre>
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badge.IconBearing {
@@ -1273,6 +1274,14 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
    * @since v0.1.0
    */
   protected class AccessibleElwhaIconButton extends AccessibleJComponent {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.1.0
+     */
+    protected AccessibleElwhaIconButton() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {

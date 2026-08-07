@@ -45,6 +45,7 @@ import javax.swing.event.ChangeListener;
  * picker.addChangeListener(e -> preview.setBackground(picker.getColor()));
  * }</pre>
  *
+ * @serial exclude
  * @author Charles Bryan
  * @version v0.5.0
  * @since v0.5.0

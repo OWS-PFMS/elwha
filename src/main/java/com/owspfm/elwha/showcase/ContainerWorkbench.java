@@ -21,8 +21,9 @@ import javax.swing.UIManager;
  * {@link ComponentWorkbench}. The event log makes selection / reorder / group-change callbacks
  * visible — append to it with {@link #logEvent(String)}.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ContainerWorkbench extends JPanel {

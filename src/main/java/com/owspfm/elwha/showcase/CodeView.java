@@ -18,8 +18,9 @@ import javax.swing.JTextArea;
  * snapshot, this takes a plain {@code String} via {@link #setCode(String)}, so any component's
  * workbench can drive it. The "Copy" button puts the current text on the system clipboard.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class CodeView extends JPanel {

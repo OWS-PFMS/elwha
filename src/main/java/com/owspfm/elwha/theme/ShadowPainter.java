@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * corners) and the size-independent caching insight this painter adopts in its place.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ShadowPainter {
@@ -150,6 +150,9 @@ public final class ShadowPainter {
   }
 
   /**
+   * Returns the number of live entries in the shared shadow cache (entries whose {@link
+   * SoftReference} has not been cleared). Diagnostic / demo seam.
+   *
    * @return the number of live entries in the shared shadow cache (entries whose {@link
    *     SoftReference} has not been cleared). Diagnostic / demo seam.
    * @version v0.2.0

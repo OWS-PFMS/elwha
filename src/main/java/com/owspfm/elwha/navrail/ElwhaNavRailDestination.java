@@ -103,8 +103,9 @@ import javax.swing.Timer;
  * <p>The variant (Collapsed / Expanded) and the selected boolean are pushed down by the parent
  * {@code ElwhaNavigationRail} — they are not part of the destination's public surface.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaNavRailDestination extends JComponent implements IconBearing {
@@ -211,17 +212,35 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     return new ElwhaNavRailDestination(unselected, selected, label);
   }
 
-  /** The destination's label text. */
+  /**
+   * The destination's label text.
+   *
+   * @return the label text
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public String getLabel() {
     return label;
   }
 
-  /** The icon rendered in the unselected state. */
+  /**
+   * The icon rendered in the unselected state.
+   *
+   * @return the unselected icon
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public Icon getIconUnselected() {
     return iconUnselected;
   }
 
-  /** The icon rendered in the selected state. */
+  /**
+   * The icon rendered in the selected state.
+   *
+   * @return the selected icon
+   * @version v0.5.0
+   * @since v0.3.0
+   */
   public Icon getIconSelected() {
     return iconSelected;
   }
@@ -1009,6 +1028,14 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
    * @since v0.3.0
    */
   protected class AccessibleElwhaNavRailDestination extends AccessibleJComponent {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.3.0
+     */
+    protected AccessibleElwhaNavRailDestination() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {

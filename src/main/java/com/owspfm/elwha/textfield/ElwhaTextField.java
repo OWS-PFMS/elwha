@@ -53,6 +53,7 @@ import javax.swing.text.JTextComponent;
  * <p>Decisions and the deliberate M3 mappings: {@code docs/research/elwha-textfield-design.md} and
  * its companion {@code elwha-textfield-research.md}.
  *
+ * @serial exclude
  * @author Charles Bryan
  * @version v0.5.0
  * @since v0.4.0

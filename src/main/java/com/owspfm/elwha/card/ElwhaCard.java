@@ -82,8 +82,9 @@ import javax.swing.Timer;
  * quadrad — cursor + hover state-layer + ripple + tab stop + AccessibleRole — together; consumers
  * cannot configure those independently. See spec §12.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public class ElwhaCard extends ElwhaSurface {
@@ -265,6 +266,8 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Returns the current card variant.
+   *
    * @return the current card variant
    * @version v0.2.0
    * @since v0.2.0
@@ -332,6 +335,8 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Returns the current padding as {@link Insets} resolved from the token steps.
+   *
    * @return the current padding as {@link Insets} resolved from the token steps
    * @version v0.2.0
    * @since v0.2.0
@@ -374,6 +379,8 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Returns whether the card is currently actionable.
+   *
    * @return whether the card is currently actionable
    * @version v0.2.0
    * @since v0.2.0
@@ -439,6 +446,8 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Returns whether the card can be selected.
+   *
    * @return whether the card can be selected
    * @version v0.2.0
    * @since v0.2.0
@@ -468,6 +477,8 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Returns whether the card is currently selected.
+   *
    * @return whether the card is currently selected
    * @version v0.2.0
    * @since v0.2.0
@@ -514,6 +525,8 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Returns whether the card is collapsible.
+   *
    * @return whether the card is collapsible
    * @version v0.2.0
    * @since v0.2.0
@@ -613,6 +626,8 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Returns whether the card is currently collapsed.
+   *
    * @return whether the card is currently collapsed
    * @version v0.2.0
    * @since v0.2.0
@@ -636,6 +651,8 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Returns whether collapse transitions animate.
+   *
    * @return whether collapse transitions animate
    * @version v0.2.0
    * @since v0.2.0
@@ -662,9 +679,11 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Returns the collapse rule assigned to a child.
+   *
    * @param child the child component
    * @return the rule for {@code child} — {@link CollapseRule#COLLAPSIBLE} if no rule was assigned
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public CollapseRule getCollapseConstraint(final Component child) {
@@ -791,6 +810,8 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Returns the active expansion-overflow strategy.
+   *
    * @return the active expansion-overflow strategy
    * @version v0.2.0
    * @since v0.2.0
@@ -818,6 +839,8 @@ public class ElwhaCard extends ElwhaSurface {
   }
 
   /**
+   * Returns whether the card is currently flagged as dragged.
+   *
    * @return whether the card is currently flagged as dragged
    * @version v0.2.0
    * @since v0.2.0

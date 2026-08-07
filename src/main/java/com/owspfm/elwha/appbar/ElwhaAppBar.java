@@ -68,6 +68,7 @@ import javax.swing.JScrollPane;
  * <p>Design: {@code docs/research/elwha-appbar-design.md}; research: {@code
  * elwha-appbar-research.md}.
  *
+ * @serial exclude
  * @author Charles Bryan
  * @version v0.5.0
  * @since v0.5.0
@@ -948,6 +949,14 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * @since v0.5.0
    */
   protected class AccessibleElwhaAppBar extends AccessibleJComponent {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    protected AccessibleElwhaAppBar() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {

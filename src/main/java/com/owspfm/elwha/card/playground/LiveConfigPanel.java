@@ -32,8 +32,9 @@ import javax.swing.JScrollPane;
  * <p>Listeners registered via {@link #addConfigChangeListener(Consumer)} fire after every mutation
  * with the latest snapshot — used to keep the {@link SnippetPanel} in sync.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class LiveConfigPanel extends JPanel {

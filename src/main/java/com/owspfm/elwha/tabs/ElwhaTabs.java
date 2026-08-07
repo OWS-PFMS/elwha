@@ -65,8 +65,9 @@ import javax.swing.event.ChangeListener;
  *
  * <p>Design: {@code docs/research/elwha-tabs-design.md}; research: {@code elwha-tabs-research.md}.
  *
+ * @serial exclude
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public class ElwhaTabs extends JComponent implements Accessible {
@@ -887,6 +888,14 @@ public class ElwhaTabs extends JComponent implements Accessible {
    * @since v0.4.0
    */
   protected class AccessibleElwhaTabs extends AccessibleJComponent implements AccessibleSelection {
+
+    /**
+     * Creates the accessible context for the host component.
+     *
+     * @version v0.5.0
+     * @since v0.4.0
+     */
+    protected AccessibleElwhaTabs() {}
 
     @Override
     public AccessibleRole getAccessibleRole() {
