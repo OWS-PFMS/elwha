@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Removed
+
+- **The entire `card.v1.*` legacy package** (#96) — the pre-Elwha-theme V1 card, its list family,
+  and its playground (30 classes + the V1 cursor resources). V1 was never adopted by a published
+  consumer (v0.2.0 was cancelled; 1.0.0 is OWS's initial adoption, on V3). The reorder cursor
+  assets live on at `com/owspfm/elwha/list/cursors/`, owned by the unified `ElwhaItemList`.
+
 ### Fixed
 
 - **`ElwhaTextField` editor colors went stale across theme switches** ([#495](https://github.com/OWS-PFMS/elwha/issues/495)) — two halves. *Detached fields:* `ElwhaTheme.install` re-themes via `updateComponentTreeUI(window)`, which never visits components outside a window hierarchy — a field built under one mode and mounted later (an unopened dialog's content, e.g. the color picker's hex field) painted the old mode's near-black text on the dark surface. *The caret:* the text UI's `installDefaults` replaced the UIResource-typed caret with the LAF default on every switch, losing the M3 `PRIMARY`/`ERROR` stroke even in-hierarchy. The field now re-applies its editor styling in `updateUI()` and `addNotify()`, setting **plain** (non-UIResource) colors/fonts so the editor's own `updateUI` (which runs after the field's in the parent-first walk) preserves them. `ElwhaSelectField` inherits the fix through its embedded field. Regression guard: `ElwhaTextFieldThemeSmoke`.

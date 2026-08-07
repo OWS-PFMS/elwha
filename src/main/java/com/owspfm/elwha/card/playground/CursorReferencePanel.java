@@ -21,10 +21,9 @@ import javax.swing.UIManager;
  * Reference panel listing every cursor a card-rendering {@link com.owspfm.elwha.list.ElwhaItemList}
  * can hand out: AWT predefined cursors plus the two custom grab / grabbing cursors.
  *
- * <p>The previews are loaded reflectively from {@code com.owspfm.elwha.card.v1.list.Cursors}, which
- * still carries its own copy of the assets. The live list now loads them from the relocated {@code
- * com.owspfm.elwha.list} package-private loader; this panel repoints at it when V1 goes away in
- * story #96.
+ * <p>The previews are loaded reflectively from the package-private {@code
+ * com.owspfm.elwha.list.ReorderCursors} loader — the same class the live list uses — so the panel
+ * needs no public preview API on the loader.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -112,7 +111,7 @@ public final class CursorReferencePanel extends JPanel {
 
   private static Cursor loadCustomCursor(final String name) {
     try {
-      final Class<?> clazz = Class.forName("com.owspfm.elwha.card.v1.list.Cursors");
+      final Class<?> clazz = Class.forName("com.owspfm.elwha.list.ReorderCursors");
       final Method method = clazz.getDeclaredMethod(name);
       method.setAccessible(true);
       return (Cursor) method.invoke(null);
@@ -123,7 +122,7 @@ public final class CursorReferencePanel extends JPanel {
 
   private static Image loadCustomImage(final String baseName) {
     try {
-      final Class<?> clazz = Class.forName("com.owspfm.elwha.card.v1.list.Cursors");
+      final Class<?> clazz = Class.forName("com.owspfm.elwha.list.ReorderCursors");
       final Method method = clazz.getDeclaredMethod("previewImage", String.class, boolean.class);
       method.setAccessible(true);
       return (Image) method.invoke(null, baseName, isDarkTheme());

@@ -8,11 +8,8 @@
  * <p>See {@code docs/research/elwha-card-v3-spec.md} for the full implementation contract and
  * {@code docs/research/elwha-card-v3-sketch.md} for the architectural narrative.
  *
- * <p>V1 (the pre-Elwha-theme card extracted from OWS) lives at {@link com.owspfm.elwha.card.v1}
- * through 0.2.0 to support OWS incremental migration; it is deleted in 1.0.0.
- *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 package com.owspfm.elwha.card;

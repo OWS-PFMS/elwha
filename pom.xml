@@ -214,6 +214,23 @@
                not fail the build until the epic's final failOnWarnings flip. -->
           <doclint>all</doclint>
           <failOnError>true</failOnError>
+          <!-- #96 — the final #529 ratchet: with card/v1 gone the tree is doclint-warning-free,
+               and failOnWarnings keeps it that way. The <tags> declarations make the house
+               @version/@since-on-every-member convention legal to javadoc (placement "a" = all);
+               without them the standard tags are class-level-only and every member tag warns. -->
+          <failOnWarnings>true</failOnWarnings>
+          <tags>
+            <tag>
+              <name>version</name>
+              <placement>a</placement>
+              <head>Version:</head>
+            </tag>
+            <tag>
+              <name>since</name>
+              <placement>a</placement>
+              <head>Since:</head>
+            </tag>
+          </tags>
           <!-- #547: the landing page of the published javadoc jar (component index + quick
                start) instead of a bare package list. -->
           <overview>${project.basedir}/src/main/javadoc/overview.html</overview>

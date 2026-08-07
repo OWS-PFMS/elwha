@@ -20,8 +20,7 @@ import java.util.stream.Stream;
  * allowlist holds the one legitimate survivor — {@code ThemePlayground}'s default button, which is
  * handed to {@link javax.swing.JRootPane#setDefaultButton(javax.swing.JButton)} and so must be a
  * {@code JButton} ({@code ElwhaButton} extends {@code JComponent}, not {@code JButton}). The frozen
- * {@code card/v1/} legacy and {@code card/fixes/} demos are deliberately out of scope and not
- * scanned.
+ * {@code card/fixes/} demos are deliberately out of scope and not scanned.
  *
  * <p>Run from the module root (where {@code mvn exec:java} puts the working directory). Exits
  * non-zero if a stray {@code new JButton} is found, or if the source tree cannot be located (so a

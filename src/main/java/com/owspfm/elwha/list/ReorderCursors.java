@@ -41,8 +41,8 @@ import javax.swing.UIManager;
  * new variant.
  *
  * <p>Relocated here from the V1 card list in story #69 (spec §7), which is what removes the last
- * code dependency both live list families had on {@code card.v1}. The asset content itself is owned
- * by issue #531.
+ * code dependency the pre-#70 list families carried. The asset content itself is owned by issue
+ * #531.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -247,6 +247,19 @@ final class ReorderCursors {
     g.setColor(Color.BLACK);
     g.setStroke(new BasicStroke((float) Math.max(1.0, 1.2 * scale)));
     g.draw(shape);
+  }
+
+  /**
+   * Theme-variant 32px preview raster for the cursor-reference playground panel.
+   *
+   * @param baseName {@code "grab"} or {@code "grabbing"}
+   * @param dark whether to load the dark-theme variant
+   * @return the 32px preview image, or {@code null} if the asset is missing
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  static java.awt.Image previewImage(final String baseName, final boolean dark) {
+    return loadPng(baseName + "-" + (dark ? "dark" : "light") + "-32.png");
   }
 
   private static RoundRectangle2D.Double rr(
