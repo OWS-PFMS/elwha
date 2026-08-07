@@ -198,7 +198,7 @@ class ElwhaCardInteractionTest {
   }
 
   @Test
-  void theCancelOnlyCoversTheOneGestureItInterrupted() {
+  void cancelOnlyCoversTheOneGestureItInterrupted() {
     final ElwhaCard card = sized(ElwhaCard.filledCard().setActionable(true));
     final List<ActionEvent> heard = new ArrayList<>();
     card.addActionListener(heard::add);
@@ -316,7 +316,7 @@ class ElwhaCardInteractionTest {
   }
 
   @Test
-  void theListWriteBackIsAllowedPastTheSelectableGate() {
+  void listWriteBackIsAllowedPastTheSelectableGate() {
     final ElwhaCard card = ElwhaCard.filledCard();
     card.setListInteractive(true);
 
@@ -438,7 +438,7 @@ class ElwhaCardInteractionTest {
   }
 
   @Test
-  void theDefaultRuleIsCollapsible() {
+  void defaultRuleIsCollapsible() {
     final ElwhaCard card = ElwhaCard.filledCard();
     final Block body = new Block(30);
     card.add(body);
@@ -545,7 +545,7 @@ class ElwhaCardInteractionTest {
   }
 
   @Test
-  void theAnimationFlagRoundTrips() {
+  void animationFlagRoundTrips() {
     final ElwhaCard card = ElwhaCard.filledCard();
 
     assertThat(card.setAnimateCollapse(true).isAnimateCollapse())

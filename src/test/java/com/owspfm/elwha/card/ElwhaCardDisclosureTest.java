@@ -72,7 +72,7 @@ class ElwhaCardDisclosureTest {
   }
 
   @Test
-  void theChevronGlyphFollowsTheCardEvenWhenSomethingElseToggledIt() {
+  void chevronGlyphFollowsTheCardEvenWhenSomethingElseToggledIt() {
     final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
     final ElwhaCardChevron chevron = new ElwhaCardChevron(card);
     final javax.swing.Icon expanded = chevron.getIcon();
@@ -139,7 +139,7 @@ class ElwhaCardDisclosureTest {
   }
 
   @Test
-  void theAnchoredHostActuallySurvivesACollapse() {
+  void anchoredHostActuallySurvivesACollapse() {
     final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
     final ElwhaCardHeader header = new ElwhaCardHeader().setTitle("Title");
     final ElwhaCardChevron chevron = new ElwhaCardChevron(card);

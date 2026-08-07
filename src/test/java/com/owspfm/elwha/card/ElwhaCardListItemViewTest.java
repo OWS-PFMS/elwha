@@ -54,7 +54,7 @@ class ElwhaCardListItemViewTest {
   }
 
   @Test
-  void theListReadsAndWritesSelectionThroughTheInterface() {
+  void listReadsAndWritesSelectionThroughTheInterface() {
     final ElwhaListItemView view = ElwhaCard.filledCard();
     view.setListInteractive(true);
 

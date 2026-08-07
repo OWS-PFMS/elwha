@@ -66,7 +66,7 @@ class ElwhaCardCompositionTest {
   }
 
   @Test
-  void theLeadingSlotHoldsExactlyOneItem() {
+  void leadingSlotHoldsExactlyOneItem() {
     final ElwhaCardHeader header = new ElwhaCardHeader();
     final ElwhaCardLeadingIcon first = new ElwhaCardLeadingIcon(MaterialIcons.pushPin());
     final ElwhaCardThumbnail second = new ElwhaCardThumbnail(blankImage());
@@ -90,7 +90,7 @@ class ElwhaCardCompositionTest {
   }
 
   @Test
-  void theLeadingSlotRejectsNull() {
+  void leadingSlotRejectsNull() {
     assertThatThrownBy(() -> new ElwhaCardHeader().setLeading(null))
         .as("clearing goes through clearLeading, not a null set")
         .isInstanceOf(NullPointerException.class);
@@ -139,7 +139,7 @@ class ElwhaCardCompositionTest {
   }
 
   @Test
-  void theTitleLeadsTheSubtitleWhicheverOrderTheyWereSet() {
+  void titleLeadsTheSubtitleWhicheverOrderTheyWereSet() {
     final ElwhaCardHeader subtitleFirst = new ElwhaCardHeader();
     subtitleFirst.setSubtitle("second line");
     subtitleFirst.setTitle("first line");
@@ -166,7 +166,7 @@ class ElwhaCardCompositionTest {
   }
 
   @Test
-  void theTrailingRowIsOpenEndedAndPolymorphic() {
+  void trailingRowIsOpenEndedAndPolymorphic() {
     final ElwhaCardHeader header = new ElwhaCardHeader().setTitle("t");
     final ElwhaIconButton overflow = new ElwhaIconButton(MaterialIcons.moreVert());
     final Block chipStandIn = new Block(40, 24);
@@ -179,7 +179,7 @@ class ElwhaCardCompositionTest {
   }
 
   @Test
-  void theTrailingSnapshotDoesNotTrackOrMutate() {
+  void trailingSnapshotDoesNotTrackOrMutate() {
     final ElwhaCardHeader header = new ElwhaCardHeader();
     header.addTrailing(new Block(10, 10));
     final List<JComponent> snapshot = header.getTrailingItems();
@@ -207,7 +207,7 @@ class ElwhaCardCompositionTest {
   }
 
   @Test
-  void theHeaderPlacesLeadingFirstAndTrailingLast() {
+  void headerPlacesLeadingFirstAndTrailingLast() {
     final ElwhaCardHeader header = new ElwhaCardHeader();
     final ElwhaCardThumbnail leading = new ElwhaCardThumbnail(blankImage());
     final Block trailing = new Block(24, 24);

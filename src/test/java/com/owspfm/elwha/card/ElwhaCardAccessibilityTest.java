@@ -34,7 +34,7 @@ class ElwhaCardAccessibilityTest {
   }
 
   @Test
-  void theRoleFollowsTheGateInBothDirections() {
+  void roleFollowsTheGateInBothDirections() {
     final ElwhaCard card = ElwhaCard.filledCard().setActionable(true);
 
     card.setActionable(false);
@@ -81,7 +81,7 @@ class ElwhaCardAccessibilityTest {
   }
 
   @Test
-  void theCardHandsOutOneAccessibleContext() {
+  void cardHandsOutOneAccessibleContext() {
     final ElwhaCard card = ElwhaCard.filledCard();
 
     assertThat(card.getAccessibleContext())
@@ -104,7 +104,7 @@ class ElwhaCardAccessibilityTest {
   }
 
   @Test
-  void theTextAtomsAnnounceTheirContent() {
+  void textAtomsAnnounceTheirContent() {
     final ElwhaCardTitle title = new ElwhaCardTitle("Recent activity");
     final ElwhaCardSupportingText body = new ElwhaCardSupportingText("12 cycles found");
 
