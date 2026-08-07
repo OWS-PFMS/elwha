@@ -55,27 +55,12 @@ public final class GuiSteps {
   }
 
   /**
-   * Clicks at the supplied point until {@code effect} reports true, with the same lost-delivery
-   * guard as {@link #keyUntil} plus two X-specific hardenings: the host window's focus is restored
-   * before each attempt (under a WM-less Xvfb the window can silently lose focus between steps, and
-   * focus-on-click semantics need a focused window), and the target point is re-derived per attempt
-   * so a late window move cannot stale it.
-   *
-   * @param robot the tier's robot
-   * @param window the window hosting the click target
-   * @param target supplier of the click point in screen coordinates, re-read per attempt
-   * @param what plain-English description of the expected effect (the assertion label)
-   * @param effect the step's observable effect, evaluated on the EDT
-   * @throws Exception if the EDT round-trip is interrupted
-   * @version v0.5.0
-   * @since v0.5.0
-   */
-  /**
    * Types {@code text} one character at a time, confirming each character's arrival in the supplied
-   * live text read before moving on. A character is re-pressed only while the text still shows the
-   * pre-press prefix (nothing arrived — the X lost-delivery race); if the text moves to anything
-   * else the step fails immediately rather than blind-retyping, since a slow-but- delivered
-   * character must never be doubled.
+   * live text read before moving on. Delivery is judged content-agnostically — the text changed
+   * <em>and</em> now ends with the typed character — so it holds whether the editor appends or
+   * replaces a selection (a combo's select-on-focus makes the first keystroke replace). A character
+   * is re-pressed only while the text is completely unchanged (nothing arrived — the X
+   * lost-delivery race), so a slow-but-delivered character is never doubled.
    *
    * @param robot the tier's robot
    * @param text the characters to type
@@ -91,11 +76,15 @@ public final class GuiSteps {
       final java.util.function.Supplier<String> read,
       final String what)
       throws Exception {
-    String expected = onEdtGet(read);
     for (final char c : text.toCharArray()) {
-      final String before = expected;
-      expected = expected + c;
-      final String want = expected;
+      final String before = onEdtGet(read);
+      final String suffix = String.valueOf(c);
+      // WaitFor evaluates its condition ON the EDT — read directly there, never invokeAndWait.
+      final BooleanSupplier delivered =
+          () -> {
+            final String now = read.get();
+            return !now.equals(before) && now.endsWith(suffix);
+          };
       for (int attempt = 0; attempt < ATTEMPTS && before.equals(onEdtGet(read)); attempt++) {
         final int keyCode = java.awt.event.KeyEvent.getExtendedKeyCodeForChar(c);
         robot.keyPress(keyCode);
@@ -106,16 +95,7 @@ public final class GuiSteps {
           Thread.sleep(20);
         }
       }
-      final String finalWant = want;
-      WaitFor.waitFor(
-          what + " — '" + c + "' delivered",
-          () -> {
-            try {
-              return finalWant.equals(onEdtGetUnchecked(read));
-            } catch (final RuntimeException e) {
-              return false;
-            }
-          });
+      WaitFor.waitFor(what + " — '" + c + "' delivered", delivered);
     }
   }
 
@@ -126,14 +106,22 @@ public final class GuiSteps {
     return value.get();
   }
 
-  private static String onEdtGetUnchecked(final java.util.function.Supplier<String> read) {
-    try {
-      return onEdtGet(read);
-    } catch (final Exception e) {
-      throw new IllegalStateException(e);
-    }
-  }
-
+  /**
+   * Clicks at the supplied point until {@code effect} reports true, with the same lost-delivery
+   * guard as {@link #keyUntil} plus two X-specific hardenings: the host window's focus is restored
+   * before each attempt (under a WM-less Xvfb the window can silently lose focus between steps, and
+   * focus-on-click semantics need a focused window), and the target point is re-derived per attempt
+   * so a late window move cannot stale it.
+   *
+   * @param robot the tier's robot
+   * @param window the window hosting the click target
+   * @param target supplier of the click point in screen coordinates, re-read per attempt
+   * @param what plain-English description of the expected effect (the assertion label)
+   * @param effect the step's observable effect, evaluated on the EDT
+   * @throws Exception if the EDT round-trip is interrupted
+   * @version v0.5.0
+   * @since v0.5.0
+   */
   public static void clickUntil(
       final Robot robot,
       final java.awt.Window window,
