@@ -165,14 +165,18 @@ class ElwhaSelectFieldMenuGuiTest {
     waitFor(
         "the first prefix match takes the active-option ring, even though a substring match "
             + "sits above it in the list",
-        () -> "Mars".equals(highlightedLabel()));
+        () -> "Mars".equals(highlightedLabel()),
+        () -> "highlighted=" + highlightedLabel() + " text='" + combo.getText() + "'");
   }
 
   @Test
   void clearingTheFilterReleasesThePrefixPriority() throws Exception {
     openTheMenu();
     type("mar");
-    waitFor("the prefix match is highlighted", () -> "Mars".equals(highlightedLabel()));
+    waitFor(
+        "the prefix match is highlighted",
+        () -> "Mars".equals(highlightedLabel()),
+        () -> "highlighted=" + highlightedLabel() + " text='" + combo.getText() + "'");
 
     GuiSteps.keyUntil(
         robot,
@@ -188,6 +192,24 @@ class ElwhaSelectFieldMenuGuiTest {
   @Test
   void arrowKeysInTheEditorMoveTheMenuHighlight() throws Exception {
     openTheMenu();
+    // The open gesture's retry guard cannot distinguish a lost Down from a slow one, so the menu
+    // may open with the highlight already a row deep (#585). Walk the highlight to the clamped
+    // top before baselining — Up at the top is a no-op, so over-pressing is harmless and a full
+    // quiet window means the clamp was reached.
+    for (int press = 0; press < 4; press++) {
+      final String before = read(this::highlightedLabel);
+      robot.keyPress(KeyEvent.VK_UP);
+      robot.keyRelease(KeyEvent.VK_UP);
+      robot.waitForIdle();
+      final long deadline = System.currentTimeMillis() + 1500;
+      while (System.currentTimeMillis() < deadline
+          && java.util.Objects.equals(before, read(this::highlightedLabel))) {
+        Thread.sleep(20);
+      }
+      if (java.util.Objects.equals(before, read(this::highlightedLabel))) {
+        break;
+      }
+    }
     final String top = read(this::highlightedLabel);
 
     GuiSteps.keyUntil(
@@ -211,7 +233,10 @@ class ElwhaSelectFieldMenuGuiTest {
         Thread.sleep(20);
       }
     }
-    waitFor("and Up walks it back to the top", () -> top.equals(highlightedLabel()));
+    waitFor(
+        "and Up walks it back to the top",
+        () -> top.equals(highlightedLabel()),
+        () -> "highlighted=" + highlightedLabel() + " top=" + top);
   }
 
   // ---------------------------------------------------------------- commit
@@ -220,7 +245,10 @@ class ElwhaSelectFieldMenuGuiTest {
   void enterCommitsTheHighlightedOptionRatherThanTheTypedText() throws Exception {
     openTheMenu();
     type("mar");
-    waitFor("the prefix match is highlighted", () -> "Mars".equals(highlightedLabel()));
+    waitFor(
+        "the prefix match is highlighted",
+        () -> "Mars".equals(highlightedLabel()),
+        () -> "highlighted=" + highlightedLabel() + " text='" + combo.getText() + "'");
 
     GuiSteps.keyUntil(
         robot,
