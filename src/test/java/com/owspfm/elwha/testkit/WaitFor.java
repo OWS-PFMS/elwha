@@ -65,6 +65,38 @@ public final class WaitFor {
   }
 
   /**
+   * Polls the condition on the EDT until true or the default deadline elapses; on timeout, fails
+   * with {@code what} plus the live state {@code actual} describes, read on the EDT at the moment
+   * of failure. Use this wherever a bare label would leave the next flake undiagnosable — the
+   * failure that motivated it burned its whole deadline and reported nothing but {@code false}
+   * (#585).
+   *
+   * @param what plain-English description of the awaited condition (the assertion label)
+   * @param condition the condition, evaluated on the EDT
+   * @param actual describes the relevant live state, evaluated on the EDT only on failure
+   * @throws Exception if the EDT round-trip is interrupted
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void waitFor(
+      final String what,
+      final BooleanSupplier condition,
+      final java.util.function.Supplier<String> actual)
+      throws Exception {
+    final long deadline = System.currentTimeMillis() + DEFAULT_TIMEOUT_MS;
+    while (System.currentTimeMillis() < deadline) {
+      if (onEdt(condition)) {
+        return;
+      }
+      Thread.sleep(POLL_MS);
+    }
+    final java.util.concurrent.atomic.AtomicReference<String> state =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    SwingUtilities.invokeAndWait(() -> state.set(actual.get()));
+    assertThat(onEdt(condition)).as(what + " (actual: " + state.get() + ")").isTrue();
+  }
+
+  /**
    * Evaluates a boolean read on the EDT and returns it — for one-shot assertions against live
    * component state from a non-EDT test thread.
    *
