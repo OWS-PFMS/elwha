@@ -127,12 +127,7 @@ class ElwhaSelectFieldMenuGuiTest {
   }
 
   private void type(final String text) throws Exception {
-    for (final char c : text.toCharArray()) {
-      final int keyCode = KeyEvent.getExtendedKeyCodeForChar(c);
-      robot.keyPress(keyCode);
-      robot.keyRelease(keyCode);
-    }
-    robot.waitForIdle();
+    GuiSteps.typeUntil(robot, text, combo::getText, "typing '" + text + "' into the editor");
   }
 
   // ------------------------------------------------------------- focus home

@@ -70,6 +70,70 @@ public final class GuiSteps {
    * @version v0.5.0
    * @since v0.5.0
    */
+  /**
+   * Types {@code text} one character at a time, confirming each character's arrival in the supplied
+   * live text read before moving on. A character is re-pressed only while the text still shows the
+   * pre-press prefix (nothing arrived — the X lost-delivery race); if the text moves to anything
+   * else the step fails immediately rather than blind-retyping, since a slow-but- delivered
+   * character must never be doubled.
+   *
+   * @param robot the tier's robot
+   * @param text the characters to type
+   * @param read live text read, evaluated on the EDT (e.g. the editor document's text)
+   * @param what plain-English description of the typing step (the assertion label)
+   * @throws Exception if the EDT round-trip is interrupted
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void typeUntil(
+      final Robot robot,
+      final String text,
+      final java.util.function.Supplier<String> read,
+      final String what)
+      throws Exception {
+    String expected = onEdtGet(read);
+    for (final char c : text.toCharArray()) {
+      final String before = expected;
+      expected = expected + c;
+      final String want = expected;
+      for (int attempt = 0; attempt < ATTEMPTS && before.equals(onEdtGet(read)); attempt++) {
+        final int keyCode = java.awt.event.KeyEvent.getExtendedKeyCodeForChar(c);
+        robot.keyPress(keyCode);
+        robot.keyRelease(keyCode);
+        robot.waitForIdle();
+        final long deadline = System.currentTimeMillis() + EFFECT_WINDOW_MS;
+        while (System.currentTimeMillis() < deadline && before.equals(onEdtGet(read))) {
+          Thread.sleep(20);
+        }
+      }
+      final String finalWant = want;
+      WaitFor.waitFor(
+          what + " — '" + c + "' delivered",
+          () -> {
+            try {
+              return finalWant.equals(onEdtGetUnchecked(read));
+            } catch (final RuntimeException e) {
+              return false;
+            }
+          });
+    }
+  }
+
+  private static String onEdtGet(final java.util.function.Supplier<String> read) throws Exception {
+    final java.util.concurrent.atomic.AtomicReference<String> value =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    javax.swing.SwingUtilities.invokeAndWait(() -> value.set(read.get()));
+    return value.get();
+  }
+
+  private static String onEdtGetUnchecked(final java.util.function.Supplier<String> read) {
+    try {
+      return onEdtGet(read);
+    } catch (final Exception e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
   public static void clickUntil(
       final Robot robot,
       final java.awt.Window window,
