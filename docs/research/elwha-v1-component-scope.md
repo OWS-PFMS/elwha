@@ -1,6 +1,44 @@
 # Elwha v1 Component Scope — Decision Doc
 
-**Status:** DRAFT — DECISIONS NEEDED. This doc proposes the **complete component catalog** for v1.0.0 and freezes it. Components not on the v1 list ship in v1.x+ when OWS need surfaces. Operator review of §6 settles the cut.
+> ## ⚠️ SUPERSEDED — historical record only. Do not plan from this document.
+>
+> **Superseded:** 2026-08-06 · **Drafted:** 2026-05-14 · **Never locked.**
+>
+> This doc proposed freezing the v1 component catalog at "**at most three more**" components past Chip / Card / Surface / IconButton (§4), and §7 closed with a v1.0.0 roadmap ending "Nothing else."
+>
+> **That cut was never adopted.** The §6 operator decisions (questions 1–7) were never answered, so the doc never left DRAFT — and the library then shipped roughly 25 components across ~29 packages, including many this doc had explicitly routed to "**v1 raw Swing + tokens**" or "**v1.x+**":
+>
+> | This doc said | What actually shipped |
+> |---|---|
+> | Switch — *raw Swing + tokens* | `ElwhaSwitch` (epic #401) |
+> | Slider — *raw Swing + tokens* | `ElwhaSlider` (epic #340) |
+> | Checkbox / Radio — *raw Swing + tokens* | `ElwhaCheckbox` (#410) · `ElwhaRadioButton` (#416) |
+> | Text Field / Select — *raw Swing + tokens* | `ElwhaTextField` (#286) · `ElwhaSelectField<T>` (#331) |
+> | Menu — *raw Swing + tokens* | `ElwhaMenu` + submenus (#298 / #322) |
+> | Tooltip — *raw Swing + tokens* | `ElwhaTooltip` (#445) |
+> | Dialog — *raw Swing + tokens* | `ElwhaDialog` + `ElwhaFullScreenDialog` (#254 / #271) |
+> | Tabs — *raw Swing + tokens* | `ElwhaTabs` (#425) |
+> | Progress (circular) — *v1 build candidate, pending confirm* | `progress/` + `loading/` (#467 / #468) |
+> | Badge · FAB · Nav Rail · Side Sheet — *v1.x+* | all shipped (#209 / #160 / #159 / #308) |
+> | Color Picker — ***never*** *(use raw Swing)* | `ElwhaColorPicker` V1 + V2 (#481 / #482) |
+> | Top App Bar — ***never*** *(different idiom)* | `ElwhaAppBar` (#287) |
+>
+> The strategic premise also moved: this doc assumed **Test B — OWS reuse evidence** as a gate on every component. Elwha has since been built out as a **Material 3 Expressive design system in its own right**, not solely against demonstrated OWS need.
+>
+> **What is still worth reading here:** §2's two-test framework and §5's "build when the cost of *not* building exceeds the cost of building" heuristic remain sound as *reasoning tools* — they simply were not applied as the gate this doc proposed. §1's accretion warning is likewise still a real risk worth naming.
+>
+> **For current 1.0.0 scope, see instead:**
+> - `CLAUDE.md` § *The road to 1.0.0* — the live gate list
+> - **#67** (`ElwhaItemList<T>`) and **#80** (Card V3) — the remaining `v1.0.0`-milestone work
+> - **#438** / **#440** / **#441** / **#424** / **#529** — the `v0.5.0` pre-V1 quality gate
+> - **#530** — the consumer-facing scope statement 1.0.0 actually ships with
+> - Milestone **`v1.1.0`** — the post-1.0 parking lot that replaced this doc's "v1.x+" column
+>
+> Everything below is preserved verbatim as filed on 2026-05-14.
+
+---
+
+**Status:** ~~DRAFT — DECISIONS NEEDED.~~ **SUPERSEDED (see header).** This doc proposes the **complete component catalog** for v1.0.0 and freezes it. Components not on the v1 list ship in v1.x+ when OWS need surfaces. Operator review of §6 settles the cut.
 
 **Drafted:** 2026-05-14
 
