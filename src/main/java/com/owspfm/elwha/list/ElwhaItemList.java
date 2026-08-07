@@ -2617,7 +2617,7 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
     if (view == null || view.getWidth() <= 0) {
       return;
     }
-    final Icon icon = MaterialIcons.moreVert(DRAG_HANDLE_SIZE);
+    final Icon icon = MaterialIcons.dragIndicator(DRAG_HANDLE_SIZE);
     final Rectangle bounds = view.getBounds();
     final int x =
         isLeftToRight()
