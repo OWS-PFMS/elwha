@@ -263,6 +263,7 @@ public class ElwhaSlider extends JComponent {
         fireStateChanged();
       };
 
+  private boolean subscribedToModel;
   private boolean hovered;
   private boolean pressed;
   private boolean valueIndicatorEnabled;
@@ -335,7 +336,7 @@ public class ElwhaSlider extends JComponent {
       throw new IllegalArgumentException("model");
     }
     this.model = model;
-    this.model.addChangeListener(modelListener);
+    subscribeToModel();
     this.lowerValue = model.getMinimum();
     this.upperValue = model.getMaximum();
     setOpaque(false);
@@ -2263,8 +2264,49 @@ public class ElwhaSlider extends JComponent {
     repaint();
   }
 
+  /**
+   * Re-subscribes to the value model and repaints from its current state. The model can have moved
+   * while the slider was detached, so the resync is what keeps a re-added slider truthful.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void addNotify() {
+    super.addNotify();
+    subscribeToModel();
+    repaint();
+  }
+
+  // Idempotent so the constructor and addNotify can both ask for it: a slider tracks its model
+  // from birth (setValue on an unparented slider still notifies the caller's ChangeListeners), and
+  // re-add after a detach has to restore the subscription without stacking a second copy.
+  private void subscribeToModel() {
+    if (!subscribedToModel) {
+      model.addChangeListener(modelListener);
+      subscribedToModel = true;
+    }
+  }
+
+  private void unsubscribeFromModel() {
+    if (subscribedToModel) {
+      model.removeChangeListener(modelListener);
+      subscribedToModel = false;
+    }
+  }
+
+  /**
+   * Releases the value-model subscription and stops the interaction motion. The listener is a
+   * lambda capturing this slider, so a caller-supplied model — the whole point of the public
+   * {@code ElwhaSlider(BoundedRangeModel)} constructor — would otherwise keep every slider it has
+   * ever backed alive and repainting on each value change.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
   @Override
   public void removeNotify() {
+    unsubscribeFromModel();
     if (rippleTimer != null) {
       rippleTimer.stop();
     }

@@ -7,6 +7,7 @@ import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Input;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import java.awt.ComponentOrientation;
+import javax.swing.DefaultBoundedRangeModel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -361,6 +362,38 @@ class ElwhaSliderInteractionTest {
     slider.setValue(50);
 
     assertThat(changes[0]).as("setting the value it already holds is not a change").isZero();
+  }
+
+  @Test
+  void leavingTheHierarchyReleasesTheValueModel() {
+    final DefaultBoundedRangeModel shared = new DefaultBoundedRangeModel(50, 0, 0, 100);
+    final ElwhaSlider slider = new ElwhaSlider(shared);
+    assertThat(shared.getChangeListeners()).as("the slider subscribes at construction").hasSize(1);
+
+    slider.addNotify();
+    slider.removeNotify();
+
+    assertThat(shared.getChangeListeners())
+        .as("#610 — a caller-supplied model would otherwise pin every slider it has backed")
+        .isEmpty();
+  }
+
+  @Test
+  void aReAddedSliderIsSubscribedOnceAndReadsTheModelAsItStandsNow() {
+    final DefaultBoundedRangeModel shared = new DefaultBoundedRangeModel(50, 0, 0, 100);
+    final ElwhaSlider slider = new ElwhaSlider(shared);
+    slider.addNotify();
+    slider.removeNotify();
+
+    shared.setValue(80);
+    slider.addNotify();
+
+    assertThat(shared.getChangeListeners())
+        .as("a stage swap re-arms the subscription exactly once")
+        .hasSize(1);
+    assertThat(slider.getValue())
+        .as("and the slider reads the model as it stands now, not as it left it")
+        .isEqualTo(80);
   }
 
   @Test
