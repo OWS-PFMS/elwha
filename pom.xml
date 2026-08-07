@@ -138,6 +138,24 @@
         </configuration>
       </plugin>
       <plugin>
+        <!-- Report-only (#536): no coverage threshold while the suite grows from zero.
+             prepare-agent populates ${argLine}; the gui-tier execution chains it via @{argLine}. -->
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.15</version>
+        <executions>
+          <execution>
+            <id>jacoco-agent</id>
+            <goals><goal>prepare-agent</goal></goals>
+          </execution>
+          <execution>
+            <id>jacoco-report</id>
+            <phase>verify</phase>
+            <goals><goal>report</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${surefire.version}</version>
@@ -168,7 +186,9 @@
                 <cacio.managed.screensize>1920x1080</cacio.managed.screensize>
                 <elwha.guiTier.toolkit>${guitier.toolkit}</elwha.guiTier.toolkit>
               </systemPropertyVariables>
-              <argLine>${cacio.argline}</argLine>
+              <!-- @{argLine} late-binds JaCoCo's agent injection; hardcoding the value would
+                   silently disable coverage for this tier (research doc §8). -->
+              <argLine>@{argLine} ${cacio.argline}</argLine>
             </configuration>
           </execution>
         </executions>
