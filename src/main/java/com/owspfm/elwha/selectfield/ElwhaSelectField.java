@@ -791,9 +791,13 @@ public class ElwhaSelectField<T> extends JComponent {
   private void commitFreeText(final String text) {
     final boolean changed = this.selectedValue != null;
     this.selectedValue = null;
-    optionsMenu();
-    for (final ElwhaMenuItem item : items) {
-      item.setSelected(false);
+    // Same empty-options guard as applySelection: an editable combo can legitimately take free
+    // text before its options are ever set.
+    if (!options.isEmpty()) {
+      optionsMenu();
+      for (final ElwhaMenuItem item : items) {
+        item.setSelected(false);
+      }
     }
     this.committedText = text;
     this.filterText = "";
@@ -1165,9 +1169,14 @@ public class ElwhaSelectField<T> extends JComponent {
   private void applySelection(final int index, final T value) {
     final boolean changed = !Objects.equals(this.selectedValue, value);
     this.selectedValue = value;
-    optionsMenu();
-    for (int i = 0; i < items.size(); i++) {
-      items.get(i).setSelected(i == index);
+    // With no options there are no marks to sync, and ElwhaMenu rejects an empty item list — so
+    // building one here would throw on the legitimate "clear the value before the options load"
+    // path (setSelectedValue(null) on a fresh or emptied select).
+    if (!options.isEmpty()) {
+      optionsMenu();
+      for (int i = 0; i < items.size(); i++) {
+        items.get(i).setSelected(i == index);
+      }
     }
     writeFieldText(value == null ? "" : display.apply(value));
     this.committedText = field.getText();
