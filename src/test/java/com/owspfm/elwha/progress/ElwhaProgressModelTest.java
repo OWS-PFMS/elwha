@@ -373,6 +373,61 @@ class ElwhaProgressModelTest {
         .isFalse();
   }
 
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("indicators")
+  void leavingTheHierarchyReleasesTheValueModel(
+      final String name, final Supplier<AbstractElwhaProgressIndicator> factory) {
+    final AbstractElwhaProgressIndicator indicator = factory.get();
+    final DefaultBoundedRangeModel shared = (DefaultBoundedRangeModel) indicator.getModel();
+    assertThat(shared.getChangeListeners())
+        .as("the indicator subscribes at construction")
+        .hasSize(1);
+
+    indicator.addNotify();
+    indicator.removeNotify();
+
+    assertThat(shared.getChangeListeners())
+        .as("#621 — a shared model would otherwise pin every readout it has ever driven")
+        .isEmpty();
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("indicators")
+  void aReAddedIndicatorIsSubscribedOnceAndReadsTheModelAsItStandsNow(
+      final String name, final Supplier<AbstractElwhaProgressIndicator> factory) {
+    final AbstractElwhaProgressIndicator indicator = factory.get();
+    final DefaultBoundedRangeModel shared = (DefaultBoundedRangeModel) indicator.getModel();
+    indicator.addNotify();
+    indicator.removeNotify();
+
+    shared.setValue(80);
+    indicator.addNotify();
+
+    assertThat(shared.getChangeListeners())
+        .as("a stage swap re-arms the subscription exactly once")
+        .hasSize(1);
+    assertThat(indicator.getProgressFraction())
+        .as("and the readout reflects the model as it stands now, not as it left it")
+        .isCloseTo(0.8f, within(0.001f));
+  }
+
+  @Test
+  void aSharedModelIsReleasedByEachIndicatorIndependently() {
+    final DefaultBoundedRangeModel shared = new DefaultBoundedRangeModel(10, 0, 0, 100);
+    final ElwhaLinearProgressIndicator bar = new ElwhaLinearProgressIndicator(shared);
+    final ElwhaCircularProgressIndicator ring = new ElwhaCircularProgressIndicator(shared);
+    bar.addNotify();
+    ring.addNotify();
+
+    bar.removeNotify();
+
+    assertThat(shared.getChangeListeners())
+        .as("#621 — tearing one readout down must not deafen the other")
+        .hasSize(1);
+    shared.setValue(70);
+    assertThat(ring.getValue()).isEqualTo(70);
+  }
+
   // ------------------------------------------------------------- posture
 
   @ParameterizedTest(name = "{0}")

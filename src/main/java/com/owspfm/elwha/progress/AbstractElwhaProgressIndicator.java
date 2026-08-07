@@ -71,6 +71,11 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
   private static final float WAVE_SPEED_AUTO = -1f;
 
   private final BoundedRangeModel model;
+
+  /** Held as a field, not a bare lambda, so {@link #removeNotify()} can unregister it. */
+  private final ChangeListener modelListener = e -> onModelChange();
+
+  private boolean subscribedToModel;
   private final int specWavelengthDeterminate;
   private final int specWavelengthIndeterminate;
   private final float specWaveAmplitude;
@@ -123,7 +128,7 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
     this.clock.setRepeats(true);
     setOpaque(false);
     setFocusable(false);
-    model.addChangeListener(e -> onModelChange());
+    subscribeToModel();
     addHierarchyListener(
         e -> {
           if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0) {
@@ -836,8 +841,42 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
    */
   @Override
   public void removeNotify() {
+    unsubscribeFromModel();
     super.removeNotify();
     clock.stop();
+  }
+
+  /**
+   * Re-subscribes to the value model and re-evaluates the animation demand. The model can have
+   * moved while the indicator was detached, so the resync is what keeps a re-added readout
+   * truthful.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void addNotify() {
+    super.addNotify();
+    subscribeToModel();
+    updateAnimationDemand();
+    repaint();
+  }
+
+  // Idempotent so the constructor and addNotify can both ask for it: an indicator tracks its model
+  // from birth (an unparented one still reports the right fraction), and re-add after a detach has
+  // to restore the subscription without stacking a second copy.
+  private void subscribeToModel() {
+    if (!subscribedToModel) {
+      model.addChangeListener(modelListener);
+      subscribedToModel = true;
+    }
+  }
+
+  private void unsubscribeFromModel() {
+    if (subscribedToModel) {
+      model.removeChangeListener(modelListener);
+      subscribedToModel = false;
+    }
   }
 
   /**
