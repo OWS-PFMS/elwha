@@ -1,8 +1,8 @@
 package com.owspfm.elwha.list;
 
 /**
- * Layout orientation shared across the {@code ElwhaList} component family ({@code ElwhaCardList},
- * {@code ElwhaChipList}, and future siblings).
+ * Layout orientation shared across the {@code ElwhaList} component family ({@link ElwhaItemList}
+ * and future siblings).
  *
  * <p>Hoisted out of the per-family inner enums in story #237 so that consumers can write code
  * against the abstraction:
@@ -13,14 +13,12 @@ package com.owspfm.elwha.list;
  * }
  * }</pre>
  *
- * <p>Not every implementation supports every orientation at every release — for instance, {@code
- * ElwhaCardList} ships VERTICAL and GRID only (HORIZONTAL and WRAP land in #242), while {@code
- * ElwhaChipList} adds the wider set in #238. Implementations may throw {@link
- * UnsupportedOperationException} or fall back to a supported orientation; check the
+ * <p>{@code ElwhaItemList} supports all four. A future sibling need not — implementations may throw
+ * {@link UnsupportedOperationException} or fall back to a supported orientation; check the
  * implementation's own documentation.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public enum ElwhaListOrientation {

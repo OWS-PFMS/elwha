@@ -5,11 +5,13 @@ import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
-import com.owspfm.elwha.chip.list.ChipSelectionMode;
-import com.owspfm.elwha.chip.list.DefaultChipListModel;
-import com.owspfm.elwha.chip.list.ElwhaChipList;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.list.DefaultElwhaListModel;
+import com.owspfm.elwha.list.ElwhaItemList;
 import com.owspfm.elwha.list.ElwhaListOrientation;
+import com.owspfm.elwha.list.IconAffordance;
+import com.owspfm.elwha.list.MovementMode;
+import com.owspfm.elwha.list.SelectionMode;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
@@ -42,7 +44,7 @@ import javax.swing.UIManager;
  * interaction surface stay in lockstep across both entry points.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public final class ChipPlaygroundPanels {
@@ -155,11 +157,11 @@ public final class ChipPlaygroundPanels {
   }
 
   /**
-   * Builds the live-list pane: a {@link ElwhaChipList} with sample data, plus controls for
+   * Builds the live-list pane: a {@link ElwhaItemList} with sample data, plus controls for
    * orientation, movement mode, columns, gap, pin / anchor affordances, and selection mode.
    *
    * @return the live-list panel
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public static JPanel buildLiveListPanel() {
@@ -301,10 +303,10 @@ public final class ChipPlaygroundPanels {
       "Revenue", "Risk", "Adoption", "Churn", "Inventory", "Throughput"
     };
 
-    private final DefaultChipListModel<String> model = new DefaultChipListModel<>();
+    private final DefaultElwhaListModel<String> model = new DefaultElwhaListModel<>();
     private final java.util.Set<String> pinned = new java.util.HashSet<>();
     private String anchor;
-    private ElwhaChipList<String> list;
+    private ElwhaItemList<String> list;
 
     JPanel build() {
       for (String s : SAMPLE_ITEMS) {
@@ -312,14 +314,14 @@ public final class ChipPlaygroundPanels {
       }
 
       list =
-          new ElwhaChipList<>(model, (item, idx) -> buildLiveChip(item))
-              .setSelectionMode(ChipSelectionMode.MULTIPLE)
+          new ElwhaItemList<>(model, (item, idx) -> buildLiveChip(item))
+              .setSelectionMode(SelectionMode.MULTIPLE)
               .setItemGap(6)
               .setListPadding(new Insets(8, 8, 8, 8));
-      list.setMovementMode(ElwhaChipList.MovementMode.PINNED);
-      list.setPinAffordance(ElwhaChipList.IconAffordance.BUTTON);
-      list.setAnchorAffordance(ElwhaChipList.IconAffordance.BUTTON);
-      armBindingsForMode(ElwhaChipList.MovementMode.PINNED);
+      list.setMovementMode(MovementMode.PINNED);
+      list.setPinAffordance(IconAffordance.BUTTON);
+      list.setAnchorAffordance(IconAffordance.BUTTON);
+      armBindingsForMode(MovementMode.PINNED);
 
       final JScrollPane scroll = new JScrollPane(list);
       scroll.setBorder(BorderFactory.createLineBorder(UIManager.getColor("Component.borderColor")));
@@ -332,8 +334,8 @@ public final class ChipPlaygroundPanels {
       return wrap;
     }
 
-    private void armBindingsForMode(final ElwhaChipList.MovementMode mode) {
-      if (mode == ElwhaChipList.MovementMode.PINNED) {
+    private void armBindingsForMode(final MovementMode mode) {
+      if (mode == MovementMode.PINNED) {
         list.setPinPredicate(pinned::contains);
         list.setPinAction(
             (item, pinNow) -> {
@@ -344,7 +346,7 @@ public final class ChipPlaygroundPanels {
               }
               list.pinStateChanged();
             });
-      } else if (mode == ElwhaChipList.MovementMode.ANCHORED) {
+      } else if (mode == MovementMode.ANCHORED) {
         list.setAnchorPredicate(item -> item != null && item.equals(anchor));
         list.setAnchorAction(
             item -> {
@@ -363,11 +365,11 @@ public final class ChipPlaygroundPanels {
       chip.attachContextMenu(
           () -> {
             final JPopupMenu p = new JPopupMenu();
-            final ElwhaChipList.MovementMode m = list.getMovementMode();
-            if (m == ElwhaChipList.MovementMode.PINNED) {
+            final MovementMode m = list.getMovementMode();
+            if (m == MovementMode.PINNED) {
               p.add(list.createPinMenuItem(item));
               p.addSeparator();
-            } else if (m == ElwhaChipList.MovementMode.ANCHORED) {
+            } else if (m == MovementMode.ANCHORED) {
               p.add(list.createAnchorMenuItem(item));
               p.addSeparator();
             }
@@ -409,13 +411,11 @@ public final class ChipPlaygroundPanels {
       p.add(orient);
 
       p.add(new JLabel("Mode:"));
-      final JComboBox<ElwhaChipList.MovementMode> mode =
-          new JComboBox<>(ElwhaChipList.MovementMode.values());
+      final JComboBox<MovementMode> mode = new JComboBox<>(MovementMode.values());
       mode.setSelectedItem(list.getMovementMode());
       mode.addActionListener(
           e -> {
-            final ElwhaChipList.MovementMode next =
-                (ElwhaChipList.MovementMode) mode.getSelectedItem();
+            final MovementMode next = (MovementMode) mode.getSelectedItem();
             list.setMovementMode(next);
             armBindingsForMode(next);
           });
@@ -432,26 +432,23 @@ public final class ChipPlaygroundPanels {
       p.add(gap);
 
       p.add(new JLabel("Pin:"));
-      final JComboBox<ElwhaChipList.IconAffordance> pinAff =
-          new JComboBox<>(ElwhaChipList.IconAffordance.values());
+      final JComboBox<IconAffordance> pinAff = new JComboBox<>(IconAffordance.values());
       pinAff.setSelectedItem(list.getPinAffordance());
       pinAff.addActionListener(
-          e -> list.setPinAffordance((ElwhaChipList.IconAffordance) pinAff.getSelectedItem()));
+          e -> list.setPinAffordance((IconAffordance) pinAff.getSelectedItem()));
       p.add(pinAff);
 
       p.add(new JLabel("Anchor:"));
-      final JComboBox<ElwhaChipList.IconAffordance> anchorAff =
-          new JComboBox<>(ElwhaChipList.IconAffordance.values());
+      final JComboBox<IconAffordance> anchorAff = new JComboBox<>(IconAffordance.values());
       anchorAff.setSelectedItem(list.getAnchorAffordance());
       anchorAff.addActionListener(
-          e ->
-              list.setAnchorAffordance((ElwhaChipList.IconAffordance) anchorAff.getSelectedItem()));
+          e -> list.setAnchorAffordance((IconAffordance) anchorAff.getSelectedItem()));
       p.add(anchorAff);
 
       p.add(new JLabel("Select:"));
-      final JComboBox<ChipSelectionMode> sel = new JComboBox<>(ChipSelectionMode.values());
+      final JComboBox<SelectionMode> sel = new JComboBox<>(SelectionMode.values());
       sel.setSelectedItem(list.getSelectionMode());
-      sel.addActionListener(e -> list.setSelectionMode((ChipSelectionMode) sel.getSelectedItem()));
+      sel.addActionListener(e -> list.setSelectionMode((SelectionMode) sel.getSelectedItem()));
       p.add(sel);
 
       return p;

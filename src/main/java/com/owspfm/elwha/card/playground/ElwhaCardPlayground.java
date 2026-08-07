@@ -24,7 +24,7 @@ import javax.swing.WindowConstants;
  *   <li>Toolbar: light / dark / system mode switcher
  *   <li>Tab 1 ({@code ElwhaCard}): {@link GalleryPanel} (left) split with a vertical stack of
  *       {@link LiveConfigPanel} + {@link SnippetPanel} (right)
- *   <li>Tab 2 ({@code ElwhaCardList}): {@link ElwhaCardListShowcase}
+ *   <li>Tab 2 ({@code Card List}): {@link ElwhaCardListShowcase}
  *   <li>Tab 3 ({@code Cursors}): {@link CursorReferencePanel}
  * </ul>
  *
@@ -35,7 +35,7 @@ import javax.swing.WindowConstants;
  * }</pre>
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaCardPlayground {
@@ -65,7 +65,7 @@ public final class ElwhaCardPlayground {
 
     final JTabbedPane tabs = new JTabbedPane();
     tabs.addTab("ElwhaCard", buildElwhaCardTab());
-    tabs.addTab("ElwhaCardList", new ElwhaCardListShowcase());
+    tabs.addTab("Card List", new ElwhaCardListShowcase());
     tabs.addTab("Cursors", new CursorReferencePanel());
 
     frame.add(buildToolbar(), BorderLayout.NORTH);

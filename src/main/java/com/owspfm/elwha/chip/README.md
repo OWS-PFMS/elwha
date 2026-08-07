@@ -1,8 +1,8 @@
-# ElwhaChip / ElwhaChipList
+# ElwhaChip
 
-A token-native chip primitive — text + leading icon + optional trailing icon-button — plus a model-driven list-of-chips container supporting four orientations, selection, drag-to-reorder, filter, sort, empty / loading state, keyboard navigation, and accessibility.
+A token-native chip primitive — text + leading icon + optional trailing icon-button. Chips render as list items through [`ElwhaItemList<T>`](../list/ElwhaItemList.java), the unified list container that supersedes the retired per-family chip and card lists (epic #67): four orientations, selection, drag-to-reorder, filter, sort, empty / loading state, keyboard navigation, and accessibility.
 
-`ElwhaChip` styling resolves entirely from the [Elwha design tokens](../theme/) — no raw colors / insets / pixel values reach the public setter API. Mirrors the structure of the sibling [`ElwhaCard` + `ElwhaCardList`](../card/README.md) package, sharing the cross-cutting [`ElwhaList<T>`](../list/ElwhaList.java) abstraction.
+`ElwhaChip` styling resolves entirely from the [Elwha design tokens](../theme/) — no raw colors / insets / pixel values reach the public setter API.
 
 ---
 
@@ -10,20 +10,20 @@ A token-native chip primitive — text + leading icon + optional trailing icon-b
 
 ```java
 // 1. Build a model
-DefaultChipListModel<Factor> model = new DefaultChipListModel<>(factors);
+DefaultElwhaListModel<Factor> model = new DefaultElwhaListModel<>(factors);
 
 // 2. Define how each item becomes a chip
-ChipAdapter<Factor> adapter = (factor, idx) ->
+ElwhaItemAdapter<Factor> adapter = (factor, idx) ->
     ElwhaChip.filterChip(factor.name())
         .setLeadingIcon(factor.icon());
 
 // 3. Build the list and wire it up
-ElwhaChipList<Factor> list = new ElwhaChipList<>(model, adapter)
+ElwhaItemList<Factor> list = new ElwhaItemList<>(model, adapter)
     .setOrientation(ElwhaListOrientation.WRAP)
-    .setSelectionMode(ChipSelectionMode.MULTIPLE)
+    .setSelectionMode(SelectionMode.MULTIPLE)
     .setReorderable(true);
 
-list.getSelectionModel().addSelectionListener(evt ->
+list.addSelectionListener(evt ->
     System.out.println("Selected: " + evt.getSelected()));
 list.addReorderListener(evt ->
     System.out.println(evt.getItem() + ": " + evt.getFromIndex() + " → " + evt.getToIndex()));
@@ -116,7 +116,9 @@ App-wide chip theming happens by installing a different palette through `ElwhaTh
 
 ---
 
-## ElwhaChipList — the container
+## Chips in an `ElwhaItemList`
+
+The container is generic and lives in [`../list/`](../list/); what follows is how its surface reads for a list of chips. `ElwhaChip` implements `ElwhaListItemView`, so the list drives its selected and drag chrome directly.
 
 ### Orientations
 
@@ -129,7 +131,7 @@ App-wide chip theming happens by installing a different palette through `ElwhaTh
 
 ### Selection
 
-`ChipSelectionMode.{NONE, SINGLE, SINGLE_MANDATORY, MULTIPLE}`. Multi-selection supports Shift-click for range, Cmd / Ctrl-click for toggle, and `Cmd/Ctrl+A` for select-all.
+`SelectionMode.{NONE, SINGLE, SINGLE_MANDATORY, MULTIPLE}` via `list.setSelectionMode(...)`. Multi-selection supports Shift-click for range, Cmd / Ctrl-click for toggle, and `Cmd/Ctrl+A` for select-all.
 
 The selection model operates on **item identity** rather than indices, so selection survives filter / sort changes.
 
@@ -139,7 +141,7 @@ The selection model operates on **item identity** rather than indices, so select
 list.setReorderable(true);
 ```
 
-Works across all four orientations. Backed by a 16ms animation timer at 30%-per-tick easing. Requires a mutable model (`DefaultChipListModel`) — non-mutable models log a one-shot warning and ignore the drop. Drag is silently disabled while a sort comparator is active.
+Works across all four orientations. Backed by a 16ms animation timer at 30%-per-tick easing. Requires a model whose `move` mutator works — the list probes it once per model install and disables drag with a `FINE` log if it refuses, so a read-only model never fails mid-gesture. Drag is silently disabled while a sort comparator is active.
 
 ### Filter / sort
 
@@ -171,7 +173,7 @@ Both fall back to a built-in placeholder when `null`.
 
 ## Playground
 
-`ElwhaChipPlayground` is the canonical interactive surface — a `Variant gallery` tab (every variant × every interaction mode × {idle, hover, pressed, selected, focused, disabled}, plus the factory-preset row and the trailing-icon sampler) and a `Live list` tab driven by the `chip.list` container. A light / dark / system mode toggle re-installs the Elwha theme so the binding rule is exercised end-to-end.
+`ElwhaChipPlayground` is the canonical interactive surface — a `Variant gallery` tab (every variant × every interaction mode × {idle, hover, pressed, selected, focused, disabled}, plus the factory-preset row and the trailing-icon sampler) and a `Live list` tab driven by `ElwhaItemList`. A light / dark / system mode toggle re-installs the Elwha theme so the binding rule is exercised end-to-end.
 
 The same two panels are also surfaced inside `ThemePlayground`'s top-level `Chip` tab — both entry points compose the shared builders in [`ChipPlaygroundPanels`](playground/ChipPlaygroundPanels.java) so the validation matrix stays in lockstep.
 
@@ -184,4 +186,4 @@ mvn -q exec:java -Dexec.mainClass=com.owspfm.elwha.theme.playground.ThemePlaygro
 
 ## Independence
 
-This package depends only on FlatLaf, standard Swing, and the Elwha theme package. The `chip/`, `chip/list/`, `chip/playground/`, `list/`, `theme/`, and `icons/` directories together are the full lib.
+This package depends only on FlatLaf, standard Swing, and the Elwha theme package. The `chip/`, `chip/playground/`, `list/`, `theme/`, and `icons/` directories together carry the chip surface end to end.

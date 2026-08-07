@@ -21,7 +21,7 @@ import javax.swing.JComponent;
  * in CI's headless JVM ({@code -Djava.awt.headless=true} safe).
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class CheckboxDogfoodSweepSmoke {
@@ -48,7 +48,7 @@ public final class CheckboxDogfoodSweepSmoke {
       assertSwept(
           "ChipPlaygroundPanels.buildLiveListPanel", ChipPlaygroundPanels.buildLiveListPanel());
     } catch (final java.awt.HeadlessException pre) {
-      // Pre-existing: ElwhaChipList loads drag cursors via Toolkit.getBestCursorSize, which
+      // Pre-existing: ElwhaItemList loads drag cursors via Toolkit.getBestCursorSize, which
       // throws headless. The chip surface's sweep is verified visually in the Showcase instead.
       System.out.println(
           "  – ChipPlaygroundPanels.buildLiveListPanel skipped headless (cursor loading)");

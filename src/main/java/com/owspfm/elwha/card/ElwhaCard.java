@@ -828,13 +828,13 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   // ------------------------------------------------------------------ drag
 
   /**
-   * Marks the card as being dragged. ElwhaCardList sets this while a drag-reorder gesture is in
-   * progress; the dragged state lifts the elevation and applies the dragged state-layer overlay
-   * (spec §9, §10.1).
+   * Marks the card as being dragged. {@link com.owspfm.elwha.list.ElwhaItemList} sets this while a
+   * drag-reorder gesture is in progress; the dragged state lifts the elevation and applies the
+   * dragged state-layer overlay (spec §9, §10.1).
    *
    * @param newDragged the new dragged state
    * @return {@code this} for fluent chaining
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public ElwhaCard setDragged(final boolean newDragged) {
@@ -855,11 +855,12 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   }
 
   /**
-   * Cancels a pending click on the card — invoked by ElwhaCardList when a press converts into a
-   * drag, so the press doesn't also fire an action listener on release.
+   * Cancels a pending click on the card — invoked by {@link com.owspfm.elwha.list.ElwhaItemList}
+   * when a press converts into a drag, so the press doesn't also fire an action listener on
+   * release.
    *
    * @return {@code this} for fluent chaining
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public ElwhaCard cancelPendingClick() {

@@ -7,8 +7,8 @@ import javax.swing.JComponent;
 
 /**
  * The shared contract implemented by every {@code ElwhaList} component family member — {@link
- * com.owspfm.elwha.card.list.ElwhaCardList} and {@link com.owspfm.elwha.chip.list.ElwhaChipList}
- * today, with the unified {@code ElwhaItemList} replacing both under epic #67.
+ * ElwhaItemList} today, and any future sibling that renders a model as a list of components. The
+ * parallel card-list and chip-list families that predated it were retired in epic #67.
  *
  * <p>Extracted in story #237 so consumers can write orientation-agnostic and family-agnostic code:
  *
@@ -29,10 +29,9 @@ import javax.swing.JComponent;
  *   <li>Filter and sort predicates over the visible items
  * </ul>
  *
- * <p>Selection, drag-to-reorder, and per-family model types stay on the concrete classes since they
- * have family-specific signatures ({@code ElwhaChip} vs {@code ElwhaCard}, {@code
- * ChipSelectionMode} vs {@code CardSelectionMode}, etc.). Those cross the abstraction barrier only
- * via the per-implementation API.
+ * <p>Selection, drag-to-reorder, and the model type stay off this interface — they were
+ * family-specific when it was extracted, and keeping them on the concrete class leaves a future
+ * sibling free to omit or reshape them. Reach for them through the implementation, not here.
  *
  * <p><strong>Fluent return types</strong>: every mutator returns {@code ElwhaList<T>} so concrete
  * implementations can return their own type via covariant override and keep their existing fluent

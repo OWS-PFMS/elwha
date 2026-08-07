@@ -827,13 +827,13 @@ public final class ElwhaShowcase {
     register(
         new LeafEntry(
             "Chip List",
-            "ElwhaChipList — orientation, selection model, drag-reorder, tab-strip semantics.",
+            "ElwhaItemList of chips — orientation, selection, drag-reorder, tab-strip semantics.",
             AREA_CONTAINERS,
             new ChipListContainer().component()));
     register(
         new LeafEntry(
             "Card List",
-            "ElwhaCardList — vertical and horizontal card containers with selection + reorder.",
+            "ElwhaItemList of cards — vertical and horizontal containers with selection + reorder.",
             AREA_CONTAINERS,
             new CardListContainer().component()));
     register(

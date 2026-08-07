@@ -221,7 +221,7 @@ public final class CardFixesDemo {
           demoCard(
               "Second card — same rules",
               "A second card under the first so vertical stacking behavior is visible. The 8 dp gap"
-                  + " between cards lives on ElwhaCardList; here it's a Box strut for the demo but"
+                  + " between cards lives on ElwhaItemList; here it's a Box strut for the demo but"
                   + " the card's <i>internal</i> rhythm — header→supporting→divider→actions — is"
                   + " the SpaceScale.SM rhythm story #105 added.");
       b.setAlignmentX(Component.LEFT_ALIGNMENT);
