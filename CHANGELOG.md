@@ -15,6 +15,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **`ElwhaSelectField.setSelectedValue(null)` threw on an optionless select** (#540's suite) —
+  clearing the value before options load (a form reset), or an editable combo committing free
+  text before options are set, died in the mark-sync's `ElwhaMenu` build (`IllegalStateException:
+  menu has no items`). The sync now skips when there are no options — the only thing it could
+  have marked anyway.
+- **`ElwhaSlider` NPE'd painting its value indicator unparented** (#540's suite) — the bubble
+  label derived from `getFont()`, which is null on a component never added to a container (exactly
+  an offscreen render's state: gallery previews, drag images). Falls back to `TypeRole.LABEL_LARGE`.
 - **A disabled `ElwhaCheckbox` still toggled from the keyboard** (#539's suite) — the Space
   `ActionMap` entry consulted the anonymous `AbstractAction`'s own always-true `isEnabled()`
   instead of the checkbox's (the #432 class; the lib-wide #434 sweep missed this one site).
