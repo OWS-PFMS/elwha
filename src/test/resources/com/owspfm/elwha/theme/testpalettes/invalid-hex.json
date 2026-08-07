@@ -1,0 +1,7 @@
+{
+  "name": "Bad hex",
+  "light": {
+    "primary": "not-a-color"
+  },
+  "dark": {}
+}
