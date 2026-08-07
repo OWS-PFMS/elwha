@@ -214,6 +214,9 @@
                not fail the build until the epic's final failOnWarnings flip. -->
           <doclint>all</doclint>
           <failOnError>true</failOnError>
+          <!-- #547: the landing page of the published javadoc jar (component index + quick
+               start) instead of a bare package list. -->
+          <overview>${project.basedir}/src/main/javadoc/overview.html</overview>
         </configuration>
         <executions>
           <execution>
