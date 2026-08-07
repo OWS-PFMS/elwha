@@ -203,6 +203,12 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   public ElwhaCard() {
     super();
     setLayout(new VerticalCardLayout());
+    // Spec §12.1 / §16.3: a non-actionable chassis is not a tab stop, only its children are.
+    // setActionable only writes the focusable flag when the value changes, so the false→false
+    // start state has to be established here — and it cannot be left to JComponent's focusable
+    // default, since installKeyboardActivation below gives the card a WHEN_FOCUSED InputMap and
+    // LayoutFocusTraversalPolicy accepts any focusable JComponent that has one.
+    setFocusable(false);
     applyVariant(variant);
     installInteraction();
     installKeyboardActivation();
