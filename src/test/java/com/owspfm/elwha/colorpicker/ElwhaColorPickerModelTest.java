@@ -415,6 +415,38 @@ class ElwhaColorPickerModelTest {
   }
 
   @Test
+  void cancellingASamplerIsSafeAndFinal() {
+    // The open-sampler half of #613 is not reachable headless — ScreenSampler.isSupported() is
+    // false with no display, so open() self-finishes and no capture window exists to tear down.
+    // What is reachable, and what ElwhaColorPicker.removeNotify() now leans on, is that cancel()
+    // can be called unconditionally: it must not care whether the sampler ever opened, and a
+    // second call must not undo the teardown. The full open → teardown path stays under the
+    // eyedropper's documented manual-smoke carve-out (see ElwhaColorPickerOverlayGuiTest).
+    final int[] closed = {0};
+    final ScreenSampler sampler = new ScreenSampler(color -> {}, () -> closed[0]++);
+
+    assertThatCode(sampler::cancel)
+        .as("teardown cancels without first checking whether a capture is up")
+        .doesNotThrowAnyException();
+    assertThat(sampler.isOpen()).as("and the sampler reports itself closed").isFalse();
+
+    sampler.cancel();
+    assertThat(closed[0]).as("cancelling twice tears down once").isEqualTo(1);
+  }
+
+  @Test
+  void aPickerLeavingTheHierarchyDoesNotThrow() {
+    final ElwhaColorPicker picker = new ElwhaColorPicker();
+    picker.setEyedropperEnabled(true);
+    picker.openEyedropper();
+
+    assertThatCode(picker::removeNotify)
+        .as("#613 — the teardown path runs whether or not a sample is in flight")
+        .doesNotThrowAnyException();
+    assertThat(picker.isSamplerOpen()).as("and leaves no sampler behind").isFalse();
+  }
+
+  @Test
   void supportingTextRoundTrips() {
     final ElwhaColorPicker picker = new ElwhaColorPicker();
 

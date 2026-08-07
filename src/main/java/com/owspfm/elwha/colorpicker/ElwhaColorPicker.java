@@ -746,6 +746,24 @@ public class ElwhaColorPicker extends JComponent {
     }
   }
 
+  /**
+   * Cancels any open eyedropper capture. The sampler owns a JVM-wide {@code KeyEventDispatcher} and
+   * one always-on-top capture window per screen device, and only it can take them down — so a
+   * teardown that skipped this (closing the hosting popover programmatically, disposing the frame
+   * mid-sample) stranded those windows over everything with no route to dismiss them, while the
+   * dispatcher went on swallowing Esc / Enter / arrows application-wide.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void removeNotify() {
+    if (sampler != null) {
+      sampler.cancel();
+    }
+    super.removeNotify();
+  }
+
   private ColorPickerPane createPane(final PickerMode mode) {
     return switch (mode) {
       case SWATCHES -> new SwatchesPane(this);
