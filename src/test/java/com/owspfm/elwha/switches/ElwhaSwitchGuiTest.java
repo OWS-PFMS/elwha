@@ -4,6 +4,7 @@ import static com.owspfm.elwha.testkit.WaitFor.onEdt;
 import static com.owspfm.elwha.testkit.WaitFor.waitFor;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.owspfm.elwha.testkit.GuiSteps;
 import com.owspfm.elwha.testkit.GuiToolkit;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
@@ -88,21 +89,24 @@ class ElwhaSwitchGuiTest {
     SwingUtilities.invokeAndWait(() -> first.requestFocusInWindow());
     waitFor("first switch owns focus", () -> first.isFocusOwner());
 
-    robot.keyPress(KeyEvent.VK_SPACE);
-    robot.keyRelease(KeyEvent.VK_SPACE);
-    robot.waitForIdle();
-    waitFor("Space through the real pipeline toggles the focused switch", () -> first.isSelected());
+    GuiSteps.keyUntil(
+        robot,
+        KeyEvent.VK_SPACE,
+        "Space through the real pipeline toggles the focused switch",
+        () -> first.isSelected());
 
-    robot.keyPress(KeyEvent.VK_TAB);
-    robot.keyRelease(KeyEvent.VK_TAB);
-    robot.waitForIdle();
-    waitFor("Tab moves real focus to the second switch", () -> second.isFocusOwner());
+    GuiSteps.keyUntil(
+        robot,
+        KeyEvent.VK_TAB,
+        "Tab moves real focus to the second switch",
+        () -> second.isFocusOwner());
     assertThat(onEdt(() -> first.isFocusOwner())).as("first switch released focus").isFalse();
 
-    robot.keyPress(KeyEvent.VK_SPACE);
-    robot.keyRelease(KeyEvent.VK_SPACE);
-    robot.waitForIdle();
-    waitFor("Space toggles the newly focused switch", () -> second.isSelected());
+    GuiSteps.keyUntil(
+        robot,
+        KeyEvent.VK_SPACE,
+        "Space toggles the newly focused switch",
+        () -> second.isSelected());
     assertThat(
             onEdt(
                 () ->
