@@ -18,13 +18,16 @@ import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 
 /**
- * Reference panel listing every cursor the V3 {@link com.owspfm.elwha.card.list.ElwhaCardList} can
- * hand out: AWT predefined cursors plus the two custom grab / grabbing cursors loaded from {@code
- * com.owspfm.elwha.card.v1.list.Cursors} (the V3 list reuses the V1 cursor assets pending package
- * consolidation in Phase 6, story #96).
+ * Reference panel listing every cursor a card-rendering {@link com.owspfm.elwha.list.ElwhaItemList}
+ * can hand out: AWT predefined cursors plus the two custom grab / grabbing cursors.
+ *
+ * <p>The previews are loaded reflectively from {@code com.owspfm.elwha.card.v1.list.Cursors}, which
+ * still carries its own copy of the assets. The live list now loads them from the relocated {@code
+ * com.owspfm.elwha.list} package-private loader; this panel repoints at it when V1 goes away in
+ * story #96.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class CursorReferencePanel extends JPanel {
@@ -86,7 +89,7 @@ public final class CursorReferencePanel extends JPanel {
         "Plus — precise selection",
         Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
 
-    final JLabel customHeader = new JLabel("Custom cursors (rendered by ElwhaCardList)");
+    final JLabel customHeader = new JLabel("Custom cursors (rendered by ElwhaItemList)");
     customHeader.putClientProperty("FlatLaf.styleClass", "h4");
     addSectionHeader(table, row++, customHeader);
     addRowWithIcon(

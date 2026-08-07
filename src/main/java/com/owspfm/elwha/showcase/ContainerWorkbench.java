@@ -16,10 +16,10 @@ import javax.swing.UIManager;
  * <strong>container</strong>, a <strong>controls</strong> column, and a scrolling <strong>event
  * log</strong>.
  *
- * <p>List and group surfaces ({@code ElwhaChipList}, {@code ElwhaCardList}, the Button / Icon
- * Button groups) cannot be expressed by a single live instance, so they mount here instead of on
- * {@link ComponentWorkbench}. The event log makes selection / reorder / group-change callbacks
- * visible — append to it with {@link #logEvent(String)}.
+ * <p>List and group surfaces ({@code ElwhaItemList}, the Button / Icon Button groups) cannot be
+ * expressed by a single live instance, so they mount here instead of on {@link ComponentWorkbench}.
+ * The event log makes selection / reorder / group-change callbacks visible — append to it with
+ * {@link #logEvent(String)}.
  *
  * @serial exclude
  * @author Charles Bryan
