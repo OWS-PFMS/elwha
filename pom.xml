@@ -43,7 +43,27 @@
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <flatlaf.version>3.2.5</flatlaf.version>
+    <junit.version>6.1.2</junit.version>
+    <assertj.version>3.27.7</assertj.version>
+    <cacio.version>2.0</cacio.version>
+    <surefire.version>3.5.4</surefire.version>
+    <!-- Tier B (gui-tagged) forked-JVM flags: Cacio's virtual toolkit needs these opens/exports
+         on JDK 21 (per its README), and the toolkit swap only works in a JVM where no other test
+         has initialized AWT — hence the separate surefire execution below. -->
+    <cacio.argline>--add-exports=java.desktop/java.awt=ALL-UNNAMED --add-exports=java.desktop/java.awt.peer=ALL-UNNAMED --add-exports=java.desktop/sun.awt.image=ALL-UNNAMED --add-exports=java.desktop/sun.java2d=ALL-UNNAMED --add-exports=java.desktop/java.awt.dnd.peer=ALL-UNNAMED --add-exports=java.desktop/sun.awt=ALL-UNNAMED --add-exports=java.desktop/sun.awt.event=ALL-UNNAMED --add-exports=java.desktop/sun.awt.datatransfer=ALL-UNNAMED --add-exports=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.desktop/java.awt=ALL-UNNAMED --add-opens=java.desktop/sun.java2d=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED -XX:+EnableDynamicAgentLoading</cacio.argline>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>${junit.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -60,6 +80,23 @@
       <groupId>com.formdev</groupId>
       <artifactId>flatlaf-intellij-themes</artifactId>
       <version>${flatlaf.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>${assertj.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.caciocavallosilano</groupId>
+      <artifactId>cacio-tta-jdk21</artifactId>
+      <version>${cacio.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -80,6 +117,41 @@
         <configuration>
           <release>21</release>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${surefire.version}</version>
+        <executions>
+          <execution>
+            <!-- Tier A — pure headless: construction, geometry, pixel probes on offscreen
+                 BufferedImages, a11y shapes, event contracts. No display, no extra toolkit. -->
+            <id>default-test</id>
+            <goals><goal>test</goal></goals>
+            <configuration>
+              <excludedGroups>gui</excludedGroups>
+              <systemPropertyVariables>
+                <java.awt.headless>true</java.awt.headless>
+              </systemPropertyVariables>
+            </configuration>
+          </execution>
+          <execution>
+            <!-- Tier B — Cacio virtual toolkit: real window peers, real focus, Robot input.
+                 Separate forked JVM per class: the AWT toolkit is a per-JVM singleton, and mixing
+                 Cacio with an already-initialized JDK toolkit segfaults (documented upstream). -->
+            <id>gui-test</id>
+            <goals><goal>test</goal></goals>
+            <configuration>
+              <groups>gui</groups>
+              <reuseForks>false</reuseForks>
+              <systemPropertyVariables>
+                <java.awt.headless>false</java.awt.headless>
+                <cacio.managed.screensize>1920x1080</cacio.managed.screensize>
+              </systemPropertyVariables>
+              <argLine>${cacio.argline}</argLine>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -115,6 +187,7 @@
           <java>
             <includes>
               <include>src/main/java/com/owspfm/**/*.java</include>
+              <include>src/test/java/com/owspfm/**/*.java</include>
             </includes>
             <googleJavaFormat>
               <style>GOOGLE</style>
@@ -145,8 +218,9 @@
           <configLocation>${project.basedir}/config/checkstyle/checkstyle.xml</configLocation>
           <sourceDirectories>
             <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
+            <sourceDirectory>${project.basedir}/src/test/java</sourceDirectory>
           </sourceDirectories>
-          <includeTestSourceDirectory>false</includeTestSourceDirectory>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
           <consoleOutput>true</consoleOutput>
           <failsOnError>true</failsOnError>
           <failOnViolation>true</failOnViolation>
