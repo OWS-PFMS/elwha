@@ -188,21 +188,30 @@ class ElwhaSelectFieldMenuGuiTest {
   @Test
   void arrowKeysInTheEditorMoveTheMenuHighlight() throws Exception {
     openTheMenu();
-    final String first = read(this::highlightedLabel);
+    final String top = read(this::highlightedLabel);
 
     GuiSteps.keyUntil(
         robot,
         KeyEvent.VK_DOWN,
         "Down in the editor is routed to the menu's roving highlight",
-        () -> !java.util.Objects.equals(first, highlightedLabel()));
-    final String second = read(this::highlightedLabel);
+        () -> !java.util.Objects.equals(top, highlightedLabel()));
 
-    GuiSteps.keyUntil(
-        robot,
-        KeyEvent.VK_UP,
-        "and Up walks it back",
-        () -> !java.util.Objects.equals(second, highlightedLabel()));
-    assertThat(read(this::highlightedLabel)).isEqualTo(first);
+    // Walk back Up with a bounded press-until-target loop rather than a single guarded press: a
+    // slow-but-delivered Down above may have moved more than one row, and Up is not idempotent
+    // mid-list — but it IS clamped at the top, so overshooting toward the target is harmless.
+    for (int press = 0;
+        press < 4 && !java.util.Objects.equals(top, read(this::highlightedLabel));
+        press++) {
+      robot.keyPress(KeyEvent.VK_UP);
+      robot.keyRelease(KeyEvent.VK_UP);
+      robot.waitForIdle();
+      final long deadline = System.currentTimeMillis() + 1500;
+      while (System.currentTimeMillis() < deadline
+          && !java.util.Objects.equals(top, read(this::highlightedLabel))) {
+        Thread.sleep(20);
+      }
+    }
+    waitFor("and Up walks it back to the top", () -> top.equals(highlightedLabel()));
   }
 
   // ---------------------------------------------------------------- commit
