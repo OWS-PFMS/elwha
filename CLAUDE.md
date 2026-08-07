@@ -126,12 +126,11 @@ Nearly every component package also carries `*Demo` / `*Smoke` / `*Guard` mains 
 
 | Package | What it is |
 |---|---|
-| `card/v1/` | The pre-Elwha-theme card extracted from OWS. **Frozen, not a design reference.** Deleted before 1.0.0 by **#96** — but note the V3 list currently imports its `Cursors` class (**#531**) |
 | `card/fixes/` | Diagnostic harnesses for historical card bugs. Advisory-only in reviews |
 | `showcase/` | `ElwhaShowcase` — the storefront, plus `ComponentWorkbench` / `ContainerWorkbench` / `CodeView` and the per-component `*ShowcasePanels`. Review/reorder pass is **#441**; dogfood sweep is **#424** |
 
 Bundled resources:
-- `src/main/resources/com/owspfm/elwha/card/v1/list/cursors/` — grab / grabbing cursors, light + dark, 16/32px (Capitaine). **The license is in dispute in our own metadata** — the bundled `LICENSE-capitaine.txt` is LGPL-3.0 while `NOTICE` claims CC BY-SA 4.0, and `NOTICE`'s path predates the #83 rename. Tracked in **#531**; don't restate a license for these assets until it resolves. Note the path: they live under `card/v1/`, and the V3 list still imports the V1 `Cursors` class
+- `src/main/resources/com/owspfm/elwha/list/cursors/` — grab / grabbing reorder cursors, light + dark, 16/32px (Capitaine), loaded by the package-private `list/ReorderCursors`. **The license is in dispute in our own metadata** — the bundled `LICENSE-capitaine.txt` is LGPL-3.0 while `NOTICE` claims CC BY-SA 4.0. Tracked in **#531** (operator-directed replacement with a redesigned set); don't restate a license for these assets until it resolves
 - `src/main/resources/com/owspfm/icons/material/` — 73 Material Symbol SVGs (Apache 2.0 from Google; attribution in `NOTICE`)
 - `src/main/resources/com/owspfm/elwha/theme/fonts/` — Inter Regular + Medium TTFs for `Typography.defaults()` (SIL OFL 1.1; attribution in `NOTICE`)
 - `src/main/resources/com/owspfm/elwha/theme/palettes/` — bundled demo palettes in two directory-derived tiers: `primary/` (`baseline.json` — the M3 baseline scheme, `MaterialPalettes.baseline()` — plus the ROYGBIV set `red` / `orange` / `yellow` / `green` / `blue` / `indigo` / `deep-purple`) and `secondary/` (10 Material Theme Builder palettes — the colors not in the primary tier; the two tiers are disjoint). `MaterialPalettes.primary()` / `secondary()` discover every `*.json` in their subdirectory at runtime and return it in spectral (hue) order — directory-derived, not a hardcoded list, so dropping a new Elwha-format palette JSON into a tier surfaces it in The Elwha Showcase's palette picker with no code change. Raw M3 Theme Builder exports are archived under `docs/research/themes/`; `scripts/convert_mtb_palette.py` automates the M3-export → Elwha-palette conversion. Consumers may still ship their own palettes via `PaletteLoader`.
@@ -174,7 +173,7 @@ The component catalog is essentially complete; what stands between `main` and 1.
 **On the `v1.0.0` milestone:**
 
 - **[#67](https://github.com/OWS-PFMS/elwha/issues/67) — `ElwhaItemList<T>`.** Collapse the two parallel list families into one generic implementation behind the existing `ElwhaList<T>` interface. Absorbs `OWS-Local-Search-GUI#252`. Locked principle: `max(funcA, funcB)` — where card and chip differ, the richer side wins, no feature loss. Stories #68 (spec) → #69 (build) → #70 (migrate + delete). **Not started; the spec is unwritten.** The last genuine architectural work before the freeze.
-- **[#80](https://github.com/OWS-PFMS/elwha/issues/80) — Card V3.** Effectively **done** — #81–#95 all closed, V3 is what `card/` ships. Remaining tail: **#96** (delete `card/v1`; gated on the `Cursors` question in #531) and **#97** (the release chore).
+- **[#80](https://github.com/OWS-PFMS/elwha/issues/80) — Card V3.** Effectively **done** — #81–#96 all closed (`card/v1` deleted 2026-08-07), V3 is what `card/` ships. Remaining tail: **#97** (the release chore).
 - **[#530](https://github.com/OWS-PFMS/elwha/issues/530) — consumer adoption & publishing notes.** Install/auth, a Quick start that compiles, theming guide, component index, stability policy. Owns the README work #97 used to claim.
 
 **On `v0.5.0` — the pre-V1 quality gate:**
