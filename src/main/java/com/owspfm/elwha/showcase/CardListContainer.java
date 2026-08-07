@@ -4,10 +4,11 @@ import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.card.ElwhaCard;
 import com.owspfm.elwha.card.ElwhaCardHeader;
 import com.owspfm.elwha.card.ElwhaCardSupportingText;
-import com.owspfm.elwha.card.list.CardSelectionMode;
-import com.owspfm.elwha.card.list.DefaultCardListModel;
-import com.owspfm.elwha.card.list.ElwhaCardList;
+import com.owspfm.elwha.list.DefaultElwhaListModel;
+import com.owspfm.elwha.list.ElwhaItemList;
 import com.owspfm.elwha.list.ElwhaListOrientation;
+import com.owspfm.elwha.list.MovementMode;
+import com.owspfm.elwha.list.SelectionMode;
 import java.awt.FlowLayout;
 import java.awt.Insets;
 import java.util.List;
@@ -22,14 +23,14 @@ import javax.swing.UIManager;
 
 /**
  * The Elwha Showcase's Card List container demo, mounted on the shared {@link ContainerWorkbench}
- * scaffold: a live {@link ElwhaCardList} of sample items rendered as cards, a controls column for
+ * scaffold: a live {@link ElwhaItemList} of sample items rendered as cards, a controls column for
  * the list options, and an event log that surfaces selection and model-change callbacks.
  *
  * <p>This is the {@code ContainerWorkbench}-pattern migration of the standalone Card List showcase
  * — a multi-instance surface a single live component cannot express.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 final class CardListContainer {
@@ -44,27 +45,25 @@ final class CardListContainer {
   };
 
   private final ContainerWorkbench workbench = new ContainerWorkbench();
-  private final DefaultCardListModel<String> model = new DefaultCardListModel<>(List.of(SAMPLE));
-  private final ElwhaCardList<String> list = new ElwhaCardList<>(model);
+  private final DefaultElwhaListModel<String> model = new DefaultElwhaListModel<>(List.of(SAMPLE));
+  private final ElwhaItemList<String> list =
+      new ElwhaItemList<>(model, CardListContainer::renderCell);
   private int addedCount;
 
   /**
    * Builds the Card List container — model, list, controls, and event-log wiring.
    *
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   CardListContainer() {
-    list.setCellRenderer(CardListContainer::renderCell);
-    list.getSelectionModel().setSelectionMode(CardSelectionMode.MULTIPLE);
+    list.setSelectionMode(SelectionMode.MULTIPLE);
+    list.setMovementMode(MovementMode.MOVABLE);
     list.setItemGap(8);
     list.setListPadding(new Insets(8, 8, 8, 8));
 
-    list.getSelectionModel()
-        .addChangeListener(
-            selection -> workbench.logEvent("selection: " + selection.getSelectedItems()));
-    model.addChangeListener(
-        changed -> workbench.logEvent("model: " + changed.getItems().size() + " items"));
+    list.addSelectionListener(event -> workbench.logEvent("selection: " + event.getSelected()));
+    model.addListDataListener(event -> workbench.logEvent("model: " + model.getSize() + " items"));
 
     final JScrollPane scroll = new JScrollPane(list);
     scroll.setBorder(BorderFactory.createLineBorder(UIManager.getColor("Component.borderColor")));
@@ -93,12 +92,10 @@ final class CardListContainer {
     orientation.addActionListener(
         event -> list.setOrientation((ElwhaListOrientation) orientation.getSelectedItem()));
 
-    final JComboBox<CardSelectionMode> selection = new JComboBox<>(CardSelectionMode.values());
-    selection.setSelectedItem(list.getSelectionModel().getSelectionMode());
+    final JComboBox<SelectionMode> selection = new JComboBox<>(SelectionMode.values());
+    selection.setSelectedItem(list.getSelectionMode());
     selection.addActionListener(
-        event ->
-            list.getSelectionModel()
-                .setSelectionMode((CardSelectionMode) selection.getSelectedItem()));
+        event -> list.setSelectionMode((SelectionMode) selection.getSelectedItem()));
 
     controls.addSection("List");
     controls.addControl("Orientation", orientation);
@@ -141,7 +138,7 @@ final class CardListContainer {
     return row;
   }
 
-  private static ElwhaCard renderCell(final String item) {
+  private static ElwhaCard renderCell(final String item, final int index) {
     final ElwhaCard card = ElwhaCard.outlinedCard().setActionable(true).setSelectable(true);
     card.add(new ElwhaCardHeader().setTitle(item).setSubtitle("List item"));
     card.add(new ElwhaCardSupportingText("A card rendered for one model item."));

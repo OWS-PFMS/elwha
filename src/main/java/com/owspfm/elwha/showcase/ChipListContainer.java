@@ -4,11 +4,13 @@ import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
-import com.owspfm.elwha.chip.list.ChipSelectionMode;
-import com.owspfm.elwha.chip.list.DefaultChipListModel;
-import com.owspfm.elwha.chip.list.ElwhaChipList;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.list.DefaultElwhaListModel;
+import com.owspfm.elwha.list.ElwhaItemList;
 import com.owspfm.elwha.list.ElwhaListOrientation;
+import com.owspfm.elwha.list.IconAffordance;
+import com.owspfm.elwha.list.MovementMode;
+import com.owspfm.elwha.list.SelectionMode;
 import java.awt.FlowLayout;
 import java.awt.Insets;
 import java.util.HashSet;
@@ -27,14 +29,14 @@ import javax.swing.UIManager;
 
 /**
  * The Elwha Showcase's Chip List container demo, mounted on the shared {@link ContainerWorkbench}
- * scaffold: a live {@link ElwhaChipList} of sample items, a controls column for every list option,
+ * scaffold: a live {@link ElwhaItemList} of sample items, a controls column for every list option,
  * and an event log that makes selection / reorder / pin / anchor callbacks visible.
  *
  * <p>This is the {@code ContainerWorkbench}-pattern migration of the standalone playground's live
  * list — a multi-instance surface a single live component cannot express.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 final class ChipListContainer {
@@ -46,16 +48,16 @@ final class ChipListContainer {
   private static final int CHIP_ICON_SIZE = 14;
 
   private final ContainerWorkbench workbench = new ContainerWorkbench();
-  private final DefaultChipListModel<String> model = new DefaultChipListModel<>();
+  private final DefaultElwhaListModel<String> model = new DefaultElwhaListModel<>();
   private final Set<String> pinned = new HashSet<>();
-  private final ElwhaChipList<String> list;
+  private final ElwhaItemList<String> list;
   private String anchor;
   private int addedCount;
 
   /**
    * Builds the Chip List container — model, list, controls, and event-log wiring.
    *
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   ChipListContainer() {
@@ -63,13 +65,13 @@ final class ChipListContainer {
       model.add(item);
     }
 
-    list = new ElwhaChipList<>(model, (item, index) -> buildChip(item));
+    list = new ElwhaItemList<>(model, (item, index) -> buildChip(item));
     list.setItemGap(6).setListPadding(new Insets(8, 8, 8, 8));
-    list.setSelectionMode(ChipSelectionMode.MULTIPLE);
-    list.setMovementMode(ElwhaChipList.MovementMode.PINNED);
-    list.setPinAffordance(ElwhaChipList.IconAffordance.BUTTON);
-    list.setAnchorAffordance(ElwhaChipList.IconAffordance.BUTTON);
-    armBindings(ElwhaChipList.MovementMode.PINNED);
+    list.setSelectionMode(SelectionMode.MULTIPLE);
+    list.setMovementMode(MovementMode.PINNED);
+    list.setPinAffordance(IconAffordance.BUTTON);
+    list.setAnchorAffordance(IconAffordance.BUTTON);
+    armBindings(MovementMode.PINNED);
 
     list.getSelectionModel()
         .addSelectionListener(event -> workbench.logEvent("selection: " + event.getSelected()));
@@ -111,18 +113,16 @@ final class ChipListContainer {
     orientation.addActionListener(
         event -> list.setOrientation((ElwhaListOrientation) orientation.getSelectedItem()));
 
-    final JComboBox<ChipSelectionMode> selection = new JComboBox<>(ChipSelectionMode.values());
+    final JComboBox<SelectionMode> selection = new JComboBox<>(SelectionMode.values());
     selection.setSelectedItem(list.getSelectionMode());
     selection.addActionListener(
-        event -> list.setSelectionMode((ChipSelectionMode) selection.getSelectedItem()));
+        event -> list.setSelectionMode((SelectionMode) selection.getSelectedItem()));
 
-    final JComboBox<ElwhaChipList.MovementMode> movement =
-        new JComboBox<>(ElwhaChipList.MovementMode.values());
+    final JComboBox<MovementMode> movement = new JComboBox<>(MovementMode.values());
     movement.setSelectedItem(list.getMovementMode());
     movement.addActionListener(
         event -> {
-          final ElwhaChipList.MovementMode mode =
-              (ElwhaChipList.MovementMode) movement.getSelectedItem();
+          final MovementMode mode = (MovementMode) movement.getSelectedItem();
           list.setMovementMode(mode);
           armBindings(mode);
           workbench.logEvent("movement mode: " + mode);
@@ -142,18 +142,13 @@ final class ChipListContainer {
     controls.addControl("Columns (grid)", columns);
     controls.addControl("Item gap", gap);
 
-    final JComboBox<ElwhaChipList.IconAffordance> pin =
-        new JComboBox<>(ElwhaChipList.IconAffordance.values());
+    final JComboBox<IconAffordance> pin = new JComboBox<>(IconAffordance.values());
     pin.setSelectedItem(list.getPinAffordance());
-    pin.addActionListener(
-        event -> list.setPinAffordance((ElwhaChipList.IconAffordance) pin.getSelectedItem()));
-    final JComboBox<ElwhaChipList.IconAffordance> anchorAffordance =
-        new JComboBox<>(ElwhaChipList.IconAffordance.values());
+    pin.addActionListener(event -> list.setPinAffordance((IconAffordance) pin.getSelectedItem()));
+    final JComboBox<IconAffordance> anchorAffordance = new JComboBox<>(IconAffordance.values());
     anchorAffordance.setSelectedItem(list.getAnchorAffordance());
     anchorAffordance.addActionListener(
-        event ->
-            list.setAnchorAffordance(
-                (ElwhaChipList.IconAffordance) anchorAffordance.getSelectedItem()));
+        event -> list.setAnchorAffordance((IconAffordance) anchorAffordance.getSelectedItem()));
 
     controls.addSection("Affordances");
     controls.addControl("Pin", pin);
@@ -197,8 +192,8 @@ final class ChipListContainer {
     return row;
   }
 
-  private void armBindings(final ElwhaChipList.MovementMode mode) {
-    if (mode == ElwhaChipList.MovementMode.PINNED) {
+  private void armBindings(final MovementMode mode) {
+    if (mode == MovementMode.PINNED) {
       list.setPinPredicate(pinned::contains);
       list.setPinAction(
           (item, pinNow) -> {
@@ -210,7 +205,7 @@ final class ChipListContainer {
             list.pinStateChanged();
             workbench.logEvent((pinNow ? "pinned: " : "unpinned: ") + item);
           });
-    } else if (mode == ElwhaChipList.MovementMode.ANCHORED) {
+    } else if (mode == MovementMode.ANCHORED) {
       list.setAnchorPredicate(item -> item != null && item.equals(anchor));
       list.setAnchorAction(
           item -> {
@@ -236,11 +231,11 @@ final class ChipListContainer {
     chip.attachContextMenu(
         () -> {
           final JPopupMenu menu = new JPopupMenu();
-          final ElwhaChipList.MovementMode mode = list.getMovementMode();
-          if (mode == ElwhaChipList.MovementMode.PINNED) {
+          final MovementMode mode = list.getMovementMode();
+          if (mode == MovementMode.PINNED) {
             menu.add(list.createPinMenuItem(item));
             menu.addSeparator();
-          } else if (mode == ElwhaChipList.MovementMode.ANCHORED) {
+          } else if (mode == MovementMode.ANCHORED) {
             menu.add(list.createAnchorMenuItem(item));
             menu.addSeparator();
           }

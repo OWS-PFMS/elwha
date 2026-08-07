@@ -4,10 +4,11 @@ import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.card.ElwhaCard;
 import com.owspfm.elwha.card.ElwhaCardHeader;
 import com.owspfm.elwha.card.ElwhaCardSupportingText;
-import com.owspfm.elwha.card.list.CardSelectionMode;
-import com.owspfm.elwha.card.list.DefaultCardListModel;
-import com.owspfm.elwha.card.list.ElwhaCardList;
+import com.owspfm.elwha.list.DefaultElwhaListModel;
+import com.owspfm.elwha.list.ElwhaItemList;
 import com.owspfm.elwha.list.ElwhaListOrientation;
+import com.owspfm.elwha.list.MovementMode;
+import com.owspfm.elwha.list.SelectionMode;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
@@ -27,8 +28,8 @@ import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 
 /**
- * Showcase tab for the V3 {@link ElwhaCardList}. Left: a live list of cards. Right: controls for
- * orientation + selection mode + a status log of recent selection / reorder events.
+ * Showcase tab for a card-rendering {@link ElwhaItemList}. Left: a live list of cards. Right:
+ * controls for orientation + selection mode + a status log of recent selection / reorder events.
  *
  * <p>Use Cmd+↑ / Cmd+↓ to reorder, Delete / Cmd+Backspace to remove, right-click for the context
  * menu, click + drag to reorder with the mouse.
@@ -40,8 +41,8 @@ import javax.swing.JTextArea;
  */
 public final class ElwhaCardListShowcase extends JPanel {
 
-  private final DefaultCardListModel<String> model;
-  private final ElwhaCardList<String> list;
+  private final DefaultElwhaListModel<String> model;
+  private final ElwhaItemList<String> list;
   private final JTextArea status;
 
   /** Builds the showcase tab. */
@@ -49,7 +50,7 @@ public final class ElwhaCardListShowcase extends JPanel {
     super(new BorderLayout());
 
     model =
-        new DefaultCardListModel<>(
+        new DefaultElwhaListModel<>(
             new ArrayList<>(
                 List.of(
                     "Trip plan — Olympic Hot Springs",
@@ -58,17 +59,17 @@ public final class ElwhaCardListShowcase extends JPanel {
                     "Cycle: alpine meadow at mile 9",
                     "Trip notes — pack for rain")));
 
-    list = new ElwhaCardList<>(model);
+    list = new ElwhaItemList<>(model, this::renderCell);
     list.setOrientation(ElwhaListOrientation.VERTICAL);
-    list.getSelectionModel().setSelectionMode(CardSelectionMode.MULTIPLE);
-    list.setCellRenderer(this::renderCell);
+    list.setSelectionMode(SelectionMode.MULTIPLE);
+    list.setMovementMode(MovementMode.MOVABLE);
 
     status = new JTextArea(8, 32);
     status.setEditable(false);
     status.putClientProperty("FlatLaf.styleClass", "monospaced");
 
-    list.getSelectionModel().addChangeListener(sm -> log("selection: " + sm.getSelectedItems()));
-    model.addChangeListener(m -> log("model: " + m.getItems().size() + " items"));
+    list.addSelectionListener(event -> log("selection: " + event.getSelected()));
+    model.addListDataListener(event -> log("model: " + model.getSize() + " items"));
 
     final JScrollPane listScroll = new JScrollPane(list);
     listScroll.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 8));
@@ -105,12 +106,10 @@ public final class ElwhaCardListShowcase extends JPanel {
         });
     addLabeled(p, gbc, "Orientation", orientationBox);
 
-    final JComboBox<CardSelectionMode> modeBox = new JComboBox<>(CardSelectionMode.values());
-    modeBox.setSelectedItem(CardSelectionMode.MULTIPLE);
+    final JComboBox<SelectionMode> modeBox = new JComboBox<>(SelectionMode.values());
+    modeBox.setSelectedItem(SelectionMode.MULTIPLE);
     modeBox.addActionListener(
-        e ->
-            list.getSelectionModel()
-                .setSelectionMode((CardSelectionMode) modeBox.getSelectedItem()));
+        e -> list.setSelectionMode((SelectionMode) modeBox.getSelectedItem()));
     addLabeled(p, gbc, "Selection mode", modeBox);
 
     addRow(p, gbc, newCheck("Enabled", true, list::setEnabled));
@@ -122,9 +121,9 @@ public final class ElwhaCardListShowcase extends JPanel {
         button(
             "Remove selected",
             () -> {
-              final java.util.Set<String> sel = list.getSelectionModel().getSelectedItems();
+              final List<String> selected = list.getSelectionModel().getSelected();
               final List<String> items = new ArrayList<>(model.getItems());
-              items.removeAll(sel);
+              items.removeAll(selected);
               model.setItems(items);
             }));
     addRow(p, gbc, button("Clear log", () -> status.setText("")));
@@ -135,7 +134,7 @@ public final class ElwhaCardListShowcase extends JPanel {
     return p;
   }
 
-  private ElwhaCard renderCell(final String item) {
+  private ElwhaCard renderCell(final String item, final int index) {
     final ElwhaCard card = ElwhaCard.outlinedCard().setActionable(true).setSelectable(true);
     card.add(new ElwhaCardHeader().setTitle(item));
     card.add(
