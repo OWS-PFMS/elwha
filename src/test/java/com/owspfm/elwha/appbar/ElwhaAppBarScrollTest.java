@@ -367,8 +367,10 @@ class ElwhaAppBarScrollTest {
     bar.setScrollSource(scroll.pane());
 
     assertThat(scroll.modelListenerCount())
-        .as("#631 — removeNotify is the only detach path and it never fires for a bar that was "
-            + "never added, so attaching here strands the subscription for the bar's whole life")
+        .as(
+            "#631 — removeNotify is the only detach path and it never fires for a bar that was"
+                + " never added, so attaching here strands the subscription for the bar's whole"
+                + " life")
         .isEqualTo(baseline);
   }
 

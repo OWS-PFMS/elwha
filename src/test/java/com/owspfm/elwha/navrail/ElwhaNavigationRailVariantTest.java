@@ -521,8 +521,7 @@ class ElwhaNavigationRailVariantTest {
    * The destination's state layer fills a pill, not its whole box, so a corner probe would miss it
    * and a center probe would land on the glyph. Comparing whole rasters sidesteps both.
    */
-  private static boolean rastersMatch(
-      final BufferedImage a, final BufferedImage b) {
+  private static boolean rastersMatch(final BufferedImage a, final BufferedImage b) {
     for (int y = 0; y < a.getHeight(); y++) {
       for (int x = 0; x < a.getWidth(); x++) {
         if (a.getRGB(x, y) != b.getRGB(x, y)) {
@@ -551,8 +550,9 @@ class ElwhaNavigationRailVariantTest {
     hovered.removeNotify();
 
     assertThat(rastersMatch(shot(hovered), atRest))
-        .as("#625 — the hover poll is the only self-correction, so teardown has to clear the "
-            + "flag or a re-added destination paints its hover layer for good")
+        .as(
+            "#625 — the hover poll is the only self-correction, so teardown has to clear the "
+                + "flag or a re-added destination paints its hover layer for good")
         .isTrue();
   }
 

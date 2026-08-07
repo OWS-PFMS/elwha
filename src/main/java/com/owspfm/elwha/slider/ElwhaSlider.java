@@ -2297,9 +2297,9 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Releases the value-model subscription and stops the interaction motion. The listener is a
-   * lambda capturing this slider, so a caller-supplied model — the whole point of the public
-   * {@code ElwhaSlider(BoundedRangeModel)} constructor — would otherwise keep every slider it has
-   * ever backed alive and repainting on each value change.
+   * lambda capturing this slider, so a caller-supplied model — the whole point of the public {@code
+   * ElwhaSlider(BoundedRangeModel)} constructor — would otherwise keep every slider it has ever
+   * backed alive and repainting on each value change.
    *
    * @version v0.5.0
    * @since v0.5.0

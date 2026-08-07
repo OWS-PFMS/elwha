@@ -532,14 +532,16 @@ class ElwhaFabAnchorTest {
     final ElwhaFabAnchor anchor =
         scrollAnchor(
             pane, ElwhaFab.standard(MaterialIcons.add()), ElwhaFabAnchor.ScrollResponse.HIDE);
-    assertThat(modelListenerCount(pane)).as("the anchor is subscribed while displayed").isEqualTo(
-        baseline + 1);
+    assertThat(modelListenerCount(pane))
+        .as("the anchor is subscribed while displayed")
+        .isEqualTo(baseline + 1);
 
     anchor.removeNotify();
 
     assertThat(modelListenerCount(pane))
-        .as("#652 — an external scroll pane would otherwise hold the anchor and its whole "
-            + "content subtree alive after removal")
+        .as(
+            "#652 — an external scroll pane would otherwise hold the anchor and its whole "
+                + "content subtree alive after removal")
         .isEqualTo(baseline);
   }
 
@@ -552,8 +554,9 @@ class ElwhaFabAnchorTest {
     anchor.setScrollResponse(ElwhaFabAnchor.ScrollResponse.HIDE);
 
     assertThat(modelListenerCount(pane))
-        .as("#652 — removeNotify is the only detach path, and it never fires for an anchor that "
-            + "was never added")
+        .as(
+            "#652 — removeNotify is the only detach path, and it never fires for an anchor that "
+                + "was never added")
         .isEqualTo(baseline);
   }
 
@@ -578,8 +581,9 @@ class ElwhaFabAnchorTest {
         .as("a stage swap re-arms the subscription exactly once")
         .isEqualTo(baseline + 1);
     assertThat(anchor.getFab().getY())
-        .as("hideAnim.stop() resets progress to 0 while `hidden` survives, so without a resync "
-            + "the FAB comes back painted home yet still flagged hidden — unable to hide again")
+        .as(
+            "hideAnim.stop() resets progress to 0 while `hidden` survives, so without a resync "
+                + "the FAB comes back painted home yet still flagged hidden — unable to hide again")
         .isEqualTo(hiddenY);
   }
 }

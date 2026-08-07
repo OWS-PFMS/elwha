@@ -653,8 +653,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    *
    * <p>{@code liftAnimator.stop()} resets its progress to 0 but {@code lifted} survives the
    * teardown, and {@link #updateLift(boolean)} early-returns when the flag already matches — so
-   * without the resync a bar that left the hierarchy lifted came back reporting {@code
-   * isLifted() == true} while painting {@code SURFACE}.
+   * without the resync a bar that left the hierarchy lifted came back reporting {@code isLifted()
+   * == true} while painting {@code SURFACE}.
    *
    * @version v0.5.0
    * @since v0.5.0

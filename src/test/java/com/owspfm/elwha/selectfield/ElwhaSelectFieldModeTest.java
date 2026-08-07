@@ -307,8 +307,9 @@ class ElwhaSelectFieldModeTest {
     select.addNotify();
 
     assertThat(select.arrowAngle())
-        .as("#641 — stopping arrowAnim resets it to 0 while `expanded` survives, so without a "
-            + "resync the arrow comes back pointing down over an open menu")
+        .as(
+            "#641 — stopping arrowAnim resets it to 0 while `expanded` survives, so without a "
+                + "resync the arrow comes back pointing down over an open menu")
         .isEqualTo(openAngle);
   }
 

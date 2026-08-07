@@ -498,9 +498,10 @@ class ElwhaTextFieldLabelTest {
     field.addNotify();
 
     assertThat(label(field, "Email").y())
-        .as("#641 — stopping labelMorph resets it to 0 while the float flag survives, and "
-            + "updateLabelFloat early-returns on a matching flag, so without a resync the label "
-            + "would come back painted over the field's own text")
+        .as(
+            "#641 — stopping labelMorph resets it to 0 while the float flag survives, and"
+                + " updateLabelFloat early-returns on a matching flag, so without a resync the"
+                + " label would come back painted over the field's own text")
         .isEqualTo(floatedY);
   }
 }

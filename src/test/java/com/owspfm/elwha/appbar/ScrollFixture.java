@@ -70,9 +70,9 @@ final class ScrollFixture {
   }
 
   /**
-   * How many change listeners are on the scroll bar's model — the subscription an app bar's
-   * {@code ScrollSourceBinding} adds, and the thing a leaked binding leaves behind. The scroll
-   * pane installs its own, so tests compare against a baseline rather than against zero.
+   * How many change listeners are on the scroll bar's model — the subscription an app bar's {@code
+   * ScrollSourceBinding} adds, and the thing a leaked binding leaves behind. The scroll pane
+   * installs its own, so tests compare against a baseline rather than against zero.
    */
   int modelListenerCount() {
     return ((javax.swing.DefaultBoundedRangeModel) pane.getVerticalScrollBar().getModel())

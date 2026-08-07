@@ -304,8 +304,9 @@ class ElwhaCardDisclosureTest {
     card.remove(pinned);
 
     assertThat(card.collapseConstraintCount())
-        .as("#594 — nothing pruned the rule map, so a card that cycled its content held every "
-            + "child it had ever shown")
+        .as(
+            "#594 — nothing pruned the rule map, so a card that cycled its content held every "
+                + "child it had ever shown")
         .isZero();
   }
 
