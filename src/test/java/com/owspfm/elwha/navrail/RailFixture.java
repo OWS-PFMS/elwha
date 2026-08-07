@@ -24,17 +24,9 @@ final class RailFixture {
 
   private RailFixture() {}
 
-  /** The font a real host hierarchy would propagate into the rail. */
-  static java.awt.Font inheritedFont() {
-    return com.owspfm.elwha.theme.TypeRole.LABEL_MEDIUM.resolve();
-  }
-
   /** A destination with a bundled glyph and a label. */
   static ElwhaNavRailDestination destination(final String label) {
-    final ElwhaNavRailDestination destination =
-        ElwhaNavRailDestination.of(MaterialIcons.symbol("home"), label);
-    destination.setFont(inheritedFont());
-    return destination;
+    return ElwhaNavRailDestination.of(MaterialIcons.symbol("home"), label);
   }
 
   /** {@code count} destinations, labelled in order. */
@@ -48,7 +40,6 @@ final class RailFixture {
 
   /** A rail populated with {@code count} destinations and laid out at its preferred size. */
   static ElwhaNavigationRail laidOut(final ElwhaNavigationRail rail, final int count) {
-    rail.setFont(inheritedFont());
     rail.setPrimary(destinations(count));
     rail.setSize(rail.getPreferredSize());
     rail.doLayout();

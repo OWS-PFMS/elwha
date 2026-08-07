@@ -6,6 +6,7 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.ShadowPainter;
+import com.owspfm.elwha.theme.TypeRole;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -1010,13 +1011,19 @@ public final class ElwhaNavigationRail extends JComponent {
     return h;
   }
 
+  /**
+   * The section header's font. {@link #getFont()} is {@code null} on a rail that has never been
+   * added to a container and never had a font installed — which is exactly the state an offscreen
+   * render (a gallery preview) measures and paints in — so the theme's own title role supplies the
+   * family when there is nothing to inherit. Both the reserved header height and the header paint
+   * read this, so the space set aside can never disagree with the glyphs drawn into it.
+   */
+  private Font sectionHeaderFont() {
+    return getFont() != null ? getFont() : TypeRole.TITLE_SMALL.resolve();
+  }
+
   private int sectionHeaderHeight() {
-    final Font f = getFont();
-    if (f == null) {
-      return 14;
-    }
-    final FontMetrics fm = getFontMetrics(f);
-    return fm.getHeight();
+    return getFontMetrics(sectionHeaderFont()).getHeight();
   }
 
   private int trailingHeight() {
@@ -1178,11 +1185,7 @@ public final class ElwhaNavigationRail extends JComponent {
   }
 
   private void paintSectionHeaders(final Graphics2D g2) {
-    final Font font = getFont();
-    if (font == null) {
-      return;
-    }
-    g2.setFont(font);
+    g2.setFont(sectionHeaderFont());
     g2.setColor(ColorRole.ON_SURFACE_VARIANT.resolve());
     final FontMetrics fm = g2.getFontMetrics();
     final int headerH = fm.getHeight();

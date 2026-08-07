@@ -61,7 +61,6 @@ class ElwhaNavigationRailSelectionTest {
   @Test
   void anEmptyRailHasNoSelection() {
     final ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
-    rail.setFont(RailFixture.inheritedFont());
 
     rail.setPrimary(List.of());
 
@@ -109,7 +108,6 @@ class ElwhaNavigationRailSelectionTest {
   @Test
   void aSectionDestinationIsSelectable() {
     final ElwhaNavigationRail rail = ElwhaNavigationRail.expanded();
-    rail.setFont(RailFixture.inheritedFont());
     rail.setPrimary(RailFixture.destinations(3));
     final List<ElwhaNavRailDestination> secondary = RailFixture.destinations(2);
     rail.addSection("Tools", secondary);
@@ -293,7 +291,6 @@ class ElwhaNavigationRailSelectionTest {
   @Test
   void anEmptyRailFallsBackToItsFirstComponentForTheDefault() {
     final ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
-    rail.setFont(RailFixture.inheritedFont());
     final ElwhaIconButton menu = new ElwhaIconButton(MaterialIcons.symbol("menu").unselected());
     rail.setMenuButton(menu);
     rail.setPrimary(List.of());

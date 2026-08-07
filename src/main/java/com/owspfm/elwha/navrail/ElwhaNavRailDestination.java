@@ -10,10 +10,12 @@ import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
+import com.owspfm.elwha.theme.TypeRole;
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -501,8 +503,20 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     return hostVariant == ElwhaNavigationRail.Variant.EXPANDED;
   }
 
+  /**
+   * The destination label's font. {@link #getFont()} is {@code null} on a component that has never
+   * been added to a container and never had a font installed — which is exactly the state an
+   * offscreen render (a gallery preview, a drag image) measures and paints in — so the theme's own
+   * label role supplies the family when there is nothing to inherit. Both the Expanded hug-width
+   * measurement and the label paint read this, so the reserved width can never disagree with the
+   * painted glyphs.
+   */
+  private Font labelFont() {
+    return getFont() != null ? getFont() : TypeRole.LABEL_MEDIUM.resolve();
+  }
+
   private int expandedHugWidth() {
-    final FontMetrics fm = getFontMetrics(getFont());
+    final FontMetrics fm = getFontMetrics(labelFont());
     final int labelWidth = label.isEmpty() ? 0 : fm.stringWidth(label);
     return LEADING_PAD_EXPANDED
         + ICON_SIZE_PX
@@ -700,7 +714,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     if (label.isEmpty()) {
       return;
     }
-    g2.setFont(getFont());
+    g2.setFont(labelFont());
     final FontMetrics fm = g2.getFontMetrics();
     final int labelWidth = fm.stringWidth(label);
 

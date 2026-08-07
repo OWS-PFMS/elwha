@@ -137,8 +137,6 @@ class ElwhaNavigationRailVariantTest {
   void aDestinationAddedLaterAdoptsTheRailsVariant() {
     final ElwhaNavigationRail rail = ElwhaNavigationRail.expanded();
 
-    rail.setFont(RailFixture.inheritedFont());
-
     rail.setPrimary(RailFixture.destinations(3));
 
     assertThat(rail.getPrimary().get(0).getHostVariant())
@@ -188,6 +186,66 @@ class ElwhaNavigationRailVariantTest {
     assertThat(destination.getMaximumSize().width)
         .as("§3 — an Expanded row fills the rail's width so its indicator can span it")
         .isEqualTo(Integer.MAX_VALUE);
+  }
+
+  // ------------------------------------------------ the unparented-font fallback
+
+  @Test
+  void anUnparentedExpandedDestinationStillMeasuresItsLabel() {
+    final ElwhaNavRailDestination detached =
+        ElwhaNavRailDestination.of(com.owspfm.elwha.icons.MaterialIcons.symbol("home"), "Home");
+    detached.setHostVariant(ElwhaNavigationRail.Variant.EXPANDED);
+
+    assertThat(detached.getParent()).as("nothing to inherit a font from").isNull();
+    assertThat(detached.getPreferredSize().width)
+        .as(
+            "a component never added to a container has a null font, which is exactly the state "
+                + "an offscreen render measures in; the label role supplies the family instead")
+        .isGreaterThan(
+            ElwhaNavRailDestination.LEADING_PAD_EXPANDED
+                + ElwhaNavRailDestination.ICON_SIZE_PX
+                + ElwhaNavRailDestination.TRAILING_PAD_EXPANDED);
+  }
+
+  @Test
+  void anUnparentedDestinationStillPaintsItsLabel() {
+    final ElwhaNavRailDestination detached =
+        ElwhaNavRailDestination.of(com.owspfm.elwha.icons.MaterialIcons.symbol("home"), "Home");
+    detached.setHostVariant(ElwhaNavigationRail.Variant.EXPANDED);
+
+    assertThat(PaintLog.capture(detached).painted("Home"))
+        .as("and it renders rather than silently dropping the text")
+        .isTrue();
+  }
+
+  @Test
+  void anUnparentedRailStillPaintsItsSectionHeaders() {
+    final ElwhaNavigationRail detached = ElwhaNavigationRail.expanded();
+    detached.setPrimary(RailFixture.destinations(2));
+    detached.addSection("Tools", RailFixture.destinations(2));
+    detached.setSize(detached.getPreferredSize());
+    detached.doLayout();
+
+    assertThat(detached.getParent()).as("nothing to inherit a font from").isNull();
+    assertThat(
+            PaintLog.capture(detached, detached.getWidth(), detached.getHeight()).painted("Tools"))
+        .as("a null inherited font used to skip the header paint outright")
+        .isTrue();
+  }
+
+  @Test
+  void anUnparentedRailReservesTheHeightItActuallyPaints() {
+    final ElwhaNavigationRail withSection = ElwhaNavigationRail.expanded();
+    withSection.setPrimary(RailFixture.destinations(2));
+    withSection.addSection("Tools", RailFixture.destinations(1));
+    final ElwhaNavigationRail withoutSection = ElwhaNavigationRail.expanded();
+    withoutSection.setPrimary(RailFixture.destinations(3));
+
+    assertThat(withSection.getPreferredSize().height)
+        .as(
+            "the reserved header height and the painted header now read one font, so the space "
+                + "set aside cannot disagree with the glyphs drawn into it")
+        .isGreaterThan(withoutSection.getPreferredSize().height);
   }
 
   // ------------------------------------------------- the morph, at injected progress
@@ -372,7 +430,6 @@ class ElwhaNavigationRailVariantTest {
   @Test
   void sectionsRenderOnlyInExpanded() {
     final ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
-    rail.setFont(RailFixture.inheritedFont());
     rail.setPrimary(RailFixture.destinations(3));
     rail.addSection("Tools", RailFixture.destinations(2));
     rail.setSize(rail.getPreferredSize());
@@ -394,7 +451,6 @@ class ElwhaNavigationRailVariantTest {
   @Test
   void sectionDestinationsStayMembersWhileHidden() {
     final ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
-    rail.setFont(RailFixture.inheritedFont());
     rail.setPrimary(RailFixture.destinations(3));
     final List<ElwhaNavRailDestination> secondary = RailFixture.destinations(2);
     rail.addSection("Tools", secondary);
@@ -409,7 +465,6 @@ class ElwhaNavigationRailVariantTest {
   @Test
   void sectionsAreReportedInAddOrder() {
     final ElwhaNavigationRail rail = ElwhaNavigationRail.expanded();
-    rail.setFont(RailFixture.inheritedFont());
     rail.setPrimary(RailFixture.destinations(2));
     rail.addSection("Tools", RailFixture.destinations(2));
     rail.addSection("Archive", RailFixture.destinations(1));
@@ -422,7 +477,6 @@ class ElwhaNavigationRailVariantTest {
   @Test
   void clearingSectionsLeavesThePrimaryListAlone() {
     final ElwhaNavigationRail rail = ElwhaNavigationRail.expanded();
-    rail.setFont(RailFixture.inheritedFont());
     rail.setPrimary(RailFixture.destinations(3));
     rail.addSection("Tools", RailFixture.destinations(2));
 
