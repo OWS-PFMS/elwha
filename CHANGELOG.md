@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **A list removed mid-drag left a 16 ms `Timer` running forever** ([#588](https://github.com/OWS-PFMS/elwha/issues/588)) — `ElwhaItemList.removeNotify()` released its window binding and nothing else. The drag-reflow timer only self-stops once the in-flight drag is cleared, and the sole path that cleared it was the mouse release; pull the list out of the hierarchy mid-drag — a model-driven panel swap, a tab change — and no release ever arrives, so the timer ticked on indefinitely, holding the list, its item views and the whole model graph live. `removeNotify` now aborts the drag (restoring the dragged view and the content order without committing a move — a teardown is not a drop) and stops the content fade and drag-handle fade alongside it. The list stays armed across a remove/re-add: a fresh drag works exactly as it did before the swap.
 - **A Containers leaf shrank the Showcase's floating FAB when the operator scrolled its controls
   column or event log** (#544's suite) — #310 tagged every inner scroll pane of `ComponentWorkbench`
   (and `CodeView`) with `FAB_SCROLL_IGNORE` so the floating FAB's scroll-shrink only follows a real
