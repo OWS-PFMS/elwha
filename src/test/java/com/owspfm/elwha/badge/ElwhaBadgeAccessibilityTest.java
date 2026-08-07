@@ -58,7 +58,7 @@ class ElwhaBadgeAccessibilityTest {
   }
 
   @Test
-  void theAnnouncementUsesTheCoercedContent() {
+  void announcementUsesTheCoercedContent() {
     assertThat(ElwhaBadge.large(4000).getAccessibilityText())
         .as("AT hears what is displayed, so the overflow sentinel carries through")
         .isEqualTo("999+ new notifications");
@@ -86,14 +86,14 @@ class ElwhaBadgeAccessibilityTest {
   }
 
   @Test
-  void theAccessibilityOverrideIsFluent() {
+  void accessibilityOverrideIsFluent() {
     final ElwhaBadge badge = ElwhaBadge.small();
 
     assertThat(badge.withAccessibilityText("x")).isSameAs(badge);
   }
 
   @Test
-  void theDefaultAnnouncementTracksAContentChange() {
+  void defaultAnnouncementTracksAContentChange() {
     final ElwhaBadge badge = ElwhaBadge.large(1);
 
     badge.setContent(9);
@@ -157,14 +157,14 @@ class ElwhaBadgeAccessibilityTest {
   // ------------------------------------------------------- accessible shape
 
   @Test
-  void theBadgeReportsTheLabelRole() {
+  void badgeReportsTheLabelRole() {
     assertThat(ElwhaBadge.small().getAccessibleContext().getAccessibleRole())
         .as("§10.6 — a badge labels its host; it is not a control")
         .isEqualTo(AccessibleRole.LABEL);
   }
 
   @Test
-  void theAccessibleNameFallsBackToTheAnnouncement() {
+  void accessibleNameFallsBackToTheAnnouncement() {
     assertThat(ElwhaBadge.large(2).getAccessibleContext().getAccessibleName())
         .as("an unattached badge still reads sensibly on its own")
         .isEqualTo("2 new notifications");
@@ -338,7 +338,7 @@ class ElwhaBadgeAccessibilityTest {
   }
 
   @Test
-  void theAnchorsOwnSpliceIsNotMistakenForAConsumerRelabel() {
+  void anchorsOwnSpliceIsNotMistakenForAConsumerRelabel() {
     final IconHost host = mountedHost("Inbox");
     final ElwhaBadge badge = ElwhaBadge.large(1);
     ElwhaBadgeAnchor.attach(host, badge);
@@ -368,7 +368,7 @@ class ElwhaBadgeAccessibilityTest {
   }
 
   @Test
-  void theHostNameListenerIsRemovedOnDetach() {
+  void hostNameListenerIsRemovedOnDetach() {
     final IconHost host = mountedHost("Inbox");
     final ElwhaBadgeAnchor.Attachment attachment =
         ElwhaBadgeAnchor.attach(host, ElwhaBadge.large(3));
@@ -382,7 +382,7 @@ class ElwhaBadgeAccessibilityTest {
   }
 
   @Test
-  void theAccessibleContextIsStableAcrossCalls() {
+  void accessibleContextIsStableAcrossCalls() {
     final ElwhaBadge badge = ElwhaBadge.small();
     final AccessibleContext first = badge.getAccessibleContext();
 

@@ -71,7 +71,7 @@ class ElwhaBadgeRenderTest {
   }
 
   @Test
-  void theContainerFillSpansTheWholeBadgeBox() {
+  void containerFillSpansTheWholeBadgeBox() {
     final ElwhaBadge badge = ElwhaBadge.large("42");
     final Dimension size = badge.getPreferredSize();
 
@@ -84,7 +84,7 @@ class ElwhaBadgeRenderTest {
   }
 
   @Test
-  void theSmallDotIsFullyRoundRatherThanASquare() {
+  void smallDotIsFullyRoundRatherThanASquare() {
     final ElwhaBadge badge = ElwhaBadge.small();
     final Dimension size = badge.getPreferredSize();
 
@@ -99,7 +99,7 @@ class ElwhaBadgeRenderTest {
   }
 
   @Test
-  void theLargePillHasRoundEndCaps() {
+  void largePillHasRoundEndCaps() {
     final ElwhaBadge badge = ElwhaBadge.large("999+");
     final Dimension size = badge.getPreferredSize();
 
@@ -114,7 +114,7 @@ class ElwhaBadgeRenderTest {
   // ----------------------------------------------------------- color axis
 
   @Test
-  void theDefaultColorMappingIsErrorOnError() {
+  void defaultColorMappingIsErrorOnError() {
     assertThat(ElwhaBadge.small().getContainerColor())
         .as("§6 — Error is the M3 default badge container")
         .isEqualTo(ColorRole.ERROR);
@@ -212,7 +212,7 @@ class ElwhaBadgeRenderTest {
   }
 
   @Test
-  void theLabelIsDrawnAtLabelSmall() {
+  void labelIsDrawnAtLabelSmall() {
     final PaintLog.Text label = paint(ElwhaBadge.large("42")).text("42").orElseThrow();
 
     assertThat(label.font())
@@ -221,7 +221,7 @@ class ElwhaBadgeRenderTest {
   }
 
   @Test
-  void theLabelIsDrawnInTheOnErrorRoleByDefault() {
+  void labelIsDrawnInTheOnErrorRoleByDefault() {
     final PaintLog.Text label = paint(ElwhaBadge.large("42")).text("42").orElseThrow();
 
     assertThat(label.color())
@@ -230,7 +230,7 @@ class ElwhaBadgeRenderTest {
   }
 
   @Test
-  void theLabelIsHorizontallyCenteredInThePill() {
+  void labelIsHorizontallyCenteredInThePill() {
     final ElwhaBadge badge = ElwhaBadge.large("42");
     final int width = badge.getPreferredSize().width;
     final int textWidth = badge.getFontMetrics(TypeRole.LABEL_SMALL.resolve()).stringWidth("42");
@@ -243,7 +243,7 @@ class ElwhaBadgeRenderTest {
   }
 
   @Test
-  void theLabelBaselineCentersTheGlyphBandNotTheLineBox() {
+  void labelBaselineCentersTheGlyphBandNotTheLineBox() {
     final ElwhaBadge badge = ElwhaBadge.large("42");
     final int height = badge.getPreferredSize().height;
     final java.awt.FontMetrics fm = badge.getFontMetrics(TypeRole.LABEL_SMALL.resolve());
@@ -256,7 +256,7 @@ class ElwhaBadgeRenderTest {
   }
 
   @Test
-  void theLabelStaysInsideTheContainer() {
+  void labelStaysInsideTheContainer() {
     final ElwhaBadge badge = ElwhaBadge.large("999+");
     final PaintLog log = paint(badge);
     final int textWidth = badge.getFontMetrics(TypeRole.LABEL_SMALL.resolve()).stringWidth("999+");

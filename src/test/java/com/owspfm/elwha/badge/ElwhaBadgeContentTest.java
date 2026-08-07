@@ -157,7 +157,7 @@ class ElwhaBadgeContentTest {
   // --------------------------------------------------------------- variants
 
   @Test
-  void theFactoriesPinTheVariant() {
+  void factoriesPinTheVariant() {
     assertThat(ElwhaBadge.small().getVariant()).isEqualTo(ElwhaBadge.Variant.SMALL);
     assertThat(ElwhaBadge.large("1").getVariant()).isEqualTo(ElwhaBadge.Variant.LARGE);
   }
@@ -217,7 +217,7 @@ class ElwhaBadgeContentTest {
   }
 
   @Test
-  void theWidthFollowsAContentChangeInPlace() {
+  void widthFollowsAContentChangeInPlace() {
     final ElwhaBadge badge = ElwhaBadge.large("1");
     final int narrow = badge.getPreferredSize().width;
 
@@ -255,7 +255,7 @@ class ElwhaBadgeContentTest {
   }
 
   @Test
-  void theContentEventCarriesTheCoercedValueNotTheRawOne() {
+  void contentEventCarriesTheCoercedValueNotTheRawOne() {
     final ElwhaBadge badge = ElwhaBadge.large("1");
     final List<PropertyChangeEvent> events = new ArrayList<>();
     badge.addPropertyChangeListener(ElwhaBadge.PROPERTY_CONTENT, events::add);

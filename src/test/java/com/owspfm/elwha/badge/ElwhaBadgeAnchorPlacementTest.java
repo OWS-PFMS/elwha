@@ -99,7 +99,7 @@ class ElwhaBadgeAnchorPlacementTest {
   }
 
   @Test
-  void theBadgeIsSizedToItsPreferredSize() {
+  void badgeIsSizedToItsPreferredSize() {
     final IconHost host = host();
     AnchorFixture.with(host, 20, 16, 48, 48);
     final ElwhaBadge badge = ElwhaBadge.large("999+");
@@ -112,7 +112,7 @@ class ElwhaBadgeAnchorPlacementTest {
   }
 
   @Test
-  void theAnchoredBoundsAreExactlyWhatTheBadgePaintsInto() {
+  void anchoredBoundsAreExactlyWhatTheBadgePaintsInto() {
     final IconHost host = host();
     AnchorFixture.with(host, 20, 16, 48, 48);
     final ElwhaBadge badge = ElwhaBadge.large("999+");
@@ -275,7 +275,7 @@ class ElwhaBadgeAnchorPlacementTest {
   }
 
   @Test
-  void theTwoOrientationsPlaceTheBadgeOnOppositeSidesOfTheIcon() {
+  void twoOrientationsPlaceTheBadgeOnOppositeSidesOfTheIcon() {
     final IconHost ltrHost = host();
     AnchorFixture.with(ltrHost, 20, 16, 48, 48);
     final ElwhaBadge ltrBadge = ElwhaBadge.small();
@@ -472,7 +472,7 @@ class ElwhaBadgeAnchorPlacementTest {
   // ------------------------------------------------------- mounting lifecycle
 
   @Test
-  void theBadgeIsMountedOnTheHostsLayeredPaneAtTheOverlayLayer() {
+  void badgeIsMountedOnTheHostsLayeredPaneAtTheOverlayLayer() {
     final IconHost host = host();
     final AnchorFixture fixture = AnchorFixture.with(host, 20, 16, 48, 48);
     final ElwhaBadge badge = ElwhaBadge.small();
@@ -591,7 +591,7 @@ class ElwhaBadgeAnchorPlacementTest {
   }
 
   @Test
-  void theExplicitBoundsOverloadFreezesTheRectItWasGiven() {
+  void explicitBoundsOverloadFreezesTheRectItWasGiven() {
     final JComponent host = new JComponent() {};
     AnchorFixture.with(host, 20, 16, 48, 48);
     final Rectangle supplied = new Rectangle(ICON);
