@@ -37,11 +37,11 @@ jobs:
         # provides the display (docs/research/elwha-test-suite-research.md §5b). The pinned
         # screen matches the Cacio config developers run against.
         run: |
-          xvfb-run -a -s "-screen 0 1920x1080x24" bash -c '
+          xvfb-run -a -s "-screen 0 1920x1080x24 -ardelay 3600000 -arinterval 3600000" bash -c '
             for i in $(seq 1 15); do xset r off 2>/dev/null && break; sleep 1; done
             echo "--- xset q keyboard state ---"
             xset q | sed -n "/Keyboard Control/,+3p"
-            if ! xset q | grep -Eq "auto repeat.+off"; then
+            if ! xset q | grep -Eq "auto repeat: +off|auto repeat delay: +3600000"; then
               echo "FATAL - X autorepeat could not be disabled; failing fast instead of flaking"
               exit 1
             fi
