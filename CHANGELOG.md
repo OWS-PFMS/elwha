@@ -15,6 +15,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **A Containers leaf shrank the Showcase's floating FAB when the operator scrolled its controls
+  column or event log** (#544's suite) — #310 tagged every inner scroll pane of `ComponentWorkbench`
+  (and `CodeView`) with `FAB_SCROLL_IGNORE` so the floating FAB's scroll-shrink only follows a real
+  page scroll, but `ContainerWorkbench`'s two panes were missed. Both are now tagged, so the four
+  Containers leaves behave like every Components leaf: the FAB stays Extended and inert unless the
+  page itself scrolls.
 - **`ElwhaNavigationRail` and `ElwhaNavRailDestination` NPE'd / silently dropped text unparented**
   (#543's suite) — both derived their font from `getFont()`, null on a component never added to a
   container (an offscreen render's state: gallery previews, drag images). An Expanded

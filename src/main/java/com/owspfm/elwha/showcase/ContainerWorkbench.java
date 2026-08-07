@@ -39,7 +39,7 @@ public final class ContainerWorkbench extends JPanel {
    * Builds an empty container workbench — call {@link #setContainer}, {@link #controls}, and {@link
    * #logEvent} to fill it.
    *
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public ContainerWorkbench() {
@@ -58,6 +58,10 @@ public final class ContainerWorkbench extends JPanel {
     controlsScroll.getVerticalScrollBar().setUnitIncrement(16);
     controlsScroll.setBorder(
         BorderFactory.createMatteBorder(0, 1, 0, 0, UIManager.getColor("Component.borderColor")));
+    // Inner panes, tagged so the Showcase's floating-FAB scroll-shrink skips them the way it skips
+    // a ComponentWorkbench's (#310): scrolling the controls column or the event log is not paging
+    // content, and a container leaf would otherwise shrink the FAB on a knob scroll.
+    controlsScroll.putClientProperty(ComponentWorkbench.FAB_SCROLL_IGNORE, Boolean.TRUE);
 
     log = new JTextArea();
     log.setEditable(false);
@@ -75,7 +79,9 @@ public final class ContainerWorkbench extends JPanel {
     logPanel.setPreferredSize(new Dimension(0, LOG_HEIGHT));
     logHeading.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
     logPanel.add(logHeading, BorderLayout.NORTH);
-    logPanel.add(new JScrollPane(log), BorderLayout.CENTER);
+    final JScrollPane logScroll = new JScrollPane(log);
+    logScroll.putClientProperty(ComponentWorkbench.FAB_SCROLL_IGNORE, Boolean.TRUE);
+    logPanel.add(logScroll, BorderLayout.CENTER);
 
     final JSplitPane split =
         new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, containerHost, controlsScroll);

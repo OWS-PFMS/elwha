@@ -342,7 +342,21 @@ public final class ComponentWorkbench extends JPanel {
     codeView.setCode(codeFor(name));
   }
 
-  private String codeFor(final String name) {
+  // Test seams — the staged component, the active switcher segment, and the code view, none of
+  // which a builder needs but all of which the Showcase suite asserts against (#544).
+  JComponent stage() {
+    return liveComponent;
+  }
+
+  String activeSegment() {
+    return activeSegment;
+  }
+
+  CodeView codeView() {
+    return codeView;
+  }
+
+  String codeFor(final String name) {
     if (COMPONENT_SEGMENT.equals(name)) {
       return componentCode;
     }
