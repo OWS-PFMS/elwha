@@ -1,6 +1,7 @@
 package com.owspfm.elwha.chip;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.list.ElwhaListItemView;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeScale;
@@ -88,7 +89,7 @@ import javax.swing.Timer;
  * @version v0.5.0
  * @since v0.1.0
  */
-public class ElwhaChip extends JPanel {
+public class ElwhaChip extends JPanel implements ElwhaListItemView {
 
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
@@ -108,6 +109,7 @@ public class ElwhaChip extends JPanel {
   // Configuration ----------------------------------------------------------
   private ChipVariant variant = ChipVariant.FILLED;
   private ChipInteractionMode interactionMode = ChipInteractionMode.STATIC;
+  private ChipInteractionMode preListInteractionMode;
   private ColorRole surfaceRoleOverride;
   private ShapeScale shape = ShapeScale.SM;
   private SpaceScale paddingVertical = SpaceScale.XS;
@@ -1026,6 +1028,34 @@ public class ElwhaChip extends JPanel {
   public ElwhaChip cancelPendingClick() {
     pressed = false;
     repaint();
+    return this;
+  }
+
+  /**
+   * Hands interaction ownership to a hosting {@code ElwhaItemList}, or takes it back.
+   *
+   * <p>While list-interactive the chip runs in {@link ChipInteractionMode#CLICKABLE}: it fires
+   * actions and shows press feedback, but does not hold its own selected state the way {@link
+   * ChipInteractionMode#SELECTABLE} would — the list writes that through {@link
+   * #setSelected(boolean)}. Passing {@code false} restores the interaction mode the chip carried
+   * before the list claimed it.
+   *
+   * @param interactive true to hand interaction to the list, false to take it back
+   * @return this chip
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public ElwhaChip setListInteractive(final boolean interactive) {
+    if (interactive) {
+      if (preListInteractionMode == null) {
+        preListInteractionMode = interactionMode;
+      }
+      setInteractionMode(ChipInteractionMode.CLICKABLE);
+    } else if (preListInteractionMode != null) {
+      setInteractionMode(preListInteractionMode);
+      preListInteractionMode = null;
+    }
     return this;
   }
 
