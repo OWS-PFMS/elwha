@@ -48,6 +48,7 @@ class ElwhaTextFieldGuiTest {
   private JFrame frame;
   private ElwhaTextField field;
   private ElwhaTextField other;
+  private javax.swing.JButton focusSink;
   private Robot robot;
 
   @BeforeEach
@@ -65,6 +66,12 @@ class ElwhaTextFieldGuiTest {
           frame = new JFrame("ElwhaTextFieldGuiTest");
           frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
           frame.setLayout(new FlowLayout());
+          // First in traversal order: on the native toolkit a freshly-shown frame gives initial
+          // focus to its first focusable child — without a sink that child is the field's editor,
+          // and every resting-state precondition below would assert against a focused field.
+          // (Cacio hands initial focus to nothing, which is how this passed under it locally.)
+          focusSink = new javax.swing.JButton("sink");
+          frame.add(focusSink);
           frame.add(field);
           frame.add(other);
           frame.pack();
@@ -73,6 +80,8 @@ class ElwhaTextFieldGuiTest {
         });
     robot.waitForIdle();
     waitFor("frame gains focus", () -> frame.isFocused());
+    SwingUtilities.invokeAndWait(() -> focusSink.requestFocusInWindow());
+    waitFor("initial focus parks on the sink", () -> focusSink.isFocusOwner());
   }
 
   @AfterEach
