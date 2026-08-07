@@ -1092,6 +1092,30 @@ public final class MaterialIcons {
   }
 
   /**
+   * Two-column 6-dot drag-handle glyph — M3's standard "this row can be dragged" affordance, and
+   * what {@link com.owspfm.elwha.list.ReorderAffordance#HOVER_ICON} reveals on hover.
+   *
+   * @return the icon at the default size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon dragIndicator() {
+    return dragIndicator(DEFAULT_SIZE);
+  }
+
+  /**
+   * Sized variant of {@link #dragIndicator()}.
+   *
+   * @param size pixel size for the returned icon
+   * @return the icon at the requested size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static FlatSVGIcon dragIndicator(final int size) {
+    return load("drag_indicator", size);
+  }
+
+  /**
    * Rotate 90° counter-clockwise glyph.
    *
    * @return the icon at the default size
