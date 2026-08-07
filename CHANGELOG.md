@@ -25,6 +25,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **A default (`STATIC`) `ElwhaChip` sat in the tab order** (#539's suite) — the constructor
   inherited `JPanel`'s `focusable=true` and `setInteractionMode` short-circuits on an unchanged
   mode, contradicting `STATIC`'s documented inert contract.
+- **A non-actionable `ElwhaCard` sat in the tab order** (#541's suite) — the same class of defect
+  as the chip above: the constructor inherited `JPanel`'s `focusable=true` and `setActionable`
+  short-circuits on an unchanged value, so the `actionable=false` start state never reached the
+  focusable flag. Because the card installs a `WHEN_FOCUSED` InputMap for Space/Enter regardless,
+  `LayoutFocusTraversalPolicy` accepted the inert chassis as a tab stop — contradicting the spec
+  §12.1 atomic gate ("chassis tab stop: no") and the §16.3 traversal table.
 - **`ElwhaTextField` editor colors went stale across theme switches** ([#495](https://github.com/OWS-PFMS/elwha/issues/495)) — two halves. *Detached fields:* `ElwhaTheme.install` re-themes via `updateComponentTreeUI(window)`, which never visits components outside a window hierarchy — a field built under one mode and mounted later (an unopened dialog's content, e.g. the color picker's hex field) painted the old mode's near-black text on the dark surface. *The caret:* the text UI's `installDefaults` replaced the UIResource-typed caret with the LAF default on every switch, losing the M3 `PRIMARY`/`ERROR` stroke even in-hierarchy. The field now re-applies its editor styling in `updateUI()` and `addNotify()`, setting **plain** (non-UIResource) colors/fonts so the editor's own `updateUI` (which runs after the field's in the parent-first walk) preserves them. `ElwhaSelectField` inherits the fix through its embedded field. Regression guard: `ElwhaTextFieldThemeSmoke`.
 
 ### Added
