@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **A submenu trigger stayed marked expanded after a whole-chain dismissal** (#542's suite) — an
+  outside press or a selection unlinks each chain level before closing it, so the opener's
+  bookkeeping survived its own menu: the row kept reporting `EXPANDED` with nothing open, and
+  because hover-to-open only arms while collapsed, the submenu silently never opened again for
+  that item. `ElwhaMenu.clearTransientState` now resets the opener state.
 - **`ElwhaSelectField.setSelectedValue(null)` threw on an optionless select** (#540's suite) —
   clearing the value before options load (a form reset), or an editable combo committing free
   text before options are set, died in the mark-sync's `ElwhaMenu` build (`IllegalStateException:
