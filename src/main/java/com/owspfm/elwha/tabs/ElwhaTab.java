@@ -1007,9 +1007,21 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
     }
   }
 
+  /**
+   * Clears the transient input state alongside the hover poll. The poll is the only path that ever
+   * self-corrects {@code hovered} / {@code pressed}, so stopping it while the pointer is over the
+   * tab — a stage swap, a CardLayout rebuild — would otherwise leave the tab painting its hover
+   * layer for good once it is re-added.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
   @Override
   public void removeNotify() {
     stopHoverPolling();
+    hovered = false;
+    pressed = false;
+    focusVisible = false;
     if (rippleTimer != null) {
       rippleTimer.stop();
     }
