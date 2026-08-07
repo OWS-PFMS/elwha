@@ -192,51 +192,28 @@ class ElwhaSelectFieldMenuGuiTest {
   @Test
   void arrowKeysInTheEditorMoveTheMenuHighlight() throws Exception {
     openTheMenu();
-    // The open gesture's retry guard cannot distinguish a lost Down from a slow one, so the menu
-    // may open with the highlight already a row deep (#585). Walk the highlight to the clamped
-    // top before baselining — Up at the top is a no-op, so over-pressing is harmless and a full
-    // quiet window means the clamp was reached.
-    for (int press = 0; press < 4; press++) {
-      final String before = read(this::highlightedLabel);
-      robot.keyPress(KeyEvent.VK_UP);
-      robot.keyRelease(KeyEvent.VK_UP);
-      robot.waitForIdle();
-      final long deadline = System.currentTimeMillis() + 1500;
-      while (System.currentTimeMillis() < deadline
-          && java.util.Objects.equals(before, read(this::highlightedLabel))) {
-        Thread.sleep(20);
-      }
-      if (java.util.Objects.equals(before, read(this::highlightedLabel))) {
-        break;
-      }
-    }
-    final String top = read(this::highlightedLabel);
+    // This tier proves the WIRING — a real keystroke in the focused editor reaches the menu's
+    // roving highlight — not the row arithmetic, which the headless suite already pins
+    // deterministically. Position assertions here compounded synthetic-delivery uncertainty
+    // across eight presses and flaked twice on stalled runners even after #585's hardened
+    // windows (the second failure self-diagnosed as a mis-baselined walk). Movement, unlike
+    // position, is retry-safe: an over-delivered arrow moves the highlight further and the
+    // condition stays satisfied.
+    final String afterOpen = read(this::highlightedLabel);
 
     GuiSteps.keyUntil(
         robot,
         KeyEvent.VK_DOWN,
         "Down in the editor is routed to the menu's roving highlight",
-        () -> !java.util.Objects.equals(top, highlightedLabel()));
+        () -> !java.util.Objects.equals(afterOpen, highlightedLabel()));
 
-    // Walk back Up with a bounded press-until-target loop rather than a single guarded press: a
-    // slow-but-delivered Down above may have moved more than one row, and Up is not idempotent
-    // mid-list — but it IS clamped at the top, so overshooting toward the target is harmless.
-    for (int press = 0;
-        press < 4 && !java.util.Objects.equals(top, read(this::highlightedLabel));
-        press++) {
-      robot.keyPress(KeyEvent.VK_UP);
-      robot.keyRelease(KeyEvent.VK_UP);
-      robot.waitForIdle();
-      final long deadline = System.currentTimeMillis() + 1500;
-      while (System.currentTimeMillis() < deadline
-          && !java.util.Objects.equals(top, read(this::highlightedLabel))) {
-        Thread.sleep(20);
-      }
-    }
-    waitFor(
-        "and Up walks it back to the top",
-        () -> top.equals(highlightedLabel()),
-        () -> "highlighted=" + highlightedLabel() + " top=" + top);
+    final String afterDown = read(this::highlightedLabel);
+
+    GuiSteps.keyUntil(
+        robot,
+        KeyEvent.VK_UP,
+        "Up in the editor is routed to the menu's roving highlight",
+        () -> !java.util.Objects.equals(afterDown, highlightedLabel()));
   }
 
   // ---------------------------------------------------------------- commit
