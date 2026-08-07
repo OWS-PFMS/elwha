@@ -28,6 +28,9 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Install X server utilities (xset — not on all runner images)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends x11-xserver-utils
+
       - name: Run the suite
         # xvfb-run hosts the gui-tagged tier: on Linux the JDK 21 X11 font natives need a real
         # display, so the linux-gui-native Maven profile selects the native toolkit and Xvfb
