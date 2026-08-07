@@ -2,7 +2,7 @@
 
 **Written:** 2026-08-06 · **Audience:** a fresh agent picking up the road to 1.0.0 cold · **Repo:** `OWS-PFMS/elwha`
 
-Read `CLAUDE.md` first — it is the standing contract. **Caveat: the version on `main` is stale** (its package table lists 9 of 29 packages and its "Open epics" section names superseded consumer-repo epics as the 1.0.0 gates). The corrected version is on **PR #533**, unmerged at time of writing — see §10. Read it from that branch, not from `main`.
+Read `CLAUDE.md` first — it is the standing contract. The version on `main` is current as of the 2026-08-06 sweep (PR #533, merged).
 
 This doc is the *plan*: what remains, in what order, and what will bite you. It is a point-in-time snapshot; where it disagrees with a GitHub issue, the issue wins.
 
@@ -59,7 +59,7 @@ python3 scripts/update_javadoc_version.py --check --changed-only --expected v0.5
 
 ## 5. Operating rules (from the operator — these carry forward)
 
-- **Don't auto-merge.** After CI green, hand off. Merge only on explicit go.
+- **Merging — amended 2026-08-06.** The operator granted merge-on-green authority for the 1.0.0 loop ("I can always revert back if needed"), with a hard constraint: nothing destructive, no history rewrites, everything revertible. Verify every `Closes` target's state after merging.
 - **Set the PR milestone at creation.** The version workflow hard-fails without one.
 - **Every new issue goes on Project #5** as part of filing it: `gh project item-add 5 --owner OWS-PFMS --url <issue-url>`.
 - **Clarifying questions as plain-text numbered lists in chat.** No UI pickers.
@@ -146,6 +146,8 @@ python3 scripts/update_javadoc_version.py --check --changed-only --expected v0.5
 
 Do not resolve these unilaterally.
 
+> **Update 2026-08-06:** items 2 and 3 are decided — the quality gate stays as filed, and #529 is milestoned `v0.5.0`. Item 1 has a direction, not a resolution: **replace** the Capitaine cursors, but hand-drawn replacements were tried before and rejected as low quality, so this is a genuine design task — invest in it (a set derived from the already-bundled Apache-2.0 Material Symbols glyphs is one candidate). Item 4 follows from item 1's outcome.
+
 1. **#531 — the cursor license.** `NOTICE` declares the bundled Capitaine cursors **CC BY-SA 4.0**; the shipped `LICENSE-capitaine.txt` says **LGPL-3.0**. `v0.1.0` already published with the wrong `NOTICE`. LGPL assets inside an Apache 2.0 jar needs a deliberate call: keep-and-declare-correctly, replace, or drop. **Do not quietly "fix" `NOTICE`** — that makes the current state look intentional.
 2. **Does the quality gate really precede 1.0?** #438 + #440 as filed make 1.0.0 a function of an unscoped test-suite epic. If they can land in 1.1.x, the date moves in by months. There is a middle path — cut an interim `0.5.0` release so OWS gets something consumable while the suite matures — but the operator has been explicit about wanting completeness before release, so **do not push this unprompted.**
 3. **#529's milestone**, per §7 item 2.
@@ -163,11 +165,9 @@ Do not resolve these unilaterally.
 
 ## 10. In flight right now
 
-**PR #533** — the maintainer-doc sweep (`CLAUDE.md` + superseding `elwha-v1-component-scope.md`), milestone `v0.5.0`, `Closes #532`. Head `284d909`, one commit ahead of `main`, content intact.
+Nothing. **PR #533** — the maintainer-doc sweep — merged 2026-08-06 (#532 closed) after the GitHub Actions outage that had been blocking it resolved upstream and the checks ran green on their own.
 
-**It cannot go green: GitHub Actions was in a `major_outage` as of 2026-08-06 22:18 UTC.** No check suite was ever created for the commit — six nudges over ~36 minutes produced nothing. This is upstream, not a repo misconfiguration (workflows are `active`, no path filters, public repo so quota is moot). **First thing to do on pickup:** check whether the checks have since appeared. If not and Actions is operational again, one force-push of a fresh SHA will trigger `synchronize`.
-
-Per the standing rule, **do not merge it** even when green — hand off.
+The loop toward 1.0.0 is being executed per §7's order under the 2026-08-06 operator grants recorded in §5 and §8. Track state lives with the agent running the loop; this section stays a point-in-time snapshot.
 
 ## 11. Definition of done for 1.0.0
 
