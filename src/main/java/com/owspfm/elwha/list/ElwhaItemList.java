@@ -7,6 +7,7 @@ import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -14,10 +15,14 @@ import java.awt.Insets;
 import java.awt.LayoutManager;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowFocusListener;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -182,6 +187,16 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
   private final Map<JComponent, Integer> targetX = new HashMap<>();
   private final Map<JComponent, Integer> targetY = new HashMap<>();
   private Timer dragAnimTimer;
+
+  // Window activation ------------------------------------------------------
+  private final WindowFocusListener cursorRefresh =
+      new WindowAdapter() {
+        @Override
+        public void windowGainedFocus(final WindowEvent event) {
+          reapplyReorderCursors();
+        }
+      };
+  private Window cursorWindow;
 
   // Fade + drag-handle animation -------------------------------------------
   private float fadeAlpha = 1f;
@@ -2663,6 +2678,107 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
   @Override
   public boolean isPaintingOrigin() {
     return fadeAlpha < 1f;
+  }
+
+  // ------------------------------------------------------ window activation
+
+  /**
+   * Binds the reorder-cursor refresh to the ancestor window.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void addNotify() {
+    super.addNotify();
+    trackAncestorWindow();
+  }
+
+  /**
+   * Releases the ancestor window binding, so a list that outlives its window leaks no listener.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void removeNotify() {
+    untrackAncestorWindow();
+    super.removeNotify();
+  }
+
+  /**
+   * Subscribes the cursor refresh to the ancestor window's focus, replacing any earlier binding.
+   *
+   * <p>A list with no window ancestor — unparented, or headless — binds nothing, which is what
+   * makes the whole mechanism inert off-display.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  void trackAncestorWindow() {
+    final Window window = SwingUtilities.getWindowAncestor(this);
+    if (window == cursorWindow) {
+      return;
+    }
+    untrackAncestorWindow();
+    if (window == null) {
+      return;
+    }
+    window.addWindowFocusListener(cursorRefresh);
+    cursorWindow = window;
+  }
+
+  /**
+   * Undoes {@link #trackAncestorWindow()}. Safe to call when nothing is bound.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  void untrackAncestorWindow() {
+    if (cursorWindow == null) {
+      return;
+    }
+    cursorWindow.removeWindowFocusListener(cursorRefresh);
+    cursorWindow = null;
+  }
+
+  /**
+   * Returns the window this list currently listens to for focus, if any.
+   *
+   * @return the bound window, or null when nothing is bound
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  Window getTrackedWindow() {
+    return cursorWindow;
+  }
+
+  /**
+   * Rebuilds the reorder cursors and re-applies them to every item that advertises a drag.
+   *
+   * <p>Cursors are otherwise installed once, when items are built. macOS drops the OS-side
+   * association for custom cursors across a Spaces or Mission Control transition, so a list that
+   * survives one goes back to the default pointer with nothing to re-install it. Re-applying the
+   * cached instances would not help — the objects survive, the association is what dies — so {@link
+   * ReorderCursors#invalidate()} forces a rebuild first (#556).
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  void reapplyReorderCursors() {
+    if (!usesCursorSwap() || !canReorderAnything()) {
+      return;
+    }
+    ReorderCursors.invalidate();
+    final Cursor grab = ReorderCursors.grab();
+    for (final Map.Entry<T, JComponent> entry : viewByItem.entrySet()) {
+      if (!isAnchored(entry.getKey())) {
+        entry.getValue().setCursor(grab);
+      }
+    }
+    if (drag != null && drag.active && drag.view != null) {
+      drag.view.setCursor(ReorderCursors.grabbing());
+    }
   }
 
   // ------------------------------------------------------------------ layout

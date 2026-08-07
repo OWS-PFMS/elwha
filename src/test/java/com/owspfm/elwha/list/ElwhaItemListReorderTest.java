@@ -181,6 +181,136 @@ class ElwhaItemListReorderTest {
         .isEqualTo(Cursor.DEFAULT_CURSOR);
   }
 
+  // ----------------------------------------------------- cursor refresh #556
+
+  /**
+   * Stands in for what macOS does to a custom cursor across a Spaces transition — it drops the
+   * OS-side association, and the pointer falls back to the default.
+   */
+  private void loseCursor(final String item) {
+    list.getComponentFor(item).setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+  }
+
+  @Test
+  void aRefreshReinstallsTheGrabCursorTheSystemDropped() {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
+    layout();
+    loseCursor("a");
+
+    list.reapplyReorderCursors();
+
+    assertThat(cursorOf(list.getComponentFor("a")))
+        .as("#556 — nothing else re-installs the cursor after the OS drops it")
+        .isEqualTo(GRAB);
+  }
+
+  @Test
+  void aRefreshCoversEveryDraggableItemNotJustTheOneUnderThePointer() {
+    slabListOf("a", "b", "c").setMovementMode(MovementMode.MOVABLE);
+    layout();
+    loseCursor("a");
+    loseCursor("b");
+    loseCursor("c");
+
+    list.reapplyReorderCursors();
+
+    assertThat(cursorOf(list.getComponentFor("b"))).isEqualTo(GRAB);
+    assertThat(cursorOf(list.getComponentFor("c")))
+        .as("the whole window comes back at once, so every item has to")
+        .isEqualTo(GRAB);
+  }
+
+  @Test
+  void aRefreshLeavesAStaticListAlone() {
+    slabListOf("a", "b");
+    layout();
+
+    list.reapplyReorderCursors();
+
+    assertThat(cursorOf(list.getComponentFor("a")))
+        .as("a list that never advertised a drag must not acquire the cursor on reactivation")
+        .isEqualTo(Cursor.DEFAULT_CURSOR);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = ReorderAffordance.class,
+      names = {"HOVER_ICON", "NONE"})
+  void aRefreshLeavesTheCursorlessAffordancesAlone(final ReorderAffordance affordance) {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE).setReorderAffordance(affordance);
+    layout();
+
+    list.reapplyReorderCursors();
+
+    assertThat(cursorOf(list.getComponentFor("a")))
+        .as("%s never installs a cursor, so the refresh has nothing to restore", affordance)
+        .isEqualTo(Cursor.DEFAULT_CURSOR);
+  }
+
+  @Test
+  void aRefreshSkipsAnchoredItemsTheSameWayTheInstallDid() {
+    slabListOf("a", "b", "c").setAnchorPredicate("a"::equals);
+    layout();
+    loseCursor("b");
+
+    list.reapplyReorderCursors();
+
+    assertThat(cursorOf(list.getComponentFor("a")))
+        .as("the anchor still cannot move, so it still must not advertise a drag")
+        .isEqualTo(Cursor.DEFAULT_CURSOR);
+    assertThat(cursorOf(list.getComponentFor("b")))
+        .as("while its movable neighbours come back")
+        .isEqualTo(GRAB);
+  }
+
+  @Test
+  void aRefreshStopsAtAnActiveSortJustLikeTheInstall() {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
+    layout();
+    list.setSortOrder(Comparator.naturalOrder());
+    layout();
+
+    list.reapplyReorderCursors();
+
+    assertThat(cursorOf(list.getComponentFor("a")))
+        .as("a sort suppresses reorder, so reactivation must not resurrect the affordance")
+        .isEqualTo(Cursor.DEFAULT_CURSOR);
+  }
+
+  // --------------------------------------------- window binding (headless half)
+
+  @Test
+  void aListWithNoWindowBindsNothing() {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
+
+    list.trackAncestorWindow();
+
+    assertThat(list.getTrackedWindow())
+        .as("no window ancestor is what makes the whole mechanism inert off-display")
+        .isNull();
+  }
+
+  @Test
+  void bindingIsIdempotentSoRepeatedAttachesCannotStack() {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
+
+    list.trackAncestorWindow();
+    list.trackAncestorWindow();
+
+    assertThat(list.getTrackedWindow()).isNull();
+  }
+
+  @Test
+  void unbindingIsSafeWhenNothingIsBound() {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
+
+    list.untrackAncestorWindow();
+
+    assertThat(list.getTrackedWindow())
+        .as("removeNotify runs on lists that never reached a window, so it cannot throw")
+        .isNull();
+  }
+
   // -------------------------------------------------------- hover handle
 
   @Test
