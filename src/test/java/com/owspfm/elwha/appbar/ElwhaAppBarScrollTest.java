@@ -21,6 +21,11 @@ import org.junit.jupiter.params.provider.EnumSource;
  * ({@link ScrollFixture}) rather than by writing values at a bare scroll bar. A scroll bar with no
  * view behind it has an empty range, so a written value is clamped straight back to zero and the
  * binding never fires — the shortcut looks like it works and tests nothing.
+ *
+ * <p>Every bar that drives a scroll is {@code addNotify}'d first. Since #631 the binding attaches
+ * only while the bar is displayable — {@code removeNotify} is the sole detach path, so attaching
+ * from an undisplayed bar strands the subscription — which makes mounting part of the setup rather
+ * than an incidental detail.
  */
 @ExtendWith({EdtInterceptor.class, ThemeExtension.class})
 class ElwhaAppBarScrollTest {
@@ -38,6 +43,7 @@ class ElwhaAppBarScrollTest {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.small();
 
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
 
     assertThat(bar.getScrollSource()).isSameAs(scroll.pane());
@@ -63,6 +69,7 @@ class ElwhaAppBarScrollTest {
     final ElwhaAppBar bar = ElwhaAppBar.small();
     bar.setLiftOnScroll(true);
 
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
 
     assertThat(bar.isLifted())
@@ -75,6 +82,7 @@ class ElwhaAppBarScrollTest {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.small();
     bar.setLiftOnScroll(true);
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
 
     scroll.scrollTo(1);
@@ -89,6 +97,7 @@ class ElwhaAppBarScrollTest {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.small();
     bar.setLiftOnScroll(true);
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
     scroll.scrollTo(300);
 
@@ -102,6 +111,7 @@ class ElwhaAppBarScrollTest {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.small();
     bar.setLiftOnScroll(false);
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
 
     scroll.scrollTo(900);
@@ -152,6 +162,7 @@ class ElwhaAppBarScrollTest {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.small();
     bar.setLiftOnScroll(true);
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
     scroll.scrollTo(300);
 
@@ -168,6 +179,7 @@ class ElwhaAppBarScrollTest {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.small();
     bar.setLiftOnScroll(true);
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
     bar.setScrollSource(null);
 
@@ -185,6 +197,7 @@ class ElwhaAppBarScrollTest {
     final ElwhaAppBar bar = ElwhaAppBar.small();
     bar.setLiftOnScroll(true);
 
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
 
     assertThat(bar.isLifted())
@@ -198,6 +211,7 @@ class ElwhaAppBarScrollTest {
   void aSmallBarDoesNotCollapse() {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.small();
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
 
     scroll.scrollTo(500);
@@ -228,6 +242,7 @@ class ElwhaAppBarScrollTest {
   void collapseCompletesOverTheHeightItHasToGive(final AppBarVariant variant) {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = new ElwhaAppBar(variant);
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
     final int range = collapseRange(variant, false);
 
@@ -245,6 +260,7 @@ class ElwhaAppBarScrollTest {
   void collapseIsProportionalOnTheWayDown() {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
     final int range = collapseRange(AppBarVariant.MEDIUM_FLEXIBLE, false);
 
@@ -273,6 +289,7 @@ class ElwhaAppBarScrollTest {
   void collapsingPastTheRangeStaysCollapsed() {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.largeFlexible();
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
 
     scroll.scrollTo(2000);
@@ -287,6 +304,7 @@ class ElwhaAppBarScrollTest {
   void scrollingBackUpReExpandsTheBar() {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
     scroll.scrollTo(500);
 
@@ -304,6 +322,7 @@ class ElwhaAppBarScrollTest {
     final ScrollFixture withSubtitle = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
     bar.setSubtitle("12 unread");
+    bar.addNotify();
     bar.setScrollSource(withSubtitle.pane());
     final int plainRange = collapseRange(AppBarVariant.MEDIUM_FLEXIBLE, false);
 
@@ -336,11 +355,69 @@ class ElwhaAppBarScrollTest {
         .isZero();
   }
 
+  // ---------------------------------------------------------------- teardown
+
+  @Test
+  void anUndisplayedBarDoesNotSubscribeToItsScrollSource() {
+    final ScrollFixture scroll = ScrollFixture.create();
+    final ElwhaAppBar bar = ElwhaAppBar.small();
+    bar.setLiftOnScroll(true);
+    final int baseline = scroll.modelListenerCount();
+
+    bar.setScrollSource(scroll.pane());
+
+    assertThat(scroll.modelListenerCount())
+        .as("#631 — removeNotify is the only detach path and it never fires for a bar that was "
+            + "never added, so attaching here strands the subscription for the bar's whole life")
+        .isEqualTo(baseline);
+  }
+
+  @Test
+  void addNotifyArmsAScrollSourceSetBeforeTheBarWasDisplayed() {
+    final ScrollFixture scroll = ScrollFixture.create();
+    final ElwhaAppBar bar = ElwhaAppBar.small();
+    bar.setLiftOnScroll(true);
+    bar.setScrollSource(scroll.pane());
+
+    bar.addNotify();
+    scroll.scrollTo(120);
+
+    assertThat(bar.isLifted())
+        .as("#631 — deferring the attach must not cost the bar its response once it is displayed")
+        .isTrue();
+  }
+
+  @Test
+  void aBarReAddedAfterScrollingStillPaintsItsLift() {
+    final ScrollFixture scroll = ScrollFixture.create();
+    final ElwhaAppBar bar = ElwhaAppBar.small();
+    bar.setTitle("Inbox");
+    bar.setLiftOnScroll(true);
+    bar.addNotify();
+    bar.setScrollSource(scroll.pane());
+    scroll.scrollTo(300);
+    assertThat(bar.isLifted()).as("the bar is lifted before the swap").isTrue();
+
+    bar.removeNotify();
+    bar.addNotify();
+
+    assertThat(bar.isLifted()).as("and still reports lifted after it").isTrue();
+    Pixels.assertPixelNear(
+        Pixels.render(bar, 400, bar.getPreferredSize().height),
+        390,
+        4,
+        ColorRole.SURFACE_CONTAINER.resolve(),
+        "#626 — liftAnimator.stop() reset progress to 0 while `lifted` stayed true, and "
+            + "updateLift early-returns on a matching flag, so the bar reported lifted while "
+            + "painting SURFACE");
+  }
+
   @Test
   void liftAndCollapseAreDrivenByTheSameScroll() {
     final ScrollFixture scroll = ScrollFixture.create();
     final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
     bar.setLiftOnScroll(true);
+    bar.addNotify();
     bar.setScrollSource(scroll.pane());
 
     scroll.scrollTo(collapseRange(AppBarVariant.MEDIUM_FLEXIBLE, false) / 2);
