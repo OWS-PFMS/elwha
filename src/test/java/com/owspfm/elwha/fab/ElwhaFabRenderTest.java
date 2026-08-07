@@ -168,28 +168,25 @@ class ElwhaFabRenderTest {
   void hoverBumpsTheElevationSoTheHaloDeepens() {
     final ElwhaFab resting = fab(ElwhaFab.Color.PRIMARY_CONTAINER);
     final ElwhaFab hovered = fab(ElwhaFab.Color.PRIMARY_CONTAINER).setHovered(true);
-    final Insets reserve = resting.getShadowInsets();
-    final int probeX = reserve.left + resting.getFabSize().containerPx() / 2;
-    final int probeY = reserve.top + resting.getFabSize().containerPx() + 2;
+    final Point probe = haloProbe(resting);
 
-    final int restingLuma = luma(render(resting), probeX, probeY);
-    final int hoveredLuma = luma(render(hovered), probeX, probeY);
+    final int restingHalo = brightness(render(resting), probe.x, probe.y);
+    final int hoveredHalo = brightness(render(hovered), probe.x, probe.y);
 
-    assertThat(hoveredLuma)
+    assertThat(hoveredHalo)
         .as(
             "§6.1 — hover is the one per-state elevation token M3 publishes, and level 4 casts a"
                 + " deeper shadow than the resting level 3")
-        .isLessThan(restingLuma);
+        .isLessThan(restingHalo);
   }
 
   @Test
   void haloIsPaintedBelowTheBodyNotOverIt() {
     final ElwhaFab fab = fab(ElwhaFab.Color.PRIMARY_CONTAINER);
-    final Insets reserve = fab.getShadowInsets();
     final BufferedImage image = render(fab);
 
-    final int outside = luma(image, reserve.left + 28, reserve.top + 56 + 2);
-    final int ground = luma(image, 0, 0);
+    final int outside = brightness(image, haloProbe(fab).x, haloProbe(fab).y);
+    final int ground = brightness(image, 0, 0);
 
     assertThat(outside).as("the halo darkens the ground just outside the body").isLessThan(ground);
     final Point center = bodyCenter(fab);
@@ -226,12 +223,11 @@ class ElwhaFabRenderTest {
   void aDisabledFabCastsNoShadowAtAll() {
     final ElwhaFab fab = fab(ElwhaFab.Color.PRIMARY_CONTAINER);
     fab.setEnabled(false);
-    final Insets reserve = fab.getShadowInsets();
     final BufferedImage image = render(fab);
 
-    assertThat(luma(image, reserve.left + 28, reserve.top + 56 + 2))
+    assertThat(brightness(image, haloProbe(fab).x, haloProbe(fab).y))
         .as("a disabled FAB is not lifted, so the reserve stays clean ground")
-        .isEqualTo(luma(image, 0, 0));
+        .isEqualTo(brightness(image, 0, 0));
   }
 
   @Test
@@ -250,7 +246,15 @@ class ElwhaFabRenderTest {
         "re-enabling returns a clean resting FAB rather than a stuck hover or press");
   }
 
-  private static int luma(final BufferedImage image, final int x, final int y) {
+  /** A point in the reserve just below the body's bottom edge, where the halo falls. */
+  private static Point haloProbe(final ElwhaFab fab) {
+    final Insets reserve = fab.getShadowInsets();
+    return new Point(
+        reserve.left + fab.getFabSize().containerPx() / 2,
+        reserve.top + fab.getFabSize().containerPx() + 2);
+  }
+
+  private static int brightness(final BufferedImage image, final int x, final int y) {
     final java.awt.Color color = new java.awt.Color(image.getRGB(x, y), true);
     return color.getRed() + color.getGreen() + color.getBlue();
   }
