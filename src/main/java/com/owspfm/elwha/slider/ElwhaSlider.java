@@ -5,6 +5,7 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
+import com.owspfm.elwha.theme.TypeRole;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Cursor;
@@ -1898,7 +1899,7 @@ public class ElwhaSlider extends JComponent {
       b.fill(shape);
 
       b.setColor(ColorRole.INVERSE_ON_SURFACE.resolve());
-      b.setFont(getFont().deriveFont(Font.PLAIN, VALUE_BUBBLE_LABEL_PT));
+      b.setFont(valueBubbleFont());
       final FontMetrics fm = b.getFontMetrics();
       final int bodyHeight = VALUE_BUBBLE_HEIGHT_PX - VALUE_BUBBLE_NUB_HEIGHT_PX;
       final int bodyTop = nubTipY - VALUE_BUBBLE_HEIGHT_PX;
@@ -1941,7 +1942,7 @@ public class ElwhaSlider extends JComponent {
       b.fill(verticalValueBubbleShape(nubTipX, cy));
 
       b.setColor(ColorRole.INVERSE_ON_SURFACE.resolve());
-      b.setFont(getFont().deriveFont(Font.PLAIN, VALUE_BUBBLE_LABEL_PT));
+      b.setFont(valueBubbleFont());
       final FontMetrics fm = b.getFontMetrics();
       final float bodyWidth = VALUE_BUBBLE_HEIGHT_PX - VALUE_BUBBLE_NUB_HEIGHT_PX;
       final float bodyRight = nubTipX - VALUE_BUBBLE_NUB_HEIGHT_PX;
@@ -2072,6 +2073,17 @@ public class ElwhaSlider extends JComponent {
       return withAlpha(ColorRole.ON_SURFACE.resolve(), opacity);
     }
     return (active ? ColorRole.PRIMARY : ColorRole.SECONDARY_CONTAINER).resolve();
+  }
+
+  /**
+   * The value bubble's label font. {@link #getFont()} is {@code null} on a component that has never
+   * been added to a container and never had a font installed — which is exactly the state an
+   * offscreen render (a gallery preview, a drag image) paints in — so the theme's own label role
+   * supplies the family when there is nothing to inherit.
+   */
+  private Font valueBubbleFont() {
+    final Font base = getFont() != null ? getFont() : TypeRole.LABEL_LARGE.resolve();
+    return base.deriveFont(Font.PLAIN, VALUE_BUBBLE_LABEL_PT);
   }
 
   /** The handle color, honoring the disabled treatment. */
