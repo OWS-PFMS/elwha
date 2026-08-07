@@ -2,7 +2,7 @@ package com.owspfm.elwha.switches;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.github.caciocavallosilano.cacio.ctc.junit.CacioExtension;
+import com.owspfm.elwha.testkit.GuiToolkit;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -29,12 +29,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * Tier B spike for the #439 framework selection — proves the load-bearing unknowns of the Cacio
- * virtual-toolkit tier on a real Elwha component: FlatLaf + {@code ElwhaTheme} install under Cacio,
- * a top-level window realizes and paints, {@code java.awt.Robot} drives the real input pipeline,
- * {@code KeyboardFocusManager} arbitrates real focus (traversal moves it), and a screen capture of
- * the virtual framebuffer shows token-correct pixels. Everything here is impossible under {@code
- * java.awt.headless=true} — which is exactly why this tier exists.
+ * Tier B spike for the #439 framework selection — proves the display-bearing tier on a real Elwha
+ * component: FlatLaf + {@code ElwhaTheme} install, a top-level window realizes and paints, {@code
+ * java.awt.Robot} drives the real input pipeline, {@code KeyboardFocusManager} arbitrates real
+ * focus (traversal moves it), and a screen capture shows token-correct pixels. Everything here is
+ * impossible under {@code java.awt.headless=true} — which is exactly why this tier exists. The
+ * hosting display stack is per-platform via {@link GuiToolkit}: Cacio's virtual toolkit on
+ * macOS/Windows dev machines, the native toolkit under Xvfb on Linux CI.
  *
  * <p>Runs only in the {@code gui-test} surefire execution (tag {@code gui}), in its own forked JVM:
  * mixing Cacio's toolkit with an already-initialized JDK toolkit is a documented segfault.
@@ -44,7 +45,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * @since v0.5.0
  */
 @Tag("gui")
-@ExtendWith(CacioExtension.class)
+@ExtendWith(GuiToolkit.class)
 class ElwhaSwitchGuiTest {
 
   private static final int TIMEOUT_MS = 4000;

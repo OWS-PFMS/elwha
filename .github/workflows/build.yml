@@ -21,7 +21,23 @@ jobs:
           cache: maven
 
       - name: Build with Maven
-        run: mvn -B clean package --file pom.xml
+        # xvfb-run hosts the gui-tagged test tier: on Linux the JDK 21 X11 font natives need a
+        # real display (Cacio segfaults there — see docs/research/elwha-test-suite-research.md §5),
+        # so the linux-gui-native Maven profile selects the native toolkit and Xvfb provides the
+        # display. Preinstalled on ubuntu runner images. Headless Tier A is unaffected.
+        run: xvfb-run -a mvn -B clean package --file pom.xml
+
+      - name: Upload test reports and crash dumps
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failure-diagnostics
+          path: |
+            target/surefire-reports/**
+            hs_err_pid*.log
+            core*
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Upload build artifacts
         if: success()

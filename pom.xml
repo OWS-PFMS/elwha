@@ -51,7 +51,26 @@
          on JDK 21 (per its README), and the toolkit swap only works in a JVM where no other test
          has initialized AWT — hence the separate surefire execution below. -->
     <cacio.argline>--add-exports=java.desktop/java.awt=ALL-UNNAMED --add-exports=java.desktop/java.awt.peer=ALL-UNNAMED --add-exports=java.desktop/sun.awt.image=ALL-UNNAMED --add-exports=java.desktop/sun.java2d=ALL-UNNAMED --add-exports=java.desktop/java.awt.dnd.peer=ALL-UNNAMED --add-exports=java.desktop/sun.awt=ALL-UNNAMED --add-exports=java.desktop/sun.awt.event=ALL-UNNAMED --add-exports=java.desktop/sun.awt.datatransfer=ALL-UNNAMED --add-exports=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.desktop/java.awt=ALL-UNNAMED --add-opens=java.desktop/sun.java2d=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED -XX:+EnableDynamicAgentLoading</cacio.argline>
+    <!-- Which display stack hosts the gui-tagged tier (see testkit/GuiToolkit): "cacio" (the
+         virtual toolkit — macOS/Windows dev default) or "native" (real toolkit + real display).
+         Linux MUST use native (under Xvfb on CI): the JDK 21 X11 font natives depend on JNI
+         state that only real X11 display init registers, so any font-manager construction under
+         Cacio segfaults there (hs_err frame: Java_sun_awt_FcFontManager_getFontPathNative).
+         Full derivation: docs/research/elwha-test-suite-research.md §5. -->
+    <guitier.toolkit>cacio</guitier.toolkit>
   </properties>
+
+  <profiles>
+    <profile>
+      <id>linux-gui-native</id>
+      <activation>
+        <os><name>Linux</name></os>
+      </activation>
+      <properties>
+        <guitier.toolkit>native</guitier.toolkit>
+      </properties>
+    </profile>
+  </profiles>
 
   <dependencyManagement>
     <dependencies>
@@ -147,6 +166,7 @@
               <systemPropertyVariables>
                 <java.awt.headless>false</java.awt.headless>
                 <cacio.managed.screensize>1920x1080</cacio.managed.screensize>
+                <elwha.guiTier.toolkit>${guitier.toolkit}</elwha.guiTier.toolkit>
               </systemPropertyVariables>
               <argLine>${cacio.argline}</argLine>
             </configuration>

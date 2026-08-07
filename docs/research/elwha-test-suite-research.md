@@ -7,9 +7,13 @@ the evidence, and proposes the remaining #438 stories. The selections were valid
 spike in this branch — `src/test/java` exists as of this PR and `mvn test` runs both tiers green.
 
 **The selection in one line:** JUnit 6 + AssertJ Core on a **two-tier execution split** — pure
-`java.awt.headless=true` for the bulk of the suite, and the **Cacio virtual toolkit** in a separate
-forked JVM for the minority of tests that need real focus, real input, or real windows. No
-AssertJ-Swing, no Xvfb, no golden-image backbone.
+`java.awt.headless=true` for the bulk of the suite, and a display-bearing `gui` tier in a separate
+forked JVM for the minority of tests that need real focus, real input, or real windows. The gui
+tier's display stack is **per-platform behind one switch** (`testkit/GuiToolkit`): the **Cacio
+virtual toolkit** on macOS/Windows dev machines, the **native toolkit under Xvfb** on Linux CI —
+same tests, zero per-platform test code. No AssertJ-Swing, no golden-image backbone. (Why not
+Cacio everywhere: the JDK 21 X11 font natives make Cacio structurally crash on Linux the moment a
+font registers — the full derivation is §5b, paid for in hs_err logs.)
 
 ---
 
@@ -98,11 +102,18 @@ way this goes wrong:
   probes light *and* dark, a11y shapes, focus-traversal *policy* order
   (`FocusTraversalPolicy.getComponentAfter` is a plain object-graph query — headless-safe), InputMap
   binding checks, synthetic `dispatchEvent` input. Identical semantics on macOS and Linux.
-- **Tier B — `@Tag("gui")` (deliberate minority).** Cacio's virtual toolkit: real window peers,
-  real `KeyboardFocusManager` arbitration, real `java.awt.Robot` input, screen capture of the
-  virtual framebuffer. Covers what headless *cannot represent*: focus **ownership** (roving tab
-  stops, `ownsFocus`/`takesFocus()` opt-outs, overlay focus handoff), Robot-driven gestures, window
-  realization, overlay placement against a deterministic screen (`cacio.managed.screensize`).
+- **Tier B — `@Tag("gui")` (deliberate minority).** A real display stack: real window peers, real
+  `KeyboardFocusManager` arbitration, real `java.awt.Robot` input, screen capture. Covers what
+  headless *cannot represent*: focus **ownership** (roving tab stops, `ownsFocus`/`takesFocus()`
+  opt-outs, overlay focus handoff), Robot-driven gestures, window realization, overlay placement.
+  Tests are written toolkit-agnostically (plain Robot + Swing APIs); which stack hosts them is
+  decided per-platform by `testkit/GuiToolkit` reading `elwha.guiTier.toolkit`:
+  - **`cacio` (default — macOS/Windows dev):** Cacio's virtual toolkit. Deterministic screen
+    (`cacio.managed.screensize`), no display theft (native Robot would drag the developer's real
+    cursor around), zero setup.
+  - **`native` (Linux, selected by the `linux-gui-native` Maven profile):** the platform toolkit
+    with a real display — Xvfb on CI (`xvfb-run -a mvn …` in `build.yml`), the desktop on a Linux
+    dev machine. Forced by the JDK 21 font-native constraint derived in §5b.
 
 Two hard rules make the split load-bearing rather than stylistic:
 
@@ -131,12 +142,13 @@ presses the real key.
   semantics, disabled guards, the full a11y shape (role/name/CHECKED/value/action), the hover
   state-layer pixel probe via the shared `mix` math, and a `@ParameterizedTest` over
   `Mode.LIGHT/DARK` proving the mode-matrix shape costs one annotation.
-- **`switches/ElwhaSwitchGuiTest`** (Tier B, 2 tests, ~0.5s): **the load-bearing unknown, proven.**
-  No public project combined Cacio and FlatLaf before; under `CacioExtension` on JDK 21, FlatLaf +
-  `ElwhaTheme` install cleanly, a `JFrame` realizes and *gains focus*, Robot Space toggles the
-  focused switch, **Tab moves real focus** (asserted via `isFocusOwner` *and* KFM agreement), Robot
-  click toggles through the real pipeline, and `Robot.createScreenCapture` of the virtual
-  framebuffer shows the selected track at resolved `PRIMARY` within ±10/channel.
+- **`switches/ElwhaSwitchGuiTest`** (Tier B, 2 tests, ~0.5s Cacio / ~3.8s Xvfb): FlatLaf +
+  `ElwhaTheme` install, a `JFrame` realizes and *gains focus*, Robot Space toggles the focused
+  switch, **Tab moves real focus** (asserted via `isFocusOwner` *and* KFM agreement), Robot click
+  toggles through the real pipeline, and `Robot.createScreenCapture` shows the selected track at
+  resolved `PRIMARY` within ±10/channel. Verified green on **both** hosting stacks: Cacio on
+  macOS, and the native toolkit under bare Xvfb (no window manager — frame focus and Tab traversal
+  held without one) in a Linux container matching the CI runner.
 - **`testkit/`** seeds the shared fixture library: `EdtInterceptor` (the JUnit user guide's
   documented EDT interceptor, extended to lifecycle + `@ParameterizedTest` templates) and `Pixels`
   (the smokes' render/`near`/`mix` idiom, shared once, with hex-diff failure messages).
@@ -148,6 +160,46 @@ provider friction; Cacio 2.0's `@ExtendWith(CacioExtension.class)` needs *no* ma
 counterintuitively Tier B requires `java.awt.headless=false`; and Cacio pulls the abandoned
 `assertj-swing-junit:3.17.1` transitively — harmless at test scope, and excluding it would break
 `@CacioTest`'s screenshot path, so it stays.
+
+### 5b. The Linux font-native crash — why the gui tier is per-platform
+
+The first CI run went 10/10 on Tier A and **SIGABRT'd the Tier B fork** (exit 134, "Aborted (core
+dumped)", zero tests reported) — after both tiers had passed on macOS. The diagnosis is recorded
+here in full because every intermediate hypothesis *looked* fixable and wasn't; the next person
+should not re-walk this path.
+
+**Repro methodology (reusable):** the runner's crash dump was inaccessible, so the environment was
+rebuilt locally in Docker (`maven:3.9-eclipse-temurin-21` + X client libraries + fontconfig, **no
+X server** — the runner's exact shape). That converted the crash into local `hs_err_pid` logs with
+full native frames. `build.yml` now uploads `surefire-reports` + `hs_err_pid*` on failure so future
+CI-only crashes are diagnosable directly.
+
+**Root cause, from the hs_err frames:** Cacio needs `java.awt.headless=false`; with that set on
+Linux, `Toolkit.<clinit>` binds AWT's native backend to **`libawt_xawt`** (per-JVM, one-time), and
+the JDK's hard-wired `X11FontManager` answers font-path queries through xawt natives that call
+back through JNI state which **only real X11 display initialization registers**. Under Cacio, X11
+display init never runs, so the first `SunFontManager` construction — triggered by
+`Typography.defaults()` registering Inter, i.e. by any `ElwhaTheme.install` — dies inside
+`Java_sun_awt_FcFontManager_getFontPathNative` (a null callback through
+`jni_CallStaticVoidMethod`).
+
+**Dead ends, so nobody retries them:**
+1. `-Dsun.font.fontmanager=sun.awt.FcFontManager` — **the property no longer exists.** JDK 21's
+   `FontManagerFactory` delegates to `PlatformFontInfo.createFontManager()`, a hard-wired platform
+   switch (probe-confirmed).
+2. Pre-warming the font caches under a temporarily-headless environment (LauncherSessionListener +
+   reflective `GraphicsEnvironment.headless` flip) — the enumeration still crashed identically,
+   and the ordering games it forces (which backend `libawt` binds first vs. `AWTEvent.initIDs`
+   registration, each one-shot and mutually exclusive) make every fix create the next crash.
+3. `-Dsun.java2d.fontpath=…` — `SunFontManager`'s constructor calls the native platform-path
+   lookup regardless (hs_err shows it from `SunFontManager$2.run`).
+4. Xvfb *underneath Cacio* — a display exists, but Cacio still owns the toolkit, X11 display init
+   still never runs, same crash. The display alone is not the missing piece; the init is.
+
+**Conclusion:** Cacio + JDK 21 + anything that constructs the font manager (any FlatLaf/Elwha
+theme install) is structurally broken on Linux. Not a flag, not an ordering trick. Hence
+`GuiToolkit`: same gui tests, Cacio where it shines (dev machines), native-toolkit-under-Xvfb
+where Linux forces it (CI) — where X11 init runs for real and the font natives are on home turf.
 
 ## 6. Determinism rules (the flake budget is zero)
 
@@ -207,8 +259,10 @@ src/test/java/com/owspfm/elwha/
 
 ## 8. CI-job shape
 
-Already gated: `build` runs `mvn -B clean package`, which now runs both tiers — this PR's own CI
-run is the first headless-Linux execution of the suite. S2 adds the deliberate version:
+Already gated: `build` runs `xvfb-run -a mvn -B clean package` (the wrapper hosts the gui tier per
+§5b; Xvfb is preinstalled on ubuntu runners) and now uploads `surefire-reports` + `hs_err_pid*` as
+a `test-failure-diagnostics` artifact on failure. This PR's own CI run is the first Linux
+execution of the suite. S2 adds the deliberate version:
 
 - A dedicated `test` job (name: `Test (components + Showcase)`) running `mvn -B verify`, uploading
   `target/surefire-reports` on failure, becoming a required check alongside build/format/naming.
@@ -252,25 +306,32 @@ they encode those contracts.
   live fork documents JDK 11/17 only and is beta. Both are `Robot`-bound — headless-incompatible —
   and their fixture-lookup ergonomics solve an app-testing problem a component library doesn't
   have (tests hold direct references). Revisit only if Tier B ergonomics ever hurt.
-- **Xvfb (+ window manager):** works on Actions (preinstalled), but bare Xvfb has no WM — real
-  focus tests need fluxbox added; its async rendering makes pixel read-back timing-flaky (the
-  documented failure mode is literally "pixels aren't there yet"); and it's Linux-only, so macOS
-  dev runs would diverge from CI. Documented fallback if Cacio ever regresses: `xvfb-run` +
-  fluxbox, same tags, no test rewrites.
+- **Xvfb as the *universal* Tier B host:** rejected as universal, adopted for Linux (§5b forced
+  it). What survives of the original objections: it's Linux-only (macOS dev keeps Cacio — which
+  also avoids native Robot dragging the developer's real cursor), and X's async rendering can make
+  read-back racy — mitigated because every Tier B pixel assertion goes through the poll-with-
+  deadline `waitFor` idiom, never a single read. What did *not* survive: the "needs a WM" claim —
+  frame focus and Tab traversal held under bare Xvfb in the spike; fluxbox remains the documented
+  escalation if a future test needs real WM protocols (activation ordering, iconify, stacking).
 - **Jemmy:** GPL-2.0 without the classpath exception, dormant, Robot-bound.
 - **Golden images as the primary oracle:** brittleness economics (§6). Capability retained as an
   optional tier, never the backbone.
 
 ## 11. Risks & open questions
 
-1. **Cacio bus factor** — active but single-maintainer. Mitigations: it's test-scope (consumers
-   unaffected), the Xvfb+fluxbox fallback needs no test rewrites, and Tier A (the bulk) has zero
-   Cacio dependence.
+1. **Cacio bus factor** — active but single-maintainer. Now a small risk: it's test-scope, it only
+   hosts the *dev-machine* side of Tier B (CI runs native+Xvfb), and dropping it entirely would
+   cost dev convenience, not CI coverage — `-Delwha.guiTier.toolkit=native` on a dev desktop runs
+   the same tests on the real display today.
 2. **JUnit 6 is young** (6.x line since 2025-09). It unified the 5.x platform rather than rewriting
    it; the spike surfaced no friction. Downgrade path to 5.13.x exists if surefire integration
    regresses.
 3. **The `@version` tax on test files** (§7) — needs the S2 ruling before the suite grows to
    hundreds of files.
-4. **Tier B on developer machines** runs Cacio, not the native toolkit — that is the point
-   (identical everywhere), but it means Tier B never exercises macOS-native focus quirks. Operator
-   smokes remain the human net for platform-native behavior, per the epic.
+4. **The gui tier runs on two display stacks** (Cacio on dev, Xvfb on CI) — deliberate, but it
+   means a dev-green gui test can in principle differ on CI. Mitigations: both stacks run the
+   identical tests, both were green in the spike, and CI is the gate. Operator smokes remain the
+   human net for platform-*native* behavior (real macOS focus quirks), per the epic.
+5. **JDK patch drift in the font natives** — §5b's crash lives in JDK internals that patch
+   releases have touched before. The failure-diagnostics artifact upload in `build.yml` exists so
+   any recurrence is diagnosable from the run page directly.
