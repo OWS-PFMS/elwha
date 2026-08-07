@@ -244,6 +244,12 @@ class ElwhaSliderRangeTest {
     final ElwhaSlider slider = span();
     final javax.swing.JPanel host = new javax.swing.JPanel();
     host.setFocusCycleRoot(true);
+    // Pin the policy instead of inheriting one. A focus-cycle root with no policy of its own
+    // falls back to the KeyboardFocusManager's default, which is JVM-global and which Swing
+    // swaps from DefaultFocusTraversalPolicy to LayoutFocusTraversalPolicy the first time any
+    // top-level (a JRootPane, say) is constructed anywhere in the JVM. That made this test's
+    // result depend on what ran before it in the same fork.
+    host.setFocusTraversalPolicy(new java.awt.DefaultFocusTraversalPolicy());
     host.add(slider);
     host.addNotify();
     final java.awt.FocusTraversalPolicy policy = host.getFocusTraversalPolicy();
