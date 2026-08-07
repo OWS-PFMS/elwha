@@ -66,6 +66,36 @@ public final class Input {
   }
 
   /**
+   * Dispatches a mouse-entered event — the only way to reach a hover state that the component keeps
+   * private and drives from its own {@code MouseListener} (rather than exposing a {@code
+   * setHovered} seam). Unlike focus, hover carries no toolkit-level ownership: {@code
+   * MOUSE_ENTERED} through the real dispatch pipeline is exactly what the platform delivers, so
+   * nothing is faked.
+   *
+   * @param target the component under test
+   * @param x pointer x in component coordinates
+   * @param y pointer y in component coordinates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void enter(final Component target, final int x, final int y) {
+    mouse(target, MouseEvent.MOUSE_ENTERED, x, y);
+  }
+
+  /**
+   * Dispatches a mouse-exited event, clearing a hover state entered with {@link #enter}.
+   *
+   * @param target the component under test
+   * @param x pointer x in component coordinates
+   * @param y pointer y in component coordinates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void exit(final Component target, final int x, final int y) {
+    mouse(target, MouseEvent.MOUSE_EXITED, x, y);
+  }
+
+  /**
    * Dispatches a press-then-release pair at {@code (x, y)} — the synthetic click.
    *
    * @param target the component under test
@@ -104,11 +134,15 @@ public final class Input {
   }
 
   private static void mouse(final Component target, final int id, final int x, final int y) {
-    final int modifiers = (id == MouseEvent.MOUSE_RELEASED) ? 0 : MouseEvent.BUTTON1_DOWN_MASK;
+    final boolean buttonDown = id == MouseEvent.MOUSE_PRESSED || id == MouseEvent.MOUSE_DRAGGED;
+    final boolean pointerOnly = id == MouseEvent.MOUSE_ENTERED || id == MouseEvent.MOUSE_EXITED;
+    final int modifiers = buttonDown ? MouseEvent.BUTTON1_DOWN_MASK : 0;
+    final int button = pointerOnly ? MouseEvent.NOBUTTON : MouseEvent.BUTTON1;
+    final int clicks = pointerOnly ? 0 : 1;
     // Explicit-abs-coords ctor: the (x,y)-only ctor calls getLocationOnScreen, which NPEs on an
     // unrealized (peerless) component in headless mode.
     target.dispatchEvent(
         new MouseEvent(
-            target, id, System.nanoTime(), modifiers, x, y, x, y, 1, false, MouseEvent.BUTTON1));
+            target, id, System.nanoTime(), modifiers, x, y, x, y, clicks, false, button));
   }
 }
