@@ -161,13 +161,28 @@ class ElwhaButtonGuiTest {
 
   private void assertRing(final ElwhaButton button, final boolean expected, final String what)
       throws Exception {
-    final BufferedImage image = snapshot(button);
-    Pixels.assertPixelNear(
-        image,
-        RING_PROBE_X,
-        button.getHeight() / 2,
-        expected ? ColorRole.PRIMARY.resolve() : ColorRole.SECONDARY_CONTAINER.resolve(),
-        what);
+    final java.awt.Color want =
+        expected ? ColorRole.PRIMARY.resolve() : ColorRole.SECONDARY_CONTAINER.resolve();
+    // Poll rather than probe once. Parking the pointer clears the hover layer through the real
+    // event pipeline, and waitForIdle does not guarantee the resulting MOUSE_EXITED has been
+    // processed before the snapshot — probing immediately reads the hover tint over the resting
+    // color and fails. The deadline keeps a chrome state that never settles a failure, not a hang.
+    waitFor(
+        what,
+        () ->
+            near(
+                Pixels.render(button, button.getWidth(), button.getHeight())
+                    .getRGB(RING_PROBE_X, button.getHeight() / 2),
+                want));
+    Pixels.assertPixelNear(snapshot(button), RING_PROBE_X, button.getHeight() / 2, want, what);
+  }
+
+  /** The {@link Pixels} tolerance, as a predicate, so a poll can use the same comparison. */
+  private static boolean near(final int argb, final java.awt.Color want) {
+    final java.awt.Color got = new java.awt.Color(argb, true);
+    return Math.abs(got.getRed() - want.getRed()) <= 10
+        && Math.abs(got.getGreen() - want.getGreen()) <= 10
+        && Math.abs(got.getBlue() - want.getBlue()) <= 10;
   }
 
   private static BufferedImage snapshot(final ElwhaButton button) throws Exception {
