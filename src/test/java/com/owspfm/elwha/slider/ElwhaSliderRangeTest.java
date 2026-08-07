@@ -246,6 +246,12 @@ class ElwhaSliderRangeTest {
     host.setFocusCycleRoot(true);
     host.add(slider);
     host.addNotify();
+    // Pinned rather than inherited: the JVM-global default policy flips to
+    // LayoutFocusTraversalPolicy the first time any JRootPane resolves its UI
+    // (UIManager.getUI), and that policy's comparator throws on a cycle whose root is not inside a
+    // Window — which no headless host can be. Asking for the sorting-free policy keeps this
+    // assertion about proxy participation instead of about which test ran first.
+    host.setFocusTraversalPolicy(new java.awt.DefaultFocusTraversalPolicy());
     final java.awt.FocusTraversalPolicy policy = host.getFocusTraversalPolicy();
 
     assertThat(policy.getFirstComponent(host))
