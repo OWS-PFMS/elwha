@@ -26,8 +26,8 @@ import javax.swing.JPanel;
  * <em>Paper</em>: the bare round-rect container that the rest of the component set composes for its
  * background paint. It carries no interaction model — no hover / pressed / selected state layers,
  * no focus indicator, no padding API. Consumers needing an interactive surface should compose an
- * {@code ElwhaSurface} inside {@link com.owspfm.elwha.chip.ElwhaChip}, the upcoming {@code
- * ElwhaIconButton}, or {@code ElwhaCard} V2.
+ * {@code ElwhaSurface} inside {@link com.owspfm.elwha.chip.ElwhaChip}, {@link
+ * com.owspfm.elwha.iconbutton.ElwhaIconButton}, or {@link com.owspfm.elwha.card.ElwhaCard}.
  *
  * <p><strong>Typed API only.</strong> The four setters — {@link #setSurfaceRole(ColorRole)}, {@link
  * #setShape(ShapeScale)}, {@link #setBorderRole(ColorRole)}, {@link #setBorderWidth(int)} — accept
@@ -36,7 +36,7 @@ import javax.swing.JPanel;
  * every escape hatch becomes a long-term migration cost. Pre-1.0, the typed API is the only API.
  *
  * <p><strong>Defaults.</strong> {@link ColorRole#SURFACE} fill, {@link ShapeScale#MD} (12 px)
- * corner radius, no border. These match the locked {@code ElwhaCard} default so Card V2 composing a
+ * corner radius, no border. These match the locked {@code ElwhaCard} default so a card composing a
  * Surface inherits the right look out of the box.
  *
  * <p><strong>Binding rule.</strong> The painter resolves every token at paint time, so a runtime
