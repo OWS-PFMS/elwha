@@ -22,7 +22,12 @@ import java.util.function.BooleanSupplier;
 public final class GuiSteps {
 
   private static final int ATTEMPTS = 3;
-  private static final int EFFECT_WINDOW_MS = 1500;
+
+  // The window must out-wait a stalled CI runner, not just event latency: a re-press after a
+  // delivered-but-slow event corrupts state unrecoverably (a doubled keystroke poisons a typed
+  // filter; an extra Down moves a highlight the test just baselined), while a longer window only
+  // delays the retry of a genuinely lost event. 1500ms lost that bet on a loaded runner (#585).
+  private static final int EFFECT_WINDOW_MS = 5000;
 
   private GuiSteps() {}
 
@@ -60,7 +65,9 @@ public final class GuiSteps {
    * <em>and</em> now ends with the typed character — so it holds whether the editor appends or
    * replaces a selection (a combo's select-on-focus makes the first keystroke replace). A character
    * is re-pressed only while the text is completely unchanged (nothing arrived — the X
-   * lost-delivery race), so a slow-but-delivered character is never doubled.
+   * lost-delivery race), so a slow-but-delivered character is never doubled. After the last
+   * character the whole typed string is asserted to survive as the text's suffix, and every failure
+   * message carries the actual text — a corrupted delivery diagnoses itself (#585).
    *
    * @param robot the tier's robot
    * @param text the characters to type
@@ -95,8 +102,13 @@ public final class GuiSteps {
           Thread.sleep(20);
         }
       }
-      WaitFor.waitFor(what + " — '" + c + "' delivered", delivered);
+      WaitFor.waitFor(
+          what + " — '" + c + "' delivered", delivered, () -> "text is '" + read.get() + "'");
     }
+    WaitFor.waitFor(
+        what + " — the full string survives intact",
+        () -> read.get().endsWith(text),
+        () -> "text is '" + read.get() + "'");
   }
 
   private static String onEdtGet(final java.util.function.Supplier<String> read) throws Exception {
