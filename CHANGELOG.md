@@ -15,6 +15,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **A Containers leaf shrank the Showcase's floating FAB when the operator scrolled its controls
+  column or event log** (#544's suite) — #310 tagged every inner scroll pane of `ComponentWorkbench`
+  (and `CodeView`) with `FAB_SCROLL_IGNORE` so the floating FAB's scroll-shrink only follows a real
+  page scroll, but `ContainerWorkbench`'s two panes were missed. Both are now tagged, so the four
+  Containers leaves behave like every Components leaf: the FAB stays Extended and inert unless the
+  page itself scrolls.
 - **`ElwhaItemList` reorder cursors stopped applying after a macOS Spaces switch** ([#556](https://github.com/OWS-PFMS/elwha/issues/556)) — the grab / grabbing cursors were installed once, when items were built, and nothing re-installed them afterwards. macOS drops the OS-side association for `Toolkit.createCustomCursor` cursors across a Spaces or Mission Control transition, so a list that survived one went back to the default pointer for the rest of the session, with no affordance that its rows could be dragged. The list now binds a `WindowFocusListener` to its ancestor window in `addNotify` (released in `removeNotify`, so nothing leaks when a list outlives its window) and re-installs the cursors when that window regains focus. Because the transition kills the association and not the object, re-applying the cached `Cursor` would restore nothing — the new `ReorderCursors.invalidate()` drops the cache so the cursors are rebuilt. The refresh honors the same gates as the original install: nothing happens under a cursorless `ReorderAffordance`, a `STATIC` list, or an active sort, and anchored items stay untouched. The defect predates the unified list — the two deleted families shared the pattern.
 - **`ElwhaNavigationRail` and `ElwhaNavRailDestination` NPE'd / silently dropped text unparented**
   (#543's suite) — both derived their font from `getFont()`, null on a component never added to a

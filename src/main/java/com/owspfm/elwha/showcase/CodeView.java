@@ -89,4 +89,10 @@ public final class CodeView extends JPanel {
     area.setText(code);
     area.setCaretPosition(0);
   }
+
+  // Test seam — the displayed text, so the Showcase suite can assert what a workbench pushed here
+  // without walking the view hierarchy for the text area (#544).
+  String code() {
+    return area.getText();
+  }
 }

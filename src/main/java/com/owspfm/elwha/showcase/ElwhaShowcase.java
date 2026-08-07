@@ -147,31 +147,35 @@ import javax.swing.event.DocumentListener;
 public final class ElwhaShowcase {
 
   private static final int RAIL_COLLAPSED_WIDTH = 96;
-  private static final String HOME_KEY = "__landing_home";
-  private static final String FOUNDATIONS_KEY = "__landing_foundations";
-  private static final String COMPONENTS_KEY = "__landing_components";
-  private static final String CONTAINERS_KEY = "__landing_containers";
-  private static final String AREA_FOUNDATIONS = "Foundations";
-  private static final String AREA_COMPONENTS = "Components";
-  private static final String AREA_CONTAINERS = "Containers";
+  // The catalog, the card keys, and the routing entry points are package-private rather than
+  // private so the Showcase suite (#544) can reach them: buildAndShow starts by constructing a
+  // JFrame, which throws under headless, but everything it wires up afterwards is testable
+  // without a window. Nothing here is API — the class is final and none of it is public.
+  static final String HOME_KEY = "__landing_home";
+  static final String FOUNDATIONS_KEY = "__landing_foundations";
+  static final String COMPONENTS_KEY = "__landing_components";
+  static final String CONTAINERS_KEY = "__landing_containers";
+  static final String AREA_FOUNDATIONS = "Foundations";
+  static final String AREA_COMPONENTS = "Components";
+  static final String AREA_CONTAINERS = "Containers";
   // Maximum width of the landing-page card grid. Caps cards at ~320 dp each (960 / 3) so the
   // grid reads as a dashboard tile-row rather than stretching cards to the full frame width.
   private static final int MAX_GRID_WIDTH = 960;
 
   private final List<Runnable> tokenRefreshers = new ArrayList<>();
-  private final JPanel content = new JPanel(new CardLayout());
+  final JPanel content = new JPanel(new CardLayout());
   private final List<Theme> primaryThemes = MaterialPalettes.primary();
   private final List<Theme> secondaryThemes = MaterialPalettes.secondary();
   // Insertion-ordered so Home and area landings list leaves in the same order they appear in the
   // area sections (which is also the rail's primary-destination order).
-  private final Map<String, LeafEntry> leaves = new LinkedHashMap<>();
+  final Map<String, LeafEntry> leaves = new LinkedHashMap<>();
   private JLabel statusLabel;
   private JComboBox<Theme> palettePicker;
   private Theme primarySelection;
   private Theme secondarySelection;
   private boolean secondaryTier;
   private boolean pickerAdjusting;
-  private ElwhaNavigationRail rail;
+  ElwhaNavigationRail rail;
   private ElwhaFabAnchor floatingFabAnchor;
   private ElwhaNavRailDestination foundationsPrim;
   private ElwhaNavRailDestination componentsPrim;
@@ -183,7 +187,7 @@ public final class ElwhaShowcase {
    * back-affordance returns to. Holds the leaf's display label, supporting copy, parent area, and
    * the realised JComponent surface that goes into the CardLayout.
    */
-  private static final class LeafEntry {
+  static final class LeafEntry {
     final String label;
     final String supporting;
     final String area;
@@ -236,7 +240,7 @@ public final class ElwhaShowcase {
     }
   }
 
-  private ElwhaShowcase() {}
+  ElwhaShowcase() {}
 
   /**
    * Launches the Showcase.
@@ -277,8 +281,7 @@ public final class ElwhaShowcase {
     populateLandingCards();
     populateLeafCards();
 
-    rail = buildShowcaseRail();
-    mountRailOnLayeredPane(frame, rail);
+    mountRailOnLayeredPane(frame, buildShowcaseRail());
 
     floatingFabAnchor = buildFloatingFabAnchor(root);
     frame.setContentPane(floatingFabAnchor);
@@ -366,7 +369,7 @@ public final class ElwhaShowcase {
   // Swap the CardLayout to the named card and re-sync the rail's selected primary to the area
   // that hosts this card. Programmatic setSelected on the rail does NOT fire its action listener,
   // so calling this from inside a rail action listener can't re-enter.
-  private void showCard(final String key) {
+  void showCard(final String key) {
     ((CardLayout) content.getLayout()).show(content, key);
     final ElwhaNavRailDestination targetPrim = primaryForKey(key);
     if (targetPrim != null && rail != null && rail.getSelected() != targetPrim) {
@@ -392,7 +395,7 @@ public final class ElwhaShowcase {
     }
   }
 
-  private JScrollPane activeCardScrollPane() {
+  JScrollPane activeCardScrollPane() {
     for (final Component card : content.getComponents()) {
       if (card.isVisible()) {
         return findScrollPane(card);
@@ -401,7 +404,7 @@ public final class ElwhaShowcase {
     return null;
   }
 
-  private static JScrollPane findScrollPane(final Component component) {
+  static JScrollPane findScrollPane(final Component component) {
     if (component instanceof JScrollPane scrollPane
         && !Boolean.TRUE.equals(
             scrollPane.getClientProperty(ComponentWorkbench.FAB_SCROLL_IGNORE))) {
@@ -418,7 +421,7 @@ public final class ElwhaShowcase {
     return null;
   }
 
-  private ElwhaNavRailDestination primaryForKey(final String key) {
+  ElwhaNavRailDestination primaryForKey(final String key) {
     if (FOUNDATIONS_KEY.equals(key)) {
       return foundationsPrim;
     }
@@ -442,7 +445,7 @@ public final class ElwhaShowcase {
 
   // --- header bar ---
 
-  private JComponent buildHeaderBar() {
+  JComponent buildHeaderBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
 
     // No "Mode:" label — the sun / moon / auto icons are self-evident.
@@ -628,7 +631,7 @@ public final class ElwhaShowcase {
   // component. The order here is the order Home + the area landings render their cards in, and
   // is also the order the Components/Containers area destinations are traversed from. Foundations
   // appears first per the rail's first-primary-selected-by-default contract — see buildAndShow.
-  private void populateCatalog() {
+  void populateCatalog() {
     register(
         new LeafEntry(
             "Color Roles",
@@ -871,7 +874,7 @@ public final class ElwhaShowcase {
   // Home is the master index (all 33 leaves, grouped by area heading); each area landing covers
   // just its own leaves. ElwhaCard's actionable mode is the entire raison-d'être here: the cards
   // are the navigation surface, not decoration.
-  private void populateLandingCards() {
+  void populateLandingCards() {
     content.add(buildHomeLanding(), HOME_KEY);
     content.add(buildAreaLanding(AREA_FOUNDATIONS), FOUNDATIONS_KEY);
     content.add(buildAreaLanding(AREA_COMPONENTS), COMPONENTS_KEY);
@@ -881,7 +884,7 @@ public final class ElwhaShowcase {
   // Wraps each leaf surface with a leading-edge "← {area}" back affordance and registers it in
   // the CardLayout under the leaf label. The back row is a thin BorderLayout NORTH strip; the
   // leaf surface fills CENTER unchanged.
-  private void populateLeafCards() {
+  void populateLeafCards() {
     for (final LeafEntry entry : leaves.values()) {
       content.add(withBackToLanding(entry.area, entry.surface), entry.label);
     }
@@ -922,7 +925,7 @@ public final class ElwhaShowcase {
     };
   }
 
-  private List<LeafEntry> leavesIn(final String area) {
+  List<LeafEntry> leavesIn(final String area) {
     final List<LeafEntry> out = new ArrayList<>();
     for (final LeafEntry entry : leaves.values()) {
       if (entry.area.equals(area)) {
@@ -1015,11 +1018,12 @@ public final class ElwhaShowcase {
     };
   }
 
-  // Builds the Showcase's navigation rail — 3 primary destinations (one per area) wired to area
-  // landings, plus an extended FAB linking to the Home master-index landing. Both the rail-FAB
-  // and the bottom-trailing floating FAB share the layered pane; together they demonstrate two
-  // distinct M3 FAB placement modes (chrome slot + true floating anchor) on a single frame.
-  private ElwhaNavigationRail buildShowcaseRail() {
+  // Builds and installs the Showcase's navigation rail — 3 primary destinations (one per area)
+  // wired to area landings, plus an extended FAB linking to the Home master-index landing. Both
+  // the rail-FAB and the bottom-trailing floating FAB share the layered pane; together they
+  // demonstrate two distinct M3 FAB placement modes (chrome slot + true floating anchor) on a
+  // single frame.
+  ElwhaNavigationRail buildShowcaseRail() {
     final ElwhaNavigationRail target = ElwhaNavigationRail.collapsed();
     target.getAccessibleContext().setAccessibleName("Showcase navigation rail");
     target.setSurfaceFilled(true);
@@ -1059,6 +1063,7 @@ public final class ElwhaShowcase {
     aboutButton.addActionListener(e -> openAboutDialog());
     target.setTrailingActions(List.of(helpButton, aboutButton));
 
+    rail = target;
     return target;
   }
 
