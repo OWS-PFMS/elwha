@@ -244,6 +244,18 @@ So the default was already correct for the five — none of them was a live stra
 
 **Apply when:** adding any component. Declare the flag in the constructor next to `setOpaque`, match it to whether you install `WHEN_FOCUSED` bindings, add a `requestFocus*` forward if you are a decorator over an embedded focusable, and add the component to `FocusStopDoctrineTest`'s parameterized sweep.
 
+## 13. A component names its items the way it models them — by value, or by position when there is nothing else
+
+`ElwhaSelectField<T>` exposes no `getSelectedIndex` / `setSelectedIndex` / `getItemCount`, and will not gain them. `ElwhaButtonGroup` exposes `getSelectedIndex`, `setSelectedIndex`, `getSelectedIndices`, `getButtonAt(int)` and `getButtonCount`, and keeps them. [#719](https://github.com/OWS-PFMS/elwha/issues/719) asked whether that asymmetry was drift. It is not — the two components have different things to name with.
+
+**The test is whether the component owns a value model.** A select field is generic over `T` and holds `setOptions(List<T>)`, `getOptions()` and a `setDisplayFunction`; its selection *is* a `T`, and its listeners already deliver one. An index there is a second name for something that already has a name, and a worse one: it goes stale when the options change, it cannot survive a re-sort, and `Consumer<T>` would have to grow an `int` overload to stay symmetric. A button group has no value model at all — its "items" are live `ElwhaButton` / `ElwhaIconButton` children it lays out itself, and position is the only handle they have. Position is also *load-bearing geometry* there: `connectedRadii(i, count, …)` gives the outer segments pill caps and butts the inner ones, so the index is not an addressing convenience layered on top, it is what the component already computes with.
+
+The same rule already held elsewhere without being written down: `ElwhaColorPicker.getMode()` / `setMode(PickerMode)` are index-mediated internally (`tabs.getActiveTabIndex()`) and expose only the enum, and §10 requires a group's selection event to carry the *member* rather than an index precisely so identity survives a member being replaced at the same position.
+
+**A caller who wants a position from a value model is usually holding the wrong value.** All three sites #424 found were parallel-array workarounds — a select field carrying labels so a position could be recovered to index a second array — and all three read better rewritten: the nav rail badge picker became `ElwhaSelectField<ElwhaNavRailDestination>` with a display function and the parallel `List<String>` disappeared; the radio panel's round trip became label equality against the member's own `getLabel()`. What survived is one genuine positional use, and it is not an API question: the code-rendering helper picks which local variable name to emit, which is a property of the generated text.
+
+**Apply when:** designing a selection surface. If the component owns the values, name them by value everywhere — getter, setter and event. If it owns laid-out children and nothing else, position is the honest name, and it is fine for that component to expose it.
+
 ---
 
 ## Cross-reference

@@ -3316,13 +3316,14 @@ public final class ElwhaShowcase {
     }
     destinations.get(0).setSelected(true);
 
-    final List<String> targetLabels = new ArrayList<>();
-    for (final String[] entry : entries) {
-      targetLabels.add(entry[1]);
-    }
-    final ElwhaSelectField<String> targetBox = ElwhaSelectField.outlined("Target");
-    targetBox.setOptions(targetLabels);
-    targetBox.setSelectedValue(targetLabels.get(0));
+    // Typed on the destination rather than on its label: the picker's job is to name a
+    // destination, and a label-typed field would only be a handle to recover one by position
+    // (conventions §13).
+    final ElwhaSelectField<com.owspfm.elwha.navrail.ElwhaNavRailDestination> targetBox =
+        ElwhaSelectField.outlined("Target");
+    targetBox.setDisplayFunction(com.owspfm.elwha.navrail.ElwhaNavRailDestination::getLabel);
+    targetBox.setOptions(destinations);
+    targetBox.setSelectedValue(destinations.get(0));
     final JLabel badgeStatus = new JLabel(" ");
 
     // --- Badge facet (#318) ---
@@ -3332,7 +3333,7 @@ public final class ElwhaShowcase {
     // color axis is reachable here exactly as it is on the standalone Badge leaf. Which
     // destination wears it stays a host axis and stays in the main column; the badge is held so
     // retargeting moves the same badge rather than minting a new one.
-    final int[] targetIndex = {0};
+    final com.owspfm.elwha.navrail.ElwhaNavRailDestination[] target = {destinations.get(0)};
     final com.owspfm.elwha.badge.ElwhaBadge[] held = new com.owspfm.elwha.badge.ElwhaBadge[1];
     final BadgePlaygroundPanels.BadgeSlot badgeSlot =
         new BadgePlaygroundPanels.BadgeSlot() {
@@ -3344,25 +3345,26 @@ public final class ElwhaShowcase {
           @Override
           public void set(final com.owspfm.elwha.badge.ElwhaBadge badge) {
             held[0] = badge;
-            destinations.get(targetIndex[0]).setBadge(badge);
+            target[0].setBadge(badge);
           }
         };
     final ComponentWorkbench.Facet[] badgeFacet = new ComponentWorkbench.Facet[1];
     final Runnable refreshBadgeCode =
         () -> {
-          final com.owspfm.elwha.navrail.ElwhaNavRailDestination target =
-              destinations.get(targetIndex[0]);
-          badgeStatus.setText(target.getLabel());
+          badgeStatus.setText(target[0].getLabel());
           if (badgeFacet[0] != null) {
             badgeFacet[0].setCode(
-                renderBadgeSlotCode(badgeSlot, target.getLabel().toLowerCase(Locale.ROOT), ""));
+                renderBadgeSlotCode(badgeSlot, target[0].getLabel().toLowerCase(Locale.ROOT), ""));
           }
         };
     targetBox.addSelectionChangeListener(
         value -> {
-          destinations.get(targetIndex[0]).setBadge(null);
-          targetIndex[0] = Math.max(0, targetLabels.indexOf(targetBox.getSelectedValue()));
-          destinations.get(targetIndex[0]).setBadge(held[0]);
+          if (value == null) {
+            return;
+          }
+          target[0].setBadge(null);
+          target[0] = value;
+          target[0].setBadge(held[0]);
           refreshBadgeCode.run();
         });
 
