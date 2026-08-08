@@ -491,6 +491,32 @@ class ElwhaNavigationRailVariantTest {
     assertThat(rail.getPrimary()).hasSize(3);
   }
 
+  @Test
+  void addingASectionToARailWithNoPrimaryStillLeavesItOneSelection() {
+    final ElwhaNavigationRail rail = ElwhaNavigationRail.expanded();
+    final List<ElwhaNavRailDestination> secondary = RailFixture.destinations(2);
+
+    rail.addSection("Tools", secondary);
+
+    assertThat(rail.getSelected())
+        .as(
+            "#633 — the single-mandatory invariant held for setPrimary but not for addSection, and"
+                + " setSelected(null) throws, so the consumer had no way to repair it")
+        .isSameAs(secondary.get(0));
+  }
+
+  @Test
+  void addingASectionDoesNotStealAnExistingSelection() {
+    final ElwhaNavigationRail rail = ElwhaNavigationRail.expanded();
+    final List<ElwhaNavRailDestination> primary = RailFixture.destinations(3);
+    rail.setPrimary(primary);
+    rail.setSelected(primary.get(2));
+
+    rail.addSection("Tools", RailFixture.destinations(2));
+
+    assertThat(rail.getSelected()).as("the fallback only fills a vacancy").isSameAs(primary.get(2));
+  }
+
   // -------------------------------------------------------------------- fonts
 
   @Test

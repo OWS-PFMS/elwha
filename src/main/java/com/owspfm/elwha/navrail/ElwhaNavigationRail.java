@@ -716,21 +716,23 @@ public final class ElwhaNavigationRail extends JComponent {
               + ". This is advisory only — paint and layout still work.");
     }
 
-    final ElwhaNavRailDestination prior = selected;
-    final ElwhaNavRailDestination next;
-    if (allDestinations().isEmpty()) {
-      next = null;
-    } else if (prior != null && allDestinations().contains(prior)) {
-      next = prior;
-    } else if (!primary.isEmpty()) {
-      next = primary.get(0);
-    } else {
-      next = allDestinations().get(0);
-    }
-    applySelection(prior, next);
+    applySelection(selected, resolveSelection(selected));
 
     revalidate();
     repaint();
+  }
+
+  // The single-mandatory invariant: a rail with any destination has one selected. Keeps the current
+  // selection when it survived the change, else falls to the first primary destination, else the
+  // first destination of any kind.
+  private ElwhaNavRailDestination resolveSelection(final ElwhaNavRailDestination current) {
+    if (allDestinations().isEmpty()) {
+      return null;
+    }
+    if (current != null && allDestinations().contains(current)) {
+      return current;
+    }
+    return primary.isEmpty() ? allDestinations().get(0) : primary.get(0);
   }
 
   /**
@@ -761,6 +763,12 @@ public final class ElwhaNavigationRail extends JComponent {
       d.addActionListener(destinationClickListener);
       installKeyboardNavigation(d);
     }
+    // The same selection fallback setPrimary runs (#633). Without it, adding a section to a rail
+    // with no primary destinations left getSelected() null while allDestinations() was non-empty —
+    // violating the single-mandatory invariant — and setSelected(null) throws, so the consumer had
+    // no way back.
+    applySelection(selected, resolveSelection(selected));
+
     revalidate();
     repaint();
   }
