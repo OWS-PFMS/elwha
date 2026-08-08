@@ -406,15 +406,15 @@ public final class BadgePlaygroundPanels {
           final ElwhaBadge badge;
           if (isLarge) {
             badge = ElwhaBadge.large(contentText.isEmpty() ? BADGE_DEFAULT_CONTENT : contentText);
-            badge.withLabelColor((ColorRole) labelColorBox.getSelectedItem());
+            badge.setLabelColor((ColorRole) labelColorBox.getSelectedItem());
           } else {
             badge = ElwhaBadge.small();
           }
-          badge.withContainerColor((ColorRole) containerColorBox.getSelectedItem());
+          badge.setContainerColor((ColorRole) containerColorBox.getSelectedItem());
           final String overrideText =
               a11yOverrideField.getText() == null ? "" : a11yOverrideField.getText();
           if (!overrideText.isEmpty()) {
-            badge.withAccessibilityText(overrideText);
+            badge.setAccessibilityText(overrideText);
           }
           slot.set(badge);
           onChange.run();

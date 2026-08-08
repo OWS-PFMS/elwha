@@ -39,8 +39,8 @@ import javax.swing.event.DocumentListener;
  *       "Inbox {content} new notifications"}.
  *   <li>Content text field — every {@code setContent} call re-derives the default a11y text and the
  *       splice updates immediately.
- *   <li>Override text field + Clear — verifies {@link ElwhaBadge#withAccessibilityText(String)}
- *       wins over the default and that passing {@code null} reverts.
+ *   <li>Override text field + Clear — verifies {@link ElwhaBadge#setAccessibilityText(String)} wins
+ *       over the default and that passing {@code null} reverts.
  *   <li>Detach button — verifies {@code host.accessibleName} restores to {@code "Inbox"}.
  * </ul>
  *
@@ -198,14 +198,14 @@ public final class ElwhaBadgeA11yPlayground {
 
               private void apply() {
                 final String text = overrideField.getText();
-                badge.withAccessibilityText(text.isEmpty() ? null : text);
+                badge.setAccessibilityText(text.isEmpty() ? null : text);
               }
             });
 
     clearOverride.addActionListener(
         e -> {
           overrideField.setText("");
-          badge.withAccessibilityText(null);
+          badge.setAccessibilityText(null);
         });
 
     final JToggleButton smallToggle = new JToggleButton("Small");

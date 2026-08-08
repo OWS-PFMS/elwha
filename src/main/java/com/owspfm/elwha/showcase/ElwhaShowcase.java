@@ -3144,12 +3144,12 @@ public final class ElwhaShowcase {
     code.append("ElwhaBadge badge = ElwhaBadge.");
     code.append(small ? "small()" : "large(\"" + badge.getContent() + "\")");
     if (badge.getContainerColor() != ColorRole.ERROR) {
-      code.append("\n    .withContainerColor(ColorRole.")
+      code.append("\n    .setContainerColor(ColorRole.")
           .append(badge.getContainerColor().name())
           .append(")");
     }
     if (!small && badge.getLabelColor() != ColorRole.ON_ERROR) {
-      code.append("\n    .withLabelColor(ColorRole.")
+      code.append("\n    .setLabelColor(ColorRole.")
           .append(badge.getLabelColor().name())
           .append(")");
     }
@@ -3169,12 +3169,12 @@ public final class ElwhaShowcase {
     code.append("ElwhaBadge badge = ElwhaBadge.");
     code.append(small ? "small()" : "large(\"" + badge.getContent() + "\")");
     if (badge.getContainerColor() != ColorRole.ERROR) {
-      code.append("\n    .withContainerColor(ColorRole.")
+      code.append("\n    .setContainerColor(ColorRole.")
           .append(badge.getContainerColor().name())
           .append(")");
     }
     if (!small && badge.getLabelColor() != ColorRole.ON_ERROR) {
-      code.append("\n    .withLabelColor(ColorRole.")
+      code.append("\n    .setLabelColor(ColorRole.")
           .append(badge.getLabelColor().name())
           .append(")");
     }
