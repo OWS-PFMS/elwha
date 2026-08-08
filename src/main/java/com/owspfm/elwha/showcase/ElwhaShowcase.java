@@ -58,6 +58,7 @@ import com.owspfm.elwha.navrail.ElwhaNavRailDestination;
 import com.owspfm.elwha.navrail.ElwhaNavigationRail;
 import com.owspfm.elwha.navrail.playground.NavRailDestinationPlaygroundPanels;
 import com.owspfm.elwha.navrail.playground.NavigationRailPlaygroundPanels;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
 import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.ColorRole;
@@ -97,14 +98,10 @@ import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.DefaultComboBoxModel;
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
-import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
@@ -171,7 +168,7 @@ public final class ElwhaShowcase {
   // area sections (which is also the rail's primary-destination order).
   final Map<String, LeafEntry> leaves = new LinkedHashMap<>();
   private JLabel statusLabel;
-  private JComboBox<Theme> palettePicker;
+  private ElwhaSelectField<Theme> palettePicker;
   private Theme primarySelection;
   private Theme secondarySelection;
   private boolean secondaryTier;
@@ -457,7 +454,6 @@ public final class ElwhaShowcase {
     bar.add(buildTierToggle());
 
     bar.add(Box.createHorizontalStrut(16));
-    bar.add(new JLabel("Palette:"));
     bar.add(buildPalettePicker());
 
     statusLabel = new JLabel();
@@ -530,32 +526,17 @@ public final class ElwhaShowcase {
   // MaterialPalettes. A new Elwha-format palette JSON dropped into the tier's resource subdirectory
   // appears here with no code change.
   private JComponent buildPalettePicker() {
-    palettePicker = new JComboBox<>();
-    palettePicker.setRenderer(
-        new DefaultListCellRenderer() {
-          @Override
-          public Component getListCellRendererComponent(
-              final JList<?> list,
-              final Object value,
-              final int index,
-              final boolean isSelected,
-              final boolean cellHasFocus) {
-            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-            if (value instanceof Theme theme) {
-              setText(theme.name());
-            }
-            return this;
-          }
-        });
+    palettePicker = ElwhaSelectField.outlined("Palette");
+    palettePicker.setDisplayFunction(Theme::name);
 
     // The app installs MaterialPalettes.baseline() at startup — a primary-tier theme.
     primarySelection = matchOrFirst(primaryThemes, ElwhaTheme.current().theme().name());
     secondarySelection = secondaryThemes.get(0);
     populatePicker(primaryThemes, primarySelection);
 
-    palettePicker.addActionListener(
-        event -> {
-          if (!pickerAdjusting && palettePicker.getSelectedItem() instanceof Theme theme) {
+    palettePicker.addSelectionChangeListener(
+        theme -> {
+          if (!pickerAdjusting && theme != null) {
             if (secondaryTier) {
               secondarySelection = theme;
             } else {
@@ -571,8 +552,8 @@ public final class ElwhaShowcase {
   // model swap and selection seed run under the pickerAdjusting guard.
   private void populatePicker(final List<Theme> themes, final Theme selection) {
     pickerAdjusting = true;
-    palettePicker.setModel(new DefaultComboBoxModel<>(themes.toArray(new Theme[0])));
-    palettePicker.setSelectedItem(selection);
+    palettePicker.setOptions(themes);
+    palettePicker.setSelectedValue(selection);
     pickerAdjusting = false;
   }
 
@@ -1181,14 +1162,23 @@ public final class ElwhaShowcase {
   private static JComponent buildButtonWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JComboBox<ButtonVariant> variantBox = new JComboBox<>(ButtonVariant.values());
-    variantBox.setSelectedItem(ButtonVariant.FILLED);
-    final JComboBox<ButtonInteractionMode> modeBox =
-        new JComboBox<>(ButtonInteractionMode.values());
-    final JComboBox<ButtonSize> sizeBox = new JComboBox<>(ButtonSize.values());
-    sizeBox.setSelectedItem(ButtonSize.S);
-    final JComboBox<ButtonShape> shapeBox = new JComboBox<>(ButtonShape.values());
-    final JComboBox<ButtonSurfaceRole> surfaceBox = new JComboBox<>(ButtonSurfaceRole.values());
+    final ElwhaSelectField<ButtonVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(List.of(ButtonVariant.values()));
+    variantBox.setSelectedValue(ButtonVariant.FILLED);
+    final ElwhaSelectField<ButtonInteractionMode> modeBox =
+        ElwhaSelectField.outlined("Interaction mode");
+    modeBox.setOptions(List.of(ButtonInteractionMode.values()));
+    modeBox.setSelectedValue(ButtonInteractionMode.CLICKABLE);
+    final ElwhaSelectField<ButtonSize> sizeBox = ElwhaSelectField.outlined("Size");
+    sizeBox.setOptions(List.of(ButtonSize.values()));
+    sizeBox.setSelectedValue(ButtonSize.S);
+    final ElwhaSelectField<ButtonShape> shapeBox = ElwhaSelectField.outlined("Shape");
+    shapeBox.setOptions(List.of(ButtonShape.values()));
+    shapeBox.setSelectedValue(ButtonShape.ROUND);
+    final ElwhaSelectField<ButtonSurfaceRole> surfaceBox =
+        ElwhaSelectField.outlined("Surface role override");
+    surfaceBox.setOptions(List.of(ButtonSurfaceRole.values()));
+    surfaceBox.setSelectedValue(ButtonSurfaceRole.VARIANT_DEFAULT);
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
     final ElwhaCheckbox iconBox = new ElwhaCheckbox("Leading icon");
     final ElwhaCheckbox cornerRadiiBox = new ElwhaCheckbox("Per-corner radii override");
@@ -1206,12 +1196,12 @@ public final class ElwhaShowcase {
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Button");
-    controls.addControl("Variant", variantBox);
-    controls.addControl("Interaction mode", modeBox);
-    controls.addControl("Size", sizeBox);
-    controls.addControl("Shape", shapeBox);
+    controls.addControl("", variantBox);
+    controls.addControl("", modeBox);
+    controls.addControl("", sizeBox);
+    controls.addControl("", shapeBox);
     controls.addSection("Appearance");
-    controls.addControl("Surface role override", surfaceBox);
+    controls.addControl("", surfaceBox);
     controls.addControl("Border width", borderWidth);
     controls.addControl("", iconBox);
     controls.addSection("Corner radii");
@@ -1234,16 +1224,16 @@ public final class ElwhaShowcase {
     final ElwhaButton[] stage = new ElwhaButton[1];
     final Runnable apply =
         () -> {
-          final ButtonVariant variant = (ButtonVariant) variantBox.getSelectedItem();
-          ButtonInteractionMode mode = (ButtonInteractionMode) modeBox.getSelectedItem();
+          final ButtonVariant variant = variantBox.getSelectedValue();
+          ButtonInteractionMode mode = modeBox.getSelectedValue();
           // SELECTABLE + TEXT is illegal — guard the pairing so the demo never throws.
           if (mode == ButtonInteractionMode.SELECTABLE && variant == ButtonVariant.TEXT) {
             mode = ButtonInteractionMode.CLICKABLE;
-            modeBox.setSelectedItem(ButtonInteractionMode.CLICKABLE);
+            modeBox.setSelectedValue(ButtonInteractionMode.CLICKABLE);
           }
-          final ButtonSize size = (ButtonSize) sizeBox.getSelectedItem();
-          final ButtonShape shape = (ButtonShape) shapeBox.getSelectedItem();
-          final ButtonSurfaceRole surface = (ButtonSurfaceRole) surfaceBox.getSelectedItem();
+          final ButtonSize size = sizeBox.getSelectedValue();
+          final ButtonShape shape = shapeBox.getSelectedValue();
+          final ButtonSurfaceRole surface = surfaceBox.getSelectedValue();
           final int width = (Integer) borderWidth.getValue();
           final boolean icon = iconBox.isChecked();
           final boolean selected = selectedBox.isChecked();
@@ -1297,11 +1287,11 @@ public final class ElwhaShowcase {
                   enabled,
                   cornerRadii));
         };
-    variantBox.addActionListener(event -> apply.run());
-    modeBox.addActionListener(event -> apply.run());
-    sizeBox.addActionListener(event -> apply.run());
-    shapeBox.addActionListener(event -> apply.run());
-    surfaceBox.addActionListener(event -> apply.run());
+    variantBox.addSelectionChangeListener(value -> apply.run());
+    modeBox.addSelectionChangeListener(value -> apply.run());
+    sizeBox.addSelectionChangeListener(value -> apply.run());
+    shapeBox.addSelectionChangeListener(value -> apply.run());
+    surfaceBox.addSelectionChangeListener(value -> apply.run());
     borderWidth.addChangeListener(event -> apply.run());
     iconBox.addActionListener(event -> apply.run());
     cornerRadiiBox.addActionListener(event -> apply.run());
@@ -1389,16 +1379,15 @@ public final class ElwhaShowcase {
     reducedMotionBox.addActionListener(
         e -> MorphAnimator.setReducedMotion(reducedMotionBox.isChecked()));
 
-    final JComboBox<MorphSpeed> speedBox = new JComboBox<>(MorphSpeed.values());
-    speedBox.setSelectedItem(MorphSpeed.NORMAL);
-    speedBox.addActionListener(
-        e ->
-            MorphAnimator.setDurationMultiplier(
-                ((MorphSpeed) speedBox.getSelectedItem()).multiplier));
+    final ElwhaSelectField<MorphSpeed> speedBox = ElwhaSelectField.outlined("Speed");
+    speedBox.setOptions(List.of(MorphSpeed.values()));
+    speedBox.setSelectedValue(MorphSpeed.NORMAL);
+    speedBox.addSelectionChangeListener(
+        speed -> MorphAnimator.setDurationMultiplier(speed.multiplier));
 
     controls.addSection("Animation");
     controls.addControl("", reducedMotionBox);
-    controls.addControl("Speed", speedBox);
+    controls.addControl("", speedBox);
   }
 
   // Workbench-only speed presets — 1× is the §3 spec, 2× / 5× let the operator watch a single
@@ -1445,26 +1434,25 @@ public final class ElwhaShowcase {
   private static JComponent buildButtonGroupContainer() {
     final ContainerWorkbench workbench = new ContainerWorkbench();
 
-    final JComboBox<ButtonVariant> variantBox =
-        new JComboBox<>(
-            new ButtonVariant[] {
-              ButtonVariant.ELEVATED,
-              ButtonVariant.FILLED,
-              ButtonVariant.FILLED_TONAL,
-              ButtonVariant.OUTLINED
-            });
-    variantBox.setSelectedItem(ButtonVariant.FILLED);
+    final ElwhaSelectField<ButtonVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(
+        List.of(
+            ButtonVariant.ELEVATED,
+            ButtonVariant.FILLED,
+            ButtonVariant.FILLED_TONAL,
+            ButtonVariant.OUTLINED));
+    variantBox.setSelectedValue(ButtonVariant.FILLED);
     final ElwhaCheckbox mandatoryBox = new ElwhaCheckbox("Mandatory");
     mandatoryBox.setChecked(true);
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Button group");
-    controls.addControl("Variant", variantBox);
+    controls.addControl("", variantBox);
     controls.addControl("", mandatoryBox);
 
     final Runnable rebuild =
         () -> {
-          final ButtonVariant variant = (ButtonVariant) variantBox.getSelectedItem();
+          final ButtonVariant variant = variantBox.getSelectedValue();
           final boolean mandatory = mandatoryBox.isChecked();
           final JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
           final ElwhaButtonSelectionGroup group =
@@ -1491,7 +1479,7 @@ public final class ElwhaShowcase {
               });
           workbench.setContainer(row);
         };
-    variantBox.addActionListener(event -> rebuild.run());
+    variantBox.addSelectionChangeListener(value -> rebuild.run());
     mandatoryBox.addActionListener(event -> rebuild.run());
     rebuild.run();
     return workbench;
@@ -1513,20 +1501,36 @@ public final class ElwhaShowcase {
 
     final ElwhaTextField textField = ElwhaTextField.outlined("");
     textField.setText("Chip");
-    final JComboBox<ChipVariant> variantBox = new JComboBox<>(ChipVariant.values());
-    final JComboBox<ChipInteractionMode> modeBox = new JComboBox<>(ChipInteractionMode.values());
-    modeBox.setSelectedItem(ChipInteractionMode.SELECTABLE);
-    final JComboBox<ChipSurfaceRole> surfaceBox = new JComboBox<>(ChipSurfaceRole.values());
-    final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
-    final JComboBox<SpaceScale> padHBox = new JComboBox<>(SpaceScale.values());
-    padHBox.setSelectedItem(SpaceScale.MD);
-    final JComboBox<SpaceScale> padVBox = new JComboBox<>(SpaceScale.values());
-    padVBox.setSelectedItem(SpaceScale.XS);
+    final ElwhaSelectField<ChipVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(List.of(ChipVariant.values()));
+    variantBox.setSelectedValue(ChipVariant.FILLED);
+    final ElwhaSelectField<ChipInteractionMode> modeBox =
+        ElwhaSelectField.outlined("Interaction mode");
+    modeBox.setOptions(List.of(ChipInteractionMode.values()));
+    modeBox.setSelectedValue(ChipInteractionMode.SELECTABLE);
+    final ElwhaSelectField<ChipSurfaceRole> surfaceBox =
+        ElwhaSelectField.outlined("Surface role override");
+    surfaceBox.setOptions(List.of(ChipSurfaceRole.values()));
+    surfaceBox.setSelectedValue(ChipSurfaceRole.VARIANT_DEFAULT);
+    final ElwhaSelectField<ShapeScale> shapeBox = ElwhaSelectField.outlined("Shape");
+    shapeBox.setOptions(List.of(ShapeScale.values()));
+    shapeBox.setSelectedValue(ShapeScale.NONE);
+    final ElwhaSelectField<SpaceScale> padHBox = ElwhaSelectField.outlined("Padding — horizontal");
+    padHBox.setOptions(List.of(SpaceScale.values()));
+    padHBox.setSelectedValue(SpaceScale.MD);
+    final ElwhaSelectField<SpaceScale> padVBox = ElwhaSelectField.outlined("Padding — vertical");
+    padVBox.setOptions(List.of(SpaceScale.values()));
+    padVBox.setSelectedValue(SpaceScale.XS);
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
-    final JComboBox<LeadingSlot> leadingSlotBox = new JComboBox<>(LeadingSlot.values());
+    final ElwhaSelectField<LeadingSlot> leadingSlotBox = ElwhaSelectField.outlined("Leading slot");
+    leadingSlotBox.setOptions(List.of(LeadingSlot.values()));
+    leadingSlotBox.setSelectedValue(LeadingSlot.NONE);
     final ElwhaCheckbox leadingAffordanceActiveBox = new ElwhaCheckbox("Affordance active");
     leadingAffordanceActiveBox.setEnabled(false);
-    final JComboBox<TrailingSlot> trailingSlotBox = new JComboBox<>(TrailingSlot.values());
+    final ElwhaSelectField<TrailingSlot> trailingSlotBox =
+        ElwhaSelectField.outlined("Trailing slot");
+    trailingSlotBox.setOptions(List.of(TrailingSlot.values()));
+    trailingSlotBox.setSelectedValue(TrailingSlot.NONE);
     final ElwhaCheckbox trailingAffordanceActiveBox = new ElwhaCheckbox("Affordance active");
     trailingAffordanceActiveBox.setEnabled(false);
     final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
@@ -1536,17 +1540,17 @@ public final class ElwhaShowcase {
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Chip");
     controls.addControl("Text", textField);
-    controls.addControl("Variant", variantBox);
-    controls.addControl("Interaction mode", modeBox);
+    controls.addControl("", variantBox);
+    controls.addControl("", modeBox);
     controls.addSection("Appearance");
-    controls.addControl("Surface role override", surfaceBox);
-    controls.addControl("Shape", shapeBox);
-    controls.addControl("Padding — horizontal", padHBox);
-    controls.addControl("Padding — vertical", padVBox);
+    controls.addControl("", surfaceBox);
+    controls.addControl("", shapeBox);
+    controls.addControl("", padHBox);
+    controls.addControl("", padVBox);
     controls.addControl("Border width", borderWidth);
-    controls.addControl("Leading slot", leadingSlotBox);
+    controls.addControl("", leadingSlotBox);
     controls.addControl("", leadingAffordanceActiveBox);
-    controls.addControl("Trailing slot", trailingSlotBox);
+    controls.addControl("", trailingSlotBox);
     controls.addControl("", trailingAffordanceActiveBox);
     controls.addSection("State");
     controls.addControl("", selectedBox);
@@ -1558,17 +1562,17 @@ public final class ElwhaShowcase {
     final Runnable apply =
         () -> {
           final String text = textField.getText();
-          final ChipVariant variant = (ChipVariant) variantBox.getSelectedItem();
-          final ChipInteractionMode mode = (ChipInteractionMode) modeBox.getSelectedItem();
-          final ChipSurfaceRole surface = (ChipSurfaceRole) surfaceBox.getSelectedItem();
-          final ShapeScale shape = (ShapeScale) shapeBox.getSelectedItem();
-          final SpaceScale padH = (SpaceScale) padHBox.getSelectedItem();
-          final SpaceScale padV = (SpaceScale) padVBox.getSelectedItem();
+          final ChipVariant variant = variantBox.getSelectedValue();
+          final ChipInteractionMode mode = modeBox.getSelectedValue();
+          final ChipSurfaceRole surface = surfaceBox.getSelectedValue();
+          final ShapeScale shape = shapeBox.getSelectedValue();
+          final SpaceScale padH = padHBox.getSelectedValue();
+          final SpaceScale padV = padVBox.getSelectedValue();
           final int width = (Integer) borderWidth.getValue();
-          final LeadingSlot leadingSlot = (LeadingSlot) leadingSlotBox.getSelectedItem();
+          final LeadingSlot leadingSlot = leadingSlotBox.getSelectedValue();
           leadingAffordanceActiveBox.setEnabled(leadingSlot == LeadingSlot.AFFORDANCE);
           final boolean leadingAffordanceActive = leadingAffordanceActiveBox.isChecked();
-          final TrailingSlot trailingSlot = (TrailingSlot) trailingSlotBox.getSelectedItem();
+          final TrailingSlot trailingSlot = trailingSlotBox.getSelectedValue();
           trailingAffordanceActiveBox.setEnabled(trailingSlot == TrailingSlot.AFFORDANCE);
           final boolean trailingAffordanceActive = trailingAffordanceActiveBox.isChecked();
           // GHOST does not render a selected state (issue #50) — reflect that in the control.
@@ -1647,16 +1651,16 @@ public final class ElwhaShowcase {
     applyRef[0] = apply;
 
     textField.getEditor().getDocument().addDocumentListener(new SimpleDocumentListener(apply));
-    variantBox.addActionListener(event -> apply.run());
-    modeBox.addActionListener(event -> apply.run());
-    surfaceBox.addActionListener(event -> apply.run());
-    shapeBox.addActionListener(event -> apply.run());
-    padHBox.addActionListener(event -> apply.run());
-    padVBox.addActionListener(event -> apply.run());
+    variantBox.addSelectionChangeListener(value -> apply.run());
+    modeBox.addSelectionChangeListener(value -> apply.run());
+    surfaceBox.addSelectionChangeListener(value -> apply.run());
+    shapeBox.addSelectionChangeListener(value -> apply.run());
+    padHBox.addSelectionChangeListener(value -> apply.run());
+    padVBox.addSelectionChangeListener(value -> apply.run());
     borderWidth.addChangeListener(event -> apply.run());
-    leadingSlotBox.addActionListener(event -> apply.run());
+    leadingSlotBox.addSelectionChangeListener(value -> apply.run());
     leadingAffordanceActiveBox.addActionListener(event -> apply.run());
-    trailingSlotBox.addActionListener(event -> apply.run());
+    trailingSlotBox.addSelectionChangeListener(value -> apply.run());
     trailingAffordanceActiveBox.addActionListener(event -> apply.run());
     selectedBox.addActionListener(event -> apply.run());
     enabledBox.addActionListener(event -> apply.run());
@@ -1805,19 +1809,26 @@ public final class ElwhaShowcase {
   private static JComponent buildIconButtonWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JComboBox<IconChoice> iconBox = new JComboBox<>(IconChoice.values());
-    iconBox.setSelectedItem(IconChoice.FAVORITE);
-    final JComboBox<IconButtonVariant> variantBox = new JComboBox<>(IconButtonVariant.values());
-    variantBox.setSelectedItem(IconButtonVariant.FILLED_TONAL);
-    final JComboBox<IconButtonInteractionMode> modeBox =
-        new JComboBox<>(IconButtonInteractionMode.values());
-    modeBox.setSelectedItem(IconButtonInteractionMode.SELECTABLE);
-    final JComboBox<IconButtonSize> sizeBox = new JComboBox<>(IconButtonSize.values());
-    sizeBox.setSelectedItem(IconButtonSize.M);
-    final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
-    shapeBox.setSelectedItem(ShapeScale.FULL);
-    final JComboBox<IconButtonSurfaceRole> surfaceBox =
-        new JComboBox<>(IconButtonSurfaceRole.values());
+    final ElwhaSelectField<IconChoice> iconBox = ElwhaSelectField.outlined("Icon");
+    iconBox.setOptions(List.of(IconChoice.values()));
+    iconBox.setSelectedValue(IconChoice.FAVORITE);
+    final ElwhaSelectField<IconButtonVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(List.of(IconButtonVariant.values()));
+    variantBox.setSelectedValue(IconButtonVariant.FILLED_TONAL);
+    final ElwhaSelectField<IconButtonInteractionMode> modeBox =
+        ElwhaSelectField.outlined("Interaction mode");
+    modeBox.setOptions(List.of(IconButtonInteractionMode.values()));
+    modeBox.setSelectedValue(IconButtonInteractionMode.SELECTABLE);
+    final ElwhaSelectField<IconButtonSize> sizeBox = ElwhaSelectField.outlined("Size");
+    sizeBox.setOptions(List.of(IconButtonSize.values()));
+    sizeBox.setSelectedValue(IconButtonSize.M);
+    final ElwhaSelectField<ShapeScale> shapeBox = ElwhaSelectField.outlined("Shape");
+    shapeBox.setOptions(List.of(ShapeScale.values()));
+    shapeBox.setSelectedValue(ShapeScale.FULL);
+    final ElwhaSelectField<IconButtonSurfaceRole> surfaceBox =
+        ElwhaSelectField.outlined("Surface role override");
+    surfaceBox.setOptions(List.of(IconButtonSurfaceRole.values()));
+    surfaceBox.setSelectedValue(IconButtonSurfaceRole.VARIANT_DEFAULT);
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
     final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
     final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
@@ -1825,13 +1836,13 @@ public final class ElwhaShowcase {
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Icon Button");
-    controls.addControl("Icon", iconBox);
-    controls.addControl("Variant", variantBox);
-    controls.addControl("Interaction mode", modeBox);
-    controls.addControl("Size", sizeBox);
-    controls.addControl("Shape", shapeBox);
+    controls.addControl("", iconBox);
+    controls.addControl("", variantBox);
+    controls.addControl("", modeBox);
+    controls.addControl("", sizeBox);
+    controls.addControl("", shapeBox);
     controls.addSection("Appearance");
-    controls.addControl("Surface role override", surfaceBox);
+    controls.addControl("", surfaceBox);
     controls.addControl("Border width", borderWidth);
     controls.addSection("State");
     controls.addControl("", selectedBox);
@@ -1839,14 +1850,12 @@ public final class ElwhaShowcase {
 
     final Runnable apply =
         () -> {
-          final IconChoice icon = (IconChoice) iconBox.getSelectedItem();
-          final IconButtonVariant variant = (IconButtonVariant) variantBox.getSelectedItem();
-          final IconButtonInteractionMode mode =
-              (IconButtonInteractionMode) modeBox.getSelectedItem();
-          final IconButtonSize size = (IconButtonSize) sizeBox.getSelectedItem();
-          final ShapeScale shape = (ShapeScale) shapeBox.getSelectedItem();
-          final IconButtonSurfaceRole surface =
-              (IconButtonSurfaceRole) surfaceBox.getSelectedItem();
+          final IconChoice icon = iconBox.getSelectedValue();
+          final IconButtonVariant variant = variantBox.getSelectedValue();
+          final IconButtonInteractionMode mode = modeBox.getSelectedValue();
+          final IconButtonSize size = sizeBox.getSelectedValue();
+          final ShapeScale shape = shapeBox.getSelectedValue();
+          final IconButtonSurfaceRole surface = surfaceBox.getSelectedValue();
           final int width = (Integer) borderWidth.getValue();
           final boolean selectable = mode == IconButtonInteractionMode.SELECTABLE;
           selectedBox.setEnabled(selectable);
@@ -1874,12 +1883,12 @@ public final class ElwhaShowcase {
               renderIconButtonCode(
                   icon, variant, mode, size, shape, surface, width, selected, enabled));
         };
-    iconBox.addActionListener(event -> apply.run());
-    variantBox.addActionListener(event -> apply.run());
-    modeBox.addActionListener(event -> apply.run());
-    sizeBox.addActionListener(event -> apply.run());
-    shapeBox.addActionListener(event -> apply.run());
-    surfaceBox.addActionListener(event -> apply.run());
+    iconBox.addSelectionChangeListener(value -> apply.run());
+    variantBox.addSelectionChangeListener(value -> apply.run());
+    modeBox.addSelectionChangeListener(value -> apply.run());
+    sizeBox.addSelectionChangeListener(value -> apply.run());
+    shapeBox.addSelectionChangeListener(value -> apply.run());
+    surfaceBox.addSelectionChangeListener(value -> apply.run());
     borderWidth.addChangeListener(event -> apply.run());
     selectedBox.addActionListener(event -> apply.run());
     enabledBox.addActionListener(event -> apply.run());
@@ -2099,14 +2108,18 @@ public final class ElwhaShowcase {
   private static JComponent buildFabWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JComboBox<FabForm> formBox = new JComboBox<>(FabForm.values());
-    formBox.setSelectedItem(FabForm.STANDARD);
-    final JComboBox<ElwhaFab.Size> sizeBox = new JComboBox<>(ElwhaFab.Size.values());
-    sizeBox.setSelectedItem(ElwhaFab.Size.SMALL);
-    final JComboBox<ElwhaFab.ColorStyle> colorBox = new JComboBox<>(ElwhaFab.ColorStyle.values());
-    colorBox.setSelectedItem(ElwhaFab.ColorStyle.PRIMARY_CONTAINER);
-    final JComboBox<FabIconChoice> iconBox = new JComboBox<>(FabIconChoice.values());
-    iconBox.setSelectedItem(FabIconChoice.ADD);
+    final ElwhaSelectField<FabForm> formBox = ElwhaSelectField.outlined("Form");
+    formBox.setOptions(List.of(FabForm.values()));
+    formBox.setSelectedValue(FabForm.STANDARD);
+    final ElwhaSelectField<ElwhaFab.Size> sizeBox = ElwhaSelectField.outlined("Size");
+    sizeBox.setOptions(List.of(ElwhaFab.Size.values()));
+    sizeBox.setSelectedValue(ElwhaFab.Size.SMALL);
+    final ElwhaSelectField<ElwhaFab.ColorStyle> colorBox = ElwhaSelectField.outlined("Color");
+    colorBox.setOptions(List.of(ElwhaFab.ColorStyle.values()));
+    colorBox.setSelectedValue(ElwhaFab.ColorStyle.PRIMARY_CONTAINER);
+    final ElwhaSelectField<FabIconChoice> iconBox = ElwhaSelectField.outlined("Icon");
+    iconBox.setOptions(List.of(FabIconChoice.values()));
+    iconBox.setSelectedValue(FabIconChoice.ADD);
     final ElwhaTextField labelField = ElwhaTextField.outlined("");
     labelField.setText("Compose");
     final ElwhaCheckbox hoveredBox = new ElwhaCheckbox("Hovered");
@@ -2123,11 +2136,11 @@ public final class ElwhaShowcase {
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("FAB");
-    controls.addControl("Form", formBox);
-    controls.addControl("Size", sizeBox);
-    controls.addControl("Color", colorBox);
+    controls.addControl("", formBox);
+    controls.addControl("", sizeBox);
+    controls.addControl("", colorBox);
     controls.addSection("Content");
-    controls.addControl("Icon", iconBox);
+    controls.addControl("", iconBox);
     controls.addControl("Label text", labelField);
     controls.addSection("State");
     controls.addControl("", hoveredBox);
@@ -2138,10 +2151,10 @@ public final class ElwhaShowcase {
 
     final Runnable apply =
         () -> {
-          final FabForm form = (FabForm) formBox.getSelectedItem();
-          final ElwhaFab.Size size = (ElwhaFab.Size) sizeBox.getSelectedItem();
-          final ElwhaFab.ColorStyle color = (ElwhaFab.ColorStyle) colorBox.getSelectedItem();
-          final FabIconChoice iconChoice = (FabIconChoice) iconBox.getSelectedItem();
+          final FabForm form = formBox.getSelectedValue();
+          final ElwhaFab.Size size = sizeBox.getSelectedValue();
+          final ElwhaFab.ColorStyle color = colorBox.getSelectedValue();
+          final FabIconChoice iconChoice = iconBox.getSelectedValue();
           final String label = labelField.getText() == null ? "" : labelField.getText();
           final boolean hovered = hoveredBox.isChecked();
           final boolean pressed = pressedBox.isChecked();
@@ -2191,10 +2204,10 @@ public final class ElwhaShowcase {
                   ? ElwhaFab.Form.STANDARD
                   : ElwhaFab.Form.EXTENDED);
         });
-    formBox.addActionListener(event -> apply.run());
-    sizeBox.addActionListener(event -> apply.run());
-    colorBox.addActionListener(event -> apply.run());
-    iconBox.addActionListener(event -> apply.run());
+    formBox.addSelectionChangeListener(value -> apply.run());
+    sizeBox.addSelectionChangeListener(value -> apply.run());
+    colorBox.addSelectionChangeListener(value -> apply.run());
+    iconBox.addSelectionChangeListener(value -> apply.run());
     labelField.getEditor().getDocument().addDocumentListener(new SimpleDocumentListener(apply));
     hoveredBox.addActionListener(event -> apply.run());
     pressedBox.addActionListener(event -> apply.run());
@@ -2313,19 +2326,20 @@ public final class ElwhaShowcase {
   private static JComponent buildIconButtonGroupContainer() {
     final ContainerWorkbench workbench = new ContainerWorkbench();
 
-    final JComboBox<IconButtonVariant> variantBox = new JComboBox<>(IconButtonVariant.values());
-    variantBox.setSelectedItem(IconButtonVariant.FILLED_TONAL);
+    final ElwhaSelectField<IconButtonVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(List.of(IconButtonVariant.values()));
+    variantBox.setSelectedValue(IconButtonVariant.FILLED_TONAL);
     final ElwhaCheckbox mandatoryBox = new ElwhaCheckbox("Mandatory");
     mandatoryBox.setChecked(true);
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Icon Button group");
-    controls.addControl("Variant", variantBox);
+    controls.addControl("", variantBox);
     controls.addControl("", mandatoryBox);
 
     final Runnable rebuild =
         () -> {
-          final IconButtonVariant variant = (IconButtonVariant) variantBox.getSelectedItem();
+          final IconButtonVariant variant = variantBox.getSelectedValue();
           final boolean mandatory = mandatoryBox.isChecked();
           final JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
           final ElwhaIconButtonSelectionGroup group = new ElwhaIconButtonSelectionGroup(mandatory);
@@ -2354,7 +2368,7 @@ public final class ElwhaShowcase {
           }
           workbench.setContainer(row);
         };
-    variantBox.addActionListener(event -> rebuild.run());
+    variantBox.addSelectionChangeListener(value -> rebuild.run());
     mandatoryBox.addActionListener(event -> rebuild.run());
     rebuild.run();
     return workbench;
@@ -2393,16 +2407,26 @@ public final class ElwhaShowcase {
   private static JComponent buildButtonGroupWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JComboBox<ButtonGroupVariant> variantBox = new JComboBox<>(ButtonGroupVariant.values());
-    variantBox.setSelectedItem(ButtonGroupVariant.CONNECTED);
-    final JComboBox<SelectionMode> selectionBox = new JComboBox<>(SelectionMode.values());
-    final JComboBox<ButtonSize> sizeBox = new JComboBox<>(ButtonSize.values());
-    sizeBox.setSelectedItem(ButtonSize.S);
-    final JComboBox<ResizeMode> resizeBox = new JComboBox<>(ResizeMode.values());
-    final JComboBox<ButtonGroupColorStyle> colorBox =
-        new JComboBox<>(ButtonGroupColorStyle.values());
-    colorBox.setSelectedItem(ButtonGroupColorStyle.TONAL);
-    final JComboBox<SegmentContent> contentBox = new JComboBox<>(SegmentContent.values());
+    final ElwhaSelectField<ButtonGroupVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(List.of(ButtonGroupVariant.values()));
+    variantBox.setSelectedValue(ButtonGroupVariant.CONNECTED);
+    final ElwhaSelectField<SelectionMode> selectionBox =
+        ElwhaSelectField.outlined("Selection mode");
+    selectionBox.setOptions(List.of(SelectionMode.values()));
+    selectionBox.setSelectedValue(SelectionMode.SINGLE);
+    final ElwhaSelectField<ButtonSize> sizeBox = ElwhaSelectField.outlined("Size");
+    sizeBox.setOptions(List.of(ButtonSize.values()));
+    sizeBox.setSelectedValue(ButtonSize.S);
+    final ElwhaSelectField<ResizeMode> resizeBox = ElwhaSelectField.outlined("Resize mode");
+    resizeBox.setOptions(List.of(ResizeMode.values()));
+    resizeBox.setSelectedValue(ResizeMode.FIXED);
+    final ElwhaSelectField<ButtonGroupColorStyle> colorBox =
+        ElwhaSelectField.outlined("Connected colour style");
+    colorBox.setOptions(List.of(ButtonGroupColorStyle.values()));
+    colorBox.setSelectedValue(ButtonGroupColorStyle.TONAL);
+    final ElwhaSelectField<SegmentContent> contentBox = ElwhaSelectField.outlined("Content");
+    contentBox.setOptions(List.of(SegmentContent.values()));
+    contentBox.setSelectedValue(SegmentContent.LABELS);
     final JSpinner countSpinner = new JSpinner(new SpinnerNumberModel(3, 2, 5, 1));
     final JSpinner maxWidthSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 600, 20));
     final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
@@ -2410,27 +2434,27 @@ public final class ElwhaShowcase {
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Button group");
-    controls.addControl("Variant", variantBox);
-    controls.addControl("Selection mode", selectionBox);
-    controls.addControl("Size", sizeBox);
-    controls.addControl("Resize mode", resizeBox);
+    controls.addControl("", variantBox);
+    controls.addControl("", selectionBox);
+    controls.addControl("", sizeBox);
+    controls.addControl("", resizeBox);
     controls.addControl("Connected max width", maxWidthSpinner);
     controls.addSection("Segments");
-    controls.addControl("Content", contentBox);
+    controls.addControl("", contentBox);
     controls.addControl("Count", countSpinner);
-    controls.addControl("Connected colour style", colorBox);
+    controls.addControl("", colorBox);
     controls.addSection("State");
     controls.addControl("", enabledBox);
     installMorphControls(controls);
 
     final Runnable apply =
         () -> {
-          final ButtonGroupVariant variant = (ButtonGroupVariant) variantBox.getSelectedItem();
-          final SelectionMode selection = (SelectionMode) selectionBox.getSelectedItem();
-          final ButtonSize size = (ButtonSize) sizeBox.getSelectedItem();
-          final ResizeMode resize = (ResizeMode) resizeBox.getSelectedItem();
-          final ButtonGroupColorStyle color = (ButtonGroupColorStyle) colorBox.getSelectedItem();
-          final SegmentContent content = (SegmentContent) contentBox.getSelectedItem();
+          final ButtonGroupVariant variant = variantBox.getSelectedValue();
+          final SelectionMode selection = selectionBox.getSelectedValue();
+          final ButtonSize size = sizeBox.getSelectedValue();
+          final ResizeMode resize = resizeBox.getSelectedValue();
+          final ButtonGroupColorStyle color = colorBox.getSelectedValue();
+          final SegmentContent content = contentBox.getSelectedValue();
           final int count = (Integer) countSpinner.getValue();
           final int maxWidth = (Integer) maxWidthSpinner.getValue();
           final boolean enabled = enabledBox.isChecked();
@@ -2463,12 +2487,12 @@ public final class ElwhaShowcase {
               renderButtonGroupCode(
                   variant, selection, size, resize, color, content, count, maxWidth, enabled));
         };
-    variantBox.addActionListener(event -> apply.run());
-    selectionBox.addActionListener(event -> apply.run());
-    sizeBox.addActionListener(event -> apply.run());
-    resizeBox.addActionListener(event -> apply.run());
-    colorBox.addActionListener(event -> apply.run());
-    contentBox.addActionListener(event -> apply.run());
+    variantBox.addSelectionChangeListener(value -> apply.run());
+    selectionBox.addSelectionChangeListener(value -> apply.run());
+    sizeBox.addSelectionChangeListener(value -> apply.run());
+    resizeBox.addSelectionChangeListener(value -> apply.run());
+    colorBox.addSelectionChangeListener(value -> apply.run());
+    contentBox.addSelectionChangeListener(value -> apply.run());
     countSpinner.addChangeListener(event -> apply.run());
     maxWidthSpinner.addChangeListener(event -> apply.run());
     enabledBox.addActionListener(event -> apply.run());
@@ -2712,18 +2736,26 @@ public final class ElwhaShowcase {
   private static JComponent buildCardWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JComboBox<CardVariant> variantBox = new JComboBox<>(CardVariant.values());
+    final ElwhaSelectField<CardVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(List.of(CardVariant.values()));
+    variantBox.setSelectedValue(CardVariant.ELEVATED);
     final JSpinner elevationBox =
         new JSpinner(new SpinnerNumberModel(1, 0, ElwhaCard.MAX_ELEVATION, 1));
-    final JComboBox<SpaceScale> padHBox = new JComboBox<>(SpaceScale.values());
-    padHBox.setSelectedItem(SpaceScale.LG);
-    final JComboBox<SpaceScale> padVBox = new JComboBox<>(SpaceScale.values());
-    padVBox.setSelectedItem(SpaceScale.MD);
-    final JComboBox<CardMediaSlot> mediaBox = new JComboBox<>(CardMediaSlot.values());
+    final ElwhaSelectField<SpaceScale> padHBox = ElwhaSelectField.outlined("Padding — horizontal");
+    padHBox.setOptions(List.of(SpaceScale.values()));
+    padHBox.setSelectedValue(SpaceScale.LG);
+    final ElwhaSelectField<SpaceScale> padVBox = ElwhaSelectField.outlined("Padding — vertical");
+    padVBox.setOptions(List.of(SpaceScale.values()));
+    padVBox.setSelectedValue(SpaceScale.MD);
+    final ElwhaSelectField<CardMediaSlot> mediaBox = ElwhaSelectField.outlined("Media");
+    mediaBox.setOptions(List.of(CardMediaSlot.values()));
+    mediaBox.setSelectedValue(CardMediaSlot.NONE);
     final ElwhaCheckbox headerBox = new ElwhaCheckbox("Header (title + subtitle)");
     headerBox.setChecked(true);
-    final JComboBox<CardHeaderLeading> headerLeadingBox =
-        new JComboBox<>(CardHeaderLeading.values());
+    final ElwhaSelectField<CardHeaderLeading> headerLeadingBox =
+        ElwhaSelectField.outlined("Header leading");
+    headerLeadingBox.setOptions(List.of(CardHeaderLeading.values()));
+    headerLeadingBox.setSelectedValue(CardHeaderLeading.NONE);
     final ElwhaCheckbox bodyBox = new ElwhaCheckbox("Supporting text");
     bodyBox.setChecked(true);
     final ElwhaCheckbox dividerBox = new ElwhaCheckbox("Divider");
@@ -2735,20 +2767,23 @@ public final class ElwhaShowcase {
     final ElwhaCheckbox collapsedBox = new ElwhaCheckbox("Collapsed");
     final ElwhaCheckbox animateBox = new ElwhaCheckbox("Animate collapse");
     animateBox.setChecked(true);
-    final JComboBox<ExpansionOverflow> overflowBox = new JComboBox<>(ExpansionOverflow.values());
+    final ElwhaSelectField<ExpansionOverflow> overflowBox =
+        ElwhaSelectField.outlined("Expansion overflow");
+    overflowBox.setOptions(List.of(ExpansionOverflow.values()));
+    overflowBox.setSelectedValue(ExpansionOverflow.GROW);
     final ElwhaCheckbox enabledBox = new ElwhaCheckbox("Enabled");
     enabledBox.setChecked(true);
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Card");
-    controls.addControl("Variant", variantBox);
+    controls.addControl("", variantBox);
     controls.addControl("Elevation", elevationBox);
-    controls.addControl("Padding — horizontal", padHBox);
-    controls.addControl("Padding — vertical", padVBox);
+    controls.addControl("", padHBox);
+    controls.addControl("", padVBox);
     controls.addSection("Slots");
-    controls.addControl("Media", mediaBox);
+    controls.addControl("", mediaBox);
     controls.addControl("", headerBox);
-    controls.addControl("Header leading", headerLeadingBox);
+    controls.addControl("", headerLeadingBox);
     controls.addControl("", bodyBox);
     controls.addControl("", dividerBox);
     controls.addControl("", actionsBox);
@@ -2759,7 +2794,7 @@ public final class ElwhaShowcase {
     controls.addControl("", collapsibleBox);
     controls.addControl("", collapsedBox);
     controls.addControl("", animateBox);
-    controls.addControl("Expansion overflow", overflowBox);
+    controls.addControl("", overflowBox);
     controls.addSection("State");
     controls.addControl("", enabledBox);
 
@@ -2771,13 +2806,13 @@ public final class ElwhaShowcase {
           animateBox.setEnabled(collapsibleBox.isChecked());
           final CardConfig cfg =
               new CardConfig(
-                  (CardVariant) variantBox.getSelectedItem(),
+                  variantBox.getSelectedValue(),
                   (Integer) elevationBox.getValue(),
-                  (SpaceScale) padHBox.getSelectedItem(),
-                  (SpaceScale) padVBox.getSelectedItem(),
-                  (CardMediaSlot) mediaBox.getSelectedItem(),
+                  padHBox.getSelectedValue(),
+                  padVBox.getSelectedValue(),
+                  mediaBox.getSelectedValue(),
                   headerBox.isChecked(),
-                  (CardHeaderLeading) headerLeadingBox.getSelectedItem(),
+                  headerLeadingBox.getSelectedValue(),
                   bodyBox.isChecked(),
                   dividerBox.isChecked(),
                   actionsBox.isChecked(),
@@ -2787,18 +2822,18 @@ public final class ElwhaShowcase {
                   collapsibleBox.isChecked(),
                   collapsedBox.isChecked(),
                   animateBox.isChecked(),
-                  (ExpansionOverflow) overflowBox.getSelectedItem(),
+                  overflowBox.getSelectedValue(),
                   enabledBox.isChecked());
           workbench.setStage(buildCard(cfg));
           workbench.setCode(renderCardCode(cfg));
         };
-    variantBox.addActionListener(event -> apply.run());
+    variantBox.addSelectionChangeListener(value -> apply.run());
     elevationBox.addChangeListener(event -> apply.run());
-    padHBox.addActionListener(event -> apply.run());
-    padVBox.addActionListener(event -> apply.run());
-    mediaBox.addActionListener(event -> apply.run());
+    padHBox.addSelectionChangeListener(value -> apply.run());
+    padVBox.addSelectionChangeListener(value -> apply.run());
+    mediaBox.addSelectionChangeListener(value -> apply.run());
     headerBox.addActionListener(event -> apply.run());
-    headerLeadingBox.addActionListener(event -> apply.run());
+    headerLeadingBox.addSelectionChangeListener(value -> apply.run());
     bodyBox.addActionListener(event -> apply.run());
     dividerBox.addActionListener(event -> apply.run());
     actionsBox.addActionListener(event -> apply.run());
@@ -2808,7 +2843,7 @@ public final class ElwhaShowcase {
     collapsibleBox.addActionListener(event -> apply.run());
     collapsedBox.addActionListener(event -> apply.run());
     animateBox.addActionListener(event -> apply.run());
-    overflowBox.addActionListener(event -> apply.run());
+    overflowBox.addSelectionChangeListener(value -> apply.run());
     enabledBox.addActionListener(event -> apply.run());
     apply.run();
     return workbench;
@@ -3075,8 +3110,10 @@ public final class ElwhaShowcase {
     // not the badge's own axes): the anchor mode + RTL that drive which host composition is staged,
     // and the live host-accessible-name inspector that proves the push-model a11y splice.
     final ElwhaCheckbox rtlBox = new ElwhaCheckbox("RTL");
-    final JComboBox<ElwhaBadgeAnchor.AnchorMode> anchorModeBox =
-        new JComboBox<>(ElwhaBadgeAnchor.AnchorMode.values());
+    final ElwhaSelectField<ElwhaBadgeAnchor.AnchorMode> anchorModeBox =
+        ElwhaSelectField.outlined("Anchor");
+    anchorModeBox.setOptions(List.of(ElwhaBadgeAnchor.AnchorMode.values()));
+    anchorModeBox.setSelectedValue(ElwhaBadgeAnchor.AnchorMode.ICON_CORNER);
     final JLabel a11yInspector = new JLabel("(detached)");
 
     // The Workbench owns the host + its live anchor attachment; the shared editor drives the badge
@@ -3102,7 +3139,7 @@ public final class ElwhaShowcase {
             }
             liveBadge.set(badge);
             final boolean trailingEdge =
-                anchorModeBox.getSelectedItem() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE;
+                anchorModeBox.getSelectedValue() == ElwhaBadgeAnchor.AnchorMode.TRAILING_EDGE;
             final JComponent host = buildBadgeHost(trailingEdge, rtlBox.isChecked(), a11yInspector);
             workbench.setStage(host);
             if (badge != null) {
@@ -3121,13 +3158,13 @@ public final class ElwhaShowcase {
 
     // Re-stage the host (and thus re-anchor the current badge) when the host-owned anchor/RTL
     // change.
-    anchorModeBox.addActionListener(event -> slot.set(liveBadge.get()));
+    anchorModeBox.addSelectionChangeListener(value -> slot.set(liveBadge.get()));
     rtlBox.addActionListener(event -> slot.set(liveBadge.get()));
 
     final WorkbenchControls controls = workbench.controls();
     controls.addControl("", badgeEditor);
     controls.addSection("Layout");
-    controls.addControl("Anchor", anchorModeBox);
+    controls.addControl("", anchorModeBox);
     controls.addControl("", rtlBox);
     controls.addControl("host.name:", a11yInspector);
 
@@ -3229,13 +3266,16 @@ public final class ElwhaShowcase {
     }
     destinations.get(0).setSelected(true);
 
-    final JComboBox<String> badgeBox =
-        new JComboBox<>(new String[] {"None", "Small (dot)", "Large · 3", "Large · 999+"});
-    badgeBox.setSelectedIndex(0);
-    final JComboBox<String> targetBox = new JComboBox<>();
+    final ElwhaSelectField<String> badgeBox = ElwhaSelectField.outlined("Variant");
+    badgeBox.setOptions(List.of("None", "Small (dot)", "Large · 3", "Large · 999+"));
+    badgeBox.setSelectedValue("None");
+    final List<String> targetLabels = new ArrayList<>();
     for (final String[] entry : entries) {
-      targetBox.addItem(entry[1]);
+      targetLabels.add(entry[1]);
     }
+    final ElwhaSelectField<String> targetBox = ElwhaSelectField.outlined("Target");
+    targetBox.setOptions(targetLabels);
+    targetBox.setSelectedValue(targetLabels.get(0));
 
     // Live edit (no Apply button — matches every other Workbench): changing either the target
     // destination or the badge variant applies the badge immediately.
@@ -3243,20 +3283,20 @@ public final class ElwhaShowcase {
     final Runnable applyBadge =
         () -> {
           final com.owspfm.elwha.navrail.ElwhaNavRailDestination target =
-              destinations.get(targetBox.getSelectedIndex());
-          target.setBadge(badgeFor((String) badgeBox.getSelectedItem()));
-          badgeStatus.setText(badgeBox.getSelectedItem() + " → " + target.getLabel());
+              destinations.get(targetLabels.indexOf(targetBox.getSelectedValue()));
+          target.setBadge(badgeFor(badgeBox.getSelectedValue()));
+          badgeStatus.setText(badgeBox.getSelectedValue() + " → " + target.getLabel());
         };
-    targetBox.addActionListener(e -> applyBadge.run());
-    badgeBox.addActionListener(e -> applyBadge.run());
+    targetBox.addSelectionChangeListener(value -> applyBadge.run());
+    badgeBox.addSelectionChangeListener(value -> applyBadge.run());
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Selection");
     controls.addControl(
         "", new JLabel("Click any destination to select it (tab-strip semantics)."));
     controls.addSection("Badge");
-    controls.addControl("Target", targetBox);
-    controls.addControl("Variant", badgeBox);
+    controls.addControl("", targetBox);
+    controls.addControl("", badgeBox);
     controls.addControl("Applied:", badgeStatus);
 
     workbench.setStage(row);
@@ -3416,14 +3456,12 @@ public final class ElwhaShowcase {
         });
 
     // --- #238: trailing-actions overflow ---
-    final JComboBox<com.owspfm.elwha.navrail.ElwhaNavigationRail.OverflowMode> overflowBox =
-        new JComboBox<>(com.owspfm.elwha.navrail.ElwhaNavigationRail.OverflowMode.values());
-    overflowBox.setSelectedItem(rail.getOverflowMode());
-    overflowBox.addActionListener(
-        e ->
-            rail.setOverflowMode(
-                (com.owspfm.elwha.navrail.ElwhaNavigationRail.OverflowMode)
-                    overflowBox.getSelectedItem()));
+    final ElwhaSelectField<com.owspfm.elwha.navrail.ElwhaNavigationRail.OverflowMode> overflowBox =
+        ElwhaSelectField.outlined("Mode");
+    overflowBox.setOptions(
+        List.of(com.owspfm.elwha.navrail.ElwhaNavigationRail.OverflowMode.values()));
+    overflowBox.setSelectedValue(rail.getOverflowMode());
+    overflowBox.addSelectionChangeListener(rail::setOverflowMode);
 
     final javax.swing.JSpinner frameHeightSpinner =
         new javax.swing.JSpinner(new javax.swing.SpinnerNumberModel(720, 280, 900, 40));
@@ -3526,7 +3564,7 @@ public final class ElwhaShowcase {
     // height: shrink the frame under WHEN_NEEDED and the four trailing actions fold into a single
     // ⋮ entry point that opens them as a menu beside the rail.
     controls.addSection("Trailing overflow");
-    controls.addControl("Mode", overflowBox);
+    controls.addControl("", overflowBox);
     controls.addControl("Frame height", frameHeightSpinner);
 
     controls.addSection("Container");
@@ -3671,11 +3709,19 @@ public final class ElwhaShowcase {
   // Triggers are plain (CLICKABLE) — a menu opens on a momentary click; clicking another trigger
   // light-dismisses the current menu and opens the new one.
   private static JComponent buildMenuWorkbench() {
-    final JComboBox<Layout> layout = new JComboBox<>(Layout.values());
-    final JComboBox<Separator> separator = new JComboBox<>(Separator.values());
-    final JComboBox<ColorStyle> colorStyle = new JComboBox<>(ColorStyle.values());
-    final JComboBox<com.owspfm.elwha.menu.SelectionMode> selection =
-        new JComboBox<>(com.owspfm.elwha.menu.SelectionMode.values());
+    final ElwhaSelectField<Layout> layout = ElwhaSelectField.outlined("Layout");
+    layout.setOptions(List.of(Layout.values()));
+    layout.setSelectedValue(Layout.STANDARD);
+    final ElwhaSelectField<Separator> separator = ElwhaSelectField.outlined("Separator");
+    separator.setOptions(List.of(Separator.values()));
+    separator.setSelectedValue(Separator.GAP);
+    final ElwhaSelectField<ColorStyle> colorStyle = ElwhaSelectField.outlined("Color");
+    colorStyle.setOptions(List.of(ColorStyle.values()));
+    colorStyle.setSelectedValue(ColorStyle.STANDARD);
+    final ElwhaSelectField<com.owspfm.elwha.menu.SelectionMode> selection =
+        ElwhaSelectField.outlined("Selection");
+    selection.setOptions(List.of(com.owspfm.elwha.menu.SelectionMode.values()));
+    selection.setSelectedValue(com.owspfm.elwha.menu.SelectionMode.NONE);
     final JLabel status =
         new JLabel(
             "Open a menu from any trigger — note how edge triggers flip / shift to stay in view.");
@@ -3684,7 +3730,7 @@ public final class ElwhaShowcase {
     // state — so the chosen item labels are remembered here and re-applied on every rebuild (reopen
     // and the pick is still checked). Changing the selection mode resets it.
     final java.util.Set<String> selectedLabels = new java.util.LinkedHashSet<>();
-    selection.addItemListener(e -> selectedLabels.clear());
+    selection.addSelectionChangeListener(value -> selectedLabels.clear());
 
     final ElwhaIconButton overflow =
         new ElwhaIconButton(MaterialIcons.moreVert(IconButtonSize.M.iconPx()));
@@ -3694,13 +3740,9 @@ public final class ElwhaShowcase {
                 .open(overflow));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
-    controls.add(new JLabel("Layout:"));
     controls.add(layout);
-    controls.add(new JLabel("Separator:"));
     controls.add(separator);
-    controls.add(new JLabel("Color:"));
     controls.add(colorStyle);
-    controls.add(new JLabel("Selection:"));
     controls.add(selection);
 
     final JPanel triggers = new JPanel(new GridBagLayout());
@@ -3777,10 +3819,10 @@ public final class ElwhaShowcase {
       final int gx,
       final int gy,
       final int anchor,
-      final JComboBox<Layout> layout,
-      final JComboBox<Separator> separator,
-      final JComboBox<ColorStyle> colorStyle,
-      final JComboBox<com.owspfm.elwha.menu.SelectionMode> selection,
+      final ElwhaSelectField<Layout> layout,
+      final ElwhaSelectField<Separator> separator,
+      final ElwhaSelectField<ColorStyle> colorStyle,
+      final ElwhaSelectField<com.owspfm.elwha.menu.SelectionMode> selection,
       final java.util.Set<String> selectedLabels,
       final JLabel status) {
     final ElwhaButton trigger = ElwhaButton.outlinedButton(label);
@@ -3798,18 +3840,17 @@ public final class ElwhaShowcase {
   }
 
   private static ElwhaMenu buildWorkbenchMenu(
-      final JComboBox<Layout> layout,
-      final JComboBox<Separator> separator,
-      final JComboBox<ColorStyle> colorStyle,
-      final JComboBox<com.owspfm.elwha.menu.SelectionMode> selection,
+      final ElwhaSelectField<Layout> layout,
+      final ElwhaSelectField<Separator> separator,
+      final ElwhaSelectField<ColorStyle> colorStyle,
+      final ElwhaSelectField<com.owspfm.elwha.menu.SelectionMode> selection,
       final java.util.Set<String> selectedLabels,
       final JLabel status) {
-    final com.owspfm.elwha.menu.SelectionMode mode =
-        (com.owspfm.elwha.menu.SelectionMode) selection.getSelectedItem();
+    final com.owspfm.elwha.menu.SelectionMode mode = selection.getSelectedValue();
     final ElwhaMenu.Builder b = ElwhaMenu.builder();
-    b.layout((Layout) layout.getSelectedItem());
-    b.separator((Separator) separator.getSelectedItem());
-    b.colorStyle((ColorStyle) colorStyle.getSelectedItem());
+    b.layout(layout.getSelectedValue());
+    b.separator(separator.getSelectedValue());
+    b.colorStyle(colorStyle.getSelectedValue());
     b.selectionMode(mode);
     final ElwhaMenu[] holder = new ElwhaMenu[1];
     if (mode != com.owspfm.elwha.menu.SelectionMode.NONE) {
@@ -3832,7 +3873,7 @@ public final class ElwhaShowcase {
     // A nested submenu (V2): Share › Email / Copy link / Embed. The submenu opens to the side on
     // hover / click / Right, inherits the menu's color style, and morphs the active-state corners.
     b.addItem(rename).addItem(duplicate).addItem(buildShareSubMenuItem(status)).addItem(share);
-    if (layout.getSelectedItem() == Layout.GROUPED) {
+    if (layout.getSelectedValue() == Layout.GROUPED) {
       b.addGroup();
       final ElwhaMenuItem delete = ElwhaMenuItem.of(MaterialIcons.delete(20), "Delete");
       delete.addActionListener(e -> status.setText("Activated: Delete"));
@@ -3942,8 +3983,9 @@ public final class ElwhaShowcase {
   }
 
   private static JComponent buildDialogWorkbench() {
-    final JComboBox<Integer> actionCount = new JComboBox<>(new Integer[] {1, 2, 3});
-    actionCount.setSelectedItem(2);
+    final ElwhaSelectField<Integer> actionCount = ElwhaSelectField.outlined("Actions");
+    actionCount.setOptions(List.of(1, 2, 3));
+    actionCount.setSelectedValue(2);
     final ElwhaCheckbox scrimDismiss = new ElwhaCheckbox("scrim-dismissible");
     scrimDismiss.setChecked(true);
     final ElwhaCheckbox escDismiss = new ElwhaCheckbox("Esc-dismissible");
@@ -4007,7 +4049,6 @@ public final class ElwhaShowcase {
                 fullScreen, fsConfirm, fsDivider, escDismiss, reducedMotion, status));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
-    controls.add(new JLabel("Actions:"));
     controls.add(actionCount);
     controls.add(scrimDismiss);
     controls.add(escDismiss);
@@ -4036,7 +4077,7 @@ public final class ElwhaShowcase {
   private static void openWorkbenchDialog(
       final Component parent,
       final DialogVariant variant,
-      final JComboBox<Integer> actionCount,
+      final ElwhaSelectField<Integer> actionCount,
       final ElwhaCheckbox scrimDismiss,
       final ElwhaCheckbox escDismiss,
       final ElwhaCheckbox reducedMotion,
@@ -4063,7 +4104,7 @@ public final class ElwhaShowcase {
     }
 
     final boolean destructive = variant == DialogVariant.DESTRUCTIVE;
-    final int count = (Integer) actionCount.getSelectedItem();
+    final int count = actionCount.getSelectedValue();
     builder.confirmAction(ElwhaButton.filledButton(destructive ? "Delete" : "Confirm"));
     if (count >= 3) {
       builder.alternateAction(ElwhaButton.textButton("Not now"));

@@ -2,15 +2,16 @@ package com.owspfm.elwha.showcase;
 
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox.CheckState;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.textfield.ElwhaTextField;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -26,11 +27,12 @@ import javax.swing.event.DocumentListener;
  * constraint is what makes the label's ellipsis truncation observable), error, and enabled controls
  * plus the generated-code view, and a state gallery matrix rendering enabled / hover / focused /
  * pressed / disabled across the plain, labeled, error, indeterminate, and truncating-label
- * configurations. The boolean workbench controls are themselves {@code ElwhaCheckbox}es and the
- * label control is an {@link ElwhaTextField} — the component dogfoods its own leaf.
+ * configurations. The boolean workbench controls are themselves {@code ElwhaCheckbox}es, the state
+ * selector is an {@link ElwhaSelectField}, and the label control is an {@link ElwhaTextField} — the
+ * component dogfoods its own leaf.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 final class CheckboxShowcasePanels {
@@ -41,7 +43,9 @@ final class CheckboxShowcasePanels {
   static JComponent buildWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JComboBox<CheckState> stateBox = new JComboBox<>(CheckState.values());
+    final ElwhaSelectField<CheckState> stateBox = ElwhaSelectField.outlined("State");
+    stateBox.setOptions(List.of(CheckState.values()));
+    stateBox.setSelectedValue(CheckState.UNCHECKED);
     final ElwhaTextField labelCtl = ElwhaTextField.outlined("");
     labelCtl.setText("Remember this device");
     final ElwhaCheckbox errorCtl = new ElwhaCheckbox("Error shown");
@@ -56,7 +60,7 @@ final class CheckboxShowcasePanels {
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Checkbox");
-    controls.addControl("State", stateBox);
+    controls.addControl("", stateBox);
     controls.addControl("Label", labelCtl);
     controls.addControl("", constrainCtl);
     controls.addControl("Width", widthSpinner);
@@ -66,7 +70,7 @@ final class CheckboxShowcasePanels {
 
     final Runnable apply =
         () -> {
-          final CheckState state = (CheckState) stateBox.getSelectedItem();
+          final CheckState state = stateBox.getSelectedValue();
           final String label = labelCtl.getText();
           final boolean constrained = constrainCtl.isChecked();
           final int width = (Integer) widthSpinner.getValue();
@@ -87,9 +91,9 @@ final class CheckboxShowcasePanels {
         };
 
     // The live subject feeds the state selector back so a stage click keeps the rail honest.
-    subject.addActionListener(e -> stateBox.setSelectedItem(subject.getCheckState()));
+    subject.addActionListener(e -> stateBox.setSelectedValue(subject.getCheckState()));
 
-    stateBox.addActionListener(e -> apply.run());
+    stateBox.addSelectionChangeListener(v -> apply.run());
     onChange(labelCtl, apply);
     constrainCtl.addActionListener(e -> apply.run());
     widthSpinner.addChangeListener(e -> apply.run());

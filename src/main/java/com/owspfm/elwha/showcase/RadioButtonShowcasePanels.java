@@ -1,7 +1,9 @@
 package com.owspfm.elwha.showcase;
 
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.radio.ElwhaRadioButton;
 import com.owspfm.elwha.radio.ElwhaRadioGroup;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.BorderLayout;
 import java.awt.ComponentOrientation;
@@ -10,11 +12,10 @@ import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -27,10 +28,11 @@ import javax.swing.SwingConstants;
  * and reduced-motion controls plus a generated construction snippet; and a state gallery — the
  * Unselected / Selected rows against Enabled / Hover / Focused / Pressed / Disabled columns (the
  * pressed column shows the M3 <strong>press swap</strong> from both sides, the disabled column both
- * 0.38 treatments) over a live grouped strip exercising arrows + roving focus in place.
+ * 0.38 treatments) over a live grouped strip exercising arrows + roving focus in place. The control
+ * rail dogfoods {@link ElwhaSelectField} and {@link ElwhaCheckbox}.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 final class RadioButtonShowcasePanels {
@@ -51,21 +53,25 @@ final class RadioButtonShowcasePanels {
     }
     group.setSelected(radios[0]);
 
-    final String[] selectionOptions = {"First option", "Second option", "Third option", "(none)"};
-    final JComboBox<String> selectedBox = new JComboBox<>(selectionOptions);
-    final JCheckBox[] enabledBoxes = new JCheckBox[MEMBER_NAMES.length];
+    final List<String> selectionOptions =
+        List.of("First option", "Second option", "Third option", "(none)");
+    final ElwhaSelectField<String> selectedBox = ElwhaSelectField.outlined("Selected");
+    selectedBox.setOptions(selectionOptions);
+    selectedBox.setSelectedValue(selectionOptions.get(0));
+    final ElwhaCheckbox[] enabledBoxes = new ElwhaCheckbox[MEMBER_NAMES.length];
     for (int i = 0; i < MEMBER_NAMES.length; i++) {
-      enabledBoxes[i] = new JCheckBox(MEMBER_NAMES[i] + " enabled", true);
+      enabledBoxes[i] = new ElwhaCheckbox(MEMBER_NAMES[i] + " enabled");
+      enabledBoxes[i].setChecked(true);
     }
-    final JCheckBox rtlBox = new JCheckBox("Right-to-left");
-    final JCheckBox reducedBox = new JCheckBox("Reduced motion (global)");
-    reducedBox.setSelected(MorphAnimator.isReducedMotion());
+    final ElwhaCheckbox rtlBox = new ElwhaCheckbox("Right-to-left");
+    final ElwhaCheckbox reducedBox = new ElwhaCheckbox("Reduced motion (global)");
+    reducedBox.setChecked(MorphAnimator.isReducedMotion());
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Radio group");
-    controls.addControl("Selected", selectedBox);
+    controls.addControl("", selectedBox);
     controls.addSection("Members");
-    for (final JCheckBox box : enabledBoxes) {
+    for (final ElwhaCheckbox box : enabledBoxes) {
       controls.addControl("", box);
     }
     controls.addSection("Context");
@@ -84,15 +90,13 @@ final class RadioButtonShowcasePanels {
           readout.setText(
               "group.getSelected() → " + (current == null ? "null" : current.getLabel()));
           // Reflect user-driven changes (click / arrows on the stage) back into the control.
-          int index = selectionOptions.length - 1;
+          int index = selectionOptions.size() - 1;
           for (int i = 0; i < radios.length; i++) {
             if (current == radios[i]) {
               index = i;
             }
           }
-          if (selectedBox.getSelectedIndex() != index) {
-            selectedBox.setSelectedIndex(index);
-          }
+          selectedBox.setSelectedValue(selectionOptions.get(index));
         });
 
     // The stage is built ONCE; apply mutates state in place. Rebuilding per event re-parents the
@@ -102,7 +106,7 @@ final class RadioButtonShowcasePanels {
 
     final Runnable apply =
         () -> {
-          final int selection = selectedBox.getSelectedIndex();
+          final int selection = selectionOptions.indexOf(selectedBox.getSelectedValue());
           if (selection >= 0 && selection < radios.length) {
             if (group.getSelected() != radios[selection]) {
               group.setSelected(radios[selection]);
@@ -111,29 +115,29 @@ final class RadioButtonShowcasePanels {
             group.clearSelection();
           }
           final ComponentOrientation orientation =
-              rtlBox.isSelected()
+              rtlBox.isChecked()
                   ? ComponentOrientation.RIGHT_TO_LEFT
                   : ComponentOrientation.LEFT_TO_RIGHT;
           for (int i = 0; i < radios.length; i++) {
-            radios[i].setEnabled(enabledBoxes[i].isSelected());
+            radios[i].setEnabled(enabledBoxes[i].isChecked());
             radios[i].setComponentOrientation(orientation);
             rowPanels[i].setComponentOrientation(orientation);
             rowPanels[i].revalidate();
           }
-          MorphAnimator.setReducedMotion(reducedBox.isSelected());
+          MorphAnimator.setReducedMotion(reducedBox.isChecked());
           workbench.setCode(
               renderCode(
                   selection,
                   new boolean[] {
-                    enabledBoxes[0].isSelected(),
-                    enabledBoxes[1].isSelected(),
-                    enabledBoxes[2].isSelected()
+                    enabledBoxes[0].isChecked(),
+                    enabledBoxes[1].isChecked(),
+                    enabledBoxes[2].isChecked()
                   },
-                  rtlBox.isSelected()));
+                  rtlBox.isChecked()));
         };
 
-    selectedBox.addActionListener(e -> apply.run());
-    for (final JCheckBox box : enabledBoxes) {
+    selectedBox.addSelectionChangeListener(v -> apply.run());
+    for (final ElwhaCheckbox box : enabledBoxes) {
       box.addActionListener(e -> apply.run());
     }
     rtlBox.addActionListener(e -> apply.run());

@@ -10,12 +10,12 @@ import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import java.awt.Component;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JSpinner;
 import org.junit.jupiter.api.Test;
@@ -29,9 +29,14 @@ import org.junit.jupiter.params.provider.MethodSource;
  *
  * <p>The sweep is deliberately exhaustive rather than representative. A workbench's {@code apply}
  * rebuilds its live component from the full control set on every change, so an illegal pairing, a
- * null-hostile combo entry, or a control wired to nothing only shows up when something walks the
- * whole matrix. Controls are driven through their models and actions, never through focus, so all
- * of it stays in the headless tier.
+ * null-hostile option, or a control wired to nothing only shows up when something walks the whole
+ * matrix. Controls are driven through their models and actions, never through focus, so all of it
+ * stays in the headless tier.
+ *
+ * <p>The rails are Elwha's own controls since the dogfood sweep (#424): an {@code ElwhaSelectField}
+ * is driven through {@code getOptions()} + {@code setSelectedValue}, an {@code ElwhaCheckbox}
+ * through {@code doClick()}. {@code JSpinner} is the one raw survivor — the library has no stepper
+ * — and keeps its row label where the Elwha controls carry their captions themselves.
  */
 @ExtendWith({EdtInterceptor.class, ThemeExtension.class})
 class WorkbenchControlApplyTest {
@@ -57,6 +62,58 @@ class WorkbenchControlApplyTest {
     return ShowcaseFixture.findAll(workbench.controls(), type);
   }
 
+  // -------------------------------------------------- the sweep sweeps something
+
+  /**
+   * The sweeps below iterate whatever controls they find, so a rail that stopped exposing any would
+   * turn every one of them into a green no-op. That is exactly what the dogfood sweep (#424) risked
+   * — it retyped every rail control, and a sweep still looking for the old type would have passed
+   * loudly and tested nothing. The floors are the counts the swept Showcase actually carries; they
+   * are a tripwire, not a target, so raising a floor is fine and dropping below one is the bug.
+   */
+  @Test
+  void sweepsFindTheControlsTheyWalk() {
+    int selects = 0;
+    int toggles = 0;
+    int spinners = 0;
+    int options = 0;
+    for (final String label : workbenchLeaves()) {
+      final ComponentWorkbench workbench = workbenchOf(label);
+      for (final ElwhaSelectField<?> select : controlsOfType(workbench, ElwhaSelectField.class)) {
+        selects++;
+        options += select.getOptions().size();
+      }
+      toggles += controlsOfType(workbench, ElwhaCheckbox.class).size();
+      spinners += controlsOfType(workbench, JSpinner.class).size();
+    }
+
+    assertThat(selects).as("select fields the choice sweep walks").isGreaterThanOrEqualTo(65);
+    assertThat(options).as("choices the choice sweep applies").isGreaterThanOrEqualTo(400);
+    assertThat(toggles).as("checkboxes the toggle sweeps click").isGreaterThanOrEqualTo(75);
+    assertThat(spinners).as("spinners the spinner sweep steps").isGreaterThanOrEqualTo(20);
+  }
+
+  /**
+   * Every rail control is reachable by the caption it shows. The sweep moved most captions off the
+   * row label and into the control's own floating label, and a caption that resolves to nothing is
+   * a control no by-name test can ever drive again.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("workbenchLeaves")
+  void everyRailControlIsReachableByItsCaption(final String label) {
+    final ComponentWorkbench workbench = workbenchOf(label);
+
+    for (final ElwhaSelectField<?> select : controlsOfType(workbench, ElwhaSelectField.class)) {
+      final String caption = ShowcaseFixture.labelOf(select);
+      assertThat(caption).as("%s — a rail select with no caption at all", label).isNotEmpty();
+      assertThat(ShowcaseFixture.controlLabelled(select.getParent(), caption))
+          .as(
+              "%s — the %s select does not resolve back to itself by its own caption",
+              label, caption)
+          .isSameAs(select);
+    }
+  }
+
   // ------------------------------------------------------------- the sweeps
 
   @ParameterizedTest(name = "{0}")
@@ -69,26 +126,26 @@ class WorkbenchControlApplyTest {
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("workbenchLeaves")
-  void everyChoiceOnEveryComboApplies(final String label) {
+  void everyChoiceOnEverySelectApplies(final String label) {
     final ComponentWorkbench workbench = workbenchOf(label);
 
-    for (final JComboBox<?> combo : controlsOfType(workbench, JComboBox.class)) {
-      final int original = combo.getSelectedIndex();
-      for (int choice = 0; choice < combo.getItemCount(); choice++) {
-        combo.setSelectedIndex(choice);
+    for (final ElwhaSelectField<?> select : controlsOfType(workbench, ElwhaSelectField.class)) {
+      final Object original = select.getSelectedValue();
+      for (final Object choice : select.getOptions()) {
+        choose(select, choice);
 
         assertThat(workbench.stage())
             .as(
                 "%s — choosing %s on the %s control left the stage empty",
-                label, combo.getItemAt(choice), name(combo))
+                label, choice, name(select))
             .isNotNull();
         assertThat(ShowcaseFixture.descendants(workbench))
             .as(
                 "%s — choosing %s on the %s control staged a component that never got mounted",
-                label, combo.getItemAt(choice), name(combo))
+                label, choice, name(select))
             .contains(workbench.stage());
       }
-      restore(combo, original);
+      restore(select, original);
     }
   }
 
@@ -174,10 +231,10 @@ class WorkbenchControlApplyTest {
   @Test
   void buttonVariantControlRestagesTheButton() {
     final ComponentWorkbench workbench = workbenchOf("Button");
-    final JComboBox<?> variants = combo(workbench, "Variant");
+    final ElwhaSelectField<?> variants = select(workbench, "Variant");
 
     for (final ButtonVariant variant : ButtonVariant.values()) {
-      variants.setSelectedItem(variant);
+      choose(variants, variant);
 
       assertThat(((ElwhaButton) workbench.stage()).getVariant())
           .as("the control does not merely record a choice; it rebuilds the live button")
@@ -188,10 +245,10 @@ class WorkbenchControlApplyTest {
   @Test
   void buttonSizeControlRestagesTheButton() {
     final ComponentWorkbench workbench = workbenchOf("Button");
-    final JComboBox<?> sizes = combo(workbench, "Size");
+    final ElwhaSelectField<?> sizes = select(workbench, "Size");
 
     for (final ButtonSize size : ButtonSize.values()) {
-      sizes.setSelectedItem(size);
+      choose(sizes, size);
 
       assertThat(((ElwhaButton) workbench.stage()).getButtonSize()).isEqualTo(size);
     }
@@ -215,7 +272,7 @@ class WorkbenchControlApplyTest {
   void buttonCodeViewTracksTheChosenVariant() {
     final ComponentWorkbench workbench = workbenchOf("Button");
 
-    combo(workbench, "Variant").setSelectedItem(ButtonVariant.OUTLINED);
+    choose(select(workbench, "Variant"), ButtonVariant.OUTLINED);
 
     assertThat(workbench.codeFor("Component"))
         .as("the equivalent Java is regenerated with the component, not left stale")
@@ -225,13 +282,13 @@ class WorkbenchControlApplyTest {
   @Test
   void illegalSelectableTextPairingIsCoercedRatherThanThrown() {
     final ComponentWorkbench workbench = workbenchOf("Button");
-    final JComboBox<?> variants = combo(workbench, "Variant");
-    final JComboBox<?> modes = combo(workbench, "Interaction mode");
+    final ElwhaSelectField<?> variants = select(workbench, "Variant");
+    final ElwhaSelectField<?> modes = select(workbench, "Interaction mode");
 
-    variants.setSelectedItem(ButtonVariant.TEXT);
-    modes.setSelectedItem(com.owspfm.elwha.button.ButtonInteractionMode.SELECTABLE);
+    choose(variants, ButtonVariant.TEXT);
+    choose(modes, com.owspfm.elwha.button.ButtonInteractionMode.SELECTABLE);
 
-    assertThat(modes.getSelectedItem())
+    assertThat(modes.getSelectedValue())
         .as(
             "#183 — SELECTABLE + TEXT is illegal, so the workbench walks the control back to a "
                 + "legal pairing instead of letting the demo throw")
@@ -242,10 +299,10 @@ class WorkbenchControlApplyTest {
   @Test
   void chipVariantControlRestagesTheChip() {
     final ComponentWorkbench workbench = workbenchOf("Chip");
-    final JComboBox<?> variants = combo(workbench, "Variant");
+    final ElwhaSelectField<?> variants = select(workbench, "Variant");
 
     for (final ChipVariant variant : ChipVariant.values()) {
-      variants.setSelectedItem(variant);
+      choose(variants, variant);
 
       assertThat(((ElwhaChip) workbench.stage()).getVariant()).isEqualTo(variant);
     }
@@ -254,10 +311,10 @@ class WorkbenchControlApplyTest {
   @Test
   void iconButtonVariantControlRestagesTheButton() {
     final ComponentWorkbench workbench = workbenchOf("Icon Button");
-    final JComboBox<?> variants = combo(workbench, "Variant");
+    final ElwhaSelectField<?> variants = select(workbench, "Variant");
 
     for (final IconButtonVariant variant : IconButtonVariant.values()) {
-      variants.setSelectedItem(variant);
+      choose(variants, variant);
 
       assertThat(((ElwhaIconButton) workbench.stage()).getVariant()).isEqualTo(variant);
     }
@@ -278,10 +335,18 @@ class WorkbenchControlApplyTest {
         .isNotNull();
   }
 
-  private static void restore(final JComboBox<?> combo, final int original) {
-    if (original >= 0 && original < combo.getItemCount()) {
-      combo.setSelectedIndex(original);
+  private static void restore(final ElwhaSelectField<?> select, final Object original) {
+    if (original != null) {
+      choose(select, original);
     }
+  }
+
+  // A select is generic in its option type, and the sweeps walk it as ElwhaSelectField<?> — every
+  // value handed back comes from this same field's own getOptions(), so the cast holds by
+  // construction and setSelectedValue's not-among-the-options throw is unreachable from here.
+  @SuppressWarnings("unchecked")
+  private static void choose(final ElwhaSelectField<?> select, final Object value) {
+    ((ElwhaSelectField<Object>) select).setSelectedValue(value);
   }
 
   private static void setChecked(final ElwhaCheckbox toggle, final boolean checked) {
@@ -290,10 +355,11 @@ class WorkbenchControlApplyTest {
     }
   }
 
-  private static JComboBox<?> combo(final ComponentWorkbench workbench, final String label) {
+  private static ElwhaSelectField<?> select(
+      final ComponentWorkbench workbench, final String label) {
     final Component control = ShowcaseFixture.controlLabelled(workbench.controls(), label);
-    assertThat(control).as("the %s control", label).isInstanceOf(JComboBox.class);
-    return (JComboBox<?>) control;
+    assertThat(control).as("the %s control", label).isInstanceOf(ElwhaSelectField.class);
+    return (ElwhaSelectField<?>) control;
   }
 
   private static ElwhaCheckbox toggle(final ComponentWorkbench workbench, final String text) {
