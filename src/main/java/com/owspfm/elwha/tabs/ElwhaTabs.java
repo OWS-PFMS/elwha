@@ -13,6 +13,7 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,7 @@ import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -133,10 +135,28 @@ public class ElwhaTabs extends JComponent implements Accessible {
     addMouseWheelListener(
         e -> {
           if (tabMode != TabMode.SCROLLABLE || !isEnabled()) {
+            passWheelUp(e);
             return;
           }
+          final int before = scrollOffset;
           setScrollOffset(scrollOffset + (int) Math.round(e.getPreciseWheelRotation() * 30));
+          if (scrollOffset == before) {
+            passWheelUp(e);
+          }
         });
+  }
+
+  // Hands a notch this bar did not act on to the enclosing scroll pane. Returning early is not
+  // enough: Component.dispatchEventImpl retargets a wheel event to an ancestor only while
+  // eventTypeEnabled(MOUSE_WHEEL) is false, and registering any MouseWheelListener at all makes it
+  // true — so without this the event dies here and a page freezes whenever the pointer is over the
+  // bar (#624). A bar already at its scroll limit is "did not act on it" too, so the page keeps
+  // scrolling past a strip that has nowhere left to go.
+  private void passWheelUp(final MouseWheelEvent e) {
+    final Container parent = getParent();
+    if (parent != null && !e.isConsumed()) {
+      parent.dispatchEvent(SwingUtilities.convertMouseEvent(this, e, parent));
+    }
   }
 
   /**
