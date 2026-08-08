@@ -1,12 +1,16 @@
 package com.owspfm.elwha.switches;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.owspfm.elwha.testkit.EdtInterceptor;
+import com.owspfm.elwha.testkit.Input;
 import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.StateLayer;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.image.BufferedImage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -203,5 +207,64 @@ class ElwhaSwitchDisabledPaintTest {
         CENTER_Y,
         ColorRole.PRIMARY.resolve(),
         "the disabled treatment is a paint-time branch, not a latched state");
+  }
+
+  // ------------------------------------------------------- transient teardown
+
+  @Test
+  void disablingDropsThePointerCursorTheHoverInstalled() {
+    final ElwhaSwitch toggle = new ElwhaSwitch();
+    toggle.setSize(WIDTH, HEIGHT);
+    Input.enter(toggle, WIDTH / 2, CENTER_Y);
+
+    assertThat(toggle.getCursor().getType())
+        .as("hovering an enabled switch advertises it as clickable")
+        .isEqualTo(Cursor.HAND_CURSOR);
+
+    toggle.setEnabled(false);
+
+    assertThat(toggle.getCursor().getType())
+        .as(
+            "nothing on the exit path checks isEnabled, so the disable has to take the cursor back"
+                + " itself")
+        .isEqualTo(Cursor.DEFAULT_CURSOR);
+  }
+
+  @Test
+  void aSwitchDisabledWhileHoveredComesBackAtRest() {
+    final ElwhaSwitch toggle = new ElwhaSwitch();
+    toggle.setSize(WIDTH, HEIGHT);
+    Input.enter(toggle, WIDTH / 2, CENTER_Y);
+    Input.press(toggle, WIDTH / 2, CENTER_Y);
+
+    toggle.setEnabled(false);
+    toggle.setEnabled(true);
+
+    Pixels.assertPixelNear(
+        render(toggle),
+        OFF_HANDLE_X,
+        CENTER_Y - 18,
+        GROUND,
+        "re-enabling without moving the pointer must not replay the hover halo the disable"
+            + " should have dropped");
+  }
+
+  @Test
+  void aSwitchDisabledMidDragDoesNotFreezeItsHandleWhereThePointerLeftIt() {
+    final ElwhaSwitch toggle = new ElwhaSwitch();
+    toggle.setSize(WIDTH, HEIGHT);
+    Input.press(toggle, OFF_HANDLE_X, CENTER_Y);
+    Input.drag(toggle, ON_HANDLE_X, CENTER_Y);
+
+    toggle.setEnabled(false);
+    toggle.setEnabled(true);
+
+    Pixels.assertPixelNear(
+        render(toggle),
+        OFF_HANDLE_X,
+        CENTER_Y,
+        ColorRole.OUTLINE.resolve(),
+        "handleFraction follows dragFraction for as long as `dragging` holds, so an abandoned drag"
+            + " would otherwise strand the handle mid-track for good");
   }
 }

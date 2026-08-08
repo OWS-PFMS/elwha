@@ -520,6 +520,33 @@ public class ElwhaSwitch extends JComponent {
     return iconsVisible && !showOnlySelectedIcon;
   }
 
+  // ---------------------------------------------------------------- enablement
+
+  @Override
+  public void setEnabled(final boolean enabled) {
+    super.setEnabled(enabled);
+    if (!enabled) {
+      // The ElwhaCheckbox / ElwhaRadioButton clear-transient-state block, plus the drag. Two
+      // switch-specific reasons it is needed here: mouseEntered installs the hand cursor and
+      // nothing on the way out checks isEnabled, so a disabled switch keeps advertising itself as
+      // clickable; and handleFraction() reads dragFraction for as long as `dragging` holds, so a
+      // switch disabled mid-drag would freeze its handle wherever the pointer left it.
+      if (dragging) {
+        slideTween.seed(dragFraction);
+      }
+      hovered = false;
+      pressed = false;
+      dragging = false;
+      if (rippleTimer != null) {
+        rippleTimer.stop();
+      }
+      rippleProgress = 1f;
+      syncMotion(false);
+      setCursor(Cursor.getDefaultCursor());
+    }
+    repaint();
+  }
+
   // -------------------------------------------------------------------- sizing
 
   @Override
