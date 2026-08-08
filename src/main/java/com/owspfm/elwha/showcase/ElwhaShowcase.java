@@ -158,6 +158,33 @@ public final class ElwhaShowcase {
   static final String AREA_FOUNDATIONS = "Foundations";
   static final String AREA_COMPONENTS = "Components";
   static final String AREA_CONTAINERS = "Containers";
+
+  // Component families, named and ordered after the package taxonomy in CLAUDE.md. The Components
+  // area is 25 leaves deep — flat and alphabetical, it reads as a wall you can only search by name.
+  // Grouping it by the same families the library documents itself with lets the landing be browsed
+  // by kind, and keeps one taxonomy between the source tree and the storefront (#441).
+  static final String GROUP_ACTIONS = "Actions";
+  static final String GROUP_SELECTION = "Selection controls";
+  static final String GROUP_FIELDS = "Fields";
+  static final String GROUP_SURFACES = "Containers & surfaces";
+  static final String GROUP_OVERLAYS = "Overlays";
+  static final String GROUP_NAVIGATION = "Navigation";
+  static final String GROUP_FEEDBACK = "Feedback";
+
+  // Family render order, taxonomy order — what you reach for first (actions) through what reports
+  // back to you (feedback). Areas that do not subdivide contribute one group named for themselves.
+  private static final List<String> GROUP_ORDER =
+      List.of(
+          AREA_FOUNDATIONS,
+          GROUP_ACTIONS,
+          GROUP_SELECTION,
+          GROUP_FIELDS,
+          GROUP_SURFACES,
+          GROUP_OVERLAYS,
+          GROUP_NAVIGATION,
+          GROUP_FEEDBACK,
+          AREA_CONTAINERS);
+
   // Maximum width of the landing-page card grid. Caps cards at ~320 dp each (960 / 3) so the
   // grid reads as a dashboard tile-row rather than stretching cards to the full frame width.
   private static final int MAX_GRID_WIDTH = 960;
@@ -184,21 +211,35 @@ public final class ElwhaShowcase {
 
   /**
    * Catalog entry for one Showcase leaf — what every landing-page card renders and what the
-   * back-affordance returns to. Holds the leaf's display label, supporting copy, parent area, and
-   * the realised JComponent surface that goes into the CardLayout.
+   * back-affordance returns to. Holds the leaf's display label, supporting copy, parent area, the
+   * component family it groups under within that area, and the realised JComponent surface that
+   * goes into the CardLayout.
    */
   static final class LeafEntry {
     final String label;
     final String supporting;
     final String area;
+    final String group;
     final JComponent surface;
 
     LeafEntry(
-        final String label, final String supporting, final String area, final JComponent surface) {
+        final String label,
+        final String supporting,
+        final String area,
+        final String group,
+        final JComponent surface) {
       this.label = label;
       this.supporting = supporting;
       this.area = area;
+      this.group = group;
       this.surface = surface;
+    }
+
+    // An area that does not subdivide is its own single family, so its landing renders one
+    // unheaded grid exactly as it did before the taxonomy pass.
+    LeafEntry(
+        final String label, final String supporting, final String area, final JComponent surface) {
+      this(label, supporting, area, area, surface);
     }
   }
 
@@ -611,10 +652,10 @@ public final class ElwhaShowcase {
 
   // --- navigation rail + content cards ---
 
-  // Catalog of every Showcase leaf — label, supporting blurb, area, and the realised surface
-  // component. The order here is the order Home + the area landings render their cards in, and
-  // is also the order the Components/Containers area destinations are traversed from. Foundations
-  // appears first per the rail's first-primary-selected-by-default contract — see buildAndShow.
+  // Catalog of every Showcase leaf — label, supporting blurb, area, component family, and the
+  // realised surface component. Registration order groups each area's leaves contiguously with
+  // Foundations first, per the rail's first-primary-selected-by-default contract (see
+  // buildAndShow); the order cards actually RENDER in is derived, not this — see leavesIn.
   void populateCatalog() {
     register(
         new LeafEntry(
@@ -650,60 +691,70 @@ public final class ElwhaShowcase {
             "Button",
             "The M3 Expressive button — five variants, four sizes, the morph kit, all knobs.",
             AREA_COMPONENTS,
+            GROUP_ACTIONS,
             buildButtonComponent()));
     register(
         new LeafEntry(
             "Chip",
             "Assist / filter / input / suggestion chips with trailing-slot variants.",
             AREA_COMPONENTS,
+            GROUP_SELECTION,
             buildChipComponent()));
     register(
         new LeafEntry(
             "Icon Button",
             "Icon-only buttons with the same variant + interaction-mode contract as Button.",
             AREA_COMPONENTS,
+            GROUP_ACTIONS,
             buildIconButtonComponent()));
     register(
         new LeafEntry(
             "FAB",
             "Floating Action Button — Standard ↔ Extended morph, three sizes, four colors.",
             AREA_COMPONENTS,
+            GROUP_ACTIONS,
             buildFabComponent()));
     register(
         new LeafEntry(
             "Badge",
             "M3 Badge primitive + anchor — dot, count, and label forms on any icon-bearing host.",
             AREA_COMPONENTS,
+            GROUP_FEEDBACK,
             buildBadgeComponent()));
     register(
         new LeafEntry(
             "Nav Rail Destination",
             "The rail's destination atom — Collapsed / Expanded layouts and badge slot.",
             AREA_COMPONENTS,
+            GROUP_NAVIGATION,
             buildNavRailDestinationComponent()));
     register(
         new LeafEntry(
             "Navigation Rail",
             "The full rail container — chrome slots, sections, Collapsed ↔ Expanded morph.",
             AREA_COMPONENTS,
+            GROUP_NAVIGATION,
             buildNavigationRailComponent()));
     register(
         new LeafEntry(
             "Button Group",
             "M3 segmented + connected button groups with single / required / multi selection.",
             AREA_COMPONENTS,
+            GROUP_ACTIONS,
             buildButtonGroupComponent()));
     register(
         new LeafEntry(
             "Card",
             "ElwhaCard variants and composition primitives (header, body, actions, media).",
             AREA_COMPONENTS,
+            GROUP_SURFACES,
             buildCardComponent()));
     register(
         new LeafEntry(
             "Surface",
             "The token-driven surface primitive underpinning every chrome component.",
             AREA_COMPONENTS,
+            GROUP_SURFACES,
             buildSurfaceComponent()));
     register(
         new LeafEntry(
@@ -711,6 +762,7 @@ public final class ElwhaShowcase {
             "M3 Basic Dialog — modal overlay with icon / headline / supporting / content /"
                 + " actions.",
             AREA_COMPONENTS,
+            GROUP_OVERLAYS,
             buildDialogComponent()));
     register(
         new LeafEntry(
@@ -718,6 +770,7 @@ public final class ElwhaShowcase {
             "M3 Menu — anchored light-dismiss popover with ElwhaMenuItem rows, grouping, selection,"
                 + " keyboard navigation, and nested submenus.",
             AREA_COMPONENTS,
+            GROUP_OVERLAYS,
             buildMenuComponent()));
     register(
         new LeafEntry(
@@ -725,12 +778,14 @@ public final class ElwhaShowcase {
             "M3 text field — Filled / Outlined, floating label, icons / affixes, supporting +"
                 + " error text.",
             AREA_COMPONENTS,
+            GROUP_FIELDS,
             TextFieldShowcasePanels.buildComponent()));
     register(
         new LeafEntry(
             "Slider",
             "M3 Expressive slider — split track, pill handle, stops, value bubble (standard XS).",
             AREA_COMPONENTS,
+            GROUP_FIELDS,
             buildSliderComponent()));
     register(
         new LeafEntry(
@@ -738,6 +793,7 @@ public final class ElwhaShowcase {
             "M3 exposed dropdown — a read-only ElwhaTextField + anchored ElwhaMenu of typed"
                 + " options, with single-select write-back.",
             AREA_COMPONENTS,
+            GROUP_FIELDS,
             SelectFieldShowcasePanels.buildComponent()));
     register(
         new LeafEntry(
@@ -745,6 +801,7 @@ public final class ElwhaShowcase {
             "M3 switch — binary toggle with the state-morphing handle, drag-to-toggle, and"
                 + " on-handle icons.",
             AREA_COMPONENTS,
+            GROUP_SELECTION,
             buildSwitchComponent()));
     register(
         new LeafEntry(
@@ -752,6 +809,7 @@ public final class ElwhaShowcase {
             "M3 tabs — primary/secondary bar of ElwhaTab primitives with the sliding indicator,"
                 + " fixed + scrollable modes, icons, and badges.",
             AREA_COMPONENTS,
+            GROUP_NAVIGATION,
             buildTabsComponent()));
     register(
         new LeafEntry(
@@ -759,6 +817,7 @@ public final class ElwhaShowcase {
             "M3 checkbox — tri-state with indeterminate dash, error palette, label, and the"
                 + " cross-color pressed ripple.",
             AREA_COMPONENTS,
+            GROUP_SELECTION,
             buildCheckboxComponent()));
     register(
         new LeafEntry(
@@ -766,6 +825,7 @@ public final class ElwhaShowcase {
             "M3 radio button — the ring-and-dot single select, with ElwhaRadioGroup exclusion,"
                 + " arrow navigation, and a roving tab stop.",
             AREA_COMPONENTS,
+            GROUP_SELECTION,
             buildRadioButtonComponent()));
     register(
         new LeafEntry(
@@ -773,6 +833,7 @@ public final class ElwhaShowcase {
             "ElwhaColorPicker — the M3 picker grammar applied to color: swatches, spectrum, and"
                 + " slider/hex modes, opt-in alpha, and the pending-until-OK dialog.",
             AREA_COMPONENTS,
+            GROUP_FIELDS,
             buildColorPickerComponent()));
     register(
         new LeafEntry(
@@ -780,6 +841,7 @@ public final class ElwhaShowcase {
             "M3 tooltips — plain inverse-surface labels and rich cards with subhead, supporting"
                 + " text, and actions; hover/focus triggers, persistent flavor.",
             AREA_COMPONENTS,
+            GROUP_OVERLAYS,
             TooltipShowcasePanels.buildComponent()));
     register(
         new LeafEntry(
@@ -788,6 +850,7 @@ public final class ElwhaShowcase {
                 + " surface with header, content, and action footer; docked or detached posture,"
                 + " optional drag-to-dismiss and drag-to-resize.",
             AREA_COMPONENTS,
+            GROUP_SURFACES,
             buildSideSheetComponent()));
     register(
         new LeafEntry(
@@ -795,6 +858,7 @@ public final class ElwhaShowcase {
             "M3 Expressive progress indicators — linear + circular, determinate + indeterminate,"
                 + " flat + wavy, with the track-active gap and stop dot.",
             AREA_COMPONENTS,
+            GROUP_FEEDBACK,
             buildProgressComponent()));
     register(
         new LeafEntry(
@@ -802,6 +866,7 @@ public final class ElwhaShowcase {
             "M3 Expressive loading indicator — the shape-morph spinner; standard + contained,"
                 + " indeterminate (7-shape loop) + determinate (Circle → SoftBurst).",
             AREA_COMPONENTS,
+            GROUP_FEEDBACK,
             buildLoadingComponent()));
     register(
         new LeafEntry(
@@ -809,6 +874,7 @@ public final class ElwhaShowcase {
             "M3 Expressive app bar — nav icon, title + subtitle, trailing actions; lift-on-scroll"
                 + " and the flexible variants' scroll-driven collapse.",
             AREA_COMPONENTS,
+            GROUP_NAVIGATION,
             buildAppBarComponent()));
 
     register(
@@ -882,7 +948,7 @@ public final class ElwhaShowcase {
     for (final String area : List.of(AREA_FOUNDATIONS, AREA_COMPONENTS, AREA_CONTAINERS)) {
       page.add(sectionHeading(area));
       page.add(Box.createVerticalStrut(8));
-      page.add(landingGrid(leavesIn(area)));
+      addFamilyGrids(page, area);
       page.add(Box.createVerticalStrut(20));
     }
     return scroll(page);
@@ -893,8 +959,28 @@ public final class ElwhaShowcase {
     page.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
     page.add(landingTitle(area, areaBlurb(area)));
     page.add(Box.createVerticalStrut(16));
-    page.add(landingGrid(leavesIn(area)));
+    addFamilyGrids(page, area);
     return scroll(page);
+  }
+
+  // One grid per component family, in taxonomy order, each under its family heading. An area that
+  // does not subdivide contributes a single family named for itself — heading suppressed, since
+  // repeating the area name over its own only grid says nothing.
+  private void addFamilyGrids(final LandingPage page, final String area) {
+    final Map<String, List<LeafEntry>> families = familiesIn(area);
+    final boolean headed = families.size() > 1;
+    boolean first = true;
+    for (final Map.Entry<String, List<LeafEntry>> family : families.entrySet()) {
+      if (headed) {
+        if (!first) {
+          page.add(Box.createVerticalStrut(16));
+        }
+        page.add(familyHeading(family.getKey()));
+        page.add(Box.createVerticalStrut(8));
+      }
+      page.add(landingGrid(family.getValue()));
+      first = false;
+    }
   }
 
   private static String areaBlurb(final String area) {
@@ -916,9 +1002,24 @@ public final class ElwhaShowcase {
         out.add(entry);
       }
     }
-    // Alpha-sort within each area so landing-page cards read left-to-right, top-down by label.
-    out.sort(Comparator.comparing(e -> e.label));
+    // Family first, in taxonomy order, then alphabetically inside each family — so landing cards
+    // read left-to-right, top-down within a family, and the families themselves run in the order
+    // GROUP_ORDER declares. Alphabetical within a family rather than "spec order": it is the rule a
+    // reader can apply without knowing the spec, and it is stable as families gain leaves.
+    out.sort(
+        Comparator.comparingInt((LeafEntry entry) -> GROUP_ORDER.indexOf(entry.group))
+            .thenComparing(entry -> entry.label));
     return out;
+  }
+
+  // The area's leaves split into their component families, in taxonomy order, each family's leaves
+  // alphabetical. Backed by leavesIn, so the flat list and the grouped one can never disagree.
+  Map<String, List<LeafEntry>> familiesIn(final String area) {
+    final Map<String, List<LeafEntry>> families = new LinkedHashMap<>();
+    for (final LeafEntry entry : leavesIn(area)) {
+      families.computeIfAbsent(entry.group, key -> new ArrayList<>()).add(entry);
+    }
+    return families;
   }
 
   // A 3-column GridLayout grid of leaf cards, capped at MAX_GRID_WIDTH so individual cards stay
@@ -970,6 +1071,16 @@ public final class ElwhaShowcase {
     label.setFont(label.getFont().deriveFont(Font.BOLD, 16f));
     label.setAlignmentX(JComponent.LEFT_ALIGNMENT);
     label.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+    return label;
+  }
+
+  // A component-family heading — one rung quieter than the area heading it nests under, so the
+  // Home page's area / family / cards hierarchy reads at a glance instead of as two peer rows.
+  private static JComponent familyHeading(final String text) {
+    final JLabel label = new JLabel(text);
+    label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
+    label.setForeground(ColorRole.ON_SURFACE_VARIANT.resolve());
+    label.setAlignmentX(JComponent.LEFT_ALIGNMENT);
     return label;
   }
 
@@ -1480,6 +1591,19 @@ public final class ElwhaShowcase {
                 workbench.logEvent("selected: " + (picked == null ? "(none)" : picked.getText()));
               });
           workbench.setContainer(row);
+          workbench.setCode(
+              """
+              ElwhaButtonSelectionGroup group = new ElwhaButtonSelectionGroup().setMandatory(%b);
+              for (String label : List.of("List", "Grid", "Compact")) {
+                ElwhaButton button = new ElwhaButton(label)
+                    .setVariant(ButtonVariant.%s)
+                    .setInteractionMode(ButtonInteractionMode.SELECTABLE);
+                group.add(button);
+                row.add(button);
+              }
+              group.addSelectionChangeListener(event -> handle(event.getNewValue()));
+              """
+                  .formatted(mandatory, variant));
         };
     variantBox.addSelectionChangeListener(value -> rebuild.run());
     mandatoryBox.addActionListener(event -> rebuild.run());
@@ -2370,6 +2494,20 @@ public final class ElwhaShowcase {
             row.add(button);
           }
           workbench.setContainer(row);
+          workbench.setCode(
+              """
+              ElwhaIconButtonSelectionGroup group = new ElwhaIconButtonSelectionGroup(%b);
+              for (String name : List.of("favorite", "star", "info", "help")) {
+                MaterialIcons.IconPair pair = MaterialIcons.pair(name, 24);
+                ElwhaIconButton button = new ElwhaIconButton(pair.resting())
+                    .setVariant(IconButtonVariant.%s)
+                    .setInteractionMode(IconButtonInteractionMode.SELECTABLE);
+                button.setIcons(pair.resting(), pair.filled());
+                group.add(button);
+                row.add(button);
+              }
+              """
+                  .formatted(mandatory, variant));
         };
     variantBox.addSelectionChangeListener(value -> rebuild.run());
     mandatoryBox.addActionListener(event -> rebuild.run());

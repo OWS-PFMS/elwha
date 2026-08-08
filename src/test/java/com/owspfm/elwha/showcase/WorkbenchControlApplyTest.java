@@ -413,13 +413,20 @@ class WorkbenchControlApplyTest {
   }
 
   /**
-   * A facet host's switcher has to fit the column it lives in. The switcher is a {@code FIXED}
-   * connected group, so every segment takes the width of the widest — measured at {@code XS} with
-   * the bookends' icons, three segments come to 376 px and a fourth to 502 px against a 480 px
-   * column, where {@code BorderLayout.WEST} hands the group its full preferred width and the region
-   * clips whatever runs past the edge. Nothing throws and nothing logs; the last segment simply
-   * loses its end. So the fourth segment is the constraint on this rollout, and it is asserted
-   * rather than remembered.
+   * A facet host's switcher has to fit the column it lives in. A connected group never shrinks a
+   * segment below its own content width — {@code connectedSegmentWidthPx} floors the per-segment
+   * share at the widest segment's preferred width in <em>both</em> resize modes, deliberately, so a
+   * segment label is never truncated. Measured at {@code XS}, the widest segment is the scaffold's
+   * own {@code Component} bookend (its icon plus a nine-character word, 124 px), which puts three
+   * segments at 376 px and a fourth at 502 px against a 480 px column. {@code BorderLayout.WEST}
+   * then hands the group its full preferred width and the region clips what runs past the edge:
+   * nothing throws, nothing logs, the last segment simply loses its end.
+   *
+   * <p><strong>Ruling (#441).</strong> The column stays at 480. The 502 px is not a control that
+   * cannot fit — it is four times a label width — and widening the column would take 40 px of stage
+   * off every component leaf in the catalog to buy headroom no leaf uses. Three segments (one
+   * facet) is the ceiling, and {@link #everyWorkbenchsSwitcherFitsTheControlsColumn} asserts it
+   * across the whole catalog so a future host cannot rediscover the clip by hand.
    */
   @ParameterizedTest(name = "{0}")
   @MethodSource("facetHosts")
@@ -432,6 +439,57 @@ class WorkbenchControlApplyTest {
             "%s — %d segments overflow the %d px controls column and the last one clips",
             label, facets.size() + 2, ComponentWorkbench.CONTROLS_WIDTH)
         .isLessThanOrEqualTo(ComponentWorkbench.CONTROLS_WIDTH - SWITCHER_BAR_PADDING);
+  }
+
+  /**
+   * The same ceiling, swept over every component leaf rather than the hand-kept facet-host list —
+   * so a leaf that gains a facet is covered the day it gains one, without anyone remembering to add
+   * it here.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("workbenchLeaves")
+  void everyWorkbenchsSwitcherFitsTheControlsColumn(final String label) {
+    final ElwhaButtonGroup switcher =
+        ShowcaseFixture.findFirst(workbenchOf(label), ElwhaButtonGroup.class);
+
+    assertThat(switcher.getPreferredSize().width)
+        .as(
+            "%s — #441: the controls column is %d px and a connected group will not shrink a"
+                + " segment below its label, so the switcher must be kept inside it",
+            label, ComponentWorkbench.CONTROLS_WIDTH)
+        .isLessThanOrEqualTo(ComponentWorkbench.CONTROLS_WIDTH - SWITCHER_BAR_PADDING);
+  }
+
+  static List<String> containerLeaves() {
+    final List<String> labels = new ArrayList<>();
+    for (final String label : ShowcaseFixture.leafLabels()) {
+      if (ShowcaseFixture.findFirst(ShowcaseFixture.surfaceOf(label), ContainerWorkbench.class)
+          != null) {
+        labels.add(label);
+      }
+    }
+    return labels;
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("containerLeaves")
+  void everyContainerLeafShowsItsEquivalentJava(final String label) {
+    final ContainerWorkbench workbench =
+        ShowcaseFixture.findFirst(ShowcaseFixture.surfaceOf(label), ContainerWorkbench.class);
+
+    assertThat(workbench.codeView().code())
+        .as(
+            "%s — #582: a container leaf owes the same equivalent-Java answer a component leaf"
+                + " does, and owes it from the moment it opens",
+            label)
+        .isNotBlank();
+  }
+
+  @Test
+  void everyContainerLeafIsWiredToItsWorkbench() {
+    assertThat(containerLeaves())
+        .as("#582 — the four Containers leaves are the scaffold's whole population")
+        .hasSize(4);
   }
 
   @Test

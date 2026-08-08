@@ -92,6 +92,44 @@ final class ChipListContainer {
     workbench.setContainer(scroll);
 
     buildControls();
+    refreshCode();
+  }
+
+  // The equivalent Java for the live list, read off the list itself rather than off the controls,
+  // so the snippet cannot drift from what is on the stage. Model and renderer lead: they are the
+  // half of a list a reader cannot infer from looking at one (#582).
+  private void refreshCode() {
+    workbench.setCode(
+        """
+        DefaultElwhaListModel<String> model = new DefaultElwhaListModel<>();
+        items.forEach(model::add);
+
+        ElwhaItemList<String> list =
+            new ElwhaItemList<>(model, (item, index) -> new ElwhaChip(item));
+        list.setOrientation(ElwhaListOrientation.%s);
+        list.setSelectionMode(SelectionMode.%s);
+        list.setMovementMode(MovementMode.%s);
+        list.setColumns(%d);
+        list.setItemGap(%d);
+        list.setListPadding(new Insets(8, 8, 8, 8));
+
+        // Movement affordances — the pin / anchor glyphs the chosen MovementMode reads.
+        list.setPinAffordance(IconAffordance.%s);
+        list.setAnchorAffordance(IconAffordance.%s);
+        list.setPinPredicate(pinned::contains);
+        list.setPinAction((item, pinNow) -> { togglePin(item, pinNow); list.pinStateChanged(); });
+
+        list.getSelectionModel().addSelectionListener(event -> handle(event.getSelected()));
+        list.addReorderListener(event -> handle(event.getFromIndex(), event.getToIndex()));
+        """
+            .formatted(
+                list.getOrientation(),
+                list.getSelectionMode(),
+                list.getMovementMode(),
+                list.getColumns(),
+                list.getItemGap(),
+                list.getPinAffordance(),
+                list.getAnchorAffordance()));
   }
 
   /**
@@ -112,12 +150,20 @@ final class ChipListContainer {
         ElwhaSelectField.outlined("Orientation");
     orientation.setOptions(List.of(ElwhaListOrientation.values()));
     orientation.setSelectedValue(ElwhaListOrientation.VERTICAL);
-    orientation.addSelectionChangeListener(list::setOrientation);
+    orientation.addSelectionChangeListener(
+        value -> {
+          list.setOrientation(value);
+          refreshCode();
+        });
 
     final ElwhaSelectField<SelectionMode> selection = ElwhaSelectField.outlined("Selection mode");
     selection.setOptions(List.of(SelectionMode.values()));
     selection.setSelectedValue(list.getSelectionMode());
-    selection.addSelectionChangeListener(list::setSelectionMode);
+    selection.addSelectionChangeListener(
+        value -> {
+          list.setSelectionMode(value);
+          refreshCode();
+        });
 
     final ElwhaSelectField<MovementMode> movement = ElwhaSelectField.outlined("Movement mode");
     movement.setOptions(List.of(MovementMode.values()));
@@ -126,6 +172,7 @@ final class ChipListContainer {
         mode -> {
           list.setMovementMode(mode);
           armBindings(mode);
+          refreshCode();
           workbench.logEvent("movement mode: " + mode);
         });
 
@@ -135,9 +182,17 @@ final class ChipListContainer {
     controls.addControl("", movement);
 
     final JSpinner columns = new JSpinner(new SpinnerNumberModel(4, 1, 10, 1));
-    columns.addChangeListener(event -> list.setColumns((Integer) columns.getValue()));
+    columns.addChangeListener(
+        event -> {
+          list.setColumns((Integer) columns.getValue());
+          refreshCode();
+        });
     final JSpinner gap = new JSpinner(new SpinnerNumberModel(6, 0, 30, 1));
-    gap.addChangeListener(event -> list.setItemGap((Integer) gap.getValue()));
+    gap.addChangeListener(
+        event -> {
+          list.setItemGap((Integer) gap.getValue());
+          refreshCode();
+        });
 
     controls.addSection("Layout");
     controls.addControl("Columns (grid)", columns);
@@ -146,11 +201,19 @@ final class ChipListContainer {
     final ElwhaSelectField<IconAffordance> pin = ElwhaSelectField.outlined("Pin");
     pin.setOptions(List.of(IconAffordance.values()));
     pin.setSelectedValue(list.getPinAffordance());
-    pin.addSelectionChangeListener(list::setPinAffordance);
+    pin.addSelectionChangeListener(
+        value -> {
+          list.setPinAffordance(value);
+          refreshCode();
+        });
     final ElwhaSelectField<IconAffordance> anchorAffordance = ElwhaSelectField.outlined("Anchor");
     anchorAffordance.setOptions(List.of(IconAffordance.values()));
     anchorAffordance.setSelectedValue(list.getAnchorAffordance());
-    anchorAffordance.addSelectionChangeListener(list::setAnchorAffordance);
+    anchorAffordance.addSelectionChangeListener(
+        value -> {
+          list.setAnchorAffordance(value);
+          refreshCode();
+        });
 
     controls.addSection("Affordances");
     controls.addControl("", pin);

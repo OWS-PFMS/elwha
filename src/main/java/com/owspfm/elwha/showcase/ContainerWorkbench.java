@@ -13,13 +13,21 @@ import javax.swing.UIManager;
 
 /**
  * The canonical layout for a multi-instance container's interactive workbench: a live
- * <strong>container</strong>, a <strong>controls</strong> column, and a scrolling <strong>event
- * log</strong>.
+ * <strong>container</strong>, a <strong>controls</strong> column, and a bottom band carrying the
+ * <strong>code view</strong> beside a scrolling <strong>event log</strong>.
  *
  * <p>List and group surfaces ({@code ElwhaItemList}, the Button / Icon Button groups) cannot be
  * expressed by a single live instance, so they mount here instead of on {@link ComponentWorkbench}.
  * The event log makes selection / reorder / group-change callbacks visible — append to it with
  * {@link #logEvent(String)}.
+ *
+ * <p><strong>The code view.</strong> A container workbench shows equivalent Java for the same
+ * reason a component one does, and it earns it harder: a list is a model, a renderer, and a
+ * container, which is precisely the construction a reader cannot guess from the live surface. Push
+ * it through {@link #setCode(String)} on every control change, exactly as a {@code
+ * ComponentWorkbench} builder does. The code view sits on the leading edge of the bottom band — the
+ * position it occupies in the other scaffold — with the event log, which is this scaffold's own
+ * addition, beside it (#582).
  *
  * @serial exclude
  * @author Charles Bryan
@@ -29,10 +37,13 @@ import javax.swing.UIManager;
 public final class ContainerWorkbench extends JPanel {
 
   private static final int CONTROLS_WIDTH = 480;
-  private static final int LOG_HEIGHT = 150;
+  // Matches ComponentWorkbench's CODE_HEIGHT: the two scaffolds' bottom bands are the same depth,
+  // so switching between a component leaf and a container leaf does not shift the stage.
+  private static final int BOTTOM_HEIGHT = 200;
 
   private final JPanel containerHost;
   private final WorkbenchControls controls;
+  private final CodeView codeView;
   private final JTextArea log;
 
   /**
@@ -71,17 +82,23 @@ public final class ContainerWorkbench extends JPanel {
     final JLabel logHeading = new JLabel("Event log");
     logHeading.putClientProperty("FlatLaf.styleClass", "h4");
     final JPanel logPanel = new JPanel(new BorderLayout());
-    logPanel.setBorder(
-        BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(
-                1, 0, 0, 0, UIManager.getColor("Component.borderColor")),
-            BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-    logPanel.setPreferredSize(new Dimension(0, LOG_HEIGHT));
+    logPanel.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
     logHeading.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
     logPanel.add(logHeading, BorderLayout.NORTH);
     final JScrollPane logScroll = new JScrollPane(log);
     logScroll.putClientProperty(ComponentWorkbench.FAB_SCROLL_IGNORE, Boolean.TRUE);
     logPanel.add(logScroll, BorderLayout.CENTER);
+
+    codeView = new CodeView();
+
+    // The bottom band: equivalent Java on the leading edge, the event log beside it, split so a
+    // reader can give either side the room the moment needs. The divider is the band's only
+    // internal chrome; the band as a whole carries the rule that separates it from the stage.
+    final JSplitPane bottom = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, codeView, logPanel);
+    bottom.setResizeWeight(0.5);
+    bottom.setBorder(
+        BorderFactory.createMatteBorder(1, 0, 0, 0, UIManager.getColor("Component.borderColor")));
+    bottom.setPreferredSize(new Dimension(0, BOTTOM_HEIGHT));
 
     final JSplitPane split =
         new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, containerHost, controlsScroll);
@@ -89,7 +106,18 @@ public final class ContainerWorkbench extends JPanel {
     split.setBorder(null);
 
     add(split, BorderLayout.CENTER);
-    add(logPanel, BorderLayout.SOUTH);
+    add(bottom, BorderLayout.SOUTH);
+  }
+
+  /**
+   * Updates the container's equivalent-Java code, shown in the bottom band's code view.
+   *
+   * @param code the code text to show
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setCode(final String code) {
+    codeView.setCode(code);
   }
 
   /**
@@ -127,5 +155,15 @@ public final class ContainerWorkbench extends JPanel {
   public void logEvent(final String message) {
     log.append(message + "\n");
     log.setCaretPosition(log.getDocument().getLength());
+  }
+
+  // Test seams — the code view and the event log, which the Showcase suite asserts against without
+  // walking the hierarchy for whichever JTextArea happens to come first (#544).
+  CodeView codeView() {
+    return codeView;
+  }
+
+  JTextArea log() {
+    return log;
   }
 }

@@ -100,15 +100,64 @@ class ShowcaseCatalogTest {
   }
 
   @Test
-  void anAreaListsItsLeavesAlphabetically() {
+  void anAreaListsItsLeavesAlphabeticallyWithinEachFamily() {
     for (final String area : ShowcaseFixture.areas()) {
-      final List<LeafEntry> listed = ShowcaseFixture.showcase().leavesIn(area);
+      for (final List<LeafEntry> family : ShowcaseFixture.showcase().familiesIn(area).values()) {
+        assertThat(family)
+            .as(
+                "#441 — landing cards read left-to-right, top-down by label inside %s / %s",
+                area, family.get(0).group)
+            .isSortedAccordingTo(Comparator.comparing((LeafEntry entry) -> entry.label));
+      }
+    }
+  }
 
-      assertThat(listed)
+  @Test
+  void anAreasFamiliesRunInTaxonomyOrder() {
+    assertThat(ShowcaseFixture.showcase().familiesIn(ElwhaShowcase.AREA_COMPONENTS).keySet())
+        .as(
+            "#441 — the Components landing groups by the same families CLAUDE.md documents the"
+                + " packages with, in that order")
+        .containsExactly(
+            ElwhaShowcase.GROUP_ACTIONS,
+            ElwhaShowcase.GROUP_SELECTION,
+            ElwhaShowcase.GROUP_FIELDS,
+            ElwhaShowcase.GROUP_SURFACES,
+            ElwhaShowcase.GROUP_OVERLAYS,
+            ElwhaShowcase.GROUP_NAVIGATION,
+            ElwhaShowcase.GROUP_FEEDBACK);
+  }
+
+  @Test
+  void anAreaThatDoesNotSubdivideIsItsOwnSingleFamily() {
+    for (final String area :
+        List.of(ElwhaShowcase.AREA_FOUNDATIONS, ElwhaShowcase.AREA_CONTAINERS)) {
+      assertThat(ShowcaseFixture.showcase().familiesIn(area).keySet())
+          .as("#441 — %s does not subdivide, so its landing renders one unheaded grid", area)
+          .containsExactly(area);
+    }
+  }
+
+  @Test
+  void everyLeafCarriesAFamily() {
+    for (final LeafEntry entry : ShowcaseFixture.leaves()) {
+      assertThat(entry.group)
           .as(
-              "§4 — landing cards read left-to-right, top-down by label, so %s must be sorted",
-              area)
-          .isSortedAccordingTo(Comparator.comparing((LeafEntry entry) -> entry.label));
+              "%s — a leaf with no family sorts to the head of its area and reads misplaced",
+              entry.label)
+          .isNotBlank();
+    }
+  }
+
+  @Test
+  void familiesPartitionTheirArea() {
+    for (final String area : ShowcaseFixture.areas()) {
+      final List<LeafEntry> combined = new ArrayList<>();
+      ShowcaseFixture.showcase().familiesIn(area).values().forEach(combined::addAll);
+
+      assertThat(combined)
+          .as("#441 — the grouped landing renders exactly the flat list, once each: %s", area)
+          .isEqualTo(ShowcaseFixture.showcase().leavesIn(area));
     }
   }
 

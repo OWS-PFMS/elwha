@@ -58,7 +58,9 @@ class ShowcaseLandingTest {
     }
 
     assertThat(openLabels(cardsOn(ElwhaShowcase.HOME_KEY)))
-        .as("§5 — Home reads area by area, in the rail's order, alphabetically within each")
+        .as(
+            "§5 — Home reads area by area in the rail's order; #441 — component family by family"
+                + " inside each, alphabetically within a family")
         .containsExactlyElementsOf(expected);
   }
 
@@ -161,7 +163,13 @@ class ShowcaseLandingTest {
       }
     }
 
-    assertThat(grids).as("Home renders one card grid per area").hasSize(3);
+    int families = 0;
+    for (final String area : ShowcaseFixture.areas()) {
+      families += ShowcaseFixture.showcase().familiesIn(area).size();
+    }
+    assertThat(grids)
+        .as("#441 — Home renders one card grid per component family, not one per area")
+        .hasSize(families);
     for (final JPanel grid : grids) {
       assertThat(grid.getMaximumSize().width)
           .as("§5 — cards hold a dashboard-tile measure instead of stretching to the frame width")
