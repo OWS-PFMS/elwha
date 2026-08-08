@@ -108,13 +108,13 @@ public final class ElwhaSwitchA11ySmoke {
     final int[] actions = {0};
     final int[] changes = {0};
     s.addActionListener(e -> actions[0]++);
-    s.addChangeListener(e -> changes[0]++);
+    s.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> changes[0]++);
     check(
         "setCurrentAccessibleValue(1) accepts",
         ax.getAccessibleValue().setCurrentAccessibleValue(1));
     check("the value write selected the switch", s.isSelected());
     check(
-        "the value write is programmatic — ChangeListener only",
+        "the value write is programmatic — PROPERTY_SELECTED only",
         changes[0] == 1 && actions[0] == 0);
   }
 

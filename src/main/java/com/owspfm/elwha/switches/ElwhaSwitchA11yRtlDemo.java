@@ -66,7 +66,8 @@ public final class ElwhaSwitchA11yRtlDemo {
 
     final JLabel readout = new JLabel("toggle a switch to read its accessible state");
     for (final ElwhaSwitch s : new ElwhaSwitch[] {labelled, named, icons}) {
-      s.addChangeListener(
+      s.addPropertyChangeListener(
+          ElwhaSwitch.PROPERTY_SELECTED,
           e -> {
             final AccessibleContext ax = s.getAccessibleContext();
             final boolean checked = ax.getAccessibleStateSet().contains(AccessibleState.CHECKED);

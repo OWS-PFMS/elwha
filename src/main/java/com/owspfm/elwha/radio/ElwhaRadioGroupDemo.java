@@ -17,11 +17,11 @@ import javax.swing.WindowConstants;
 
 /**
  * S4 group demo (story #420) — two independent {@link ElwhaRadioGroup}s ("Sort by" and "View")
- * proving mutual exclusion, group isolation, and the group {@code ChangeListener}: each pane's
+ * proving mutual exclusion, group isolation, and the group {@code PROPERTY_SELECTED}: each pane's
  * readout reflects {@code getSelected()} live, including the empty selection after "Clear".
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaRadioGroupDemo {
@@ -68,7 +68,7 @@ public final class ElwhaRadioGroupDemo {
     }
 
     final JLabel readout = new JLabel("selected: (none)", SwingConstants.CENTER);
-    group.addChangeListener(
+    group.addSelectionChangeListener(
         e -> {
           final ElwhaRadioButton current = group.getSelected();
           readout.setText("selected: " + (current == null ? "(none)" : current.getLabel()));

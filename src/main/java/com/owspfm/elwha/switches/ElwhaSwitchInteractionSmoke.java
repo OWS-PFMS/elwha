@@ -14,14 +14,14 @@ import java.awt.image.BufferedImage;
 /**
  * Headless S2 guard (story #403) — synthesises press/drag/release gestures on an offscreen {@link
  * ElwhaSwitch} and asserts the §7 interaction contract: click toggles and fires {@code
- * ActionListener} + {@code ChangeListener}; programmatic {@code setSelected} fires only the change
+ * ActionListener} + {@code PROPERTY_SELECTED}; programmatic {@code setSelected} fires only the
  * listener; a release outside the bounds cancels; a drag commits to the nearest half (including a
  * scrub that lands back where it started — no events); Space press/release toggles via the bound
  * actions; a disabled switch ignores everything. Pixel checks cover the hover layer, the
  * hover/press handle-role shifts, and the pressed 28px handle growth.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaSwitchInteractionSmoke {
@@ -65,13 +65,13 @@ public final class ElwhaSwitchInteractionSmoke {
           actions[0]++;
           lastCommand[0] = e.getActionCommand();
         });
-    s.addChangeListener(e -> changes[0]++);
+    s.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> changes[0]++);
 
     press(s, 30, CY);
     release(s, 30, CY);
     check("click toggles on", s.isSelected());
     check("click fires ActionListener once", actions[0] == 1);
-    check("click fires ChangeListener once", changes[0] == 1);
+    check("click fires PROPERTY_SELECTED once", changes[0] == 1);
     check("action command reflects the committed state", "selected".equals(lastCommand[0]));
 
     press(s, 30, CY);
@@ -80,7 +80,7 @@ public final class ElwhaSwitchInteractionSmoke {
     check("cancelled click fires no events", actions[0] == 1 && changes[0] == 1);
 
     s.setSelected(false);
-    check("programmatic setSelected fires ChangeListener", changes[0] == 2);
+    check("programmatic setSelected fires PROPERTY_SELECTED", changes[0] == 2);
     check("programmatic setSelected never fires ActionListener", actions[0] == 1);
   }
 
@@ -89,7 +89,7 @@ public final class ElwhaSwitchInteractionSmoke {
     final int[] actions = {0};
     final int[] changes = {0};
     s.addActionListener(e -> actions[0]++);
-    s.addChangeListener(e -> changes[0]++);
+    s.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> changes[0]++);
 
     press(s, 20, CY);
     drag(s, 40, CY);
@@ -136,7 +136,7 @@ public final class ElwhaSwitchInteractionSmoke {
     s.setEnabled(false);
     final int[] events = {0};
     s.addActionListener(e -> events[0]++);
-    s.addChangeListener(e -> events[0]++);
+    s.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> events[0]++);
 
     press(s, 30, CY);
     release(s, 30, CY);

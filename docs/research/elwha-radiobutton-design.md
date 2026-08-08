@@ -109,7 +109,7 @@ A **non-visual controller** (plain class; layout stays free-form — members can
 - **Exclusion:** any member reaching `selected == true` (user gesture or programmatic) deselects the previously selected member. Adding an already-selected radio to a group that has a selection **deselects the incoming radio** (first-selected-wins — the `javax.swing.ButtonGroup` precedent).
 - `getSelected()` → the selected member or `null`; `setSelected(ElwhaRadioButton)` (must be a member); `clearSelection()`.
 - `remove` of the selected member clears the selection.
-- **Events:** group `addChangeListener` fires once per selection change, including to/from empty. Members' own `ChangeListener`s still fire per-member (the deselected one tells its subscribers itself — no `ItemListener`-style two-event protocol; research §Open-3).
+- **Events:** group `addSelectionChangeListener` subscribes to `PROPERTY_SELECTED`, fired once per selection change, including to/from empty; the event carries the departing and arriving `ElwhaRadioButton` (`null` at either end). Members' own `PROPERTY_SELECTED` events still fire per-member (the deselected one tells its subscribers itself — no `ItemListener`-style two-event protocol; research §Open-3). Converted from `addChangeListener` in [#700](https://github.com/OWS-PFMS/elwha/issues/700) under conventions §10.
 
 ## §9. Group keyboard nav & roving tab stop [the S5 risk point]
 

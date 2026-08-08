@@ -6,14 +6,12 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import javax.swing.event.EventListenerList;
 
 /**
  * The Elwha Material 3 <strong>radio group</strong> — a <em>non-visual</em> mutual-exclusion
@@ -31,11 +29,14 @@ import javax.swing.event.EventListenerList;
  * belongs to at most one group — adding it to a second group removes it from the first. Removing
  * the selected member clears the group's selection (the removed radio keeps its own state).
  *
- * <p><strong>Events.</strong> {@link #addChangeListener} fires once per group-selection change,
- * including to and from empty. It fires <em>before</em> the changing members' own {@code
- * ChangeListener}s complete their cascade, and the group's state is consistent ({@link
- * #getSelected()} already answers the new member) inside every listener. Members' own listeners
- * still fire per-member — the deselected sibling tells its subscribers itself.
+ * <p><strong>Events.</strong> {@link #addSelectionChangeListener} subscribes to {@link
+ * #PROPERTY_SELECTED}, fired once per group-selection change, including to and from empty; the
+ * event's {@code oldValue} and {@code newValue} are {@link ElwhaRadioButton} references (or {@code
+ * null} for "no selection"). It fires <em>before</em> the changing members' own {@link
+ * ElwhaRadioButton#PROPERTY_SELECTED} events complete their cascade, and the group's state is
+ * consistent ({@link #getSelected()} already answers the new member) inside every listener.
+ * Members' own listeners still fire per-member — the deselected sibling tells its subscribers
+ * itself.
  *
  * <p><strong>Keyboard (design §9 — material-web's controller contract, verbatim).</strong> Arrows
  * navigate in membership order — Up/Left to the previous member, Down/Right to the next — wrapping
@@ -54,6 +55,13 @@ import javax.swing.event.EventListenerList;
  */
 public class ElwhaRadioGroup {
 
+  /**
+   * Property-change key fired whenever the group's selection changes. The event's {@code oldValue}
+   * and {@code newValue} are {@link ElwhaRadioButton} references, or {@code null} for "no
+   * selection".
+   */
+  public static final String PROPERTY_SELECTED = "selected";
+
   private static final String ACTION_UP = "elwhaRadioGroup.up";
   private static final String ACTION_DOWN = "elwhaRadioGroup.down";
   private static final String ACTION_LEFT = "elwhaRadioGroup.left";
@@ -67,8 +75,7 @@ public class ElwhaRadioGroup {
   };
 
   private final List<ElwhaRadioButton> members = new ArrayList<>();
-  private final EventListenerList listenerList = new EventListenerList();
-  private final ChangeEvent changeEvent = new ChangeEvent(this);
+  private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
 
   private final FocusListener rovingFocusListener =
       new FocusAdapter() {
@@ -127,7 +134,7 @@ public class ElwhaRadioGroup {
     if (radio.isSelected()) {
       if (selected == null) {
         selected = radio;
-        fireGroupChanged();
+        fireGroupChanged(null);
       } else {
         cascading = true;
         try {
@@ -159,7 +166,7 @@ public class ElwhaRadioGroup {
     }
     if (selected == radio) {
       selected = null;
-      fireGroupChanged();
+      fireGroupChanged(radio);
     }
     updateRovingFocus();
   }
@@ -188,8 +195,8 @@ public class ElwhaRadioGroup {
 
   /**
    * Selects the given member programmatically — the previously selected member deselects, both
-   * members' {@code ChangeListener}s fire, the group listener fires once; no {@code
-   * ActionListener}s fire (not a user gesture).
+   * members fire their own {@link ElwhaRadioButton#PROPERTY_SELECTED}, the group fires {@link
+   * #PROPERTY_SELECTED} once; no {@code ActionListener}s fire (not a user gesture).
    *
    * @param radio the member to select
    * @throws IllegalArgumentException if {@code radio} is {@code null} or not a member — use {@link
@@ -205,9 +212,10 @@ public class ElwhaRadioGroup {
   }
 
   /**
-   * Clears the selection — the selected member (if any) deselects and the group listener fires.
+   * Clears the selection — the selected member (if any) deselects and the group fires {@link
+   * #PROPERTY_SELECTED}.
    *
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void clearSelection() {
@@ -217,33 +225,35 @@ public class ElwhaRadioGroup {
   }
 
   /**
-   * Adds a {@link ChangeListener} notified once per group-selection change — selecting a member,
-   * moving the selection between members, or clearing it.
+   * Subscribes a listener to {@link #PROPERTY_SELECTED} — fired once per group-selection change,
+   * whether that is selecting a member, moving the selection between members, or clearing it. The
+   * event's {@code oldValue} and {@code newValue} are {@link ElwhaRadioButton} references (or
+   * {@code null} for "no selection").
    *
-   * @param listener the listener to add
-   * @version v0.4.0
-   * @since v0.4.0
+   * @param listener the listener to add; {@code null} is ignored
+   * @version v0.5.0
+   * @since v0.5.0
    */
-  public void addChangeListener(final ChangeListener listener) {
-    listenerList.add(ChangeListener.class, listener);
+  public void addSelectionChangeListener(final PropertyChangeListener listener) {
+    if (listener != null) {
+      pcs.addPropertyChangeListener(PROPERTY_SELECTED, listener);
+    }
   }
 
   /**
-   * Removes a previously added {@link ChangeListener}.
+   * Removes a previously registered selection listener.
    *
    * @param listener the listener to remove
-   * @version v0.4.0
-   * @since v0.4.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
-  public void removeChangeListener(final ChangeListener listener) {
-    listenerList.remove(ChangeListener.class, listener);
+  public void removeSelectionChangeListener(final PropertyChangeListener listener) {
+    pcs.removePropertyChangeListener(PROPERTY_SELECTED, listener);
   }
 
-  /** Notifies registered {@link ChangeListener}s of a group-selection change. */
-  private void fireGroupChanged() {
-    for (final ChangeListener listener : listenerList.getListeners(ChangeListener.class)) {
-      listener.stateChanged(changeEvent);
-    }
+  /** Fires {@link #PROPERTY_SELECTED} for a group-selection change. */
+  private void fireGroupChanged(final ElwhaRadioButton previous) {
+    pcs.firePropertyChange(PROPERTY_SELECTED, previous, selected);
   }
 
   /**
@@ -269,11 +279,11 @@ public class ElwhaRadioGroup {
           cascading = false;
         }
       }
-      fireGroupChanged();
+      fireGroupChanged(previous);
       updateRovingFocus();
     } else if (selected == radio) {
       selected = null;
-      fireGroupChanged();
+      fireGroupChanged(radio);
       updateRovingFocus();
     }
   }

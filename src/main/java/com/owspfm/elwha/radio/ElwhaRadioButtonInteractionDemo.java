@@ -19,12 +19,12 @@ import javax.swing.WindowConstants;
  * S2 interaction demo (story #418) — three <em>ungrouped</em> {@link ElwhaRadioButton}s (grouping
  * arrives in S4 #420) with an event log proving the interaction contract: click/Space select and
  * fire {@code ActionListener} once; re-clicking the selected radio fires nothing; programmatic
- * deselect fires {@code ChangeListener} only. Hover/focus/press show their state layers live —
+ * deselect fires {@code PROPERTY_SELECTED} only. Hover/focus/press show their state layers live —
  * watch the press tint swap: {@code PRIMARY} on an unselected radio, {@code ON_SURFACE} on a
  * selected one.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaRadioButtonInteractionDemo {
@@ -63,7 +63,8 @@ public final class ElwhaRadioButtonInteractionDemo {
       final String name = names[i];
       final ElwhaRadioButton radio = radios[i];
       radio.addActionListener(e -> append(name + " action: " + e.getActionCommand()));
-      radio.addChangeListener(
+      radio.addPropertyChangeListener(
+          ElwhaRadioButton.PROPERTY_SELECTED,
           e -> append(name + " change → " + (radio.isSelected() ? "selected" : "deselected")));
       row.add(radio);
     }

@@ -21,7 +21,7 @@ import javax.swing.KeyStroke;
  * {@code ON_SURFACE} on a selected press) and the unselected ring's hover shift.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaRadioButtonInteractionSmoke {
@@ -112,22 +112,22 @@ public final class ElwhaRadioButtonInteractionSmoke {
     final int[] actions = {0};
     final int[] changes = {0};
     radio.addActionListener(e -> actions[0] += "selected".equals(e.getActionCommand()) ? 1 : 100);
-    radio.addChangeListener(e -> changes[0]++);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     click(radio);
     check("click selects", radio.isSelected());
     check("click fires ActionListener once, command 'selected'", actions[0] == 1);
-    check("click fires ChangeListener once", changes[0] == 1);
+    check("click fires PROPERTY_SELECTED once", changes[0] == 1);
 
     click(radio);
     check("re-click keeps selected", radio.isSelected());
     check("re-click fires no ActionListener", actions[0] == 1);
-    check("re-click fires no ChangeListener", changes[0] == 1);
+    check("re-click fires no PROPERTY_SELECTED", changes[0] == 1);
 
     radio.setSelected(false);
     check("programmatic deselect works", !radio.isSelected());
     check("programmatic deselect fires no ActionListener", actions[0] == 1);
-    check("programmatic deselect fires ChangeListener", changes[0] == 2);
+    check("programmatic deselect fires PROPERTY_SELECTED", changes[0] == 2);
 
     press(radio);
     release(radio, new java.awt.Point(SIZE * 3, SIZE * 3));
@@ -168,7 +168,7 @@ public final class ElwhaRadioButtonInteractionSmoke {
     radio.setEnabled(false);
     final int[] events = {0};
     radio.addActionListener(e -> events[0]++);
-    radio.addChangeListener(e -> events[0]++);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> events[0]++);
 
     click(radio);
     spacePress(radio);

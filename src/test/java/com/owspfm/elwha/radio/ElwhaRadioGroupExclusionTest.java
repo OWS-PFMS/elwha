@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -96,7 +98,7 @@ class ElwhaRadioGroupExclusionTest {
     final ElwhaRadioButton member = new ElwhaRadioButton();
     group.add(member);
     final int[] fires = {0};
-    group.addChangeListener(e -> fires[0]++);
+    group.addSelectionChangeListener(e -> fires[0]++);
 
     group.remove(new ElwhaRadioButton());
 
@@ -125,7 +127,7 @@ class ElwhaRadioGroupExclusionTest {
     final ElwhaRadioGroup group = new ElwhaRadioGroup();
     final ElwhaRadioButton radio = new ElwhaRadioButton(true);
     final int[] fires = {0};
-    group.addChangeListener(e -> fires[0]++);
+    group.addSelectionChangeListener(e -> fires[0]++);
 
     group.add(radio);
 
@@ -157,7 +159,7 @@ class ElwhaRadioGroupExclusionTest {
     final ElwhaRadioButton incumbent = new ElwhaRadioButton(true);
     group.add(incumbent);
     final int[] fires = {0};
-    group.addChangeListener(e -> fires[0]++);
+    group.addSelectionChangeListener(e -> fires[0]++);
 
     group.add(new ElwhaRadioButton(true));
 
@@ -270,7 +272,7 @@ class ElwhaRadioGroupExclusionTest {
     final ElwhaRadioGroup group = new ElwhaRadioGroup();
     group.add(new ElwhaRadioButton());
     final int[] fires = {0};
-    group.addChangeListener(e -> fires[0]++);
+    group.addSelectionChangeListener(e -> fires[0]++);
 
     group.clearSelection();
 
@@ -301,7 +303,7 @@ class ElwhaRadioGroupExclusionTest {
     group.add(first);
     group.add(second);
     final int[] fires = {0};
-    group.addChangeListener(e -> fires[0]++);
+    group.addSelectionChangeListener(e -> fires[0]++);
 
     second.setSelected(true);
 
@@ -319,8 +321,8 @@ class ElwhaRadioGroupExclusionTest {
     group.add(second);
     final int[] firstChanges = {0};
     final int[] secondChanges = {0};
-    first.addChangeListener(e -> firstChanges[0]++);
-    second.addChangeListener(e -> secondChanges[0]++);
+    first.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> firstChanges[0]++);
+    second.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> secondChanges[0]++);
 
     second.setSelected(true);
 
@@ -337,8 +339,9 @@ class ElwhaRadioGroupExclusionTest {
     group.add(second);
     final List<ElwhaRadioButton> seenByGroup = new ArrayList<>();
     final List<ElwhaRadioButton> seenByDeparting = new ArrayList<>();
-    group.addChangeListener(e -> seenByGroup.add(group.getSelected()));
-    first.addChangeListener(e -> seenByDeparting.add(group.getSelected()));
+    group.addSelectionChangeListener(e -> seenByGroup.add(group.getSelected()));
+    first.addPropertyChangeListener(
+        ElwhaRadioButton.PROPERTY_SELECTED, e -> seenByDeparting.add(group.getSelected()));
 
     second.setSelected(true);
 
@@ -356,7 +359,7 @@ class ElwhaRadioGroupExclusionTest {
     final ElwhaRadioButton radio = new ElwhaRadioButton();
     group.add(radio);
     final List<Object> sources = new ArrayList<>();
-    group.addChangeListener(e -> sources.add(e.getSource()));
+    group.addSelectionChangeListener(e -> sources.add(e.getSource()));
 
     radio.setSelected(true);
 
@@ -373,11 +376,11 @@ class ElwhaRadioGroupExclusionTest {
     group.add(first);
     group.add(second);
     final int[] fires = {0};
-    final javax.swing.event.ChangeListener listener = e -> fires[0]++;
-    group.addChangeListener(listener);
+    final PropertyChangeListener listener = e -> fires[0]++;
+    group.addSelectionChangeListener(listener);
     first.setSelected(true);
 
-    group.removeChangeListener(listener);
+    group.removeSelectionChangeListener(listener);
     second.setSelected(true);
 
     assertThat(fires[0]).as("a removed listener hears nothing further").isEqualTo(1);
@@ -394,5 +397,48 @@ class ElwhaRadioGroupExclusionTest {
 
     assertThat(first.getSelected()).as("the old group loses the selection it held").isNull();
     assertThat(second.getSelected()).as("and the new one adopts it").isSameAs(radio);
+  }
+
+  // -------------------------------------------------------- property changes
+
+  @Test
+  void everyGroupSelectionChangeCarriesBothMembers() {
+    final ElwhaRadioGroup group = new ElwhaRadioGroup();
+    final ElwhaRadioButton first = new ElwhaRadioButton();
+    final ElwhaRadioButton second = new ElwhaRadioButton();
+    group.add(first);
+    group.add(second);
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    group.addSelectionChangeListener(events::add);
+
+    first.setSelected(true);
+    second.setSelected(true);
+    group.clearSelection();
+
+    assertThat(events).as("adopt, move, clear — three group changes").hasSize(3);
+    assertThat(events.get(0).getOldValue()).as("an empty group starts from null").isNull();
+    assertThat(events.get(0).getNewValue()).isSameAs(first);
+    assertThat(events.get(1).getOldValue())
+        .as("a move carries the member the selection left")
+        .isSameAs(first);
+    assertThat(events.get(1).getNewValue()).isSameAs(second);
+    assertThat(events.get(2).getOldValue()).isSameAs(second);
+    assertThat(events.get(2).getNewValue()).as("clearing lands on null").isNull();
+  }
+
+  @Test
+  void groupEventCarriesTheKeyItWasSubscribedUnder() {
+    final ElwhaRadioGroup group = new ElwhaRadioGroup();
+    final ElwhaRadioButton radio = new ElwhaRadioButton();
+    group.add(radio);
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    group.addSelectionChangeListener(events::add);
+
+    radio.setSelected(true);
+
+    assertThat(events).hasSize(1);
+    assertThat(events.get(0).getPropertyName())
+        .as("the group's only observable state is named, so subscription can be key-scoped")
+        .isEqualTo(ElwhaRadioGroup.PROPERTY_SELECTED);
   }
 }

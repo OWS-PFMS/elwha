@@ -119,7 +119,8 @@ public class ElwhaColorPicker extends JComponent {
     body.add(tabs, BorderLayout.NORTH);
     body.add(paneHost, BorderLayout.CENTER);
     add(body, BorderLayout.CENTER);
-    tabs.addChangeListener(
+    tabs.addPropertyChangeListener(
+        ElwhaTabs.PROPERTY_ACTIVE_TAB,
         e -> {
           if (!rebuilding) {
             showActivePane();

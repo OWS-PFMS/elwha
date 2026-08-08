@@ -40,8 +40,6 @@ import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 import javax.swing.Timer;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.EventListenerList;
 
 /**
@@ -83,10 +81,10 @@ import javax.swing.event.EventListenerList;
  * {@value #STATE_LAYER_SIZE_PX} dp circle riding the handle; a press grows the handle to {@value
  * #HANDLE_PRESSED_PX} dp, paints {@link StateLayer#PRESSED}, and shows a {@link RipplePainter}
  * ripple bounded to the same circle. User-gesture commits fire the registered {@link
- * ActionListener}s <em>and</em> {@link ChangeListener}s; programmatic {@code setSelected} fires
- * only the latter. Under a right-to-left {@link java.awt.ComponentOrientation} the switch mirrors:
- * selected rests the handle at the <em>left</em> end, and the travel, drag scrubbing, and commit
- * halves all flip with it.
+ * ActionListener}s <em>and</em> a {@link #PROPERTY_SELECTED} property change; programmatic {@code
+ * setSelected} fires only the latter. Under a right-to-left {@link java.awt.ComponentOrientation}
+ * the switch mirrors: selected rests the handle at the <em>left</em> end, and the travel, drag
+ * scrubbing, and commit halves all flip with it.
  *
  * <p><strong>Motion (design §6 / research §Mo).</strong> A toggle slides the handle over {@value
  * #SLIDE_MS}&nbsp;ms on material-web's overshoot bezier {@code (0.175, 0.885, 0.32, 1.275)} — the
@@ -125,6 +123,12 @@ import javax.swing.event.EventListenerList;
  * @since v0.4.0
  */
 public class ElwhaSwitch extends JComponent implements BodyBearing {
+
+  /**
+   * Property-change key fired whenever the selection state changes — user-driven or programmatic.
+   * The event's {@code oldValue} and {@code newValue} are {@link Boolean}s.
+   */
+  public static final String PROPERTY_SELECTED = "selected";
 
   // --- M3 switch geometry (dp == px at 100% scale; research §T — the md-comp-switch values) ---
 
@@ -177,7 +181,6 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
   private static final Easing OVERSHOOT = Easing.cubicBezier(0.175f, 0.885f, 0.32f, 1.275f);
 
   private final EventListenerList listenerList = new EventListenerList();
-  private final ChangeEvent changeEvent = new ChangeEvent(this);
 
   private final RetargetTween slideTween;
   private final RetargetTween sizeTween;
@@ -251,13 +254,13 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
   }
 
   /**
-   * Sets the selection state. Fires the registered {@link ChangeListener}s only when the state
-   * actually changes. Programmatic writes never fire the user-gesture {@code ActionListener}s (the
+   * Sets the selection state, firing {@link #PROPERTY_SELECTED} only when the state actually
+   * changes. Programmatic writes never fire the user-gesture {@code ActionListener}s (the
    * interaction story's surface) — mirroring material-web, whose {@code change} event fires on user
    * interaction only.
    *
    * @param selected the new selection state
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setSelected(final boolean selected) {
@@ -266,7 +269,7 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
     }
     this.selected = selected;
     syncMotion(animateAllowed());
-    fireStateChanged();
+    firePropertyChange(PROPERTY_SELECTED, !selected, selected);
     if (accessibleContext != null) {
       accessibleContext.firePropertyChange(
           AccessibleContext.ACCESSIBLE_STATE_PROPERTY,
@@ -274,37 +277,6 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
           selected ? AccessibleState.CHECKED : null);
     }
     repaint();
-  }
-
-  /**
-   * Adds a {@link ChangeListener} notified on every selection-state change, user-driven or
-   * programmatic.
-   *
-   * @param listener the listener to add
-   * @version v0.4.0
-   * @since v0.4.0
-   */
-  public void addChangeListener(final ChangeListener listener) {
-    listenerList.add(ChangeListener.class, listener);
-  }
-
-  /**
-   * Removes a previously added {@link ChangeListener}.
-   *
-   * @param listener the listener to remove
-   * @version v0.4.0
-   * @since v0.4.0
-   */
-  public void removeChangeListener(final ChangeListener listener) {
-    listenerList.remove(ChangeListener.class, listener);
-  }
-
-  /** Notifies registered {@link ChangeListener}s of a selection-state change. */
-  private void fireStateChanged() {
-    final ChangeListener[] listeners = listenerList.getListeners(ChangeListener.class);
-    for (final ChangeListener listener : listeners) {
-      listener.stateChanged(changeEvent);
-    }
   }
 
   /**
@@ -937,9 +909,9 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
    * for the web {@code switch} role (research §X): {@link AccessibleRole#TOGGLE_BUTTON}, {@link
    * AccessibleState#CHECKED} while selected, one "click" {@link AccessibleAction} performing the
    * user-gesture toggle (assistive tech acts as the user, so it fires {@code ActionListener}s), and
-   * an {@link AccessibleValue} of 0/1 (programmatic, so it fires {@code ChangeListener}s only). The
-   * accessible name comes from {@link ElwhaSwitch#setAccessibleLabel(String)}, falling back to an
-   * associated {@code labelFor} {@link javax.swing.JLabel}.
+   * an {@link AccessibleValue} of 0/1 (programmatic, so it fires {@link #PROPERTY_SELECTED} only).
+   * The accessible name comes from {@link ElwhaSwitch#setAccessibleLabel(String)}, falling back to
+   * an associated {@code labelFor} {@link javax.swing.JLabel}.
    *
    * @author Charles Bryan
    * @version v0.4.0

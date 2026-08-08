@@ -6,18 +6,20 @@ import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.event.ChangeListener;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * Tier A coverage of the two-listener event surface the class Javadoc pins: {@code ChangeListener}
- * hears every selection change, {@code ActionListener} hears only user gestures. The asymmetry that
- * makes a radio different from a checkbox is also here — a user gesture can only ever
- * <em>select</em> (research §B: "clicking on a radio input always selects it"), so re-affirming an
- * already-selected radio is silent while a programmatic deselect is perfectly legal.
+ * Tier A coverage of the two-listener event surface the class Javadoc pins: {@code
+ * PROPERTY_SELECTED} fires on every selection change, {@code ActionListener} hears only user
+ * gestures. The asymmetry that makes a radio different from a checkbox is also here — a user
+ * gesture can only ever <em>select</em> (research §B: "clicking on a radio input always selects
+ * it"), so re-affirming an already-selected radio is silent while a programmatic deselect is
+ * perfectly legal.
  */
 @ExtendWith({EdtInterceptor.class, ThemeExtension.class})
 class ElwhaRadioButtonSelectionTest {
@@ -64,11 +66,11 @@ class ElwhaRadioButtonSelectionTest {
   // ----------------------------------------------------- programmatic writes
 
   @Test
-  void setSelectedFiresTheChangeListenerOnly() {
+  void setSelectedFiresTheSelectionPropertyOnly() {
     final ElwhaRadioButton radio = new ElwhaRadioButton();
     final int[] changes = {0};
     final int[] actions = {0};
-    radio.addChangeListener(e -> changes[0]++);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> changes[0]++);
     radio.addActionListener(e -> actions[0]++);
 
     radio.setSelected(true);
@@ -84,7 +86,7 @@ class ElwhaRadioButtonSelectionTest {
   void programmaticDeselectIsLegal() {
     final ElwhaRadioButton radio = new ElwhaRadioButton(true);
     final int[] changes = {0};
-    radio.addChangeListener(e -> changes[0]++);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     radio.setSelected(false);
 
@@ -98,7 +100,7 @@ class ElwhaRadioButtonSelectionTest {
   void writingTheSameSelectionFiresNothing() {
     final ElwhaRadioButton radio = new ElwhaRadioButton(true);
     final int[] changes = {0};
-    radio.addChangeListener(e -> changes[0]++);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     radio.setSelected(true);
 
@@ -106,10 +108,11 @@ class ElwhaRadioButtonSelectionTest {
   }
 
   @Test
-  void changeEventNamesTheRadioAsItsSource() {
+  void selectionEventNamesTheRadioAsItsSource() {
     final ElwhaRadioButton radio = new ElwhaRadioButton();
     final List<Object> sources = new ArrayList<>();
-    radio.addChangeListener(e -> sources.add(e.getSource()));
+    radio.addPropertyChangeListener(
+        ElwhaRadioButton.PROPERTY_SELECTED, e -> sources.add(e.getSource()));
 
     radio.setSelected(true);
 
@@ -126,13 +129,13 @@ class ElwhaRadioButtonSelectionTest {
     final List<ActionEvent> actions = new ArrayList<>();
     final int[] changes = {0};
     radio.addActionListener(actions::add);
-    radio.addChangeListener(e -> changes[0]++);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     radio.doClick();
 
     assertThat(radio.isSelected()).as("doClick performs the user-equivalent select").isTrue();
     assertThat(actions).as("a user gesture fires the action listeners").hasSize(1);
-    assertThat(changes[0]).as("and the change listeners too").isEqualTo(1);
+    assertThat(changes[0]).as("and the selection property fires too").isEqualTo(1);
   }
 
   @Test
@@ -155,13 +158,13 @@ class ElwhaRadioButtonSelectionTest {
     final int[] actions = {0};
     final int[] changes = {0};
     radio.addActionListener(e -> actions[0]++);
-    radio.addChangeListener(e -> changes[0]++);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     radio.doClick();
 
     assertThat(radio.isSelected()).as("it stays selected").isTrue();
     assertThat(actions[0]).as("re-affirming fires no action event").isZero();
-    assertThat(changes[0]).as("and no change event — nothing changed").isZero();
+    assertThat(changes[0]).as("and no selection event — nothing changed").isZero();
   }
 
   @Test
@@ -196,19 +199,19 @@ class ElwhaRadioButtonSelectionTest {
     final ElwhaRadioButton radio = new ElwhaRadioButton();
     final int[] changes = {0};
     final int[] actions = {0};
-    final ChangeListener changeListener = e -> changes[0]++;
+    final PropertyChangeListener changeListener = e -> changes[0]++;
     final ActionListener actionListener = e -> actions[0]++;
-    radio.addChangeListener(changeListener);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, changeListener);
     radio.addActionListener(actionListener);
     radio.doClick();
 
-    radio.removeChangeListener(changeListener);
+    radio.removePropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, changeListener);
     radio.removeActionListener(actionListener);
     radio.setSelected(false);
     radio.doClick();
 
     assertThat(changes[0])
-        .as("the removed change listener heard only the first gesture")
+        .as("the removed selection listener heard only the first gesture")
         .isEqualTo(1);
     assertThat(actions[0]).as("and so did the removed action listener").isEqualTo(1);
   }
@@ -239,5 +242,36 @@ class ElwhaRadioButtonSelectionTest {
         .as("the accessible-name override is stored independently of the visual label")
         .isEqualTo("Weekly digest");
     assertThat(radio.getLabel()).as("and creates no visual label").isNull();
+  }
+
+  // -------------------------------------------------------- property changes
+
+  @Test
+  void everySelectionChangeCarriesBothValues() {
+    final ElwhaRadioButton radio = new ElwhaRadioButton();
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, events::add);
+
+    radio.setSelected(true);
+    radio.setSelected(false);
+
+    assertThat(events).as("one event per real transition").hasSize(2);
+    assertThat(events.get(0).getOldValue()).as("the old value is carried").isEqualTo(false);
+    assertThat(events.get(0).getNewValue()).as("the new value is carried").isEqualTo(true);
+    assertThat(events.get(1).getOldValue()).as("and again on the way back").isEqualTo(true);
+    assertThat(events.get(1).getNewValue()).isEqualTo(false);
+  }
+
+  @Test
+  void aSelectionListenerIsNotWokenByOtherProperties() {
+    final ElwhaRadioButton radio = new ElwhaRadioButton();
+    final int[] changes = {0};
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> changes[0]++);
+
+    radio.setEnabled(false);
+
+    assertThat(changes[0])
+        .as("subscription is key-scoped — the enabled property must not wake it")
+        .isZero();
   }
 }
