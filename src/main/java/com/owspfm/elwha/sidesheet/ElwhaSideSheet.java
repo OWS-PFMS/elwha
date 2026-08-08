@@ -85,6 +85,18 @@ public final class ElwhaSideSheet extends JComponent {
   /** M3 detached side sheet margin ({@code m3_side_sheet_margin_detached}). */
   public static final int DETACHED_MARGIN_PX = SpaceScale.LG.px();
 
+  /**
+   * Property name fired when the {@linkplain #isOpen() open state} of an embedded standard sheet
+   * changes — by {@link #setOpen(boolean)}, by {@link #open()} / {@link #close()}, or by the user
+   * pressing the sheet's own close affordance.
+   *
+   * <p>Fires once on the <em>target</em> flip, not per animation tick, so a listener reading {@link
+   * #isOpen()} sees the value the event carries. The modal presentation reports its outcome through
+   * {@link #setOnClose(java.util.function.Consumer)} instead, which carries the richer {@link
+   * SheetDismissCause}; a modal show or dismiss does not fire this property.
+   */
+  public static final String PROPERTY_OPEN = "open";
+
   // Release past this fraction of the sheet width (dragged toward the anchored edge) dismisses;
   // under it settles back. A position threshold reads clearly with a mouse (design doc §1/§4).
   private static final float DRAG_DISMISS_THRESHOLD = 0.5f;
@@ -814,6 +826,10 @@ public final class ElwhaSideSheet extends JComponent {
   /**
    * Sets the open state, animating toward it — see {@link #open()} / {@link #close()}.
    *
+   * <p>Fires {@link #PROPERTY_OPEN} once, before the animation starts, so a consumer control that
+   * mirrors the sheet's state stays in step whichever path flipped it — including the sheet's own
+   * close affordance, which a consumer cannot otherwise observe.
+   *
    * @param open the target state
    * @version v0.5.0
    * @since v0.5.0
@@ -822,7 +838,9 @@ public final class ElwhaSideSheet extends JComponent {
     if (open == this.open) {
       return;
     }
+    final boolean previous = this.open;
     this.open = open;
+    firePropertyChange(PROPERTY_OPEN, previous, open);
     ensureOpenAnimator();
     if (open) {
       openAnimator.start();
@@ -835,7 +853,8 @@ public final class ElwhaSideSheet extends JComponent {
    * Returns the target open state ({@code true} from construction).
    *
    * @return the target open state ({@code true} from construction); flips immediately on {@link
-   *     #setOpen} while the width animation catches up
+   *     #setOpen} while the width animation catches up, and always agrees with the value the {@link
+   *     #PROPERTY_OPEN} event carried
    * @version v0.5.0
    * @since v0.5.0
    */
