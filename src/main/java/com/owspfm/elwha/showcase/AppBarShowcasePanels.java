@@ -28,12 +28,18 @@ import javax.swing.JScrollPane;
  * ComponentWorkbench} stage hosting a live bar in {@code BorderLayout.NORTH} over a scrollable
  * content stub wired as its scroll source — scroll the page and the bar lifts (and, for the
  * flexible variants, collapses) — with Variant / Subtitle / Centered / Long headline / Headline
- * lines / Nav icon / Action count / Overflow menu / Lift on scroll / Enabled / RTL controls, and a
- * state gallery stacking one bar per configuration (the lifted and collapsed rows forced via the
- * {@code setLifted} / {@code setCollapsedFraction} hooks).
+ * lines / Nav icon / Action count / Overflow menu / Lift on scroll / Height allocated / Enabled /
+ * RTL controls, and a state gallery stacking one bar per configuration (the lifted and collapsed
+ * rows forced via the {@code setLifted} / {@code setCollapsedFraction} hooks).
  *
  * <p>The overflow control dogfoods {@link ElwhaMenu}: it appends a {@code more_vert} action whose
  * listener opens a menu anchored to the button — the class-Javadoc overflow recipe, live.
+ *
+ * <p><strong>Height allocated</strong> is the one control that is not a property of the bar. It
+ * swaps the stage's own header slot between the documented {@code BorderLayout.NORTH} placement,
+ * which honours the bar's preferred height, and a height-pinned wrapper that hands the bar less
+ * than it asked for — the only honest way for a workbench to demonstrate the #525 degradation,
+ * since the property being exercised belongs to the host rather than to the component.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -45,7 +51,28 @@ final class AppBarShowcasePanels {
 
   private static final String LONG_TITLE = "Quarterly revenue and operating expenses";
 
+  private static final String ALLOCATION_PREFERRED = "Preferred (honoured)";
+
   private AppBarShowcasePanels() {}
+
+  // The bar's slot in the stage. "Preferred" is the documented NORTH placement, which honours the
+  // bar's preferred height; every other option pins a wrapper to a fixed height and hands the bar
+  // all of it, which is how a host under-allocates the bar (#525) without ever asking what it
+  // wanted. GridLayout does this to the specimen demos by construction.
+  private static JComponent header(final ElwhaAppBar bar, final String allocation) {
+    if (ALLOCATION_PREFERRED.equals(allocation)) {
+      return bar;
+    }
+    final JPanel clamp = new JPanel(new BorderLayout());
+    clamp.setOpaque(false);
+    clamp.add(bar, BorderLayout.CENTER);
+    clamp.setPreferredSize(new Dimension(0, parsePx(allocation)));
+    return clamp;
+  }
+
+  private static int parsePx(final String allocation) {
+    return Integer.parseInt(allocation.substring(0, allocation.indexOf(' ')));
+  }
 
   private static Icon actionGlyph(final int i) {
     return switch (i % 4) {
@@ -70,6 +97,9 @@ final class AppBarShowcasePanels {
     final ElwhaSelectField<Integer> maxLinesBox = ElwhaSelectField.outlined("Headline lines");
     maxLinesBox.setOptions(List.of(1, 2, 3));
     maxLinesBox.setSelectedValue(1);
+    final ElwhaSelectField<String> allocationBox = ElwhaSelectField.outlined("Height allocated");
+    allocationBox.setOptions(List.of(ALLOCATION_PREFERRED, "120 px", "96 px", "72 px", "64 px"));
+    allocationBox.setSelectedValue(ALLOCATION_PREFERRED);
     final ElwhaCheckbox subtitleBox = new ElwhaCheckbox("Subtitle");
     final ElwhaCheckbox centeredBox = new ElwhaCheckbox("Title centered");
     final ElwhaCheckbox navBox = new ElwhaCheckbox("Navigation icon");
@@ -95,6 +125,7 @@ final class AppBarShowcasePanels {
     controls.addControl("", overflowBox);
     controls.addSection("Behavior");
     controls.addControl("", liftBox);
+    controls.addControl("", allocationBox);
     controls.addControl("", enabledBox);
     controls.addControl("", rtlBox);
 
@@ -168,9 +199,11 @@ final class AppBarShowcasePanels {
           bar.setLiftOnScroll(liftBox.isChecked());
           bar.setEnabled(enabledBox.isChecked());
 
+          final String allocation =
+              orDefault(allocationBox.getSelectedValue(), ALLOCATION_PREFERRED);
           final JPanel stage = new JPanel(new BorderLayout());
           stage.setOpaque(false);
-          stage.add(bar, BorderLayout.NORTH);
+          stage.add(header(bar, allocation), BorderLayout.NORTH);
           stage.add(scroller, BorderLayout.CENTER);
           stage.setPreferredSize(new Dimension(560, 330));
           stage.applyComponentOrientation(
@@ -190,7 +223,8 @@ final class AppBarShowcasePanels {
                   enabledBox.isChecked(),
                   rtlBox.isChecked(),
                   longTitleBox.isChecked(),
-                  orDefault(maxLinesBox.getSelectedValue(), 1)));
+                  orDefault(maxLinesBox.getSelectedValue(), 1),
+                  allocation));
         };
 
     reapply[0] = apply;
@@ -203,6 +237,7 @@ final class AppBarShowcasePanels {
     variantBox.addSelectionChangeListener(v -> apply.run());
     countBox.addSelectionChangeListener(v -> apply.run());
     maxLinesBox.addSelectionChangeListener(v -> apply.run());
+    allocationBox.addSelectionChangeListener(v -> apply.run());
     longTitleBox.addActionListener(e -> apply.run());
     subtitleBox.addActionListener(e -> apply.run());
     centeredBox.addActionListener(e -> apply.run());
@@ -246,6 +281,9 @@ final class AppBarShowcasePanels {
     stack.add(galleryRow("Flexible collapsed to the strip (fraction 1)", collapsed()));
     stack.add(galleryRow("Medium flexible — headline wrapped to two lines (#478)", wrapped(false)));
     stack.add(galleryRow("Large flexible — headline wrapped, with subtitle (#478)", wrapped(true)));
+    stack.add(
+        allocationRow(
+            "Large flexible under-allocated to 96 px — collapses, never overlaps (#525)", 96));
     stack.add(galleryRow("Disabled", disabled()));
     stack.add(Box.createVerticalGlue());
     return stack;
@@ -297,6 +335,11 @@ final class AppBarShowcasePanels {
     return galleryRow(title, (JComponent) bar);
   }
 
+  private static JComponent allocationRow(final String title, final int height) {
+    final ElwhaAppBar bar = configured(AppBarVariant.LARGE_FLEXIBLE, true, false);
+    return galleryRow(title, header(bar, height + " px"));
+  }
+
   private static JComponent galleryRow(final String title, final JComponent content) {
     final JPanel row = new JPanel(new BorderLayout(0, 4));
     row.setOpaque(false);
@@ -324,7 +367,8 @@ final class AppBarShowcasePanels {
       final boolean enabled,
       final boolean rtl,
       final boolean longTitle,
-      final int maxLines) {
+      final int maxLines,
+      final String allocation) {
     final StringBuilder code = new StringBuilder(512);
     code.append("ElwhaAppBar bar = ElwhaAppBar.")
         .append(
@@ -365,7 +409,18 @@ final class AppBarShowcasePanels {
       code.append("    .addItem(ElwhaMenuItem.of(\"Settings\")) /* … */ .build();\n");
       code.append("more.addActionListener(e -> menu.open(more));\n");
     }
-    code.append("frame.add(bar, BorderLayout.NORTH);\n");
+    if (ALLOCATION_PREFERRED.equals(allocation)) {
+      code.append("frame.add(bar, BorderLayout.NORTH);\n");
+    } else {
+      code.append("// A host that pins the bar's height under-allocates it — the bar renders at\n");
+      code.append("// the collapse fraction that height implies rather than overlapping (#525).\n");
+      code.append("JPanel clamp = new JPanel(new BorderLayout());\n");
+      code.append("clamp.add(bar, BorderLayout.CENTER);\n");
+      code.append("clamp.setPreferredSize(new Dimension(0, ")
+          .append(parsePx(allocation))
+          .append("));\n");
+      code.append("frame.add(clamp, BorderLayout.NORTH);\n");
+    }
     code.append("bar.setScrollSource(scroller);  // lift");
     if (variant.isFlexible()) {
       code.append(" + collapse");

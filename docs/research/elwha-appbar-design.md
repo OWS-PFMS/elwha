@@ -166,9 +166,9 @@ Layout regions (flexible, fraction *f*):
 
 Confirmed — §2 locked as built. One class, all variants; the nav/trailing children lay out in 48px slots (4px edge spaces, zero gap) with the default `IconButtonSize.M` (40px) button centered in its slot, which lands the 24px glyph exactly 16px from the container edge — the Compose render falls out of the existing icon-button sizing with no restyling. Bar-painted title/subtitle stack centers as a unit in the 64 strip; ellipsis + centered-clamping verified pixel-level in `ElwhaAppBarChromeSmoke` (light + dark). One adaptation from the §3 sketch: `MaterialIcons` exposes per-glyph static methods, not a `Symbol` enum, so the conveniences take `(Icon, String accessibleName, ActionListener)` — the accessible name is required at the convenience layer, which also satisfies the §9 requirement earlier than planned. No fallback needed.
 
-## §12.1 Post-V1: the Expressive flexibility follow-ons — SHIPPED
+## §12.1 Post-V1: the Expressive flexibility follow-ons (#478, #525) — SHIPPED
 
-§12 deferred expanded-headline wrapping for want of "a multi-line height model on top of the fixed height tokens". This is that model: one honest answer to "how tall is this bar fully expanded, right now" — `expandedHeightPx()`, the variant's token height plus a line per wrapped line — that everything else reads.
+Two of §12's deferrals came back together, because they turned out to be the same arithmetic seen from two ends. #478 makes the expanded height depend on the *headline*; #525 makes the rendering depend on the *allocation*. Both need one honest answer to "how tall is this bar fully expanded, right now" — `expandedHeightPx()`, the variant's token height plus a line per wrapped line — and both read it.
 
 ### #478 — expanded-headline text wrapping
 
@@ -189,6 +189,20 @@ Confirmed — §2 locked as built. One class, all variants; the nav/trailing chi
 **Wrapping is height-for-width**, which Swing asks about in the wrong order: the first `getPreferredSize()` necessarily happens before the bar has a width, and reports one line. `doLayout()` therefore re-measures at the real width and `revalidate()`s when the line count disagrees with what the last preferred height assumed. It converges after one extra pass — the count is a pure function of the width, and the width does not move in response to the height in the documented NORTH placement. Lines are measured at *exactly* the width they are painted at (`getWidth() − 2×16`), which is the #305 discipline: a wrapped run measured anywhere other than where it paints is how a label ends up disagreeing with its own render.
 
 Breaking is at word boundaries; a word wider than the line breaks mid-word rather than overflowing; the last permitted line ellipsizes the remainder, so a wrapped headline still terminates. Extra lines stack *upward* from the same bottom anchor, so the subtitle and the icon strip do not move.
+
+### #525 — height-driven collapse (graceful under-allocation)
+
+**No new API.** The bar paints at `max(scrollFraction, fractionForHeight(getHeight()))` — and `getCollapsedFraction()` reports that, so the accessor describes what is on screen rather than only one of its two inputs.
+
+The invariant, and the reason this is a fix rather than a patch: **an under-allocated bar renders identically to the same bar scrolled to that height.** Under-allocation is not a special rendering mode; it is the ordinary collapse, read off the height the host actually gave. `ElwhaAppBarScrollTest` asserts it as raster equality between a squeezed bar and a scrolled one, and `ElwhaAppBarAllocationDemo` puts the two columns side by side for the eye.
+
+Three constraints kept it from becoming a loop or a behavior change:
+
+- **Render-time only.** `getPreferredSize()` stays driven by the scroll fraction alone. If the allocated height fed back into the request, one squeeze would shrink the request, which would justify the squeeze, and the bar would latch collapsed permanently.
+- **`getMinimumSize()` still returns the preferred height.** The bar goes on telling every layout manager that it cannot usefully be shorter, so `BorderLayout` / `BoxLayout` / `GridBagLayout` / `GroupLayout` never squeeze it and never see any of this. The degradation is for the layouts that ignore minimum sizes outright — `GridLayout`, which divides its cells evenly, which is what the S1/S2/S5 specimen demos use and where the bug surfaced.
+- **Neither driver undoes the other.** `max` means extra height never re-expands a scroll-collapsed bar, and scroll never re-expands a squeezed one.
+
+At its preferred height a bar's two fractions are equal by construction, so a well-behaved host observes no change at all. Over-allocation is deliberately untouched: the headline stays bottom-anchored against the taller container, which is V1 behavior and what the specimen demos have already been smoked against. 64 px remains the floor — below it the strip clips, because M3 has no rendering shorter than the strip to degrade *to*.
 
 ## §12. Out of scope (every cut filed or documented)
 

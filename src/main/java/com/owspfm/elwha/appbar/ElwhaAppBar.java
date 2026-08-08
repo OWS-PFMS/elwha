@@ -35,7 +35,11 @@ import javax.swing.JScrollPane;
  *
  * <p><strong>Hosting.</strong> The bar is an in-flow component — drop it in {@code
  * BorderLayout.NORTH} above the content it heads. It fills whatever width the host grants and
- * reports its variant's height as preferred size.
+ * reports its variant's height as both its preferred and its minimum size, so every layout manager
+ * that honors minimum sizes gives it the room it asked for. A layout that ignores them anyway
+ * ({@code GridLayout} divides its cells evenly regardless) gets graceful degradation rather than
+ * overlapping text: a flexible bar handed less height than it wants renders at the collapse
+ * fraction that height implies, exactly as if it had been scrolled there.
  *
  * <p><strong>Slots.</strong> The navigation button and trailing elements are real Swing children
  * laid out in 48&nbsp;px slots (4&nbsp;px edge spaces, zero gap between trailing slots — the
@@ -708,22 +712,29 @@ public class ElwhaAppBar extends JComponent implements Accessible {
   }
 
   /**
-   * The flexible collapse fraction — {@code 0} fully expanded, {@code 1} collapsed to the
-   * 64&nbsp;px strip. Scroll-position-driven: scrubbing the scrollbar scrubs the bar. Always {@code
-   * 0} for {@link AppBarVariant#SMALL}.
+   * The flexible collapse fraction the bar is <em>rendering</em> at — {@code 0} fully expanded,
+   * {@code 1} collapsed to the 64&nbsp;px strip. Always {@code 0} for {@link AppBarVariant#SMALL}.
+   *
+   * <p>Two things drive it. Scroll position is the primary one, and the only one in play when the
+   * host honors the bar's preferred height: scrubbing the scrollbar scrubs the bar. The second is
+   * the height the host actually allocated — a bar squeezed below the height it asked for reports
+   * (and paints) the deeper collapse that height implies, so this can read higher than the value
+   * handed to {@link #setCollapsedFraction(float)}. Neither ever re-expands the other: the bar
+   * renders at whichever of the two is further along.
    *
    * @return the collapse fraction in {@code [0, 1]}
    * @version v0.5.0
    * @since v0.5.0
    */
   public float getCollapsedFraction() {
-    return collapsedFraction;
+    return renderedFraction();
   }
 
   /**
    * Forces a collapse fraction — the static-rendering hook for galleries and tests (the {@code
    * setLifted} convention). Ignored for {@link AppBarVariant#SMALL}; a live scroll source overrides
-   * the forced value on its next scroll event.
+   * the forced value on its next scroll event, and an under-allocated bar renders past it (see
+   * {@link #getCollapsedFraction()}).
    *
    * @param fraction the forced fraction, clamped to {@code [0, 1]}
    * @version v0.5.0
@@ -733,6 +744,34 @@ public class ElwhaAppBar extends JComponent implements Accessible {
     if (variant.isFlexible()) {
       updateCollapse(Math.max(0f, Math.min(1f, fraction)));
     }
+  }
+
+  // The fraction the bar paints at: the scroll-driven request, floored by whatever the host
+  // actually gave it (#525). Under-allocation used to slide the bottom-anchored headline up into
+  // the icon strip and paint the two on top of each other; reading the allocated height as a
+  // collapse instead renders the bar exactly as if it had been scrolled to that height.
+  //
+  // This is deliberately a render-time read and not part of getPreferredSize: the bar keeps asking
+  // for its full height, so a layout that honors preferred sizes sees no change at all, and there
+  // is no path by which shrinking the render shrinks the request that produced it.
+  private float renderedFraction() {
+    if (!variant.isFlexible()) {
+      return 0f;
+    }
+    final int height = getHeight();
+    if (height <= 0) {
+      return collapsedFraction;
+    }
+    return Math.max(collapsedFraction, fractionForHeight(height));
+  }
+
+  private float fractionForHeight(final int height) {
+    final int expanded = expandedHeightPx();
+    final int range = expanded - STRIP_HEIGHT_PX;
+    if (range <= 0) {
+      return 0f;
+    }
+    return Math.max(0f, Math.min(1f, (expanded - height) / (float) range));
   }
 
   private void onScroll(final int value, final int delta) {
@@ -911,6 +950,19 @@ public class ElwhaAppBar extends JComponent implements Accessible {
     return base + extraLines * getFontMetrics(variant.expandedTitleRole().resolve()).getHeight();
   }
 
+  /**
+   * The bar's minimum size — two slots wide, and as tall as it prefers to be.
+   *
+   * <p>The height floor is deliberate and unchanged by the #525 degradation: the bar still tells
+   * every layout manager that it cannot usefully be shorter, so {@code BorderLayout}, {@code
+   * BoxLayout}, {@code GridBagLayout} and friends never squeeze it in the first place. Rendering a
+   * squeezed bar as a collapsed one is the fallback for the layouts that ignore minimum sizes
+   * outright ({@code GridLayout}), not an invitation to under-allocate.
+   *
+   * @return the minimum size
+   * @version v0.5.0
+   * @since v0.5.0
+   */
   @Override
   public Dimension getMinimumSize() {
     if (isMinimumSizeSet()) {
@@ -944,7 +996,7 @@ public class ElwhaAppBar extends JComponent implements Accessible {
   // renders it — while the collapsed strip title ramps in over the last 30% of the collapse.
   // Both layers multiply by the disabled content opacity when the bar is disabled.
   private void paintCollapseCrossfade(final Graphics2D g2) {
-    final float fraction = collapsedFraction;
+    final float fraction = renderedFraction();
     final float content = contentAlpha();
     final float expandedAlpha = (1f - fraction) * content;
     if (expandedAlpha > 0f) {
