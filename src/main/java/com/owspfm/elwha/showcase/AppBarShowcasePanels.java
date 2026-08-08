@@ -27,10 +27,10 @@ import javax.swing.JScrollPane;
  * The Elwha Showcase leaf surface for {@link ElwhaAppBar} (story #462): a {@link
  * ComponentWorkbench} stage hosting a live bar in {@code BorderLayout.NORTH} over a scrollable
  * content stub wired as its scroll source — scroll the page and the bar lifts (and, for the
- * flexible variants, collapses) — with Variant / Subtitle / Centered / Nav icon / Action count /
- * Overflow menu / Lift on scroll / Enabled / RTL controls, and a state gallery stacking one bar per
- * configuration (the lifted and collapsed rows forced via the {@code setLifted} / {@code
- * setCollapsedFraction} hooks).
+ * flexible variants, collapses) — with Variant / Subtitle / Centered / Long headline / Headline
+ * lines / Nav icon / Action count / Overflow menu / Lift on scroll / Enabled / RTL controls, and a
+ * state gallery stacking one bar per configuration (the lifted and collapsed rows forced via the
+ * {@code setLifted} / {@code setCollapsedFraction} hooks).
  *
  * <p>The overflow control dogfoods {@link ElwhaMenu}: it appends a {@code more_vert} action whose
  * listener opens a menu anchored to the button — the class-Javadoc overflow recipe, live.
@@ -42,6 +42,8 @@ import javax.swing.JScrollPane;
 final class AppBarShowcasePanels {
 
   private static final String[] ACTION_NAMES = {"Favorite", "Edit", "Color palette", "Layers"};
+
+  private static final String LONG_TITLE = "Quarterly revenue and operating expenses";
 
   private AppBarShowcasePanels() {}
 
@@ -64,6 +66,10 @@ final class AppBarShowcasePanels {
     final ElwhaSelectField<Integer> countBox = ElwhaSelectField.outlined("Actions");
     countBox.setOptions(List.of(0, 1, 2, 3));
     countBox.setSelectedValue(2);
+    final ElwhaCheckbox longTitleBox = new ElwhaCheckbox("Long headline");
+    final ElwhaSelectField<Integer> maxLinesBox = ElwhaSelectField.outlined("Headline lines");
+    maxLinesBox.setOptions(List.of(1, 2, 3));
+    maxLinesBox.setSelectedValue(1);
     final ElwhaCheckbox subtitleBox = new ElwhaCheckbox("Subtitle");
     final ElwhaCheckbox centeredBox = new ElwhaCheckbox("Title centered");
     final ElwhaCheckbox navBox = new ElwhaCheckbox("Navigation icon");
@@ -80,6 +86,9 @@ final class AppBarShowcasePanels {
     controls.addControl("", variantBox);
     controls.addControl("", subtitleBox);
     controls.addControl("", centeredBox);
+    controls.addSection("Headline");
+    controls.addControl("", longTitleBox);
+    controls.addControl("", maxLinesBox);
     controls.addSection("Slots");
     controls.addControl("", navBox);
     controls.addControl("", countBox);
@@ -108,7 +117,8 @@ final class AppBarShowcasePanels {
           final int count = orDefault(countBox.getSelectedValue(), 2);
 
           final ElwhaAppBar bar = new ElwhaAppBar(variant);
-          bar.setTitle("Inbox");
+          bar.setTitle(longTitleBox.isChecked() ? LONG_TITLE : "Inbox");
+          bar.setTitleMaxLines(orDefault(maxLinesBox.getSelectedValue(), 1));
           if (subtitleBox.isChecked()) {
             bar.setSubtitle("Synced 5 minutes ago");
           }
@@ -178,7 +188,9 @@ final class AppBarShowcasePanels {
                   overflowBox.isChecked(),
                   liftBox.isChecked(),
                   enabledBox.isChecked(),
-                  rtlBox.isChecked()));
+                  rtlBox.isChecked(),
+                  longTitleBox.isChecked(),
+                  orDefault(maxLinesBox.getSelectedValue(), 1)));
         };
 
     reapply[0] = apply;
@@ -190,6 +202,8 @@ final class AppBarShowcasePanels {
 
     variantBox.addSelectionChangeListener(v -> apply.run());
     countBox.addSelectionChangeListener(v -> apply.run());
+    maxLinesBox.addSelectionChangeListener(v -> apply.run());
+    longTitleBox.addActionListener(e -> apply.run());
     subtitleBox.addActionListener(e -> apply.run());
     centeredBox.addActionListener(e -> apply.run());
     navBox.addActionListener(e -> apply.run());
@@ -230,6 +244,8 @@ final class AppBarShowcasePanels {
             "Large flexible + subtitle — 152",
             configured(AppBarVariant.LARGE_FLEXIBLE, true, false)));
     stack.add(galleryRow("Flexible collapsed to the strip (fraction 1)", collapsed()));
+    stack.add(galleryRow("Medium flexible — headline wrapped to two lines (#478)", wrapped(false)));
+    stack.add(galleryRow("Large flexible — headline wrapped, with subtitle (#478)", wrapped(true)));
     stack.add(galleryRow("Disabled", disabled()));
     stack.add(Box.createVerticalGlue());
     return stack;
@@ -268,14 +284,27 @@ final class AppBarShowcasePanels {
     return bar;
   }
 
+  private static ElwhaAppBar wrapped(final boolean large) {
+    final ElwhaAppBar bar =
+        configured(
+            large ? AppBarVariant.LARGE_FLEXIBLE : AppBarVariant.MEDIUM_FLEXIBLE, large, false);
+    bar.setTitle(LONG_TITLE);
+    bar.setTitleMaxLines(2);
+    return bar;
+  }
+
   private static JComponent galleryRow(final String title, final ElwhaAppBar bar) {
+    return galleryRow(title, (JComponent) bar);
+  }
+
+  private static JComponent galleryRow(final String title, final JComponent content) {
     final JPanel row = new JPanel(new BorderLayout(0, 4));
     row.setOpaque(false);
     row.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
     final JLabel header = new JLabel(title);
     header.setFont(header.getFont().deriveFont(Font.BOLD));
     row.add(header, BorderLayout.NORTH);
-    row.add(bar, BorderLayout.CENTER);
+    row.add(content, BorderLayout.CENTER);
     row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height + 24));
     return row;
   }
@@ -293,7 +322,9 @@ final class AppBarShowcasePanels {
       final boolean overflow,
       final boolean lift,
       final boolean enabled,
-      final boolean rtl) {
+      final boolean rtl,
+      final boolean longTitle,
+      final int maxLines) {
     final StringBuilder code = new StringBuilder(512);
     code.append("ElwhaAppBar bar = ElwhaAppBar.")
         .append(
@@ -303,7 +334,10 @@ final class AppBarShowcasePanels {
               case LARGE_FLEXIBLE -> "largeFlexible";
             })
         .append("();\n");
-    code.append("bar.setTitle(\"Inbox\");\n");
+    code.append("bar.setTitle(\"").append(longTitle ? LONG_TITLE : "Inbox").append("\");\n");
+    if (maxLines > 1) {
+      code.append("bar.setTitleMaxLines(").append(maxLines).append(");\n");
+    }
     if (subtitle) {
       code.append("bar.setSubtitle(\"Synced 5 minutes ago\");\n");
     }

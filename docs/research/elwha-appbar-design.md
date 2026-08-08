@@ -103,6 +103,8 @@ All colors/fonts resolve **at paint time** (`ColorRole.resolve()` / `TypeRole.re
 
 Preferred size: height per variant/subtitle/collapse state; width = slots + title minimum (title ellipsizes first). No `getMaximumSize` override (#199/#200 doctrine). The bar fills whatever width `BorderLayout.NORTH` grants.
 
+⚠️ Post-V1 (#478): the expanded heights above are the *one-line* heights. With `setTitleMaxLines(n > 1)` each wrapped line past the first adds one line of the variant's expanded title role, and the collapse range grows with it — §12.1.
+
 ## §6. States & motion
 
 - **Lift:** a single boolean — *content scrolled under the bar* (`scrollY > 0`). On flip, `MorphAnimator` (~200ms, `Easing.STANDARD`) fades container `SURFACE ↔ SURFACE_CONTAINER`; reduced motion snaps. Applies to **every** variant with a scroll source while `liftOnScroll` (default `true`).
@@ -164,12 +166,36 @@ Layout regions (flexible, fraction *f*):
 
 Confirmed — §2 locked as built. One class, all variants; the nav/trailing children lay out in 48px slots (4px edge spaces, zero gap) with the default `IconButtonSize.M` (40px) button centered in its slot, which lands the 24px glyph exactly 16px from the container edge — the Compose render falls out of the existing icon-button sizing with no restyling. Bar-painted title/subtitle stack centers as a unit in the 64 strip; ellipsis + centered-clamping verified pixel-level in `ElwhaAppBarChromeSmoke` (light + dark). One adaptation from the §3 sketch: `MaterialIcons` exposes per-glyph static methods, not a `Symbol` enum, so the conveniences take `(Icon, String accessibleName, ActionListener)` — the accessible name is required at the convenience layer, which also satisfies the §9 requirement earlier than planned. No fallback needed.
 
+## §12.1 Post-V1: the Expressive flexibility follow-ons — SHIPPED
+
+§12 deferred expanded-headline wrapping for want of "a multi-line height model on top of the fixed height tokens". This is that model: one honest answer to "how tall is this bar fully expanded, right now" — `expandedHeightPx()`, the variant's token height plus a line per wrapped line — that everything else reads.
+
+### #478 — expanded-headline text wrapping
+
+**API: `setTitleMaxLines(int)` / `getTitleMaxLines()`, default `1`.** Values below 1 clamp to 1; there is no upper clamp.
+
+| Decision | Why |
+|---|---|
+| **Opt-in, default 1** | Research §A lists wrapping as an *allowance* ("text wrapping capability"), not a default, and V1 shipped single-line everywhere. Defaulting to 2 would silently change the height of every existing flexible bar with a long title. |
+| **A line budget, not a boolean** | M3's figures show two lines, so `2` is the spec'd value — but the height rule generalizes for free, and a hard cap at 2 would be a number we invented. `3` is honored and documented as past the figures. |
+| **Flexible expanded headline only** | The collapsed strip title and the `SMALL` bar stay single-line + ellipsis. This is M3's own split (a collapsed flexible *is* the small bar, §2) and the 64 strip has no room for a second line regardless. |
+| **The subtitle does not wrap** | The Expressive delta names the headline. A wrapping subtitle is a separate height rule with no spec behind it. |
+| **Preferred *width* unchanged** | It is computed from the strip title font, and the strip title still does not wrap — so the two stay consistent. |
+
+**Height rule:** each line past the first adds one `FontMetrics.getHeight()` of the variant's *expanded title role* — Headline Medium for medium-flexible, Display Small for large-flexible. The token heights (112/136/120/152) are quoted for one line, so this is additive rather than a replacement model. Measured: medium 112 → 147, large 120 → 164.
+
+**Collapse follows automatically.** The range is `expandedHeightPx() − 64`, so a wrapped bar simply has further to travel and still lands exactly on the strip. Nothing about the collapse *motion* changed: it remains scroll-position-driven with no timer (§6), so there is no animation here to make reduced-motion-aware — the lift fade is still the bar's only animated property, and it still snaps under reduced motion.
+
+**Wrapping is height-for-width**, which Swing asks about in the wrong order: the first `getPreferredSize()` necessarily happens before the bar has a width, and reports one line. `doLayout()` therefore re-measures at the real width and `revalidate()`s when the line count disagrees with what the last preferred height assumed. It converges after one extra pass — the count is a pure function of the width, and the width does not move in response to the height in the documented NORTH placement. Lines are measured at *exactly* the width they are painted at (`getWidth() − 2×16`), which is the #305 discipline: a wrapped run measured anywhere other than where it paints is how a label ends up disagreeing with its own render.
+
+Breaking is at word boundaries; a word wider than the line breaks mid-word rather than overflowing; the last permitted line ellipsizes the remainder, so a wrapped headline still terminates. Extra lines stack *upward* from the same bottom anchor, so the subtitle and the icon strip do not move.
+
 ## §12. Out of scope (every cut filed or documented)
 
 - **Search app bar** → **stub epic filed** (V2): the headline slot hosts the M3 search-field anatomy ("icons inside and outside the search bar, centered text") — blocked by `ElwhaTextField` #286 maturity. Not silently cut.
 - **Toolbars family** (docked + floating) → **stub epic filed**: the Expressive successor to the deprecated bottom app bar (research §E) — the #287 "bottom app bar sibling" note lands there. A different component family, not an app-bar variant.
 - **`enterAlways`** — whole-bar hide on scroll-down; mobile-estate pattern, low desktop value, host-layout churn. Documented deferral (a future behavior flag; `ScrollSourceBinding` already carries the delta it would need).
-- **Expanded-headline text wrapping** (Expressive flexibility) → **follow-up issue filed at S6**: needs a multi-line height model on top of the fixed height tokens. V1 is single-line + ellipsis everywhere.
+- **Expanded-headline text wrapping** (Expressive flexibility) → **follow-up issue filed at S6**: needs a multi-line height model on top of the fixed height tokens. V1 is single-line + ellipsis everywhere. ✅ **Shipped post-V1 as #478** — `setTitleMaxLines(int)`, default 1 so V1's behavior is preserved. See §12.1.
 - **Action auto-overflow** — consumer composition with `ElwhaMenu` (Javadoc recipe + Workbench demo); no auto-collapse in V1.
 - **Avatar primitive** (`AvatarSize 32`) — `addTrailingElement(JComponent)` carries imagery; a dedicated avatar is its own future discussion.
 - **Compress scroll effect** (MDC `layout_scrollEffect="compress"`) — Android-specific polish; not adopted.

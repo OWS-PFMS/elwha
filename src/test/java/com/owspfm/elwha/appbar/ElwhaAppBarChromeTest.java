@@ -11,6 +11,8 @@ import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.ComponentOrientation;
+import java.awt.FontMetrics;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -392,6 +394,249 @@ class ElwhaAppBarChromeTest {
     assertThat(wide.getPreferredSize().width)
         .as("§3 — the bar asks for room for its own text plus its slots")
         .isGreaterThan(narrow.getPreferredSize().width);
+  }
+
+  // ------------------------------------------ expanded headline wrapping (#478)
+
+  private static final String LONG_TITLE = "Quarterly revenue and operating expenses";
+
+  // A wrapping headline is height-for-width: the bar cannot know how many lines it takes until it
+  // has a width to measure against, so tests hand it one before asking what height it wants.
+  private static ElwhaAppBar measuredAt(final ElwhaAppBar bar, final int width) {
+    bar.setSize(width, 0);
+    return bar;
+  }
+
+  private static int lineHeight(final ElwhaAppBar bar, final AppBarVariant variant) {
+    return bar.getFontMetrics(variant.expandedTitleRole().resolve()).getHeight();
+  }
+
+  private static PaintLog paintExpanded(final ElwhaAppBar bar, final int width) {
+    measuredAt(bar, width);
+    return PaintLog.capture(bar, width, bar.getPreferredSize().height);
+  }
+
+  @Test
+  void headlinesDoNotWrapUntilTheyAreAllowedTo() {
+    final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+    bar.setTitle(LONG_TITLE);
+
+    assertThat(bar.getTitleMaxLines())
+        .as("§12 — V1 shipped single-line everywhere and wrapping is the opt-in on top of it")
+        .isOne();
+    assertThat(measuredAt(bar, 480).getPreferredSize().height)
+        .as("so a long title still ellipsizes into the variant's token height")
+        .isEqualTo(AppBarVariant.MEDIUM_FLEXIBLE.expandedHeightPx(false));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = AppBarVariant.class,
+      names = {"MEDIUM_FLEXIBLE", "LARGE_FLEXIBLE"})
+  void aWrappedHeadlineGrowsTheBarByOneLineOfItsOwnTitleRole(final AppBarVariant variant) {
+    final ElwhaAppBar bar = new ElwhaAppBar(variant);
+    bar.setTitle(LONG_TITLE);
+    bar.setTitleMaxLines(2);
+
+    assertThat(measuredAt(bar, 480).getPreferredSize().height)
+        .as(
+            "#478 — the token heights are quoted for one line, so a second line is worth exactly"
+                + " one line of the type role that bar paints its headline in")
+        .isEqualTo(variant.expandedHeightPx(false) + lineHeight(bar, variant));
+  }
+
+  @Test
+  void aTallerVariantGrowsByMoreBecauseItsHeadlineIsBigger() {
+    final ElwhaAppBar medium = ElwhaAppBar.mediumFlexible();
+    medium.setTitle(LONG_TITLE);
+    medium.setTitleMaxLines(2);
+    final ElwhaAppBar large = ElwhaAppBar.largeFlexible();
+    large.setTitle(LONG_TITLE);
+    large.setTitleMaxLines(2);
+
+    final int mediumGrowth =
+        measuredAt(medium, 480).getPreferredSize().height
+            - AppBarVariant.MEDIUM_FLEXIBLE.expandedHeightPx(false);
+    final int largeGrowth =
+        measuredAt(large, 480).getPreferredSize().height
+            - AppBarVariant.LARGE_FLEXIBLE.expandedHeightPx(false);
+
+    assertThat(largeGrowth)
+        .as("#478 — a Display Small line costs more height than a Headline Medium one")
+        .isGreaterThan(mediumGrowth);
+  }
+
+  @Test
+  void aTitleThatAlreadyFitsIsLeftAlone() {
+    final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+    bar.setTitle("Inbox");
+    bar.setTitleMaxLines(2);
+
+    assertThat(measuredAt(bar, 480).getPreferredSize().height)
+        .as("#478 — the budget is a ceiling, not a reservation; short titles cost nothing")
+        .isEqualTo(AppBarVariant.MEDIUM_FLEXIBLE.expandedHeightPx(false));
+  }
+
+  @Test
+  void aSmallBarNeverWraps() {
+    final ElwhaAppBar bar = ElwhaAppBar.small();
+    bar.setTitle(LONG_TITLE);
+    bar.setTitleMaxLines(2);
+
+    assertThat(measuredAt(bar, 480).getPreferredSize().height)
+        .as("#478 — wrapping is a flexible-variant affordance; the 64 dp strip has no second line")
+        .isEqualTo(ElwhaAppBar.STRIP_HEIGHT_PX);
+    assertThat(PaintLog.capture(bar, 480, ElwhaAppBar.STRIP_HEIGHT_PX).texts())
+        .as("and its title stays one ellipsized run")
+        .hasSize(1);
+  }
+
+  @Test
+  void wrappingBreaksBetweenWordsRatherThanThroughThem() {
+    final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+    bar.setTitle(LONG_TITLE);
+    bar.setTitleMaxLines(2);
+
+    final List<String> lines =
+        paintExpanded(bar, 480).texts().stream().map(PaintLog.Text::string).toList();
+
+    assertThat(lines).as("#478 — a two-line headline is two painted runs").hasSize(2);
+    assertThat(String.join(" ", lines))
+        .as("and the break costs nothing but the space it happened at")
+        .isEqualTo(LONG_TITLE);
+  }
+
+  @Test
+  void lastAllowedLineEllipsizesWhatIsLeftOver() {
+    final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+    bar.setTitle(LONG_TITLE + " for the western region and its subsidiaries");
+    bar.setTitleMaxLines(2);
+
+    final List<String> lines =
+        paintExpanded(bar, 480).texts().stream().map(PaintLog.Text::string).toList();
+
+    assertThat(lines).hasSize(2);
+    assertThat(lines.get(1))
+        .as("#478 — the budget still terminates the headline; it does not run off the end")
+        .endsWith("…");
+  }
+
+  @Test
+  void aWordWiderThanTheLineBreaksInsteadOfOverflowing() {
+    final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+    final FontMetrics fm =
+        bar.getFontMetrics(AppBarVariant.MEDIUM_FLEXIBLE.expandedTitleRole().resolve());
+
+    final List<String> lines =
+        ElwhaAppBar.wrapHeadline("Supercalifragilisticexpialidocious", fm, 120, 2);
+
+    assertThat(lines).as("there is no word boundary to break at, so it breaks anyway").hasSize(2);
+    assertThat(fm.stringWidth(lines.get(0)))
+        .as("#478 — and neither line escapes the width it was measured for")
+        .isLessThanOrEqualTo(120);
+    assertThat(fm.stringWidth(lines.get(1))).isLessThanOrEqualTo(120);
+  }
+
+  @Test
+  void wrappedLinesStackUpwardsFromTheSameBottomAnchor() {
+    final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+    bar.setTitle(LONG_TITLE);
+    bar.setTitleMaxLines(2);
+    bar.setSubtitle("12 unread");
+
+    final PaintLog log = paintExpanded(bar, 480);
+    final List<PaintLog.Text> texts = log.texts();
+
+    assertThat(texts).hasSize(3);
+    assertThat(texts.get(0).y())
+        .as("#478 — extra lines grow the block upward; the anatomy below them does not move")
+        .isLessThan(texts.get(1).y());
+    assertThat(texts.get(2).y())
+        .as("§7 — and the subtitle stays the bottom line of the block")
+        .isGreaterThan(texts.get(1).y());
+  }
+
+  @Test
+  void aNarrowerBarNeedsTheSecondLineThatAWiderOneDoesNot() {
+    final ElwhaAppBar wide = ElwhaAppBar.mediumFlexible();
+    wide.setTitle(LONG_TITLE);
+    wide.setTitleMaxLines(2);
+    final ElwhaAppBar narrow = ElwhaAppBar.mediumFlexible();
+    narrow.setTitle(LONG_TITLE);
+    narrow.setTitleMaxLines(2);
+
+    assertThat(measuredAt(wide, 720).getPreferredSize().height)
+        .as("#478 — wrapping is height-for-width: the same title costs nothing when it fits")
+        .isEqualTo(AppBarVariant.MEDIUM_FLEXIBLE.expandedHeightPx(false));
+    assertThat(measuredAt(narrow, 480).getPreferredSize().height)
+        .as("and a line when it does not")
+        .isGreaterThan(measuredAt(wide, 720).getPreferredSize().height);
+  }
+
+  @Test
+  void resizingABarReflowsItsHeadline() {
+    final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+    bar.setTitle(LONG_TITLE);
+    bar.setTitleMaxLines(2);
+    final int wrapped = measuredAt(bar, 480).getPreferredSize().height;
+
+    bar.setSize(720, wrapped);
+    bar.doLayout();
+
+    assertThat(bar.getPreferredSize().height)
+        .as("#478 — the line count is re-measured against the width the bar actually has")
+        .isEqualTo(AppBarVariant.MEDIUM_FLEXIBLE.expandedHeightPx(false));
+  }
+
+  @Test
+  void collapsedTitleStaysOneLineHoweverTheExpandedOneWraps() {
+    final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+    bar.setTitle(LONG_TITLE);
+    bar.setTitleMaxLines(2);
+    measuredAt(bar, 480);
+    bar.setCollapsedFraction(1f);
+
+    final List<PaintLog.Text> texts =
+        PaintLog.capture(bar, 480, ElwhaAppBar.STRIP_HEIGHT_PX).texts();
+
+    assertThat(texts)
+        .as("#478 — M3 wraps the headline, not the strip; a collapsed bar is the small bar")
+        .hasSize(1);
+    assertThat(texts.get(0).font())
+        .as("§4 — painted in the strip's own type role")
+        .isEqualTo(TypeRole.TITLE_LARGE.resolve());
+  }
+
+  @Test
+  void aWrappedHeadlineMirrorsWithTheRestOfTheBar() {
+    final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+    bar.setTitle(LONG_TITLE);
+    bar.setTitleMaxLines(2);
+    bar.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+
+    final List<PaintLog.Text> texts = paintExpanded(bar, 480).texts();
+
+    assertThat(texts).hasSize(2);
+    final double firstEnd = texts.get(0).x() + widthOf(bar, texts.get(0));
+    final double secondEnd = texts.get(1).x() + widthOf(bar, texts.get(1));
+    assertThat(Math.abs(firstEnd - secondEnd))
+        .as("§9 — both lines hang off the trailing margin once the orientation flips")
+        .isLessThanOrEqualTo(1.0);
+  }
+
+  private static double widthOf(final ElwhaAppBar bar, final PaintLog.Text text) {
+    return bar.getFontMetrics(text.font()).stringWidth(text.string());
+  }
+
+  @Test
+  void lineBudgetIsAtLeastOne() {
+    final ElwhaAppBar bar = ElwhaAppBar.mediumFlexible();
+
+    bar.setTitleMaxLines(0);
+    assertThat(bar.getTitleMaxLines()).as("a headline of no lines is not a thing").isOne();
+
+    bar.setTitleMaxLines(-3);
+    assertThat(bar.getTitleMaxLines()).isOne();
   }
 
   // -------------------------------------------------------------------- RTL

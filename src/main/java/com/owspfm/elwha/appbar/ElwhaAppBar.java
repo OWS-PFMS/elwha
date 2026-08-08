@@ -98,6 +98,14 @@ public class ElwhaAppBar extends JComponent implements Accessible {
   private String title = "";
   private String subtitle;
   private boolean titleCentered;
+  private int titleMaxLines = 1;
+
+  private List<String> wrappedLines = List.of();
+  private String wrappedText;
+  private Font wrappedFont;
+  private int wrappedWidth = -1;
+  private int wrappedMaxLines = -1;
+  private int laidOutLineCount = 1;
 
   /**
    * Constructs a {@link AppBarVariant#SMALL} app bar.
@@ -405,7 +413,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
 
   /**
    * Sets the title — the bar's headline, painted by the bar in the variant's title role. Single
-   * line; ellipsized at the slot edges.
+   * line and ellipsized at the slot edges, unless the flexible variants' expanded headline has been
+   * allowed to wrap — see {@link #setTitleMaxLines(int)}.
    *
    * @param title the title text; {@code null} is treated as empty
    * @version v0.5.0
@@ -415,6 +424,11 @@ public class ElwhaAppBar extends JComponent implements Accessible {
     final String old = accessibleNameNow();
     this.title = title == null ? "" : title;
     fireAccessibleNameChange(old);
+    // A wrapping headline makes the title's length part of the expanded height, and so part of the
+    // collapse range — the fraction the current scroll offset maps to has moved with it.
+    if (scrollSource != null) {
+      applyScrollState(scrollBinding.value());
+    }
     revalidate();
     repaint();
   }
@@ -485,6 +499,113 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    */
   public boolean isTitleCentered() {
     return titleCentered;
+  }
+
+  /**
+   * Allows the flexible variants' <strong>expanded</strong> headline to wrap over this many lines —
+   * the Expressive "text wrapping" flexibility. {@code 1} (the default) keeps V1's behavior: one
+   * line, ellipsized. M3 shows the expanded headline over at most two lines, so {@code 2} is the
+   * spec'd value; larger counts are honored but leave the Expressive figures behind.
+   *
+   * <p>Only the expanded headline wraps. The collapsed strip title and the {@link
+   * AppBarVariant#SMALL} bar's title stay single-line and ellipsized whatever this is set to — that
+   * is M3's own split, and the 64&nbsp;px strip has no room for a second line regardless.
+   *
+   * <p>Wrapping makes the bar's height depend on its title and its width: each line past the first
+   * adds one line of the expanded title role to the variant's expanded token height, and the
+   * collapse range grows with it, so a wrapped bar simply has further to collapse.
+   *
+   * @param titleMaxLines the line budget for the expanded headline; values below {@code 1} are
+   *     clamped to {@code 1}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setTitleMaxLines(final int titleMaxLines) {
+    final int clamped = Math.max(1, titleMaxLines);
+    if (this.titleMaxLines == clamped) {
+      return;
+    }
+    this.titleMaxLines = clamped;
+    if (scrollSource != null) {
+      applyScrollState(scrollBinding.value());
+    }
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * The expanded headline's line budget.
+   *
+   * @return the maximum number of lines, at least {@code 1}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int getTitleMaxLines() {
+    return titleMaxLines;
+  }
+
+  // The expanded headline broken into the lines it will actually paint, at the width it will
+  // actually paint them — measuring anywhere else is how a wrapped label ends up disagreeing with
+  // its own render (#305). Empty for an empty title; one line whenever wrapping is off, the bar is
+  // not flexible, or the bar has no width to measure against yet.
+  private List<String> headlineLines() {
+    if (title.isEmpty()) {
+      return List.of();
+    }
+    final int available = headlineTextWidth();
+    if (!variant.isFlexible() || titleMaxLines <= 1 || available <= 0) {
+      return List.of(title);
+    }
+    final Font font = variant.expandedTitleRole().resolve();
+    if (available == wrappedWidth
+        && titleMaxLines == wrappedMaxLines
+        && title.equals(wrappedText)
+        && font.equals(wrappedFont)) {
+      return wrappedLines;
+    }
+    wrappedLines = wrapHeadline(title, getFontMetrics(font), available, titleMaxLines);
+    wrappedWidth = available;
+    wrappedMaxLines = titleMaxLines;
+    wrappedText = title;
+    wrappedFont = font;
+    return wrappedLines;
+  }
+
+  private int headlineTextWidth() {
+    return getWidth() - 2 * EXPANDED_MARGIN_PX;
+  }
+
+  // Breaks the headline over at most maxLines lines at word boundaries; the last line ellipsizes
+  // whatever did not fit, so a wrapped headline still terminates rather than running off the end.
+  static List<String> wrapHeadline(
+      final String text, final FontMetrics fm, final int available, final int maxLines) {
+    final List<String> lines = new ArrayList<>(maxLines);
+    String rest = text;
+    while (lines.size() < maxLines - 1 && fm.stringWidth(rest) > available) {
+      final int cut = breakPoint(rest, fm, available);
+      lines.add(rest.substring(0, cut).stripTrailing());
+      rest = rest.substring(cut).stripLeading();
+    }
+    lines.add(clipText(rest, fm, available));
+    return List.copyOf(lines);
+  }
+
+  // Where to break a line that overflows: after the last space that still fits, or mid-word when a
+  // single word is wider than the line. Always advances by at least one character, so the caller's
+  // loop cannot stall on text it can never fit.
+  private static int breakPoint(final String text, final FontMetrics fm, final int available) {
+    int fits = 0;
+    for (int end = 1; end <= text.length(); end++) {
+      if (fm.stringWidth(text.substring(0, end)) > available) {
+        break;
+      }
+      fits = end;
+    }
+    if (fits >= text.length()) {
+      return text.length();
+    }
+    final int space = text.lastIndexOf(' ', fits);
+    return space > 0 ? space + 1 : Math.max(1, fits);
   }
 
   // ------------------------------------------------------------------ scroll
@@ -621,7 +742,7 @@ public class ElwhaAppBar extends JComponent implements Accessible {
   private void applyScrollState(final int value) {
     updateLift(liftOnScroll && value > 0);
     if (variant.isFlexible()) {
-      final int range = variant.expandedHeightPx(subtitle != null) - STRIP_HEIGHT_PX;
+      final int range = expandedHeightPx() - STRIP_HEIGHT_PX;
       updateCollapse(Math.max(0f, Math.min(1f, value / (float) range)));
     }
   }
@@ -697,6 +818,24 @@ public class ElwhaAppBar extends JComponent implements Accessible {
       edge = ltr ? edge - slot : edge + slot;
       placeInSlot(element, ltr ? edge : edge - slot, slot);
     }
+    reflowHeadline();
+  }
+
+  // A wrapping headline is height-for-width, and Swing asks for a preferred size before it hands
+  // out a width: the first measurement necessarily happens at width 0 and reports one line. Once a
+  // real width arrives and the line count turns out to differ, the height that count implies has
+  // to be re-requested. Converges after one extra pass — the count is a function of the width, and
+  // the width does not move in response to the height in the bar's documented NORTH placement.
+  private void reflowHeadline() {
+    if (!variant.isFlexible() || titleMaxLines <= 1) {
+      return;
+    }
+    final int lines = headlineLines().size();
+    if (lines != laidOutLineCount) {
+      laidOutLineCount = lines;
+      revalidate();
+      repaint();
+    }
   }
 
   private static int slotWidth(final JComponent element) {
@@ -748,14 +887,28 @@ public class ElwhaAppBar extends JComponent implements Accessible {
     return new Dimension(width, currentHeightPx());
   }
 
-  // The container height at the current collapse fraction: the expanded token height at 0, the
-  // 64px strip at 1, lerped between.
+  // The container height at the current collapse fraction: the expanded height at 0, the 64px
+  // strip at 1, lerped between. Driven by the scroll-side fraction only — see renderedFraction.
   private int currentHeightPx() {
-    final int expanded = variant.expandedHeightPx(subtitle != null);
+    final int expanded = expandedHeightPx();
     if (!variant.isFlexible() || collapsedFraction <= 0f) {
       return expanded;
     }
     return STRIP_HEIGHT_PX + Math.round((expanded - STRIP_HEIGHT_PX) * (1f - collapsedFraction));
+  }
+
+  // The fully-expanded height: the variant's token height for a one-line headline, plus a line of
+  // the expanded title role for every line the headline wraps onto beyond the first (#478).
+  private int expandedHeightPx() {
+    final int base = variant.expandedHeightPx(subtitle != null);
+    if (!variant.isFlexible() || titleMaxLines <= 1) {
+      return base;
+    }
+    final int extraLines = headlineLines().size() - 1;
+    if (extraLines <= 0) {
+      return base;
+    }
+    return base + extraLines * getFontMetrics(variant.expandedTitleRole().resolve()).getHeight();
   }
 
   @Override
@@ -791,12 +944,13 @@ public class ElwhaAppBar extends JComponent implements Accessible {
   // renders it — while the collapsed strip title ramps in over the last 30% of the collapse.
   // Both layers multiply by the disabled content opacity when the bar is disabled.
   private void paintCollapseCrossfade(final Graphics2D g2) {
+    final float fraction = collapsedFraction;
     final float content = contentAlpha();
-    final float expandedAlpha = (1f - collapsedFraction) * content;
+    final float expandedAlpha = (1f - fraction) * content;
     if (expandedAlpha > 0f) {
       paintTextLayer(g2, expandedAlpha, this::paintExpandedHeadline);
     }
-    final float collapsedAlpha = Math.max(0f, (collapsedFraction - 0.7f) / 0.3f) * content;
+    final float collapsedAlpha = Math.max(0f, (fraction - 0.7f) / 0.3f) * content;
     if (collapsedAlpha > 0f) {
       paintTextLayer(g2, collapsedAlpha, this::paintStripText);
     }
@@ -821,7 +975,8 @@ public class ElwhaAppBar extends JComponent implements Accessible {
 
   // The flexible variants' expanded headline block: 16px margins, bottom-anchored at the
   // variant's bottom padding (against the current collapse height), title over subtitle with
-  // zero gap (the v14.0.0 anatomy).
+  // zero gap (the v14.0.0 anatomy). A wrapped headline stacks its lines upwards from the same
+  // anchor, which is what the grown expanded height (#478) makes room for.
   private void paintExpandedHeadline(final Graphics2D g2) {
     if (title.isEmpty() && subtitle == null) {
       return;
@@ -835,14 +990,19 @@ public class ElwhaAppBar extends JComponent implements Accessible {
       return;
     }
     final int blockBottom = getHeight() - variant.expandedBottomPaddingPx();
-    final int titleBaseline =
+    final int lastTitleBaseline =
         subtitle != null
             ? blockBottom - subtitleFm.getHeight() - titleFm.getDescent()
             : blockBottom - titleFm.getDescent();
 
+    final List<String> lines = headlineLines();
     g2.setColor(ColorRole.ON_SURFACE.resolve());
     g2.setFont(titleFont);
-    drawClippedLine(g2, title, titleFm, region, titleBaseline);
+    for (int i = 0; i < lines.size(); i++) {
+      final int fromLast = lines.size() - 1 - i;
+      drawClippedLine(
+          g2, lines.get(i), titleFm, region, lastTitleBaseline - fromLast * titleFm.getHeight());
+    }
 
     if (subtitle != null) {
       g2.setColor(ColorRole.ON_SURFACE_VARIANT.resolve());
