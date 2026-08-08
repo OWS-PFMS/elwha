@@ -21,7 +21,7 @@ import javax.swing.JPanel;
  * Gallery tab so both views stay in sync.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class NavigationRailPlaygroundPanels {
@@ -29,12 +29,12 @@ public final class NavigationRailPlaygroundPanels {
   private NavigationRailPlaygroundPanels() {}
 
   /**
-   * Builds the Variants gallery panel — four side-by-side rails demonstrating the chrome knobs:
-   * minimal (destinations only), with menu + FAB, with trailing actions, fully populated (menu +
-   * FAB + trailing).
+   * Builds the Variants gallery panel — five side-by-side rails demonstrating the chrome knobs:
+   * minimal (destinations only), with menu + FAB, with trailing actions, with those actions
+   * collapsed into the overflow entry point, fully populated (menu + FAB + trailing).
    *
    * @return the panel
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public static JPanel buildVariantsPanel() {
@@ -42,6 +42,7 @@ public final class NavigationRailPlaygroundPanels {
     grid.add(cell("Minimal", railMinimal()));
     grid.add(cell("Menu + FAB", railWithMenuAndFab()));
     grid.add(cell("Trailing actions", railWithTrailing()));
+    grid.add(cell("Trailing overflow", railWithOverflow()));
     grid.add(cell("Fully populated", railFull()));
     return grid;
   }
@@ -142,6 +143,14 @@ public final class NavigationRailPlaygroundPanels {
     return hostRail(buildBaseRail(false, false, true, false));
   }
 
+  // The #238 collapsed state, pinned with ALWAYS so a gallery cell shows it without depending on
+  // how much height the surrounding FlowLayout happened to give the cell.
+  private static JPanel railWithOverflow() {
+    final ElwhaNavigationRail rail = buildBaseRail(false, false, true, false);
+    rail.setOverflowMode(ElwhaNavigationRail.OverflowMode.ALWAYS);
+    return hostRail(rail);
+  }
+
   private static JPanel railFull() {
     return hostRail(buildBaseRail(true, true, true, false));
   }
@@ -175,12 +184,17 @@ public final class NavigationRailPlaygroundPanels {
     dests.add(ElwhaNavRailDestination.of(MaterialIcons.symbol("visibility"), "Watched"));
     rail.setPrimary(dests);
     if (trailing) {
-      final List<ElwhaIconButton> actions = new ArrayList<>();
-      actions.add(new ElwhaIconButton(MaterialIcons.help()));
-      actions.add(new ElwhaIconButton(MaterialIcons.info()));
-      rail.setTrailingActions(actions);
+      // Named, because the overflow menu labels its rows from each action's accessible name (#238).
+      rail.setTrailingActions(
+          List.of(action(MaterialIcons.help(), "Help"), action(MaterialIcons.info(), "About")));
     }
     return rail;
+  }
+
+  private static ElwhaIconButton action(final javax.swing.Icon icon, final String name) {
+    final ElwhaIconButton button = new ElwhaIconButton(icon);
+    button.getAccessibleContext().setAccessibleName(name);
+    return button;
   }
 
   // Wraps a rail in a host panel that locks its size to the rail's preferred size so the
