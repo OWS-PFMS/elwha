@@ -117,7 +117,7 @@ class ElwhaColorPickerHostTest {
   }
 
   @Test
-  void thePickerHeaderIsInertChromeAroundItsEyedropper() {
+  void pickerHeaderIsInertChromeAroundItsEyedropper() {
     final ElwhaColorPicker picker = new ElwhaColorPicker(Color.RED);
     picker.setEyedropperEnabled(true);
     final ColorPickerHeader header = new ColorPickerHeader(picker);

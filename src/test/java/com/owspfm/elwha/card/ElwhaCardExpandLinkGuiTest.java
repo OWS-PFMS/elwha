@@ -122,7 +122,7 @@ class ElwhaCardExpandLinkGuiTest {
   }
 
   @Test
-  void theRingClearsWhenFocusMovesOn() throws Exception {
+  void focusRingClearsWhenFocusMovesOn() throws Exception {
     GuiSteps.keyUntil(robot, KeyEvent.VK_TAB, "Tab reaches the link", () -> link.isFocusOwner());
     assertRing(true, "the link holds focus");
 

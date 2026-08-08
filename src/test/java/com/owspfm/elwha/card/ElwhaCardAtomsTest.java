@@ -302,7 +302,7 @@ class ElwhaCardAtomsTest {
   }
 
   @Test
-  void theStructuralSlotsAreInertButPassTheirChildrensStopsThrough() {
+  void structuralSlotsAreInertButPassTheirChildrensStopsThrough() {
     final ElwhaCardHeader header = new ElwhaCardHeader();
     final ElwhaCardActions actions = new ElwhaCardActions();
     final ElwhaButton save = ElwhaButton.textButton("Save");

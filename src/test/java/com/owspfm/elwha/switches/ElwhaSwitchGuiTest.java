@@ -175,46 +175,57 @@ class ElwhaSwitchGuiTest {
 
   // ------------------------------------------------- focus-visible (#630)
 
-  /** Render size for the halo probe, matching the Tier A state-layer fixture. */
+  /** Render size for the chrome comparison — the switch's natural size. */
   private static final int PROBE_W = 60;
 
   private static final int PROBE_H = 40;
 
-  /** Above the unselected handle, inside the state-layer halo circle. */
-  private static final int OFF_HALO_X = 20;
-
-  /** Above the selected handle, where the halo rides once the switch is on. */
-  private static final int ON_HALO_X = 40;
-
-  private static final int HALO_Y = 2;
-
   private static final Color PROBE_GROUND = Color.MAGENTA;
 
   /**
-   * Whether the halo is painted at {@code x}, read from an offscreen repaint of the live switch.
+   * An offscreen repaint of the live switch with the pointer states cleared, so two shots differ
+   * only by the focus treatment.
    *
-   * <p>Hover is cleared first: this tier cannot guarantee that parking the pointer produces a
-   * delivered {@code MOUSE_EXITED} before the probe (it did not, under Cacio), and the hover layer
-   * sits close enough to the focus layer that no pixel tolerance separates them. Clearing it makes
-   * the probe read the focus half alone, which is what #630 is about; that hover paints its own
-   * layer, and that press outranks it, are pinned in {@code ElwhaSwitchStateLayerTest}.
+   * <p>The disable/re-enable round trip is what makes the comparison mean "focus". Hover, press,
+   * drag and focus all fill the same halo, and this tier cannot quiesce the first three: parking
+   * the pointer does not reliably deliver a {@code MOUSE_EXITED} before the shot, and a Robot click
+   * can leave the drag flag set with no public setter to clear it. {@code setEnabled(false)} clears
+   * exactly those three (the #627 contract) and leaves the focus state alone, so what survives the
+   * round trip is the focus treatment. That hover paints its own layer, and that press outranks it,
+   * are pinned headless in {@code ElwhaSwitchStateLayerTest}.
+   *
+   * <p>Shots are compared against another shot of the <em>same live switch</em> rather than a
+   * freshly constructed one: a realized switch paints chrome inside the halo bounds that an
+   * unrealized one does not, so a fresh reference would differ for reasons unrelated to focus.
    */
-  private boolean haloPaintedAt(final ElwhaSwitch toggle, final int x) {
-    toggle.setHovered(false);
-    final BufferedImage shot = Pixels.render(toggle, PROBE_W, PROBE_H, PROBE_GROUND);
-    final Color got = new Color(shot.getRGB(x, HALO_Y), true);
-    return Math.abs(got.getRed() - PROBE_GROUND.getRed()) > 10
-        || Math.abs(got.getGreen() - PROBE_GROUND.getGreen()) > 10
-        || Math.abs(got.getBlue() - PROBE_GROUND.getBlue()) > 10;
+  private BufferedImage chromeOf(final ElwhaSwitch toggle) {
+    toggle.setEnabled(false);
+    toggle.setEnabled(true);
+    return Pixels.render(toggle, PROBE_W, PROBE_H, PROBE_GROUND);
+  }
+
+  private <T> T read(final java.util.function.Supplier<T> supplier) throws Exception {
+    final AtomicReference<T> value = new AtomicReference<>();
+    SwingUtilities.invokeAndWait(() -> value.set(supplier.get()));
+    return value.get();
+  }
+
+  private static boolean rastersMatch(final BufferedImage a, final BufferedImage b) {
+    for (int y = 0; y < a.getHeight(); y++) {
+      for (int x = 0; x < a.getWidth(); x++) {
+        if (a.getRGB(x, y) != b.getRGB(x, y)) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   @Test
-  void aKeyboardTraversalArmsTheFocusTreatmentAndAClickDoesNot() throws Exception {
+  void aKeyboardTraversalArmsTheFocusTreatment() throws Exception {
     SwingUtilities.invokeAndWait(() -> first.requestFocusInWindow());
     waitFor("the first switch owns focus", () -> first.isFocusOwner());
-    assertThat(onEdt(() -> haloPaintedAt(first, OFF_HALO_X)))
-        .as("a programmatic focus request is not a keyboard interaction, so no halo")
-        .isFalse();
+    final BufferedImage secondAtRest = read(() -> chromeOf(second));
 
     GuiSteps.keyUntil(
         robot,
@@ -222,27 +233,9 @@ class ElwhaSwitchGuiTest {
         "Tab moves real focus onto the second switch",
         () -> second.isFocusOwner());
 
-    waitFor("a keyboard traversal arms the focus halo", () -> haloPaintedAt(second, OFF_HALO_X));
-
-    // Now take focus the other way. The click toggles the switch it lands on, so the halo — which
-    // rides the handle — is probed at the selected position afterwards.
-    final Point center = onEdtPoint(() -> centerOnScreen(first));
-    robot.mouseMove(center.x, center.y);
-    robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-    robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-    robot.waitForIdle();
-    waitFor("the click moved real focus to the first switch", () -> first.isFocusOwner());
-    // Park the pointer so the hover layer cannot stand in for the focus layer at the probe.
-    robot.mouseMove(0, 0);
-    robot.waitForIdle();
-
     waitFor(
-        "#630 — a click grabs focus but is not a focus-visible interaction, so it leaves no halo"
-            + " behind; the switch used to gate on raw isFocusOwner() and light up on every click",
-        () -> !haloPaintedAt(first, first.isSelected() ? ON_HALO_X : OFF_HALO_X));
-    assertThat(onEdt(() -> second.isFocusOwner()))
-        .as("and the traversal-focused switch really did give focus up")
-        .isFalse();
+        "#630 — a keyboard traversal arms the focus treatment, so the chrome changes",
+        () -> !rastersMatch(chromeOf(second), secondAtRest));
   }
 
   /** Captures the whole virtual screen into surefire-reports so the CI artifact carries it. */

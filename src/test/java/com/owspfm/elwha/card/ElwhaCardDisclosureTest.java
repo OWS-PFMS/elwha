@@ -250,7 +250,7 @@ class ElwhaCardDisclosureTest {
   }
 
   @Test
-  void theLinkDoesNotDependOnTheClickEventMacOsDrops() {
+  void linkDoesNotDependOnTheClickEventMacOsDrops() {
     final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
     final ElwhaCardExpandLink link = new ElwhaCardExpandLink(card, "Show more", "Show less");
     link.setSize(80, 20);
