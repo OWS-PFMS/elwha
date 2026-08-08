@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.owspfm.elwha.button.ButtonInteractionMode;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.button.ElwhaButtonSelectionGroup;
+import com.owspfm.elwha.card.ElwhaCard;
 import com.owspfm.elwha.chip.ChipInteractionMode;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
@@ -13,6 +14,7 @@ import com.owspfm.elwha.radio.ElwhaRadioGroup;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -41,6 +43,7 @@ import org.junit.jupiter.params.provider.ValueSource;
  * subscription.
  *
  * @see <a href="https://github.com/OWS-PFMS/elwha/issues/725">#725</a>
+ * @see <a href="https://github.com/OWS-PFMS/elwha/issues/732">#732</a>
  */
 @ExtendWith({EdtInterceptor.class, ThemeExtension.class})
 class SelectionObservationTest {
@@ -73,7 +76,13 @@ class SelectionObservationTest {
                     new ElwhaChip("Tag")
                         .setInteractionMode(ChipInteractionMode.SELECTABLE)
                         .setSelected(on),
-            (BiConsumer<JComponent, Boolean>) (c, on) -> ((ElwhaChip) c).setSelected(on)));
+            (BiConsumer<JComponent, Boolean>) (c, on) -> ((ElwhaChip) c).setSelected(on)),
+        Arguments.of(
+            "ElwhaCard",
+            ElwhaCard.PROPERTY_SELECTED,
+            (Function<Boolean, JComponent>)
+                on -> ElwhaCard.filledCard().setSelectable(true).setSelected(on),
+            (BiConsumer<JComponent, Boolean>) (c, on) -> ((ElwhaCard) c).setSelected(on)));
   }
 
   @ParameterizedTest(name = "{0} announces selection on the inherited key-scoped subscription")
@@ -122,7 +131,8 @@ class SelectionObservationTest {
    * arrives without its {@code remove} because there is no one-arg shape to mirror.
    */
   @ParameterizedTest(name = "{0} publishes no convenience selection wrapper")
-  @ValueSource(classes = {ElwhaButton.class, ElwhaIconButton.class, ElwhaChip.class})
+  @ValueSource(
+      classes = {ElwhaButton.class, ElwhaIconButton.class, ElwhaChip.class, ElwhaCard.class})
   void aJComponentPublishesNoSelectionWrapper(final Class<?> type) {
     assertThat(type.getMethods())
         .as(
@@ -130,6 +140,29 @@ class SelectionObservationTest {
                 + " (conventions §10)",
             type.getSimpleName())
         .noneMatch(m -> m.getName().equals("addSelectionChangeListener"));
+  }
+
+  /**
+   * The card was the one #725 left behind, on the reading that a symmetric pair is not the #725
+   * defect. It is still the wrong shape: the deciding line is inheritance, and the card inherits
+   * the same subscription every other component here points consumers at. Both of its named states
+   * are checked, because a private support held for one property is the same duplicate channel as
+   * one held for the other (#732).
+   */
+  @Test
+  void theCardHoldsNoPrivateChannelBesideTheInheritedOne() {
+    assertThat(JComponent.class.isAssignableFrom(ElwhaCard.class))
+        .as("the card is a component, not a controller — that is what decides the shape")
+        .isTrue();
+    assertThat(ElwhaCard.class.getMethods())
+        .as("no selection wrapper")
+        .noneMatch(m -> m.getName().equals("addSelectionChangeListener"));
+    assertThat(ElwhaCard.class.getMethods())
+        .as("and no expansion wrapper either")
+        .noneMatch(m -> m.getName().equals("addExpansionChangeListener"));
+    assertThat(ElwhaCard.class.getDeclaredFields())
+        .as("nor the private PropertyChangeSupport those wrappers fronted")
+        .noneMatch(f -> PropertyChangeSupport.class.isAssignableFrom(f.getType()));
   }
 
   /**
