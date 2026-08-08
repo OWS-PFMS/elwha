@@ -4,8 +4,8 @@ package com.owspfm.elwha.list;
  * Layout orientation shared across the {@code ElwhaList} component family ({@link ElwhaItemList}
  * and future siblings).
  *
- * <p>Hoisted out of the per-family inner enums in story #237 so that consumers can write code
- * against the abstraction:
+ * <p>Hoisted out of the per-family inner enums so that consumers can write code against the
+ * abstraction:
  *
  * <pre>{@code
  * void fitOrientation(ElwhaList<?> list, boolean wide) {

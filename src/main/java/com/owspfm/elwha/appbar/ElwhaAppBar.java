@@ -355,8 +355,9 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    * Enables or disables the whole bar: hosted buttons and trailing elements are disabled with it
    * (their individual enabled states are remembered and restored on re-enable — a button the
    * consumer disabled stays disabled), and the title/subtitle paint at the disabled content
-   * opacity. The bar's enabled state is read explicitly when propagating, per the #432 shadowing
-   * doctrine.
+   * opacity. The bar's enabled state is read explicitly when propagating — never through a bare
+   * {@code isEnabled()} call that could resolve to a nested listener's own method and silently read
+   * the wrong state.
    *
    * @param enabled the new enabled state
    * @version v0.5.0
@@ -953,11 +954,11 @@ public class ElwhaAppBar extends JComponent implements Accessible {
   /**
    * The bar's minimum size — two slots wide, and as tall as it prefers to be.
    *
-   * <p>The height floor is deliberate and unchanged by the #525 degradation: the bar still tells
-   * every layout manager that it cannot usefully be shorter, so {@code BorderLayout}, {@code
-   * BoxLayout}, {@code GridBagLayout} and friends never squeeze it in the first place. Rendering a
-   * squeezed bar as a collapsed one is the fallback for the layouts that ignore minimum sizes
-   * outright ({@code GridLayout}), not an invitation to under-allocate.
+   * <p>The height floor is deliberate and unchanged by the collapse-on-squeeze fallback below: the
+   * bar still tells every layout manager that it cannot usefully be shorter, so {@code
+   * BorderLayout}, {@code BoxLayout}, {@code GridBagLayout} and friends never squeeze it in the
+   * first place. Rendering a squeezed bar as a collapsed one is the fallback for the layouts that
+   * ignore minimum sizes outright ({@code GridLayout}), not an invitation to under-allocate.
    *
    * @return the minimum size
    * @version v0.5.0

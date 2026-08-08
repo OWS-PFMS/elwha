@@ -25,7 +25,7 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
 /**
- * The M3 tooltip (epic #445) — an overlay handle (not a {@link JComponent}, the {@link
+ * The M3 tooltip — an overlay handle (not a {@link JComponent}, the {@link
  * com.owspfm.elwha.menu.ElwhaMenu} shape) carrying either the {@linkplain TooltipVariant#PLAIN
  * plain} label bubble or the {@linkplain TooltipVariant#RICH rich} contextual card. Mounts on the
  * host frame's layered pane at {@code POPUP_LAYER} as the overlay host's first <em>passive-focus

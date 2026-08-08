@@ -49,14 +49,13 @@ import javax.swing.event.EventListenerList;
  * handle riding the track that morphs {@value #HANDLE_UNSELECTED_PX}&rarr;{@value
  * #HANDLE_SELECTED_PX} dp across the selection states.
  *
- * <p><strong>Architecture (load-bearing, locked by the S1 spike — design doc {@code
- * elwha-switch-design.md} §2).</strong> {@code ElwhaSwitch} is one dedicated {@link JComponent}
- * that paints every M3 part itself, holding the selection as a plain boolean. It is <em>not</em> a
- * styled {@code JToggleButton} and <em>not</em> a {@code ButtonUI} delegate: nothing of a button's
- * text/icon layout survives the track-and-riding-handle anatomy, the handle drag gesture has no
- * {@code ButtonModel} vocabulary, and switches are never {@code ButtonGroup}-grouped — so the model
- * would buy nothing. The package is {@code switches} because {@code switch} is a Java reserved
- * word.
+ * <p><strong>Architecture (load-bearing — design doc {@code elwha-switch-design.md} §2).</strong>
+ * {@code ElwhaSwitch} is one dedicated {@link JComponent} that paints every M3 part itself, holding
+ * the selection as a plain boolean. It is <em>not</em> a styled {@code JToggleButton} and
+ * <em>not</em> a {@code ButtonUI} delegate: nothing of a button's text/icon layout survives the
+ * track-and-riding-handle anatomy, the handle drag gesture has no {@code ButtonModel} vocabulary,
+ * and switches are never {@code ButtonGroup}-grouped — so the model would buy nothing. The package
+ * is {@code switches} because {@code switch} is a Java reserved word.
  *
  * <p><strong>Color (zero new tokens — research §Tokens).</strong> Selected: track {@link
  * ColorRole#PRIMARY}, handle {@link ColorRole#ON_PRIMARY}. Unselected: track {@link
@@ -189,7 +188,7 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
 
   /**
    * Whether the focus treatment should paint — armed only by a keyboard traversal, so a plain click
-   * leaves no ring behind ({@link com.owspfm.elwha.theme.FocusVisible}, #630).
+   * leaves no ring behind ({@link com.owspfm.elwha.theme.FocusVisible}).
    */
   private boolean focusVisible;
 
@@ -257,9 +256,8 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
 
   /**
    * Sets the selection state, firing {@link #PROPERTY_SELECTED} only when the state actually
-   * changes. Programmatic writes never fire the user-gesture {@code ActionListener}s (the
-   * interaction story's surface) — mirroring material-web, whose {@code change} event fires on user
-   * interaction only.
+   * changes. Programmatic writes never fire the user-gesture {@code ActionListener}s — mirroring
+   * material-web, whose {@code change} event fires on user interaction only.
    *
    * @param selected the new selection state
    * @version v0.5.0
@@ -832,12 +830,12 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
   /**
    * Paints one glyph centered at {@code (cx, cy)}, recolored by {@code SrcIn} compositing into an
    * offscreen buffer — works for any {@link Icon} and never mutates a shared {@code FlatSVGIcon}
-   * color filter (the #197 lesson).
+   * color filter (the shared-icon-filter hazard).
    *
-   * <p>The recolored buffer comes from {@code slot} rather than being allocated here (#715): this
-   * runs twice per paint, and paint runs at ~60fps for the whole ~300ms handle tween. Only the
-   * draw-time alpha and rotation vary across those frames, and both are applied to the composite
-   * below, so the buffer itself is identical frame to frame.
+   * <p>The recolored buffer comes from {@code slot} rather than being allocated here: this runs
+   * twice per paint, and paint runs at ~60fps for the whole ~300ms handle tween. Only the draw-time
+   * alpha and rotation vary across those frames, and both are applied to the composite below, so
+   * the buffer itself is identical frame to frame.
    */
   private void paintGlyph(
       final Graphics2D g2,

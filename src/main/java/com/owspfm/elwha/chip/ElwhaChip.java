@@ -120,7 +120,7 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
   /**
    * Whether the focus treatment (the 2 px PRIMARY border) should paint — armed only by a keyboard
    * traversal, so a plain click leaves no focus outline behind ({@link
-   * com.owspfm.elwha.theme.FocusVisible}, #630).
+   * com.owspfm.elwha.theme.FocusVisible}).
    */
   private boolean focusVisible;
 
@@ -1463,10 +1463,10 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
    * ColorRole#PRIMARY} so the chip reads as "the picked one" without relying on the fill alone —
    * particularly relevant for OUTLINED chips under the uniform 12% selected overlay (rebuild doc §9
    * Q2). GHOST suppresses the border at rest but reveals it on hover / press / focus, and ignores
-   * the selected state entirely (rebuild doc §9 Q2 amendment, issue #50): GHOST is M3's text-button
-   * equivalent and the spec doesn't render a selected state on that emphasis level.
+   * the selected state entirely (rebuild doc §9 Q2 amendment): GHOST is M3's text-button equivalent
+   * and the spec doesn't render a selected state on that emphasis level.
    *
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   private ColorRole effectiveBorderRole(final boolean focused) {
@@ -1602,7 +1602,7 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
    * only applies to {@code FlatSVGIcon} instances, and the component the glyph is handed at paint
    * time is the trailing {@code JLabel}, whose foreground is the plain LAF label color. A chip on a
    * custom surface role would otherwise paint its × in one color and its text in another — the
-   * unpaired result the class documentation says cannot happen (#644).
+   * unpaired result the class documentation says cannot happen.
    *
    * @version v0.5.0
    * @since v0.1.0

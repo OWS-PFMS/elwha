@@ -123,10 +123,10 @@ public final class Typography {
    *
    * <p>Looking the Medium face up is what makes {@code ofFamily(existing.familyName())} lossless:
    * {@link #familyName()} reports the Regular face's family, so without it a round trip through
-   * this method would quietly downgrade every 500-weight role to synthesis. Since #698 the round
-   * trip is lossless by {@link #equals(Object)} and not merely by what it paints — {@link
-   * #defaults()} builds through this method rather than deriving from the bundled {@code Font}
-   * objects, so both paths name their faces the same way.
+   * this method would quietly downgrade every 500-weight role to synthesis. The round trip is
+   * lossless by {@link #equals(Object)} and not merely by what it paints — {@link #defaults()}
+   * builds through this method rather than deriving from the bundled {@code Font} objects, so both
+   * paths name their faces the same way.
    *
    * @param familyName the installed font family to build on
    * @return typography over that family
@@ -181,7 +181,7 @@ public final class Typography {
    * <p>{@link #ofFamily(String)} is documented as a lossless round trip through {@link
    * #familyName()}, and without this it was lossless in rendering but produced an object that did
    * not compare equal to its source — which would have shown up as a spurious difference the moment
-   * {@link Config} gained equality. Ruled alongside {@link Palette} and {@link Theme} in (#698).
+   * {@link Config} gained equality.
    *
    * @param obj the object to compare against
    * @return whether {@code obj} is a typography over the same family with the same faces

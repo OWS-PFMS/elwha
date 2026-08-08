@@ -1,7 +1,7 @@
 /**
- * The design-token foundation every Elwha component paints from (epic #30) — install a theme once,
- * and every component resolves its colors, shapes, spacing, and type at paint time, so a runtime
- * theme or light/dark switch re-skins the whole UI live with no per-component listeners.
+ * The design-token foundation every Elwha component paints from — install a theme once, and every
+ * component resolves its colors, shapes, spacing, and type at paint time, so a runtime theme or
+ * light/dark switch re-skins the whole UI live with no per-component listeners.
  *
  * <p><strong>Install (the one required call):</strong>
  *
@@ -34,7 +34,8 @@
  * com.owspfm.elwha.theme.MorphAnimator#setReducedMotion(boolean) reduced-motion} switch), and
  * {@link com.owspfm.elwha.theme.Easing}.
  *
- * <p>Token taxonomy and binding rules: {@code docs/research/elwha-token-taxonomy.md}.
+ * <p>Research: {@code docs/research/elwha-token-taxonomy.md}. Epic <a
+ * href="https://github.com/OWS-PFMS/elwha/issues/30">#30</a>.
  *
  * @author Charles Bryan
  * @version v0.5.0

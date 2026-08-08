@@ -15,9 +15,9 @@ import java.awt.Rectangle;
  * and a size that inflates for the WCAG 48&nbsp;dp target does the same thing even at preferred
  * size. Anything that positions against {@code getBounds()} therefore addresses an edge nobody can
  * see — a tooltip's 4&nbsp;dp gap measured to the cell edge rather than the pill, a trailing badge
- * stranded in dead space, a menu opening off the bottom of an invisible rect (#493). Hit testing
- * has the same shape from the input side: a button whose bounds stretch accepts clicks far outside
- * its painted pill (#505).
+ * stranded in dead space, a menu opening off the bottom of an invisible rect. Hit testing has the
+ * same shape from the input side: a button whose bounds stretch accepts clicks far outside its
+ * painted pill.
  *
  * <p>Only the component knows where its body is, which is why this has to be a contract rather than
  * a calculation callers can do. It is a sibling of {@link ShadowBearing} rather than an extension

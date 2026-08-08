@@ -23,7 +23,7 @@ import javax.swing.UIManager;
  * MaterialPalettes.baseline()}; the single value carried here is only the last-ditch fallback.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public enum ColorRole {
@@ -191,37 +191,37 @@ public enum ColorRole {
    */
   SURFACE_BRIGHT("surfaceBright", null, 0xFDF8FD),
   /**
-   * Lowest container tone — elevation ladder (system deferred to v2).
+   * Lowest container tone in the elevation ladder.
    *
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   SURFACE_CONTAINER_LOWEST("surfaceContainerLowest", null, 0xFFFFFF),
   /**
-   * Low container tone — elevation ladder (system deferred to v2).
+   * Low container tone in the elevation ladder.
    *
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   SURFACE_CONTAINER_LOW("surfaceContainerLow", null, 0xF7F2F7),
   /**
-   * Default container tone — elevation ladder (system deferred to v2).
+   * Default container tone in the elevation ladder.
    *
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   SURFACE_CONTAINER("surfaceContainer", null, 0xF2ECF1),
   /**
-   * High container tone — elevation ladder (system deferred to v2).
+   * High container tone in the elevation ladder.
    *
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   SURFACE_CONTAINER_HIGH("surfaceContainerHigh", null, 0xECE7EB),
   /**
-   * Highest container tone — elevation ladder (system deferred to v2).
+   * Highest container tone in the elevation ladder.
    *
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   SURFACE_CONTAINER_HIGHEST("surfaceContainerHighest", null, 0xE6E1E6),
@@ -270,9 +270,9 @@ public enum ColorRole {
   // --- Utility (3) ---
 
   /**
-   * Shadow color — elevation system (deferred to v2).
+   * Shadow color — the cast-shadow tone under an elevated surface.
    *
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   SHADOW("shadow", null, 0x000000),
@@ -284,9 +284,9 @@ public enum ColorRole {
    */
   SCRIM("scrim", null, 0x000000),
   /**
-   * Surface tint — the tonal-lift overlay color (elevation system deferred to v2).
+   * Surface tint — the tonal-lift overlay color for an elevated surface.
    *
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   SURFACE_TINT("surfaceTint", null, 0x6750A4),

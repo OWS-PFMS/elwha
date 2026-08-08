@@ -1,5 +1,5 @@
 /**
- * The M3 tab bar (epic #425) — {@link com.owspfm.elwha.tabs.ElwhaTabs} hosting a row of {@link
+ * The M3 tab bar. {@link com.owspfm.elwha.tabs.ElwhaTabs} hosts a row of {@link
  * com.owspfm.elwha.tabs.ElwhaTab}s with the sliding active indicator, in both {@link
  * com.owspfm.elwha.tabs.TabsVariant} treatments (primary / secondary) and both {@link
  * com.owspfm.elwha.tabs.TabMode} layouts (fixed / scrollable). Tabs carry optional leading icons
@@ -9,7 +9,8 @@
  * children; motion runs on the shared {@link com.owspfm.elwha.theme.MorphAnimator} clock and snaps
  * under reduced motion.
  *
- * <p>Design + token bindings: {@code docs/research/elwha-tabs-design.md}.
+ * <p>Design + token bindings: {@code docs/research/elwha-tabs-design.md}. Epic <a
+ * href="https://github.com/OWS-PFMS/elwha/issues/425">#425</a>.
  *
  * @author Charles Bryan
  * @version v0.5.0

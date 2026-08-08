@@ -21,15 +21,15 @@ import javax.swing.JComponent;
  * default {@code Error} / {@code On error} color mapping. Spec lives in {@code
  * docs/research/elwha-badge-design.md}.
  *
- * <p><strong>Phase 1 scope (#210–#214).</strong> Class skeleton + per-variant factories with
- * content validation (null → NPE, empty → IAE, &gt;4 chars → silent truncate per design doc §3),
- * Small + Large container rendering, the color override surface with default {@link
- * ColorRole#ERROR} / {@link ColorRole#ON_ERROR} mapping enforced by construction, Large label paint
- * at {@link TypeRole#LABEL_SMALL} with 4 dp interior padding (§4.2), content-driven Large width via
- * {@link #setContent(String)}, the push-model accessibility surface ({@link
- * #getAccessibilityText()} / {@link #setAccessibilityText(String)} with hardcoded English defaults
- * per §10.3, custom {@link AccessibleContext} reporting {@link AccessibleRole#LABEL} with a {@link
- * AccessibleRelation#LABEL_FOR} relation set by the anchor). Placement geometry, RTL mirroring, and
+ * <p>Per-variant static factories validate content (null → NPE, empty → IAE, &gt;4 chars → silent
+ * truncate per design doc §3). Small and Large each render their own container, with a color
+ * override surface that defaults to the {@link ColorRole#ERROR} / {@link ColorRole#ON_ERROR}
+ * mapping enforced by construction. Large paints its label at {@link TypeRole#LABEL_SMALL} with 4
+ * dp interior padding (§4.2), and its width tracks content via {@link #setContent(String)}. The
+ * push-model accessibility surface ({@link #getAccessibilityText()} / {@link
+ * #setAccessibilityText(String)}) ships hardcoded English defaults per §10.3, and a custom {@link
+ * AccessibleContext} reports {@link AccessibleRole#LABEL} with an {@link
+ * AccessibleRelation#LABEL_FOR} relation set by the anchor. Placement geometry, RTL mirroring, and
  * host-name splicing live in the companion {@link ElwhaBadgeAnchor}.
  *
  * <p><strong>Posture.</strong> Extends {@link JComponent} directly — badges are decorations, not
@@ -60,18 +60,18 @@ public final class ElwhaBadge extends JComponent {
 
     /**
      * Small — 6 dp solid filled dot, no content; conveys boolean presence ("has unread"). M3
-     * default a11y announcement: "New notification" (wired in S5).
+     * default a11y announcement: "New notification".
      *
-     * @version v0.3.0
+     * @version v0.5.0
      * @since v0.3.0
      */
     SMALL,
 
     /**
      * Large — 16 dp tall rounded-pill container with a 1–4 character label, communicating a
-     * quantifiable count or short status. Width grows with content up to a 16 × 34 dp cap (S2).
+     * quantifiable count or short status. Width grows with content up to a 16 × 34 dp cap.
      *
-     * @version v0.3.0
+     * @version v0.5.0
      * @since v0.3.0
      */
     LARGE
@@ -121,9 +121,8 @@ public final class ElwhaBadge extends JComponent {
 
   /**
    * SurfacePainter's {@code arc} parameter is the {@link java.awt.geom.RoundRectangle2D arcWidth}
-   * (diameter), not the real radius — see the corner-radius convention noted in the FAB design doc
-   * and the #199 hotfix. For a 6 dp square box, an arc of 6 yields a full circle (real radius = 3
-   * dp per spec).
+   * (diameter), not the real radius — see the corner-radius convention noted in the FAB design doc.
+   * For a 6 dp square box, an arc of 6 yields a full circle (real radius = 3 dp per spec).
    */
   private static final int SMALL_ARC = SMALL_SIZE_DP;
 

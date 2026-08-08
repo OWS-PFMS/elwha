@@ -411,11 +411,10 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   /**
    * Returns the current icon's bounding box in this component's coordinate space, matching the
    * geometry {@link #paintIcon(java.awt.Graphics, float)} draws against. Anchors badges at the
-   * upper-trailing corner of the rendered icon via {@link com.owspfm.elwha.badge.ElwhaBadgeAnchor}
-   * (epic #209).
+   * upper-trailing corner of the rendered icon via {@link com.owspfm.elwha.badge.ElwhaBadgeAnchor}.
    *
    * @return the rendered icon's bounding box; an empty rectangle if no icon is installed
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   @Override
@@ -762,14 +761,14 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
    * com.owspfm.elwha.theme.RipplePainter} circle seeded at the click point on press or keyboard
    * activation. Disable it for hosts whose own motion is the press feedback: a dialog that
    * dismisses on an action click would otherwise freeze the in-flight ripple onto its exit-fade
-   * snapshot (epic #288). Disabling mid-ripple clears any in-flight ripple immediately.
+   * snapshot. Disabling mid-ripple clears any in-flight ripple immediately.
    *
    * <p>This gates <em>only</em> the press ripple; the pressed state-layer darken is unaffected.
    * Default {@code true}.
    *
    * @param rippleEnabled whether press / touch ripples animate
    * @return {@code this} for fluent chaining
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public ElwhaIconButton setRippleEnabled(final boolean rippleEnabled) {

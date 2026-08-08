@@ -47,9 +47,8 @@ import javax.swing.UIManager;
  * the colour of its body: a {@code -light-} asset is a dark hand with a light halo, because that is
  * what stays legible on a light panel. The Java2D fallback follows the same rule.
  *
- * <p>Relocated here from the V1 card list in story #69 (spec §7), which is what removes the last
- * code dependency the pre-#70 list families carried. The artwork was replaced with the first-party
- * set in issue #531.
+ * <p>Relocated here from the V1 card list (spec §7), which is what removes the last code dependency
+ * the legacy list families carried. The artwork was replaced with a first-party set.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -123,8 +122,7 @@ final class ReorderCursors {
    *
    * <p>macOS drops the OS-side association for {@code createCustomCursor} cursors across a Spaces
    * or Mission Control transition. The cached {@link Cursor} objects survive the transition but
-   * stop rendering, so re-applying the same instances changes nothing — they have to be rebuilt
-   * (#556).
+   * stop rendering, so re-applying the same instances changes nothing — they have to be rebuilt.
    *
    * @version v0.5.0
    * @since v0.5.0

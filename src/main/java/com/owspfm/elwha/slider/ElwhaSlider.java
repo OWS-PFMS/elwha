@@ -48,14 +48,13 @@ import javax.swing.event.EventListenerList;
  * chrome: a split active/inactive track with the rounded-end gap, a tall pill handle that narrows
  * when active, hover/focus state layers, a press ripple, and an optional value-indicator bubble.
  *
- * <p><strong>Architecture (load-bearing, locked by the S1 spike — design doc {@code
- * elwha-slider-design.md} §2).</strong> {@code ElwhaSlider} is one dedicated {@link JComponent}
- * that paints every M3 part itself, backed by a {@link BoundedRangeModel} ({@link
- * DefaultBoundedRangeModel}) for the value / min / max math. It is <em>not</em> a {@code JSlider}
- * subclass and <em>not</em> a {@code SliderUI} delegate: {@code BasicSliderUI}'s track/thumb layout
- * fights the M3 split-track-with-gap geometry, and the eventual range variant (two handles) is not
- * a {@code JSlider} concept — so a unified custom component keeps single and range on one paint /
- * interaction codebase.
+ * <p><strong>Architecture (load-bearing — design doc {@code elwha-slider-design.md} §2).</strong>
+ * {@code ElwhaSlider} is one dedicated {@link JComponent} that paints every M3 part itself, backed
+ * by a {@link BoundedRangeModel} ({@link DefaultBoundedRangeModel}) for the value / min / max math.
+ * It is <em>not</em> a {@code JSlider} subclass and <em>not</em> a {@code SliderUI} delegate:
+ * {@code BasicSliderUI}'s track/thumb layout fights the M3 split-track-with-gap geometry, and the
+ * eventual range variant (two handles) is not a {@code JSlider} concept — so a unified custom
+ * component keeps single and range on one paint / interaction codebase.
  *
  * <p><strong>Variants (design doc §1 / §11).</strong> {@link Variant#STANDARD} fills the active
  * track from the leading edge to the handle; {@link Variant#CENTERED} fills from a fixed
@@ -64,9 +63,9 @@ import javax.swing.event.EventListenerList;
  * {@link Variant#RANGE} adds a second handle and fills the active track <em>between</em> the two,
  * selecting a {@code [lower, upper]} sub-span (build one with {@link #range(int, int, int, int)}).
  * The {@linkplain Size size} axis ({@link #setSizeVariant(Size)}) scales the chrome across the M3
- * {@code XS}&ndash;{@code XL} preset table; the orientation axis is a later V1 phase. The geometry
- * constants below are the {@code XS} (default) preset (M3's only off-Android code preset; §M /
- * §Cfg).
+ * {@code XS}&ndash;{@code XL} preset table; the {@link Orientation orientation} axis switches
+ * between horizontal and vertical track flow. The geometry constants below are the {@code XS}
+ * (default) preset (M3's only off-Android code preset; §M / §Cfg).
  *
  * <p><strong>Interaction &amp; motion (research §S / §TS / §B).</strong> Drag the handle or click
  * the track to jump; the value updates live and a {@link ChangeListener} fires on every change with
@@ -126,15 +125,15 @@ public class ElwhaSlider extends JComponent {
   /**
    * The axis along which the slider's track runs and the handle travels (research §A / §GD4).
    *
-   * <p>{@link #HORIZONTAL} is the default and matches Phases 1&ndash;4: the active fill grows from
-   * the leading ({@linkplain java.awt.ComponentOrientation#isLeftToRight() orientation-aware}) end
-   * toward the handle. {@link #VERTICAL} is the M3 Expressive transposition: a tall track whose
-   * active fill grows <strong>bottom-up</strong> (from the minimum/bottom end toward the handle),
-   * with a horizontal pill handle. Vertical is <em>not</em> right-to-left mirrored — it always
-   * fills bottom-up regardless of {@code ComponentOrientation}.
+   * <p>{@link #HORIZONTAL} is the default: the active fill grows from the leading ({@linkplain
+   * java.awt.ComponentOrientation#isLeftToRight() orientation-aware}) end toward the handle. {@link
+   * #VERTICAL} is the M3 Expressive transposition: a tall track whose active fill grows
+   * <strong>bottom-up</strong> (from the minimum/bottom end toward the handle), with a horizontal
+   * pill handle. Vertical is <em>not</em> right-to-left mirrored — it always fills bottom-up
+   * regardless of {@code ComponentOrientation}.
    *
    * @author Charles Bryan
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public enum Orientation {
@@ -222,7 +221,7 @@ public class ElwhaSlider extends JComponent {
   /** Gap between the handle and each adjacent track segment ({@code thumbTrackGapSize}). */
   static final int HANDLE_TRACK_GAP_PX = 6;
 
-  /** Stop-indicator dot diameter (painted in the stops story). */
+  /** Stop-indicator dot diameter. */
   static final int STOP_INDICATOR_SIZE_PX = 4;
 
   /** Track outer (far-end) corner radius — full round on the 16&nbsp;dp XS track. */
@@ -271,7 +270,7 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Whether the focus treatment should paint — armed only by a keyboard traversal, so a plain click
-   * leaves no focus halo behind ({@link com.owspfm.elwha.theme.FocusVisible}, #630). Shared by both
+   * leaves no focus halo behind ({@link com.owspfm.elwha.theme.FocusVisible}). Shared by both
    * variants: in RANGE the focus lives on a handle proxy, and this records how it arrived.
    */
   private boolean focusVisible;
@@ -636,10 +635,10 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Sets the value change applied by a single arrow keypress (default {@code 1}). In stops mode the
-   * arrows step by one stop regardless (story #345).
+   * arrows step by one stop regardless.
    *
    * @param increment the unit increment; clamped to {@code >= 1}
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setUnitIncrement(final int increment) {
@@ -863,13 +862,12 @@ public class ElwhaSlider extends JComponent {
   /**
    * Sets the slider's {@linkplain Size size} preset — the M3 track-thickness scale that grows the
    * track, handle, and outer corner together (research §M / §GD5). Defaults to {@link Size#XS}, the
-   * canonical M3 code preset; the Phase&nbsp;1&ndash;3 behavior is exactly the {@code XS} size.
-   * Switching size does not change the value; all variants, interaction, keyboard, stops, value
-   * bubble, and disabled behavior are shared across sizes. The optional {@linkplain
-   * #setInsetIcon(javax.swing.Icon) inset icon} requires {@link Size#M} or larger.
+   * canonical M3 code preset. Switching size does not change the value; all variants, interaction,
+   * keyboard, stops, value bubble, and disabled behavior are shared across sizes. The optional
+   * {@linkplain #setInsetIcon(javax.swing.Icon) inset icon} requires {@link Size#M} or larger.
    *
    * @param size the size preset; never {@code null}
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setSizeVariant(final Size size) {
@@ -980,9 +978,9 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Caches a slot-sized, filter-bound copy of a {@link FlatSVGIcon} inset icon so paint never
-   * mutates the caller's shared glyph (the #197 shared-icon-filter hazard) nor re-derives per
-   * frame. Re-run whenever the icon or {@linkplain Size size} changes. Non-{@code FlatSVGIcon}
-   * icons are painted as-is, so there is nothing to cache.
+   * mutates the caller's shared glyph (the shared-icon-filter hazard) nor re-derives per frame.
+   * Re-run whenever the icon or {@linkplain Size size} changes. Non-{@code FlatSVGIcon} icons are
+   * painted as-is, so there is nothing to cache.
    */
   private void rebuildInsetIcon() {
     if (insetIcon instanceof FlatSVGIcon svg && sizeVariant.allowsInsetIcon()) {
@@ -1150,7 +1148,7 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Whether the active fill is mirrored relative to value-space. Only a horizontal right-to-left
-   * component mirrors; vertical always fills bottom-up (research §385/§386), so it never mirrors.
+   * component mirrors; vertical always fills bottom-up, so it never mirrors.
    */
   private boolean mirror() {
     return !vertical() && !getComponentOrientation().isLeftToRight();
@@ -1499,10 +1497,10 @@ public class ElwhaSlider extends JComponent {
    * size / orientation / variant changes that revalidate, and the value setters and the model
    * listener for the ones that only repaint. It is deliberately <em>not</em> called from paint —
    * {@code positionHandleFocus} ends in {@code setBounds}, and mutating a child's bounds inside a
-   * paint pass schedules a repaint of both the vacated and the new region from within that pass
-   * (#620). Neither is it redundant with {@code doLayout}: a drag only repaints, so without these
-   * calls the proxies would hold the pre-drag position for the whole gesture, leaving the focus
-   * ring and the screen-reader bounds behind the handle they describe.
+   * paint pass schedules a repaint of both the vacated and the new region from within that pass.
+   * Neither is it redundant with {@code doLayout}: a drag only repaints, so without these calls the
+   * proxies would hold the pre-drag position for the whole gesture, leaving the focus ring and the
+   * screen-reader bounds behind the handle they describe.
    */
   private void syncRangeFocusBounds() {
     if (variant != Variant.RANGE) {
@@ -2139,11 +2137,11 @@ public class ElwhaSlider extends JComponent {
   /**
    * The value bubble's label font — {@link TypeRole#LABEL_LARGE} unless a consumer installed a font
    * on this slider itself. Role-always, matching {@code ElwhaAppBar}, {@code ElwhaTab} and {@code
-   * ElwhaBadge} (#628): {@code getFont()} answers the <em>inherited</em> container font on a slider
-   * that is actually in a hierarchy, so preferring it applied the token role only to offscreen
-   * renders — the inverse of the intent. {@link #isFontSet()} is the distinction that matters: it
-   * is true only for a font set on this component, so an explicit consumer override still wins
-   * while a panel's ambient font does not.
+   * ElwhaBadge}: {@code getFont()} answers the <em>inherited</em> container font on a slider that
+   * is actually in a hierarchy, so preferring it applied the token role only to offscreen renders —
+   * the inverse of the intent. {@link #isFontSet()} is the distinction that matters: it is true
+   * only for a font set on this component, so an explicit consumer override still wins while a
+   * panel's ambient font does not.
    */
   private Font valueBubbleFont() {
     final Font base = isFontSet() ? getFont() : TypeRole.LABEL_LARGE.resolve();
@@ -2322,7 +2320,7 @@ public class ElwhaSlider extends JComponent {
    * Enables or disables the slider, propagating the state to the {@link Variant#RANGE} focus-proxy
    * children — a disabled component is skipped by focus traversal, so without the propagation a
    * disabled range slider's two handle proxies stayed Tab-reachable and the keyboard could move its
-   * handles (#432). The single variant needs nothing extra: the slider itself is the focus stop.
+   * handles. The single variant needs nothing extra: the slider itself is the focus stop.
    *
    * <p>Disabling also drops the transient interaction state — hover, press, the Space
    * block-increment latch, the in-flight ripple and the pointer cursor — so re-enabling starts from
@@ -2447,9 +2445,7 @@ public class ElwhaSlider extends JComponent {
     return spaceDown ? getBlockIncrement() : effectiveUnitIncrement();
   }
 
-  /**
-   * The unit increment used by a single arrow; stops mode (story #345) overrides this to one stop.
-   */
+  /** The unit increment used by a single arrow; stops mode overrides this to one stop. */
   int effectiveUnitIncrement() {
     return isStopsEnabled() ? stopStep : unitIncrement;
   }
@@ -2519,7 +2515,7 @@ public class ElwhaSlider extends JComponent {
    * its state in two handle values and never writes the backing model, so this node's {@link
    * #getAccessibleValue()} answers {@code null} — the {@code AccessibleContext} spelling of "no
    * value here" — rather than a number that never changes. The live values belong to the two
-   * per-handle child nodes, and this node is their container (#703).
+   * per-handle child nodes, and this node is their container.
    *
    * @author Charles Bryan
    * @version v0.5.0

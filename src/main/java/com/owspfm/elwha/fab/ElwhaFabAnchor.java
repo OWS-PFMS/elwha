@@ -17,8 +17,7 @@ import javax.swing.Timer;
  * Placement primitive that floats an {@link ElwhaFab} above a content component at a screen-edge
  * corner, per the M3 floating-action-button placement pattern. Absorbs the four-piece glue the FAB
  * design doc §15 documents as a consumer recipe — z-order, corner positioning, resize-pinning, and
- * RTL mirroring — into a single reusable container, the structural answer tracked on <a
- * href="https://github.com/OWS-PFMS/elwha/issues/205">#205</a>.
+ * RTL mirroring — into a single reusable container.
  *
  * <p><strong>Composition.</strong> The anchor <em>is</em> a {@link JLayeredPane}. The content sits
  * on {@link JLayeredPane#DEFAULT_LAYER} filling the whole pane; the FAB sits on {@link
@@ -61,7 +60,7 @@ import javax.swing.Timer;
  * ScrollResponse#NONE} — pure static placement.
  *
  * <p><strong>Scope.</strong> A full M3 Scaffold with named slots, adjacent-UI gaps (20 / 28 dp,
- * §4.4), and multi-FAB placement (FAB Menu, #185) are out of scope.
+ * §4.4), and multi-FAB placement (FAB Menu) are out of scope.
  *
  * @serial exclude
  * @author Charles Bryan

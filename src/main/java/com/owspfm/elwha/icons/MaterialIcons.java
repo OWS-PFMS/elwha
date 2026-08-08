@@ -35,10 +35,8 @@ import javax.swing.UIManager;
  * {@link #get(String)} appears to work, but client names race Elwha's bundle on the classpath with
  * undefined resolution order — keep your icons in your own namespace.
  *
- * <p><em>Adding icons to the library's bundle (contributors):</em> drop the SVG under {@code
- * resources/com/owspfm/icons/material/} with the same style axes, add a lookup here, and update the
- * inventory in the package doc ({@code MaterialIconsInventoryDocTest} enforces it). Material
- * Symbols are licensed Apache-2.0; see the project LICENSE-NOTICES file for attribution.
+ * <p>Material Symbols are licensed Apache-2.0; see the project LICENSE-NOTICES file for
+ * attribution.
  *
  * <p><strong>Per-glyph optical centering varies.</strong> Material Symbols are designed for
  * text-baseline alignment in font usage, not optical centering when consumed as standalone
@@ -951,7 +949,7 @@ public final class MaterialIcons {
 
   /**
    * Leading back arrow "←" — M3's back-navigation affordance for multi-step surfaces; the {@code
-   * ElwhaSideSheet} header's optional back icon button (#308).
+   * ElwhaSideSheet} header's optional back icon button.
    *
    * @return the icon at {@link #DEFAULT_SIZE}
    * @version v0.5.0
@@ -1024,10 +1022,10 @@ public final class MaterialIcons {
 
   /**
    * Hamburger menu glyph — three horizontal lines. M3's canonical menu / drawer affordance, and the
-   * menu-button glyph used in the Navigation Rail Collapsed variant (Phase 2 of epic #159).
+   * menu-button glyph used in the Navigation Rail Collapsed variant.
    *
    * @return the icon at the default size
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public static FlatSVGIcon menu() {
@@ -1050,10 +1048,10 @@ public final class MaterialIcons {
    * Hamburger-with-arrow "menu open" glyph — M3's canonical collapse affordance shown when a
    * navigation drawer or rail is in its expanded state. Pairs with {@link #menu()} as the rail's
    * Collapsed ↔ Expanded toggle (design doc §4.3); the consumer flips the icon when calling {@code
-   * rail.morphTo(...)} in Phase 3.
+   * rail.morphTo(...)}.
    *
    * @return the icon at the default size
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public static FlatSVGIcon menuOpen() {
@@ -1628,6 +1626,9 @@ public final class MaterialIcons {
     return load("layers_fill", size);
   }
 
+  // Adding a bundled icon: drop the SVG under resources/com/owspfm/icons/material/ with the same
+  // style axes, add a lookup method here that calls load(...), and update the inventory in the
+  // package doc (MaterialIconsInventoryDocTest enforces it).
   private static FlatSVGIcon load(final String name, final int size) {
     return themed(new FlatSVGIcon(BASE + name + ".svg", size, size));
   }
