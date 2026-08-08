@@ -370,6 +370,36 @@ class ElwhaButtonInteractionTest {
         .containsExactly(false);
   }
 
+  // --------------------------------------------------------- interaction mode
+
+  @Test
+  void droppingOutOfSelectableModeReportsTheDeselection() {
+    final ElwhaButton button = selectable(ButtonVariant.FILLED);
+    button.setSelected(true);
+    final List<Object> selected = new ArrayList<>();
+    button.addPropertyChangeListener(
+        ElwhaButton.PROPERTY_SELECTED, e -> selected.add(e.getNewValue()));
+
+    button.setInteractionMode(ButtonInteractionMode.CLICKABLE);
+
+    assertThat(button.isSelected()).as("a push button holds no selection").isFalse();
+    assertThat(selected)
+        .as("and a selection listener is told, rather than left believing the old value")
+        .containsExactly(false);
+  }
+
+  @Test
+  void droppingOutOfSelectableModeIsSilentWhenNothingWasSelected() {
+    final ElwhaButton button = selectable(ButtonVariant.FILLED);
+    final List<Object> selected = new ArrayList<>();
+    button.addPropertyChangeListener(
+        ElwhaButton.PROPERTY_SELECTED, e -> selected.add(e.getNewValue()));
+
+    button.setInteractionMode(ButtonInteractionMode.CLICKABLE);
+
+    assertThat(selected).as("there is no transition to report").isEmpty();
+  }
+
   // ------------------------------------------------------------- ripple gate
 
   @Test

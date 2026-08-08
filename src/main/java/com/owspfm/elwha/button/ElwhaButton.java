@@ -360,11 +360,19 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
       throw new IllegalStateException(TEXT_TOGGLE_ERROR);
     }
     this.interactionMode = mode;
-    if (mode == ButtonInteractionMode.CLICKABLE) {
+    if (mode == ButtonInteractionMode.CLICKABLE && this.selected) {
       // Switching out of SELECTABLE clears any latched selection — there is no toggle state in
       // CLICKABLE mode, and leaving the flag latched would produce a phantom border/overlay if the
-      // mode were later switched back.
+      // mode were later switched back. This is the one path that clears `selected` without going
+      // through setSelected, so it owes listeners the same PROPERTY_SELECTED they would have heard
+      // from a deselecting click. The select flip snaps back with it — selectMorph drives the body
+      // silhouette off its own progress, not off `selected`, so leaving it at 1 would rest the
+      // button in the selected shape forever.
       this.selected = false;
+      selectMorph.snapTo(0f);
+      repaint();
+      firePropertyChange(PROPERTY_SELECTED, true, false);
+      return this;
     }
     repaint();
     return this;

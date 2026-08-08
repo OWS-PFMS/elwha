@@ -293,6 +293,16 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
       return this;
     }
     this.interactionMode = mode;
+    if (mode == IconButtonInteractionMode.CLICKABLE && this.selected) {
+      // Switching out of SELECTABLE clears any latched selection, and fires for it — the mirror of
+      // ElwhaButton.setInteractionMode. Without the clear, currentIcon() would keep serving the
+      // filled glyph off `selected` alone (it has no mode test of its own), so a push-button that
+      // had once been a toggle would wear the selected icon permanently.
+      this.selected = false;
+      repaint();
+      firePropertyChange(PROPERTY_SELECTED, true, false);
+      return this;
+    }
     repaint();
     return this;
   }
@@ -663,15 +673,17 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   // -------------------------------------------------------------- selected
 
   /**
-   * Sets the selected state and fires a {@link #PROPERTY_SELECTED} property change.
+   * Sets the selected state and fires a {@link #PROPERTY_SELECTED} property change. No-op if the
+   * interaction mode is {@link IconButtonInteractionMode#CLICKABLE} — push-buttons have no
+   * persistent selected state.
    *
    * @param selected the new selected state
    * @return {@code this} for fluent chaining
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public ElwhaIconButton setSelected(final boolean selected) {
-    if (selected == this.selected) {
+    if (interactionMode != IconButtonInteractionMode.SELECTABLE || selected == this.selected) {
       return this;
     }
     final boolean old = this.selected;
