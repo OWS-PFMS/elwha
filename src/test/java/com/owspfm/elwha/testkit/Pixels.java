@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.theme.ColorRole;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.swing.JComponent;
@@ -27,8 +29,8 @@ public final class Pixels {
   private Pixels() {}
 
   /**
-   * Sizes, lays out, and paints an unrealized component onto an opaque {@link ColorRole#SURFACE}
-   * ground.
+   * Sizes, lays out (recursively — see {@link #render(JComponent, int, int, Color)}), and paints an
+   * unrealized component onto an opaque {@link ColorRole#SURFACE} ground.
    *
    * @param component the component to paint (never realized; no peer required)
    * @param width raster width in px
@@ -45,6 +47,10 @@ public final class Pixels {
   /**
    * Sizes, lays out, and paints an unrealized component onto an opaque ground of the given color.
    *
+   * <p>The layout pass is recursive: every descendant is bounded, not just the immediate children,
+   * so a probe aimed at nested content reads what that content painted rather than the ground
+   * behind an unlaid-out 0×0 component (#707).
+   *
    * @param component the component to paint (never realized; no peer required)
    * @param width raster width in px
    * @param height raster height in px
@@ -56,7 +62,7 @@ public final class Pixels {
   public static BufferedImage render(
       final JComponent component, final int width, final int height, final Color ground) {
     component.setSize(width, height);
-    component.doLayout();
+    layoutTree(component);
     final BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
     final Graphics2D g = image.createGraphics();
     try {
@@ -67,6 +73,28 @@ public final class Pixels {
       g.dispose();
     }
     return image;
+  }
+
+  /**
+   * Lays out {@code component} and every descendant, top-down.
+   *
+   * <p>{@link java.awt.Container#doLayout()} alone bounds the immediate children only — a
+   * grandchild keeps its default 0×0 and paints nothing, so a probe aimed at it reads the ground
+   * and can pass against code that never drew. That is not hypothetical: a #589 pixel comparison
+   * passed against broken code because both rasters were equally empty, and only a recursive layout
+   * made it discriminate (714 differing pixels, once it did). The walk is top-down because a child
+   * cannot lay out its own children until its parent has given it a size.
+   *
+   * <p>{@code validate()} is not the tool here — it short-circuits on a component with no peer,
+   * which is every component this class renders.
+   */
+  private static void layoutTree(final Component component) {
+    if (component instanceof Container container) {
+      container.doLayout();
+      for (final Component child : container.getComponents()) {
+        layoutTree(child);
+      }
+    }
   }
 
   /**
@@ -93,6 +121,35 @@ public final class Pixels {
             "%s — expected %s ±%d/channel at (%d,%d) but was %s",
             what, hex(want), TOLERANCE, x, y, hex(got))
         .isTrue();
+  }
+
+  /**
+   * Asserts the pixel at {@code (x, y)} is <em>exactly</em> {@code want}, failing with both colors
+   * as hex.
+   *
+   * <p>Use this, not {@link #assertPixelNear}, when the probe's whole point is which of two
+   * near-identical token roles was painted. Adjacent M3 surface roles can sit closer together than
+   * the ±10 tolerance — {@code SURFACE} and {@code SURFACE_CONTAINER_LOW} are 5/255 apart in the
+   * light baseline and 9/255 in dark — so a {@code near} probe passes on either one and the
+   * assertion says nothing (#707). It cost nothing to tighten: a flat token fill, probed away from
+   * an antialiased edge, lands on the exact token value.
+   *
+   * <p>The alpha channel is ignored; only the three color channels are compared.
+   *
+   * @param image the raster to probe
+   * @param x probe x
+   * @param y probe y
+   * @param want the exact expected color
+   * @param what human-readable description of what the probe verifies
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void assertPixelExact(
+      final BufferedImage image, final int x, final int y, final Color want, final String what) {
+    final Color got = new Color(image.getRGB(x, y), true);
+    assertThat(got.getRGB() & 0xFFFFFF)
+        .as("%s — expected exactly %s at (%d,%d) but was %s", what, hex(want), x, y, hex(got))
+        .isEqualTo(want.getRGB() & 0xFFFFFF);
   }
 
   /**

@@ -1,6 +1,7 @@
 package com.owspfm.elwha.menu;
 
 import com.owspfm.elwha.overlay.AbstractElwhaOverlay;
+import com.owspfm.elwha.theme.BodyBearing;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Point;
@@ -326,13 +327,17 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
     return new Rectangle(x, y, w, h);
   }
 
-  // The trigger's bounds in the layered pane's coordinate space. Falls back to the pane's top-left
-  // when the anchor is somehow detached, so placement degrades gracefully rather than throwing.
+  // The trigger's VISIBLE BODY in the layered pane's coordinate space. Falls back to the pane's
+  // top-left when the anchor is somehow detached, so placement degrades gracefully rather than
+  // throwing. Measuring from the body rather than the bounds is what stops a menu opening off the
+  // bottom of an invisible rect when a fill layout stretched its trigger, and it also backs out a
+  // shadow halo this host never handled at all (#493).
   private Rectangle anchorBoundsInPane() {
     if (anchor == null || layeredPane == null || !anchor.isShowing()) {
       return new Rectangle(0, 0, 0, 0);
     }
-    final Point origin = SwingUtilities.convertPoint(anchor, 0, 0, layeredPane);
-    return new Rectangle(origin.x, origin.y, anchor.getWidth(), anchor.getHeight());
+    final Rectangle body = BodyBearing.bodyBoundsOf(anchor);
+    final Point origin = SwingUtilities.convertPoint(anchor, body.x, body.y, layeredPane);
+    return new Rectangle(origin.x, origin.y, body.width, body.height);
   }
 }

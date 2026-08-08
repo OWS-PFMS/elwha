@@ -8,6 +8,7 @@ import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.testkit.GuiSteps;
 import com.owspfm.elwha.testkit.GuiToolkit;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Component;
@@ -124,6 +125,19 @@ class ElwhaMenuGuiTest {
     return new Rectangle(origin, component.getSize());
   }
 
+  /**
+   * The component's <em>visible body</em> in pane coordinates — what placement measures from as of
+   * #493. An {@code ElwhaButton} trigger pads its bounds with a shadow reserve and, at XS/S, with
+   * a11y target inflation; a menu row paints a 44 dp band inside a 48 dp target. Anchoring to raw
+   * bounds put the spec gap against those invisible edges.
+   */
+  private Rectangle bodyInPane(final Component component) {
+    final Rectangle body = BodyBearing.bodyBoundsOf(component);
+    final Point origin =
+        SwingUtilities.convertPoint(component, new Point(body.x, body.y), frame.getLayeredPane());
+    return new Rectangle(origin.x, origin.y, body.width, body.height);
+  }
+
   private static Point centerOnScreen(final Component component) {
     final Point origin = component.getLocationOnScreen();
     return new Point(origin.x + component.getWidth() / 2, origin.y + component.getHeight() / 2);
@@ -200,11 +214,13 @@ class ElwhaMenuGuiTest {
     open(menu);
 
     final Rectangle surface = read(() -> boundsInPane(mounted().get(0)));
-    final Rectangle anchor = read(() -> boundsInPane(trigger));
+    final Rectangle anchor = read(() -> bodyInPane(trigger));
     assertThat(surface.y)
-        .as("a real anchor puts the menu one gap below the trigger, which no headless run can show")
+        .as(
+            "a real anchor puts the menu one gap below the trigger's painted pill, which no"
+                + " headless run can show — measured from the body, not the padded bounds (#493)")
         .isEqualTo(anchor.y + anchor.height + AbstractElwhaMenuOverlay.ANCHOR_GAP_PX);
-    assertThat(surface.x).as("leading-aligned with the trigger").isEqualTo(anchor.x);
+    assertThat(surface.x).as("leading-aligned with the pill").isEqualTo(anchor.x);
   }
 
   @Test
@@ -318,11 +334,13 @@ class ElwhaMenuGuiTest {
         .as("the parent stays up — a chain is two open overlays, not a replacement")
         .hasSize(2);
     final Rectangle sub = read(() -> boundsInPane(mounted().get(0)));
-    final Rectangle opener = read(() -> boundsInPane(share));
+    final Rectangle opener = read(() -> bodyInPane(share));
     assertThat(sub.x)
         .as("the nested menu opens off the opener row's trailing edge")
         .isEqualTo(opener.x + opener.width + AbstractElwhaMenuOverlay.SUBMENU_GAP_PX);
-    assertThat(sub.y).as("top-aligned with the row that opened it").isEqualTo(opener.y);
+    assertThat(sub.y)
+        .as("top-aligned with the visible row that opened it, not its taller target box (#493)")
+        .isEqualTo(opener.y);
   }
 
   @Test
@@ -383,33 +401,11 @@ class ElwhaMenuGuiTest {
         .isFalse();
   }
 
-  @Test
-  void swappingAnOpenSubMenuClosesTheOutgoingOne() throws Exception {
-    final ElwhaMenu outgoing = ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Email")).build();
-    final ElwhaMenu incoming = ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Link")).build();
-    final ElwhaSubMenuItem share = ElwhaSubMenuItem.of("Share", outgoing);
-    final ElwhaMenu menu =
-        ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Grid")).addItem(share).build();
-    open(menu);
-    waitFor("the menu surface owns focus", () -> menu.focusComponent().isFocusOwner());
-    GuiSteps.keyUntil(
-        robot,
-        java.awt.event.KeyEvent.VK_DOWN,
-        "the highlight reaches the submenu row",
-        () -> menu.getHighlightedItem() == share);
-    GuiSteps.keyUntil(
-        robot, java.awt.event.KeyEvent.VK_RIGHT, "the nested menu opens", () -> share.isExpanded());
-
-    SwingUtilities.invokeAndWait(() -> share.setSubMenu(incoming));
-
-    assertThat(read(this::mounted))
-        .as("#604 — the outgoing menu stayed mounted with no opener able to reach it")
-        .hasSize(1);
-    assertThat(onEdt(() -> share.isExpanded()))
-        .as("and the row kept reporting EXPANDED with nothing open, disarming hover-to-open")
-        .isFalse();
-    assertThat(read(share::getSubMenu)).isSameAs(incoming);
-  }
+  // The #604 swap regression used to live here, because the submenu machinery reads the OS pointer
+  // and MouseInfo.getPointerInfo() threw headless — nothing about the behaviour itself needed a
+  // display. That read is guarded as of #709, so it moved down to
+  // ElwhaSubMenuChainTest.swappingAnOpenSubMenuClosesTheOutgoingOne. Keyboard-driven submenu
+  // opening against real focus is still covered above, by the chain-unwind test.
 
   // ---------------------------------------------------------------- selection
 

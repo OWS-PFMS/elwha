@@ -298,7 +298,7 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
         new ElwhaChip(text)
             .setVariant(ChipVariant.OUTLINED)
             .setInteractionMode(ChipInteractionMode.CLICKABLE);
-    chip.setTrailingIcon(new RemoveGlyphIcon(), "Remove", onRemove);
+    chip.setTrailingIcon(chip.new RemoveGlyphIcon(), "Remove", onRemove);
     return chip;
   }
 
@@ -1562,14 +1562,20 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
 
   /**
    * Minimal Material-shaped × glyph used by {@link #inputChip(String, Runnable)} so the input-chip
-   * preset doesn't require a MaterialIcons dependency at the public-API level. Renders crisp at the
-   * chip's foreground color via the surrounding chip's icon filter — at 14px optical size to match
-   * the in-chip glyph convention.
+   * preset doesn't require a MaterialIcons dependency at the public-API level — at 14px optical
+   * size to match the in-chip glyph convention.
    *
-   * @version v0.1.0
+   * <p>It strokes in {@link #resolveForegroundColor()}, the chip's own resolver, which is why this
+   * is an inner class rather than a static one. The chip's icon filter cannot reach it: that filter
+   * only applies to {@code FlatSVGIcon} instances, and the component the glyph is handed at paint
+   * time is the trailing {@code JLabel}, whose foreground is the plain LAF label color. A chip on a
+   * custom surface role would otherwise paint its × in one color and its text in another — the
+   * unpaired result the class documentation says cannot happen (#644).
+   *
+   * @version v0.5.0
    * @since v0.1.0
    */
-  private static final class RemoveGlyphIcon implements Icon {
+  private final class RemoveGlyphIcon implements Icon {
 
     private static final int SIZE = 14;
 
@@ -1578,7 +1584,7 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
       final Graphics2D g2 = (Graphics2D) g.create();
       try {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(c.getForeground());
+        g2.setColor(resolveForegroundColor());
         g2.setStroke(new java.awt.BasicStroke(1.6f, java.awt.BasicStroke.CAP_ROUND, 0));
         final int inset = 3;
         g2.drawLine(x + inset, y + inset, x + SIZE - inset, y + SIZE - inset);

@@ -1130,6 +1130,9 @@ public class ElwhaTextField extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     final int supportingRow = SUPPORTING_TOP_PAD + lineHeight(TypeRole.BODY_SMALL);
     return new Dimension(DEFAULT_WIDTH, containerTop() + containerHeight() + supportingRow);
   }

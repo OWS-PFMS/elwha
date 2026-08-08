@@ -1,5 +1,6 @@
 package com.owspfm.elwha.radio;
 
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.FocusVisible;
@@ -18,6 +19,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -111,7 +113,7 @@ import javax.swing.event.EventListenerList;
  * @version v0.5.0
  * @since v0.4.0
  */
-public class ElwhaRadioButton extends JComponent {
+public class ElwhaRadioButton extends JComponent implements BodyBearing {
 
   // --- M3 radio-button geometry (dp == px at 100% scale; research §T/§G) ---
 
@@ -569,6 +571,27 @@ public class ElwhaRadioButton extends JComponent {
   }
 
   // --------------------------------------------------------------------- paint
+
+  /**
+   * The visible painted body — the {@value #TOUCH_TARGET}&nbsp;dp control block plus its label.
+   *
+   * <p>Both axes are content-sized rather than granted: a layout that stretches this control leaves
+   * dead space past the label and below the block, and anchoring to either would put a tooltip or
+   * badge out in that space. The block hugs the leading edge, so under a right-to-left orientation
+   * the content sits against the trailing edge instead.
+   *
+   * @return the body rect in component coordinates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public Rectangle getBodyBounds() {
+    final Dimension content = getPreferredSize();
+    final int width = Math.min(getWidth(), content.width);
+    final int band = Math.min(getHeight(), Math.max(TOUCH_TARGET, content.height));
+    final int x = getComponentOrientation().isLeftToRight() ? 0 : Math.max(0, getWidth() - width);
+    return new Rectangle(x, Math.max(0, (getHeight() - band) / 2), width, band);
+  }
 
   @Override
   protected void paintComponent(final Graphics g) {

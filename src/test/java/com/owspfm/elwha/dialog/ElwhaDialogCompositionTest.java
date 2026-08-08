@@ -308,7 +308,10 @@ class ElwhaDialogCompositionTest {
         .as("the content slot is the consumer's own component, hosted as-is — so it moves (#589)")
         .contains(field);
     assertThat(descendants((Container) host.mounted().get(0)))
-        .as("which is the documented limit of the preview's isolation, pinned here on purpose")
+        .as(
+            "which is the documented limit of the preview's isolation — accepted as the contract in"
+                + " #708, because an arbitrary consumer component cannot be twinned and a"
+                + " placeholder would misrepresent both the composition and the settled size")
         .doesNotContain(field);
   }
 

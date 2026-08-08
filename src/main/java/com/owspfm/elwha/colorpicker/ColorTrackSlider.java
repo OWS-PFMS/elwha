@@ -211,16 +211,25 @@ final class ColorTrackSlider extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     return new Dimension(120, COMPONENT_HEIGHT);
   }
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return new Dimension(60, COMPONENT_HEIGHT);
   }
 
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     return new Dimension(Integer.MAX_VALUE, COMPONENT_HEIGHT);
   }
 

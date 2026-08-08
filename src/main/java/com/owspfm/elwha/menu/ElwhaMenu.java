@@ -14,7 +14,6 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
-import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
@@ -314,8 +313,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     if (levels.size() < 2) {
       return;
     }
-    final Point pointer =
-        MouseInfo.getPointerInfo() != null ? MouseInfo.getPointerInfo().getLocation() : null;
+    final Point pointer = MenuPointer.screenLocation();
     ElwhaMenu hovered = null;
     for (int i = levels.size() - 1; i >= 0 && hovered == null; i--) {
       if (levels.get(i).surfaceContainsScreen(pointer)) {

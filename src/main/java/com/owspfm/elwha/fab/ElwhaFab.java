@@ -1,6 +1,7 @@
 package com.owspfm.elwha.fab;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.Easing;
@@ -21,6 +22,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
@@ -81,7 +83,7 @@ import javax.swing.Timer;
  * @version v0.5.0
  * @since v0.3.0
  */
-public final class ElwhaFab extends JComponent implements ShadowBearing {
+public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBearing {
 
   /**
    * Three sizes that scale across both Standard and Extended forms per M3 Expressive (May 2025).
@@ -929,11 +931,21 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
   // from the component bounds by the shadow reserve). Points in the reserve are NOT click targets —
   // the visible surface is what counts.
   private boolean containsPoint(final Point componentPoint) {
-    final int bodyW = bodyWidthPx();
-    final int bodyH = bodyHeightPx();
-    final int x = componentPoint.x - SHADOW_RESERVE.left;
-    final int y = componentPoint.y - SHADOW_RESERVE.top;
-    return x >= 0 && y >= 0 && x < bodyW && y < bodyH;
+    return getBodyBounds().contains(componentPoint);
+  }
+
+  /**
+   * The visible painted body — the round-rect, pinned at the shadow reserve at its own size. A FAB
+   * neither centers nor fills when a layout grants it extra room, so its body sits at a fixed
+   * offset and the generic halo back-out would over-report it.
+   *
+   * @return the body rect in component coordinates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public Rectangle getBodyBounds() {
+    return new Rectangle(SHADOW_RESERVE.left, SHADOW_RESERVE.top, bodyWidthPx(), bodyHeightPx());
   }
 
   // Converts a component-local click point to body-local coordinates clamped inside the visible

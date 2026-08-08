@@ -263,10 +263,18 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
    *
    * <p>The action row is rendered with inert twins of the {@linkplain
    * Builder#confirmAction(ElwhaButton) action buttons} rather than the buttons themselves, so a
-   * preview neither fires nor strips the action row out of a dialog that is currently shown. The
-   * {@linkplain Builder#content(JComponent) content slot} is the exception: it is the consumer's
-   * own component, hosted as-is, and a Swing component has one parent — so previewing a shown
-   * dialog that carries a content slot moves that slot into the preview.
+   * preview neither fires nor strips the action row out of a dialog that is currently shown.
+   *
+   * <p><strong>The {@linkplain Builder#content(JComponent) content slot} is borrowed, not twinned —
+   * do not preview a dialog while it is shown.</strong> The slot holds the consumer's own component
+   * under a hosted-as-is contract, and a Swing component has exactly one parent, so the preview
+   * re-parents it: a shown dialog loses its content to the preview, and a second preview takes it
+   * from the first. This is the deliberate limit of the {@code renderPreview} isolation (#589,
+   * ruled in #708) rather than an oversight. It cannot be twinned the way the action buttons are —
+   * an arbitrary consumer component has no copy constructor, and a placeholder would misrepresent
+   * both the composition the preview exists to show and the natural size the surface settles at
+   * within the 280–560px band. Preview a dialog that is not currently shown, or build a separate
+   * instance for the gallery.
    *
    * @return a non-modal render of the dialog surface
    * @version v0.5.0
