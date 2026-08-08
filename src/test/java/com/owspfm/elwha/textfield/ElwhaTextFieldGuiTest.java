@@ -174,14 +174,13 @@ class ElwhaTextFieldGuiTest {
         .isFalse();
   }
 
-  /** Moves real focus into the field's editor and waits for the KFM to agree. */
   /**
    * The chassis declines the tab stop (conventions §12), so {@code field.requestFocusInWindow()}
    * would land nowhere unless it forwards. Only a real {@code KeyboardFocusManager} can tell the
    * difference between "forwarded" and "returned false and did nothing" (#688).
    */
   @Test
-  void theChassisForwardsAFocusRequestToItsEditor() throws Exception {
+  void chassisForwardsAFocusRequestToItsEditor() throws Exception {
     assertThat(field.isFocusable()).as("the decorator is not itself a tab stop").isFalse();
 
     final AtomicReference<Boolean> accepted = new AtomicReference<>();
@@ -192,6 +191,7 @@ class ElwhaTextFieldGuiTest {
     assertThat(field.isFocusOwner()).as("and never on the chassis itself").isFalse();
   }
 
+  /** Moves real focus into the field's editor and waits for the KFM to agree. */
   private void focusTheEditor() throws Exception {
     SwingUtilities.invokeAndWait(() -> field.getEditor().requestFocusInWindow());
     waitFor("the field's editor owns focus", () -> field.getEditor().isFocusOwner());

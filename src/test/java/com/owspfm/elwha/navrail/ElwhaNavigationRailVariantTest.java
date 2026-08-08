@@ -726,7 +726,7 @@ class ElwhaNavigationRailVariantTest {
    * because the Expanded rail overlays the inset rather than reflowing the content behind it.
    */
   @Test
-  void theCollapsedWidthAccessorIsIndependentOfTheCurrentVariant() {
+  void collapsedWidthAccessorIsIndependentOfTheCurrentVariant() {
     final ElwhaNavigationRail collapsed = ElwhaNavigationRail.collapsed();
     assertThat(collapsed.getCollapsedWidth())
         .as("collapsed: the accessor and the preferred width agree")

@@ -85,7 +85,7 @@ class ThemeValueEqualityTest {
   }
 
   @Test
-  void theOfFamilyRoundTripIsLosslessByEqualityAndNotOnlyByRendering() {
+  void ofFamilyRoundTripIsLosslessByEqualityAndNotOnlyByRendering() {
     // Typography.ofFamily(existing.familyName()) is documented as a lossless round trip. Without
     // equality it was lossless in what it painted and produced an object that compared unequal to
     // its source — which would surface as a spurious Config difference.
@@ -129,7 +129,7 @@ class ThemeValueEqualityTest {
    * every window — can be skipped.
    */
   @Test
-  void theLiveConfigCanBeComparedAgainstAProposedOne() {
+  void liveConfigCanBeComparedAgainstAProposedOne() {
     final Config live = ElwhaTheme.current();
 
     assertThat(live.withMode(live.mode()))

@@ -183,7 +183,7 @@ class FocusStopDoctrineTest {
   }
 
   @Test
-  void theCardTracksItsActionableBindings() {
+  void cardTracksItsActionableBindings() {
     final ElwhaCard card = new ElwhaCard();
     assertThat(card.isFocusable()).as("a resting card is chrome").isFalse();
 
@@ -196,7 +196,7 @@ class FocusStopDoctrineTest {
   }
 
   @Test
-  void theChipTracksItsInteractionMode() {
+  void chipTracksItsInteractionMode() {
     final ElwhaChip chip = new ElwhaChip("Tag");
     assertThat(chip.isFocusable()).as("a static chip is chrome").isFalse();
 
@@ -211,7 +211,7 @@ class FocusStopDoctrineTest {
   }
 
   @Test
-  void theFieldDecoratorsForwardTheFocusRequestTheyDecline() {
+  void fieldDecoratorsForwardTheFocusRequestTheyDecline() {
     // The wrapper declines the stop, so requestFocusInWindow() would be a silent no-op (§9) unless
     // it forwards. Headless cannot arbitrate real focus, so this pins the delegation target rather
     // than the outcome: the call must reach the editor, not this.

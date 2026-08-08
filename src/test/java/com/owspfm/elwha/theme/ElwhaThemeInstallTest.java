@@ -104,7 +104,7 @@ class ElwhaThemeInstallTest {
    * the installed family.
    */
   @Test
-  void theStyleClassLadderLandsOnM3StepsInsideTheInstalledFamily() {
+  void styleClassLadderLandsOnM3StepsInsideTheInstalledFamily() {
     final Typography installed = Typography.defaults();
 
     assertRole("h00.font", TypeRole.DISPLAY_SMALL, installed);
@@ -132,7 +132,7 @@ class ElwhaThemeInstallTest {
    * over most of the table.
    */
   @Test
-  void theUnbridgedRungsStillDeriveFromDefaultFont() {
+  void unbridgedRungsStillDeriveFromDefaultFont() {
     final Typography installed = Typography.defaults();
     final int defaultSize = installed.get(TypeRole.BODY_MEDIUM).getSize();
 

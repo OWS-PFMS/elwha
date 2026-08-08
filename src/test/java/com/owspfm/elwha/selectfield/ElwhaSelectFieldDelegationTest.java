@@ -34,7 +34,7 @@ class ElwhaSelectFieldDelegationTest {
   }
 
   @Test
-  void theVariantIsReachableAfterConstruction() {
+  void variantIsReachableAfterConstruction() {
     // Constructor-only before #727 — and with no getter at all, so a caller could neither read it
     // back nor change it on a field the factory had already made.
     final ElwhaSelectField<String> select = select();
@@ -45,7 +45,7 @@ class ElwhaSelectFieldDelegationTest {
   }
 
   @Test
-  void theLeadingIconGetterCompletesItsSetter() {
+  void leadingIconGetterCompletesItsSetter() {
     // Conventions §5 — an asymmetric setter-without-getter is drift to fix in the next pass.
     final ElwhaSelectField<String> select = select();
     assertThat(select.getLeadingIcon()).isNull();
@@ -56,7 +56,7 @@ class ElwhaSelectFieldDelegationTest {
   }
 
   @Test
-  void theFormAxesRoundTrip() {
+  void formAxesRoundTrip() {
     final ElwhaSelectField<String> select = select();
 
     select.setRequired(true);
@@ -94,7 +94,7 @@ class ElwhaSelectFieldDelegationTest {
   }
 
   @Test
-  void theTrailingSlotStaysTheSelectFieldsOwn() {
+  void trailingSlotStaysTheSelectFieldsOwn() {
     // §14's worked hazard: a reachable chassis would let a caller displace the arrow the select
     // field is documented to own. No passthrough exists, so the arrow survives everything the
     // public API can do to the field.
