@@ -27,7 +27,7 @@ import javax.swing.Timer;
  * is Phase 5.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class MorphAnimator {
@@ -119,7 +119,10 @@ public final class MorphAnimator {
 
   private final WeakReference<JComponent> hostRef;
   private final Timer timer;
-  private final java.util.List<Runnable> progressListeners = new java.util.ArrayList<>();
+  // Copy-on-write rather than a defensive copy per dispatch: the list changes at most once per
+  // host lifetime, and fireProgress runs on every tick of every running animator.
+  private final java.util.List<Runnable> progressListeners =
+      new java.util.concurrent.CopyOnWriteArrayList<>();
 
   private int durationMs;
   private float progress;
@@ -395,11 +398,8 @@ public final class MorphAnimator {
   }
 
   private void fireProgress() {
-    if (progressListeners.isEmpty()) {
-      return;
-    }
-    for (final Runnable r : new java.util.ArrayList<>(progressListeners)) {
-      r.run();
+    for (final Runnable listener : progressListeners) {
+      listener.run();
     }
   }
 }

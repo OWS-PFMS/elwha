@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **`MorphAnimator` copied its listener list on every animation tick** ([#669](https://github.com/OWS-PFMS/elwha/issues/669)) — `fireProgress` built a defensive `ArrayList` per dispatch so a listener could unregister itself mid-broadcast, and it runs at 62.5 Hz for every animator that is running. With `ElwhaNavigationRail` pushing progress to N destinations that is N allocations per frame for a list that changes at most once per host lifetime. The listeners now live in a `CopyOnWriteArrayList`, whose iterator is already a snapshot — so the mid-dispatch removal stays safe and the per-tick allocation is gone. Tier A probes pin both halves of that contract.
+
 - **A `MaterialIcons.Symbol` re-walked the classpath on every fill-axis query** ([#672](https://github.com/OWS-PFMS/elwha/issues/672)) — `hasSelectedVariant()` asked `getResource` each call with no memo, and `selected(int)` calls it every time, so each state change on a nav-rail destination re-ran a lookup that misses for every linework glyph — and a miss walks the whole classpath. The bundle is fixed for the life of the JVM, so the answer is now held on the `Symbol` after the first query.
 
 - **`TabbedPane.hoverColor` was written twice and the first write was dead** ([#670](https://github.com/OWS-PFMS/elwha/issues/670)) — `FlatLafKeyMapping.applyStaticKeys` set it to the flat `surfaceVariant` role and `applyStateLayerKeys` then overwrote it with the baked `HOVER` overlay. `ElwhaTheme.install` always runs the two in that order, so the static write could never take effect; it is gone. No rendered pixel changes — the state-layer value was always the one that survived.

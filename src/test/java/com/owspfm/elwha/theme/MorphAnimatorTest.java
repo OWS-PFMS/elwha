@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.within;
 
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.swing.JPanel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -68,6 +70,53 @@ class MorphAnimatorTest {
     assertThat(MorphAnimator.durationMultiplier())
         .as("a negative multiplier clamps to the same floor")
         .isEqualTo(0.1f, within(0.0001f));
+  }
+
+  // ------------------------------------------------------- progress listeners
+
+  @Test
+  void everyRegisteredListenerHearsASyntheticTick() {
+    final MorphAnimator animator = new MorphAnimator(new JPanel(), MorphAnimator.SHORT3_MS);
+    final AtomicInteger first = new AtomicInteger();
+    final AtomicInteger second = new AtomicInteger();
+    animator.addProgressListener(first::incrementAndGet);
+    animator.addProgressListener(second::incrementAndGet);
+
+    animator.snapTo(1f);
+
+    assertThat(first.get()).as("a parent broadcasting to children hears every snap").isEqualTo(1);
+    assertThat(second.get()).as("and so does every sibling listener").isEqualTo(1);
+  }
+
+  @Test
+  void aListenerCanRemoveItselfMidDispatchWithoutBreakingTheBroadcast() {
+    final MorphAnimator animator = new MorphAnimator(new JPanel(), MorphAnimator.SHORT3_MS);
+    final AtomicInteger survivorCalls = new AtomicInteger();
+    final Runnable[] selfRemoving = new Runnable[1];
+    selfRemoving[0] = () -> animator.removeProgressListener(selfRemoving[0]);
+    animator.addProgressListener(selfRemoving[0]);
+    animator.addProgressListener(survivorCalls::incrementAndGet);
+
+    animator.snapTo(1f);
+    animator.snapTo(0f);
+
+    assertThat(survivorCalls.get())
+        .as("dispatch iterates a snapshot, so a mid-dispatch removal neither throws nor skips")
+        .isEqualTo(2);
+  }
+
+  @Test
+  void removingAListenerStopsItHearingLaterTicks() {
+    final MorphAnimator animator = new MorphAnimator(new JPanel(), MorphAnimator.SHORT3_MS);
+    final AtomicInteger calls = new AtomicInteger();
+    final Runnable listener = calls::incrementAndGet;
+    animator.addProgressListener(listener);
+
+    animator.snapTo(1f);
+    animator.removeProgressListener(listener);
+    animator.snapTo(0f);
+
+    assertThat(calls.get()).as("a removed listener is off the broadcast for good").isEqualTo(1);
   }
 
   @Test
