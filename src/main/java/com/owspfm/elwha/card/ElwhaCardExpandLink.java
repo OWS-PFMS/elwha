@@ -51,6 +51,7 @@ public final class ElwhaCardExpandLink extends JLabel {
   private final PropertyChangeListener expansionSync = e -> syncText();
 
   private boolean subscribed;
+  private boolean pressed;
 
   /**
    * Creates an expand-link bound to the given card. Registers an expansion-change listener and
@@ -71,9 +72,23 @@ public final class ElwhaCardExpandLink extends JLabel {
     setText(card.isCollapsed() ? expandText : collapseText);
     addMouseListener(
         new MouseAdapter() {
+          // pressed/released, not clicked — macOS coalesces and drops MOUSE_CLICKED under rapid
+          // clicks, so a fast expand/collapse silently missed toggles (#299, and #596 here). The
+          // shape mirrors ElwhaCard's own handler.
           @Override
-          public void mouseClicked(final MouseEvent ev) {
-            toggle();
+          public void mousePressed(final MouseEvent ev) {
+            if (isEnabled() && ev.getButton() == MouseEvent.BUTTON1) {
+              pressed = true;
+            }
+          }
+
+          @Override
+          public void mouseReleased(final MouseEvent ev) {
+            final boolean wasPressed = pressed;
+            pressed = false;
+            if (wasPressed && isEnabled() && contains(ev.getPoint())) {
+              toggle();
+            }
           }
         });
     installKeyboardActivation();
