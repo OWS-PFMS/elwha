@@ -556,7 +556,11 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
       return determinateProfile(getProgressFraction());
     }
     if (MorphAnimator.isReducedMotion()) {
-      return LoadingShapes.INDETERMINATE[0].radii();
+      // Cloned so every branch of this method hands back an array the caller owns. The other two
+      // allocate; this one would otherwise leak the backing array of a static final shape, and an
+      // in-place transform on a profile — a pulse, a clamp, a normalization — would corrupt the
+      // shape catalog for the whole JVM, and only under reduced motion (#521).
+      return LoadingShapes.INDETERMINATE[0].radii().clone();
     }
     return indeterminateProfile(elapsedMs());
   }
