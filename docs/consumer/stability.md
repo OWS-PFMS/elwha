@@ -22,7 +22,10 @@ minor release can break your build. Add a `default` branch.
 ## What counts as public API
 
 The promise covers types in `com.owspfm.elwha.*` that are declared `public` and are not in one of
-the excluded areas below.
+the excluded areas below. The [API reference](https://ows-pfms.github.io/elwha/) lists every public
+type, so anything absent from it is package-private and therefore not API — but note the reverse
+does not hold: the Javadoc also documents the harness packages carved out below, and being
+documented does not by itself make a type stable.
 
 **Not API, and free to change or disappear in any release:**
 

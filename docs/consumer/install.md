@@ -80,6 +80,11 @@ mvn -q dependency:get -Dartifact=com.owspfm:elwha:1.0.0
 
 A silent exit means the artifact resolved. Then continue to the [Quick start](quick-start.md).
 
+The API reference is browsable without any of the above, at
+**[ows-pfms.github.io/elwha](https://ows-pfms.github.io/elwha/)**. It is also published as a
+`javadoc` classifier on the artifact — `com.owspfm:elwha:1.0.0:javadoc` — which most IDEs will
+attach automatically once the dependency resolves.
+
 ## Troubleshooting
 
 **`401 Unauthorized` fetching `elwha-1.0.0.pom`.** Maven is sending no credentials or wrong ones.

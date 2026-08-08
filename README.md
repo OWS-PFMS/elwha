@@ -115,6 +115,7 @@ switching: **[docs/consumer/quick-start.md](docs/consumer/quick-start.md)**.
 
 | | |
 |---|---|
+| **[API reference](https://ows-pfms.github.io/elwha/)** | The full Javadoc, redeployed on every push to `main`. |
 | **[Install & authenticate](docs/consumer/install.md)** | Coordinates, the `read:packages` token flow, Gradle, and the 401/403 troubleshooting list. |
 | **[Quick start](docs/consumer/quick-start.md)** | A program that compiles, annotated. |
 | **[Theming](docs/consumer/theming.md)** | The token families, dark mode, the bundled palette tiers, shipping your own palette, typography. |
@@ -134,8 +135,9 @@ switching: **[docs/consumer/quick-start.md](docs/consumer/quick-start.md)**.
 | **Navigation** | `ElwhaAppBar`, `ElwhaNavigationRail` + `ElwhaNavRailDestination`, `ElwhaTabs` |
 | **Feedback** | `ElwhaBadge` + `ElwhaBadgeAnchor`, `ElwhaLinearProgressIndicator`, `ElwhaCircularProgressIndicator`, `ElwhaLoadingIndicator` |
 
-One-line descriptions and Showcase leaves for all of them:
-**[docs/consumer/components.md](docs/consumer/components.md)**.
+One-line descriptions, Javadoc links and Showcase leaves for all of them:
+**[docs/consumer/components.md](docs/consumer/components.md)**. Full API reference:
+**[ows-pfms.github.io/elwha](https://ows-pfms.github.io/elwha/)**.
 
 ## Theming in one paragraph
 

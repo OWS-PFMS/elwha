@@ -112,6 +112,8 @@ re-skin correctly. `install` already repaints all open windows.
 
 ## Where to go next
 
+- **[API reference](https://ows-pfms.github.io/elwha/)** — the full Javadoc for every class named
+  on this page, redeployed on every push to `main`.
 - **[Theming](theming.md)** — palettes, dark mode, typography, and shipping your own colors.
 - **[Component index](components.md)** — the full catalog with its Showcase leaf.
 - **[Stability policy](stability.md)** — what 1.0 promises.

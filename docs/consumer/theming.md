@@ -4,17 +4,20 @@ Elwha's public API is a vocabulary of design tokens. Components — Elwha's and 
 resolve those tokens out of `UIManager` at paint time, so changing the theme changes every screen
 at once, and cohesion holds by construction rather than by discipline.
 
-Everything on this page lives in `com.owspfm.elwha.theme`.
+Everything on this page lives in
+[`com.owspfm.elwha.theme`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/package-summary.html),
+and every type named here links into the published
+[API reference](https://ows-pfms.github.io/elwha/).
 
 ## The install API in five types
 
 | Type | What it is |
 |---|---|
-| `ElwhaTheme` | The static facade. `config()` → a builder, `install(Config)` → apply, `current()` → the last-installed `Config`. |
-| `Config` | The immutable install request: a `Theme`, a `Mode`, a `Typography`, and an optional reduced-motion override. Has `with*` derivations for cheap runtime changes. |
-| `Theme` | A named pair of palettes — `light()` and `dark()`. `paletteFor(Mode)` picks one. |
-| `Palette` | One complete color scheme: all 49 `ColorRole` values. `Palette.builder()` requires every role, so an incomplete palette fails at build time rather than resolving to `null` at paint time. |
-| `Mode` | `LIGHT`, `DARK`, or `SYSTEM`. `SYSTEM` resolves against the OS appearance at install time. |
+| [`ElwhaTheme`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/ElwhaTheme.html) | The static facade. `config()` → a builder, `install(Config)` → apply, `current()` → the last-installed `Config`. |
+| [`Config`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/Config.html) | The immutable install request: a `Theme`, a `Mode`, a `Typography`, and an optional reduced-motion override. Has `with*` derivations for cheap runtime changes. |
+| [`Theme`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/Theme.html) | A named pair of palettes — `light()` and `dark()`. `paletteFor(Mode)` picks one. |
+| [`Palette`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/Palette.html) | One complete color scheme: all 49 `ColorRole` values. `Palette.builder()` requires every role, so an incomplete palette fails at build time rather than resolving to `null` at paint time. |
+| [`Mode`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/Mode.html) | `LIGHT`, `DARK`, or `SYSTEM`. `SYSTEM` resolves against the OS appearance at install time. |
 
 ```java
 ElwhaTheme.install(
@@ -41,11 +44,11 @@ accessor you use from paint code:
 
 | Family | Type | Accessor | Contents |
 |---|---|---|---|
-| Color roles | `ColorRole` (49) | `resolve()` → `Color` | The full M3 scheme — `PRIMARY` / `ON_PRIMARY` / `PRIMARY_CONTAINER` / `SURFACE` / `SURFACE_CONTAINER_HIGH` / `OUTLINE` / `ERROR` / … with the mandatory `on`-pairings for foreground contrast. |
-| Shape scale | `ShapeScale` (7) | `px()`, `arcPx()` | `NONE` 0 / `XS` 4 / `SM` 8 / `MD` 12 / `LG` 16 / `XL` 28 / `FULL`. |
-| Space scale | `SpaceScale` (6) | `px()` | 4 dp ladder: `XS` 4 / `SM` 8 / `MD` 12 / `LG` 16 / `XL` 24 / `XXL` 32. |
-| Type roles | `TypeRole` (15) | `resolve()` → `Font`, `pt()` | The complete M3 scale, `DISPLAY_LARGE` through `LABEL_SMALL`. |
-| State layers | `StateLayer` (5) | `over(base, tint)` | Hover 8% / focus 10% / pressed 10% / dragged 16% / selected 12%, as opacity overlays on a role color rather than separate colors. |
+| Color roles | [`ColorRole`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/ColorRole.html) (49) | `resolve()` → `Color` | The full M3 scheme — `PRIMARY` / `ON_PRIMARY` / `PRIMARY_CONTAINER` / `SURFACE` / `SURFACE_CONTAINER_HIGH` / `OUTLINE` / `ERROR` / … with the mandatory `on`-pairings for foreground contrast. |
+| Shape scale | [`ShapeScale`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/ShapeScale.html) (7) | `px()`, `arcPx()` | `NONE` 0 / `XS` 4 / `SM` 8 / `MD` 12 / `LG` 16 / `XL` 28 / `FULL`. |
+| Space scale | [`SpaceScale`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/SpaceScale.html) (6) | `px()` | 4 dp ladder: `XS` 4 / `SM` 8 / `MD` 12 / `LG` 16 / `XL` 24 / `XXL` 32. |
+| Type roles | [`TypeRole`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/TypeRole.html) (15) | `resolve()` → `Font`, `pt()` | The complete M3 scale, `DISPLAY_LARGE` through `LABEL_SMALL`. |
+| State layers | [`StateLayer`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/StateLayer.html) (5) | `over(base, tint)` | Hover 8% / focus 10% / pressed 10% / dragged 16% / selected 12%, as opacity overlays on a role color rather than separate colors. |
 
 ```java
 Color fill   = ColorRole.PRIMARY.resolve();
@@ -74,8 +77,9 @@ install landed on, and `isConcrete()` distinguishes `LIGHT`/`DARK` from `SYSTEM`
 
 ## Bundled palettes
 
-`MaterialPalettes` ships the demo palettes in two tiers, each discovered from its own resource
-directory at runtime rather than from a hardcoded list:
+[`MaterialPalettes`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/MaterialPalettes.html)
+ships the demo palettes in two tiers, each discovered from its own resource directory at runtime
+rather than from a hardcoded list:
 
 | Accessor | Returns | Contents |
 |---|---|---|
@@ -98,8 +102,9 @@ containers in both modes, ship your own palette built with a more expressive sch
 
 Two routes, depending on how much you want to hand-write.
 
-**From JSON (recommended).** `PaletteLoader.loadTheme(resourcePath)` reads an Elwha-normalized
-palette JSON off the classpath and returns a `Theme`. The schema is thin and maps 1:1 onto the 49
+**From JSON (recommended).**
+[`PaletteLoader.loadTheme(resourcePath)`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/PaletteLoader.html)
+reads an Elwha-normalized palette JSON off the classpath and returns a `Theme`. The schema is thin and maps 1:1 onto the 49
 `ColorRole` keys — a top-level `name`, an optional `description`, and `light` / `dark` objects each
 holding every role's `camelCase` key mapped to a `"#rrggbb"` string:
 
@@ -140,7 +145,8 @@ Showcase's palette picker, with no code change.
 
 ## Typography
 
-`Typography.defaults()` is the bundled Inter, shipped with real Regular (400) and Medium (500)
+[`Typography.defaults()`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/Typography.html)
+is the bundled Inter, shipped with real Regular (400) and Medium (500)
 faces so the M3 weight distinction renders rather than being synthesized. The faces are registered
 with the `GraphicsEnvironment` on first call and cached; if the bundled resources cannot be loaded
 it degrades to a logical sans-serif rather than failing.
@@ -193,6 +199,9 @@ ElwhaTheme.install(ElwhaTheme.current().withReducedMotion(Boolean.TRUE));
 ```
 
 ## Reference
+
+Every type on this page is in the published API reference at
+**[ows-pfms.github.io/elwha](https://ows-pfms.github.io/elwha/com/owspfm/elwha/theme/package-summary.html)**.
 
 The full token taxonomy and the FlatLaf key bridge are documented for maintainers in
 `docs/research/elwha-token-taxonomy.md` and `docs/research/elwha-theme-install-api.md`
