@@ -2,7 +2,6 @@ package com.owspfm.elwha.menu;
 
 import com.owspfm.elwha.icons.MaterialIcons;
 import java.awt.AWTEvent;
-import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
@@ -117,7 +116,7 @@ public final class ElwhaSubMenuItem extends ElwhaMenuItem {
   }
 
   private Point currentPointer() {
-    return MouseInfo.getPointerInfo() != null ? MouseInfo.getPointerInfo().getLocation() : null;
+    return MenuPointer.screenLocation();
   }
 
   // The pointer is "in the chain" when it is over this opener row or anywhere in the open submenu

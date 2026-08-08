@@ -383,33 +383,11 @@ class ElwhaMenuGuiTest {
         .isFalse();
   }
 
-  @Test
-  void swappingAnOpenSubMenuClosesTheOutgoingOne() throws Exception {
-    final ElwhaMenu outgoing = ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Email")).build();
-    final ElwhaMenu incoming = ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Link")).build();
-    final ElwhaSubMenuItem share = ElwhaSubMenuItem.of("Share", outgoing);
-    final ElwhaMenu menu =
-        ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Grid")).addItem(share).build();
-    open(menu);
-    waitFor("the menu surface owns focus", () -> menu.focusComponent().isFocusOwner());
-    GuiSteps.keyUntil(
-        robot,
-        java.awt.event.KeyEvent.VK_DOWN,
-        "the highlight reaches the submenu row",
-        () -> menu.getHighlightedItem() == share);
-    GuiSteps.keyUntil(
-        robot, java.awt.event.KeyEvent.VK_RIGHT, "the nested menu opens", () -> share.isExpanded());
-
-    SwingUtilities.invokeAndWait(() -> share.setSubMenu(incoming));
-
-    assertThat(read(this::mounted))
-        .as("#604 — the outgoing menu stayed mounted with no opener able to reach it")
-        .hasSize(1);
-    assertThat(onEdt(() -> share.isExpanded()))
-        .as("and the row kept reporting EXPANDED with nothing open, disarming hover-to-open")
-        .isFalse();
-    assertThat(read(share::getSubMenu)).isSameAs(incoming);
-  }
+  // The #604 swap regression used to live here, because the submenu machinery reads the OS pointer
+  // and MouseInfo.getPointerInfo() threw headless — nothing about the behaviour itself needed a
+  // display. That read is guarded as of #709, so it moved down to
+  // ElwhaSubMenuChainTest.swappingAnOpenSubMenuClosesTheOutgoingOne. Keyboard-driven submenu
+  // opening against real focus is still covered above, by the chain-unwind test.
 
   // ---------------------------------------------------------------- selection
 
