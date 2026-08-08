@@ -265,19 +265,6 @@ final class ReorderCursors {
     g.draw(shape);
   }
 
-  /**
-   * Theme-variant 32px preview raster for the cursor-reference playground panel.
-   *
-   * @param baseName {@code "grab"} or {@code "grabbing"}
-   * @param dark whether to load the dark-theme variant
-   * @return the 32px preview image, or {@code null} if the asset is missing
-   * @version v0.5.0
-   * @since v0.5.0
-   */
-  static java.awt.Image previewImage(final String baseName, final boolean dark) {
-    return loadPng(baseName + "-" + (dark ? "dark" : "light") + "-32.png");
-  }
-
   private static RoundRectangle2D.Double rr(
       final double x,
       final double y,
