@@ -398,6 +398,35 @@ class ElwhaTextFieldRenderTest {
     assertThat(field.getLabel()).as("as does the label setter").isEmpty();
   }
 
+  // ------------------------------------------------------------- error glyph
+
+  @Test
+  void aHeldErrorGlyphStillRetintsAcrossAModeSwitch() {
+    final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
+    field.setError(true);
+    final Dimension size = field.getPreferredSize();
+    final int glyphX = size.width - ElwhaTextField.PAD_LR_ICON - ElwhaTextField.ICON_GLYPH / 2;
+    final int glyphY = ElwhaTextField.CONTAINER_HEIGHT / 2;
+
+    Pixels.assertAnyPixelNear(
+        Pixels.render(field, size.width, size.height),
+        glyphX,
+        glyphY,
+        ElwhaTextField.ICON_GLYPH / 2,
+        ColorRole.ERROR.resolve(),
+        "the auto error glyph carries the error role");
+
+    ThemeExtension.install(Mode.DARK);
+
+    Pixels.assertAnyPixelNear(
+        Pixels.render(field, size.width, size.height),
+        glyphX,
+        glyphY,
+        ElwhaTextField.ICON_GLYPH / 2,
+        ColorRole.ERROR.resolve(),
+        "#638 — the glyph is held across paints, so its tint must follow a runtime mode switch");
+  }
+
   @Test
   void everyStaticFactoryProducesTheVariantItNames() {
     assertThat(ElwhaTextField.filled("Email").getVariant())

@@ -161,6 +161,33 @@ class ElwhaCardAtomsTest {
   }
 
   @Test
+  void plainTextIsEscapedSoItIsNotReadAsMarkup() {
+    final ElwhaCardTitle title = new ElwhaCardTitle("Price < 5 & rising");
+
+    assertThat(title.getText())
+        .as("auto-wrapping is how the atom wraps lines, not an invitation to parse consumer prose")
+        .isEqualTo("<html>Price &lt; 5 &amp; rising</html>");
+  }
+
+  @Test
+  void anEntityLikeSequenceSurvivesAsLiteralText() {
+    final ElwhaCardSupportingText body = new ElwhaCardSupportingText("Tom &amp; Jerry");
+
+    assertThat(body.getText())
+        .as("the ampersand is escaped first, so a literal entity is not silently substituted")
+        .isEqualTo("<html>Tom &amp;amp; Jerry</html>");
+  }
+
+  @Test
+  void callerAuthoredMarkupIsStillHonored() {
+    final ElwhaCardSubtitle subtitle = new ElwhaCardSubtitle("<html><b>bold</b> & plain</html>");
+
+    assertThat(subtitle.getText())
+        .as("an explicit <html> prefix is the opt-in for markup and is passed through untouched")
+        .isEqualTo("<html><b>bold</b> & plain</html>");
+  }
+
+  @Test
   void emptyAndNullTextAreLeftUnwrapped() {
     assertThat(new ElwhaCardTitle().getText())
         .as("the no-arg constructor leaves an empty title, not an empty HTML document")

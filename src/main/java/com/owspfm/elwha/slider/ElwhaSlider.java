@@ -260,6 +260,9 @@ public class ElwhaSlider extends JComponent {
   private final ChangeEvent changeEvent = new ChangeEvent(this);
   private final ChangeListener modelListener =
       e -> {
+        // A min/max change moves both handles without a layout pass, so the focus proxies have to
+        // be re-placed here too.
+        syncRangeFocusBounds();
         repaint();
         fireStateChanged();
       };
@@ -507,6 +510,7 @@ public class ElwhaSlider extends JComponent {
       return;
     }
     lowerValue = next;
+    syncRangeFocusBounds();
     fireStateChanged();
     repaint();
   }
@@ -527,6 +531,7 @@ public class ElwhaSlider extends JComponent {
       return;
     }
     upperValue = next;
+    syncRangeFocusBounds();
     fireStateChanged();
     repaint();
   }
@@ -1454,10 +1459,27 @@ public class ElwhaSlider extends JComponent {
   @Override
   public void doLayout() {
     super.doLayout();
-    if (variant == Variant.RANGE) {
-      positionHandleFocus(lowerFocus, lowerHandleCenterX());
-      positionHandleFocus(upperFocus, upperHandleCenterX());
+    syncRangeFocusBounds();
+  }
+
+  /**
+   * Re-places the {@link Variant#RANGE} focus proxies over their handle haloes.
+   *
+   * <p>Called from every path that can move a handle's long-axis center: {@link #doLayout} for the
+   * size / orientation / variant changes that revalidate, and the value setters and the model
+   * listener for the ones that only repaint. It is deliberately <em>not</em> called from paint —
+   * {@code positionHandleFocus} ends in {@code setBounds}, and mutating a child's bounds inside a
+   * paint pass schedules a repaint of both the vacated and the new region from within that pass
+   * (#620). Neither is it redundant with {@code doLayout}: a drag only repaints, so without these
+   * calls the proxies would hold the pre-drag position for the whole gesture, leaving the focus
+   * ring and the screen-reader bounds behind the handle they describe.
+   */
+  private void syncRangeFocusBounds() {
+    if (variant != Variant.RANGE) {
+      return;
     }
+    positionHandleFocus(lowerFocus, lowerHandleCenterX());
+    positionHandleFocus(upperFocus, upperHandleCenterX());
   }
 
   /**
@@ -1498,8 +1520,6 @@ public class ElwhaSlider extends JComponent {
   private void paintRange(final Graphics2D g2) {
     final int loX = lowerHandleCenterX();
     final int hiX = upperHandleCenterX();
-    positionHandleFocus(lowerFocus, loX);
-    positionHandleFocus(upperFocus, hiX);
     final int leftX = Math.min(loX, hiX);
     final int rightX = Math.max(loX, hiX);
     paintRangeTrack(g2, leftX, rightX);
