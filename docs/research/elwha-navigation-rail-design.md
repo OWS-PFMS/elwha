@@ -536,3 +536,19 @@ The entry point carries the accessible name **"More actions"** and reports `PUSH
 - **Overflowing the destination stack.** Only the trailing-actions slot collapses. M3 caps primary destinations at 3–7 and the rail already warns outside that range; a rail whose *destinations* do not fit is over-populated, not short of an affordance.
 - **A consumer-supplied overflow glyph or entry-point styling.** The rail owns the `more_vert` glyph, the accessible name, and the click behaviour, exactly as it owns the menu button's ☰ / ☰-open swap (§4.3). `getOverflowButton()` exposes the instance for restyling; file a follow-up if a consumer needs to replace it outright.
 - **Grouping, separators, or selection in the overflow menu.** The collapsed actions are a flat action list in slot order — `Layout.STANDARD`, `SelectionMode.NONE`.
+
+## §17. Composing the rail with the app bar (#526)
+
+**Canonical text: [`elwha-appbar-design.md`](elwha-appbar-design.md) §13.** This section states the rule from the rail's side so a reader who arrives here does not have to already know to look there.
+
+**The rail owns the ☰, and lateral navigation with it.** The rail's menu button is a Collapsed ↔ Expanded toggle (§4.3), and per the research capture the Expanded rail *replaces the M3 navigation drawer* — M3 Expressive deprecated the standalone drawer in its favour (§14). So in a rail + app bar shell the drawer job is already done, and the app bar's leading slot must **not** carry a second ☰. It takes either nothing — M3's `TopAppBarTitleInset` exists for exactly that case — or a back arrow for up-navigation *within* the destination the rail selected.
+
+| | Navigation rail | App bar |
+|---|---|---|
+| Scope | lateral — between top-level destinations | the current destination |
+| Leading slot | ☰ collapse/expand toggle | empty, or back arrow — never ☰ |
+| Spans | the full window height | the content column only |
+
+**Shell layout:** the rail is full-height at the leading edge and the app bar sits *inside* the content column, not full-width above the rail — otherwise the header crosses the rail's leading column and the rail reads as a sidebar pocket rather than a shell. `ElwhaShowcase` is the worked example; the code sketch and the scroll-source wiring are in app-bar design §13.2–§13.3.
+
+**The rail has no scroll behaviour** and takes no scroll source: it is full-height chrome and does not react to content scrolling under it. The app bar's `setScrollSource` and a floating `ElwhaFabAnchor` bind to the content's scroll pane; the rail does not participate. Note the rail's own FAB slot (`setFab`, §3) is static header chrome — it is not the scroll-aware `ElwhaFabAnchor`.
