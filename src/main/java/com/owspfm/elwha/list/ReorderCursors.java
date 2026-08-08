@@ -14,6 +14,7 @@ import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.net.URL;
 import javax.imageio.ImageIO;
 import javax.swing.UIManager;
@@ -56,6 +57,14 @@ final class ReorderCursors {
   private static Cursor grabCached;
   private static Cursor grabbingCached;
   private static Boolean cachedDark;
+
+  // Counts cache drops so a caller can tell whether a rebuild actually happened. EDT-confined,
+  // like everything else here.
+  private static long generation;
+
+  // The activation token the last drop was charged to, held weakly so remembering it cannot pin a
+  // Window. See invalidateOnce.
+  private static WeakReference<Object> lastActivation;
 
   private ReorderCursors() {}
 
@@ -110,14 +119,50 @@ final class ReorderCursors {
   static void invalidate() {
     grabCached = null;
     grabbingCached = null;
+    generation++;
+  }
+
+  /**
+   * Invalidates at most once for a given {@code activation} — the shared event object AWT hands to
+   * every listener of one window-activation.
+   *
+   * <p>The cache is global while the listener that drives it is per-list, so a window holding N
+   * cursor-swap lists used to run N invalidate-and-rebuild cycles per Alt-Tab, each list throwing
+   * away the cursor the previous one had just decoded. Charging the drop to the activation itself
+   * collapses that to one rebuild; the remaining lists read the cache the first one filled.
+   *
+   * <p>A {@code null} activation means "no event to charge this to" and always invalidates, which
+   * is what a direct programmatic refresh wants.
+   *
+   * @param activation the activation event, used only for identity, or {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  static void invalidateOnce(final Object activation) {
+    if (activation != null && lastActivation != null && lastActivation.get() == activation) {
+      return;
+    }
+    lastActivation = activation == null ? null : new WeakReference<>(activation);
+    invalidate();
+  }
+
+  /**
+   * How many times the cache has been dropped. Package-private so the suite can assert that N lists
+   * sharing a window rebuild once, not N times.
+   *
+   * @return a counter that advances on every cache drop
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  static long generation() {
+    return generation;
   }
 
   private static void refreshIfThemeChanged() {
     final boolean dark = isDarkTheme();
     if (cachedDark == null || cachedDark != dark) {
       cachedDark = dark;
-      grabCached = null;
-      grabbingCached = null;
+      invalidate();
     }
   }
 
