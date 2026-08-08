@@ -213,3 +213,73 @@ At its preferred height a bar's two fractions are equal by construction, so a we
 - **Action auto-overflow** — consumer composition with `ElwhaMenu` (Javadoc recipe + Workbench demo); no auto-collapse in V1.
 - **Avatar primitive** (`AvatarSize 32`) — `addTrailingElement(JComponent)` carries imagery; a dedicated avatar is its own future discussion.
 - **Compress scroll effect** (MDC `layout_scrollEffect="compress"`) — Android-specific polish; not adopted.
+
+## §13. Composing the app bar with the navigation rail (#526)
+
+Elwha ships both `ElwhaAppBar` (#287) and `ElwhaNavigationRail` (#159), and until this section neither design doc said a word about using them together. A consumer building a real app shell had to derive the answer — as we did, during the PR #479 smoke, from the question *"I'm sure it's not to have two hamburger buttons. It's also probably not to never put the two together."* Both halves of that intuition are right.
+
+Companion section: `elwha-navigation-rail-design.md` §17, which states the same rule from the rail's side.
+
+### §13.1 The ☰ rule: the rail owns lateral navigation
+
+**The two ☰ glyphs are not the same control**, which is why two of them is not a duplicate but a contradiction.
+
+- The **rail's** menu button toggles Collapsed ↔ Expanded (`ElwhaNavigationRail.setMenuButton`; rail design §4.3 documents the ☰ ↔ collapse-glyph swap). Per `elwha-navigation-rail-research.md` the Expanded rail *"replaces the M3 navigation drawer"* — M3 Expressive deprecated the standalone drawer in its favor. So it is a rail-width toggle, and it is the drawer.
+- The **app bar's** leading slot is the *navigation icon*, which in classic M3 opens a drawer on compact windows or carries up/back.
+
+With a rail present the drawer job no longer exists — the rail *is* the drawer. So the rail owns lateral navigation, and the app bar's leading slot takes one of two things:
+
+- **Empty.** A first-class spec'd state, not a degradation: `elwha-appbar-research.md` documents `TopAppBarTitleInset`, the 16 dp inset the title takes from the container edge when no nav button precedes it (§5). M3 built that inset for exactly this case, and `ElwhaAppBar` applies it automatically when `getNavigationIcon()` is `null`.
+- **A back arrow.** Hierarchical up-navigation *within* the current destination — a detail view inside a section the rail selected. `MaterialIcons.arrowBack()` already exists.
+
+| | Navigation rail | App bar |
+|---|---|---|
+| Scope | lateral — between top-level destinations | the current destination |
+| Leading slot | ☰ collapse/expand toggle | empty, or back arrow — **never ☰** |
+| Carries | destinations, sections, FAB, trailing actions | title + subtitle, contextual actions |
+| Spans | the full window height | the content column only |
+
+**The anti-pattern is two ☰ glyphs in one shell.** They look like the same affordance and are not: one resizes the rail, the other would open a drawer that the rail has already replaced. A user who has learned one has learned the wrong thing about the other. If a shell has a rail, the bar's leading slot is empty or a back arrow — there is no third option.
+
+The bar enforces nothing here, and deliberately so: it never restyles or claims its leading slot (`ElwhaAppBarChromeTest.barAttachesNoBehaviourToTheNavigationIcon` pins that), because the slot belongs to the consumer. This is guidance, not a runtime check — the same call §12's rejected-alternatives list makes about placement.
+
+### §13.2 Shell layout: full-height rail, bar inside the content column
+
+**The rail spans the full window height at the leading edge; the app bar sits to its trailing side, spanning the content width only — *not* full-width above the rail.** Otherwise the header extends across the rail's leading column and the rail reads as a sidebar pocket rather than a real-app shell.
+
+`ElwhaShowcase` is the worked example and says so in place (`ElwhaShowcase.java`, the `contentWrapper` comment). Its structure, reduced to the recipe:
+
+```java
+// Rail: full height, leading edge. On the layered pane so the Expanded morph can overlay the
+// content inset instead of reflowing the whole shell (the FAB Phase 5 recipe, #206).
+ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
+rail.setMenuButton(menuToggle);            // the shell's one and only hamburger
+rail.setPrimary(destinations);
+
+// Content column: a leading inset the width of the collapsed rail, the app bar at its top.
+// The collapsed rail's width is its preferred width (96 dp) — read it rather than hardcoding it.
+int railInset = rail.getPreferredSize().width;
+JPanel contentColumn = new JPanel(new BorderLayout());
+contentColumn.setBorder(BorderFactory.createEmptyBorder(0, railInset, 0, 0));
+contentColumn.add(bar, BorderLayout.NORTH);     // no nav icon — the rail has it
+contentColumn.add(scroller, BorderLayout.CENTER);
+
+bar.setScrollSource(scroller);                  // lift, and collapse for the flexible variants
+
+// Keep the bar's headline on the destination the rail selected — the §13.1 split, wired.
+rail.addSelectionListener(
+    (previous, current) -> bar.setTitle(current == null ? "" : current.getLabel()));
+```
+
+Two useful consequences fall out of that placement:
+
+- The bar is in `BorderLayout.NORTH`, which honors preferred height — so a shell built this way cannot hit the #525 under-allocation case at all (§12.1).
+- The bar's title tracks the destination the rail selected, which is the §13.1 division of labour made literal: the rail says *where*, the bar says *what you are looking at*.
+
+### §13.3 Scroll-source wiring
+
+**One scroll pane, and only the app bar binds to it.** `setScrollSource(scroller)` gives the bar its lift and, for the flexible variants, its collapse (§8).
+
+`ElwhaNavigationRail` has **no scroll behavior and no scroll source** — it is full-height chrome, and it does not react to the content scrolling under it. Do not look for a rail equivalent of `setScrollSource`; there isn't one, by design.
+
+The one other shell participant that *is* scroll-aware is `ElwhaFabAnchor`, and if a shell floats a FAB over the content it binds to **the same pane** as the bar: both are built on `theme/ScrollSourceBinding` (§8) and reading one offset keeps the bar's collapse and the FAB's hide/shrink from disagreeing about where the content is. Note the rail's own FAB slot (`setFab`) is a different thing — static chrome in the rail header, not a floating anchor, and not scroll-aware.
