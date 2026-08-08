@@ -37,12 +37,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * <p>That focus arrangement is the whole reason the ARIA editable-combobox pattern needed the
  * host's {@code focusHome} widening — and it cannot be represented without real focus ownership.
  *
- * <p><b>Known gap, deliberately not asserted here.</b> Escape does not close an editable combo's
- * menu, though three places in {@code ElwhaSelectField} document that it does. The menu host binds
- * Escape on the surface's {@code WHEN_FOCUSED} map (so a submenu chain collapses one level at a
- * time), and a {@code focusHome} menu's surface never owns focus — the binding is unreachable. The
- * light-dismiss route below is the one that works today; the Escape route is reported rather than
- * asserted, so this suite neither goes red nor freezes the gap in place.
+ * <p>Escape is asserted here because it is the route that was broken (#579): the menu host binds it
+ * on the surface's {@code WHEN_FOCUSED} map so a submenu chain collapses one level at a time, and a
+ * {@code focusHome} menu's surface never owns focus, which made the binding unreachable on exactly
+ * the menus three places in {@code ElwhaSelectField} promise it works on.
  */
 @Tag("gui")
 @ExtendWith(GuiToolkit.class)
@@ -269,6 +267,27 @@ class ElwhaSelectFieldMenuGuiTest {
         () -> "Venus".equals(combo.getSelectedValue()));
 
     waitFor("and closes the menu", () -> !combo.isExpanded());
+  }
+
+  @Test
+  void escapeClosesTheMenuWithoutCommittingTheFilter() throws Exception {
+    SwingUtilities.invokeAndWait(() -> combo.setSelectedValue("Venus"));
+    openTheMenu();
+    type("mar");
+    waitFor("the filter narrowed the list", () -> "Mars".equals(highlightedLabel()));
+
+    GuiSteps.keyUntil(
+        robot,
+        KeyEvent.VK_ESCAPE,
+        "Escape closes the option menu from the editor that holds focus",
+        () -> !combo.isExpanded());
+
+    assertThat(onEdt(() -> "Venus".equals(combo.getSelectedValue())))
+        .as("dismissing is not a commit — the previous value stands")
+        .isTrue();
+    assertThat(onEdt(() -> editor().isFocusOwner()))
+        .as("and focus never left the editor it was homed on")
+        .isTrue();
   }
 
   @Test

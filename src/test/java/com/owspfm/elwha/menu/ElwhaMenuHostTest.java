@@ -8,12 +8,16 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.HeadlessHost;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.accessibility.AccessibleRole;
+import javax.swing.JComponent;
 import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -270,6 +274,51 @@ class ElwhaMenuHostTest {
     assertThat(menu.initialFocusTarget())
         .as("the editable-combobox pattern keeps focus in the field, not on the listbox")
         .isSameAs(editor);
+  }
+
+  @Test
+  void aFocusHomeMenuAlsoBindsEscapeWhereItCanBeReached() {
+    final JTextField editor = new JTextField();
+    final List<MenuDismissCause> causes = new ArrayList<>();
+    open(threeItems().focusHome(editor).onClose(causes::add).build());
+    final JComponent surface = (JComponent) host.mounted().get(0);
+
+    final Object windowWide =
+        surface
+            .getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+            .get(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0));
+    assertThat(windowWide)
+        .as("the surface binding is unreachable on a menu whose surface never takes focus")
+        .isEqualTo("elwha-menu-dismiss-window");
+
+    surface
+        .getActionMap()
+        .get(windowWide)
+        .actionPerformed(new ActionEvent(surface, ActionEvent.ACTION_PERFORMED, "escape"));
+
+    assertThat(causes)
+        .as("and it really closes the menu, reporting Escape")
+        .containsExactly(MenuDismissCause.ESCAPE);
+    assertThat(host.mounted()).as("the surface is detached").isEmpty();
+  }
+
+  @Test
+  void aPlainMenuKeepsEscapeOnTheSurfaceAlone() {
+    open(threeItems().build());
+    final JComponent surface = (JComponent) host.mounted().get(0);
+
+    assertThat(
+            surface
+                .getInputMap(JComponent.WHEN_FOCUSED)
+                .get(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0)))
+        .as("a menu that owns focus reaches its own binding")
+        .isEqualTo("elwha-menu-dismiss");
+    assertThat(
+            surface
+                .getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .get(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0)))
+        .as("and gets no window-wide twin, so a submenu chain still collapses one level at a time")
+        .isNull();
   }
 
   // ----------------------------------------------------------- roving highlight

@@ -1,6 +1,7 @@
 package com.owspfm.elwha.menu;
 
 import com.owspfm.elwha.overlay.AbstractElwhaOverlay;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -34,7 +35,7 @@ import javax.swing.SwingUtilities;
  * the user.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
@@ -100,6 +101,16 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
         || cause == MenuDismissCause.PROGRAMMATIC;
   }
 
+  /**
+   * The component that keeps keyboard focus while this menu is open instead of the menu surface —
+   * the editable-combobox pattern. {@code null} (the default) means the surface itself takes focus.
+   *
+   * @return the external focus home, or {@code null}
+   */
+  protected Component focusHomeComponent() {
+    return null;
+  }
+
   // Esc is a host-level dismiss (the menu layers item navigation on top). Bound WHEN_FOCUSED on the
   // surface (the menu's single focus owner) rather than WHEN_IN_FOCUSED_WINDOW so that, in a
   // submenu
@@ -110,6 +121,21 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
     final InputMap im = surface.getInputMap(JComponent.WHEN_FOCUSED);
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-menu-dismiss");
     surface.getActionMap().put("elwha-menu-dismiss", action(() -> close(MenuDismissCause.ESCAPE)));
+    if (focusHomeComponent() == null) {
+      return;
+    }
+    // A focus-home menu never gives its surface focus, so the binding above is unreachable on one —
+    // and ElwhaSelectField documents Escape-closes in three places, one of them naming this very
+    // map (#579). Add the window-wide twin for that case only, so the chain-leaf precision above is
+    // untouched everywhere else. Topmost-gated (#599): a window-wide binding resolves by
+    // registration recency, not z-order, and a submenu opened from this level must still take
+    // Escape one level at a time.
+    surface
+        .getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+        .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-menu-dismiss-window");
+    surface
+        .getActionMap()
+        .put("elwha-menu-dismiss-window", topmostAction(() -> close(MenuDismissCause.ESCAPE)));
   }
 
   /**
