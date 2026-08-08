@@ -54,10 +54,15 @@ public final class Typography {
   }
 
   /**
-   * Returns the name of the font family this typography is built on.
+   * Returns the name of the font family this typography is built on — the Regular face's family.
+   *
+   * <p>A typography can span two AWT families: a static 500-weight TTF names itself apart from its
+   * Regular sibling, so {@link #defaults()} reports {@code "Inter"} here while its five 500-weight
+   * roles resolve {@code "Inter Medium"}. That is the family to hand back to {@link
+   * #ofFamily(String)}, which looks the Medium face up again — the round trip keeps both faces.
    *
    * @return the family name
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public String familyName() {
@@ -109,27 +114,48 @@ public final class Typography {
    * Builds typography from an installed font family name.
    *
    * <p>Regular-weight roles use the family directly. Medium-weight roles use the family's Medium
-   * face if it has one; otherwise they fall back to {@link TextAttribute#WEIGHT_MEDIUM}, which the
-   * platform honors only if the family supplies the glyphs, and finally to {@link Font#BOLD}.
+   * face if the platform has one installed under {@code "<family> Medium"} — which is how a static
+   * 500-weight TTF names itself, the bundled Inter Medium included. Failing that they fall back to
+   * {@link TextAttribute#WEIGHT_MEDIUM}, which the platform honors only if the family supplies the
+   * glyphs.
+   *
+   * <p>Looking the Medium face up is what makes {@code ofFamily(existing.familyName())} lossless:
+   * {@link #familyName()} reports the Regular face's family, so without it a round trip through
+   * this method would quietly downgrade every 500-weight role to synthesis.
    *
    * @param familyName the installed font family to build on
    * @return typography over that family
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public static Typography ofFamily(String familyName) {
     Objects.requireNonNull(familyName, "familyName");
+    Font mediumFace = installedFace(familyName + " Medium");
     EnumMap<TypeRole, Font> fonts = new EnumMap<>(TypeRole.class);
     for (TypeRole role : TypeRole.values()) {
-      Font base = new Font(familyName, Font.PLAIN, role.pt());
-      if (role.medium()) {
-        Map<TextAttribute, Object> attributes = new HashMap<>();
-        attributes.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_MEDIUM);
-        base = base.deriveFont(attributes);
-      }
-      fonts.put(role, base);
+      fonts.put(role, faceForRole(familyName, mediumFace, role));
     }
     return new Typography(familyName, fonts);
+  }
+
+  private static Font faceForRole(String familyName, Font mediumFace, TypeRole role) {
+    if (role.medium() && mediumFace != null) {
+      return mediumFace.deriveFont((float) role.pt());
+    }
+    Font base = new Font(familyName, Font.PLAIN, role.pt());
+    if (!role.medium()) {
+      return base;
+    }
+    Map<TextAttribute, Object> attributes = new HashMap<>();
+    attributes.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_MEDIUM);
+    return base.deriveFont(attributes);
+  }
+
+  // A Font asked for a family the platform does not have resolves silently to Dialog rather than
+  // failing, so the family it reports back is the only reliable existence check.
+  private static Font installedFace(String candidate) {
+    Font face = new Font(candidate, Font.PLAIN, 1);
+    return face.getFamily().equalsIgnoreCase(candidate) ? face : null;
   }
 
   private static Font loadBundledFont(String resource) {
