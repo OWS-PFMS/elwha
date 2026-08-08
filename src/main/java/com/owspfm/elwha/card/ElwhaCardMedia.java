@@ -284,6 +284,9 @@ public final class ElwhaCardMedia extends JComponent {
    */
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     final int intrinsicW;
     if (image != null) {
       final int iw = image.getWidth(this);

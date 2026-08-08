@@ -68,4 +68,35 @@ class ColorTrackSliderSizingTest {
         .as("and the track still stretches horizontally when nothing is set")
         .isEqualTo(Integer.MAX_VALUE);
   }
+
+  /**
+   * The #712 ruling pass added the header to the same doctrine. It is package-private like the
+   * track, so it cannot join the library-wide sweep either — but it is a top-level class, which is
+   * the line the ruling draws: anything in this package can construct one and lay it out, so a
+   * caller who sets a size exists.
+   */
+  @Test
+  void aHeaderHonoursExplicitSizesToo() {
+    final ElwhaColorPicker picker = new ElwhaColorPicker();
+    final ColorPickerHeader header = new ColorPickerHeader(picker);
+    final Dimension natural = header.getPreferredSize();
+
+    header.setPreferredSize(EXPLICIT);
+    header.setMinimumSize(EXPLICIT);
+
+    assertThat(header.getPreferredSize())
+        .as("the header discards a caller-set preferred size (natural was %s)", natural)
+        .isEqualTo(EXPLICIT);
+    assertThat(header.getMinimumSize()).isEqualTo(EXPLICIT);
+  }
+
+  @Test
+  void anUnsetHeaderKeepsItsOwnGeometry() {
+    final ColorPickerHeader header = new ColorPickerHeader(new ElwhaColorPicker());
+
+    assertThat(header.getPreferredSize())
+        .as("the header still publishes its own swatch-plus-readout geometry")
+        .isNotEqualTo(EXPLICIT)
+        .isNotEqualTo(new Dimension(0, 0));
+  }
 }

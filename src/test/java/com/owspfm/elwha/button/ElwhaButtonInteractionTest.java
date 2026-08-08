@@ -196,7 +196,7 @@ class ElwhaButtonInteractionTest {
     final ElwhaButton button = selectable(ButtonVariant.FILLED);
     button.setEnabled(false);
     final int[] selectionChanges = {0};
-    button.addSelectionChangeListener(e -> selectionChanges[0]++);
+    button.addPropertyChangeListener(ElwhaButton.PROPERTY_SELECTED, e -> selectionChanges[0]++);
 
     Input.click(button, centerX(button), centerY(button));
     Input.pressBoundKey(button, "pressed SPACE", ACTIVATE);
@@ -213,7 +213,8 @@ class ElwhaButtonInteractionTest {
     final int[] actions = {0};
     final List<Object> selections = new ArrayList<>();
     button.addActionListener(e -> actions[0]++);
-    button.addSelectionChangeListener(e -> selections.add(e.getNewValue()));
+    button.addPropertyChangeListener(
+        ElwhaButton.PROPERTY_SELECTED, e -> selections.add(e.getNewValue()));
 
     Input.click(button, centerX(button), centerY(button));
     Input.click(button, centerX(button), centerY(button));
@@ -229,7 +230,7 @@ class ElwhaButtonInteractionTest {
   void setSelectedIsInertOnAPushButton() {
     final ElwhaButton button = new ElwhaButton("Save");
     final int[] changes = {0};
-    button.addSelectionChangeListener(e -> changes[0]++);
+    button.addPropertyChangeListener(ElwhaButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     button.setSelected(true);
 
@@ -245,7 +246,7 @@ class ElwhaButtonInteractionTest {
     final int[] actions = {0};
     final int[] changes = {0};
     button.addActionListener(e -> actions[0]++);
-    button.addSelectionChangeListener(e -> changes[0]++);
+    button.addPropertyChangeListener(ElwhaButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     button.setSelected(true);
 
@@ -259,7 +260,7 @@ class ElwhaButtonInteractionTest {
   void resettingTheSameSelectionFiresNothing() {
     final ElwhaButton button = selectable(ButtonVariant.FILLED).setSelected(true);
     final int[] changes = {0};
-    button.addSelectionChangeListener(e -> changes[0]++);
+    button.addPropertyChangeListener(ElwhaButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     button.setSelected(true);
 

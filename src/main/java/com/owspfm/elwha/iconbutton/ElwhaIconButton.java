@@ -25,7 +25,6 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -856,17 +855,6 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     return actionListeners.toArray(new ActionListener[0]);
   }
 
-  /**
-   * Convenience: scopes a {@link PropertyChangeListener} to {@link #PROPERTY_SELECTED}.
-   *
-   * @param listener the listener
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public void addSelectionChangeListener(final PropertyChangeListener listener) {
-    addPropertyChangeListener(PROPERTY_SELECTED, listener);
-  }
-
   // ------------------------------------------------------------ foreground
 
   /**
@@ -1344,16 +1332,25 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     return new Dimension(containerSize, containerSize);
   }
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     return getPreferredSize();
   }
 

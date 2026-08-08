@@ -205,6 +205,8 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
   private boolean showOnlySelectedIcon;
   private Icon selectedIcon = MaterialIcons.check(ICON_SIZE_PX);
   private Icon unselectedIcon = MaterialIcons.close(ICON_SIZE_PX);
+  private final GlyphRaster selectedGlyph = new GlyphRaster();
+  private final GlyphRaster unselectedGlyph = new GlyphRaster();
 
   private Point rippleOrigin;
   private float rippleProgress = 1f;
@@ -818,11 +820,12 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
       final Color color =
           isEnabled() ? ColorRole.ON_PRIMARY_CONTAINER.resolve() : ColorRole.ON_SURFACE.resolve();
       final double rotation = showOnlySelectedIcon ? Math.toRadians(-45.0 * (1.0 - p)) : 0.0;
-      paintGlyph(g2, selectedIcon, cx, cy, color, p * disabledFactor, rotation);
+      paintGlyph(g2, selectedGlyph, selectedIcon, cx, cy, color, p * disabledFactor, rotation);
     }
     if (unselectedIconEnabled() && p < 1f) {
       final Color color = ColorRole.SURFACE_CONTAINER_HIGHEST.resolve();
-      paintGlyph(g2, unselectedIcon, cx, cy, color, (1f - p) * disabledFactor, 0.0);
+      paintGlyph(
+          g2, unselectedGlyph, unselectedIcon, cx, cy, color, (1f - p) * disabledFactor, 0.0);
     }
   }
 
@@ -830,9 +833,15 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
    * Paints one glyph centered at {@code (cx, cy)}, recolored by {@code SrcIn} compositing into an
    * offscreen buffer — works for any {@link Icon} and never mutates a shared {@code FlatSVGIcon}
    * color filter (the #197 lesson).
+   *
+   * <p>The recolored buffer comes from {@code slot} rather than being allocated here (#715): this
+   * runs twice per paint, and paint runs at ~60fps for the whole ~300ms handle tween. Only the
+   * draw-time alpha and rotation vary across those frames, and both are applied to the composite
+   * below, so the buffer itself is identical frame to frame.
    */
   private void paintGlyph(
       final Graphics2D g2,
+      final GlyphRaster slot,
       final Icon icon,
       final int cx,
       final int cy,
@@ -847,17 +856,7 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
     if (w <= 0 || h <= 0) {
       return;
     }
-    final BufferedImage buffer = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-    final Graphics2D ig = buffer.createGraphics();
-    try {
-      ig.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      icon.paintIcon(this, ig, 0, 0);
-      ig.setComposite(AlphaComposite.SrcIn);
-      ig.setColor(color);
-      ig.fillRect(0, 0, w, h);
-    } finally {
-      ig.dispose();
-    }
+    final BufferedImage buffer = slot.recolored(icon, color, w, h);
     final Graphics2D c = (Graphics2D) g2.create();
     try {
       c.setComposite(AlphaComposite.SrcOver.derive(clampF(alpha)));
@@ -867,6 +866,53 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
       c.drawImage(buffer, cx - w / 2, cy - h / 2, null);
     } finally {
       c.dispose();
+    }
+  }
+
+  /**
+   * One cached recolored glyph. The switch keeps exactly two — one per icon slot — because the
+   * crossfade paints both within a single frame, and a single shared entry would miss on every
+   * call.
+   *
+   * <p>The key is the whole input to the render: the icon instance, the resolved color, and the
+   * size. {@code SrcIn} replaces every pixel's color with {@code color} and keeps only the icon's
+   * alpha, so nothing else can affect the result — which is why a theme change needs no separate
+   * hook. It arrives as a different resolved {@code color} and misses on its own, and so does a
+   * {@code setSelectedIcon} / {@code setUnselectedIcon} replacement.
+   */
+  private final class GlyphRaster {
+
+    private BufferedImage image;
+    private Icon icon;
+    private Color color;
+    private int width;
+    private int height;
+
+    BufferedImage recolored(final Icon icon, final Color color, final int w, final int h) {
+      if (image != null
+          && this.icon == icon
+          && this.color.equals(color)
+          && width == w
+          && height == h) {
+        return image;
+      }
+      final BufferedImage buffer = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+      final Graphics2D ig = buffer.createGraphics();
+      try {
+        ig.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        icon.paintIcon(ElwhaSwitch.this, ig, 0, 0);
+        ig.setComposite(AlphaComposite.SrcIn);
+        ig.setColor(color);
+        ig.fillRect(0, 0, w, h);
+      } finally {
+        ig.dispose();
+      }
+      this.image = buffer;
+      this.icon = icon;
+      this.color = color;
+      this.width = w;
+      this.height = h;
+      return buffer;
     }
   }
 
