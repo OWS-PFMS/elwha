@@ -63,7 +63,7 @@ made visible, not a new default.
 | `chip/playground`, `iconbutton/playground`, `button/playground` | 21 |
 | `navrail/playground`, `surface/playground` | 7 |
 | `card/playground`, `dialog/playground` | 6 |
-| `theme/playground` (excl. the two deferred files), `badge/playground`, `fab/playground` | 11 |
+| `theme/playground` (11 in the two once-deferred files, swept by #718), `badge/playground`, `fab/playground` | 31 |
 
 ### `JCheckBox` → `ElwhaCheckbox`
 
@@ -161,19 +161,36 @@ line is visible: `DialogModalityDemo`'s field proves *input inertness* (the scri
 `ElwhaTextField` identically, so the proof survives and now shows an Elwha control going inert), and
 `FullScreenDialogContentDemo`'s 16-row form proves *scroll behavior*, not focus order.
 
-## Deferred: two files, 21 sites
+## Deferred: two files, 21 sites — resolved by #718
 
-`theme/playground/ThemePlayground.java` and `theme/playground/FoundationsPanels.java` keep all their
-raw controls this pass. Both are edited by the open ShapeScale PR
-[#706](https://github.com/OWS-PFMS/elwha/pull/706), and a sweep that rewrites the same regions would
-guarantee a conflict on a PR already awaiting operator smoke. They are on every guard's allowlist
-with that reason, so the exemption is visible rather than silent.
+`theme/playground/ThemePlayground.java` and `theme/playground/FoundationsPanels.java` kept all their
+raw controls through the #424 pass. Both were edited by the then-open ShapeScale PR
+[#706](https://github.com/OWS-PFMS/elwha/pull/706), and a sweep rewriting the same regions would have
+guaranteed a conflict on a PR already awaiting operator smoke. They sat on every guard's allowlist
+with that reason, so the exemption was visible rather than silent.
 
-**Follow-up, ready to file:** *"Finish the #424 dogfood sweep in the theme playground"* — 1 `JComboBox`,
-1 `JCheckBox`, 6 `JToggleButton`, 2 `JRadioButton`, 1 `JTextField` in `ThemePlayground`; the same
-shape in `FoundationsPanels`; drop the two allowlist entries from all five guards afterwards. The
-`everyAllowlistedKeepIsStillAKeep` test will fail the moment they are swept and the entries are left
-behind, so the cleanup cannot be forgotten.
+[#718](https://github.com/OWS-PFMS/elwha/issues/718) swept them once #706 landed: 20 of the 21 sites
+converted, and the five deferred allowlist entries came off `JCheckBox` / `JComboBox` /
+`JRadioButton` / `JTextField` / `JToggleButton`. Four of those allowlists are now empty.
+
+The 6 `JToggleButton`s per file did not become 6 Elwha toggles. The three view-mode buttons in each
+were a `javax.swing.ButtonGroup` + `FlowLayout` hand-assembly of exactly what `ElwhaButtonGroup`'s
+connected treatment is, so each trio collapsed into one component — the same reduction #424 applied
+to the other 33. `ThemePlayground`'s mode bar took the `REQUIRED` / `XS` / `FIXED` / `TONAL` preset
+every other playground's mode bar now uses.
+
+**One conversion overrode a standing in-code comment**, and it is called out because the comment
+said the opposite. `buildTextRow` in both files carried *"Intentionally raw Swing (not
+ElwhaTextField): this row demonstrates how the token foundation themes native JTextField /
+JTextArea"*, written in #286 long before the dogfood doctrine settled. #424's keeps table — which
+enumerates its judgement calls exhaustively, and does list `ThemePlayground`'s `JButton` — does not
+list this row, and #424's own follow-up text names the `JTextField` as convert-scope. It converted.
+The row's proof survives intact in the raw `JTextArea` beside it, which no guard covers and which
+Elwha still has no primitive for; the comment now says that.
+
+**The one site that stayed:** `ThemePlayground`'s `JButton defaultButton`, for the
+`JRootPane.setDefaultButton(JButton)` reason already in the keeps table. Its `JButtonSweepGuard`
+entry is unchanged.
 
 `card/fixes/` is out of scope, as it was for #317 — frozen diagnostic harnesses for historical card
 bugs, advisory-only in reviews.
