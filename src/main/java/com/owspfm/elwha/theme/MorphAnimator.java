@@ -2,8 +2,11 @@ package com.owspfm.elwha.theme;
 
 import java.awt.Toolkit;
 import java.lang.ref.WeakReference;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JComponent;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 /**
@@ -25,7 +28,10 @@ import javax.swing.Timer;
  * {@link #start()} and {@link #reverse()} snap {@link #progress()} to the destination value and the
  * Timer never schedules ticks — visually identical to the static v1 behavior. The flag is static
  * and global per the design doc §10; the {@code ElwhaTheme.config(...).reducedMotion(...)} wiring
- * is Phase 5.
+ * is Phase 5. Because every animator samples the flag when an animation <em>starts</em>, a change
+ * needs no notification to be picked up. A consumer running a continuous clock gated on the flag —
+ * rather than a morph started by an interaction — is the exception, and subscribes through {@link
+ * #addReducedMotionListener(Runnable)}.
  *
  * <p><strong>OS detection is best-effort, and Windows is a proxy.</strong> macOS reads {@code
  * apple.awt.reduceMotion} and GNOME reads {@code org.gnome.desktop.interface enable-animations} —
@@ -85,6 +91,11 @@ public final class MorphAnimator {
   // had, where the probe ran first and the setter then overrode it.
   private static boolean explicitOverride;
 
+  // Weak so a consumer that never removes its listener cannot pin itself in memory; copy-on-write
+  // because the OS probe fires from a daemon thread while the EDT may be registering.
+  private static final List<WeakReference<Runnable>> REDUCED_MOTION_LISTENERS =
+      new CopyOnWriteArrayList<>();
+
   private static void requestOsSignal() {
     if (!OS_SIGNAL_REQUESTED.compareAndSet(false, true)) {
       return;
@@ -97,12 +108,17 @@ public final class MorphAnimator {
   private static void applyOsReducedMotion() {
     final boolean osReduced =
         detectMacReducedMotion() || detectWindowsReducedMotion() || detectLinuxReducedMotion();
+    final boolean changed;
     synchronized (MorphAnimator.class) {
       // Only ever turns reduced motion on, never off — an OS that isn't asking for it has no
       // opinion about a consumer that is.
-      if (osReduced && !explicitOverride) {
+      changed = osReduced && !explicitOverride && !reducedMotion;
+      if (changed) {
         reducedMotion = true;
       }
+    }
+    if (changed) {
+      fireReducedMotionChanged();
     }
   }
 
@@ -201,11 +217,84 @@ public final class MorphAnimator {
    * @since v0.3.0
    */
   public static void setReducedMotion(final boolean reduced) {
+    final boolean changed;
     synchronized (MorphAnimator.class) {
       explicitOverride = true;
+      changed = reducedMotion != reduced;
       reducedMotion = reduced;
     }
     OS_SIGNAL_REQUESTED.set(true);
+    if (changed) {
+      fireReducedMotionChanged();
+    }
+  }
+
+  /**
+   * Registers a callback invoked on the EDT whenever the global reduced-motion state changes — from
+   * {@link #setReducedMotion(boolean)} or from the background OS probe, which can flip it on well
+   * after startup.
+   *
+   * <p>Most consumers need nothing here: a {@code MorphAnimator} is event-driven, so the next
+   * {@link #start()} reads the current value and a stale flag is unobservable. It exists for a
+   * consumer whose animation is a <em>continuously running clock</em> gated on the flag rather than
+   * a morph started by an interaction — {@code ElwhaLoadingIndicator}'s spinner is the case that
+   * motivated it (#632). For those, sampling the flag only at start-up leaves a live component
+   * wrong in both directions: burning frames while painting a static shape, or frozen with the
+   * clock stopped.
+   *
+   * <p>The reference held is <strong>weak</strong>, so a consumer that forgets to remove its
+   * listener cannot pin itself in memory — but the consumer must keep its own strong reference (a
+   * field, not an inline lambda) for the listener to stay alive.
+   *
+   * <p>A change raised on the EDT notifies synchronously; the background probe's marshals through
+   * {@link SwingUtilities#invokeLater}. Either way the callback runs on the EDT.
+   *
+   * @param listener the callback to invoke on change; {@code null} is ignored
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void addReducedMotionListener(final Runnable listener) {
+    if (listener != null) {
+      REDUCED_MOTION_LISTENERS.add(new WeakReference<>(listener));
+    }
+  }
+
+  /**
+   * Removes a previously-added reduced-motion listener, along with any listeners already collected.
+   *
+   * @param listener the callback to remove
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void removeReducedMotionListener(final Runnable listener) {
+    REDUCED_MOTION_LISTENERS.removeIf(
+        ref -> {
+          final Runnable held = ref.get();
+          return held == null || held == listener;
+        });
+  }
+
+  // The listeners drive Swing Timers and repaints, so they have to reach the EDT — but only the OS
+  // probe is off it. A caller already on the EDT (the Showcase's reduced-motion checkbox, a
+  // consumer's own handler) is served synchronously rather than a frame later, so the toggle and
+  // the components it governs never disagree within one paint.
+  private static void fireReducedMotionChanged() {
+    if (SwingUtilities.isEventDispatchThread()) {
+      dispatchReducedMotionChanged();
+    } else {
+      SwingUtilities.invokeLater(MorphAnimator::dispatchReducedMotionChanged);
+    }
+  }
+
+  private static void dispatchReducedMotionChanged() {
+    for (final WeakReference<Runnable> ref : REDUCED_MOTION_LISTENERS) {
+      final Runnable listener = ref.get();
+      if (listener == null) {
+        REDUCED_MOTION_LISTENERS.remove(ref);
+      } else {
+        listener.run();
+      }
+    }
   }
 
   /**

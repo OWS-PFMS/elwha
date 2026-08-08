@@ -96,6 +96,13 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
 
   private boolean subscribedToModel;
   private final Timer clock;
+
+  /**
+   * Held as a field, not passed inline: {@link MorphAnimator#addReducedMotionListener} keeps only a
+   * weak reference, so an inline lambda would be collectable the moment the constructor returns.
+   */
+  private final Runnable reducedMotionWatch = this::reducedMotionChanged;
+
   private long cycleAnchorNanos;
 
   /**
@@ -132,6 +139,7 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
             updateAnimationDemand();
           }
         });
+    MorphAnimator.addReducedMotionListener(reducedMotionWatch);
   }
 
   /**
@@ -586,6 +594,21 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
       cycleAnchorNanos = System.nanoTime();
     }
     return (System.nanoTime() - cycleAnchorNanos) / 1_000_000L;
+  }
+
+  /**
+   * The global reduced-motion state flipped under a live indicator (#632).
+   *
+   * <p>Sampling the flag only in {@link #updateAnimationDemand()}, which runs on {@code
+   * SHOWING_CHANGED} and mode changes, left a showing spinner wrong in both directions: turning
+   * reduced motion on kept the 60 fps clock burning while the paint had already snapped to the
+   * static shape, and turning it off left the clock stopped, so the spinner stayed frozen until it
+   * was removed and re-added. The repaint is what the off→on direction needs — stopping a Timer
+   * does not schedule one, and the frozen frame is mid-rotation.
+   */
+  private void reducedMotionChanged() {
+    updateAnimationDemand();
+    repaint();
   }
 
   /** Starts/stops the repaint clock based on visibility, mode, and reduced motion. */
