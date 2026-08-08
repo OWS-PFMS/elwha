@@ -107,6 +107,18 @@ class ElwhaCardClipTest {
   }
 
   @Test
+  void mediaStillForcesTheClipWhenTheCardScrollsItsOverflow() {
+    final ElwhaCard card = ElwhaCard.filledCard();
+    card.setExpansionOverflow(ExpansionOverflow.SCROLL);
+    card.add(media());
+    card.add(text());
+
+    assertThat(card.clipsChildrenToCorners())
+        .as("SCROLL re-parents children into the scroll body; the rule must follow them there")
+        .isTrue();
+  }
+
+  @Test
   void mediaSandwichedBetweenSiblingsDoesNotForceTheClip() {
     final ElwhaCard card = ElwhaCard.filledCard();
     card.add(text());

@@ -1100,11 +1100,15 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   }
 
   private boolean hasEdgeBleedMedia() {
-    final int count = getComponentCount();
+    // contentHost(), not the card itself: under ExpansionOverflow.SCROLL addImpl routes children
+    // into scrollBody, so the card's only child is the JScrollPane and a direct walk would never
+    // find the media at all. Every other child walk in the class already routes through here.
+    final Container host = contentHost();
+    final int count = host.getComponentCount();
     Component firstVisible = null;
     Component lastVisible = null;
     for (int i = 0; i < count; i++) {
-      final Component c = getComponent(i);
+      final Component c = host.getComponent(i);
       if (!c.isVisible()) {
         continue;
       }
