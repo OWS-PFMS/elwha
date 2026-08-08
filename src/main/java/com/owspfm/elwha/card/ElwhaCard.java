@@ -1568,7 +1568,16 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
       return super.getPreferredSize();
     }
     final Dimension d = super.getPreferredSize();
-    int height = d.height;
+    return new Dimension(d.width, clampHeight(d.height));
+  }
+
+  /**
+   * Applies the two rules that sit between a measured content height and the height the card
+   * reports: the collapse tween interpolating between the pre- and post-collapse heights, and the
+   * {@link ExpansionOverflow#SCROLL} cap.
+   */
+  private int clampHeight(final int measured) {
+    int height = measured;
     if (animationFraction < 1f) {
       height =
           Math.round(
@@ -1578,7 +1587,40 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
     if (expansionOverflow == ExpansionOverflow.SCROLL && !collapsed) {
       height = Math.min(height, SCROLL_MAX_EXPANDED_HEIGHT_PX);
     }
-    return new Dimension(d.width, height);
+    return height;
+  }
+
+  /**
+   * The height this card needs if it is given {@code slotWidth} pixels of width — the card-level
+   * height-for-width hook, matching the one {@link ElwhaCardMedia} and {@link ElwhaCardActions}
+   * already offer the chassis for themselves.
+   *
+   * <p>{@link #getPreferredSize()} cannot answer this question. It measures against the width the
+   * card is currently holding, and before the card has ever been laid out there is none — so it
+   * falls back to the natural width of its widest child, which for wrapping copy is the whole
+   * string on one line. A layout manager that divides its container into cells knows the width it
+   * is about to assign long before it assigns it, and has nowhere to say so; the workaround has
+   * been to size the card first and measure after, which mutates the component during a measuring
+   * pass and leaves the ancestors that cache size requirements holding the pre-mutation answer
+   * ([#737](https://github.com/OWS-PFMS/elwha/issues/737)).
+   *
+   * <p>Nothing is mutated here — the card is measured, not resized — so the caller may ask before
+   * committing to anything.
+   *
+   * @param slotWidth the width the caller will assign, in pixels; {@code <= 0} answers as {@link
+   *     #getPreferredSize()} does
+   * @return the height in pixels the card needs at that width
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int heightForSlotWidth(final int slotWidth) {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize().height;
+    }
+    if (slotWidth <= 0 || !(getLayout() instanceof VerticalCardLayout cardLayout)) {
+      return getPreferredSize().height;
+    }
+    return clampHeight(cardLayout.sizeFor(this, slotWidth).height);
   }
 
   /**
@@ -1628,6 +1670,15 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
 
     @Override
     public Dimension preferredLayoutSize(final Container parent) {
+      return sizeFor(parent, 0);
+    }
+
+    /**
+     * The chassis size, optionally measured against a width a caller is about to assign rather than
+     * the one the chassis is holding. {@code slotWidth <= 0} means "no opinion" — fall back to the
+     * laid-out width, then to the natural estimate.
+     */
+    private Dimension sizeFor(final Container parent, final int slotWidth) {
       final Insets ins = parent.getInsets();
       final int padH = paddingHorizontal.px();
       final int padV = paddingVertical.px();
@@ -1668,9 +1719,16 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
         bodyW = Math.max(bodyW, bleed ? w : w + 2 * padH);
       }
       // Once the chassis has been laid out, its real body width supersedes the estimate so
-      // width-sensitive children measure against the width they will actually receive.
+      // width-sensitive children measure against the width they will actually receive. An explicit
+      // slotWidth from a height-for-width caller outranks both — it is the width the caller is
+      // about to assign, which neither of the other two knows yet.
       final int laidOutBodyW = parent.getWidth() - ins.left - ins.right;
-      final int effectiveBodyW = laidOutBodyW > 0 ? laidOutBodyW : bodyW;
+      final int effectiveBodyW;
+      if (slotWidth > 0) {
+        effectiveBodyW = Math.max(0, slotWidth - ins.left - ins.right);
+      } else {
+        effectiveBodyW = laidOutBodyW > 0 ? laidOutBodyW : bodyW;
+      }
 
       int totalH = 0;
       if (!(firstVisible instanceof ElwhaCardMedia)) {
@@ -1789,6 +1847,12 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
      *       ElwhaCardActions#heightForSlotWidth(int)} (#17) so the chassis reserves vertical space
      *       for whatever rows the wrap layout produces at this width — preferred-size queries carry
      *       no width context and would otherwise always report single-row height.
+     *   <li>The three wrapping text atoms report theirs the same way (#737). Their {@code
+     *       getPreferredSize} measures at the width the label is <em>currently</em> holding, which
+     *       on a first layout is none — so asking for a preferred height described the previous
+     *       pass's width, or, before any pass, the nearest sized ancestor. Measured on the Showcase
+     *       landing: copy that wraps to six lines in its real 244 px slot reported two, and the
+     *       chassis sized itself to that.
      *   <li>Everything else uses its preferred height.
      * </ul>
      */
@@ -1798,6 +1862,15 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
       }
       if (c instanceof ElwhaCardActions actions) {
         return actions.heightForSlotWidth(slotWidth);
+      }
+      if (c instanceof ElwhaCardTitle title) {
+        return title.heightForSlotWidth(slotWidth);
+      }
+      if (c instanceof ElwhaCardSubtitle subtitle) {
+        return subtitle.heightForSlotWidth(slotWidth);
+      }
+      if (c instanceof ElwhaCardSupportingText supporting) {
+        return supporting.heightForSlotWidth(slotWidth);
       }
       return c.getPreferredSize().height;
     }
