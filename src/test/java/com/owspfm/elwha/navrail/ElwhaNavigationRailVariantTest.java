@@ -517,6 +517,56 @@ class ElwhaNavigationRailVariantTest {
     assertThat(rail.getSelected()).as("the fallback only fills a vacancy").isSameAs(primary.get(2));
   }
 
+  // ------------------------------------------------------- sections and the morph
+
+  @Test
+  void aCollapseInFlightKeepsItsSectionsOnScreen() {
+    final ElwhaNavigationRail rail = ElwhaNavigationRail.expanded();
+    rail.setPrimary(RailFixture.destinations(2));
+    final List<ElwhaNavRailDestination> secondary = RailFixture.destinations(2);
+    rail.addSection("Tools", secondary);
+    rail.setSize(rail.getPreferredSize());
+    rail.doLayout();
+    final int expandedHeight = rail.getPreferredSize().height;
+
+    MorphAnimator.setReducedMotion(false);
+    rail.morphTo(ElwhaNavigationRail.Variant.COLLAPSED);
+    // Re-pinned before asserting: the animator is latched at progress 0 (a Swing timer cannot tick
+    // while this test holds the dispatch thread), and the restore keeps the teardown synchronous.
+    MorphAnimator.setReducedMotion(true);
+    rail.setSize(rail.getPreferredSize());
+    rail.doLayout();
+
+    assertThat(secondary.get(0).getY())
+        .as("#635 — frame 0 of the collapse parked every section destination off-screen")
+        .isGreaterThanOrEqualTo(0);
+    assertThat(rail.getPreferredSize().height)
+        .as("and dropped the height the sections occupy, so the band jumped under the tween")
+        .isEqualTo(expandedHeight);
+    assertThat(PaintLog.capture(rail, rail.getWidth(), rail.getHeight()).painted("Tools"))
+        .as("the header rides the morph out rather than vanishing on frame 0")
+        .isTrue();
+  }
+
+  @Test
+  void anExpandInFlightAlreadyShowsItsSections() {
+    final ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
+    rail.setPrimary(RailFixture.destinations(2));
+    rail.addSection("Tools", RailFixture.destinations(2));
+    rail.setSize(rail.getPreferredSize());
+    rail.doLayout();
+
+    MorphAnimator.setReducedMotion(false);
+    rail.morphTo(ElwhaNavigationRail.Variant.EXPANDED);
+    MorphAnimator.setReducedMotion(true);
+    rail.setSize(rail.getPreferredSize());
+    rail.doLayout();
+
+    assertThat(PaintLog.capture(rail, rail.getWidth(), rail.getHeight()).painted("Tools"))
+        .as("#635 — sections join the tween from its first frame, like the destination band")
+        .isTrue();
+  }
+
   // -------------------------------------------------------------------- fonts
 
   @Test

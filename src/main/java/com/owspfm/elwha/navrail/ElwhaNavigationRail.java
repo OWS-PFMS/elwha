@@ -1224,6 +1224,16 @@ public final class ElwhaNavigationRail extends JComponent {
         COLLAPSED_WIDTH_PX, expandedWidthPx, variantMorph.progress());
   }
 
+  // Sections join the 350 ms variant morph instead of popping (#635). `variant` is already the
+  // target when the animator starts, so gating sections on it alone dropped a header and parked
+  // its destinations off-screen on frame 0 of a collapse, and snapped them in at full size while
+  // the primary band was still mid-lerp on an expand. This is the gate that band has always used.
+  // Row height is the same in both variants, so header positions stay exact throughout the tween —
+  // only the row width and x are interpolated.
+  private boolean expandedish() {
+    return variant == Variant.EXPANDED || variantMorph.isRunning();
+  }
+
   private int preferredContentHeight() {
     int h = CHROME_PAD_PX;
     if (menuButton != null) {
@@ -1233,7 +1243,7 @@ public final class ElwhaNavigationRail extends JComponent {
       h += fab.getPreferredSize().height + CHROME_GAP_PX;
     }
     h += primaryStackHeight();
-    if (variant == Variant.EXPANDED) {
+    if (expandedish()) {
       h += sectionsStackHeight();
     }
     if (!trailingActions.isEmpty()) {
@@ -1268,7 +1278,9 @@ public final class ElwhaNavigationRail extends JComponent {
     for (final ElwhaNavRailDestination d : primary) {
       h += ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX;
     }
-    if (variant == Variant.COLLAPSED) {
+    // doLayout only inserts the Collapsed gap once the morph has settled, so reserving it from
+    // frame 0 would ask the host for height the laid-out band does not use (#635).
+    if (!expandedish()) {
       h += DESTINATION_GAP_PX * (primary.size() - 1);
     }
     return h;
@@ -1335,7 +1347,7 @@ public final class ElwhaNavigationRail extends JComponent {
     // the destination's own paint lerps the indicator inside those bounds, and Collapsed paint
     // self-clips to the centered 56-wide pill region. Using the wider bounds avoids a bounds-jump
     // mid-morph that would otherwise crop the indicator.
-    final boolean expandedish = variant == Variant.EXPANDED || variantMorph.isRunning();
+    final boolean expandedish = expandedish();
 
     int topY = CHROME_PAD_PX;
     if (menuButton != null) {
@@ -1369,7 +1381,7 @@ public final class ElwhaNavigationRail extends JComponent {
       }
     }
 
-    if (variant == Variant.EXPANDED && !sections.isEmpty()) {
+    if (expandedish && !sections.isEmpty()) {
       final int headerH = sectionHeaderHeight();
       for (final Section s : sections) {
         topY += SECTION_HEADER_TOP_PAD_PX;
@@ -1380,7 +1392,7 @@ public final class ElwhaNavigationRail extends JComponent {
           destinationsBottom = topY;
         }
       }
-    } else if (variant == Variant.COLLAPSED) {
+    } else if (!expandedish) {
       // Hide secondary destinations in Collapsed by parking them off-screen — they remain in the
       // selection-model union but neither paint nor accept input. (Setting them invisible would
       // also work; off-screen parking matches the Phase 2 pattern of the rail layout-managing its
@@ -1468,7 +1480,7 @@ public final class ElwhaNavigationRail extends JComponent {
         g2.fillRect(x, 0, DIVIDER_WIDTH_PX, h);
       }
 
-      if (variant == Variant.EXPANDED && !sections.isEmpty()) {
+      if (expandedish() && !sections.isEmpty()) {
         paintSectionHeaders(g2);
       }
     } finally {
