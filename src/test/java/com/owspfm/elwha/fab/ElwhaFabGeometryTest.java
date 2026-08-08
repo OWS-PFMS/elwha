@@ -162,12 +162,14 @@ class ElwhaFabGeometryTest {
     final ElwhaFab fab =
         ElwhaFab.standard(MaterialIcons.add())
             .setFabSize(ElwhaFab.Size.LARGE)
-            .setColor(ElwhaFab.Color.TERTIARY);
+            .setColorStyle(ElwhaFab.ColorStyle.TERTIARY);
 
-    fab.setFabSize(null).setColor(null);
+    fab.setFabSize(null).setColorStyle(null);
 
     assertThat(fab.getFabSize()).as("a null size is ignored").isEqualTo(ElwhaFab.Size.LARGE);
-    assertThat(fab.getColor()).as("a null color is ignored").isEqualTo(ElwhaFab.Color.TERTIARY);
+    assertThat(fab.getColorStyle())
+        .as("a null color is ignored")
+        .isEqualTo(ElwhaFab.ColorStyle.TERTIARY);
   }
 
   // ------------------------------------------------------- shadow reserve

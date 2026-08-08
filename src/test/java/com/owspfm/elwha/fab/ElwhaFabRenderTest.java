@@ -57,11 +57,11 @@ class ElwhaFabRenderTest {
 
   private static Stream<Arguments> colorsInBothModes() {
     return Stream.of(Mode.LIGHT, Mode.DARK)
-        .flatMap(mode -> Stream.of(ElwhaFab.Color.values()).map(c -> Arguments.of(c, mode)));
+        .flatMap(mode -> Stream.of(ElwhaFab.ColorStyle.values()).map(c -> Arguments.of(c, mode)));
   }
 
-  private static ElwhaFab fab(final ElwhaFab.Color color) {
-    return ElwhaFab.standard(new BlankIcon()).setColor(color);
+  private static ElwhaFab fab(final ElwhaFab.ColorStyle color) {
+    return ElwhaFab.standard(new BlankIcon()).setColorStyle(color);
   }
 
   private static BufferedImage render(final ElwhaFab fab) {
@@ -80,7 +80,7 @@ class ElwhaFabRenderTest {
 
   @ParameterizedTest
   @MethodSource("colorsInBothModes")
-  void everyColorStylePaintsItsContainerRole(final ElwhaFab.Color color, final Mode mode) {
+  void everyColorStylePaintsItsContainerRole(final ElwhaFab.ColorStyle color, final Mode mode) {
     ThemeExtension.install(mode);
     final ElwhaFab fab = fab(color);
 
@@ -94,8 +94,8 @@ class ElwhaFabRenderTest {
   }
 
   @ParameterizedTest
-  @EnumSource(ElwhaFab.Color.class)
-  void everyColorStylePairsItsOwnContentRole(final ElwhaFab.Color color) {
+  @EnumSource(ElwhaFab.ColorStyle.class)
+  void everyColorStylePairsItsOwnContentRole(final ElwhaFab.ColorStyle color) {
     assertThat(color.onContainerRole())
         .as("%s tints the icon, the label, and the state layer with one paired role", color)
         .isEqualTo(color.containerRole().on().orElse(ColorRole.ON_SURFACE));
@@ -103,9 +103,9 @@ class ElwhaFabRenderTest {
 
   @Test
   void defaultColorStyleIsPrimaryContainer() {
-    assertThat(ElwhaFab.standard(new BlankIcon()).getColor())
+    assertThat(ElwhaFab.standard(new BlankIcon()).getColorStyle())
         .as("§5 — the M3 color-styles legend defaults both forms to primaryContainer")
-        .isEqualTo(ElwhaFab.Color.PRIMARY_CONTAINER);
+        .isEqualTo(ElwhaFab.ColorStyle.PRIMARY_CONTAINER);
   }
 
   // ------------------------------------------------------------ state model
@@ -113,7 +113,7 @@ class ElwhaFabRenderTest {
   @ParameterizedTest
   @MethodSource("colorsInBothModes")
   void hoverCompositesTheEightPercentLayerInTheContentRole(
-      final ElwhaFab.Color color, final Mode mode) {
+      final ElwhaFab.ColorStyle color, final Mode mode) {
     ThemeExtension.install(mode);
     final ElwhaFab fab = fab(color).setHovered(true);
 
@@ -130,8 +130,8 @@ class ElwhaFabRenderTest {
   }
 
   @ParameterizedTest
-  @EnumSource(ElwhaFab.Color.class)
-  void pressCompositesTheTenPercentLayerAndWinsOverHover(final ElwhaFab.Color color) {
+  @EnumSource(ElwhaFab.ColorStyle.class)
+  void pressCompositesTheTenPercentLayerAndWinsOverHover(final ElwhaFab.ColorStyle color) {
     final ElwhaFab fab = fab(color).setHovered(true).setPressed(true);
 
     final Point center = bodyCenter(fab);
@@ -148,7 +148,7 @@ class ElwhaFabRenderTest {
 
   @Test
   void aPressInTheShadowReserveLeavesTheChromeAtRest() {
-    final ElwhaFab fab = fab(ElwhaFab.Color.PRIMARY_CONTAINER);
+    final ElwhaFab fab = fab(ElwhaFab.ColorStyle.PRIMARY_CONTAINER);
     final Dimension pref = fab.getPreferredSize();
     fab.setSize(pref.width, pref.height);
     final Insets reserve = fab.getShadowInsets();
@@ -168,7 +168,7 @@ class ElwhaFabRenderTest {
 
   @Test
   void keyboardActivationFlashesThePressedLayerToo() {
-    final ElwhaFab fab = fab(ElwhaFab.Color.PRIMARY_CONTAINER);
+    final ElwhaFab fab = fab(ElwhaFab.ColorStyle.PRIMARY_CONTAINER);
 
     Input.pressBoundKey(fab, "pressed SPACE", "elwhafab.activate");
 
@@ -186,8 +186,8 @@ class ElwhaFabRenderTest {
 
   @Test
   void hoverBumpsTheElevationSoTheHaloDeepens() {
-    final ElwhaFab resting = fab(ElwhaFab.Color.PRIMARY_CONTAINER);
-    final ElwhaFab hovered = fab(ElwhaFab.Color.PRIMARY_CONTAINER).setHovered(true);
+    final ElwhaFab resting = fab(ElwhaFab.ColorStyle.PRIMARY_CONTAINER);
+    final ElwhaFab hovered = fab(ElwhaFab.ColorStyle.PRIMARY_CONTAINER).setHovered(true);
     final Point probe = haloProbe(resting);
 
     final int restingHalo = brightness(render(resting), probe.x, probe.y);
@@ -202,7 +202,7 @@ class ElwhaFabRenderTest {
 
   @Test
   void haloIsPaintedBelowTheBodyNotOverIt() {
-    final ElwhaFab fab = fab(ElwhaFab.Color.PRIMARY_CONTAINER);
+    final ElwhaFab fab = fab(ElwhaFab.ColorStyle.PRIMARY_CONTAINER);
     final BufferedImage image = render(fab);
 
     final int outside = brightness(image, haloProbe(fab).x, haloProbe(fab).y);
@@ -222,7 +222,7 @@ class ElwhaFabRenderTest {
 
   @ParameterizedTest
   @MethodSource("colorsInBothModes")
-  void disabledDropsTheContainerToTwelvePercent(final ElwhaFab.Color color, final Mode mode) {
+  void disabledDropsTheContainerToTwelvePercent(final ElwhaFab.ColorStyle color, final Mode mode) {
     ThemeExtension.install(mode);
     final ElwhaFab fab = fab(color).setHovered(true).setPressed(true);
     fab.setEnabled(false);
@@ -241,7 +241,7 @@ class ElwhaFabRenderTest {
 
   @Test
   void aDisabledFabCastsNoShadowAtAll() {
-    final ElwhaFab fab = fab(ElwhaFab.Color.PRIMARY_CONTAINER);
+    final ElwhaFab fab = fab(ElwhaFab.ColorStyle.PRIMARY_CONTAINER);
     fab.setEnabled(false);
     final BufferedImage image = render(fab);
 
@@ -252,7 +252,8 @@ class ElwhaFabRenderTest {
 
   @Test
   void disablingClearsAnyLiveHoverOrPressState() {
-    final ElwhaFab fab = fab(ElwhaFab.Color.PRIMARY_CONTAINER).setHovered(true).setPressed(true);
+    final ElwhaFab fab =
+        fab(ElwhaFab.ColorStyle.PRIMARY_CONTAINER).setHovered(true).setPressed(true);
 
     fab.setEnabled(false);
     fab.setEnabled(true);

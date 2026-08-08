@@ -2103,8 +2103,8 @@ public final class ElwhaShowcase {
     formBox.setSelectedItem(FabForm.STANDARD);
     final JComboBox<ElwhaFab.Size> sizeBox = new JComboBox<>(ElwhaFab.Size.values());
     sizeBox.setSelectedItem(ElwhaFab.Size.SMALL);
-    final JComboBox<ElwhaFab.Color> colorBox = new JComboBox<>(ElwhaFab.Color.values());
-    colorBox.setSelectedItem(ElwhaFab.Color.PRIMARY_CONTAINER);
+    final JComboBox<ElwhaFab.ColorStyle> colorBox = new JComboBox<>(ElwhaFab.ColorStyle.values());
+    colorBox.setSelectedItem(ElwhaFab.ColorStyle.PRIMARY_CONTAINER);
     final JComboBox<FabIconChoice> iconBox = new JComboBox<>(FabIconChoice.values());
     iconBox.setSelectedItem(FabIconChoice.ADD);
     final ElwhaTextField labelField = ElwhaTextField.outlined("");
@@ -2140,7 +2140,7 @@ public final class ElwhaShowcase {
         () -> {
           final FabForm form = (FabForm) formBox.getSelectedItem();
           final ElwhaFab.Size size = (ElwhaFab.Size) sizeBox.getSelectedItem();
-          final ElwhaFab.Color color = (ElwhaFab.Color) colorBox.getSelectedItem();
+          final ElwhaFab.ColorStyle color = (ElwhaFab.ColorStyle) colorBox.getSelectedItem();
           final FabIconChoice iconChoice = (FabIconChoice) iconBox.getSelectedItem();
           final String label = labelField.getText() == null ? "" : labelField.getText();
           final boolean hovered = hoveredBox.isChecked();
@@ -2162,7 +2162,7 @@ public final class ElwhaShowcase {
                 fab = ElwhaFab.extended(iconChoice.icon(size.iconPx()), safeLabel);
             default -> fab = ElwhaFab.standard(iconChoice.icon(size.iconPx()));
           }
-          fab.setFabSize(size).setColor(color);
+          fab.setFabSize(size).setColorStyle(color);
           fab.setHovered(hovered);
           fab.setPressed(pressed);
           fab.setEnabled(enabled);
@@ -2206,7 +2206,7 @@ public final class ElwhaShowcase {
   private static String renderFabCode(
       final FabForm form,
       final ElwhaFab.Size size,
-      final ElwhaFab.Color color,
+      final ElwhaFab.ColorStyle color,
       final FabIconChoice iconChoice,
       final String label,
       final boolean enabled) {
@@ -2235,8 +2235,8 @@ public final class ElwhaShowcase {
     if (size != ElwhaFab.Size.SMALL) {
       code.append("\nfab.setFabSize(ElwhaFab.Size.").append(size).append(");");
     }
-    if (color != ElwhaFab.Color.PRIMARY_CONTAINER) {
-      code.append("\nfab.setColor(ElwhaFab.Color.").append(color).append(");");
+    if (color != ElwhaFab.ColorStyle.PRIMARY_CONTAINER) {
+      code.append("\nfab.setColorStyle(ElwhaFab.ColorStyle.").append(color).append(");");
     }
     if (!enabled) {
       code.append("\nfab.setEnabled(false);");

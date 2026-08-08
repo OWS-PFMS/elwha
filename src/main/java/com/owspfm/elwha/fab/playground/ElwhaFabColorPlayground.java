@@ -23,11 +23,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 /**
- * Story #188 (S2) smoketest — Standard FAB across all six {@link ElwhaFab.Color} styles at every
- * {@link ElwhaFab.Size}. Renders a 6 × 3 matrix (color × size) so the validator can scan a single
- * panel and confirm each {@code (container, on-container)} role pair resolves correctly. The light
- * / dark / system mode toggle exercises the M3 dark-scheme resolution path — the same role names
- * pick up the dark palette values without any per-mode code in the FAB.
+ * Story #188 (S2) smoketest — Standard FAB across all six {@link ElwhaFab.ColorStyle} styles at
+ * every {@link ElwhaFab.Size}. Renders a 6 × 3 matrix (color × size) so the validator can scan a
+ * single panel and confirm each {@code (container, on-container)} role pair resolves correctly. The
+ * light / dark / system mode toggle exercises the M3 dark-scheme resolution path — the same role
+ * names pick up the dark palette values without any per-mode code in the FAB.
  *
  * <p>Run:
  *
@@ -76,7 +76,7 @@ public final class ElwhaFabColorPlayground {
     gc.anchor = GridBagConstraints.CENTER;
 
     final ElwhaFab.Size[] sizes = ElwhaFab.Size.values();
-    final ElwhaFab.Color[] colors = ElwhaFab.Color.values();
+    final ElwhaFab.ColorStyle[] colors = ElwhaFab.ColorStyle.values();
 
     gc.gridy = 0;
     gc.gridx = 0;
@@ -97,7 +97,7 @@ public final class ElwhaFabColorPlayground {
         final ElwhaFab fab =
             ElwhaFab.standard(MaterialIcons.add(sizes[col].iconPx()))
                 .setFabSize(sizes[col])
-                .setColor(colors[row]);
+                .setColorStyle(colors[row]);
         fab.setToolTipText(colors[row].name() + " · " + sizes[col].name());
         grid.add(fab, gc);
       }

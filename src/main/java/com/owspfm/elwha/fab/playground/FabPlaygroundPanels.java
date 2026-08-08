@@ -31,8 +31,8 @@ public final class FabPlaygroundPanels {
   private FabPlaygroundPanels() {}
 
   /**
-   * Builds the variant gallery panel: every {@link ElwhaFab.Color} as a row × every visual state
-   * (idle / hover / pressed / focused / disabled) as a column, all rendered at {@link
+   * Builds the variant gallery panel: every {@link ElwhaFab.ColorStyle} as a row × every visual
+   * state (idle / hover / pressed / focused / disabled) as a column, all rendered at {@link
    * ElwhaFab.Size#SMALL} in the Standard (icon-only) form. Hover and pressed cells use {@link
    * ElwhaFab#setHovered}/{@link ElwhaFab#setPressed} to pre-render the state-layer overlay so the
    * M3 spec rendering is visible side-by-side without requiring live interaction. The focused
@@ -65,7 +65,7 @@ public final class FabPlaygroundPanels {
     }
 
     int row = 1;
-    for (ElwhaFab.Color color : ElwhaFab.Color.values()) {
+    for (ElwhaFab.ColorStyle color : ElwhaFab.ColorStyle.values()) {
       gbc.gridy = row++;
       gbc.gridx = 0;
       matrix.add(rowLabel(color.name()), gbc);
@@ -81,9 +81,9 @@ public final class FabPlaygroundPanels {
   /**
    * Builds the sizes panel: every {@link ElwhaFab.Size} as a row × every form ({@code Standard
    * (icon)} / {@code Extended (text)} / {@code Extended (icon + text)}) as a column, all at the
-   * default {@link ElwhaFab.Color#PRIMARY_CONTAINER}. Lets the validator confirm container height
-   * (56 / 80 / 96 dp), icon-size scaling, and the Extended-form per-size leading / icon-gap /
-   * trailing insets all match the M3 token-panel values at a glance.
+   * default {@link ElwhaFab.ColorStyle#PRIMARY_CONTAINER}. Lets the validator confirm container
+   * height (56 / 80 / 96 dp), icon-size scaling, and the Extended-form per-size leading / icon-gap
+   * / trailing insets all match the M3 token-panel values at a glance.
    *
    * @return the sizes panel
    * @version v0.3.0
@@ -127,9 +127,9 @@ public final class FabPlaygroundPanels {
   }
 
   private static JComponent buildStandardGalleryCell(
-      final ElwhaFab.Color color, final int columnIndex) {
+      final ElwhaFab.ColorStyle color, final int columnIndex) {
     final Icon icon = MaterialIcons.add(ElwhaFab.Size.SMALL.iconPx());
-    final ElwhaFab fab = ElwhaFab.standard(icon).setColor(color);
+    final ElwhaFab fab = ElwhaFab.standard(icon).setColorStyle(color);
     fab.setToolTipText(color.name());
     switch (columnIndex) {
       case 0 -> {

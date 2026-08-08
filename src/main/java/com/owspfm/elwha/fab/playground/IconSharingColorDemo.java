@@ -32,7 +32,7 @@ import javax.swing.JComponent;
  *       filter was clobbered.
  *   <li><strong>Render proof (Issues A &amp; B):</strong> two FABs built from one shared icon at
  *       different color styles paint the glyph in their own colors; and a single FAB repainted
- *       after {@link ElwhaFab#setColor} renders the glyph at the new color on the next paint
+ *       after {@link ElwhaFab#setColorStyle} renders the glyph at the new color on the next paint
  *       (confirming the live-filter path — FlatLaf 3.2.5 applies the color filter at paint time, so
  *       there is no stale raster to invalidate).
  * </ol>
@@ -73,7 +73,7 @@ public final class IconSharingColorDemo {
     final FlatSVGIcon shared = MaterialIcons.add(24);
     final FlatSVGIcon.ColorFilter before = shared.getColorFilter();
 
-    ElwhaFab.standard(shared).setColor(ElwhaFab.Color.PRIMARY_CONTAINER);
+    ElwhaFab.standard(shared).setColorStyle(ElwhaFab.ColorStyle.PRIMARY_CONTAINER);
     new ElwhaButton("B", shared).setVariant(ButtonVariant.FILLED);
     new ElwhaIconButton(shared).setVariant(IconButtonVariant.FILLED);
 
@@ -87,13 +87,14 @@ public final class IconSharingColorDemo {
   // color.
   private static void fabPaintsOwnColor() {
     final FlatSVGIcon shared = MaterialIcons.add(24);
-    final ElwhaFab a = ElwhaFab.standard(shared).setColor(ElwhaFab.Color.PRIMARY_CONTAINER);
-    final ElwhaFab b = ElwhaFab.standard(shared).setColor(ElwhaFab.Color.TERTIARY);
+    final ElwhaFab a =
+        ElwhaFab.standard(shared).setColorStyle(ElwhaFab.ColorStyle.PRIMARY_CONTAINER);
+    final ElwhaFab b = ElwhaFab.standard(shared).setColorStyle(ElwhaFab.ColorStyle.TERTIARY);
 
     final Color glyphA = glyphColor(a);
     final Color glyphB = glyphColor(b);
-    final Color expectA = ElwhaFab.Color.PRIMARY_CONTAINER.onContainerRole().resolve();
-    final Color expectB = ElwhaFab.Color.TERTIARY.onContainerRole().resolve();
+    final Color expectA = ElwhaFab.ColorStyle.PRIMARY_CONTAINER.onContainerRole().resolve();
+    final Color expectB = ElwhaFab.ColorStyle.TERTIARY.onContainerRole().resolve();
 
     check("FAB-A glyph ≈ onPrimaryContainer (got " + hex(glyphA) + ")", near(glyphA, expectA));
     check("FAB-B glyph ≈ onTertiary (got " + hex(glyphB) + ")", near(glyphB, expectB));
@@ -106,16 +107,16 @@ public final class IconSharingColorDemo {
         !near(glyphA, glyphB));
   }
 
-  // Issue B render proof: setColor re-renders the glyph fresh on the next paint.
+  // Issue B render proof: setColorStyle re-renders the glyph fresh on the next paint.
   private static void fabSetColorRepaints() {
     final ElwhaFab fab = ElwhaFab.standard(MaterialIcons.add(24));
     final Color first = glyphColor(fab);
-    fab.setColor(ElwhaFab.Color.TERTIARY);
+    fab.setColorStyle(ElwhaFab.ColorStyle.TERTIARY);
     final Color second = glyphColor(fab);
-    final Color expectSecond = ElwhaFab.Color.TERTIARY.onContainerRole().resolve();
+    final Color expectSecond = ElwhaFab.ColorStyle.TERTIARY.onContainerRole().resolve();
 
     check(
-        "setColor(TERTIARY) repaints glyph at the new color (was "
+        "setColorStyle(TERTIARY) repaints glyph at the new color (was "
             + hex(first)
             + ", now "
             + hex(second)
