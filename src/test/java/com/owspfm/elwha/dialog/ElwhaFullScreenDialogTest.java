@@ -8,7 +8,9 @@ import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.HeadlessHost;
 import com.owspfm.elwha.testkit.Input;
+import com.owspfm.elwha.testkit.PaintOrigin;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Rectangle;
@@ -76,6 +78,30 @@ class ElwhaFullScreenDialogTest {
       }
     }
     return found;
+  }
+
+  // ------------------------------------------------------------ paint origin
+
+  @Test
+  void aSurfaceIsAPaintingOriginOnlyWhileTheEntranceIsStillRunning() {
+    MorphAnimator.setReducedMotion(false);
+    show(form().build());
+    // Re-pinned before asserting: motionProgress is already latched at 0 (a Swing timer cannot tick
+    // while this test holds the dispatch thread), and the restore keeps the teardown synchronous.
+    MorphAnimator.setReducedMotion(true);
+
+    assertThat(PaintOrigin.of(surface()))
+        .as("mid-slide the surface offsets a snapshot, so children must repaint through it")
+        .isTrue();
+  }
+
+  @Test
+  void aSettledSurfaceIsNotAPaintingOrigin() {
+    show(form().build());
+
+    assertThat(PaintOrigin.of(surface()))
+        .as("at rest paint() offsets nothing, so a caret blink need not re-composite the dialog")
+        .isFalse();
   }
 
   // ------------------------------------------------------------ modal posture

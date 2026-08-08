@@ -6,8 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.HeadlessHost;
 import com.owspfm.elwha.testkit.Input;
+import com.owspfm.elwha.testkit.PaintOrigin;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ElwhaLayers;
+import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Rectangle;
@@ -81,6 +83,30 @@ class ElwhaSideSheetModalTest {
   private Component scrim(final ElwhaSideSheet sheet) {
     final Component slide = surface(sheet);
     return host.mounted().stream().filter(c -> c != slide).findFirst().orElseThrow();
+  }
+
+  // ------------------------------------------------------------ paint origin
+
+  @Test
+  void aSurfaceIsAPaintingOriginOnlyWhileTheEntranceIsStillRunning() {
+    MorphAnimator.setReducedMotion(false);
+    final ElwhaSideSheet sheet = present(sheet());
+    // Re-pinned before asserting: motionProgress is already latched at 0 (a Swing timer cannot tick
+    // while this test holds the dispatch thread), and the restore keeps the teardown synchronous.
+    MorphAnimator.setReducedMotion(true);
+
+    assertThat(PaintOrigin.of((JComponent) surface(sheet)))
+        .as("mid-slide the surface translates a snapshot, so children must repaint through it")
+        .isTrue();
+  }
+
+  @Test
+  void aSettledSurfaceIsNotAPaintingOrigin() {
+    final ElwhaSideSheet sheet = present(sheet());
+
+    assertThat(PaintOrigin.of((JComponent) surface(sheet)))
+        .as("at rest paint() translates nothing, so a caret blink need not re-composite the sheet")
+        .isFalse();
   }
 
   // ------------------------------------------------------------ presentation

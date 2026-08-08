@@ -7,7 +7,9 @@ import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.HeadlessHost;
+import com.owspfm.elwha.testkit.PaintOrigin;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -290,6 +292,28 @@ class ElwhaDialogCompositionTest {
         .as("the dialog is centered horizontally in the host")
         .isEqualTo(900 / 2);
     assertThat(surface.getY() + surface.getHeight() / 2).as("and vertically").isEqualTo(700 / 2);
+  }
+
+  @Test
+  void aSurfaceIsAPaintingOriginOnlyWhileTheEntranceIsStillRunning() {
+    MorphAnimator.setReducedMotion(false);
+    show(alert().build());
+    // Re-pinned before asserting: motionProgress is already latched at 0 (a Swing timer cannot tick
+    // while this test holds the dispatch thread), and the restore keeps the teardown synchronous.
+    MorphAnimator.setReducedMotion(true);
+
+    assertThat(PaintOrigin.of((JComponent) host.mounted().get(0)))
+        .as("mid-tween the surface transforms a snapshot, so children must repaint through it")
+        .isTrue();
+  }
+
+  @Test
+  void aSettledSurfaceIsNotAPaintingOrigin() {
+    show(alert().build());
+
+    assertThat(PaintOrigin.of((JComponent) host.mounted().get(0)))
+        .as("at rest paint() transforms nothing, so a caret blink need not re-composite the dialog")
+        .isFalse();
   }
 
   @Test
