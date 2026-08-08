@@ -2194,6 +2194,10 @@ public class ElwhaSlider extends JComponent {
           @Override
           public void focusLost(final FocusEvent e) {
             pressed = false;
+            // Tabbing away with Space held means the release action never runs. Left latched, the
+            // slider answers every later arrow key with getBlockIncrement() instead of the unit
+            // increment — permanently, since nothing else clears the flag.
+            spaceDown = false;
             updateInteractionAnimator();
             repaint();
           }
@@ -2252,8 +2256,12 @@ public class ElwhaSlider extends JComponent {
    * disabled range slider's two handle proxies stayed Tab-reachable and the keyboard could move its
    * handles (#432). The single variant needs nothing extra: the slider itself is the focus stop.
    *
+   * <p>Disabling also drops the transient interaction state — hover, press, the Space
+   * block-increment latch, the in-flight ripple and the pointer cursor — so re-enabling starts from
+   * rest rather than replaying whatever the pointer or keyboard happened to be doing.
+   *
    * @param enabled whether the slider responds to input
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   @Override
@@ -2261,6 +2269,18 @@ public class ElwhaSlider extends JComponent {
     super.setEnabled(enabled);
     lowerFocus.setEnabled(enabled);
     upperFocus.setEnabled(enabled);
+    if (!enabled) {
+      hovered = false;
+      pressed = false;
+      spaceDown = false;
+      model.setValueIsAdjusting(false);
+      if (rippleTimer != null) {
+        rippleTimer.stop();
+      }
+      rippleProgress = 1f;
+      updateInteractionAnimator();
+      setCursor(Cursor.getDefaultCursor());
+    }
     repaint();
   }
 

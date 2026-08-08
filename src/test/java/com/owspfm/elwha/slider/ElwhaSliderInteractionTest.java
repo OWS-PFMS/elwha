@@ -7,6 +7,9 @@ import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Input;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import java.awt.ComponentOrientation;
+import java.awt.Cursor;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import javax.swing.DefaultBoundedRangeModel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +39,21 @@ class ElwhaSliderInteractionTest {
 
   private static int midY(final ElwhaSlider slider) {
     return slider.getHeight() / 2;
+  }
+
+  /**
+   * Delivers a focus loss to the slider's own installed listener.
+   *
+   * <p>{@code dispatchEvent(new FocusEvent(...))} does not work here: AWT routes focus events
+   * through the {@code KeyboardFocusManager}, which drops a {@code FOCUS_LOST} aimed at a component
+   * that is not the global focus owner — and nothing headless and unrealized ever is. Calling the
+   * listener is the same code path a real focus change would reach, minus the arbitration.
+   */
+  private static void loseFocus(final ElwhaSlider slider) {
+    final FocusEvent event = new FocusEvent(slider, FocusEvent.FOCUS_LOST);
+    for (final FocusListener listener : slider.getFocusListeners()) {
+      listener.focusLost(event);
+    }
   }
 
   // ------------------------------------------------------------- pointer
@@ -231,6 +249,47 @@ class ElwhaSliderInteractionTest {
     Input.pressBoundKey(slider, "released SPACE", "elwhaSlider.spaceUp");
     Input.pressBoundKey(slider, "pressed RIGHT", "elwhaSlider.right");
     assertThat(slider.getValue()).as("and releasing Space restores the fine one").isEqualTo(71);
+  }
+
+  @Test
+  void tabbingAwayWithSpaceHeldDoesNotStrandTheBlockIncrement() {
+    final ElwhaSlider slider = percent();
+    slider.setUnitIncrement(1);
+    slider.setBlockIncrement(20);
+    Input.pressBoundKey(slider, "pressed SPACE", "elwhaSlider.spaceDown");
+
+    // Tabbing (or alt-tabbing) away with Space held means the release action never runs, so focus
+    // loss is the only place left that can unlatch it.
+    loseFocus(slider);
+
+    Input.pressBoundKey(slider, "pressed RIGHT", "elwhaSlider.right");
+    assertThat(slider.getValue())
+        .as(
+            "an arrow after the abandoned hold is a fine adjustment again, not a permanent"
+                + " promotion to the block increment")
+        .isEqualTo(51);
+  }
+
+  @Test
+  void disablingClearsTheSpaceLatchAlongWithTheRestOfTheTransientState() {
+    final ElwhaSlider slider = percent();
+    slider.setUnitIncrement(1);
+    slider.setBlockIncrement(20);
+    Input.enter(slider, slider.getWidth() / 2, midY(slider));
+    Input.pressBoundKey(slider, "pressed SPACE", "elwhaSlider.spaceDown");
+
+    slider.setEnabled(false);
+
+    assertThat(slider.getCursor().getType())
+        .as("a disabled slider stops advertising itself as draggable")
+        .isEqualTo(Cursor.DEFAULT_CURSOR);
+
+    slider.setEnabled(true);
+    Input.pressBoundKey(slider, "pressed RIGHT", "elwhaSlider.right");
+
+    assertThat(slider.getValue())
+        .as("and it comes back at rest — the Space latch did not survive the round trip")
+        .isEqualTo(51);
   }
 
   @Test
