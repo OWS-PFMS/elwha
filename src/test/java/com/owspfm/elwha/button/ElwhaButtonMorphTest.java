@@ -133,7 +133,7 @@ class ElwhaButtonMorphTest {
     final ElwhaButton button = bigButton().setInteractionMode(ButtonInteractionMode.SELECTABLE);
     final int[] fired = {0};
     button.addActionListener(e -> fired[0]++);
-    button.addSelectionChangeListener(e -> fired[0]++);
+    button.addPropertyChangeListener(ElwhaButton.PROPERTY_SELECTED, e -> fired[0]++);
 
     button.triggerPressAnimation();
 

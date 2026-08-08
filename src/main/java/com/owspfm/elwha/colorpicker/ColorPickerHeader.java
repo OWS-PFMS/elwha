@@ -76,6 +76,9 @@ final class ColorPickerHeader extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     final int pad = SpaceScale.LG.px();
     int height = pad;
     if (picker.getSupportingText() != null) {
@@ -87,6 +90,9 @@ final class ColorPickerHeader extends JComponent {
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 

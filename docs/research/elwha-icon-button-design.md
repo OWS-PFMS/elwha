@@ -104,7 +104,9 @@ public class ElwhaIconButton extends JComponent {
   // -- listeners
   public void addActionListener(ActionListener listener);
   public void removeActionListener(ActionListener listener);
-  public void addSelectionChangeListener(PropertyChangeListener listener);
+  // Selection is observed through the inherited key-scoped pair (conventions §10):
+  //   addPropertyChangeListener(ElwhaIconButton.PROPERTY_SELECTED, listener)
+  //   removePropertyChangeListener(ElwhaIconButton.PROPERTY_SELECTED, listener)
 }
 ```
 

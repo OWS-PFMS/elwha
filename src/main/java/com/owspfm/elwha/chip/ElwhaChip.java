@@ -30,7 +30,6 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -1021,17 +1020,6 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
   }
 
   /**
-   * Convenience: scopes a {@link PropertyChangeListener} to {@link #PROPERTY_SELECTED}.
-   *
-   * @param listener the listener
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public void addSelectionChangeListener(final PropertyChangeListener listener) {
-    addPropertyChangeListener(PROPERTY_SELECTED, listener);
-  }
-
-  /**
    * Reports whether a context-menu callback (or attached popup) is installed.
    *
    * @return true if any context-menu callback is installed
@@ -1491,6 +1479,9 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
 
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     return new Dimension(getPreferredSize().width, getPreferredSize().height);
   }
 

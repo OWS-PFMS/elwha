@@ -583,6 +583,9 @@ public class ElwhaColorPicker extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     final Dimension d = super.getPreferredSize();
     d.width = Math.max(d.width, PREFERRED_WIDTH);
     return d;
@@ -599,6 +602,9 @@ public class ElwhaColorPicker extends JComponent {
    */
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     return new Dimension(getPreferredSize().width, Integer.MAX_VALUE);
   }
 

@@ -1602,6 +1602,9 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    */
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     final Dimension d = super.getPreferredSize();
     int height = d.height;
     if (animationFraction < 1f) {
@@ -1630,6 +1633,9 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    */
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     return new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE);
   }
 

@@ -135,7 +135,9 @@ public class ElwhaButton extends JComponent {
   // -- listeners
   public void addActionListener(ActionListener listener);
   public void removeActionListener(ActionListener listener);
-  public void addSelectionChangeListener(PropertyChangeListener listener);
+  // Selection is observed through the inherited key-scoped pair (conventions §10):
+  //   addPropertyChangeListener(ElwhaButton.PROPERTY_SELECTED, listener)
+  //   removePropertyChangeListener(ElwhaButton.PROPERTY_SELECTED, listener)
 }
 
 public enum ButtonVariant { ELEVATED, FILLED, FILLED_TONAL, OUTLINED, TEXT }

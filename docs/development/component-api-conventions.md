@@ -183,6 +183,12 @@ Ruled in [#446](https://github.com/OWS-PFMS/elwha/issues/446). The library was s
 
 **Group-level surfaces take the same rule, in whichever shape the class can carry.** A group that is a `JComponent` (`ElwhaNavigationRail`, `ElwhaTabs`) fires the inherited `firePropertyChange` and needs no wrapper. A non-visual controller (`ElwhaButtonSelectionGroup`, `ElwhaRadioGroup`) holds its own `PropertyChangeSupport` and exposes exactly one scoped pair, `addSelectionChangeListener` / `removeSelectionChangeListener`, rather than re-publishing the generic keyed `addPropertyChangeListener` — the group has one observable state, so the narrow surface is the honest one. Either way the event carries the *member*, not an index: identity survives a member being removed and replaced at the same position, where an index would compare equal and be swallowed by `PropertyChangeSupport`.
 
+**A `JComponent` gets no convenience wrapper — the inherited keyed pair is the whole surface.** Ruled in [#725](https://github.com/OWS-PFMS/elwha/issues/725). `ElwhaButton`, `ElwhaIconButton` and `ElwhaChip` each carried a one-line `addSelectionChangeListener` that forwarded to `addPropertyChangeListener(PROPERTY_SELECTED, l)` — and no `remove` counterpart, because there is no `removePropertyChangeListener` shape a one-arg wrapper can mirror without inventing a second name. The library's own code showed the cost before any consumer did: `ElwhaButtonGroup` subscribed through the wrapper and unsubscribed through the inherited keyed call, two idioms for the two halves of one subscription, sitting in adjacent methods. The wrappers are **removed** rather than completed. Adding the missing `remove` would have kept a surface that only restates one inherited method, on three of the nine components that fire a named state — and the other six, including the `ElwhaCheckbox` precedent and everything #700 converted, already ask consumers to call the inherited pair directly.
+
+The distinction that decides it is **inheritance, not visibility**: a non-visual controller has no inherited subscription to point at, so its scoped pair is the only surface it can offer; a `JComponent` already has one, and a wrapper over it is a second way to say the same thing that can only drift. So: if the class extends `JComponent`, publish the `PROPERTY_X` constant and stop. If it does not, hold a `PropertyChangeSupport` and expose the symmetric pair.
+
+**Apply when:** adding an observable named state to any component. Do not write an `addXxxListener` convenience over `addPropertyChangeListener` — and if you find one, it is missing its `remove`.
+
 ## 10a. The attached-label contract — and who is exempt from it
 
 `ElwhaCheckbox.setLabel` and `ElwhaRadioButton.setLabel` attach a **visible, clickable** label: it widens the preferred size, extends the click target, and supplies the accessible name. Both also expose `setAccessibleLabel` for the label-less case, where only the accessible name is wanted.
@@ -192,6 +198,30 @@ Ruled in [#446](https://github.com/OWS-PFMS/elwha/issues/446). The library was s
 **But an exempt component must not reuse the name.** `ElwhaSwitch.setLabel` and `ElwhaSlider.setLabel` set the accessible name only, which is exactly what the checkbox and radio call `setAccessibleLabel`. One method name meaning two different things across one family is the trap [#436](https://github.com/OWS-PFMS/elwha/issues/436) fixed for the radio; both are now `setAccessibleLabel` / `getAccessibleLabel`.
 
 **Apply when:** adding a component that takes a caption. If it attaches a visible label, name it `setLabel` and add `setAccessibleLabel` for the label-less case. If it only names itself for assistive tech, `setAccessibleLabel` is the only accessor it gets — `setLabel` is reserved.
+
+## 11. A sizing hook stands down when the caller sets a size — and "fixed geometry" is not an exemption
+
+Every override of `getPreferredSize()` / `getMinimumSize()` / `getMaximumSize()` opens with the escape, per hook:
+
+```java
+@Override
+public Dimension getPreferredSize() {
+  if (isPreferredSizeSet()) {
+    return super.getPreferredSize();
+  }
+  return /* the component's own M3 geometry */;
+}
+```
+
+**Why it is not optional.** `setPreferredSize` records the value on `JComponent` and flips `isPreferredSizeSet()`, so the call *appears* to succeed. An override that never reads the flag then answers the layout manager with its own number. No exception, no warning — the consumer reads a getter that disagrees with what they just wrote, which is the same silent-no-op class §9 rules out for setters. [#567](https://github.com/OWS-PFMS/elwha/issues/567) swept nine sites; [#712](https://github.com/OWS-PFMS/elwha/issues/712) ruled on and swept the remaining thirty-six.
+
+**"But the geometry is fixed" is not a reason — that was ruled and rejected.** It is the most natural objection (an M3 switch really is 52×32; a FAB's halo really does have to fit) and #567 already settled it against, on the two hardest cases: `ElwhaSwitch` has fixed M3 track geometry *and* bakes `2 × HALO_OVERHANG_PX` of shadow halo into its preferred size, and it took the escape anyway, with the test that pinned the old behavior flipped. So **§8's halo-in-preferred does not license ignoring an explicit size.** Honoring a caller who leaves no room for the halo clips the halo — a visible consequence of their own instruction, not a broken component — and every leaf degrades that way gracefully. The alternative is a component that cannot be placed in a layout the consumer controls.
+
+**Scope: the declaring class's reachability, not the geometry.** The rule binds a **top-level** class, whatever its visibility — a caller who can name the type can set a size on it, which is why #567 swept the package-private `ColorTrackSlider` alongside the public eight, and why #712 swept `ColorPickerHeader` and `TooltipSurface`. A **private nested** composition child is exempt: it is laid out solely by the component that declares it, nothing outside can name its type, and the enclosing component computes its geometry rather than setting it. Adding an escape there is dead code — verified, not assumed: no library code calls `setXxxSize` on any of them. The twenty-four exempt sites are the colour picker's panes (`SvBox`, `HueGrid`, `ShadeStrip`, `RecentRow`, `ThemeGrid`, `FavoritesGrid`, `WheelDisc`, `ChannelRow`), the dialogs' inner surfaces and dividers, the chip's slot buttons, and the side sheet's footer divider.
+
+**Do not confuse this with §8's `getMaximumSize` rule.** They govern the same methods and answer different questions: this one is *may the caller override the answer*, §8's is *may a halo-in-preferred leaf clamp `max = preferred`* (it may not — [#199](https://github.com/OWS-PFMS/elwha/issues/199)). Both hold at once. #712 audited the second across the catalog and found no violations: the three `ShadowBearing` primitives (`ElwhaButton`, `ElwhaFab`, `ElwhaSurface`) override no maximum at all, `ElwhaChip` and `ElwhaIconButton` carry `max = preferred` legitimately because they paint no shadow, and `ElwhaButtonGroup`'s clamp is the [#660](https://github.com/OWS-PFMS/elwha/issues/660) case §8 already refuted.
+
+**Apply when:** overriding any sizing hook on a top-level component. Add the escape to *every* hook you override, not just preferred — an explicit minimum is as much an instruction as an explicit preferred — and add the component to `SizingHookEscapeTest`'s parameterized sweep, which tests the doctrine rather than any one geometry.
 
 ---
 

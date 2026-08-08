@@ -205,6 +205,9 @@ class TooltipSurface extends JPanel {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     if (variant == TooltipVariant.PLAIN) {
       return plainPreferredSize();
     }

@@ -57,6 +57,9 @@ public final class ElwhaCardSupportingText extends JLabel {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     return WrappingLabels.preferredSizeForWidth(this, super.getPreferredSize());
   }
 
@@ -72,6 +75,9 @@ public final class ElwhaCardSupportingText extends JLabel {
    */
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
   }
 

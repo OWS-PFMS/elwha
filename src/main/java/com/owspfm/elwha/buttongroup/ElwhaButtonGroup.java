@@ -875,6 +875,9 @@ public final class ElwhaButtonGroup extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     final int count = segments.size();
     if (count == 0) {
       return new Dimension(0, 0);
@@ -893,11 +896,17 @@ public final class ElwhaButtonGroup extends JComponent {
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     if (variant == ButtonGroupVariant.CONNECTED && resizeMode == ResizeMode.FLEXIBLE) {
       final int width = maxWidthPx > 0 ? maxWidthPx : Integer.MAX_VALUE;
       return new Dimension(width, getPreferredSize().height);
@@ -1076,7 +1085,7 @@ public final class ElwhaButtonGroup extends JComponent {
 
     @Override
     void addSelectionListener(final PropertyChangeListener listener) {
-      button.addSelectionChangeListener(listener);
+      button.addPropertyChangeListener(ElwhaButton.PROPERTY_SELECTED, listener);
     }
 
     @Override
@@ -1185,7 +1194,7 @@ public final class ElwhaButtonGroup extends JComponent {
 
     @Override
     void addSelectionListener(final PropertyChangeListener listener) {
-      button.addSelectionChangeListener(listener);
+      button.addPropertyChangeListener(ElwhaIconButton.PROPERTY_SELECTED, listener);
     }
 
     @Override

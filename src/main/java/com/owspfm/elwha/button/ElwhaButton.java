@@ -31,7 +31,6 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -92,7 +91,8 @@ import javax.swing.Timer;
  * ElwhaButton pin = new ElwhaButton("Pinned")
  *     .setVariant(ButtonVariant.FILLED_TONAL)
  *     .setInteractionMode(ButtonInteractionMode.SELECTABLE);
- * pin.addSelectionChangeListener(evt -> System.out.println("pinned: " + pin.isSelected()));
+ * pin.addPropertyChangeListener(ElwhaButton.PROPERTY_SELECTED,
+ *     evt -> System.out.println("pinned: " + pin.isSelected()));
  * }</pre>
  *
  * <p><strong>Connected-segment mode.</strong> {@link #setCornerRadii(CornerRadii)} installs a
@@ -902,17 +902,6 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
     if (isEnabled()) {
       activate(0);
     }
-  }
-
-  /**
-   * Convenience: scopes a {@link PropertyChangeListener} to {@link #PROPERTY_SELECTED}.
-   *
-   * @param listener the listener
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public void addSelectionChangeListener(final PropertyChangeListener listener) {
-    addPropertyChangeListener(PROPERTY_SELECTED, listener);
   }
 
   // ----------------------------------------------------------- role resolution
@@ -1790,6 +1779,9 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     final Insets s = getShadowInsets();
     final int rawW = bodyWidthPx() + s.left + s.right;
     final int rawH = buttonSize.containerHeightPx() + s.top + s.bottom;
@@ -1804,6 +1796,9 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 

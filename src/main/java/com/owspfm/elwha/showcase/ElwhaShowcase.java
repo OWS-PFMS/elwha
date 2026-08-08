@@ -2359,7 +2359,8 @@ public final class ElwhaShowcase {
                     .setInteractionMode(IconButtonInteractionMode.SELECTABLE);
             button.setIcons(pair.resting(), pair.filled());
             final String label = entry[1];
-            button.addSelectionChangeListener(
+            button.addPropertyChangeListener(
+                ElwhaIconButton.PROPERTY_SELECTED,
                 event -> {
                   if (Boolean.TRUE.equals(event.getNewValue())) {
                     workbench.logEvent("selected: " + label);

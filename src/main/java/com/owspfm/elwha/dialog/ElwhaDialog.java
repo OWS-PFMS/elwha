@@ -3,6 +3,7 @@ package com.owspfm.elwha.dialog;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.MotionSnapshot;
 import com.owspfm.elwha.theme.ShadowPainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
@@ -21,7 +22,6 @@ import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.util.function.Consumer;
 import javax.accessibility.AccessibleContext;
@@ -676,9 +676,7 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
 
     // Cached full-size render reused across the scale tween's frames (see paint()). Held only while
     // animating; released at the steady state.
-    private BufferedImage motionSnapshot;
-    private int snapshotW;
-    private int snapshotH;
+    private final MotionSnapshot motionSnapshot = new MotionSnapshot();
 
     DialogSurface() {
       setLayout(new BorderLayout());
@@ -694,20 +692,20 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
     // progress
     // it's a plain live paint — no transform or buffer cost on the steady state.
     //
-    // The content is static during the tween, so the surface is rasterized ONCE at full size into a
-    // device-resolution buffer (cached in motionSnapshot) and only that bitmap is scaled per frame.
-    // This serves two ends: (1) text is rasterized at one stable scale, so glyph advances don't
-    // snap
+    // The content is mostly static during the tween, so the surface is rasterized at full size into
+    // a device-resolution buffer (MotionSnapshot) and only that bitmap is scaled per frame. This
+    // serves two ends: (1) text is rasterized at one stable scale, so glyph advances don't snap
     // to the pixel grid differently each frame (no left/right "shuffle"); (2) the ~18 frames of the
     // tween reuse one render instead of re-allocating a multi-MB buffer and re-running the full
     // shadow + child paint every tick — the dominant cost behind open/close lag under load. The
     // snapshot is released when the animation reaches the steady state and re-rendered on the next
-    // open/close (so theme / content / size changes are picked up).
+    // open/close (so theme / content / size changes are picked up), and re-rendered mid-tween when
+    // a descendant repaints — the #713 gap, handled inside the helper.
     @Override
     public void paint(final Graphics g) {
       final float p = Math.max(0f, Math.min(1f, motionProgress));
       if (p >= 1f) {
-        motionSnapshot = null;
+        motionSnapshot.release();
         super.paint(g);
         return;
       }
@@ -716,25 +714,7 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
       if (w <= 0 || h <= 0) {
         return;
       }
-      final AffineTransform tx = ((Graphics2D) g).getTransform();
-      final double sx = tx.getScaleX() > 0 ? tx.getScaleX() : 1.0;
-      final double sy = tx.getScaleY() > 0 ? tx.getScaleY() : 1.0;
-      final int deviceW = Math.max(1, (int) Math.ceil(w * sx));
-      final int deviceH = Math.max(1, (int) Math.ceil(h * sy));
-      if (motionSnapshot == null || snapshotW != deviceW || snapshotH != deviceH) {
-        final BufferedImage snap = new BufferedImage(deviceW, deviceH, BufferedImage.TYPE_INT_ARGB);
-        final Graphics2D bg = snap.createGraphics();
-        try {
-          bg.scale(sx, sy);
-          super.paint(bg);
-        } finally {
-          bg.dispose();
-        }
-        motionSnapshot = snap;
-        snapshotW = deviceW;
-        snapshotH = deviceH;
-      }
-
+      final BufferedImage raster = motionSnapshot.rasterFor((Graphics2D) g, w, h, super::paint);
       final Graphics2D g2 = (Graphics2D) g.create();
       try {
         final float scale = SCALE_FROM + (1f - SCALE_FROM) * p;
@@ -746,7 +726,7 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
         g2.scale(scale, scale);
         g2.translate(-cx, -cy);
         g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, p));
-        g2.drawImage(motionSnapshot, 0, 0, w, h, null);
+        g2.drawImage(raster, 0, 0, w, h, null);
       } finally {
         g2.dispose();
       }
@@ -762,9 +742,13 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
     // Gated on the tween, not unconditional: past full progress paint() short-circuits to
     // super.paint() and transforms nothing, so a bare `true` would keep forcing a whole-surface
     // re-composite for every caret blink and hover tick for as long as the dialog is open.
+    //
+    // Routed through the snapshot because being ASKED this question is Swing's signal that a
+    // descendant is redirecting a repaint up here, which is exactly when the cached raster has gone
+    // stale (#713). See MotionSnapshot for the measurement behind that.
     @Override
     public boolean isPaintingOrigin() {
-      return motionProgress < 1f;
+      return motionSnapshot.paintingOrigin(motionProgress < 1f);
     }
 
     @Override

@@ -85,7 +85,7 @@ public final class ElwhaIconButtonSelectionGroup {
     }
     if (!buttons.contains(button)) {
       buttons.add(button);
-      button.addSelectionChangeListener(listener);
+      button.addPropertyChangeListener(ElwhaIconButton.PROPERTY_SELECTED, listener);
     }
     return this;
   }

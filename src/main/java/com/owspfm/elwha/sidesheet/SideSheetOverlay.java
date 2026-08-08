@@ -3,6 +3,7 @@ package com.owspfm.elwha.sidesheet;
 import com.owspfm.elwha.overlay.AbstractElwhaOverlay;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ElwhaLayers;
+import com.owspfm.elwha.theme.MotionSnapshot;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -12,7 +13,6 @@ import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -151,9 +151,7 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
   // every tick); at full progress it's a plain live paint with no buffer cost.
   private final class SlideSurface extends JPanel {
 
-    private BufferedImage motionSnapshot;
-    private int snapshotW;
-    private int snapshotH;
+    private final MotionSnapshot motionSnapshot = new MotionSnapshot();
 
     SlideSurface() {
       super(new BorderLayout());
@@ -167,7 +165,7 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
     public void paint(final Graphics g) {
       final float p = Math.max(0f, Math.min(1f, motionProgress));
       if (p >= 1f) {
-        motionSnapshot = null;
+        motionSnapshot.release();
         super.paint(g);
         return;
       }
@@ -176,24 +174,7 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
       if (w <= 0 || h <= 0) {
         return;
       }
-      final AffineTransform tx = ((Graphics2D) g).getTransform();
-      final double sx = tx.getScaleX() > 0 ? tx.getScaleX() : 1.0;
-      final double sy = tx.getScaleY() > 0 ? tx.getScaleY() : 1.0;
-      final int deviceW = Math.max(1, (int) Math.ceil(w * sx));
-      final int deviceH = Math.max(1, (int) Math.ceil(h * sy));
-      if (motionSnapshot == null || snapshotW != deviceW || snapshotH != deviceH) {
-        final BufferedImage snap = new BufferedImage(deviceW, deviceH, BufferedImage.TYPE_INT_ARGB);
-        final Graphics2D bg = snap.createGraphics();
-        try {
-          bg.scale(sx, sy);
-          super.paint(bg);
-        } finally {
-          bg.dispose();
-        }
-        motionSnapshot = snap;
-        snapshotW = deviceW;
-        snapshotH = deviceH;
-      }
+      final BufferedImage raster = motionSnapshot.rasterFor((Graphics2D) g, w, h, super::paint);
 
       final int dx = Math.round((1f - p) * w) * (sheet.isDockedRight() ? 1 : -1);
       final Graphics2D g2 = (Graphics2D) g.create();
@@ -201,7 +182,7 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
         g2.translate(dx, 0);
         g2.setRenderingHint(
             RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2.drawImage(motionSnapshot, 0, 0, w, h, null);
+        g2.drawImage(raster, 0, 0, w, h, null);
       } finally {
         g2.dispose();
       }
@@ -215,9 +196,13 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
     // Gated on the tween, not unconditional: past full progress paint() short-circuits to
     // super.paint() and translates nothing, so a bare `true` would keep forcing a whole-surface
     // re-composite for every caret blink and hover tick for as long as the sheet is open.
+    //
+    // Routed through the snapshot because being ASKED this question is Swing's signal that a
+    // descendant is redirecting a repaint up here, which is exactly when the cached raster has gone
+    // stale (#713). See MotionSnapshot for the measurement behind that.
     @Override
     public boolean isPaintingOrigin() {
-      return motionProgress < 1f;
+      return motionSnapshot.paintingOrigin(motionProgress < 1f);
     }
   }
 
