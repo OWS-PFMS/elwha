@@ -23,7 +23,7 @@ import javax.swing.text.View;
  * </ol>
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 final class WrappingLabels {
@@ -36,6 +36,12 @@ final class WrappingLabels {
    * Wraps {@code text} in {@code <html>...</html>} if it's not already HTML and not empty.
    * Returning {@code <html>} content makes {@link JLabel} install an HTML view that supports
    * wrapping.
+   *
+   * <p>Plain text is escaped on the way in. Wrapping is an implementation detail of how these atoms
+   * wrap lines, so a caller who passed prose must not have it reinterpreted as markup — {@code
+   * setTitle("Price < 5")} renders that text, not a malformed tag. A caller who wants markup opts
+   * in explicitly by supplying a string that already starts with {@code <html>}, which is returned
+   * untouched.
    */
   static String htmlWrap(final String text) {
     if (text == null || text.isEmpty()) {
@@ -45,7 +51,12 @@ final class WrappingLabels {
     if (trimmedLower.startsWith("<html>")) {
       return text;
     }
-    return "<html>" + text + "</html>";
+    return "<html>" + escapeMarkup(text) + "</html>";
+  }
+
+  /** Ampersand first, so the replacements' own ampersands are not escaped a second time. */
+  private static String escapeMarkup(final String text) {
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
   }
 
   /**
