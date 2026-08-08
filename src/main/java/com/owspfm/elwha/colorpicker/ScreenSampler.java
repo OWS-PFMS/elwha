@@ -60,6 +60,8 @@ final class ScreenSampler {
   private static final int LOUPE_MARGIN = 24;
   private static final int CHIP_HEIGHT = 22;
 
+  private static volatile Boolean robotSupported;
+
   private final Consumer<Color> onPick;
   private final Runnable onClosed;
   private final List<SamplerWindow> windows = new ArrayList<>();
@@ -75,17 +77,27 @@ final class ScreenSampler {
   /**
    * Answers whether screen sampling can work here — a graphics environment exists and {@link Robot}
    * constructs. (A macOS permission denial is not detectable; see the class note.)
+   *
+   * <p>The {@code Robot} probe is memoized: it is a permission-checked native handle, and this runs
+   * on every {@code setEnabled} and every eyedropper refresh. Whether the platform can grant a
+   * {@code Robot} at all does not change within a process. The headless check stays live because it
+   * is free and because a test may install a toolkit after class load.
    */
   static boolean isSupported() {
     if (GraphicsEnvironment.isHeadless()) {
       return false;
     }
-    try {
-      new Robot();
-      return true;
-    } catch (final AWTException | SecurityException e) {
-      return false;
+    Boolean resolved = robotSupported;
+    if (resolved == null) {
+      try {
+        new Robot();
+        resolved = Boolean.TRUE;
+      } catch (final AWTException | SecurityException e) {
+        resolved = Boolean.FALSE;
+      }
+      robotSupported = resolved;
     }
+    return resolved;
   }
 
   /** Samples the capture at a point, clamping to the image bounds. */
