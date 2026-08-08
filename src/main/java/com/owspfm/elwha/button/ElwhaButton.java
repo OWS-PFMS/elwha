@@ -874,6 +874,19 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
   }
 
   /**
+   * Returns the action listeners registered on this button, in registration order — the {@link
+   * javax.swing.AbstractButton#getActionListeners()} analogue {@code JComponent} does not provide.
+   * The array is a fresh copy; mutating it does not change the registrations.
+   *
+   * @return the registered listeners, never {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public ActionListener[] getActionListeners() {
+    return actionListeners.toArray(new ActionListener[0]);
+  }
+
+  /**
    * Programmatically activates the button, firing its action listeners (and, in {@code SELECTABLE}
    * mode, toggling selection) exactly as a click or keyboard activation would — the {@link
    * javax.swing.JButton#doClick()} analogue {@code JComponent} doesn't provide. No ripple or press

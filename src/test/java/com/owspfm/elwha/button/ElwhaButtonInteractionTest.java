@@ -9,6 +9,7 @@ import com.owspfm.elwha.testkit.ThemeExtension;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -138,6 +139,37 @@ class ElwhaButtonInteractionTest {
     assertThat(fired[0])
         .as("a removed listener hears nothing, and a null one was never added")
         .isZero();
+  }
+
+  // ----------------------------------------------------- listener accessor
+
+  @Test
+  void registeredActionListenersReadBack() {
+    final ElwhaButton button = new ElwhaButton("Save");
+    final ActionListener first = e -> {};
+    final ActionListener second = e -> {};
+
+    button.addActionListener(first);
+    button.addActionListener(second);
+
+    assertThat(button.getActionListeners())
+        .as("#678 — listener accumulation was unassertable without a counting subclass")
+        .containsExactly(first, second);
+
+    button.removeActionListener(first);
+    assertThat(button.getActionListeners()).containsExactly(second);
+  }
+
+  @Test
+  void theListenerArrayIsACopy() {
+    final ElwhaButton button = new ElwhaButton("Save");
+    button.addActionListener(e -> {});
+
+    button.getActionListeners()[0] = null;
+
+    assertThat(button.getActionListeners())
+        .as("a caller cannot unregister a listener by writing into the returned array")
+        .doesNotContainNull();
   }
 
   // -------------------------------------------------------- disabled guards

@@ -10,6 +10,7 @@ import com.owspfm.elwha.testkit.ThemeExtension;
 import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -179,6 +180,22 @@ class ElwhaFabInteractionTest {
     assertThat(fired[0])
         .as("a removed listener hears nothing, and a null one was never added")
         .isZero();
+  }
+
+  // ----------------------------------------------------- listener accessor
+
+  @Test
+  void registeredActionListenersReadBack() {
+    final ElwhaFab fab = ElwhaFab.standard(MaterialIcons.add());
+    final ActionListener listener = e -> {};
+
+    fab.addActionListener(listener);
+
+    assertThat(fab.getActionListeners())
+        .as("#678 — the accessor is uniform across the action components")
+        .containsExactly(listener);
+    fab.removeActionListener(listener);
+    assertThat(fab.getActionListeners()).isEmpty();
   }
 
   // -------------------------------------------------------- disabled guards

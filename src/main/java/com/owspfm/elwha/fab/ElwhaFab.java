@@ -740,6 +740,19 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
   }
 
   /**
+   * Returns the action listeners registered on this FAB, in registration order — the {@link
+   * javax.swing.AbstractButton#getActionListeners()} analogue {@code JComponent} does not provide.
+   * The array is a fresh copy; mutating it does not change the registrations.
+   *
+   * @return the registered listeners, never {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public ActionListener[] getActionListeners() {
+    return actionListeners.toArray(new ActionListener[0]);
+  }
+
+  /**
    * Forces the hover visual state on or off. Primarily for visual-validation tools (the playground
    * pre-renders the hover column without requiring a live cursor) and snapshot tests — under normal
    * use the mouse listeners drive this automatically.
