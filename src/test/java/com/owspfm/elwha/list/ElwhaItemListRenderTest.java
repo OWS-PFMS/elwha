@@ -675,6 +675,72 @@ class ElwhaItemListRenderTest {
         .isEqualTo("elwhaList.activate");
   }
 
+  /**
+   * Focus position is private, so each case reads it back the way a user would: move focus, then
+   * activate, and see which item the activation landed on.
+   */
+  private void focusThen(final String start, final String keystroke, final String actionKey) {
+    Input.click(list.getComponentFor(start), 4, 4);
+    Input.pressBoundKey(list, keystroke, actionKey);
+    Input.pressBoundKey(list, "pressed SPACE", "elwhaList.activate");
+  }
+
+  @Test
+  void gridBlockArrowsStepAWholeRow() {
+    listOf("a", "b", "c", "d", "e", "f", "g", "h")
+        .setOrientation(ElwhaListOrientation.GRID)
+        .setColumns(4)
+        .setSelectionMode(SelectionMode.SINGLE);
+    layout();
+
+    focusThen("a", "pressed DOWN", "elwhaList.next");
+
+    assertThat(list.getSelectionModel().getSelected())
+        .as("Down moves one row, not one item — otherwise it does exactly what Right does")
+        .containsExactly("e");
+  }
+
+  @Test
+  void gridBlockArrowsStepAWholeRowBackwards() {
+    listOf("a", "b", "c", "d", "e", "f", "g", "h")
+        .setOrientation(ElwhaListOrientation.GRID)
+        .setColumns(4)
+        .setSelectionMode(SelectionMode.SINGLE);
+    layout();
+
+    focusThen("f", "pressed UP", "elwhaList.previous");
+
+    assertThat(list.getSelectionModel().getSelected())
+        .as("Up lands in the same column of the row above")
+        .containsExactly("b");
+  }
+
+  @Test
+  void gridInlineArrowsStillStepOneItem() {
+    listOf("a", "b", "c", "d", "e", "f", "g", "h")
+        .setOrientation(ElwhaListOrientation.GRID)
+        .setColumns(4)
+        .setSelectionMode(SelectionMode.SINGLE);
+    layout();
+
+    focusThen("a", "pressed RIGHT", "elwhaList.nextInline");
+
+    assertThat(list.getSelectionModel().getSelected())
+        .as("the inline arrows walk within the row, which is what makes the two axes distinct")
+        .containsExactly("b");
+  }
+
+  @Test
+  void blockArrowsStillStepOneItemOutsideAGrid() {
+    listOf("a", "b", "c", "d").setSelectionMode(SelectionMode.SINGLE);
+
+    focusThen("a", "pressed DOWN", "elwhaList.next");
+
+    assertThat(list.getSelectionModel().getSelected())
+        .as("a flat orientation has one axis, so the row step must not leak into it")
+        .containsExactly("b");
+  }
+
   @Test
   void spaceActivatesTheFocusedItemAsAnUnmodifiedPress() {
     listOf("a", "b").setSelectionMode(SelectionMode.SINGLE);

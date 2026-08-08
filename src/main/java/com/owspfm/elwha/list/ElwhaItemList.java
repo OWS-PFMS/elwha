@@ -2499,9 +2499,16 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
 
     @Override
     public void actionPerformed(final ActionEvent event) {
+      // In a GRID the block arrows walk whole rows. Stepping them by one, as the flat orientations
+      // do, made Down identical to Right and left a keyboard user no way to move vertically at all
+      // — the grid read as a flat sequence (#598).
+      final int step =
+          !inline && orientation == ElwhaListOrientation.GRID
+              ? delta * Math.max(1, columns)
+              : delta;
       final boolean mirrored =
           inline && !isLeftToRight() && orientation != ElwhaListOrientation.VERTICAL;
-      moveFocus(mirrored ? -delta : delta);
+      moveFocus(mirrored ? -step : step);
     }
   }
 
