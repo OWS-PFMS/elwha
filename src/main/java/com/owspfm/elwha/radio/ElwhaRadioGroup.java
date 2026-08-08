@@ -312,9 +312,10 @@ public class ElwhaRadioGroup {
 
   /**
    * Moves the selection one step from {@code from} in membership order — wrapping, skipping
-   * disabled members ("if we return to the host index, there is nothing to select") — then focuses
-   * and <em>selects</em> the arrival as a user gesture (selection follows focus). The target is
-   * held as a transient roving-stop override so the focus request survives the flag flips while
+   * disabled members — then focuses and <em>selects</em> the arrival as a user gesture (selection
+   * follows focus). The search visits each of the other members exactly once and gives up if none
+   * of them is enabled, so a group whose only enabled member is the host does not move. The target
+   * is held as a transient roving-stop override so the focus request survives the flag flips while
    * focus is in flight (design §14-3); a request that cannot succeed (headless, not in a window)
    * clears the override immediately.
    */
@@ -329,9 +330,6 @@ public class ElwhaRadioGroup {
       final ElwhaRadioButton candidate = members.get(((origin + step * n) % size + size) % size);
       if (candidate.isEnabled()) {
         target = candidate;
-        break;
-      }
-      if (candidate == from) {
         break;
       }
     }
