@@ -176,6 +176,40 @@ class MaterialIconsTest {
     assertThat(pair.filled().getIconWidth()).as("the fill half is sized to match").isEqualTo(18);
   }
 
+  /**
+   * #675 — {@code pair} used to hand back a raw {@code <name>_fill} icon whatever the bundle held.
+   * A {@link FlatSVGIcon} over a missing resource does not throw, as the javadoc once claimed; it
+   * paints a solid red error block. Routing through {@link MaterialIcons.Symbol} makes the two
+   * entry points answer identically for a glyph with no fill axis.
+   */
+  @Test
+  void aPairFallsBackToTheOutlineGlyphWhenNoFillIsBundled() {
+    final MaterialIcons.IconPair pair = MaterialIcons.pair(SYMBOL_WITHOUT_FILL);
+
+    assertThat(pair.filled().hasFound())
+        .as("the fill half resolves a real glyph instead of a missing-resource error block")
+        .isTrue();
+    assertThat(pair.filled().getName())
+        .as("with no fill axis, the filled half repeats the outline glyph")
+        .isEqualTo(pair.resting().getName());
+    assertThat(pair.filled().getName())
+        .as("the fallback never reaches for the unbundled _fill resource")
+        .doesNotContain("_fill");
+  }
+
+  @Test
+  void aPairFallbackMatchesTheSymbolEntryPoint() {
+    final MaterialIcons.IconPair pair = MaterialIcons.pair(SYMBOL_WITHOUT_FILL, 18);
+    final MaterialIcons.Symbol symbol = MaterialIcons.symbol(SYMBOL_WITHOUT_FILL);
+
+    assertThat(pair.filled().getName())
+        .as("pair and Symbol.selected answer identically for identical input")
+        .isEqualTo(symbol.selected(18).getName());
+    assertThat(pair.filled().getIconWidth())
+        .as("the fallback still honors the requested size")
+        .isEqualTo(18);
+  }
+
   // ---------------------------------------------------------------- symbol
 
   @Test
