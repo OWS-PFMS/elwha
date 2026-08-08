@@ -72,7 +72,7 @@ public final class ElwhaTabsKeyboardA11yDemo {
     bars.add(new JTextField("…and Tab leaves the bar to here"));
 
     final ElwhaSwitch auto = new ElwhaSwitch();
-    auto.setLabel("Auto-activate on focus");
+    auto.setAccessibleLabel("Auto-activate on focus");
     auto.addActionListener(
         e -> {
           fixed.setAutoActivate(auto.isSelected());
@@ -80,7 +80,7 @@ public final class ElwhaTabsKeyboardA11yDemo {
         });
 
     final ElwhaSwitch rtl = new ElwhaSwitch();
-    rtl.setLabel("Right-to-left");
+    rtl.setAccessibleLabel("Right-to-left");
     rtl.addActionListener(
         e -> {
           final ComponentOrientation o =

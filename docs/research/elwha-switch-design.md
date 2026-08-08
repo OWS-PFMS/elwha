@@ -18,7 +18,7 @@
 8. **Color crossfade tied to slide progress** — accepted deviation from M3's 67ms color snap (research §Open-2); revisit at smoke.
 9. **Drag-to-toggle** ships in V1: handle scrubs the 20px run with the pointer, commit by nearest half on release. §7.
 10. **Icons:** `setIconsVisible` / `setShowOnlySelectedIcon` / custom `setSelectedIcon`/`setUnselectedIcon`, defaults `MaterialIcons.check(16)` / `close(16)`; check rotates −45°→0 into view in selected-only mode. §3, §6.
-11. **a11y = the `JToggleButton` shape:** `AccessibleRole.TOGGLE_BUTTON` + `AccessibleState.CHECKED` + `AccessibleAction` + `AccessibleValue(0/1)`; name via `setLabel` / `labelFor`. RTL mirrors via `ComponentOrientation`. §8.
+11. **a11y = the `JToggleButton` shape:** `AccessibleRole.TOGGLE_BUTTON` + `AccessibleState.CHECKED` + `AccessibleAction` + `AccessibleValue(0/1)`; name via `setAccessibleLabel` / `labelFor`. RTL mirrors via `ComponentOrientation`. §8.
 12. **V1 = one phase, six stories** (S1 spike → interaction → motion → icons → a11y/RTL → Showcase). §11.
 
 ## §1. Scope — what V1 ships
@@ -110,7 +110,7 @@ All resolved **at paint time** (`ColorRole.resolve()` / `StateLayer.opacity()` �
 - Role `AccessibleRole.TOGGLE_BUTTON`; `AccessibleState.CHECKED` in `getAccessibleStateSet()` while selected; state-change `PropertyChangeEvent` (`ACCESSIBLE_STATE_PROPERTY`) on toggle.
 - `AccessibleAction`: one action, "click", performs the user-gesture toggle (fires both listener kinds).
 - `AccessibleValue`: 0/1, min 0, max 1; `setCurrentAccessibleValue` maps to `setSelected`.
-- Name: `setLabel(String)` (mirrors slider) → `getAccessibleName()`; a `JLabel.setLabelFor(theSwitch)` association is honored as the fallback name source. Research §A: a switch **always** needs a label — Javadoc says so on the class.
+- Name: `setAccessibleLabel(String)` (mirrors slider) → `getAccessibleName()`; a `JLabel.setLabelFor(theSwitch)` association is honored as the fallback name source. Research §A: a switch **always** needs a label — Javadoc says so on the class.
 
 ## §9. Showcase pattern
 
@@ -132,7 +132,7 @@ All resolved **at paint time** (`ColorRole.resolve()` / `StateLayer.opacity()` �
 - **S2 — interaction & state layers** (#403) — click toggle, Space press/release, drag-to-toggle commit, hover/focus/pressed layers + press ripple, pressed 28px (static snap this story), `ActionListener` semantics, `setHovered`/`setPressed` gallery hooks. §6-static/§7. Demo: `ElwhaSwitchInteractionDemo`; guard: `ElwhaSwitchInteractionSmoke`.
 - **S3 — motion** (#404) — slide animator + overshoot, retargeting size animator (250/100ms), color crossfade, drag scrubbing→handoff, reduced-motion + non-displayable snap. §6. Demo: `ElwhaSwitchMotionDemo`; guard: `ElwhaSwitchMotionSmoke`.
 - **S4 — icons** (#405) — `setIconsVisible` / `setShowOnlySelectedIcon` / custom icon slots, 24px with-icon handle, icon crossfade + −45° rotate-in, disabled icon treatments. §3/§6. Demo: `ElwhaSwitchIconsDemo`; guard: `ElwhaSwitchIconsSmoke`.
-- **S5 — a11y, label & RTL** (#406) — `AccessibleElwhaSwitch` (§8), `setLabel`/`labelFor` naming, RTL mirroring incl. drag math, focus traversal polish, disabled guards audit. Demo: `ElwhaSwitchA11yRtlDemo`; guard: `ElwhaSwitchA11ySmoke`.
+- **S5 — a11y, label & RTL** (#406) — `AccessibleElwhaSwitch` (§8), `setAccessibleLabel`/`labelFor` naming, RTL mirroring incl. drag math, focus traversal polish, disabled guards audit. Demo: `ElwhaSwitchA11yRtlDemo`; guard: `ElwhaSwitchA11ySmoke`.
 - **S6 — Showcase + CHANGELOG** (#407) — §9 panels + registration + `ElwhaSwitchShowcaseSmoke`; CHANGELOG `[Unreleased]` entry. *Completes V1; closes the epic.*
 
 ### S1 spike outcome (2026-06-10)
@@ -144,3 +144,24 @@ Confirmed — §2 locked as built. `ElwhaSwitch extends JComponent` with a plain
 1. Whether the 2px outline renders crisply inside the capsule at 1× without a half-pixel seam (stroke-inside vs inset-fill — pick whichever survives both light/dark).
 2. Whether the overshoot bezier's >1 excursion needs clamping at the travel ends (the handle may overshoot past x=36 by design — confirm it stays inside the track visually; M3's overshoot does).
 3. Exact drag threshold (px of movement before a press becomes a drag rather than a click) — propose 4px, tune at smoke.
+
+---
+
+## §16. The attached-label ruling ([#446](https://github.com/OWS-PFMS/elwha/issues/446), 2026-08-07)
+
+`ElwhaCheckbox` and `ElwhaRadioButton` grew a **visible, clickable attached label** — `setLabel`
+there widens the preferred size, extends the click target, and supplies the accessible name. This
+switch does not, and **§10's punt to an external-label / list-item pattern stands.**
+
+**Why the switch is exempt.** M3 shows switches inside list rows where the *row* owns the label,
+the tap target, and the leading/trailing arrangement — building a second attached-label mechanism
+into the switch would duplicate that container rather than complete it. The checkbox and radio have
+no such M3 container idiom; a bare box or dot with a caption beside it *is* the M3 anatomy, so the
+label has to live on the component.
+
+**What did change.** The switch's `setLabel` never attached anything — it set the accessible name
+only, exactly what the checkbox and radio call `setAccessibleLabel`. Same method name, different
+semantics across one family is the trap #436 had just fixed for the radio, so the switch's accessor
+pair is renamed **`setAccessibleLabel` / `getAccessibleLabel`**. `ElwhaSlider` carried the identical
+accessible-name-only `setLabel` and was renamed with it, since fixing one and not the other would
+have left a fresh outlier. Recorded lib-wide in `docs/development/component-api-conventions.md` §10.

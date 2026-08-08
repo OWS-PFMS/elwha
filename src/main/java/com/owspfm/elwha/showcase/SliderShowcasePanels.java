@@ -71,7 +71,7 @@ final class SliderShowcasePanels {
     enabledBox.setChecked(true);
 
     final ElwhaSlider slider = new ElwhaSlider(0, 100, 70);
-    slider.setLabel("Workbench slider");
+    slider.setAccessibleLabel("Workbench slider");
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Slider");
@@ -216,7 +216,7 @@ final class SliderShowcasePanels {
 
   private static JComponent galleryCell(final int row, final int col) {
     final ElwhaSlider s = gallerySlider(row);
-    s.setLabel("Gallery slider");
+    s.setAccessibleLabel("Gallery slider");
     switch (col) {
       case 1 -> s.setHovered(true);
       case 3 -> s.setPressed(true);
@@ -379,7 +379,7 @@ final class SliderShowcasePanels {
     if (!enabled) {
       code.append("slider.setEnabled(false);\n");
     }
-    code.append("slider.setLabel(\"Brightness\");\n");
+    code.append("slider.setAccessibleLabel(\"Brightness\");\n");
     if (range) {
       code.append(
           "slider.addChangeListener(e -> apply(slider.getLowerValue(), slider.getUpperValue()));");

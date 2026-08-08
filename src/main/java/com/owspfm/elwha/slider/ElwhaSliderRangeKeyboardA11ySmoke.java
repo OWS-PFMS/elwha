@@ -54,7 +54,7 @@ public final class ElwhaSliderRangeKeyboardA11ySmoke {
         focusableChildCount(rangeSlider) == 2);
 
     // --- accessibility: two AccessibleValue children, correct names + no-cross bounds ---
-    rangeSlider.setLabel("Price");
+    rangeSlider.setAccessibleLabel("Price");
     final AccessibleContext ctx = rangeSlider.getAccessibleContext();
     check("two accessible children", ctx.getAccessibleChildrenCount() == 2);
 

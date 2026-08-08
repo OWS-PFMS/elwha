@@ -86,7 +86,7 @@ public final class ElwhaTabsInteractionDemo {
 
     final ElwhaSwitch enabled = new ElwhaSwitch();
     enabled.setSelected(true);
-    enabled.setLabel("Bars enabled");
+    enabled.setAccessibleLabel("Bars enabled");
     enabled.addActionListener(
         e -> {
           primary.setEnabled(enabled.isSelected());

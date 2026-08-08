@@ -94,7 +94,7 @@ public final class ElwhaTabsIconsBadgesDemo {
 
     final ElwhaSwitch inlineToggle = new ElwhaSwitch();
     inlineToggle.setSelected(true);
-    inlineToggle.setLabel("Second bar inline icons");
+    inlineToggle.setAccessibleLabel("Second bar inline icons");
     inlineToggle.addActionListener(
         e -> {
           for (int i = 0; i < inline.getTabCount(); i++) {

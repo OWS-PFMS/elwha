@@ -383,7 +383,7 @@ class ElwhaSliderRangeTest {
   @Test
   void eachHandleNodeIsASliderNamedForItsEnd() {
     final ElwhaSlider slider = span();
-    slider.setLabel("Price");
+    slider.setAccessibleLabel("Price");
 
     final AccessibleContext lower =
         slider.getAccessibleContext().getAccessibleChild(0).getAccessibleContext();

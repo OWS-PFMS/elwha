@@ -58,11 +58,11 @@ public final class ElwhaSwitchA11yRtlDemo {
     wifiLabel.setLabelFor(labelled);
 
     final ElwhaSwitch named = new ElwhaSwitch();
-    named.setLabel("Bluetooth");
+    named.setAccessibleLabel("Bluetooth");
 
     final ElwhaSwitch icons = new ElwhaSwitch(true);
     icons.setIconsVisible(true);
-    icons.setLabel("Location");
+    icons.setAccessibleLabel("Location");
 
     final JLabel readout = new JLabel("toggle a switch to read its accessible state");
     for (final ElwhaSwitch s : new ElwhaSwitch[] {labelled, named, icons}) {

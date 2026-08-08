@@ -67,7 +67,7 @@ final class ProgressShowcasePanels {
 
     final DefaultBoundedRangeModel model = new DefaultBoundedRangeModel(60, 0, 0, 100);
     final ElwhaSlider valueSlider = new ElwhaSlider(model);
-    valueSlider.setLabel("Value");
+    valueSlider.setAccessibleLabel("Value");
     final ElwhaButton simulate = ElwhaButton.filledTonalButton("Simulate load");
 
     final WorkbenchControls controls = workbench.controls();

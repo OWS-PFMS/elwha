@@ -69,7 +69,7 @@ public final class ElwhaTabsMotionDemo {
             });
 
     final ElwhaSwitch auto = new ElwhaSwitch();
-    auto.setLabel("Auto-cycle");
+    auto.setAccessibleLabel("Auto-cycle");
     auto.addActionListener(
         e -> {
           if (auto.isSelected()) {
@@ -80,11 +80,11 @@ public final class ElwhaTabsMotionDemo {
         });
 
     final ElwhaSwitch slow = new ElwhaSwitch();
-    slow.setLabel("5x slow motion");
+    slow.setAccessibleLabel("5x slow motion");
     slow.addActionListener(e -> MorphAnimator.setDurationMultiplier(slow.isSelected() ? 5f : 1f));
 
     final ElwhaSwitch reduced = new ElwhaSwitch();
-    reduced.setLabel("Reduced motion");
+    reduced.setAccessibleLabel("Reduced motion");
     reduced.setSelected(MorphAnimator.isReducedMotion());
     reduced.addActionListener(e -> MorphAnimator.setReducedMotion(reduced.isSelected()));
 

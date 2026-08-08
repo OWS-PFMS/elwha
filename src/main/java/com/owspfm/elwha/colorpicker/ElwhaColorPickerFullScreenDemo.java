@@ -72,7 +72,7 @@ public final class ElwhaColorPickerFullScreenDemo {
     modal.addActionListener(e -> dialog.show(frame));
 
     final ElwhaSwitch alpha = new ElwhaSwitch();
-    alpha.setLabel("Alpha");
+    alpha.setAccessibleLabel("Alpha");
     alpha.addActionListener(e -> dialog.setAlphaEnabled(alpha.isSelected()));
 
     final JPanel content = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 16));

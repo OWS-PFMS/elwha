@@ -95,7 +95,7 @@ public final class ElwhaSliderKeyboardSmoke {
     av.setCurrentAccessibleValue(42);
     check("AccessibleValue set writes through", slider.getValue() == 42);
 
-    slider.setLabel("Brightness");
+    slider.setAccessibleLabel("Brightness");
     check("accessible name == label", "Brightness".equals(ac.getAccessibleName()));
 
     System.out.println("ElwhaSliderKeyboardSmoke: OK (keymap + RTL mirror + slider a11y)");

@@ -194,7 +194,7 @@ final class SwitchShowcasePanels {
 
   private static JComponent galleryCell(final int row, final int col) {
     final ElwhaSwitch s = galleryRow(row);
-    s.setLabel("Gallery switch");
+    s.setAccessibleLabel("Gallery switch");
     switch (col) {
       case 1 -> s.setSelected(true);
       case 2 -> {

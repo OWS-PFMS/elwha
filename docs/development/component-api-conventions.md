@@ -148,6 +148,33 @@ Two components appeared to disagree about what a setter does when the caller ask
 
 **Apply when:** adding a setter that names one member of a closed set the component was configured with, or a setting that conflicts with another. Pick the row, and say which in the javadoc.
 
+## 10. Observable change — named state fires a property change, model-backed value fires a `ChangeListener`
+
+Ruled in [#446](https://github.com/OWS-PFMS/elwha/issues/446). The library was split on how a component reports a change, and the split did not fall where it looked like it did: framed as "the checkbox is the odd one out among the selection controls" it is 3-to-1 for `ChangeListener`, but counted across every *toggle* in the catalog it is 3-to-2 the other way (`ElwhaButton`, `ElwhaIconButton` and `ElwhaCheckbox` fire property changes; `ElwhaSwitch` and `ElwhaRadioButton` expose `addChangeListener`). Numbers do not settle it, so the rule is about what the change *is*.
+
+| The observable change is… | Surface | Components |
+|---|---|---|
+| A **discrete named state** — selected, checked, expanded, collapsed, the active item | `firePropertyChange(PROPERTY_X, old, new)`, observed with `addPropertyChangeListener(PROPERTY_X, l)` | `ElwhaButton`, `ElwhaIconButton`, `ElwhaCheckbox`, `ElwhaBadge`, `ElwhaButtonSelectionGroup`, `ElwhaNavigationRail` |
+| A **value from a model** — a `BoundedRangeModel` position, progress | `addChangeListener(ChangeListener)` | `ElwhaSlider`, the progress indicators |
+
+**Why named state gets the property change.** It carries typed old and new values, which a tri-state control genuinely needs (`ChangeListener` has no payload, so a checkbox consumer would have to cache the previous value to learn *which* transition happened — and the checkbox already needs old/new internally for its accessible-state firing). Subscription is key-scoped, so a listener watching selection is not woken when the component later grows a second observable property. And `JComponent.firePropertyChange` is inherited, so it needs no `listenerList` plumbing and composes with the `AccessibleContext` property events these components already fire.
+
+**Why a model-backed value keeps `ChangeListener`.** `BoundedRangeModel` fires `ChangeEvent` natively; wrapping that in a property change would translate an event into a different shape for no gain, and `JSlider`'s own contract is the thing consumers expect to find.
+
+**User gesture vs programmatic change stays orthogonal, and is already uniform:** `ActionListener` fires only for user-driven commits, on every interactive component. That axis is not what this rule is about.
+
+**Not yet applied.** `ElwhaSwitch`, `ElwhaRadioButton` / `ElwhaRadioGroup` and `ElwhaTabs` report discrete named state through `addChangeListener` and sit on the wrong side of this table. Converting them is a real change across three components, two of them with group-level listeners, plus their suites, playgrounds and Showcase panels — filed separately rather than folded into the #440 doctrine batch. Until it lands, do not add a *new* component on the `ChangeListener` side for a named state.
+
+## 10a. The attached-label contract — and who is exempt from it
+
+`ElwhaCheckbox.setLabel` and `ElwhaRadioButton.setLabel` attach a **visible, clickable** label: it widens the preferred size, extends the click target, and supplies the accessible name. Both also expose `setAccessibleLabel` for the label-less case, where only the accessible name is wanted.
+
+**`ElwhaSwitch` is exempt, deliberately.** M3 places switches in list rows where the *row* owns the label, the tap target, and the arrangement; an attached label on the switch would duplicate that container instead of completing it (switch design doc §10 / §16). The checkbox and radio have no equivalent M3 container idiom — a bare box or dot with a caption beside it *is* the anatomy — so the label has to live on the component there.
+
+**But an exempt component must not reuse the name.** `ElwhaSwitch.setLabel` and `ElwhaSlider.setLabel` set the accessible name only, which is exactly what the checkbox and radio call `setAccessibleLabel`. One method name meaning two different things across one family is the trap [#436](https://github.com/OWS-PFMS/elwha/issues/436) fixed for the radio; both are now `setAccessibleLabel` / `getAccessibleLabel`.
+
+**Apply when:** adding a component that takes a caption. If it attaches a visible label, name it `setLabel` and add `setAccessibleLabel` for the label-less case. If it only names itself for assistive tech, `setAccessibleLabel` is the only accessor it gets — `setLabel` is reserved.
+
 ---
 
 ## Cross-reference

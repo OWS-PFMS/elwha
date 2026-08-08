@@ -125,11 +125,11 @@ public final class ElwhaSwitchA11ySmoke {
     check(
         "labelFor association names the switch",
         "Wi-Fi".equals(s.getAccessibleContext().getAccessibleName()));
-    s.setLabel("Wireless");
+    s.setAccessibleLabel("Wireless");
     check(
         "an explicit setLabel takes precedence",
         "Wireless".equals(s.getAccessibleContext().getAccessibleName()));
-    check("getLabel round-trips", "Wireless".equals(s.getLabel()));
+    check("getLabel round-trips", "Wireless".equals(s.getAccessibleLabel()));
   }
 
   private static void checkRtl() {

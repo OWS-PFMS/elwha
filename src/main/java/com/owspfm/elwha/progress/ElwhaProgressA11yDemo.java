@@ -74,7 +74,7 @@ public final class ElwhaProgressA11yDemo {
     grid.add(readout);
 
     final ElwhaSwitch indeterminate = new ElwhaSwitch();
-    indeterminate.setLabel("Indeterminate");
+    indeterminate.setAccessibleLabel("Indeterminate");
     indeterminate.addActionListener(
         e -> {
           final boolean on = indeterminate.isSelected();
@@ -84,7 +84,7 @@ public final class ElwhaProgressA11yDemo {
           updateReadout();
         });
     final ElwhaSwitch rtl = new ElwhaSwitch();
-    rtl.setLabel("RTL");
+    rtl.setAccessibleLabel("RTL");
     rtl.addActionListener(
         e -> {
           final ComponentOrientation orientation =

@@ -86,7 +86,7 @@ public final class ElwhaSliderVerticalInteractionDemo {
     slider.setSizeVariant(size);
     slider.setOrientation(ElwhaSlider.Orientation.VERTICAL);
     slider.setValueIndicatorEnabled(true);
-    slider.setLabel("Vertical " + size);
+    slider.setAccessibleLabel("Vertical " + size);
     if (insetIcon) {
       slider.setInsetIcon(MaterialIcons.brightnessAuto());
     }

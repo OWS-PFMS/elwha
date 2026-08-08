@@ -67,7 +67,7 @@ public final class ElwhaColorPickerAlphaDemo {
 
     final ElwhaSwitch alphaToggle = new ElwhaSwitch();
     alphaToggle.setSelected(true);
-    alphaToggle.setLabel("Alpha enabled");
+    alphaToggle.setAccessibleLabel("Alpha enabled");
     alphaToggle.addActionListener(e -> picker.setAlphaEnabled(alphaToggle.isSelected()));
 
     final JPanel center = new JPanel(new FlowLayout(FlowLayout.LEADING, 24, 16));

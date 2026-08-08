@@ -674,13 +674,13 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Returns the slider's accessible label, or {@code null} if none was set via {@link
-   * #setLabel(String)}.
+   * #setAccessibleLabel(String)}.
    *
    * @return the accessible label text, or {@code null}
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
-  public String getLabel() {
+  public String getAccessibleLabel() {
     return label;
   }
 
@@ -691,10 +691,10 @@ public class ElwhaSlider extends JComponent {
    * value here takes precedence.
    *
    * @param label the accessible label, or {@code null} to clear
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
-  public void setLabel(final String label) {
+  public void setAccessibleLabel(final String label) {
     this.label = label;
   }
 
@@ -2498,9 +2498,10 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Accessible context for the slider — reports {@link AccessibleRole#SLIDER}, exposes {@link
-   * AccessibleValue} (current / min / max), and uses the {@link ElwhaSlider#setLabel(String) label}
-   * (falling back to an associated {@code labelFor} {@link javax.swing.JLabel}) as the accessible
-   * name so a screen reader announces label &rarr; role &rarr; value (research §X #50).
+   * AccessibleValue} (current / min / max), and uses the {@link
+   * ElwhaSlider#setAccessibleLabel(String) label} (falling back to an associated {@code labelFor}
+   * {@link javax.swing.JLabel}) as the accessible name so a screen reader announces label &rarr;
+   * role &rarr; value (research §X #50).
    *
    * @author Charles Bryan
    * @version v0.4.0

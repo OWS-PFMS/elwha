@@ -73,7 +73,7 @@ Per research §B/§X (authoritative keymap in §X #49): **drag** (smooth; snap-t
 
 ## §8. Accessibility
 
-Role **`AccessibleRole.SLIDER`**; expose **`AccessibleValue`** (current/min/max). Accessible **name = adjacent label** (a `setLabel`/`labelFor`-style hook or associated `JLabel`); screen reader reads label → role → value. **Range:** two foci (one per handle) with per-handle value text (web `aria-*-start/end` analogue) — custom, built in the Range phase. **External +/− affordances** are `ElwhaIconButton`s (Button role), outside the slider's a11y node. **End stop indicators** guarantee the inactive-track end ≥3:1 contrast (research §X #48).
+Role **`AccessibleRole.SLIDER`**; expose **`AccessibleValue`** (current/min/max). Accessible **name = adjacent label** (a `setAccessibleLabel`/`labelFor`-style hook or associated `JLabel`); screen reader reads label → role → value. **Range:** two foci (one per handle) with per-handle value text (web `aria-*-start/end` analogue) — custom, built in the Range phase. **External +/− affordances** are `ElwhaIconButton`s (Button role), outside the slider's a11y node. **End stop indicators** guarantee the inactive-track end ≥3:1 contrast (research §X #48).
 
 ## §9. Showcase pattern
 

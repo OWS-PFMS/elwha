@@ -52,12 +52,12 @@ public final class ElwhaSliderRangeKeyboardA11yDemo {
 
     final ElwhaSlider price = ElwhaSlider.range(0, 100, 30, 70);
     price.setValueIndicatorEnabled(true);
-    price.setLabel("Price range");
+    price.setAccessibleLabel("Price range");
 
     final ElwhaSlider budget = ElwhaSlider.range(0, 100, 25, 75);
     budget.setValueIndicatorEnabled(true);
     budget.setStops(5);
-    budget.setLabel("Budget percent");
+    budget.setAccessibleLabel("Budget percent");
 
     final JPanel grid = new JPanel(new GridLayout(0, 1, 0, 28));
     grid.setBorder(BorderFactory.createEmptyBorder(48, 32, 24, 32));

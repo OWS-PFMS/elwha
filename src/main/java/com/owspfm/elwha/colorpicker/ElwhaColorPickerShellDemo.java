@@ -69,7 +69,7 @@ public final class ElwhaColorPickerShellDemo {
 
     final ElwhaSwitch enabled = new ElwhaSwitch();
     enabled.setSelected(true);
-    enabled.setLabel("Enabled");
+    enabled.setAccessibleLabel("Enabled");
     enabled.addActionListener(e -> picker.setEnabled(enabled.isSelected()));
 
     final JPanel pickers = new JPanel(new FlowLayout(FlowLayout.LEADING, 24, 16));
