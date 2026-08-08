@@ -238,4 +238,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Apache License, Version 2.0 — see [LICENSE](LICENSE). Bundled third-party assets (Material Symbols, Inter font, Capitaine cursors) carry their own licenses; see [`NOTICE`](NOTICE).
+Apache License, Version 2.0 — see [LICENSE](LICENSE). Bundled third-party assets (Material Symbols, Inter font) carry their own licenses; see [`NOTICE`](NOTICE).
