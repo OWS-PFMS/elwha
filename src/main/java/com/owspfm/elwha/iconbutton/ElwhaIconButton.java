@@ -965,15 +965,14 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     }
   }
 
-  private void pollHoverState() {
+  /** The hover poll's tick body. Package-private so the suite can drive it without a live Timer. */
+  void pollHoverState() {
     if (!hovered) {
       stopHoverPolling();
       return;
     }
     if (!isShowing()) {
-      hovered = false;
-      pressed = false;
-      stopHoverPolling();
+      endPollHover();
       return;
     }
     final java.awt.PointerInfo info = java.awt.MouseInfo.getPointerInfo();
@@ -984,11 +983,24 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     final Point local = new Point(screenPt);
     SwingUtilities.convertPointFromScreen(local, this);
     if (!containsPoint(local)) {
-      hovered = false;
-      pressed = false;
-      stopHoverPolling();
+      endPollHover();
       repaint();
     }
+  }
+
+  // The poll's exit path is a mouseExited that never arrived (the pointer left the window, or the
+  // component was hidden mid-press), so it has to unwind exactly what mouseExited does. Reversing
+  // pressMorph is the part that bites: morphedRadii reads pressMorph.progress(), not `pressed`, so
+  // clearing the flag alone leaves the button resting in the pressed corner geometry until the
+  // next press cycle happens to reverse it.
+  private void endPollHover() {
+    final boolean wasPressed = pressed;
+    hovered = false;
+    pressed = false;
+    if (wasPressed) {
+      pressMorph.reverse();
+    }
+    stopHoverPolling();
   }
 
   private boolean isCursorStillInsideButton(final MouseEvent event) {
@@ -1238,6 +1250,16 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   public void setEnabled(final boolean enabled) {
     super.setEnabled(enabled);
     setCursor(enabled ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
+    if (!enabled) {
+      endPollHover();
+      // A ripple in flight when the button is disabled mid-press is invisible (the disabled paint
+      // branch never reaches paintRippleLayer) but the Timer would otherwise keep ticking and
+      // scheduling repaints for the rest of the 400 ms window — wasted EDT work.
+      if (rippleTimer != null) {
+        rippleTimer.stop();
+      }
+      rippleProgress = 1f;
+    }
     repaint();
   }
 

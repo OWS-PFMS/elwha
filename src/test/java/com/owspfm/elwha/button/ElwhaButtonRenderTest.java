@@ -454,6 +454,25 @@ class ElwhaButtonRenderTest {
   }
 
   @Test
+  void aReEnabledButtonPaintsNoStateLayerFromBeforeItWasDisabled() {
+    final ElwhaButton button = chromeOnly(ButtonVariant.FILLED);
+    final Point center = bodyCenter(button);
+    button.setHovered(true);
+    button.setPressed(true);
+
+    button.setEnabled(false);
+    button.setEnabled(true);
+
+    Pixels.assertPixelNear(
+        render(button),
+        center.x,
+        center.y,
+        restingFill(ButtonVariant.FILLED),
+        "disabling drops the hover and press state, so re-enabling resumes at rest instead of"
+            + " replaying an overlay the pointer left behind");
+  }
+
+  @Test
   void freshButtonDefaults() {
     final ElwhaButton button = new ElwhaButton();
 

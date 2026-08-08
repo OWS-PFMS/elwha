@@ -105,6 +105,42 @@ class ElwhaIconButtonMorphTest {
   }
 
   @Test
+  void aPollDetectedExitRestoresTheRestingCornersToo() {
+    final ElwhaIconButton button = bigButton(ShapeScale.FULL);
+    Input.enter(button, SIDE / 2, SIDE / 2);
+    Input.press(button, SIDE / 2, SIDE / 2);
+
+    // The case the poll exists to catch: the pointer left the window (or the button was hidden)
+    // with the press still down, so no mouseExited will arrive. An unrealized button is never
+    // showing, which is exactly that branch.
+    button.pollHoverState();
+
+    Pixels.assertPixelNear(
+        Pixels.render(button, SIDE, SIDE),
+        ROUND_PROBE,
+        ROUND_PROBE,
+        ColorRole.SURFACE.resolve(),
+        "clearing the flag is not enough — morphedRadii reads the animator, so the poll has to"
+            + " reverse the morph or the button rests in the pressed geometry");
+  }
+
+  @Test
+  void disablingMidPressRestoresTheRestingCorners() {
+    final ElwhaIconButton button = bigButton(ShapeScale.FULL);
+    Input.press(button, SIDE / 2, SIDE / 2);
+
+    button.setEnabled(false);
+    button.setEnabled(true);
+
+    Pixels.assertPixelNear(
+        Pixels.render(button, SIDE, SIDE),
+        ROUND_PROBE,
+        ROUND_PROBE,
+        ColorRole.SURFACE.resolve(),
+        "a button disabled mid-press comes back at rest, not still wearing the press");
+  }
+
+  @Test
   void keyboardActivationPulsesTheSameMorphWithoutThePressedLayer() {
     final ElwhaIconButton button = bigButton(ShapeScale.FULL);
 
