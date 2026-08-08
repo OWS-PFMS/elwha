@@ -49,7 +49,7 @@ import javax.swing.event.EventListenerList;
  * behavior and plain focusability.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public class ElwhaRadioGroup {
