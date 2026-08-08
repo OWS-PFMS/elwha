@@ -193,9 +193,22 @@ class ElwhaButtonGeometryTest {
   void aScalableIconIsRederivedToTheTiersIconSlot(final ButtonSize size) {
     final ElwhaButton button = new ElwhaButton("Save", MaterialIcons.add()).setButtonSize(size);
 
-    assertThat(button.getIcon().getIconWidth())
+    assertThat(button.paintedIcon().getIconWidth())
         .as("%s paints its glyph at the slot the layout reserves", size)
         .isEqualTo(size.iconSizePx());
+  }
+
+  @Test
+  void theGetterHandsBackTheInstalledIconNotTheFilteredCopy() {
+    final Icon installed = MaterialIcons.add();
+    final ElwhaButton button = new ElwhaButton("Save", installed).setButtonSize(ButtonSize.XL);
+
+    assertThat(button.getIcon())
+        .as("the getter returns what the caller installed, reusable in another component (#664)")
+        .isSameAs(installed);
+    assertThat(button.paintedIcon())
+        .as("while the painted glyph stays a private, filter-bound derivation")
+        .isNotSameAs(installed);
   }
 
   @Test
@@ -204,7 +217,7 @@ class ElwhaButtonGeometryTest {
 
     button.setButtonSize(ButtonSize.XL);
 
-    assertThat(button.getIcon().getIconWidth())
+    assertThat(button.paintedIcon().getIconWidth())
         .as("the glyph follows the tier rather than staying at its install size")
         .isEqualTo(ButtonSize.XL.iconSizePx());
   }
@@ -214,7 +227,7 @@ class ElwhaButtonGeometryTest {
     final ElwhaButton button =
         new ElwhaButton("Save", new FixedIcon(9)).setButtonSize(ButtonSize.L);
 
-    assertThat(button.getIcon().getIconWidth())
+    assertThat(button.paintedIcon().getIconWidth())
         .as("a non-vector icon cannot be rescaled losslessly, so it is left alone")
         .isEqualTo(9);
   }

@@ -35,7 +35,7 @@ import javax.swing.JComponent;
  * </ol>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class IconSizeFidelityDemo {
@@ -67,12 +67,13 @@ public final class IconSizeFidelityDemo {
     System.out.println("PASS: all icon-size-fidelity checks passed.");
   }
 
-  // FAB: the stored painted glyph is derived to size.iconPx() at every tier (read via reflection —
-  // ElwhaFab exposes no icon getter).
+  // FAB: the stored painted glyph is derived to size.iconPx() at every tier. Read via reflection —
+  // the painted glyph is a private paint detail on all three components (#664); getIcon() hands
+  // back the icon the caller installed, which is exactly the unscaled 24 px source here.
   private static void fabGlyphMatchesTier() {
     for (final ElwhaFab.Size size : ElwhaFab.Size.values()) {
       final ElwhaFab fab = ElwhaFab.standard(MaterialIcons.add()).setFabSize(size);
-      final Icon painted = fabIcon(fab);
+      final Icon painted = paintedIcon(ElwhaFab.class, fab, "icon");
       check(
           "FAB " + size + ": painted glyph is " + size.iconPx() + " px (got " + dims(painted) + ")",
           painted != null
@@ -81,14 +82,14 @@ public final class IconSizeFidelityDemo {
     }
   }
 
-  // Button: getIcon() returns the painted glyph, derived to buttonSize.iconSizePx() at every tier.
+  // Button: the painted glyph is derived to buttonSize.iconSizePx() at every tier.
   private static void buttonGlyphMatchesTier() {
     for (final ButtonSize size : ButtonSize.values()) {
       final ElwhaButton button =
           new ElwhaButton("Label", MaterialIcons.add())
               .setVariant(ButtonVariant.FILLED)
               .setButtonSize(size);
-      final Icon painted = button.getIcon();
+      final Icon painted = paintedIcon(ElwhaButton.class, button, "icon");
       check(
           "Button "
               + size
@@ -103,11 +104,11 @@ public final class IconSizeFidelityDemo {
     }
   }
 
-  // IconButton: getIcon() returns the painted glyph, derived to the tier's iconPx() at every tier.
+  // IconButton: the painted glyph is derived to the tier's iconPx() at every tier.
   private static void iconButtonGlyphMatchesTier() {
     for (final IconButtonSize size : IconButtonSize.values()) {
       final ElwhaIconButton button = new ElwhaIconButton(MaterialIcons.add()).setButtonSize(size);
-      final Icon painted = button.getIcon();
+      final Icon painted = paintedIcon(ElwhaIconButton.class, button, "restingIcon");
       check(
           "IconButton "
               + size
@@ -126,7 +127,7 @@ public final class IconSizeFidelityDemo {
   // the paint source, no longer just a layout hint).
   private static void iconButtonRawSetIconSizeRescales() {
     final ElwhaIconButton button = new ElwhaIconButton(MaterialIcons.add()).setIconSize(40);
-    final Icon painted = button.getIcon();
+    final Icon painted = paintedIcon(ElwhaIconButton.class, button, "restingIcon");
     check(
         "IconButton setIconSize(40): painted glyph is 40 px (got " + dims(painted) + ")",
         painted != null && painted.getIconWidth() == 40 && painted.getIconHeight() == 40);
@@ -173,13 +174,15 @@ public final class IconSizeFidelityDemo {
     return true;
   }
 
-  private static Icon fabIcon(final ElwhaFab fab) {
+  private static Icon paintedIcon(
+      final Class<?> owner, final Object component, final String field) {
     try {
-      final java.lang.reflect.Field f = ElwhaFab.class.getDeclaredField("icon");
+      final java.lang.reflect.Field f = owner.getDeclaredField(field);
       f.setAccessible(true);
-      return (Icon) f.get(fab);
+      return (Icon) f.get(component);
     } catch (final ReflectiveOperationException e) {
-      throw new IllegalStateException("ElwhaFab.icon field moved — update this smoke", e);
+      throw new IllegalStateException(
+          owner.getSimpleName() + "." + field + " moved — update this smoke", e);
     }
   }
 

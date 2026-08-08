@@ -605,11 +605,24 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
    * Returns the installed icon. Standard FAB always has an icon; Extended FAB created via {@link
    * #extended(String)} has none. Extended FAB created via {@link #extended(Icon, String)} has one.
    *
+   * <p>This is the {@link Icon} the caller handed to the factory, not the glyph this FAB paints.
+   * The painted glyph is a private derivation — a copy re-sized to the active size tier's icon slot
+   * and bound to <em>this</em> FAB's color filter — and is deliberately not exposed, so an icon
+   * round-tripped through this getter into another component does not arrive with its tint slaved
+   * to this one.
+   *
    * @return the icon, or {@code null} when none is installed
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public Icon getIcon() {
+    return rawIcon;
+  }
+
+  // The glyph actually painted at the active tier — a filtered, re-sized copy of the installed
+  // icon. Package-private on purpose (#664): handing the filtered clone to a consumer would slave
+  // its tint to this instance, which is the very sharing bug themeIcon() exists to prevent.
+  Icon paintedIcon() {
     return icon;
   }
 

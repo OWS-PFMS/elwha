@@ -152,7 +152,7 @@ class ElwhaFabGeometryTest {
   void aScalableGlyphIsRederivedToTheTiersIconSize(final ElwhaFab.Size size) {
     final ElwhaFab fab = ElwhaFab.standard(MaterialIcons.add()).setFabSize(size);
 
-    assertThat(fab.getIcon().getIconWidth())
+    assertThat(fab.paintedIcon().getIconWidth())
         .as("%s paints its glyph at the size the layout reserves", size)
         .isEqualTo(size.iconPx());
   }

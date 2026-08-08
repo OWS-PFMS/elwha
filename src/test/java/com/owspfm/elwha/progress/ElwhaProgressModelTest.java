@@ -1,6 +1,7 @@
 package com.owspfm.elwha.progress;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.within;
 
 import com.owspfm.elwha.testkit.EdtInterceptor;
@@ -241,6 +242,29 @@ class ElwhaProgressModelTest {
 
     assertThat(indicator.getIndicatorColorRole()).isEqualTo(ColorRole.PRIMARY);
     assertThat(indicator.getTrackColorRole()).isEqualTo(ColorRole.SECONDARY_CONTAINER);
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("indicators")
+  void aNullColorRoleIsRejectedAtTheSetterNotAtPaintTime(
+      final String name, final Supplier<AbstractElwhaProgressIndicator> factory) {
+    final AbstractElwhaProgressIndicator indicator = factory.get();
+
+    assertThatNullPointerException()
+        .as("the never-null indicator role is enforced where the caller can see it (#637)")
+        .isThrownBy(() -> indicator.setIndicatorColorRole(null));
+    assertThatNullPointerException()
+        .as("and likewise the track role")
+        .isThrownBy(() -> indicator.setTrackColorRole(null));
+  }
+
+  @Test
+  void aNullStopIndicatorRoleIsRejectedAtTheSetter() {
+    final ElwhaLinearProgressIndicator bar = new ElwhaLinearProgressIndicator();
+
+    assertThatNullPointerException()
+        .as("the linear-only stop-dot role follows the same eager rule (#637)")
+        .isThrownBy(() -> bar.setStopIndicatorColorRole(null));
   }
 
   // -------------------------------------------------------------- wave axes
