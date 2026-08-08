@@ -51,6 +51,20 @@ class MaterialPalettesTest {
         .contains("Material Baseline");
   }
 
+  @Test
+  void baselineIsTheVeryInstanceThePrimaryTierCarries() {
+    assertThat(MaterialPalettes.primary())
+        .as("one palette resource means one Theme, so a picker can match the installed one")
+        .contains(MaterialPalettes.baseline());
+
+    assertThat(
+            MaterialPalettes.primary().stream()
+                .filter(theme -> theme == MaterialPalettes.baseline())
+                .count())
+        .as("and exactly one entry is it — not an equal copy loaded a second time")
+        .isEqualTo(1L);
+  }
+
   // ------------------------------------------------------------ discovery
 
   @Test

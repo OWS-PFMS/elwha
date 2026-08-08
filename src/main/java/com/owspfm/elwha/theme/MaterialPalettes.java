@@ -11,6 +11,8 @@ import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -37,8 +39,12 @@ import java.util.jar.JarFile;
  * through {@link PaletteLoader}: the token <em>vocabulary</em> is Elwha's, the palette
  * <em>values</em> are the consumer's (see {@code elwha-design-direction.md} §13).
  *
+ * <p>Every accessor here returns the <em>same</em> {@link Theme} instance for a given bundled
+ * palette, so a picker can match the installed theme against a tier by identity — {@link
+ * #baseline()} is the very object {@link #primary()} carries, not a second load of the same JSON.
+ *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public final class MaterialPalettes {
@@ -60,7 +66,14 @@ public final class MaterialPalettes {
           .thenComparingDouble(MaterialPalettes::primaryHue)
           .thenComparing(Theme::name);
 
-  private static volatile Theme baseline;
+  // One Theme per palette resource, shared by every accessor that reaches it. baseline.json lives
+  // *inside* the primary tier, so loading it twice — once by path, once by directory sweep — gave
+  // two equal-but-distinct objects and Theme declares no value equality, which left
+  // primary().contains(baseline()) false and a palette picker unable to mark the installed
+  // baseline as selected (#671). Keying the cache on the resource path is what makes the two
+  // entry points agree, without making baseline() depend on the sweep finding it.
+  private static final Map<String, Theme> BY_RESOURCE = new ConcurrentHashMap<>();
+
   private static volatile List<Theme> primary;
   private static volatile List<Theme> secondary;
 
@@ -73,6 +86,10 @@ public final class MaterialPalettes {
    * <p>Loaded once from the bundled JSON resource and cached. This is the theme to install when
    * validating the pipeline or when a consumer has not yet supplied its own palette.
    *
+   * <p>The baseline is a member of the {@link #primary()} tier, and this returns that tier's very
+   * instance — so {@code primary().contains(baseline())} holds and a picker can find it by
+   * identity.
+   *
    * <p><strong>Known quirk:</strong> the baseline ships a single-seed M3 export, which under M3's
    * default Tonal Spot algorithm produces near-identical {@code primaryContainer} and {@code
    * secondaryContainer} values in <em>light</em> mode (high-tone end of the tonal palette, where
@@ -83,20 +100,15 @@ public final class MaterialPalettes {
    * multi-seed core colors.
    *
    * @return the baseline theme
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public static Theme baseline() {
-    Theme cached = baseline;
-    if (cached != null) {
-      return cached;
-    }
-    synchronized (MaterialPalettes.class) {
-      if (baseline == null) {
-        baseline = PaletteLoader.loadTheme(BASELINE_RESOURCE);
-      }
-      return baseline;
-    }
+    return load(BASELINE_RESOURCE);
+  }
+
+  private static Theme load(final String resource) {
+    return BY_RESOURCE.computeIfAbsent(resource, PaletteLoader::loadTheme);
   }
 
   /**
@@ -153,7 +165,7 @@ public final class MaterialPalettes {
   private static List<Theme> loadTier(final String dir) {
     final List<Theme> themes = new ArrayList<>();
     for (final String fileName : discoverPaletteResources(dir)) {
-      themes.add(PaletteLoader.loadTheme(dir + "/" + fileName));
+      themes.add(load(dir + "/" + fileName));
     }
     themes.sort(SPECTRAL);
     return List.copyOf(themes);
