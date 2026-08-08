@@ -19,11 +19,11 @@ import javax.swing.WindowConstants;
  * Phase-1 / S1 playground (story #402) — the {@link ElwhaSwitch} architecture-spike chrome
  * skeleton: the four static state cells (selected/unselected &times; enabled/disabled) painted from
  * tokens, with no interaction yet. The buttons dogfood {@link ElwhaButton}: one flips the top pair
- * programmatically (exercising {@code setSelected} + {@code ChangeListener}), one toggles
+ * programmatically (exercising {@code setSelected} + {@code PROPERTY_SELECTED}), one toggles
  * light/dark to prove the paint-time token resolve re-skins live.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaSwitchChromeDemo {
@@ -59,8 +59,10 @@ public final class ElwhaSwitchChromeDemo {
 
     final JLabel changeReadout = new JLabel("changes: 0");
     final int[] changes = {0};
-    off.addChangeListener(e -> changeReadout.setText("changes: " + ++changes[0]));
-    on.addChangeListener(e -> changeReadout.setText("changes: " + ++changes[0]));
+    off.addPropertyChangeListener(
+        ElwhaSwitch.PROPERTY_SELECTED, e -> changeReadout.setText("changes: " + ++changes[0]));
+    on.addPropertyChangeListener(
+        ElwhaSwitch.PROPERTY_SELECTED, e -> changeReadout.setText("changes: " + ++changes[0]));
 
     final JPanel grid = new JPanel(new GridLayout(0, 2, 24, 20));
     grid.setBorder(BorderFactory.createEmptyBorder(28, 32, 24, 32));

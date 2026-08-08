@@ -10,6 +10,9 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.StateLayer;
 import java.awt.image.BufferedImage;
+import java.beans.PropertyChangeEvent;
+import java.util.ArrayList;
+import java.util.List;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
 import javax.accessibility.AccessibleState;
@@ -50,14 +53,14 @@ class ElwhaSwitchInteractionTest {
           actions[0]++;
           lastCommand[0] = e.getActionCommand();
         });
-    s.addChangeListener(e -> changes[0]++);
+    s.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> changes[0]++);
 
     Input.press(s, 30, CY);
     Input.release(s, 30, CY);
 
     assertThat(s.isSelected()).as("click toggles on").isTrue();
     assertThat(actions[0]).as("ActionListener fires once").isEqualTo(1);
-    assertThat(changes[0]).as("ChangeListener fires once").isEqualTo(1);
+    assertThat(changes[0]).as("PROPERTY_SELECTED fires once").isEqualTo(1);
     assertThat(lastCommand[0])
         .as("action command reflects the committed state")
         .isEqualTo("selected");
@@ -68,7 +71,7 @@ class ElwhaSwitchInteractionTest {
     final ElwhaSwitch s = sized(new ElwhaSwitch(true));
     final int[] events = {0};
     s.addActionListener(e -> events[0]++);
-    s.addChangeListener(e -> events[0]++);
+    s.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> events[0]++);
 
     Input.press(s, 30, CY);
     Input.release(s, 200, CY);
@@ -78,16 +81,16 @@ class ElwhaSwitchInteractionTest {
   }
 
   @Test
-  void programmaticSetSelectedFiresChangeListenerOnly() {
+  void programmaticSetSelectedFiresTheSelectionPropertyOnly() {
     final ElwhaSwitch s = sized(new ElwhaSwitch());
     final int[] actions = {0};
     final int[] changes = {0};
     s.addActionListener(e -> actions[0]++);
-    s.addChangeListener(e -> changes[0]++);
+    s.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> changes[0]++);
 
     s.setSelected(true);
 
-    assertThat(changes[0]).as("setSelected fires ChangeListener").isEqualTo(1);
+    assertThat(changes[0]).as("setSelected fires PROPERTY_SELECTED").isEqualTo(1);
     assertThat(actions[0]).as("setSelected never fires ActionListener").isZero();
   }
 
@@ -132,7 +135,7 @@ class ElwhaSwitchInteractionTest {
     s.setEnabled(false);
     final int[] events = {0};
     s.addActionListener(e -> events[0]++);
-    s.addChangeListener(e -> events[0]++);
+    s.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> events[0]++);
 
     Input.press(s, 30, CY);
     Input.release(s, 30, CY);
@@ -212,6 +215,38 @@ class ElwhaSwitchInteractionTest {
         CY,
         ColorRole.PRIMARY.resolve(),
         "selected track interior resolves PRIMARY in " + mode);
+  }
+
+  // -------------------------------------------------------- property changes
+
+  @Test
+  void everySelectionChangeCarriesBothValues() {
+    final ElwhaSwitch s = sized(new ElwhaSwitch());
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    s.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, events::add);
+
+    s.setSelected(true);
+    s.setSelected(false);
+
+    assertThat(events).as("one event per real transition").hasSize(2);
+    assertThat(events.get(0).getOldValue()).as("the old value is carried").isEqualTo(false);
+    assertThat(events.get(0).getNewValue()).as("the new value is carried").isEqualTo(true);
+    assertThat(events.get(1).getOldValue()).as("and again on the way back").isEqualTo(true);
+    assertThat(events.get(1).getNewValue()).isEqualTo(false);
+  }
+
+  @Test
+  void aSelectionListenerIsNotWokenByOtherProperties() {
+    final ElwhaSwitch s = sized(new ElwhaSwitch());
+    final int[] changes = {0};
+    s.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> changes[0]++);
+
+    s.setEnabled(false);
+    s.setAccessibleLabel("Wi-Fi");
+
+    assertThat(changes[0])
+        .as("subscription is key-scoped — a second observable property must not wake it")
+        .isZero();
   }
 
   private static ElwhaSwitch sized(final ElwhaSwitch s) {

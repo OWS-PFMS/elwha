@@ -137,14 +137,14 @@ class ElwhaSwitchLabelAccessibilityTest {
     final int[] actions = {0};
     final int[] changes = {0};
     toggle.addActionListener(e -> actions[0]++);
-    toggle.addChangeListener(e -> changes[0]++);
+    toggle.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> changes[0]++);
 
     contextOf(toggle).getAccessibleAction().doAccessibleAction(0);
 
     assertThat(actions[0])
         .as("assistive technology acts as the user, so the action listeners fire")
         .isEqualTo(1);
-    assertThat(changes[0]).as("along with the change listeners").isEqualTo(1);
+    assertThat(changes[0]).as("along with the selection property").isEqualTo(1);
   }
 
   @Test
@@ -178,7 +178,7 @@ class ElwhaSwitchLabelAccessibilityTest {
     final int[] actions = {0};
     final int[] changes = {0};
     toggle.addActionListener(e -> actions[0]++);
-    toggle.addChangeListener(e -> changes[0]++);
+    toggle.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> changes[0]++);
 
     final boolean accepted = contextOf(toggle).getAccessibleValue().setCurrentAccessibleValue(1);
 
