@@ -10,12 +10,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * Tier A coverage of {@link IconButtonGroup} — the mutual-exclusion helper that stands in for
- * Swing's {@code ButtonGroup}, which cannot accept an {@link ElwhaIconButton} because the primitive
- * extends {@code JComponent} rather than {@code AbstractButton}.
+ * Tier A coverage of {@link ElwhaIconButtonSelectionGroup} — the mutual-exclusion helper that
+ * stands in for Swing's {@code ButtonGroup}, which cannot accept an {@link ElwhaIconButton} because
+ * the primitive extends {@code JComponent} rather than {@code AbstractButton}.
  */
 @ExtendWith({EdtInterceptor.class, ThemeExtension.class})
-class IconButtonGroupTest {
+class ElwhaIconButtonSelectionGroupTest {
 
   private static ElwhaIconButton toggle() {
     return new ElwhaIconButton(MaterialIcons.gridView())
@@ -24,7 +24,7 @@ class IconButtonGroupTest {
 
   @Test
   void aFreshGroupIsEmptyAndPermissive() {
-    final IconButtonGroup group = new IconButtonGroup();
+    final ElwhaIconButtonSelectionGroup group = new ElwhaIconButtonSelectionGroup();
 
     assertThat(group.size()).as("a fresh group holds no buttons").isZero();
     assertThat(group.isMandatory())
@@ -35,11 +35,11 @@ class IconButtonGroupTest {
 
   @Test
   void onlySelectableButtonsMayJoin() {
-    assertThatThrownBy(() -> new IconButtonGroup().add(new ElwhaIconButton()))
+    assertThatThrownBy(() -> new ElwhaIconButtonSelectionGroup().add(new ElwhaIconButton()))
         .as("a push button cannot participate in a mutually-exclusive selection")
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("SELECTABLE");
-    assertThatThrownBy(() -> new IconButtonGroup().add(null))
+    assertThatThrownBy(() -> new ElwhaIconButtonSelectionGroup().add(null))
         .as("and null is rejected outright")
         .isInstanceOf(NullPointerException.class);
   }
@@ -47,14 +47,15 @@ class IconButtonGroupTest {
   @Test
   void addingTheSameButtonTwiceRegistersItOnce() {
     final ElwhaIconButton button = toggle();
-    final IconButtonGroup group = new IconButtonGroup().add(button).add(button);
+    final ElwhaIconButtonSelectionGroup group =
+        new ElwhaIconButtonSelectionGroup().add(button).add(button);
 
     assertThat(group.size()).as("the group de-duplicates its members").isEqualTo(1);
   }
 
   @Test
   void addReturnsTheGroupForChaining() {
-    final IconButtonGroup group = new IconButtonGroup();
+    final ElwhaIconButtonSelectionGroup group = new ElwhaIconButtonSelectionGroup();
 
     assertThat(group.add(toggle())).as("add chains").isSameAs(group);
     assertThat(group.remove(toggle())).as("and so does remove").isSameAs(group);
@@ -65,7 +66,8 @@ class IconButtonGroupTest {
     final ElwhaIconButton first = toggle();
     final ElwhaIconButton second = toggle();
     final ElwhaIconButton third = toggle();
-    final IconButtonGroup group = new IconButtonGroup().add(first).add(second).add(third);
+    final ElwhaIconButtonSelectionGroup group =
+        new ElwhaIconButtonSelectionGroup().add(first).add(second).add(third);
 
     first.setSelected(true);
     second.setSelected(true);
@@ -79,7 +81,7 @@ class IconButtonGroupTest {
   @Test
   void aPermissiveGroupLetsTheUserClearTheSelection() {
     final ElwhaIconButton button = toggle();
-    final IconButtonGroup group = new IconButtonGroup().add(button);
+    final ElwhaIconButtonSelectionGroup group = new ElwhaIconButtonSelectionGroup().add(button);
     button.setSelected(true);
 
     button.setSelected(false);
@@ -92,7 +94,8 @@ class IconButtonGroupTest {
   void aMandatoryGroupRefusesToEmptyItself() {
     final ElwhaIconButton first = toggle();
     final ElwhaIconButton second = toggle();
-    final IconButtonGroup group = new IconButtonGroup(true).add(first).add(second);
+    final ElwhaIconButtonSelectionGroup group =
+        new ElwhaIconButtonSelectionGroup(true).add(first).add(second);
     first.setSelected(true);
 
     first.setSelected(false);
@@ -107,7 +110,7 @@ class IconButtonGroupTest {
   void aMandatoryGroupStillAllowsMovingTheSelection() {
     final ElwhaIconButton first = toggle();
     final ElwhaIconButton second = toggle();
-    new IconButtonGroup(true).add(first).add(second);
+    new ElwhaIconButtonSelectionGroup(true).add(first).add(second);
     first.setSelected(true);
 
     second.setSelected(true);
@@ -120,7 +123,8 @@ class IconButtonGroupTest {
   void aRemovedButtonResumesIndependentToggleBehavior() {
     final ElwhaIconButton first = toggle();
     final ElwhaIconButton second = toggle();
-    final IconButtonGroup group = new IconButtonGroup().add(first).add(second);
+    final ElwhaIconButtonSelectionGroup group =
+        new ElwhaIconButtonSelectionGroup().add(first).add(second);
     first.setSelected(true);
 
     group.remove(first);
@@ -134,7 +138,7 @@ class IconButtonGroupTest {
 
   @Test
   void removingAButtonThatNeverJoinedIsHarmless() {
-    final IconButtonGroup group = new IconButtonGroup().add(toggle());
+    final ElwhaIconButtonSelectionGroup group = new ElwhaIconButtonSelectionGroup().add(toggle());
 
     group.remove(toggle()).remove(null);
 

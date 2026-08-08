@@ -61,6 +61,17 @@ class ElwhaButtonAccessibilityTest {
   }
 
   @Test
+  void aConsumerSetNameOutranksTheVisibleLabel() {
+    final ElwhaButton button = new ElwhaButton("Save");
+
+    button.getAccessibleContext().setAccessibleName("Save the current document");
+
+    assertThat(button.getAccessibleContext().getAccessibleName())
+        .as("a declared name wins over the terse visual label (#653)")
+        .isEqualTo("Save the current document");
+  }
+
+  @Test
   void selectionIsExposedAsStateNotOnlyAsShapeAndColor() {
     final ElwhaButton button =
         new ElwhaButton("Pin").setInteractionMode(ButtonInteractionMode.SELECTABLE);

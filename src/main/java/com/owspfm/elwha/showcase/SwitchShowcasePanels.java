@@ -32,7 +32,7 @@ import javax.swing.event.DocumentListener;
  * SURFACE} handle when selected, 38% {@code ON_SURFACE} when not).
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 final class SwitchShowcasePanels {
@@ -194,7 +194,7 @@ final class SwitchShowcasePanels {
 
   private static JComponent galleryCell(final int row, final int col) {
     final ElwhaSwitch s = galleryRow(row);
-    s.setLabel("Gallery switch");
+    s.setAccessibleLabel("Gallery switch");
     switch (col) {
       case 1 -> s.setSelected(true);
       case 2 -> {

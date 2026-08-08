@@ -383,8 +383,13 @@ public class ElwhaSlider extends JComponent {
   /**
    * Returns the slider's current value.
    *
-   * @return the current value
-   * @version v0.4.0
+   * <p><strong>Not the range variant.</strong> A {@link Variant#RANGE} slider keeps its state in
+   * two handle values and never writes the backing model, so this returns whatever {@link
+   * #range(int, int, int, int)} seeded at construction — it does not track either handle. Read
+   * {@link #getLowerValue()} / {@link #getUpperValue()} there.
+   *
+   * @return the current value; meaningless for {@link Variant#RANGE}
+   * @version v0.5.0
    * @since v0.4.0
    */
   public int getValue() {
@@ -394,8 +399,13 @@ public class ElwhaSlider extends JComponent {
   /**
    * Sets the slider's value, clamped into the current {@code [min, max]} range.
    *
-   * @param value the new value
-   * @version v0.4.0
+   * <p><strong>Not the range variant.</strong> A {@link Variant#RANGE} slider paints from its two
+   * handle values, not the model, so this writes a value nothing renders — it moves no handle and
+   * changes no pixel, while still waking every {@link ChangeListener}. Use {@link
+   * #setLowerValue(int)} / {@link #setUpperValue(int)} there.
+   *
+   * @param value the new value; inert for {@link Variant#RANGE}
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setValue(final int value) {
@@ -664,13 +674,13 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Returns the slider's accessible label, or {@code null} if none was set via {@link
-   * #setLabel(String)}.
+   * #setAccessibleLabel(String)}.
    *
    * @return the accessible label text, or {@code null}
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
-  public String getLabel() {
+  public String getAccessibleLabel() {
     return label;
   }
 
@@ -681,10 +691,10 @@ public class ElwhaSlider extends JComponent {
    * value here takes precedence.
    *
    * @param label the accessible label, or {@code null} to clear
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
-  public void setLabel(final String label) {
+  public void setAccessibleLabel(final String label) {
     this.label = label;
   }
 
@@ -722,8 +732,12 @@ public class ElwhaSlider extends JComponent {
    * hard to land on. Prefer a step that yields a readable handful of stops across the range; for a
    * fine scale, leave the slider continuous and rely on the value indicator instead.
    *
+   * <p>Enabling stops snaps the live value onto the grid immediately, so the slider is never left
+   * showing an off-stop position waiting for the user to drag. On a {@link Variant#RANGE} slider
+   * that means both handles.
+   *
    * @param step the snap increment; {@code <= 0} disables stops
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setStops(final int step) {
@@ -733,7 +747,14 @@ public class ElwhaSlider extends JComponent {
     }
     this.stopStep = next;
     if (next > 0) {
-      setValue(snap(model.getValue()));
+      if (variant == Variant.RANGE) {
+        // Re-run both handles through their own setters, which snap now that stops are on. The
+        // model value is deliberately left alone — RANGE never paints from it.
+        setLowerValue(lowerValue);
+        setUpperValue(upperValue);
+      } else {
+        setValue(snap(model.getValue()));
+      }
     }
     repaint();
   }
@@ -2477,9 +2498,10 @@ public class ElwhaSlider extends JComponent {
 
   /**
    * Accessible context for the slider — reports {@link AccessibleRole#SLIDER}, exposes {@link
-   * AccessibleValue} (current / min / max), and uses the {@link ElwhaSlider#setLabel(String) label}
-   * (falling back to an associated {@code labelFor} {@link javax.swing.JLabel}) as the accessible
-   * name so a screen reader announces label &rarr; role &rarr; value (research §X #50).
+   * AccessibleValue} (current / min / max), and uses the {@link
+   * ElwhaSlider#setAccessibleLabel(String) label} (falling back to an associated {@code labelFor}
+   * {@link javax.swing.JLabel}) as the accessible name so a screen reader announces label &rarr;
+   * role &rarr; value (research §X #50).
    *
    * @author Charles Bryan
    * @version v0.4.0
@@ -2530,6 +2552,12 @@ public class ElwhaSlider extends JComponent {
     public AccessibleValue getAccessibleValue() {
       return this;
     }
+
+    // The root node's value mirrors ElwhaSlider.getValue()/setValue(), and inherits their RANGE
+    // carve-out: a range slider paints from its two handle values and never touches the model, so
+    // this node reports the construction-time seed and writes somewhere nothing renders. Assistive
+    // tech reads a range slider through the two per-handle proxies below, each of which carries its
+    // own handle's live value; the root is their container (#643).
 
     @Override
     public Number getCurrentAccessibleValue() {

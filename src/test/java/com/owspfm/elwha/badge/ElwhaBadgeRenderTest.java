@@ -135,7 +135,7 @@ class ElwhaBadgeRenderTest {
       value = ColorRole.class,
       names = {"PRIMARY", "TERTIARY", "SECONDARY_CONTAINER"})
   void anOverriddenContainerRoleIsWhatGetsPainted(final ColorRole role) {
-    final ElwhaBadge badge = ElwhaBadge.small().withContainerColor(role);
+    final ElwhaBadge badge = ElwhaBadge.small().setContainerColor(role);
     final Dimension size = badge.getPreferredSize();
 
     Pixels.assertPixelNear(
@@ -150,8 +150,8 @@ class ElwhaBadgeRenderTest {
   void anOverriddenLabelRoleIsWhatTheGlyphIsDrawnIn() {
     final ElwhaBadge badge =
         ElwhaBadge.large("7")
-            .withContainerColor(ColorRole.PRIMARY)
-            .withLabelColor(ColorRole.ON_PRIMARY);
+            .setContainerColor(ColorRole.PRIMARY)
+            .setLabelColor(ColorRole.ON_PRIMARY);
 
     final Optional<PaintLog.Text> label = paint(badge).text("7");
 
@@ -164,24 +164,24 @@ class ElwhaBadgeRenderTest {
   @Test
   void colorOverridesRejectNull() {
     assertThatExceptionOfType(NullPointerException.class)
-        .isThrownBy(() -> ElwhaBadge.small().withContainerColor(null));
+        .isThrownBy(() -> ElwhaBadge.small().setContainerColor(null));
     assertThatExceptionOfType(NullPointerException.class)
-        .isThrownBy(() -> ElwhaBadge.large("1").withLabelColor(null));
+        .isThrownBy(() -> ElwhaBadge.large("1").setLabelColor(null));
   }
 
   @Test
   void aSmallBadgeRejectsALabelColor() {
     assertThatExceptionOfType(IllegalStateException.class)
         .as("there is no label sub-part on Small to color")
-        .isThrownBy(() -> ElwhaBadge.small().withLabelColor(ColorRole.ON_PRIMARY));
+        .isThrownBy(() -> ElwhaBadge.small().setLabelColor(ColorRole.ON_PRIMARY));
   }
 
   @Test
   void colorOverridesAreFluent() {
     final ElwhaBadge badge = ElwhaBadge.large("1");
 
-    assertThat(badge.withContainerColor(ColorRole.PRIMARY)).isSameAs(badge);
-    assertThat(badge.withLabelColor(ColorRole.ON_PRIMARY)).isSameAs(badge);
+    assertThat(badge.setContainerColor(ColorRole.PRIMARY)).isSameAs(badge);
+    assertThat(badge.setLabelColor(ColorRole.ON_PRIMARY)).isSameAs(badge);
   }
 
   @Test

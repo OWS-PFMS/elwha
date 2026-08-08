@@ -84,10 +84,16 @@ New component — **`ElwhaButtonGroup`**. Two variants:
 - **Connected** — segments **butted together** sharing edges, uniform sizing. A selection control.
   Replaces the M3 baseline Segmented Button.
 
-**Naming collision (resolved):** Elwha already has `ButtonGroup` / `IconButtonGroup` — those are
-*selection-mutex helpers* (the `javax.swing.ButtonGroup` analog, pure logic, no layout/paint). The
-new **visual + layout + selection container** is `ElwhaButtonGroup`. The mutex helpers keep their
-names and are reused internally by `ElwhaButtonGroup` (§5).
+**Naming collision (resolved):** Elwha already has two *selection-mutex helpers* (the
+`javax.swing.ButtonGroup` analog, pure logic, no layout/paint). The new **visual + layout +
+selection container** is `ElwhaButtonGroup`, and it reuses the helpers internally (§5).
+
+> **Superseded 2026-08-07 ([#665](https://github.com/OWS-PFMS/elwha/issues/665)).** This section
+> originally ruled that the mutex helpers "keep their names". They did not: `ButtonGroup` could not
+> be imported alongside `javax.swing.ButtonGroup` in the same file — exactly the file a consumer
+> migrating from Swing writes — and both lacked the `Elwha` prefix every other public type carries
+> after #42. They are now **`ElwhaButtonSelectionGroup`** and **`ElwhaIconButtonSelectionGroup`**.
+> Read the bare names below as those two types.
 
 `ElwhaButtonGroup` is a container that **composes** `ElwhaButton` / `ElwhaIconButton` — it owns
 layout, padding, group-wide shape/size, width behavior, and selection presentation. It does **not**
@@ -120,9 +126,11 @@ Three M3 selection modes — **all API-mandatory**:
 - **Single-select** — at most one selected.
 - **Multi-select** — any number selected independently.
 - **Selection-required** — exactly one selected at all times (M3 "selection-required"; equivalent
-  to the chip-list `SINGLE_MANDATORY` and the existing `ButtonGroup` mandatory mode).
+  to the chip-list `SINGLE_MANDATORY` and the existing `ElwhaButtonSelectionGroup` mandatory
+  mode).
 
-Reuse: `ButtonGroup` / `IconButtonGroup` mutex helpers already implement single-select + mandatory
+Reuse: the `ElwhaButtonSelectionGroup` / `ElwhaIconButtonSelectionGroup` mutex helpers already
+implement single-select + mandatory
 (= selection-required). Multi-select uses a container-level tracker (decided §18.2).
 `ElwhaButtonGroup` exposes a `SelectionMode` enum (`SINGLE` / `MULTI` / `REQUIRED`, decided §18.3)
 and wires the appropriate mechanism internally.
@@ -255,7 +263,8 @@ Already present and sufficient — **no extension needed:**
 - `ButtonSize` / `IconButtonSize` — XS–XL, exact match, with per-size corner + 48dp target.
 - `ButtonVariant` — FILLED / FILLED_TONAL / OUTLINED (+ ELEVATED / TEXT).
 - `ButtonInteractionMode.SELECTABLE` — persistent toggle/selected state.
-- `ButtonGroup` / `IconButtonGroup` — mutex single-select + mandatory mode (= selection-required).
+- `ElwhaButtonSelectionGroup` / `ElwhaIconButtonSelectionGroup` — mutex single-select + mandatory
+  mode (= selection-required).
 
 ## §16. Required button extensions
 
@@ -306,8 +315,9 @@ _All 9 resolved 2026-05-21 (operator + capture). Numbering is stable so existing
    three modes expose a uniform selection surface + one unified change event — not bare independent
    buttons.
 3. **Selection-mode API** → **a single `SelectionMode` enum (`SINGLE` / `MULTI` / `REQUIRED`)** on
-   `ElwhaButtonGroup`. The group wires the right helper internally; the `ButtonGroup` /
-   `IconButtonGroup` mutex helpers stay an implementation detail.
+   `ElwhaButtonGroup`. The group wires the right helper internally; the
+   `ElwhaButtonSelectionGroup` / `ElwhaIconButtonSelectionGroup` mutex helpers stay an
+   implementation detail.
 4. **Morph in v1** → **static selected-shape inversion in v1**; animated morph + the standard
    width-ripple stay in the Phase 6 epic #176. #176 does **not** block v1.
 5. **Overflow menu** → **parked** — not built in this epic. Revisit a static, developer-controlled
@@ -319,6 +329,26 @@ _All 9 resolved 2026-05-21 (operator + capture). Numbering is stable so existing
 8. **Standard-group inner padding** → XS 18 · S 12 · M 8 · L 8 · XL 8 dp. See §11.
 9. **Keyboard model** → **follow the M3 spec literally: `Tab` moves between every segment**, each
    segment its own tab stop. Not Swing arrow-key roving-focus. Operator call.
+
+## §20. RTL mirroring
+
+**CODE rule**, added 2026-08-07 by [#565](https://github.com/OWS-PFMS/elwha/issues/565): the spec
+was silent on right-to-left, and `doLayout` always advanced left-to-right.
+
+Segments advance from the **leading** edge, so under an RTL orientation segment 0 sits at the right
+and the row reads right to left. Both variants mirror; the standard variant's per-size gap and the
+connected variant's 2 dp inner padding are unchanged by direction.
+
+The **connected end caps mirror with the row.** Corner radii are geometric (top-left, top-right, …)
+while a segment's index is in reading order, so the two disagree under RTL: segment 0 is laid out at
+the right edge and must round *that* side. `connectedRadii` resolves the index to a visual position
+before picking corners, and `setComponentOrientation` re-derives the cached radii — they live on the
+segments, so unlike the layout they cannot simply be read fresh each pass.
+
+Within a segment, an `ElwhaButton`'s own icon/label pair mirrors under its own rule
+(`elwha-button-design.md` §17); an icon-only segment is symmetric and needs nothing.
+
+---
 
 ## §19. Screenshot index (~28 captures)
 

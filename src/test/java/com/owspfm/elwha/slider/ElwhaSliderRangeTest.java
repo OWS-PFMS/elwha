@@ -129,6 +129,33 @@ class ElwhaSliderRangeTest {
     assertThat(slider.getUpperValue()).as("and so does the upper").isEqualTo(50);
   }
 
+  @Test
+  void enablingStopsSnapsBothHandlesThatAreAlreadyOffGrid() {
+    final ElwhaSlider slider = ElwhaSlider.range(0, 100, 20, 80);
+
+    slider.setStops(25);
+
+    assertThat(slider.getLowerValue())
+        .as("enabling stops pulls the lower handle onto the grid immediately (#643)")
+        .isEqualTo(25);
+    assertThat(slider.getUpperValue())
+        .as("and the upper — neither is left off-stop waiting for a drag")
+        .isEqualTo(75);
+  }
+
+  @Test
+  void singleValueApiIsInertOnARangeSlider() {
+    final ElwhaSlider slider = span();
+
+    slider.setValue(60);
+
+    assertThat(slider.getLowerValue()).as("setValue moves no range handle (#643)").isEqualTo(20);
+    assertThat(slider.getUpperValue()).isEqualTo(80);
+    assertThat(slider.getValue())
+        .as("and getValue reports the backing model, which RANGE never paints from")
+        .isEqualTo(60);
+  }
+
   // ------------------------------------------------------------- geometry
 
   @Test
@@ -356,7 +383,7 @@ class ElwhaSliderRangeTest {
   @Test
   void eachHandleNodeIsASliderNamedForItsEnd() {
     final ElwhaSlider slider = span();
-    slider.setLabel("Price");
+    slider.setAccessibleLabel("Price");
 
     final AccessibleContext lower =
         slider.getAccessibleContext().getAccessibleChild(0).getAccessibleContext();

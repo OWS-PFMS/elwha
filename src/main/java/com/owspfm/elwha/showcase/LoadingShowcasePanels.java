@@ -53,14 +53,14 @@ final class LoadingShowcasePanels {
     modeBox.setOptions(List.of(LoadingMode.values()));
     modeBox.setSelectedValue(LoadingMode.INDETERMINATE);
     final ElwhaSwitch containedSwitch = new ElwhaSwitch();
-    containedSwitch.setLabel("Contained");
+    containedSwitch.setAccessibleLabel("Contained");
     final ElwhaSelectField<Integer> sizeBox = ElwhaSelectField.outlined("Indicator size px");
     sizeBox.setOptions(List.of(24, 38, 56, 80));
     sizeBox.setSelectedValue(56);
 
     final DefaultBoundedRangeModel model = new DefaultBoundedRangeModel(40, 0, 0, 100);
     final ElwhaSlider valueSlider = new ElwhaSlider(model);
-    valueSlider.setLabel("Value (determinate)");
+    valueSlider.setAccessibleLabel("Value (determinate)");
     final ElwhaButton simulate = ElwhaButton.filledTonalButton("Simulate load");
 
     final WorkbenchControls controls = workbench.controls();

@@ -27,7 +27,7 @@
 5. **Form enforcement:** per-variant static factories — `ElwhaBadge.small()` takes no content; `ElwhaBadge.large(String content)` requires content. The 4-char cap (including a `+`) is silently truncated in the model; documented as a layout invariant per M3.
 6. **A11y push model:** badge owns its `accessibilityText()`; anchor splices it into the host's `accessibleName` on attach and on badge-content change via a property listener. The badge itself is non-focusable and reports no independent accessible action — AT users address badge announcements by selecting the host destination, exactly per M3's use-case requirement.
 7. **RTL:** auto via `Component.getComponentOrientation()`. Upper-trailing flips to upper-leading; anchor math is the only place that branches.
-8. **Out of scope:** trailing-edge composition placement (e.g., the M3 "Favorites 84" pattern); badge interaction states (badges are decorations, not buttons); animated value transitions; localization beyond the per-badge `withAccessibilityText(...)` override.
+8. **Out of scope:** trailing-edge composition placement (e.g., the M3 "Favorites 84" pattern); badge interaction states (badges are decorations, not buttons); animated value transitions; localization beyond the per-badge `setAccessibilityText(...)` override.
 
 ---
 
@@ -52,7 +52,7 @@ Per [`elwha-design-direction.md`](elwha-design-direction.md) Elwha tracks M3 Exp
 - ❌ **Trailing-edge composition placement** (M3 "Favorites 84" pattern, where a Large badge sits at the trailing edge of a label+icon composition rather than on the icon corner) — deferred. Rail items don't trigger this case; consumer can compose manually if needed pre-1.0.
 - ❌ **Badge interaction states** — badges are decorations; no hover / focus / press / ripple. The host has those.
 - ❌ **Animated value transitions** (count incrementing, dot↔pill morph) — not in this epic; can layer on `MorphAnimator` later.
-- ❌ **Localization of default announcement strings** — hardcoded English in V0.3.0. Per-badge `withAccessibilityText(...)` override available. Follow-up issue tracks `UIManager` keys.
+- ❌ **Localization of default announcement strings** — hardcoded English in V0.3.0. Per-badge `setAccessibilityText(...)` override available. Follow-up issue tracks `UIManager` keys.
 
 ---
 
@@ -183,7 +183,7 @@ One color mapping, two roles. Small uses only the container role (no label sub-p
 
 **No new theme tokens.** Both roles exist on the `ColorRole` facade today (verified in `ColorRole.java`).
 
-**Default mapping is enforced.** Consumers can override via explicit per-badge methods (`withContainerColor(ColorRole)` / `withLabelColor(ColorRole)`) but the default is `ERROR` / `ON_ERROR` and that requires no consumer action.
+**Default mapping is enforced.** Consumers can override via explicit per-badge methods (`setContainerColor(ColorRole)` / `setLabelColor(ColorRole)`) but the default is `ERROR` / `ON_ERROR` and that requires no consumer action.
 
 **Contrast rule (DOCS):** M3 requires ≥3:1 contrast between container and label when consumers use a custom color pair. Not enforced at runtime — too expensive, trust the consumer. Documented in Javadoc.
 
@@ -232,16 +232,22 @@ public final class ElwhaBadge extends JComponent {
   public ElwhaBadge setContent(String content)              { ... }  // Large only; ISE on Small
 
   // Color overrides (default Error / On error)
-  public ElwhaBadge withContainerColor(ColorRole role)      { ... }
-  public ElwhaBadge withLabelColor(ColorRole role)          { ... }
+  public ElwhaBadge setContainerColor(ColorRole role)       { ... }
+  public ElwhaBadge setLabelColor(ColorRole role)           { ... }
   public ColorRole getContainerColor()                      { ... }
   public ColorRole getLabelColor()                          { ... }
 
   // Accessibility text override (default = M3-prescribed announcement)
-  public ElwhaBadge withAccessibilityText(String text)      { ... }
+  public ElwhaBadge setAccessibilityText(String text)       { ... }
   public String getAccessibilityText()                      { ... }
 }
 ```
+
+> **Renamed 2026-08-07 ([#636](https://github.com/OWS-PFMS/elwha/issues/636)).** These three
+> mutators shipped as `withContainerColor` / `withLabelColor` / `withAccessibilityText`. The `with`
+> prefix was the badge's alone — every other component in the catalog writes `setX` against a
+> `getX` — so they are now `setX`, matching the badge's own `setContent`. The fluent `this` return
+> is unchanged.
 
 ### §8.1 Default values
 
@@ -351,7 +357,7 @@ The push model keeps the anchor primitive as the single integration seam. Mirror
 | Small | `"New notification"` |
 | Large (content `c`) | `"{c} new notifications"` (e.g., `"3 new notifications"`, `"999+ new notifications"`) |
 
-**Localization:** hardcoded English in V0.3.0. Per-badge `withAccessibilityText(...)` overrides for consumers that need non-English. Follow-up issue tracks routing through `UIManager` keys (e.g., `"ElwhaBadge.smallBadgeAnnouncement"`).
+**Localization:** hardcoded English in V0.3.0. Per-badge `setAccessibilityText(...)` overrides for consumers that need non-English. Follow-up issue tracks routing through `UIManager` keys (e.g., `"ElwhaBadge.smallBadgeAnnouncement"`).
 
 ### §10.4 Read order
 
@@ -469,7 +475,7 @@ Decisions captured during the spec pass on 2026-05-26.
 | **Inverted-looking M3 color callout reconciled** | Rail-page callout points at the active-indicator pill, not the badge container. Conventional fill-on-fill mapping is authoritative. |
 | **A11y push model (anchor mutates host name)** | Keeps anchor as the single integration seam; hosts stay badge-agnostic. |
 | **Default announcement strings hardcoded English** | OWS-tooling is English-first. Follow-up issue tracks `UIManager` keys. |
-| **Per-badge `withAccessibilityText(...)` override** | Escape hatch for consumers needing custom text or non-English. |
+| **Per-badge `setAccessibilityText(...)` override** | Escape hatch for consumers needing custom text or non-English. |
 | **Non-focusable invariant** | Set in constructor; not overridable. M3 a11y requires users address badges via host. |
 | **RTL via `ComponentOrientation`** | Auto-mirror in anchor; no consumer flag. |
 | **Trailing-edge composition mode deferred** | Rail doesn't need it; defer until first consumer asks. |

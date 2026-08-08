@@ -4,7 +4,7 @@ package com.owspfm.elwha.buttongroup;
  * The three M3 selection modes an {@link ElwhaButtonGroup} can enforce across its segments.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public enum SelectionMode {
@@ -30,7 +30,7 @@ public enum SelectionMode {
   /**
    * Exactly one segment selected at all times — clicking the selected segment is a no-op (the
    * deselect is refused). The M3 selection-required mode; equivalent to the chip-list {@code
-   * SINGLE_MANDATORY} and a mandatory {@link com.owspfm.elwha.button.ButtonGroup}.
+   * SINGLE_MANDATORY} and a mandatory {@link com.owspfm.elwha.button.ElwhaButtonSelectionGroup}.
    *
    * @version v0.3.0
    * @since v0.3.0

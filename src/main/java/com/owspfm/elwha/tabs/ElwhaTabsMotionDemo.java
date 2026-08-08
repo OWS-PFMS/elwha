@@ -23,7 +23,7 @@ import javax.swing.Timer;
  * click anywhere mid-slide to watch the retarget pick up from the in-flight rect.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaTabsMotionDemo {
@@ -69,7 +69,7 @@ public final class ElwhaTabsMotionDemo {
             });
 
     final ElwhaSwitch auto = new ElwhaSwitch();
-    auto.setLabel("Auto-cycle");
+    auto.setAccessibleLabel("Auto-cycle");
     auto.addActionListener(
         e -> {
           if (auto.isSelected()) {
@@ -80,11 +80,11 @@ public final class ElwhaTabsMotionDemo {
         });
 
     final ElwhaSwitch slow = new ElwhaSwitch();
-    slow.setLabel("5x slow motion");
+    slow.setAccessibleLabel("5x slow motion");
     slow.addActionListener(e -> MorphAnimator.setDurationMultiplier(slow.isSelected() ? 5f : 1f));
 
     final ElwhaSwitch reduced = new ElwhaSwitch();
-    reduced.setLabel("Reduced motion");
+    reduced.setAccessibleLabel("Reduced motion");
     reduced.setSelected(MorphAnimator.isReducedMotion());
     reduced.addActionListener(e -> MorphAnimator.setReducedMotion(reduced.isSelected()));
 

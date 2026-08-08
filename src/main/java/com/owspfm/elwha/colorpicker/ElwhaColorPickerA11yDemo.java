@@ -50,7 +50,7 @@ public final class ElwhaColorPickerA11yDemo {
     picker.setAlphaEnabled(true);
 
     final ElwhaSwitch rtl = new ElwhaSwitch();
-    rtl.setLabel("Right-to-left");
+    rtl.setAccessibleLabel("Right-to-left");
     rtl.addActionListener(
         e -> {
           picker.applyComponentOrientation(
@@ -63,7 +63,7 @@ public final class ElwhaColorPickerA11yDemo {
 
     final ElwhaSwitch enabled = new ElwhaSwitch();
     enabled.setSelected(true);
-    enabled.setLabel("Enabled (try keys while off)");
+    enabled.setAccessibleLabel("Enabled (try keys while off)");
     enabled.addActionListener(e -> picker.setEnabled(enabled.isSelected()));
 
     final JPanel center = new JPanel(new FlowLayout(FlowLayout.LEADING, 24, 16));

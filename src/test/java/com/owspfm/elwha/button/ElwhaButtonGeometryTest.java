@@ -10,6 +10,7 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.ShadowPainter;
 import java.awt.Component;
+import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -35,6 +36,7 @@ class ElwhaButtonGeometryTest {
   /** A fixed-size icon that is not a {@code FlatSVGIcon}, so it cannot be losslessly rescaled. */
   private static final class FixedIcon implements Icon {
     private final int side;
+    private int paintedX = -1;
 
     FixedIcon(final int side) {
       this.side = side;
@@ -42,7 +44,8 @@ class ElwhaButtonGeometryTest {
 
     @Override
     public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-      // geometry-only fixture; nothing to draw
+      // geometry-only fixture; nothing to draw beyond recording where it was asked to draw
+      this.paintedX = x;
     }
 
     @Override
@@ -193,9 +196,42 @@ class ElwhaButtonGeometryTest {
   void aScalableIconIsRederivedToTheTiersIconSlot(final ButtonSize size) {
     final ElwhaButton button = new ElwhaButton("Save", MaterialIcons.add()).setButtonSize(size);
 
-    assertThat(button.getIcon().getIconWidth())
+    assertThat(button.paintedIcon().getIconWidth())
         .as("%s paints its glyph at the slot the layout reserves", size)
         .isEqualTo(size.iconSizePx());
+  }
+
+  @Test
+  void iconLeadsTheLabelOnBothSidesOfTheOrientation() {
+    final FixedIcon icon = new FixedIcon(18);
+    final ElwhaButton button = new ElwhaButton("Save", icon);
+    final Dimension pref = button.getPreferredSize();
+
+    Pixels.render(button, pref.width, pref.height);
+    final int ltrIconX = icon.paintedX;
+
+    button.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+    Pixels.render(button, pref.width, pref.height);
+
+    assertThat(icon.paintedX)
+        .as("the icon leads, so RTL moves it past the label to the trailing side (#565)")
+        .isGreaterThan(ltrIconX);
+    assertThat(icon.paintedX + 18)
+        .as("and the pair still sits inside the same centered content block")
+        .isLessThanOrEqualTo(pref.width);
+  }
+
+  @Test
+  void getIconHandsBackTheInstalledIconNotTheFilteredCopy() {
+    final Icon installed = MaterialIcons.add();
+    final ElwhaButton button = new ElwhaButton("Save", installed).setButtonSize(ButtonSize.XL);
+
+    assertThat(button.getIcon())
+        .as("the getter returns what the caller installed, reusable in another component (#664)")
+        .isSameAs(installed);
+    assertThat(button.paintedIcon())
+        .as("while the painted glyph stays a private, filter-bound derivation")
+        .isNotSameAs(installed);
   }
 
   @Test
@@ -204,7 +240,7 @@ class ElwhaButtonGeometryTest {
 
     button.setButtonSize(ButtonSize.XL);
 
-    assertThat(button.getIcon().getIconWidth())
+    assertThat(button.paintedIcon().getIconWidth())
         .as("the glyph follows the tier rather than staying at its install size")
         .isEqualTo(ButtonSize.XL.iconSizePx());
   }
@@ -214,7 +250,7 @@ class ElwhaButtonGeometryTest {
     final ElwhaButton button =
         new ElwhaButton("Save", new FixedIcon(9)).setButtonSize(ButtonSize.L);
 
-    assertThat(button.getIcon().getIconWidth())
+    assertThat(button.paintedIcon().getIconWidth())
         .as("a non-vector icon cannot be rescaled losslessly, so it is left alone")
         .isEqualTo(9);
   }

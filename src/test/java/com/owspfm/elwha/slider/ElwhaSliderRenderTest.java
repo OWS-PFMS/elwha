@@ -285,9 +285,9 @@ class ElwhaSliderRenderTest {
   void labelNamesTheSlider() {
     final ElwhaSlider slider = percent(50);
 
-    slider.setLabel("Volume");
+    slider.setAccessibleLabel("Volume");
 
-    assertThat(slider.getLabel()).as("the label round-trips").isEqualTo("Volume");
+    assertThat(slider.getAccessibleLabel()).as("the label round-trips").isEqualTo("Volume");
     assertThat(slider.getAccessibleContext().getAccessibleName())
         .as("and names the control to AT")
         .isEqualTo("Volume");

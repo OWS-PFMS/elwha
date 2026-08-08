@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -11,7 +12,9 @@ import java.util.Set;
  * order for free and keeps membership tests constant-time.
  *
  * <p>Every mutator is change-guarded: a write that leaves the set identical fires nothing, so a
- * listener that rebuilds expensive chrome is not woken by redundant writes.
+ * listener that rebuilds expensive chrome is not woken by redundant writes. "Identical" means
+ * {@link Object#equals(Object) equal} throughout — the same notion of item identity the backing set
+ * uses — so re-selecting a value-typed item with an equal-but-distinct instance is a no-op.
  *
  * @param <T> the item type
  * @author Charles Bryan
@@ -109,7 +112,7 @@ public class DefaultElwhaSelectionModel<T> implements ElwhaSelectionModel<T> {
     final Iterator<T> mine = selected.iterator();
     final Iterator<T> theirs = candidate.iterator();
     while (mine.hasNext()) {
-      if (mine.next() != theirs.next()) {
+      if (!Objects.equals(mine.next(), theirs.next())) {
         return false;
       }
     }

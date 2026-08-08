@@ -361,6 +361,21 @@ class ElwhaItemListSelectionTest {
   }
 
   @Test
+  void changeGuardComparesByEqualityNotByInstance() {
+    final DefaultElwhaSelectionModel<String> model = new DefaultElwhaSelectionModel<>();
+    final int[] fired = {0};
+    model.addSelectionListener(event -> fired[0]++);
+    model.setSelected(List.of("a"));
+    final int afterFirst = fired[0];
+
+    model.setSelected(List.of(new StringBuilder("a").toString()));
+
+    assertThat(fired[0])
+        .as("an equal-but-distinct value-typed item is the same selection, not a change (#609)")
+        .isEqualTo(afterFirst);
+  }
+
+  @Test
   void programmaticSelectionPushesChromeOntoRenderedViews() {
     listOf("a", "b").setSelectionMode(SelectionMode.MULTIPLE);
 

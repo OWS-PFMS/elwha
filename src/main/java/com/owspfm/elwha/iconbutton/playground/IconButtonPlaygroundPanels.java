@@ -2,7 +2,7 @@ package com.owspfm.elwha.iconbutton.playground;
 
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
-import com.owspfm.elwha.iconbutton.IconButtonGroup;
+import com.owspfm.elwha.iconbutton.ElwhaIconButtonSelectionGroup;
 import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
 import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
@@ -43,7 +43,7 @@ import javax.swing.UIManager;
  * pattern, same reasons.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public final class IconButtonPlaygroundPanels {
@@ -186,13 +186,13 @@ public final class IconButtonPlaygroundPanels {
 
     column.add(
         captionLabel(
-            "JToolBar mockups at IconButtonSize.M (40 dp), each at a different ShapeScale "
-                + "(FULL / LG / SM). Left cluster: independent SELECTABLE toggles (pin / anchor "
-                + "/ visibility / edit / delete, each its own state). Right cluster: mandatory "
-                + "radio group (favorite / star / info / help — exactly one always selected) via "
-                + "IconButtonGroup. Toolbar buttons suppress click-focus (setRequestFocusEnabled "
-                + "false) so the toolbar action doesn't pull focus from the document; Tab still "
-                + "focuses them."));
+            "JToolBar mockups at IconButtonSize.M (40 dp), each at a different ShapeScale (FULL /"
+                + " LG / SM). Left cluster: independent SELECTABLE toggles (pin / anchor /"
+                + " visibility / edit / delete, each its own state). Right cluster: mandatory radio"
+                + " group (favorite / star / info / help — exactly one always selected) via"
+                + " ElwhaIconButtonSelectionGroup. Toolbar buttons suppress click-focus"
+                + " (setRequestFocusEnabled false) so the toolbar action doesn't pull focus from"
+                + " the document; Tab still focuses them."));
     column.add(Box.createVerticalStrut(8));
     for (ShapeScale shape : new ShapeScale[] {ShapeScale.FULL, ShapeScale.LG, ShapeScale.SM}) {
       final JToolBar toolBar = buildToolbarMockup(shape);
@@ -439,7 +439,7 @@ public final class IconButtonPlaygroundPanels {
             size, shape, "Delete (independent toggle)", MaterialIcons.pair("delete", iconPx)));
     toolBar.addSeparator();
 
-    // Mandatory radio group via IconButtonGroup — exactly one selected at all times.
+    // Mandatory radio group via ElwhaIconButtonSelectionGroup — exactly one selected at all times.
     final ElwhaIconButton favorite =
         makeToggleButton(
             size, shape, "Favorite (radio group)", MaterialIcons.pair("favorite", iconPx));
@@ -450,7 +450,7 @@ public final class IconButtonPlaygroundPanels {
     final ElwhaIconButton help =
         makeToggleButton(size, shape, "Help (radio group)", MaterialIcons.pair("help", iconPx));
     favorite.setSelected(true); // initial selection — required for a mandatory group
-    new IconButtonGroup(true).add(favorite).add(star).add(info).add(help);
+    new ElwhaIconButtonSelectionGroup(true).add(favorite).add(star).add(info).add(help);
     toolBar.add(favorite);
     toolBar.add(star);
     toolBar.add(info);

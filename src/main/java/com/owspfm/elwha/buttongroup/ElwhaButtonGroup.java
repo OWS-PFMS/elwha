@@ -11,6 +11,7 @@ import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.ShapeScale;
+import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -44,9 +45,10 @@ import javax.swing.JComponent;
  * pill-ended bar. The transient press width / shape morph is a separate polish epic and is not
  * rendered statically here.
  *
- * <p><strong>Naming.</strong> Not to be confused with {@link com.owspfm.elwha.button.ButtonGroup} /
- * {@link com.owspfm.elwha.iconbutton.IconButtonGroup}, which are pure selection-mutex helpers with
- * no layout or paint. {@code ElwhaButtonGroup} is the visual container.
+ * <p><strong>Naming.</strong> Not to be confused with {@link
+ * com.owspfm.elwha.button.ElwhaButtonSelectionGroup} / {@link
+ * com.owspfm.elwha.iconbutton.ElwhaIconButtonSelectionGroup}, which are pure selection-mutex
+ * helpers with no layout or paint. {@code ElwhaButtonGroup} is the visual container.
  *
  * <p><strong>Quick start:</strong>
  *
@@ -770,10 +772,14 @@ public final class ElwhaButtonGroup extends JComponent {
     if (count == 1) {
       return CornerRadii.uniform(pill);
     }
-    if (index == 0) {
+    // Corners are geometric (top-left, top-right, ...) while the index is in reading order, so the
+    // two disagree under RTL: segment 0 is laid out at the right edge and must round its right
+    // side. Resolve the index to a visual position first and the geometric cases below stand.
+    final int visual = getComponentOrientation().isLeftToRight() ? index : count - 1 - index;
+    if (visual == 0) {
       return CornerRadii.of(pill, inner, inner, pill);
     }
-    if (index == count - 1) {
+    if (visual == count - 1) {
       return CornerRadii.of(inner, pill, pill, inner);
     }
     return CornerRadii.uniform(inner);
@@ -844,18 +850,23 @@ public final class ElwhaButtonGroup extends JComponent {
       return;
     }
     final int rowHeight = rowHeightPx();
+    // Segments advance from the leading edge, so under an RTL orientation the first segment sits
+    // at the right and the row reads right-to-left. Positions are computed left-to-right and
+    // mirrored on the way out, the same shape ElwhaItemList.flipX uses.
+    final boolean ltr = getComponentOrientation().isLeftToRight();
+    final int total = getWidth();
     int x = 0;
     if (variant == ButtonGroupVariant.STANDARD) {
       final int gap = standardGapPx(buttonSize);
       for (final Segment segment : segments) {
         final int width = segment.preferredSize().width;
-        segment.component().setBounds(x, 0, width, rowHeight);
+        segment.component().setBounds(ltr ? x : total - x - width, 0, width, rowHeight);
         x += width + gap;
       }
     } else {
       final int width = connectedSegmentWidthPx(getWidth());
       for (final Segment segment : segments) {
-        segment.component().setBounds(x, 0, width, rowHeight);
+        segment.component().setBounds(ltr ? x : total - x - width, 0, width, rowHeight);
         x += width + CONNECTED_GAP_PX;
       }
     }
@@ -891,6 +902,23 @@ public final class ElwhaButtonGroup extends JComponent {
       return new Dimension(width, getPreferredSize().height);
     }
     return getPreferredSize();
+  }
+
+  /**
+   * Applies a component orientation. A connected group re-derives its per-segment corner radii,
+   * which are cached on the segments and keyed to a segment's <em>visual</em> position — the end
+   * caps swap ends when the row mirrors.
+   *
+   * @param orientation the new orientation
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void setComponentOrientation(final ComponentOrientation orientation) {
+    super.setComponentOrientation(orientation);
+    if (segments != null && variant == ButtonGroupVariant.CONNECTED) {
+      refreshSegments();
+    }
   }
 
   /**

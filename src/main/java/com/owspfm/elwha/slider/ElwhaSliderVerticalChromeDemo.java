@@ -24,7 +24,7 @@ import javax.swing.WindowConstants;
  * ElwhaButton}; Tab into a slider to see the leading-side value bubble.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaSliderVerticalChromeDemo {
@@ -69,7 +69,7 @@ public final class ElwhaSliderVerticalChromeDemo {
     // A horizontal standard slider alongside so the transposition is obvious.
     final ElwhaSlider horizontal = new ElwhaSlider(0, 100, 70);
     horizontal.setValueIndicatorEnabled(true);
-    horizontal.setLabel("Horizontal");
+    horizontal.setAccessibleLabel("Horizontal");
     final JPanel horizontalRow = new JPanel(new BorderLayout(12, 0));
     horizontalRow.setBorder(BorderFactory.createEmptyBorder(4, 28, 20, 28));
     horizontalRow.add(new JLabel("Horizontal (for comparison)"), BorderLayout.WEST);
@@ -102,7 +102,7 @@ public final class ElwhaSliderVerticalChromeDemo {
     slider.setSizeVariant(size);
     slider.setOrientation(ElwhaSlider.Orientation.VERTICAL);
     slider.setValueIndicatorEnabled(true);
-    slider.setLabel(size + " " + variant);
+    slider.setAccessibleLabel(size + " " + variant);
     slider.setPreferredSize(new Dimension(slider.getPreferredSize().width, 280));
     return slider;
   }
@@ -114,7 +114,7 @@ public final class ElwhaSliderVerticalChromeDemo {
     slider.setSizeVariant(size);
     slider.setOrientation(ElwhaSlider.Orientation.VERTICAL);
     slider.setValueIndicatorEnabled(true);
-    slider.setLabel("Centered " + size);
+    slider.setAccessibleLabel("Centered " + size);
     slider.setPreferredSize(new Dimension(slider.getPreferredSize().width, 280));
     return slider;
   }

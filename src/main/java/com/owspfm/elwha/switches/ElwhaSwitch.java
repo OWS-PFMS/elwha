@@ -110,11 +110,11 @@ import javax.swing.event.EventListenerList;
  *
  * <p><strong>Labelling &amp; accessibility (research §A / §X).</strong> A switch never labels
  * itself — M3 requires an adjacent label naming what it toggles, and the accessible name must
- * <em>always</em> be set: call {@link #setLabel(String)} or associate a {@link javax.swing.JLabel}
- * via {@link javax.swing.JLabel#setLabelFor}. Swing has no SWITCH role, so the accessible context
- * is the {@code JToggleButton} shape: {@link AccessibleRole#TOGGLE_BUTTON} with {@link
- * AccessibleState#CHECKED} while selected, one "click" {@link AccessibleAction} (a user-gesture
- * toggle), and an {@link AccessibleValue} of 0/1.
+ * <em>always</em> be set: call {@link #setAccessibleLabel(String)} or associate a {@link
+ * javax.swing.JLabel} via {@link javax.swing.JLabel#setLabelFor}. Swing has no SWITCH role, so the
+ * accessible context is the {@code JToggleButton} shape: {@link AccessibleRole#TOGGLE_BUTTON} with
+ * {@link AccessibleState#CHECKED} while selected, one "click" {@link AccessibleAction} (a
+ * user-gesture toggle), and an {@link AccessibleValue} of 0/1.
  *
  * @serial exclude
  * @author Charles Bryan
@@ -349,13 +349,13 @@ public class ElwhaSwitch extends JComponent {
 
   /**
    * Returns the switch's accessible label, or {@code null} if none was set via {@link
-   * #setLabel(String)}.
+   * #setAccessibleLabel(String)}.
    *
    * @return the accessible label text, or {@code null}
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
-  public String getLabel() {
+  public String getAccessibleLabel() {
     return label;
   }
 
@@ -366,10 +366,10 @@ public class ElwhaSwitch extends JComponent {
    * automatically; an explicit value here takes precedence.
    *
    * @param label the accessible label, or {@code null} to clear
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
-  public void setLabel(final String label) {
+  public void setAccessibleLabel(final String label) {
     this.label = label;
   }
 
@@ -915,8 +915,8 @@ public class ElwhaSwitch extends JComponent {
    * AccessibleState#CHECKED} while selected, one "click" {@link AccessibleAction} performing the
    * user-gesture toggle (assistive tech acts as the user, so it fires {@code ActionListener}s), and
    * an {@link AccessibleValue} of 0/1 (programmatic, so it fires {@code ChangeListener}s only). The
-   * accessible name comes from {@link ElwhaSwitch#setLabel(String)}, falling back to an associated
-   * {@code labelFor} {@link javax.swing.JLabel}.
+   * accessible name comes from {@link ElwhaSwitch#setAccessibleLabel(String)}, falling back to an
+   * associated {@code labelFor} {@link javax.swing.JLabel}.
    *
    * @author Charles Bryan
    * @version v0.4.0

@@ -125,13 +125,24 @@ public final class ElwhaCardHeader extends JComponent {
       final int leadingY = topForBaseline(leadingHolder, lp, targetBaseline);
       final int textY = topForBaseline(textStack, tp, targetBaseline);
       final int trailingY = topForBaseline(trailingRow, rp, targetBaseline);
+      // Segment X positions are computed as if the row were left-to-right and mirrored on the way
+      // out, the same shape ElwhaItemList.flipX uses. The segments' own contents follow on their
+      // own: leadingHolder is a BoxLayout X_AXIS and trailingRow a FlowLayout, both of which
+      // reverse their children under an RTL orientation.
+      final boolean ltr = parent.getComponentOrientation().isLeftToRight();
       if (leadingHolder.isVisible()) {
-        leadingHolder.setBounds(0, leadingY, lp.width, lp.height);
+        leadingHolder.setBounds(flipX(ltr, width, 0, lp.width), leadingY, lp.width, lp.height);
       }
-      textStack.setBounds(leadingW, textY, textW, tp.height);
+      textStack.setBounds(flipX(ltr, width, leadingW, textW), textY, textW, tp.height);
       if (trailingRow.isVisible()) {
-        trailingRow.setBounds(width - rp.width, trailingY, rp.width, rp.height);
+        trailingRow.setBounds(
+            flipX(ltr, width, width - rp.width, rp.width), trailingY, rp.width, rp.height);
       }
+    }
+
+    /** Mirrors an x position across the row when the orientation is right-to-left. */
+    private int flipX(final boolean ltr, final int rowWidth, final int x, final int segmentWidth) {
+      return ltr ? x : rowWidth - x - segmentWidth;
     }
 
     /** Shared baseline Y for the row = deepest top-above-baseline across all visible segments. */

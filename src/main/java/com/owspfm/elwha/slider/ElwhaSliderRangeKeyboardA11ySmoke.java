@@ -19,7 +19,7 @@ import javax.accessibility.AccessibleValue;
  * package-private {@code focusedHandle} and the mouse listener's active-handle pick).
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaSliderRangeKeyboardA11ySmoke {
@@ -54,7 +54,7 @@ public final class ElwhaSliderRangeKeyboardA11ySmoke {
         focusableChildCount(rangeSlider) == 2);
 
     // --- accessibility: two AccessibleValue children, correct names + no-cross bounds ---
-    rangeSlider.setLabel("Price");
+    rangeSlider.setAccessibleLabel("Price");
     final AccessibleContext ctx = rangeSlider.getAccessibleContext();
     check("two accessible children", ctx.getAccessibleChildrenCount() == 2);
 

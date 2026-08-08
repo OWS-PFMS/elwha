@@ -18,7 +18,7 @@ import javax.swing.Action;
  * {@link AccessibleValue} (current / min / max) with the label as the accessible name.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaSliderKeyboardSmoke {
@@ -95,7 +95,7 @@ public final class ElwhaSliderKeyboardSmoke {
     av.setCurrentAccessibleValue(42);
     check("AccessibleValue set writes through", slider.getValue() == 42);
 
-    slider.setLabel("Brightness");
+    slider.setAccessibleLabel("Brightness");
     check("accessible name == label", "Brightness".equals(ac.getAccessibleName()));
 
     System.out.println("ElwhaSliderKeyboardSmoke: OK (keymap + RTL mirror + slider a11y)");

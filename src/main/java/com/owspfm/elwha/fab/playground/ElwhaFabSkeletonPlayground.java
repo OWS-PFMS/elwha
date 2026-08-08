@@ -23,8 +23,8 @@ import javax.swing.WindowConstants;
 /**
  * Story #187 (S1) smoketest — Standard FAB skeleton at all three sizes. Pure visual: container +
  * icon paints at the M3 token values (56 / 80 / 96 dp container, 24 / 28 / 36 dp icon, 16 / 20 / 28
- * dp corner radius) in the default {@link ElwhaFab.Color#PRIMARY_CONTAINER} color, light + dark
- * mode toggleable.
+ * dp corner radius) in the default {@link ElwhaFab.ColorStyle#PRIMARY_CONTAINER} color, light +
+ * dark mode toggleable.
  *
  * <p>Run:
  *
@@ -33,7 +33,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaFabSkeletonPlayground {

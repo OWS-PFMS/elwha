@@ -7,7 +7,7 @@
 **Author:** Charles Bryan (`cfb3@uw.edu`).
 
 **Parents:**
-- [`elwha-button-design.md`](elwha-button-design.md) — the reference primitive; FAB borrows the orthogonal-axis enum structure (`Size` / `Color`), the `AbstractButton` posture, and the §10 divergence-table format.
+- [`elwha-button-design.md`](elwha-button-design.md) — the reference primitive; FAB borrows the orthogonal-axis enum structure (`Size` / `ColorStyle`), the `AbstractButton` posture, and the §10 divergence-table format.
 - [`elwha-button-anim-design.md`](elwha-button-anim-design.md) — locks the shared morph kit (`ShapeMorphPainter`, `MorphAnimator`, `Easing`) that this epic consumes for the Standard↔Extended morph. No new motion infra needed.
 - [`elwha-design-direction.md`](elwha-design-direction.md) §9 — doctrine bar (raw Swing + tokens can't express).
 - [`elwha-v1-component-scope.md`](elwha-v1-component-scope.md) — catalogs the FAB primitive.
@@ -165,7 +165,7 @@ M3 also specifies screen-edge margins (16 dp uniform) and per-size adjacent-UI g
 
 Two color families, six total styles. Each style is a `{container, on-container}` `ColorRole` pair. Container drives background; on-container drives icon tint, label tint, and state-layer color.
 
-| `Color` enum | Container role | On-container role | M3 name |
+| `ColorStyle` enum | Container role | On-container role | M3 name |
 |---|---|---|---|
 | **PRIMARY_CONTAINER** *(default)* | `primaryContainer` | `onPrimaryContainer` | Primary container & On primary container |
 | SECONDARY_CONTAINER | `secondaryContainer` | `onSecondaryContainer` | Secondary container & On secondary container |
@@ -292,7 +292,7 @@ public final class ElwhaFab extends AbstractButton {
 | Property | Default |
 |---|---|
 | `Size` | `SMALL` (56 dp) |
-| `Color` | `PRIMARY_CONTAINER` |
+| `ColorStyle` | `PRIMARY_CONTAINER` |
 | `Icon` | `null` for `extended(text)`; required for `standard(icon)` and `extended(icon, text)` |
 | Tooltip | none — consumer-set via inherited `setToolTipText(...)` |
 
@@ -452,7 +452,7 @@ Each story is a sub-issue of #160, added to Project #5. Each story produces a fr
 
 ### Phase 1 — Standard FAB
 
-- **S1.** `ElwhaFab` skeleton + `Size`/`Color` enums + `standard(Icon)` factory + container rendering at all 3 sizes (default color). Demo: 3-size visual matrix.
+- **S1.** `ElwhaFab` skeleton + `Size`/`ColorStyle` enums + `standard(Icon)` factory + container rendering at all 3 sizes (default color). Demo: 3-size visual matrix.
 - **S2.** Apply all 6 color styles across light/dark themes. Demo: 6 × 2 grid.
 - **S3.** States — hover/focus/press state layers + hover elevation bump to level 4 + ripple via `RipplePainter` + focus ring. Demo: 4-state visual + interactive.
 

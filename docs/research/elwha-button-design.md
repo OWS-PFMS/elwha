@@ -346,7 +346,7 @@ Story 5 of epic #103 builds the playground surface. Three tabs exercise the full
 
 - **Variant gallery tab.** 5 variants × 6 states (Enabled / Disabled / Hovered / Focused / Pressed + Selected for the four toggleable ones) at default size S, live-rerendered on theme/mode switch — the binding-rule contract end-to-end. For toggleable variants, also shows the 2×5 selection grid.
 - **Sizes tab.** 5 sizes (XS / S / M / L / XL) × 2 shapes (Round / Square) × default variant (FILLED), demonstrating per-size measurements (height, padding, icon size, gap) and per-size corner radius for square. Shows the 48dp target inflation visually on XS / S.
-- **Toggle examples tab.** Realistic toggle patterns — Filter ON/OFF rows (FILLED toggle), Pin/Unpin rows (FILLED_TONAL toggle), Active/Inactive rows (OUTLINED toggle), Subscribed/Unsubscribed rows (ELEVATED toggle). Each row also demonstrates `ButtonGroup` mutex-selection across 3 buttons.
+- **Toggle examples tab.** Realistic toggle patterns — Filter ON/OFF rows (FILLED toggle), Pin/Unpin rows (FILLED_TONAL toggle), Active/Inactive rows (OUTLINED toggle), Subscribed/Unsubscribed rows (ELEVATED toggle). Each row also demonstrates `ElwhaButtonSelectionGroup` mutex-selection across 3 buttons.
 
 All three tabs factored into `ButtonPlaygroundPanels` so the standalone `ElwhaButtonPlayground` and `ThemePlayground`'s new `Button` tab compose the same instances. Same factored-builder pattern `ChipPlaygroundPanels` / `IconButtonPlaygroundPanels` / `SurfacePlaygroundPanels` already establish.
 
@@ -365,6 +365,29 @@ All three tabs factored into `ButtonPlaygroundPanels` so the standalone `ElwhaBu
 - `feat(#103)` — V3 `ElwhaCardActions` integration: card playground swaps raw `JButton` for `ElwhaButton.<variant>` per the card↔button pairing table; V1→V3 migration doc updated with canonical action-button pattern
 
 A separate `### Changed` entry covers the follow-up `ElwhaCard.paintRipple` refactor onto `RipplePainter`, filed against #80.
+
+---
+
+## §17. RTL mirroring
+
+**CODE rule**, added 2026-08-07 by [#565](https://github.com/OWS-PFMS/elwha/issues/565): the spec
+was silent on right-to-left, and the implementation always placed the icon to the left of the label.
+
+| Orientation | Layout |
+|---|---|
+| LTR | Icon leading (left), label trailing (right) |
+| RTL | Icon leading (right), label trailing (left) |
+
+The content block stays optically centered in the body either way — only the icon/label order
+within it swaps. `paintContent` reads `getComponentOrientation().isLeftToRight()`; there is no
+hardcoded "icon left". This matches the Extended FAB rule (`elwha-fab-design.md` §11), which M3
+states explicitly for that component and which reads the same way here.
+
+**Nothing else in the button mirrors.** A label-only or icon-only button is symmetric about the
+centre line, so RTL is a no-op for it. The surface, border, focus ring, ripple, state layers and
+both morphs are geometry about the body rect and carry no reading direction. Selection, elevation
+and the connected-segment corner override are likewise direction-free — the corner override arrives
+pre-mirrored from `ElwhaButtonGroup` (`elwha-button-group-design.md` §20).
 
 ---
 

@@ -146,7 +146,7 @@ class ElwhaSwitchInteractionTest {
   @Test
   void accessibleShapeMatchesTheToggleContract() {
     final ElwhaSwitch s = sized(new ElwhaSwitch());
-    s.setLabel("Wi-Fi");
+    s.setAccessibleLabel("Wi-Fi");
     final AccessibleContext ac = s.getAccessibleContext();
 
     assertThat(ac.getAccessibleRole()).as("role").isEqualTo(AccessibleRole.TOGGLE_BUTTON);
