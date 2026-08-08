@@ -27,6 +27,17 @@ import javax.swing.Timer;
  * and global per the design doc §10; the {@code ElwhaTheme.config(...).reducedMotion(...)} wiring
  * is Phase 5.
  *
+ * <p><strong>OS detection is best-effort, and Windows is a proxy.</strong> macOS reads {@code
+ * apple.awt.reduceMotion} and GNOME reads {@code org.gnome.desktop.interface enable-animations} —
+ * both are the setting itself. Windows has no such route: the real toggle is {@code
+ * SPI_GETCLIENTAREAANIMATION}, which the JDK does not surface, so the probe reads {@code
+ * win.text.animationsEnabled} instead. That property answers a related but different question ("are
+ * UI animations enabled" rather than "has the user asked for reduced motion"), and it has never
+ * been checked against a real Windows machine — it may be unset, or set independently of the
+ * Ease-of-Access toggle a user actually flipped. Treat a Windows auto-detect as a hint. Consumers
+ * that need the setting honored exactly should pass it explicitly through {@code
+ * ElwhaTheme.config(...).reducedMotion(...)}, which always wins over the probe.
+ *
  * @author Charles Bryan
  * @version v0.5.0
  * @since v0.3.0
