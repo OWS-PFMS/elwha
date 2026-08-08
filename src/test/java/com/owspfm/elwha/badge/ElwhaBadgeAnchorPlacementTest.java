@@ -43,6 +43,9 @@ class ElwhaBadgeAnchorPlacementTest {
   private static final int LARGE_OFFSET_Y = 14;
   private static final int LABEL_TRAILING_GAP = 4;
 
+  /** #442's optical seat — the dp the badge sits below the content rect's true centre. */
+  private static final int LABEL_TRAILING_OPTICAL_SEAT = 1;
+
   private static final Rectangle ICON = new Rectangle(12, 8, 24, 24);
 
   private static IconHost host() {
@@ -396,8 +399,14 @@ class ElwhaBadgeAnchorPlacementTest {
         .isEqualTo(origin.x + label.x + label.width + LABEL_TRAILING_GAP);
   }
 
+  /**
+   * #442 — the badge seats a dp below the rect's true centre. A pill centred on a text rect reads
+   * high, because the rect is the font box and the ink sits well inside it: at TITLE_SMALL the pill
+   * overshoots the lowercase body by ~5 px on top against ~3 px below the baseline. The seat
+   * approximates centring on the x-height box instead.
+   */
   @Test
-  void labelTrailingCentersTheBadgeOnTheContentRect() {
+  void labelTrailingSeatsTheBadgeOnTheContentRectsOpticalCentre() {
     final Rectangle label = new Rectangle(40, 12, 60, 16);
     final IconHost host = new IconHost(label);
     AnchorFixture.with(host, 20, 16, 160, 40);
@@ -406,9 +415,26 @@ class ElwhaBadgeAnchorPlacementTest {
     ElwhaBadgeAnchor.attach(host, badge, ElwhaBadgeAnchor.AnchorMode.LABEL_TRAILING);
 
     final Point origin = AnchorFixture.hostOriginInLayeredPane(host);
+    final int trueCentre =
+        origin.y + label.y + (label.height - badge.getPreferredSize().height) / 2;
     assertThat(badge.getY())
-        .as("centered on the rect it trails, not on the host cell")
-        .isEqualTo(origin.y + label.y + (label.height - badge.getPreferredSize().height) / 2);
+        .as("seated on the rect it trails, not on the host cell, and a dp below its true centre")
+        .isEqualTo(trueCentre + LABEL_TRAILING_OPTICAL_SEAT);
+  }
+
+  @Test
+  void theOpticalSeatIsSmallEnoughToStayInsideTheRow() {
+    final Rectangle label = new Rectangle(40, 12, 60, 16);
+    final IconHost host = new IconHost(label);
+    AnchorFixture.with(host, 20, 16, 160, 40);
+    final ElwhaBadge badge = ElwhaBadge.large("999+");
+
+    ElwhaBadgeAnchor.attach(host, badge, ElwhaBadgeAnchor.AnchorMode.LABEL_TRAILING);
+
+    final Point origin = AnchorFixture.hostOriginInLayeredPane(host);
+    assertThat(badge.getY() + badge.getHeight())
+        .as("an optical nudge must not push the pill out of the row it decorates")
+        .isLessThanOrEqualTo(origin.y + 40);
   }
 
   @Test
