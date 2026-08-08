@@ -220,6 +220,24 @@ class ElwhaFullScreenDialogTest {
   }
 
   @Test
+  void aContentSlotIsTheOneChildAPreviewStillBorrows() {
+    final JTextField field = new JTextField("draft");
+    final ElwhaFullScreenDialog dialog = show(form().content(field).build());
+
+    final JComponent preview = dialog.renderPreview();
+
+    assertThat(descendantsOfType(preview, JTextField.class))
+        .as("the content slot is the consumer's own component, hosted as-is — so it moves (#589)")
+        .contains(field);
+    assertThat(descendantsOfType(surface(), JTextField.class))
+        .as(
+            "the same limit the Basic Dialog carries, accepted as the contract in #708 — an"
+                + " arbitrary consumer component cannot be twinned, and a placeholder would"
+                + " misrepresent the composition the preview exists to show")
+        .doesNotContain(field);
+  }
+
+  @Test
   void previewingTwiceLeavesBothPreviewsWhole() {
     final ElwhaFullScreenDialog dialog =
         form().confirmAction(ElwhaButton.textButton("Save")).build();

@@ -215,9 +215,16 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
    * <p>The app bar's close affordance and {@linkplain Builder#confirmAction(ElwhaButton) confirming
    * action} render as inert twins rather than the live controls, so a preview neither fires nor
    * strips them out of a dialog that is currently shown, and leaves this dialog's scroll state
-   * alone. The {@linkplain Builder#content(JComponent) content slot} is the exception: it is the
-   * consumer's own component, hosted as-is, and a Swing component has one parent — so previewing a
-   * shown dialog moves its content into the preview.
+   * alone.
+   *
+   * <p><strong>The {@linkplain Builder#content(JComponent) content slot} is borrowed, not twinned —
+   * do not preview a dialog while it is shown.</strong> The slot holds the consumer's own component
+   * under a hosted-as-is contract, and a Swing component has exactly one parent, so the preview
+   * re-parents it: a shown dialog loses its content to the preview, and a second preview takes it
+   * from the first. This is the deliberate limit of the {@code renderPreview} isolation (#589,
+   * ruled in #708) rather than an oversight — an arbitrary consumer component has no copy
+   * constructor, and a placeholder would misrepresent the composition the preview exists to show.
+   * Preview a dialog that is not currently shown, or build a separate instance for the gallery.
    *
    * @return a non-modal render of the dialog surface
    * @version v0.5.0
