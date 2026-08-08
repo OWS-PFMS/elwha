@@ -159,6 +159,9 @@ public class ElwhaTextField extends JComponent {
   /** The child actually added to the decorator — the editor, or its {@link JScrollPane} host. */
   private JComponent editorHost;
 
+  /** Detached twin used to measure auto-grow wrapping; see {@link #autoGrowHeight()}. */
+  private JTextArea measureArea;
+
   private String label = "";
   private String placeholder = "";
   private String prefix = "";
@@ -1169,14 +1172,33 @@ public class ElwhaTextField extends JComponent {
     }
   }
 
-  /** The wrapped content height of the auto-grow area at the current available width. */
+  /**
+   * The wrapped content height of the auto-grow area at the current available width.
+   *
+   * <p>Measured on a detached twin rather than on the live editor. Sizing a {@link JTextArea} is
+   * how you ask it what height its text wraps to, but this runs from {@link #getPreferredSize()} —
+   * so measuring the mounted editor meant a parent's measurement pass resized a live child,
+   * invalidating the tree mid-validate and leaving the editor {@link Short#MAX_VALUE} px tall until
+   * the next layout. The twin shares the editor's {@link javax.swing.text.Document}, so it needs no
+   * text copy and can never drift from what the editor holds.
+   */
   private int autoGrowHeight() {
     final int line = lineHeight(TypeRole.BODY_LARGE);
     if (!(editor instanceof JTextArea area)) {
       return line;
     }
-    area.setSize(Math.max(1, availableEditorWidth()), Short.MAX_VALUE);
-    return Math.max(line, area.getPreferredSize().height);
+    if (measureArea == null) {
+      measureArea = new JTextArea();
+      measureArea.setLineWrap(true);
+      measureArea.setWrapStyleWord(true);
+      measureArea.setBorder(BorderFactory.createEmptyBorder());
+    }
+    if (measureArea.getDocument() != area.getDocument()) {
+      measureArea.setDocument(area.getDocument());
+    }
+    measureArea.setFont(area.getFont());
+    measureArea.setSize(Math.max(1, availableEditorWidth()), Short.MAX_VALUE);
+    return Math.max(line, measureArea.getPreferredSize().height);
   }
 
   /** Editor-region width used to measure auto-grow wrapping (falls back to the default width). */
