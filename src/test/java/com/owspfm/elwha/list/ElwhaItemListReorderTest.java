@@ -473,6 +473,50 @@ class ElwhaItemListReorderTest {
   }
 
   @Test
+  void gridKeyboardReorderStepsAWholeRow() {
+    chipListOf("a", "b", "c", "d", "e", "f", "g", "h").setMovementMode(MovementMode.MOVABLE);
+    list.setOrientation(ElwhaListOrientation.GRID).setColumns(4);
+    layout();
+    focusOn("a");
+
+    Input.pressBoundKey(list, "ctrl pressed DOWN", "elwhaList.moveDown");
+
+    assertThat(model.getItems())
+        .as(
+            "#687 — Ctrl-Down stepped one slot, which in a grid moves sideways; #598 fixed the same"
+                + " defect one binding over, on the focus path")
+        .containsExactly("b", "c", "d", "e", "a", "f", "g", "h");
+  }
+
+  @Test
+  void gridKeyboardReorderStepsAWholeRowBackwards() {
+    chipListOf("a", "b", "c", "d", "e", "f", "g", "h").setMovementMode(MovementMode.MOVABLE);
+    list.setOrientation(ElwhaListOrientation.GRID).setColumns(4);
+    layout();
+    focusOn("f");
+
+    Input.pressBoundKey(list, "ctrl pressed UP", "elwhaList.moveUp");
+
+    assertThat(model.getItems())
+        .as("Ctrl-Up lands the item in the same column of the row above")
+        .containsExactly("a", "f", "b", "c", "d", "e", "g", "h");
+  }
+
+  @Test
+  void aGridReorderPastTheLastRowClampsRatherThanFailing() {
+    chipListOf("a", "b", "c", "d", "e", "f").setMovementMode(MovementMode.MOVABLE);
+    list.setOrientation(ElwhaListOrientation.GRID).setColumns(4);
+    layout();
+    focusOn("d");
+
+    Input.pressBoundKey(list, "ctrl pressed DOWN", "elwhaList.moveDown");
+
+    assertThat(model.getItems())
+        .as("a row-sized step from the last full row clamps into the partial one")
+        .containsExactly("a", "b", "c", "e", "f", "d");
+  }
+
+  @Test
   void aMoveOffEitherEndIsANoOp() {
     chipListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
     focusOn("a");

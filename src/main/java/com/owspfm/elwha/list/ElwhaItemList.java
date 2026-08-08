@@ -2558,7 +2558,13 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
 
     @Override
     public void actionPerformed(final ActionEvent event) {
-      moveFocusedItem(focusedItem(), delta);
+      // The reorder bindings are the block arrows, so in a GRID they walk whole rows for the same
+      // reason MoveFocus does (#598): stepping by one moves the item along the flat sequence, which
+      // in a grid reads as sideways, leaving no way to reorder vertically from the keyboard (#687).
+      // resolveMoveTarget clamps, so a row-sized step is safe in the last partial row.
+      final int step =
+          orientation == ElwhaListOrientation.GRID ? delta * Math.max(1, columns) : delta;
+      moveFocusedItem(focusedItem(), step);
     }
   }
 
