@@ -93,6 +93,13 @@ public final class Typography {
     }
   }
 
+  // Register the bundled faces, then build through the same path ofFamily uses. Deriving from the
+  // loaded Font objects instead would resolve the identical faces but name the regular ones by
+  // their full face name ("Inter Regular") where ofFamily names them by family ("Inter") — and
+  // Font.equals compares the name, so the round trip ofFamily(defaults().familyName()) came back
+  // rendering-identical but not equal. That was invisible until Typography gained value equality
+  // (#698); routing both paths through one construction is what makes the documented round trip
+  // lossless by the contract and not merely by what it paints.
   private static Typography buildDefault() {
     Font regular = loadBundledFont(INTER_REGULAR_RESOURCE);
     Font medium = loadBundledFont(INTER_MEDIUM_RESOURCE);
@@ -102,12 +109,7 @@ public final class Typography {
     GraphicsEnvironment environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
     environment.registerFont(regular);
     environment.registerFont(medium);
-    EnumMap<TypeRole, Font> fonts = new EnumMap<>(TypeRole.class);
-    for (TypeRole role : TypeRole.values()) {
-      Font face = role.medium() ? medium : regular;
-      fonts.put(role, face.deriveFont((float) role.pt()));
-    }
-    return new Typography(regular.getFamily(), fonts);
+    return ofFamily(regular.getFamily());
   }
 
   /**
@@ -121,7 +123,10 @@ public final class Typography {
    *
    * <p>Looking the Medium face up is what makes {@code ofFamily(existing.familyName())} lossless:
    * {@link #familyName()} reports the Regular face's family, so without it a round trip through
-   * this method would quietly downgrade every 500-weight role to synthesis.
+   * this method would quietly downgrade every 500-weight role to synthesis. Since #698 the round
+   * trip is lossless by {@link #equals(Object)} and not merely by what it paints — {@link
+   * #defaults()} builds through this method rather than deriving from the bundled {@code Font}
+   * objects, so both paths name their faces the same way.
    *
    * @param familyName the installed font family to build on
    * @return typography over that family
@@ -167,5 +172,50 @@ public final class Typography {
     } catch (Exception loadFailed) {
       return null;
     }
+  }
+
+  /**
+   * Value equality — two typographies are equal when they name the same family and resolve every
+   * role to the same font.
+   *
+   * <p>{@link #ofFamily(String)} is documented as a lossless round trip through {@link
+   * #familyName()}, and without this it was lossless in rendering but produced an object that did
+   * not compare equal to its source — which would have shown up as a spurious difference the moment
+   * {@link Config} gained equality. Ruled alongside {@link Palette} and {@link Theme} in (#698).
+   *
+   * @param obj the object to compare against
+   * @return whether {@code obj} is a typography over the same family with the same faces
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof Typography other)) {
+      return false;
+    }
+    return familyName.equals(other.familyName) && fonts.equals(other.fonts);
+  }
+
+  /**
+   * @return a hash consistent with {@link #equals(Object)}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public int hashCode() {
+    return 31 * familyName.hashCode() + fonts.hashCode();
+  }
+
+  /**
+   * @return the family this typography is built over
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public String toString() {
+    return "Typography[" + familyName + "]";
   }
 }

@@ -68,24 +68,98 @@ class ElwhaThemeInstallTest {
   }
 
   /**
-   * #658 asked whether writing {@code defaultFont} <em>after</em> the base look-and-feel installs
-   * means raw Swing never picks it up — FlatLaf reads that key while building its defaults table,
-   * so a later write should arrive too late to reach the already-built {@code Label.font}. It does
-   * not: FlatLaf resolves the font keys lazily against {@code defaultFont}, so the ordering is
-   * harmless. Pinned here because the raw-Swing typography contract has no other coverage, and
-   * because the ordering is exactly the kind of thing a later refactor could break silently.
+   * The type half of the FlatLaf bridge (#696). Before it, every raw Swing component read {@code
+   * defaultFont} and so painted Body Medium — a {@code JButton}, a {@code JTable} row and a tab
+   * label were typographically identical, and the "raw Swing inherits the design language" claim
+   * held for colour and shape but not type. M3 assigns a role per component archetype, and Swing
+   * keys fonts by component class, so those assignments transfer exactly.
    */
   @Test
-  void rawSwingFontKeysFollowTheInstalledTypography() {
-    final String installed = Typography.defaults().familyName();
+  void rawSwingFontKeysCarryTheRoleM3AssignsEachArchetype() {
+    final Typography installed = Typography.defaults();
 
-    for (final String key : new String[] {"Label.font", "Button.font", "TextField.font"}) {
-      assertThat(UIManager.getFont(key))
-          .as("%s is what raw Swing paints with, so it has to be Elwha's family", key)
-          .isNotNull()
-          .extracting(Font::getFamily)
-          .isEqualTo(installed);
-    }
+    assertRole("Button.font", TypeRole.LABEL_LARGE, installed);
+    assertRole("CheckBox.font", TypeRole.LABEL_LARGE, installed);
+    assertRole("MenuItem.font", TypeRole.LABEL_LARGE, installed);
+    assertRole("TextField.font", TypeRole.BODY_LARGE, installed);
+    assertRole("ComboBox.font", TypeRole.BODY_LARGE, installed);
+    assertRole("List.font", TypeRole.BODY_LARGE, installed);
+    assertRole("Label.font", TypeRole.BODY_MEDIUM, installed);
+    assertRole("ToolTip.font", TypeRole.BODY_SMALL, installed);
+    assertRole("TabbedPane.font", TypeRole.TITLE_SMALL, installed);
+    assertRole("TableHeader.font", TypeRole.TITLE_SMALL, installed);
+    assertRole("ProgressBar.font", TypeRole.LABEL_MEDIUM, installed);
+
+    assertThat(UIManager.getFont("Button.font"))
+        .as("the point of the bridge: a button and a body label no longer read the same font")
+        .isNotEqualTo(UIManager.getFont("Label.font"));
+  }
+
+  /**
+   * FlatLaf's style-class ladder is how raw Swing names a role per <em>usage</em> — the case
+   * Swing's one {@code Label.font} cannot express, and the one #696 opened with. Left un-bridged,
+   * {@code h1}-{@code h3} resolve through {@code $semibold.font}, which falls back to a system face
+   * when the installed family has no semibold: measured at Helvetica Neue while everything around
+   * it was Inter. So this pins both halves — the rungs land on M3 steps, and none of them leaves
+   * the installed family.
+   */
+  @Test
+  void styleClassLadderLandsOnM3StepsInsideTheInstalledFamily() {
+    final Typography installed = Typography.defaults();
+
+    assertRole("h00.font", TypeRole.DISPLAY_SMALL, installed);
+    assertRole("h0.font", TypeRole.HEADLINE_LARGE, installed);
+    assertRole("h1.font", TypeRole.HEADLINE_MEDIUM, installed);
+    assertRole("h2.font", TypeRole.HEADLINE_SMALL, installed);
+    assertRole("h3.font", TypeRole.TITLE_LARGE, installed);
+    assertRole("h4.font", TypeRole.TITLE_MEDIUM, installed);
+    assertRole("large.font", TypeRole.BODY_LARGE, installed);
+    assertRole("small.font", TypeRole.BODY_SMALL, installed);
+    assertRole("semibold.font", TypeRole.LABEL_LARGE, installed);
+
+    assertThat(UIManager.getFont("h1.font").getFamily())
+        .as("the regression: a heading must not escape to a system face for want of a semibold")
+        .startsWith(installed.familyName());
+  }
+
+  /**
+   * #658 asked whether writing {@code defaultFont} <em>after</em> the base look-and-feel installs
+   * means raw Swing never picks it up — FlatLaf reads that key while building its defaults table,
+   * so a later write should arrive too late. It does not: FlatLaf resolves lazily against {@code
+   * defaultFont}. Two ladder rungs are deliberately left to that derivation ({@code medium.font} at
+   * default−1 and {@code mini.font} at default−3 land on sizes the M3 scale has no step for), which
+   * makes them the live witness that the ordering still holds now that #696 writes explicit values
+   * over most of the table.
+   */
+  @Test
+  void unbridgedRungsStillDeriveFromDefaultFont() {
+    final Typography installed = Typography.defaults();
+    final int defaultSize = installed.get(TypeRole.BODY_MEDIUM).getSize();
+
+    assertThat(UIManager.getFont("medium.font"))
+        .as("medium.font is derived, not written")
+        .isNotNull()
+        .extracting(Font::getFamily, Font::getSize)
+        .containsExactly(installed.familyName(), defaultSize - 1);
+    assertThat(UIManager.getFont("mini.font"))
+        .as("and so is mini.font")
+        .isNotNull()
+        .extracting(Font::getFamily, Font::getSize)
+        .containsExactly(installed.familyName(), defaultSize - 3);
+  }
+
+  @Test
+  void bridgedFontKeysAreStoredAsUiResourcesSoUpdateUiReinstallsThem() {
+    assertThat(UIManager.get("Button.font"))
+        .as("a plain Font would be treated as developer-owned and survive a re-skin")
+        .isInstanceOf(FontUIResource.class);
+  }
+
+  private static void assertRole(final String key, final TypeRole role, final Typography source) {
+    assertThat(UIManager.getFont(key))
+        .as("%s carries %s", key, role)
+        .isNotNull()
+        .isEqualTo(source.get(role));
   }
 
   @Test

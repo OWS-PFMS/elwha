@@ -257,8 +257,10 @@ rail.setMenuButton(menuToggle);            // the shell's one and only hamburger
 rail.setPrimary(destinations);
 
 // Content column: a leading inset the width of the collapsed rail, the app bar at its top.
-// The collapsed rail's width is its preferred width (96 dp) — read it rather than hardcoding it.
-int railInset = rail.getPreferredSize().width;
+// Ask the rail for the number (#729). NOT getPreferredSize().width — that tracks the rail's
+// current state, so it answers the Expanded width once the rail expands and an interpolation
+// mid-morph, and the inset must not move (the Expanded rail overlays it rather than reflowing).
+int railInset = rail.getCollapsedWidth();
 JPanel contentColumn = new JPanel(new BorderLayout());
 contentColumn.setBorder(BorderFactory.createEmptyBorder(0, railInset, 0, 0));
 contentColumn.add(bar, BorderLayout.NORTH);     // no nav icon — the rail has it

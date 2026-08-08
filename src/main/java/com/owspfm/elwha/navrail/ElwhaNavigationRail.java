@@ -294,6 +294,9 @@ public final class ElwhaNavigationRail extends JComponent {
     this.variant = Objects.requireNonNull(variant, "variant");
     setLayout(null);
     setOpaque(false);
+    // Conventions §12 — the rail routes traversal but operates no keyboard itself; the arrow-key
+    // bindings live on each destination.
+    setFocusable(false);
     setFocusTraversalPolicyProvider(true);
     setFocusTraversalPolicy(new RailFocusTraversalPolicy());
     variantMorph.snapTo(variant == Variant.EXPANDED ? 1f : 0f);
@@ -424,6 +427,25 @@ public final class ElwhaNavigationRail extends JComponent {
    */
   public int getExpandedWidth() {
     return expandedWidthPx;
+  }
+
+  /**
+   * Returns the rail's Collapsed width — fixed at {@value #COLLAPSED_WIDTH_PX} dp by M3, and the
+   * number a shell needs for the content column's leading inset.
+   *
+   * <p><strong>Not the same as {@code getPreferredSize().width}</strong>, which is what the shell
+   * recipe used to reach for. Preferred width tracks the rail's <em>current</em> state: it reports
+   * this value only in {@link Variant#COLLAPSED}, {@link #getExpandedWidth()} in {@link
+   * Variant#EXPANDED}, and an interpolation mid-{@link #morphTo(Variant)}. The inset wants the
+   * collapsed width whatever the rail is doing, because the Expanded rail overlays the inset rather
+   * than reflowing the content — so it must not move when the rail expands.
+   *
+   * @return the Collapsed width in pixels, independent of the current variant
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int getCollapsedWidth() {
+    return COLLAPSED_WIDTH_PX;
   }
 
   /**
