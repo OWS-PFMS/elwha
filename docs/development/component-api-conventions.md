@@ -117,6 +117,18 @@ Both roles honor the **same paint convention**: translate the graphics origin by
 
 **Apply when:** adding any new elevated/shadowed primitive. Implement `ShadowBearing`, pick the reserve home by role, honor the `ShadowPainter` translate convention, and obey the `getMaximumSize` rule. Contract-alignment of the existing primitives onto `ShadowBearing` is tracked in [#313](https://github.com/OWS-PFMS/elwha/issues/313).
 
+## 8a. Right-to-left is a lib-wide contract, and every design doc says which case it is
+
+Any component that places content along the inline axis resolves *leading* and *trailing* through `getComponentOrientation().isLeftToRight()` — never through hardcoded left / right. This is not per-component opt-in; a consumer switching a window to an RTL locale expects the whole catalog to mirror, and one component that does not is the visible defect.
+
+**The house shape.** Compute positions as if the container were left-to-right, then mirror on the way out: `x' = totalWidth - x - width`. `ElwhaItemList.flipX` is the reference implementation (it notes the mapping is its own inverse, so the same method serves layout going out and pointer coordinates coming in); `ElwhaCardHeader`, `ElwhaCardActions` and `ElwhaButtonGroup.doLayout` follow it, and `AbstractElwhaMenuOverlay.placeBeside` / `ElwhaSideSheet.isDockedRight` are the overlay-side equivalents. One flip covers both halves of the problem — the segments swap ends *and* the items inside a segment reverse.
+
+**Cached geometry needs an orientation hook; live geometry does not.** A layout that reads the orientation each pass is correct for free. State *derived* from the orientation and stored — `ElwhaButtonGroup`'s per-segment corner radii are the case in point — goes stale, so the component overrides `setComponentOrientation` to re-derive it.
+
+**Every component's design doc carries an RTL section, including when the answer is "nothing".** A symmetric component genuinely needs no mirroring — `ElwhaIconButton` is one centered glyph in a square, so mirroring maps it onto itself — but silence in the doc is indistinguishable from an oversight, which is what [#565](https://github.com/OWS-PFMS/elwha/issues/565) filed. Write the no-op case down, and say *why* it is a no-op, so the next reader does not have to re-derive it. If the component later grows a second slot, that section is the thing that has to change.
+
+**Apply when:** adding any component with a leading or trailing slot, a row or column of children, or an anchored overlay. Mirror it, add the design-doc section either way, and add an RTL case to its Tier A suite.
+
 ## 9. "Requested configuration not available" — force when the request is satisfiable, throw when it is not
 
 Two components appeared to disagree about what a setter does when the caller asks for something the component's current configuration does not allow: `ElwhaColorPicker.setMode` / `setSwatchSource` **throw** `IllegalArgumentException`, while `ElwhaSelectField`'s `setEditable` / `setMultiSelect` **force** the conflicting axis off. Ruled in [#573](https://github.com/OWS-PFMS/elwha/issues/573): they are answering different questions, and both are right.

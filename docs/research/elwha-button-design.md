@@ -368,6 +368,29 @@ A separate `### Changed` entry covers the follow-up `ElwhaCard.paintRipple` refa
 
 ---
 
+## §17. RTL mirroring
+
+**CODE rule**, added 2026-08-07 by [#565](https://github.com/OWS-PFMS/elwha/issues/565): the spec
+was silent on right-to-left, and the implementation always placed the icon to the left of the label.
+
+| Orientation | Layout |
+|---|---|
+| LTR | Icon leading (left), label trailing (right) |
+| RTL | Icon leading (right), label trailing (left) |
+
+The content block stays optically centered in the body either way — only the icon/label order
+within it swaps. `paintContent` reads `getComponentOrientation().isLeftToRight()`; there is no
+hardcoded "icon left". This matches the Extended FAB rule (`elwha-fab-design.md` §11), which M3
+states explicitly for that component and which reads the same way here.
+
+**Nothing else in the button mirrors.** A label-only or icon-only button is symmetric about the
+centre line, so RTL is a no-op for it. The surface, border, focus ring, ripple, state layers and
+both morphs are geometry about the body rect and carry no reading direction. Selection, elevation
+and the connected-segment corner override are likewise direction-free — the corner override arrives
+pre-mirrored from `ElwhaButtonGroup` (`elwha-button-group-design.md` §20).
+
+---
+
 ## Appendix A. Per-size measurements
 
 | Size | Container H (dp) | Horiz padding, no icon (L / R) | Horiz padding, with icon (L / gap / R) | Icon size (dp) | Square corner (dp) | Pressed corner (dp, v2 only) |

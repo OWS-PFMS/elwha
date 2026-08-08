@@ -1670,18 +1670,24 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
       final Icon paintedIcon = currentIcon();
       final int contentW =
           (paintedIcon != null ? iconSlot + (labelW > 0 ? iconGap : 0) : 0) + labelW;
-      int x = (bodyW - contentW) / 2;
+      final int x = (bodyW - contentW) / 2;
       final int y = bodyH / 2;
+
+      // Icon leads the label — which under an RTL orientation means the icon sits on the *right*
+      // and the label to its left, so the pair swaps within the centered content block. Matches
+      // ElwhaFab's Extended form (design doc §11); design doc §17 for this button.
+      final boolean ltr = getComponentOrientation().isLeftToRight();
+      final int iconX = (ltr || labelW == 0) ? x : x + labelW + iconGap;
+      final int labelX = (!ltr || paintedIcon == null) ? x : x + iconSlot + iconGap;
 
       if (paintedIcon != null) {
         final int iconY = y - iconSlot / 2;
-        paintedIcon.paintIcon(this, g2, x, iconY);
-        x += iconSlot + (labelW > 0 ? iconGap : 0);
+        paintedIcon.paintIcon(this, g2, iconX, iconY);
       }
       if (labelW > 0) {
         final int baseline = y + (fm.getAscent() - fm.getDescent()) / 2;
         g2.setColor(resolveForegroundColor());
-        g2.drawString(text, x, baseline);
+        g2.drawString(text, labelX, baseline);
       }
     } finally {
       g2.dispose();

@@ -330,6 +330,26 @@ _All 9 resolved 2026-05-21 (operator + capture). Numbering is stable so existing
 9. **Keyboard model** → **follow the M3 spec literally: `Tab` moves between every segment**, each
    segment its own tab stop. Not Swing arrow-key roving-focus. Operator call.
 
+## §20. RTL mirroring
+
+**CODE rule**, added 2026-08-07 by [#565](https://github.com/OWS-PFMS/elwha/issues/565): the spec
+was silent on right-to-left, and `doLayout` always advanced left-to-right.
+
+Segments advance from the **leading** edge, so under an RTL orientation segment 0 sits at the right
+and the row reads right to left. Both variants mirror; the standard variant's per-size gap and the
+connected variant's 2 dp inner padding are unchanged by direction.
+
+The **connected end caps mirror with the row.** Corner radii are geometric (top-left, top-right, …)
+while a segment's index is in reading order, so the two disagree under RTL: segment 0 is laid out at
+the right edge and must round *that* side. `connectedRadii` resolves the index to a visual position
+before picking corners, and `setComponentOrientation` re-derives the cached radii — they live on the
+segments, so unlike the layout they cannot simply be read fresh each pass.
+
+Within a segment, an `ElwhaButton`'s own icon/label pair mirrors under its own rule
+(`elwha-button-design.md` §17); an icon-only segment is symmetric and needs nothing.
+
+---
+
 ## §19. Screenshot index (~28 captures)
 
 Overview: Segmented Buttons (deprecation context) · Button groups Overview · M3 Expressive update ·

@@ -10,6 +10,8 @@ import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import com.owspfm.elwha.theme.CornerRadii;
+import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +45,46 @@ class ElwhaButtonGroupLayoutTest {
 
   private static int segmentWidth(final ElwhaButtonGroup group, final int index) {
     return group.getButtonAt(index).getWidth();
+  }
+
+  // -------------------------------------------------------------------- RTL
+
+  @Test
+  void segmentsAdvanceFromTheLeadingEdgeUnderRightToLeft() {
+    final ElwhaButtonGroup group = laidOut(ElwhaButtonGroup.standard().add("List", "Grid"));
+    assertThat(group.getButtonAt(0).getX())
+        .as("left-to-right puts the first segment at the left")
+        .isZero();
+
+    group.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+    group.doLayout();
+
+    assertThat(group.getButtonAt(0).getX() + segmentWidth(group, 0))
+        .as("under RTL the first segment mirrors to the right edge (#565)")
+        .isEqualTo(group.getWidth());
+    assertThat(group.getButtonAt(1).getX())
+        .as("and the row reads right to left")
+        .isLessThan(group.getButtonAt(0).getX());
+  }
+
+  @Test
+  void theConnectedEndCapsSwapEndsUnderRightToLeft() {
+    final ElwhaButtonGroup group = laidOut(ElwhaButtonGroup.connected().add("List", "Grid"));
+    final CornerRadii ltrFirst = ((ElwhaButton) group.getButtonAt(0)).getCornerRadii();
+    assertThat(ltrFirst.topLeftPx())
+        .as("left-to-right, the first segment caps its left side")
+        .isGreaterThan(ltrFirst.topRightPx());
+
+    group.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+    group.doLayout();
+
+    final CornerRadii rtlFirst = ((ElwhaButton) group.getButtonAt(0)).getCornerRadii();
+    assertThat(rtlFirst.topRightPx())
+        .as("mirrored, the first segment is the right end cap and rounds that side (#565)")
+        .isGreaterThan(rtlFirst.topLeftPx());
+    assertThat(rtlFirst.topRightPx())
+        .as("with the same pill radius it used on the other end")
+        .isEqualTo(ltrFirst.topLeftPx());
   }
 
   // -------------------------------------------------------------- empty
