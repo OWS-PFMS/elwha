@@ -1373,7 +1373,7 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
   protected void paintComponent(final Graphics g) {
     final int w = getWidth();
     final int h = getHeight();
-    final int arc = shape.px();
+    final int arc = shape.arcPx();
     final boolean interactive = interactionMode != ChipInteractionMode.STATIC && isEnabled();
     final boolean focused = focusVisible && interactive;
 

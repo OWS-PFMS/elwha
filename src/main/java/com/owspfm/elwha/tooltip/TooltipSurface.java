@@ -268,7 +268,7 @@ class TooltipSurface extends JPanel {
   }
 
   private void paintPlain(final Graphics2D g2) {
-    final int arc = ShapeScale.XS.px() * 2;
+    final int arc = ShapeScale.XS.arcPx();
     g2.setColor(ColorRole.INVERSE_SURFACE.resolve());
     g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), arc, arc));
 
@@ -367,7 +367,7 @@ class TooltipSurface extends JPanel {
     final int by = halo.top;
     final int bw = getWidth() - halo.left - halo.right;
     final int bh = getHeight() - halo.top - halo.bottom;
-    final int arc = ShapeScale.MD.px() * 2;
+    final int arc = ShapeScale.MD.arcPx();
 
     final Graphics2D sg = (Graphics2D) g2.create();
     sg.translate(bx, by);

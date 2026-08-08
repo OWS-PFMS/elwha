@@ -3,16 +3,20 @@ package com.owspfm.elwha.tooltip;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.testkit.Corners;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.PaintLog;
 import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShadowPainter;
+import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.TypeRole;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Insets;
+import java.awt.image.BufferedImage;
 import java.util.List;
 import javax.accessibility.AccessibleRole;
 import javax.swing.JComponent;
@@ -264,6 +268,44 @@ class ElwhaTooltipSurfaceTest {
     assertThat(TooltipSurface.wrap("", metricsOf(host, TypeRole.BODY_SMALL), 100))
         .as("empty text still yields one (empty) line, so the caller never divides by zero")
         .hasSize(1);
+  }
+
+  // ------------------------------------------------------------ corner radius (#663)
+
+  @Test
+  void aPlainBubbleKeepsItsExtraSmallFourPixelCorner() {
+    final TooltipSurface surface = plain("Rename");
+    final Dimension pref = surface.getPreferredSize();
+    final BufferedImage shot = Pixels.render(surface, pref.width, pref.height, Color.MAGENTA);
+
+    Corners.assertTopLeftRadius(
+        shot,
+        0,
+        0,
+        ShapeScale.XS.px(),
+        ColorRole.INVERSE_SURFACE.resolve(),
+        Color.MAGENTA,
+        ShapeScale.XS.px(),
+        "the tooltip was already one of the sites that doubled at the painter, so the #663"
+            + " normalization must not move it");
+  }
+
+  @Test
+  void aRichCardKeepsItsMediumTwelvePixelCorner() {
+    final TooltipSurface surface = rich("Subhead", "Supporting text");
+    final Dimension pref = surface.getPreferredSize();
+    final BufferedImage shot = Pixels.render(surface, pref.width, pref.height, Color.MAGENTA);
+    final Insets halo = surface.halo();
+
+    Corners.assertTopLeftRadius(
+        shot,
+        halo.left,
+        halo.top,
+        ShapeScale.MD.px(),
+        ColorRole.SURFACE_CONTAINER.resolve(),
+        new Color(shot.getRGB(halo.left - 3, halo.top - 3), true),
+        ShapeScale.MD.px(),
+        "the rich card's 12 dp corner is unchanged, body and halo still on one silhouette");
   }
 
   /**
