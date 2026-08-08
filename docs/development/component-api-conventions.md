@@ -256,6 +256,20 @@ The same rule already held elsewhere without being written down: `ElwhaColorPick
 
 **Apply when:** designing a selection surface. If the component owns the values, name them by value everywhere — getter, setter and event. If it owns laid-out children and nothing else, position is the honest name, and it is fine for that component to expose it.
 
+## 14. A host exposes children the consumer owns; it does not expose its own implementation
+
+`ElwhaAppBar.getNavigationIcon()` and `getActions()` hand back live `ElwhaIconButton`s and are correct. `ElwhaSelectField`'s embedded `ElwhaTextField` / `ElwhaIconButton` / `ElwhaMenu` and `ElwhaColorPicker`'s embedded `ElwhaTabs` stay private and will stay private. Ruled in [#727](https://github.com/OWS-PFMS/elwha/issues/727), which asked whether to expose them so the Showcase's [#318](https://github.com/OWS-PFMS/elwha/issues/318) workbench facets could bind to them.
+
+**The line is who put the child there.** The app bar's buttons exist because the consumer asked for them (`addAction(...)`), the bar never destroys them, and the bar owns none of their presentation — so handing back the reference gives the consumer their own object back. A select field's arrow, chassis and menu exist because the select field needs them to be a select field; they are how it is built, not what it holds.
+
+**Exposing them would not even work, which is the tell.** The facet contract needs a live reference that stays valid across the host's own mutations, and two of the four cannot supply one: `ElwhaSelectField.rebuildMenu()` reassigns `menu` on every `setOptions` / `setDisplayFunction` / `setMultiSelect` / `setEditable`, and `ElwhaColorPicker.rebuildModes()` destroys and recreates every `ElwhaTab` on `setModes`. An accessor there hands out a reference that goes stale on the next ordinary call — it does not satisfy the facet, it relocates the breakage into consumer code. And a reachable `ElwhaTextField` would let a caller do `setTrailingIconButton(...)` and displace the arrow the select field is documented to own.
+
+**Say no, then close the gap the request was really about.** Refusing an accessor is only honest if the wrapper's own API can express what the caller wanted, so #727 also added the twelve `ElwhaSelectField` delegations that were genuinely missing — `getVariant` / `setVariant` (constructor-only before), `getLeadingIcon` (§5: the setter shipped without it), `setRequired` / `setNoAsterisk`, `setPrefixText` / `setSuffixText`, `setSupportingTextVisibility`, `setMaxLength`. The arrow stays unreachable on purpose: it is chrome the select field sizes and animates, and every axis of it is a decision the component has already made.
+
+**Not the same rule as `getEditor()`.** `ElwhaTextField.getEditor()` returns the raw Swing `JTextComponent` so a consumer can attach document and input listeners and reach the accessible context — capabilities the wrapper cannot mirror without re-exporting all of `javax.swing.text`. It hands out a *Swing* object for observation, not an *Elwha* component for restyling, and its javadoc says the chrome stays Elwha-owned.
+
+**Apply when:** a composed component is asked to expose something it holds. Ask who created the child and whether the host ever replaces it. If the consumer supplied it and the host keeps it, expose it. Otherwise forward the specific settings, and record here what you deliberately did not forward.
+
 ---
 
 ## Cross-reference
