@@ -15,25 +15,30 @@ import javax.swing.UIManager;
  * #DEFAULT_SIZE}, and a sized form taking an explicit pixel size, so consumers don't have to chain
  * {@code .derive(size, size)} themselves.
  *
- * <p>Adding new icons: drop the SVG under {@code resources/com/owspfm/icons/material/} (download
- * from <a href="https://fonts.google.com/icons">fonts.google.com/icons</a> with the same style axes
- * — Rounded, 400, fill 0, 20px — to keep visual consistency) and add a lookup here. Material
- * Symbols are licensed Apache-2.0; see the project LICENSE-NOTICES file for attribution.
- *
- * <p><strong>Theming icons from a client-owned resource path.</strong> Consumer libraries and apps
- * that want to pair their own SVGs with Elwha's theme-aware color filter should drop the SVGs at a
+ * <p><strong>Using your own icons.</strong> The bundle is fixed at build time — client code cannot
+ * add to it. To use your own icons alongside it, keep the SVGs in your <em>own</em> resources at a
  * client-owned classpath location (e.g. {@code com/acme/icons/}), construct a {@link FlatSVGIcon}
- * against that path, and wrap it with {@link #themed(FlatSVGIcon)}:
+ * against that path, and wrap it with {@link #themed(FlatSVGIcon)} so it follows the installed
+ * Elwha theme (light/dark re-skins live) exactly like the bundled set:
  *
  * <pre>{@code
  * Icon icon = MaterialIcons.themed(new FlatSVGIcon("com/acme/icons/foo.svg", 24, 24));
  * }</pre>
  *
- * <p>For unusual cases that need raw access to the filter (e.g. applying it to an icon constructed
- * elsewhere), use the {@link #LABEL_FOREGROUND_FILTER} constant directly. The alternative —
- * dropping SVGs into {@code com/owspfm/icons/material/} and using {@link #get(String)} — works, but
- * client names race Elwha's bundle on the classpath with undefined resolution order; the {@code
- * themed} route is the recommended one for any non-trivial consumer.
+ * <p>For visual consistency with the bundled glyphs, download from <a
+ * href="https://fonts.google.com/icons">fonts.google.com/icons</a> with the house style axes —
+ * Rounded, weight 400, fill 0, optical size 20px (fill 1 for selected/active states). The filter
+ * remaps every painted color to {@code Label.foreground}, so monochrome artwork themes cleanly;
+ * multicolor artwork will flatten. For unusual cases that need raw access to the filter (e.g.
+ * applying it to an icon constructed elsewhere), use the {@link #LABEL_FOREGROUND_FILTER} constant
+ * directly. One route to avoid: dropping SVGs into {@code com/owspfm/icons/material/} and using
+ * {@link #get(String)} appears to work, but client names race Elwha's bundle on the classpath with
+ * undefined resolution order — keep your icons in your own namespace.
+ *
+ * <p><em>Adding icons to the library's bundle (contributors):</em> drop the SVG under {@code
+ * resources/com/owspfm/icons/material/} with the same style axes, add a lookup here, and update the
+ * inventory in the package doc ({@code MaterialIconsInventoryDocTest} enforces it). Material
+ * Symbols are licensed Apache-2.0; see the project LICENSE-NOTICES file for attribution.
  *
  * <p><strong>Per-glyph optical centering varies.</strong> Material Symbols are designed for
  * text-baseline alignment in font usage, not optical centering when consumed as standalone

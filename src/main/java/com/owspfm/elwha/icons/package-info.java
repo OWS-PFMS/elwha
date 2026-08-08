@@ -26,8 +26,12 @@
  * from the resource directory and fails the build when this doc drifts — adding a glyph means
  * updating this list in the same change.
  *
- * <p>Use this helper, never raw {@code FlatSVGIcon} — the house icon style and the theming filter
- * are the point. Attribution for the Apache-2.0 Google assets lives in {@code NOTICE}.
+ * <p>For the bundled set, use this helper, never raw {@code FlatSVGIcon} — the house icon style and
+ * the theming filter are the point. Client code bringing its <em>own</em> SVGs keeps them in its
+ * own classpath namespace and wraps them with {@link
+ * com.owspfm.elwha.icons.MaterialIcons#themed(com.formdev.flatlaf.extras.FlatSVGIcon)
+ * MaterialIcons.themed} to get the same theme treatment — the recipe is in the {@code
+ * MaterialIcons} class doc. Attribution for the Apache-2.0 Google assets lives in {@code NOTICE}.
  *
  * @author Charles Bryan
  * @version v0.5.0
