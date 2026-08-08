@@ -19,7 +19,7 @@ import javax.swing.SwingUtilities;
 
 /**
  * S2 visual smoke for {@link ElwhaTabs} interaction (#427): live click activation with an event log
- * separating bar {@code ChangeListener} events from per-tab {@code ActionListener} events
+ * separating bar {@code PROPERTY_ACTIVE_TAB} events from per-tab {@code ActionListener} events
  * (programmatic activation logs change-only — verify in the log!), hover/press layers and ripple
  * under real pointer input, the primary inactive-pressed→PRIMARY layer quirk on a forced-state row,
  * and a whole-bar enabled switch.
@@ -59,9 +59,11 @@ public final class ElwhaTabsInteractionDemo {
       wireLogging(primary.addTab(label), log, "primary");
       wireLogging(secondary.addTab(label), log, "secondary");
     }
-    primary.addChangeListener(
+    primary.addPropertyChangeListener(
+        ElwhaTabs.PROPERTY_ACTIVE_TAB,
         e -> append(log, "primary   change  -> active=" + primary.getActiveTabIndex()));
-    secondary.addChangeListener(
+    secondary.addPropertyChangeListener(
+        ElwhaTabs.PROPERTY_ACTIVE_TAB,
         e -> append(log, "secondary change  -> active=" + secondary.getActiveTabIndex()));
 
     final ElwhaTabs forced = ElwhaTabs.primary();

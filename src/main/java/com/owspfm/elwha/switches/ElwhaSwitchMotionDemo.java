@@ -27,7 +27,7 @@ import javax.swing.WindowConstants;
  * on programmatic writes too.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaSwitchMotionDemo {
@@ -64,10 +64,12 @@ public final class ElwhaSwitchMotionDemo {
     rows.add(row("drag me partway and release — no-jump handoff", dragMe));
 
     final ElwhaSwitch slowMotion = new ElwhaSwitch();
-    slowMotion.addChangeListener(
+    slowMotion.addPropertyChangeListener(
+        ElwhaSwitch.PROPERTY_SELECTED,
         e -> MorphAnimator.setDurationMultiplier(slowMotion.isSelected() ? 5f : 1f));
     final ElwhaSwitch reducedMotion = new ElwhaSwitch(MorphAnimator.isReducedMotion());
-    reducedMotion.addChangeListener(
+    reducedMotion.addPropertyChangeListener(
+        ElwhaSwitch.PROPERTY_SELECTED,
         e -> MorphAnimator.setReducedMotion(reducedMotion.isSelected()));
     rows.add(row("slow motion 5× (observation multiplier)", slowMotion));
     rows.add(row("reduced motion — toggles snap", reducedMotion));

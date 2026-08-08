@@ -54,7 +54,7 @@
 
 - `ElwhaTabs()` (PRIMARY) / `ElwhaTabs(TabsVariant)`; factories `ElwhaTabs.primary()` / `ElwhaTabs.secondary()`.
 - `addTab(ElwhaTab)` (+ `addTab(String label)` / varargs convenience), `removeTab(ElwhaTab)`, `getTabCount()`, `getTabAt(int)`.
-- `getActiveTabIndex()` / `setActiveTabIndex(int)` / `getActiveTab()` / `setActiveTab(ElwhaTab)`; `addChangeListener(ChangeListener)`.
+- `getActiveTabIndex()` / `setActiveTabIndex(int)` / `getActiveTab()` / `setActiveTab(ElwhaTab)`; observe with `addPropertyChangeListener(PROPERTY_ACTIVE_TAB, l)`, whose event carries the departing and arriving `ElwhaTab` (converted from `addChangeListener` in [#700](https://github.com/OWS-PFMS/elwha/issues/700) under conventions §10).
 - `setAutoActivate(boolean)`, `setTabMode(TabMode)`, `scrollToTab(ElwhaTab)`.
 - Paints `SURFACE` fill, the 1px `OUTLINE_VARIANT` divider along the bottom, and the active indicator (over the divider).
 

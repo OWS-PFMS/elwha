@@ -15,7 +15,7 @@ import java.awt.image.BufferedImage;
  * both variants in light and dark modes.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaTabsChromeSmoke {
@@ -52,7 +52,7 @@ public final class ElwhaTabsChromeSmoke {
   private static void checkSelectionApi() {
     final ElwhaTabs bar = ElwhaTabs.primary();
     final int[] changes = {0};
-    bar.addChangeListener(e -> changes[0]++);
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, e -> changes[0]++);
 
     check("empty bar has activeTabIndex -1", bar.getActiveTabIndex() == -1);
     check("empty bar has null activeTab", bar.getActiveTab() == null);
@@ -92,7 +92,7 @@ public final class ElwhaTabsChromeSmoke {
     final ElwhaTab b = bar.addTab("B");
     final ElwhaTab c = bar.addTab("C");
     final int[] changes = {0};
-    bar.addChangeListener(e -> changes[0]++);
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, e -> changes[0]++);
 
     bar.setActiveTabIndex(1);
     check("setup: B active", bar.getActiveTab() == b && changes[0] == 1);

@@ -10,11 +10,11 @@ import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.StateLayer;
 import java.awt.Color;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -181,13 +181,13 @@ class ElwhaTabsSelectionTest {
     assertThat(bar.getTabCount()).as("a defensive no-op, not an exception").isEqualTo(2);
   }
 
-  // -------------------------------------------------------- change events
+  // ----------------------------------------------------- selection events
 
   @Test
-  void activatingADifferentTabFiresAChange() {
+  void activatingADifferentTabFiresTheActiveTabProperty() {
     final ElwhaTabs bar = barOf("One", "Two", "Three");
-    final List<ChangeEvent> events = new ArrayList<>();
-    bar.addChangeListener(events::add);
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, events::add);
 
     bar.setActiveTabIndex(2);
 
@@ -201,8 +201,8 @@ class ElwhaTabsSelectionTest {
   void reActivatingTheSameTabFiresNothing() {
     final ElwhaTabs bar = barOf("One", "Two", "Three");
     bar.setActiveTabIndex(1);
-    final List<ChangeEvent> events = new ArrayList<>();
-    bar.addChangeListener(events::add);
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, events::add);
 
     bar.setActiveTabIndex(1);
 
@@ -212,8 +212,8 @@ class ElwhaTabsSelectionTest {
   @Test
   void firstTabsImplicitActivationIsSilent() {
     final ElwhaTabs bar = new ElwhaTabs();
-    final List<ChangeEvent> events = new ArrayList<>();
-    bar.addChangeListener(events::add);
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, events::add);
 
     bar.addTab("One");
 
@@ -226,11 +226,11 @@ class ElwhaTabsSelectionTest {
   void aRemovedListenerStopsHearingChanges() {
     final ElwhaTabs bar = barOf("One", "Two", "Three");
     final AtomicInteger count = new AtomicInteger();
-    final ChangeListener listener = e -> count.incrementAndGet();
-    bar.addChangeListener(listener);
+    final PropertyChangeListener listener = e -> count.incrementAndGet();
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, listener);
     bar.setActiveTabIndex(1);
 
-    bar.removeChangeListener(listener);
+    bar.removePropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, listener);
     bar.setActiveTabIndex(2);
 
     assertThat(count.get()).isOne();
@@ -438,5 +438,53 @@ class ElwhaTabsSelectionTest {
         4,
         GROUND,
         "#625 — the pressed flag is stranded by the same stopped poll");
+  }
+
+  // -------------------------------------------------------- property changes
+
+  @Test
+  void everyActivationCarriesBothTabs() {
+    final ElwhaTabs bar = barOf("One", "Two", "Three");
+    final ElwhaTab first = bar.getTabAt(0);
+    final ElwhaTab third = bar.getTabAt(2);
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, events::add);
+
+    bar.setActiveTabIndex(2);
+
+    assertThat(events).hasSize(1);
+    assertThat(events.get(0).getOldValue())
+        .as("the tab the selection left is carried, not just its index")
+        .isSameAs(first);
+    assertThat(events.get(0).getNewValue()).as("along with the arriving tab").isSameAs(third);
+  }
+
+  @Test
+  void anActiveTabListenerIsNotWokenByOtherProperties() {
+    final ElwhaTabs bar = barOf("One", "Two", "Three");
+    final int[] changes = {0};
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, e -> changes[0]++);
+
+    bar.setEnabled(false);
+
+    assertThat(changes[0])
+        .as("subscription is key-scoped — the enabled property must not wake it")
+        .isZero();
+  }
+
+  @Test
+  void removingTheActiveTabAnnouncesTheReplacementAtTheSameIndex() {
+    final ElwhaTabs bar = barOf("One", "Two");
+    final ElwhaTab second = bar.getTabAt(1);
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, events::add);
+
+    bar.removeTab(bar.getTabAt(0));
+
+    assertThat(bar.getActiveTab()).as("the survivor takes index 0").isSameAs(second);
+    assertThat(events)
+        .as("the event carries tab identity, so a same-index replacement is still a change")
+        .hasSize(1);
+    assertThat(events.get(0).getNewValue()).isSameAs(second);
   }
 }

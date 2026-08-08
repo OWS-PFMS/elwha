@@ -132,7 +132,8 @@ final class TabsShowcasePanels {
           badgedTab[0].setBadge(badge[0]);
           bar.setActiveTabIndex(Math.min(activeIndex[0], count - 1));
           activeIndex[0] = bar.getActiveTabIndex();
-          bar.addChangeListener(
+          bar.addPropertyChangeListener(
+              ElwhaTabs.PROPERTY_ACTIVE_TAB,
               e -> {
                 activeIndex[0] = bar.getActiveTabIndex();
                 ((CardLayout) pages.getLayout())
@@ -464,8 +465,9 @@ final class TabsShowcasePanels {
     code.append("\n// Content switching is consumer composition — the CardLayout recipe:\n");
     code.append("JPanel pages = new JPanel(new CardLayout());\n");
     code.append("// pages.add(panel, \"0\"), \"1\", … per tab\n");
-    code.append("tabs.addChangeListener(e -> ((CardLayout) pages.getLayout())\n");
-    code.append("    .show(pages, String.valueOf(tabs.getActiveTabIndex())));");
+    code.append("tabs.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB,\n");
+    code.append("    e -> ((CardLayout) pages.getLayout())\n");
+    code.append("        .show(pages, String.valueOf(tabs.getActiveTabIndex())));");
     return code.toString();
   }
 }

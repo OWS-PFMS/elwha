@@ -14,11 +14,11 @@ import java.awt.image.BufferedImage;
  * Headless S1 guard (story #402) — renders the four static {@link ElwhaSwitch} state cells into a
  * {@link BufferedImage} over a {@link ColorRole#SURFACE} ground and pixel-asserts the research §T
  * role mapping in light <em>and</em> dark mode (proving the paint-time token resolve), plus the
- * selection API + {@code ChangeListener} contract and the 60&times;40 state-layer-inclusive
+ * selection API + {@code PROPERTY_SELECTED} contract and the 60&times;40 state-layer-inclusive
  * preferred size.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaSwitchChromeSmoke {
@@ -48,7 +48,7 @@ public final class ElwhaSwitchChromeSmoke {
     checkChrome("dark");
 
     System.out.println(
-        "ElwhaSwitchChromeSmoke: OK (selection API + ChangeListener contract + preferred size +"
+        "ElwhaSwitchChromeSmoke: OK (selection API + PROPERTY_SELECTED contract + preferred size +"
             + " light/dark §T chrome pixels)");
   }
 
@@ -61,9 +61,9 @@ public final class ElwhaSwitchChromeSmoke {
     check("minimum size matches preferred", api.getMinimumSize().equals(new Dimension(W, H)));
 
     final int[] fired = {0};
-    api.addChangeListener(e -> fired[0]++);
+    api.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> fired[0]++);
     api.setSelected(true);
-    check("setSelected(true) fires ChangeListener once", fired[0] == 1);
+    check("setSelected(true) fires PROPERTY_SELECTED once", fired[0] == 1);
     api.setSelected(true);
     check("same-value setSelected does not fire", fired[0] == 1);
     api.setSelected(false);

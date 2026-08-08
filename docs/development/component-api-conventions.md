@@ -170,7 +170,7 @@ Ruled in [#446](https://github.com/OWS-PFMS/elwha/issues/446). The library was s
 
 | The observable change is… | Surface | Components |
 |---|---|---|
-| A **discrete named state** — selected, checked, expanded, collapsed, the active item | `firePropertyChange(PROPERTY_X, old, new)`, observed with `addPropertyChangeListener(PROPERTY_X, l)` | `ElwhaButton`, `ElwhaIconButton`, `ElwhaCheckbox`, `ElwhaBadge`, `ElwhaButtonSelectionGroup`, `ElwhaNavigationRail` |
+| A **discrete named state** — selected, checked, expanded, collapsed, the active item | `firePropertyChange(PROPERTY_X, old, new)`, observed with `addPropertyChangeListener(PROPERTY_X, l)` | `ElwhaButton`, `ElwhaIconButton`, `ElwhaCheckbox`, `ElwhaBadge`, `ElwhaButtonSelectionGroup`, `ElwhaNavigationRail`, `ElwhaSwitch`, `ElwhaRadioButton`, `ElwhaRadioGroup`, `ElwhaTabs` |
 | A **value from a model** — a `BoundedRangeModel` position, progress | `addChangeListener(ChangeListener)` | `ElwhaSlider`, the progress indicators |
 
 **Why named state gets the property change.** It carries typed old and new values, which a tri-state control genuinely needs (`ChangeListener` has no payload, so a checkbox consumer would have to cache the previous value to learn *which* transition happened — and the checkbox already needs old/new internally for its accessible-state firing). Subscription is key-scoped, so a listener watching selection is not woken when the component later grows a second observable property. And `JComponent.firePropertyChange` is inherited, so it needs no `listenerList` plumbing and composes with the `AccessibleContext` property events these components already fire.
@@ -179,7 +179,9 @@ Ruled in [#446](https://github.com/OWS-PFMS/elwha/issues/446). The library was s
 
 **User gesture vs programmatic change stays orthogonal, and is already uniform:** `ActionListener` fires only for user-driven commits, on every interactive component. That axis is not what this rule is about.
 
-**Not yet applied.** `ElwhaSwitch`, `ElwhaRadioButton` / `ElwhaRadioGroup` and `ElwhaTabs` report discrete named state through `addChangeListener` and sit on the wrong side of this table. Converting them is a real change across three components, two of them with group-level listeners, plus their suites, playgrounds and Showcase panels — filed separately rather than folded into the #440 doctrine batch. Until it lands, do not add a *new* component on the `ChangeListener` side for a named state.
+**Applied.** The four components that sat on the wrong side converted in [#700](https://github.com/OWS-PFMS/elwha/issues/700): `ElwhaSwitch` and `ElwhaRadioButton` fire `PROPERTY_SELECTED` (`Boolean`), `ElwhaTabs` fires `PROPERTY_ACTIVE_TAB` (`ElwhaTab`), and `ElwhaRadioGroup` fires `PROPERTY_SELECTED` (`ElwhaRadioButton`). Their `addChangeListener` surfaces are gone — no pre-1.0 shims. Nothing in the catalog reports a named state through a `ChangeListener` any more, so a new component on that side would be the only one.
+
+**Group-level surfaces take the same rule, in whichever shape the class can carry.** A group that is a `JComponent` (`ElwhaNavigationRail`, `ElwhaTabs`) fires the inherited `firePropertyChange` and needs no wrapper. A non-visual controller (`ElwhaButtonSelectionGroup`, `ElwhaRadioGroup`) holds its own `PropertyChangeSupport` and exposes exactly one scoped pair, `addSelectionChangeListener` / `removeSelectionChangeListener`, rather than re-publishing the generic keyed `addPropertyChangeListener` — the group has one observable state, so the narrow surface is the honest one. Either way the event carries the *member*, not an index: identity survives a member being removed and replaced at the same position, where an index would compare equal and be swallowed by `PropertyChangeSupport`.
 
 ## 10a. The attached-label contract — and who is exempt from it
 

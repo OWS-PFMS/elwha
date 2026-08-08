@@ -27,8 +27,6 @@ import javax.swing.Action;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 
 /**
  * The M3 tab bar — a dedicated Swing container of {@link ElwhaTab} children that organizes groups
@@ -45,8 +43,9 @@ import javax.swing.event.ChangeListener;
  * <p><strong>Selection is exactly-one-mandatory</strong> (the {@code SINGLE_MANDATORY} tab-strip
  * semantics): the first tab added auto-activates silently; removing the active tab re-activates the
  * first remaining tab; programmatic activation flows through {@link #setActiveTabIndex(int)} /
- * {@link #setActiveTab(ElwhaTab)}. {@link ChangeListener}s fire on <em>any</em> active-tab change
- * (programmatic included) — except the initial silent auto-activation, matching material-web.
+ * {@link #setActiveTab(ElwhaTab)}. {@link #PROPERTY_ACTIVE_TAB} fires on <em>any</em> active-tab
+ * change (programmatic included) — except the initial silent auto-activation, matching
+ * material-web.
  *
  * <p><strong>Content panels are consumer composition</strong> — M3 ships the bar; pair it with a
  * {@link java.awt.CardLayout} panel:
@@ -61,7 +60,7 @@ import javax.swing.event.ChangeListener;
  * pages.add(videoPanel, "0");
  * pages.add(photosPanel, "1");
  * pages.add(audioPanel, "2");
- * tabs.addChangeListener(e ->
+ * tabs.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, e ->
  *     ((CardLayout) pages.getLayout()).show(pages, String.valueOf(tabs.getActiveTabIndex())));
  * }</pre>
  *
@@ -73,6 +72,13 @@ import javax.swing.event.ChangeListener;
  * @since v0.4.0
  */
 public class ElwhaTabs extends JComponent implements Accessible {
+
+  /**
+   * Property-change key fired whenever the active tab changes. The event's {@code oldValue} and
+   * {@code newValue} are {@link ElwhaTab} references — never equal, so removing the active tab and
+   * re-activating a different one at the same index still fires.
+   */
+  public static final String PROPERTY_ACTIVE_TAB = "activeTab";
 
   static final int BAR_HEIGHT_INLINE_PX = 48;
   static final int DIVIDER_THICKNESS_PX = 1;
@@ -86,7 +92,6 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
   private final TabsVariant variant;
   private final List<ElwhaTab> tabs = new ArrayList<>();
-  private final List<ChangeListener> changeListeners = new ArrayList<>();
 
   private final MorphAnimator slideAnimator = new MorphAnimator(this, INDICATOR_SLIDE_MS);
   private Rectangle slideFromRect;
@@ -196,8 +201,8 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
   /**
    * Adds a tab to the trailing end of the bar, stamping the bar's variant onto it. The first tab
-   * added auto-activates silently (no {@link ChangeListener} event) — the bar always has exactly
-   * one active tab while it has children.
+   * added auto-activates silently (no {@link #PROPERTY_ACTIVE_TAB} event) — the bar always has
+   * exactly one active tab while it has children.
    *
    * @param tab the tab to add; required
    * @return {@code tab}, for chaining
@@ -237,8 +242,8 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
   /**
    * Removes a tab from the bar. Removing the active tab re-activates the first remaining tab
-   * (firing {@link ChangeListener}s — the selection did change); removing a tab before the active
-   * one keeps the same tab active.
+   * (firing {@link #PROPERTY_ACTIVE_TAB} — the selection did change); removing a tab before the
+   * active one keeps the same tab active.
    *
    * @param tab the tab to remove; unknown tabs are ignored
    * @version v0.4.0
@@ -462,12 +467,12 @@ public class ElwhaTabs extends JComponent implements Accessible {
   }
 
   /**
-   * Activates the tab at the given index. Fires {@link ChangeListener}s on an actual change;
+   * Activates the tab at the given index. Fires {@link #PROPERTY_ACTIVE_TAB} on an actual change;
    * activating the already-active index is a no-op. Out-of-range indices are ignored (material-web
    * parity).
    *
    * @param index the tab index to activate
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setActiveTabIndex(final int index) {
@@ -497,31 +502,6 @@ public class ElwhaTabs extends JComponent implements Accessible {
    */
   public void setActiveTab(final ElwhaTab tab) {
     setActiveTabIndex(tabs.indexOf(tab));
-  }
-
-  /**
-   * Adds a listener notified on any active-tab change — programmatic or user-driven — except the
-   * initial silent auto-activation of the first tab added.
-   *
-   * @param listener the listener to add; null is ignored
-   * @version v0.4.0
-   * @since v0.4.0
-   */
-  public void addChangeListener(final ChangeListener listener) {
-    if (listener != null) {
-      changeListeners.add(listener);
-    }
-  }
-
-  /**
-   * Removes a previously added change listener.
-   *
-   * @param listener the listener to remove
-   * @version v0.4.0
-   * @since v0.4.0
-   */
-  public void removeChangeListener(final ChangeListener listener) {
-    changeListeners.remove(listener);
   }
 
   /**
@@ -573,6 +553,7 @@ public class ElwhaTabs extends JComponent implements Accessible {
     if (index == activeTabIndex) {
       return;
     }
+    final ElwhaTab previous = getActiveTab();
     // FLIP-style slide (research §I): freeze the indicator's current rect as the slide origin,
     // then animate toward the (live) rest rect of the new active tab — recomputing the
     // destination each paint self-corrects across mid-slide relayouts. Snap when there is no
@@ -592,17 +573,10 @@ public class ElwhaTabs extends JComponent implements Accessible {
       slideAnimator.snapTo(1f);
     }
     if (!silent) {
-      fireChange();
+      firePropertyChange(PROPERTY_ACTIVE_TAB, previous, tabs.get(index));
     }
     scrollToTab(getActiveTab());
     repaint();
-  }
-
-  private void fireChange() {
-    final ChangeEvent event = new ChangeEvent(this);
-    for (ChangeListener l : new ArrayList<>(changeListeners)) {
-      l.stateChanged(event);
-    }
   }
 
   // ------------------------------------------------------------------ layout

@@ -13,7 +13,7 @@ import java.awt.event.MouseEvent;
  * group-to-group moves.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaRadioGroupSmoke {
@@ -53,8 +53,9 @@ public final class ElwhaRadioGroupSmoke {
 
     final int[] groupEvents = {0};
     final boolean[] consistentInside = {true};
-    group.addChangeListener(e -> groupEvents[0]++);
-    a.addChangeListener(
+    group.addSelectionChangeListener(e -> groupEvents[0]++);
+    a.addPropertyChangeListener(
+        ElwhaRadioButton.PROPERTY_SELECTED,
         e -> {
           if (!a.isSelected() && group.getSelected() == a) {
             consistentInside[0] = false;
@@ -87,7 +88,7 @@ public final class ElwhaRadioGroupSmoke {
     group.add(b);
     final int[] groupEvents = {0};
     final int[] actions = {0};
-    group.addChangeListener(e -> groupEvents[0]++);
+    group.addSelectionChangeListener(e -> groupEvents[0]++);
     a.addActionListener(e -> actions[0]++);
     b.addActionListener(e -> actions[0]++);
 
@@ -125,7 +126,7 @@ public final class ElwhaRadioGroupSmoke {
 
     final ElwhaRadioButton late = sized(new ElwhaRadioButton(true));
     final int[] groupEvents = {0};
-    group.addChangeListener(e -> groupEvents[0]++);
+    group.addSelectionChangeListener(e -> groupEvents[0]++);
     group.add(late);
     check("first-selected-wins: incoming radio deselected", !late.isSelected());
     check("existing selection kept", group.getSelected() == holder && holder.isSelected());
@@ -145,7 +146,7 @@ public final class ElwhaRadioGroupSmoke {
     first.setSelected(a);
 
     final int[] firstEvents = {0};
-    first.addChangeListener(e -> firstEvents[0]++);
+    first.addSelectionChangeListener(e -> firstEvents[0]++);
 
     first.remove(a);
     check("removing the holder clears the group selection", first.getSelected() == null);

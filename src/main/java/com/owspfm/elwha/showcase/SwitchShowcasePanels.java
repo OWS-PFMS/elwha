@@ -114,7 +114,8 @@ final class SwitchShowcasePanels {
     // A user toggle on the stage switch (click / drag / Space) tracks back into the Selected
     // control and refreshes the code panel; the re-entrant apply writes the same selected value,
     // which fires no second change event, so the loop terminates.
-    elwhaSwitch.addChangeListener(
+    elwhaSwitch.addPropertyChangeListener(
+        ElwhaSwitch.PROPERTY_SELECTED,
         e -> {
           selectedBox.setChecked(elwhaSwitch.isSelected());
           apply.run();

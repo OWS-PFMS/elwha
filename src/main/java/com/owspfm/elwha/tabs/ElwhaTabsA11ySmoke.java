@@ -22,7 +22,7 @@ import javax.accessibility.AccessibleState;
  * RTL geometry mirroring for both layout modes and inline icons.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaTabsA11ySmoke {
@@ -105,7 +105,7 @@ public final class ElwhaTabsA11ySmoke {
         selection.isAccessibleChildSelected(0) && !selection.isAccessibleChildSelected(1));
 
     final int[] changes = {0};
-    bar.addChangeListener(e -> changes[0]++);
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, e -> changes[0]++);
     selection.addAccessibleSelection(2);
     check("addAccessibleSelection activates", bar.getActiveTabIndex() == 2 && changes[0] == 1);
 
@@ -166,7 +166,7 @@ public final class ElwhaTabsA11ySmoke {
   private static void checkKeyboardActions() {
     final ElwhaTabs bar = laidOutBar();
     final int[] changes = {0};
-    bar.addChangeListener(e -> changes[0]++);
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, e -> changes[0]++);
 
     // Focus motion is headless-untestable (no focus owner); the index math and activation
     // side-effects are: moveFocus drives the same path the arrow actions use.
