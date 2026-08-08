@@ -2,6 +2,7 @@ package com.owspfm.elwha.slider;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
@@ -264,6 +265,14 @@ public class ElwhaSlider extends JComponent {
       };
 
   private boolean subscribedToModel;
+
+  /**
+   * Whether the focus treatment should paint — armed only by a keyboard traversal, so a plain click
+   * leaves no focus halo behind ({@link com.owspfm.elwha.theme.FocusVisible}, #630). Shared by both
+   * variants: in RANGE the focus lives on a handle proxy, and this records how it arrived.
+   */
+  private boolean focusVisible;
+
   private boolean hovered;
   private boolean pressed;
   private boolean valueIndicatorEnabled;
@@ -1515,25 +1524,19 @@ public class ElwhaSlider extends JComponent {
     if (!isEnabled()) {
       return;
     }
+    final StateLayer layer =
+        activeLayer(
+            pressed && handle == activeHandle,
+            hovered && handle == hoveredHandle,
+            focusVisible && childHasFocus(handle));
+    if (layer == null) {
+      return;
+    }
     final Graphics2D s = (Graphics2D) g2.create();
     try {
-      final RoundRectangle2D.Float halo = handleHalo(cx);
-      final Color tint = ColorRole.PRIMARY.resolve();
-      if (childHasFocus(handle)) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.FOCUS.opacity()));
-        s.setColor(tint);
-        s.fill(halo);
-      }
-      if (hovered && handle == hoveredHandle) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.HOVER.opacity()));
-        s.setColor(tint);
-        s.fill(halo);
-      }
-      if (pressed && handle == activeHandle) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.PRESSED.opacity()));
-        s.setColor(tint);
-        s.fill(halo);
-      }
+      s.setComposite(AlphaComposite.SrcOver.derive(layer.opacity()));
+      s.setColor(ColorRole.PRIMARY.resolve());
+      s.fill(handleHalo(cx));
     } finally {
       s.dispose();
     }
@@ -1697,30 +1700,37 @@ public class ElwhaSlider extends JComponent {
     if (!isEnabled()) {
       return;
     }
+    final StateLayer layer = activeLayer(pressed, hovered, focusVisible);
+    if (layer == null) {
+      return;
+    }
     final Graphics2D s = (Graphics2D) g2.create();
     try {
-      final RoundRectangle2D.Float halo = handleHalo(cx);
-      final Color tint = ColorRole.PRIMARY.resolve();
-      if (isFocusOwner()) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.FOCUS.opacity()));
-        s.setColor(tint);
-        s.fill(halo);
-      }
-      if (hovered) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.HOVER.opacity()));
-        s.setColor(tint);
-        s.fill(halo);
-      }
-      // Pressed feedback is primarily the ripple; a faint static layer keeps the pressed state
-      // legible in still renders (gallery cells, reduced motion, between ripple frames).
-      if (pressed) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.PRESSED.opacity()));
-        s.setColor(tint);
-        s.fill(halo);
-      }
+      s.setComposite(AlphaComposite.SrcOver.derive(layer.opacity()));
+      s.setColor(ColorRole.PRIMARY.resolve());
+      s.fill(handleHalo(cx));
     } finally {
       s.dispose();
     }
+  }
+
+  // One layer at a time, highest-priority wins — the policy ElwhaCheckbox and ElwhaRadioButton
+  // already implement. The three used to composite as three sequential fills (~0.26 combined),
+  // which is a different colour from any single state (#630). Pressed feedback is primarily the
+  // ripple; the static layer keeps the pressed state legible in still renders (gallery cells,
+  // reduced motion, between ripple frames).
+  private static StateLayer activeLayer(
+      final boolean isPressed, final boolean isHovered, final boolean showsFocus) {
+    if (isPressed) {
+      return StateLayer.PRESSED;
+    }
+    if (isHovered) {
+      return StateLayer.HOVER;
+    }
+    if (showsFocus) {
+      return StateLayer.FOCUS;
+    }
+    return null;
   }
 
   private void paintRipple(final Graphics2D g2, final int cx) {
@@ -2135,6 +2145,9 @@ public class ElwhaSlider extends JComponent {
               return;
             }
             requestFocusInWindow();
+            // A pointer press is not a focus-visible interaction, even though it grabs focus —
+            // and in RANGE it re-requests onto a handle proxy, which is equally not a traversal.
+            focusVisible = false;
             pressed = true;
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
             model.setValueIsAdjusting(true);
@@ -2187,12 +2200,14 @@ public class ElwhaSlider extends JComponent {
         new FocusAdapter() {
           @Override
           public void focusGained(final FocusEvent e) {
+            focusVisible = FocusVisible.isKeyboardCause(e.getCause());
             updateInteractionAnimator();
             repaint();
           }
 
           @Override
           public void focusLost(final FocusEvent e) {
+            focusVisible = false;
             pressed = false;
             // Tabbing away with Space held means the release action never runs. Left latched, the
             // slider answers every later arrow key with getBlockIncrement() instead of the unit
@@ -2546,12 +2561,14 @@ public class ElwhaSlider extends JComponent {
             public void focusGained(final FocusEvent e) {
               focusedHandle = handle;
               activeHandle = handle;
+              focusVisible = FocusVisible.isKeyboardCause(e.getCause());
               updateInteractionAnimator();
               ElwhaSlider.this.repaint();
             }
 
             @Override
             public void focusLost(final FocusEvent e) {
+              focusVisible = false;
               updateInteractionAnimator();
               ElwhaSlider.this.repaint();
             }

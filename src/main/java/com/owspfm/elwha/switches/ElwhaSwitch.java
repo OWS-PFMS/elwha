@@ -3,6 +3,7 @@ package com.owspfm.elwha.switches;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
+import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
@@ -179,6 +180,13 @@ public class ElwhaSwitch extends JComponent {
   private final RetargetTween sizeTween;
 
   private boolean selected;
+
+  /**
+   * Whether the focus treatment should paint — armed only by a keyboard traversal, so a plain click
+   * leaves no ring behind ({@link com.owspfm.elwha.theme.FocusVisible}, #630).
+   */
+  private boolean focusVisible;
+
   private boolean hovered;
   private boolean pressed;
   private boolean dragging;
@@ -685,30 +693,36 @@ public class ElwhaSwitch extends JComponent {
     if (!isEnabled()) {
       return;
     }
+    final StateLayer layer = activeLayer();
+    if (layer == null) {
+      return;
+    }
     final Graphics2D s = (Graphics2D) g2.create();
     try {
-      final Ellipse2D.Float halo = stateLayerCircle();
-      final Color tint = stateLayerTint();
-      if (isFocusOwner()) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.FOCUS.opacity()));
-        s.setColor(tint);
-        s.fill(halo);
-      }
-      if (hovered) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.HOVER.opacity()));
-        s.setColor(tint);
-        s.fill(halo);
-      }
-      // Pressed feedback is primarily the ripple; a faint static layer keeps the pressed state
-      // legible in still renders (gallery cells, reduced motion, between ripple frames).
-      if (pressed || dragging) {
-        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.PRESSED.opacity()));
-        s.setColor(tint);
-        s.fill(halo);
-      }
+      s.setComposite(AlphaComposite.SrcOver.derive(layer.opacity()));
+      s.setColor(stateLayerTint());
+      s.fill(stateLayerCircle());
     } finally {
       s.dispose();
     }
+  }
+
+  // One layer at a time, highest-priority wins — the policy ElwhaCheckbox and ElwhaRadioButton
+  // already implement. The three used to composite as three sequential fills (~0.26 combined),
+  // which is a different colour from any single state (#630). Pressed feedback is primarily the
+  // ripple; the static layer keeps the pressed state legible in still renders (gallery cells,
+  // reduced motion, between ripple frames).
+  private StateLayer activeLayer() {
+    if (pressed || dragging) {
+      return StateLayer.PRESSED;
+    }
+    if (hovered) {
+      return StateLayer.HOVER;
+    }
+    if (focusVisible) {
+      return StateLayer.FOCUS;
+    }
+    return null;
   }
 
   /** Paints the press ripple, bounded to the state-layer circle (material-web's md-ripple). */
@@ -877,7 +891,7 @@ public class ElwhaSwitch extends JComponent {
           ? ColorRole.SURFACE.resolve()
           : withAlpha(ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContentOpacity());
     }
-    final boolean active = hovered || pressed || dragging || isFocusOwner();
+    final boolean active = hovered || pressed || dragging || focusVisible;
     final Color unselectedRole =
         (active ? ColorRole.ON_SURFACE_VARIANT : ColorRole.OUTLINE).resolve();
     final Color selectedRole =
@@ -1022,6 +1036,8 @@ public class ElwhaSwitch extends JComponent {
               return;
             }
             requestFocusInWindow();
+            // A pointer press is not a focus-visible interaction, even though it grabs focus.
+            focusVisible = false;
             pressed = true;
             pressX = e.getX();
             dragFraction = selected ? 1f : 0f;
@@ -1077,6 +1093,7 @@ public class ElwhaSwitch extends JComponent {
         new FocusAdapter() {
           @Override
           public void focusGained(final FocusEvent e) {
+            focusVisible = FocusVisible.isKeyboardCause(e.getCause());
             repaint();
           }
 
@@ -1085,6 +1102,7 @@ public class ElwhaSwitch extends JComponent {
             if (dragging) {
               slideTween.seed(dragFraction);
             }
+            focusVisible = false;
             pressed = false;
             dragging = false;
             syncMotion(animateAllowed());

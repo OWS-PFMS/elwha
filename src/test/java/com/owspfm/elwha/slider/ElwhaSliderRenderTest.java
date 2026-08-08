@@ -62,6 +62,40 @@ class ElwhaSliderRenderTest {
         Math.round(StateLayer.disabledContentOpacity() * 255f));
   }
 
+  // ------------------------------------------------- state layer (#630)
+
+  /** Halo fills — the handle overlay, which is the only PRIMARY round-rect over the handle. */
+  private static int haloFills(final ElwhaSlider slider) {
+    final int handleHaloWidth = ElwhaSlider.HANDLE_HALO_WIDTH_PX;
+    return (int)
+        capture(slider).shapes().stream()
+            .filter(shape -> !shape.stroked())
+            .filter(shape -> ColorRole.PRIMARY.resolve().equals(shape.color()))
+            .filter(shape -> shape.shape().getBounds().width == handleHaloWidth)
+            .count();
+  }
+
+  @Test
+  void hoverAndPressCompositeExactlyOneHaloLayer() {
+    final ElwhaSlider slider = percent(50);
+    slider.setHovered(true);
+    slider.setPressed(true);
+
+    assertThat(haloFills(slider))
+        .as(
+            "#630 — one layer at a time, as ElwhaCheckbox and ElwhaRadioButton already do; the"
+                + " slider used to fill the halo once per live state, so two or three states"
+                + " stacked into a colour none of them produces")
+        .isEqualTo(1);
+  }
+
+  @Test
+  void aRestingSliderPaintsNoHaloAtAll() {
+    assertThat(haloFills(percent(50)))
+        .as("with no state live there is no overlay to paint")
+        .isZero();
+  }
+
   // ------------------------------------------------------------ the roles
 
   @ParameterizedTest

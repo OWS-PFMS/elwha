@@ -1,6 +1,7 @@
 package com.owspfm.elwha.colorpicker;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.TypeRole;
@@ -251,6 +252,13 @@ final class SwatchesPane extends ColorPickerPane {
     int hover = -1;
     int pressed = -1;
 
+    /**
+     * Whether the focus indicator should paint — armed only by a keyboard traversal, so a plain
+     * click leaves no ring behind ({@link com.owspfm.elwha.theme.FocusVisible}, #630). The grid
+     * requests focus from its own mousePressed, which is exactly the case the gate exists for.
+     */
+    boolean focusVisible;
+
     CellStrip() {
       setOpaque(false);
       setFocusable(true);
@@ -278,6 +286,8 @@ final class SwatchesPane extends ColorPickerPane {
                 pressed = index;
                 cursor = index;
                 requestFocusInWindow();
+                // A pointer press is not a focus-visible interaction, even though it grabs focus.
+                focusVisible = false;
                 activate(index);
               }
             }
@@ -297,11 +307,13 @@ final class SwatchesPane extends ColorPickerPane {
               if (cursor < 0) {
                 cursor = 0;
               }
+              focusVisible = FocusVisible.isKeyboardCause(e.getCause());
               repaint();
             }
 
             @Override
             public void focusLost(final FocusEvent e) {
+              focusVisible = false;
               repaint();
             }
           });
@@ -427,7 +439,7 @@ final class SwatchesPane extends ColorPickerPane {
         } else if (index == hover) {
           result = StateLayer.HOVER.over(result, tint);
         }
-        if (isFocusOwner() && index == cursor) {
+        if (focusVisible && index == cursor) {
           result = StateLayer.FOCUS.over(result, tint);
         }
       }
