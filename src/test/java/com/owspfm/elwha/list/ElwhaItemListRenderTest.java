@@ -540,6 +540,36 @@ class ElwhaItemListRenderTest {
   }
 
   @Test
+  void contextMenuEntriesRespectTheAnchorPartition() {
+    listOf("a", "b", "c").setAnchorPredicate("a"::equals);
+
+    assertThat(list.createReorderMenuItems("a").get(1).isEnabled())
+        .as("the anchor is locked to the leading slot, so Move down would do nothing")
+        .isFalse();
+    assertThat(list.createReorderMenuItems("b").get(0).isEnabled())
+        .as("its neighbour cannot move up into the slot the anchor holds either")
+        .isFalse();
+    assertThat(list.createReorderMenuItems("b").get(1).isEnabled())
+        .as("but moving down is a real move")
+        .isTrue();
+  }
+
+  @Test
+  void contextMenuEntriesRespectThePinPartition() {
+    listOf("a", "b", "c", "d").setPinPredicate(item -> "a".equals(item) || "b".equals(item));
+
+    assertThat(list.createReorderMenuItems("b").get(1).isEnabled())
+        .as("the last pinned item cannot move down out of the pinned partition")
+        .isFalse();
+    assertThat(list.createReorderMenuItems("c").get(0).isEnabled())
+        .as("nor can the first unpinned item move up into it")
+        .isFalse();
+    assertThat(list.createReorderMenuItems("c").get(1).isEnabled())
+        .as("moves inside a partition stay available")
+        .isTrue();
+  }
+
+  @Test
   void noReorderMenuEntriesWhenReorderIsUnavailable() {
     listOf("a", "b");
 
