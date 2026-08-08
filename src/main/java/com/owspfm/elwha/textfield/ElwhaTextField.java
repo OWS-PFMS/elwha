@@ -16,7 +16,9 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.IllegalComponentStateException;
 import java.awt.KeyboardFocusManager;
+import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -30,6 +32,7 @@ import javax.swing.JComponent;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.JTextComponent;
@@ -262,9 +265,9 @@ public class ElwhaTextField extends JComponent {
    */
   private JTextComponent createEditor(final InputMode mode) {
     if (mode == InputMode.SINGLE_LINE) {
-      return new JTextField();
+      return new OrphanSafeTextField();
     }
-    final JTextArea area = new JTextArea();
+    final JTextArea area = new OrphanSafeTextArea();
     area.setLineWrap(true);
     area.setWrapStyleWord(true);
     area.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, null);
@@ -273,6 +276,47 @@ public class ElwhaTextField extends JComponent {
       area.setRows(rows);
     }
     return area;
+  }
+
+  // A component that has been addNotify()'d but never parented is a state Swing answers
+  // inconsistently: Component.isShowing() reports true (it checks `visible && peer != null` and
+  // treats a null parent as "nothing above me objects"), while there is no window to measure
+  // against. AccessibleJTextComponent.caretUpdate asks for the screen location on every caret
+  // move and guards that ask with `catch (IllegalComponentStateException)` — the right handler,
+  // never reached, because Component.getLocationOnScreen takes its isShowing() branch and NPEs
+  // walking to the absent window instead. The first setText therefore blows up.
+  //
+  // Elwha widens the trap: syncAccessibleName() realizes the editor's accessible context in the
+  // constructor, so every field has the caret listener installed, where a bare JTextField only
+  // does once a consumer asks for accessibility. Offscreen-render paths (gallery previews, drag
+  // images) are exactly the code that peers a component without parenting it.
+  //
+  // The fix answers the question Swing's own contract already specifies: a component with no
+  // window ancestor is not showing on the screen, so its screen location is unavailable, so the
+  // documented IllegalComponentStateException is the answer — and the JDK's existing catch
+  // absorbs it. #679.
+  private static boolean hasWindowAncestor(final JComponent editor) {
+    return SwingUtilities.getWindowAncestor(editor) != null;
+  }
+
+  private static final class OrphanSafeTextField extends JTextField {
+    @Override
+    public Point getLocationOnScreen() {
+      if (!hasWindowAncestor(this)) {
+        throw new IllegalComponentStateException("the editor has no window ancestor");
+      }
+      return super.getLocationOnScreen();
+    }
+  }
+
+  private static final class OrphanSafeTextArea extends JTextArea {
+    @Override
+    public Point getLocationOnScreen() {
+      if (!hasWindowAncestor(this)) {
+        throw new IllegalComponentStateException("the editor has no window ancestor");
+      }
+      return super.getLocationOnScreen();
+    }
   }
 
   // Editor properties are set as PLAIN (non-UIResource) values: theme resolves return
