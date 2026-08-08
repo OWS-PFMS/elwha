@@ -103,6 +103,8 @@ All colors/fonts resolve **at paint time** (`ColorRole.resolve()` / `TypeRole.re
 
 Preferred size: height per variant/subtitle/collapse state; width = slots + title minimum (title ellipsizes first). No `getMaximumSize` override (#199/#200 doctrine). The bar fills whatever width `BorderLayout.NORTH` grants.
 
+⚠️ Post-V1 (#478): the expanded heights above are the *one-line* heights. With `setTitleMaxLines(n > 1)` each wrapped line past the first adds one line of the variant's expanded title role, and the collapse range grows with it — §12.1.
+
 ## §6. States & motion
 
 - **Lift:** a single boolean — *content scrolled under the bar* (`scrollY > 0`). On flip, `MorphAnimator` (~200ms, `Easing.STANDARD`) fades container `SURFACE ↔ SURFACE_CONTAINER`; reduced motion snaps. Applies to **every** variant with a scroll source while `liftOnScroll` (default `true`).
@@ -164,12 +166,120 @@ Layout regions (flexible, fraction *f*):
 
 Confirmed — §2 locked as built. One class, all variants; the nav/trailing children lay out in 48px slots (4px edge spaces, zero gap) with the default `IconButtonSize.M` (40px) button centered in its slot, which lands the 24px glyph exactly 16px from the container edge — the Compose render falls out of the existing icon-button sizing with no restyling. Bar-painted title/subtitle stack centers as a unit in the 64 strip; ellipsis + centered-clamping verified pixel-level in `ElwhaAppBarChromeSmoke` (light + dark). One adaptation from the §3 sketch: `MaterialIcons` exposes per-glyph static methods, not a `Symbol` enum, so the conveniences take `(Icon, String accessibleName, ActionListener)` — the accessible name is required at the convenience layer, which also satisfies the §9 requirement earlier than planned. No fallback needed.
 
+## §12.1 Post-V1: the Expressive flexibility follow-ons (#478, #525) — SHIPPED
+
+Two of §12's deferrals came back together, because they turned out to be the same arithmetic seen from two ends. #478 makes the expanded height depend on the *headline*; #525 makes the rendering depend on the *allocation*. Both need one honest answer to "how tall is this bar fully expanded, right now" — `expandedHeightPx()`, the variant's token height plus a line per wrapped line — and both read it.
+
+### #478 — expanded-headline text wrapping
+
+**API: `setTitleMaxLines(int)` / `getTitleMaxLines()`, default `1`.** Values below 1 clamp to 1; there is no upper clamp.
+
+| Decision | Why |
+|---|---|
+| **Opt-in, default 1** | Research §A lists wrapping as an *allowance* ("text wrapping capability"), not a default, and V1 shipped single-line everywhere. Defaulting to 2 would silently change the height of every existing flexible bar with a long title. |
+| **A line budget, not a boolean** | M3's figures show two lines, so `2` is the spec'd value — but the height rule generalizes for free, and a hard cap at 2 would be a number we invented. `3` is honored and documented as past the figures. |
+| **Flexible expanded headline only** | The collapsed strip title and the `SMALL` bar stay single-line + ellipsis. This is M3's own split (a collapsed flexible *is* the small bar, §2) and the 64 strip has no room for a second line regardless. |
+| **The subtitle does not wrap** | The Expressive delta names the headline. A wrapping subtitle is a separate height rule with no spec behind it. |
+| **Preferred *width* unchanged** | It is computed from the strip title font, and the strip title still does not wrap — so the two stay consistent. |
+
+**Height rule:** each line past the first adds one `FontMetrics.getHeight()` of the variant's *expanded title role* — Headline Medium for medium-flexible, Display Small for large-flexible. The token heights (112/136/120/152) are quoted for one line, so this is additive rather than a replacement model. Measured: medium 112 → 147, large 120 → 164.
+
+**Collapse follows automatically.** The range is `expandedHeightPx() − 64`, so a wrapped bar simply has further to travel and still lands exactly on the strip. Nothing about the collapse *motion* changed: it remains scroll-position-driven with no timer (§6), so there is no animation here to make reduced-motion-aware — the lift fade is still the bar's only animated property, and it still snaps under reduced motion.
+
+**Wrapping is height-for-width**, which Swing asks about in the wrong order: the first `getPreferredSize()` necessarily happens before the bar has a width, and reports one line. `doLayout()` therefore re-measures at the real width and `revalidate()`s when the line count disagrees with what the last preferred height assumed. It converges after one extra pass — the count is a pure function of the width, and the width does not move in response to the height in the documented NORTH placement. Lines are measured at *exactly* the width they are painted at (`getWidth() − 2×16`), which is the #305 discipline: a wrapped run measured anywhere other than where it paints is how a label ends up disagreeing with its own render.
+
+Breaking is at word boundaries; a word wider than the line breaks mid-word rather than overflowing; the last permitted line ellipsizes the remainder, so a wrapped headline still terminates. Extra lines stack *upward* from the same bottom anchor, so the subtitle and the icon strip do not move.
+
+### #525 — height-driven collapse (graceful under-allocation)
+
+**No new API.** The bar paints at `max(scrollFraction, fractionForHeight(getHeight()))` — and `getCollapsedFraction()` reports that, so the accessor describes what is on screen rather than only one of its two inputs.
+
+The invariant, and the reason this is a fix rather than a patch: **an under-allocated bar renders identically to the same bar scrolled to that height.** Under-allocation is not a special rendering mode; it is the ordinary collapse, read off the height the host actually gave. `ElwhaAppBarScrollTest` asserts it as raster equality between a squeezed bar and a scrolled one, and `ElwhaAppBarAllocationDemo` puts the two columns side by side for the eye.
+
+Three constraints kept it from becoming a loop or a behavior change:
+
+- **Render-time only.** `getPreferredSize()` stays driven by the scroll fraction alone. If the allocated height fed back into the request, one squeeze would shrink the request, which would justify the squeeze, and the bar would latch collapsed permanently.
+- **`getMinimumSize()` still returns the preferred height.** The bar goes on telling every layout manager that it cannot usefully be shorter, so `BorderLayout` / `BoxLayout` / `GridBagLayout` / `GroupLayout` never squeeze it and never see any of this. The degradation is for the layouts that ignore minimum sizes outright — `GridLayout`, which divides its cells evenly, which is what the S1/S2/S5 specimen demos use and where the bug surfaced.
+- **Neither driver undoes the other.** `max` means extra height never re-expands a scroll-collapsed bar, and scroll never re-expands a squeezed one.
+
+At its preferred height a bar's two fractions are equal by construction, so a well-behaved host observes no change at all. Over-allocation is deliberately untouched: the headline stays bottom-anchored against the taller container, which is V1 behavior and what the specimen demos have already been smoked against. 64 px remains the floor — below it the strip clips, because M3 has no rendering shorter than the strip to degrade *to*.
+
 ## §12. Out of scope (every cut filed or documented)
 
 - **Search app bar** → **stub epic filed** (V2): the headline slot hosts the M3 search-field anatomy ("icons inside and outside the search bar, centered text") — blocked by `ElwhaTextField` #286 maturity. Not silently cut.
 - **Toolbars family** (docked + floating) → **stub epic filed**: the Expressive successor to the deprecated bottom app bar (research §E) — the #287 "bottom app bar sibling" note lands there. A different component family, not an app-bar variant.
 - **`enterAlways`** — whole-bar hide on scroll-down; mobile-estate pattern, low desktop value, host-layout churn. Documented deferral (a future behavior flag; `ScrollSourceBinding` already carries the delta it would need).
-- **Expanded-headline text wrapping** (Expressive flexibility) → **follow-up issue filed at S6**: needs a multi-line height model on top of the fixed height tokens. V1 is single-line + ellipsis everywhere.
+- **Expanded-headline text wrapping** (Expressive flexibility) → **follow-up issue filed at S6**: needs a multi-line height model on top of the fixed height tokens. V1 is single-line + ellipsis everywhere. ✅ **Shipped post-V1 as #478** — `setTitleMaxLines(int)`, default 1 so V1's behavior is preserved. See §12.1.
 - **Action auto-overflow** — consumer composition with `ElwhaMenu` (Javadoc recipe + Workbench demo); no auto-collapse in V1.
 - **Avatar primitive** (`AvatarSize 32`) — `addTrailingElement(JComponent)` carries imagery; a dedicated avatar is its own future discussion.
 - **Compress scroll effect** (MDC `layout_scrollEffect="compress"`) — Android-specific polish; not adopted.
+
+## §13. Composing the app bar with the navigation rail (#526)
+
+Elwha ships both `ElwhaAppBar` (#287) and `ElwhaNavigationRail` (#159), and until this section neither design doc said a word about using them together. A consumer building a real app shell had to derive the answer — as we did, during the PR #479 smoke, from the question *"I'm sure it's not to have two hamburger buttons. It's also probably not to never put the two together."* Both halves of that intuition are right.
+
+Companion section: `elwha-navigation-rail-design.md` §17, which states the same rule from the rail's side.
+
+### §13.1 The ☰ rule: the rail owns lateral navigation
+
+**The two ☰ glyphs are not the same control**, which is why two of them is not a duplicate but a contradiction.
+
+- The **rail's** menu button toggles Collapsed ↔ Expanded (`ElwhaNavigationRail.setMenuButton`; rail design §4.3 documents the ☰ ↔ collapse-glyph swap). Per `elwha-navigation-rail-research.md` the Expanded rail *"replaces the M3 navigation drawer"* — M3 Expressive deprecated the standalone drawer in its favor. So it is a rail-width toggle, and it is the drawer.
+- The **app bar's** leading slot is the *navigation icon*, which in classic M3 opens a drawer on compact windows or carries up/back.
+
+With a rail present the drawer job no longer exists — the rail *is* the drawer. So the rail owns lateral navigation, and the app bar's leading slot takes one of two things:
+
+- **Empty.** A first-class spec'd state, not a degradation: `elwha-appbar-research.md` documents `TopAppBarTitleInset`, the 16 dp inset the title takes from the container edge when no nav button precedes it (§5). M3 built that inset for exactly this case, and `ElwhaAppBar` applies it automatically when `getNavigationIcon()` is `null`.
+- **A back arrow.** Hierarchical up-navigation *within* the current destination — a detail view inside a section the rail selected. `MaterialIcons.arrowBack()` already exists.
+
+| | Navigation rail | App bar |
+|---|---|---|
+| Scope | lateral — between top-level destinations | the current destination |
+| Leading slot | ☰ collapse/expand toggle | empty, or back arrow — **never ☰** |
+| Carries | destinations, sections, FAB, trailing actions | title + subtitle, contextual actions |
+| Spans | the full window height | the content column only |
+
+**The anti-pattern is two ☰ glyphs in one shell.** They look like the same affordance and are not: one resizes the rail, the other would open a drawer that the rail has already replaced. A user who has learned one has learned the wrong thing about the other. If a shell has a rail, the bar's leading slot is empty or a back arrow — there is no third option.
+
+The bar enforces nothing here, and deliberately so: it never restyles or claims its leading slot (`ElwhaAppBarChromeTest.barAttachesNoBehaviourToTheNavigationIcon` pins that), because the slot belongs to the consumer. This is guidance, not a runtime check — the same call §12's rejected-alternatives list makes about placement.
+
+### §13.2 Shell layout: full-height rail, bar inside the content column
+
+**The rail spans the full window height at the leading edge; the app bar sits to its trailing side, spanning the content width only — *not* full-width above the rail.** Otherwise the header extends across the rail's leading column and the rail reads as a sidebar pocket rather than a real-app shell.
+
+`ElwhaShowcase` is the worked example and says so in place (`ElwhaShowcase.java`, the `contentWrapper` comment). Its structure, reduced to the recipe:
+
+```java
+// Rail: full height, leading edge. On the layered pane so the Expanded morph can overlay the
+// content inset instead of reflowing the whole shell (the FAB Phase 5 recipe, #206).
+ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
+rail.setMenuButton(menuToggle);            // the shell's one and only hamburger
+rail.setPrimary(destinations);
+
+// Content column: a leading inset the width of the collapsed rail, the app bar at its top.
+// The collapsed rail's width is its preferred width (96 dp) — read it rather than hardcoding it.
+int railInset = rail.getPreferredSize().width;
+JPanel contentColumn = new JPanel(new BorderLayout());
+contentColumn.setBorder(BorderFactory.createEmptyBorder(0, railInset, 0, 0));
+contentColumn.add(bar, BorderLayout.NORTH);     // no nav icon — the rail has it
+contentColumn.add(scroller, BorderLayout.CENTER);
+
+bar.setScrollSource(scroller);                  // lift, and collapse for the flexible variants
+
+// Keep the bar's headline on the destination the rail selected — the §13.1 split, wired.
+rail.addSelectionListener(
+    (previous, current) -> bar.setTitle(current == null ? "" : current.getLabel()));
+```
+
+Two useful consequences fall out of that placement:
+
+- The bar is in `BorderLayout.NORTH`, which honors preferred height — so a shell built this way cannot hit the #525 under-allocation case at all (§12.1).
+- The bar's title tracks the destination the rail selected, which is the §13.1 division of labour made literal: the rail says *where*, the bar says *what you are looking at*.
+
+### §13.3 Scroll-source wiring
+
+**One scroll pane, and only the app bar binds to it.** `setScrollSource(scroller)` gives the bar its lift and, for the flexible variants, its collapse (§8).
+
+`ElwhaNavigationRail` has **no scroll behavior and no scroll source** — it is full-height chrome, and it does not react to the content scrolling under it. Do not look for a rail equivalent of `setScrollSource`; there isn't one, by design.
+
+The one other shell participant that *is* scroll-aware is `ElwhaFabAnchor`, and if a shell floats a FAB over the content it binds to **the same pane** as the bar: both are built on `theme/ScrollSourceBinding` (§8) and reading one offset keeps the bar's collapse and the FAB's hide/shrink from disagreeing about where the content is. Note the rail's own FAB slot (`setFab`) is a different thing — static chrome in the rail header, not a floating anchor, and not scroll-aware.
