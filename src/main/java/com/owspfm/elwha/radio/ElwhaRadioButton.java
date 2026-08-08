@@ -1,9 +1,11 @@
 package com.owspfm.elwha.radio;
 
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
+import com.owspfm.elwha.theme.RetargetTween;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.TypeRole;
@@ -17,6 +19,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -110,7 +113,7 @@ import javax.swing.event.EventListenerList;
  * @version v0.5.0
  * @since v0.4.0
  */
-public class ElwhaRadioButton extends JComponent {
+public class ElwhaRadioButton extends JComponent implements BodyBearing {
 
   // --- M3 radio-button geometry (dp == px at 100% scale; research §T/§G) ---
 
@@ -183,9 +186,9 @@ public class ElwhaRadioButton extends JComponent {
   public ElwhaRadioButton(final boolean selected) {
     this.selected = selected;
     final float rest = selected ? 1f : 0f;
-    this.dotScale = new RetargetTween(DOT_GROW_MS, rest);
-    this.dotAlpha = new RetargetTween(COLOR_FADE_MS, rest);
-    this.ringBlend = new RetargetTween(COLOR_FADE_MS, rest);
+    this.dotScale = new RetargetTween(this, DOT_GROW_MS, rest);
+    this.dotAlpha = new RetargetTween(this, COLOR_FADE_MS, rest);
+    this.ringBlend = new RetargetTween(this, COLOR_FADE_MS, rest);
     setOpaque(false);
     setFocusable(true);
     initInteraction();
@@ -568,6 +571,27 @@ public class ElwhaRadioButton extends JComponent {
   }
 
   // --------------------------------------------------------------------- paint
+
+  /**
+   * The visible painted body — the {@value #TOUCH_TARGET}&nbsp;dp control block plus its label.
+   *
+   * <p>Both axes are content-sized rather than granted: a layout that stretches this control leaves
+   * dead space past the label and below the block, and anchoring to either would put a tooltip or
+   * badge out in that space. The block hugs the leading edge, so under a right-to-left orientation
+   * the content sits against the trailing edge instead.
+   *
+   * @return the body rect in component coordinates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public Rectangle getBodyBounds() {
+    final Dimension content = getPreferredSize();
+    final int width = Math.min(getWidth(), content.width);
+    final int band = Math.min(getHeight(), Math.max(TOUCH_TARGET, content.height));
+    final int x = getComponentOrientation().isLeftToRight() ? 0 : Math.max(0, getWidth() - width);
+    return new Rectangle(x, Math.max(0, (getHeight() - band) / 2), width, band);
+  }
 
   @Override
   protected void paintComponent(final Graphics g) {
@@ -1075,56 +1099,4 @@ public class ElwhaRadioButton extends JComponent {
    * @version v0.4.0
    * @since v0.4.0
    */
-  private final class RetargetTween {
-
-    private final MorphAnimator animator;
-    private float from;
-    private float to;
-    private Easing easing = Easing.LINEAR;
-
-    RetargetTween(final int durationMs, final float initial) {
-      this.animator = new MorphAnimator(ElwhaRadioButton.this, durationMs);
-      this.from = initial;
-      this.to = initial;
-      this.animator.snapTo(1f);
-    }
-
-    float value() {
-      return from + (to - from) * easing.ease(animator.progress());
-    }
-
-    void retarget(
-        final float target, final int durationMs, final Easing easing, final boolean animate) {
-      if (this.to == target) {
-        if (!animate) {
-          this.from = target;
-          animator.snapTo(1f);
-        }
-        return;
-      }
-      this.from = value();
-      this.to = target;
-      this.easing = easing;
-      animator.setDurationMs(durationMs);
-      if (animate) {
-        animator.snapTo(0f);
-        animator.start();
-      } else {
-        this.from = target;
-        animator.snapTo(1f);
-      }
-    }
-
-    /** Re-seats the tween at the given value without animating. */
-    void seed(final float value) {
-      this.from = value;
-      this.to = value;
-      animator.snapTo(1f);
-    }
-
-    /** Stops the timer and lands on the target — {@code removeNotify} cleanup. */
-    void finish() {
-      animator.immediateFinish();
-    }
-  }
 }

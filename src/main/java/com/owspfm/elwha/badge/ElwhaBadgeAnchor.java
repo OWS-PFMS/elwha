@@ -1,5 +1,6 @@
 package com.owspfm.elwha.badge;
 
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ElwhaLayers;
 import java.awt.Dimension;
 import java.awt.Point;
@@ -93,6 +94,25 @@ public final class ElwhaBadgeAnchor {
   /** Gap between the anchor rect's trailing edge and the badge in LABEL_TRAILING mode, in dp. */
   private static final int LABEL_TRAILING_GAP_DP = 4;
 
+  /**
+   * How far below the anchor rect's true centre the badge is seated in LABEL_TRAILING mode, in dp
+   * (#442).
+   *
+   * <p>Geometrically centring a pill on a text rect makes it read <em>high</em>, because the rect
+   * is the font box and the ink is not. Measured at {@code TITLE_SMALL} 14 px / Inter, in a 48 px
+   * tab: font box y 15–33 (centre 24.0) and a Large pill 16 px tall at y 16–32 — exactly centred,
+   * and the M3-correct size. But the capitals occupy roughly y 19–29 and the lowercase body only y
+   * 21.5–29, so the pill overshoots the lowercase body by about 5 px on top against 3 px below the
+   * baseline, and the eye reads the imbalance rather than the arithmetic.
+   *
+   * <p>Centring on the x-height box instead — {@code baseline − xHeight/2} — puts the pill about
+   * 1.25 px lower than the font-box centre at that size, which is the correction this constant
+   * approximates. It is expressed as a flat dp rather than derived because the anchor is fed a
+   * {@link Rectangle} and has no route to the host's baseline or x-height; feeding it a glyph box
+   * would be the exact fix, and is the larger change #442 also describes.
+   */
+  private static final int LABEL_TRAILING_OPTICAL_SEAT_DP = 1;
+
   /** Client-property key on the host marking the active attachment. */
   private static final String HOST_ATTACHMENT_KEY = "ElwhaBadgeAnchor.attachment";
 
@@ -135,9 +155,10 @@ public final class ElwhaBadgeAnchor {
 
     /**
      * The badge flows inline immediately after the anchor rect's trailing edge — a small gap, then
-     * the badge, vertically centered on the rect — the M3 badge-spec "Label&nbsp;999+" placement
-     * row. Unlike {@link #TRAILING_EDGE} (which pins to the host's <em>bounds</em>), this mode
-     * reads the icon-bounds feed, so a host whose content is centered inside a wider cell (an
+     * the badge, seated on the rect's optical centre (a dp below its true centre, because a pill
+     * centred on a font box reads high beside lowercase text) — the M3 badge-spec "Label&nbsp;999+"
+     * placement row. Unlike {@link #TRAILING_EDGE} (which pins to the host's <em>bounds</em>), this
+     * mode reads the icon-bounds feed, so a host whose content is centered inside a wider cell (an
      * {@code ElwhaTab} in a fixed bar) can hand it the label rect and the badge trails the
      * <em>text</em>, not the cell. RTL mirrors to before the rect's leading edge.
      *
@@ -542,10 +563,11 @@ public final class ElwhaBadgeAnchor {
       badge.repaint();
     }
 
-    // LABEL_TRAILING placement: a small gap after the anchor rect's trailing edge, vertically
-    // centered on the rect — the M3 badge-spec "Label 999+" row. Reads the icon-bounds feed (for
+    // LABEL_TRAILING placement: a small gap after the anchor rect's trailing edge, seated on the
+    // rect's optical centre — the M3 badge-spec "Label 999+" row. Reads the icon-bounds feed (for
     // a tab, the label rect) so centered content inside a wider cell anchors against the text,
-    // not the cell. RTL mirrors to before the rect's leading edge.
+    // not the cell. RTL mirrors to before the rect's leading edge. The seat is one dp below true
+    // centre; see LABEL_TRAILING_OPTICAL_SEAT_DP for why a text rect is not centred on its box.
     private void refreshLabelTrailing() {
       final Rectangle rect = iconBoundsSupplier.get();
       if (rect.width <= 0 || rect.height <= 0) {
@@ -560,7 +582,8 @@ public final class ElwhaBadgeAnchor {
           ltr
               ? rect.x + rect.width + LABEL_TRAILING_GAP_DP
               : rect.x - LABEL_TRAILING_GAP_DP - pref.width;
-      final int badgeYInHost = rect.y + (rect.height - pref.height) / 2;
+      final int badgeYInHost =
+          rect.y + (rect.height - pref.height) / 2 + LABEL_TRAILING_OPTICAL_SEAT_DP;
       final Point topLeftInLayered =
           SwingUtilities.convertPoint(host, new Point(badgeXInHost, badgeYInHost), layeredPane);
 
@@ -570,12 +593,20 @@ public final class ElwhaBadgeAnchor {
     }
 
     // TRAILING_EDGE placement: the badge sits flush against the host composition's trailing edge,
-    // vertically centered on the host — the M3 "Favorites 84" pattern. The icon bounds are not
-    // consulted; the host's full bounds drive placement. RTL mirrors the trailing edge to the left.
+    // vertically centered on it — the M3 "Favorites 84" pattern. The icon bounds are not consulted;
+    // the host's VISIBLE BODY drives placement. Body rather than raw bounds because a host whose
+    // painted chrome is centered inside a stretched cell would otherwise strand the badge out in
+    // the dead space at the cell edge (#493) — the same mismatch LABEL_TRAILING was hand-fixed for
+    // during the tabs epic. RTL mirrors the trailing edge to the left.
     private void refreshTrailingEdge() {
-      final int hostW = host.getWidth();
-      final int hostH = host.getHeight();
-      if (hostW <= 0 || hostH <= 0) {
+      // Both guards matter: the host may not be laid out yet (refresh runs on mount), and a body
+      // is derived from content rather than bounds, so it stays non-empty on a zero-sized host.
+      if (host.getWidth() <= 0 || host.getHeight() <= 0) {
+        badge.setVisible(false);
+        return;
+      }
+      final Rectangle body = BodyBearing.bodyBoundsOf(host);
+      if (body.width <= 0 || body.height <= 0) {
         badge.setVisible(false);
         return;
       }
@@ -583,10 +614,10 @@ public final class ElwhaBadgeAnchor {
       final boolean ltr = host.getComponentOrientation().isLeftToRight();
       final Dimension pref = badge.getPreferredSize();
 
-      // Align the badge's trailing edge to the host's trailing edge (right in LTR, left in RTL) and
-      // center it vertically on the host.
-      final int badgeXInHost = ltr ? hostW - pref.width : 0;
-      final int badgeYInHost = (hostH - pref.height) / 2;
+      // Align the badge's trailing edge to the body's trailing edge (right in LTR, left in RTL) and
+      // center it vertically on the body.
+      final int badgeXInHost = ltr ? body.x + body.width - pref.width : body.x;
+      final int badgeYInHost = body.y + (body.height - pref.height) / 2;
       final Point topLeftInLayered =
           SwingUtilities.convertPoint(host, new Point(badgeXInHost, badgeYInHost), layeredPane);
 

@@ -39,7 +39,7 @@ The single source of truth is the selected `T`.
 
 - `setOptions(List<T>)` — the option list. The menu is rebuilt lazily on the next open (rebuild-on-options-change), so changing options is cheap.
 - `setDisplayFunction(Function<T,String>)` — value→label renderer (default `String::valueOf`).
-- `getSelectedValue()` / `setSelectedValue(T)` — read / programmatically set the selection; `setSelectedValue(null)` clears (empty field, the floating label rests). A value not among the options is ignored — a select is constrained to its options.
+- `getSelectedValue()` / `setSelectedValue(T)` — read / programmatically set the selection; `setSelectedValue(null)` clears (empty field, the floating label rests). A value not among the options throws `IllegalArgumentException` — a select is constrained to its options, so there is no reachable state that satisfies the request (conventions §9). Use `setSelectedValues` when lenient filtering is what you want.
 - `addSelectionChangeListener(Consumer<T>)` / `removeSelectionChangeListener(...)` — notified with the new value on every change (a menu pick **or** a programmatic set); not fired for a no-op set to the current value.
 
 Internally the menu is built `SelectionMode.SINGLE`; choosing an item is the write-back path (set field text → close → mark `selected` for the next open).

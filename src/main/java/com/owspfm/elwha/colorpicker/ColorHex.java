@@ -1,6 +1,7 @@
 package com.owspfm.elwha.colorpicker;
 
 import java.awt.Color;
+import java.util.regex.Pattern;
 
 /**
  * Hex formatting for the color picker. Web byte order throughout: {@code #RRGGBB}, with alpha
@@ -12,6 +13,8 @@ import java.awt.Color;
  * @since v0.5.0
  */
 final class ColorHex {
+
+  private static final Pattern HEX_DIGITS = Pattern.compile("[0-9a-fA-F]+");
 
   private ColorHex() {}
 
@@ -56,14 +59,17 @@ final class ColorHex {
     if (digits.length() != 6 && !(allowAlpha && withAlpha)) {
       return null;
     }
-    try {
-      final int red = Integer.parseInt(digits.substring(0, 2), 16);
-      final int green = Integer.parseInt(digits.substring(2, 4), 16);
-      final int blue = Integer.parseInt(digits.substring(4, 6), 16);
-      final int alpha = withAlpha ? Integer.parseInt(digits.substring(6, 8), 16) : 255;
-      return new Color(red, green, blue, alpha);
-    } catch (final NumberFormatException e) {
+    // Length alone is not "is hex": Integer.parseInt accepts a leading sign, so "-12345" parses to
+    // a negative red that Color rejects with an IllegalArgumentException escaping onto the EDT, and
+    // "+12345" parses to a color the user never typed. With every character checked, each two-digit
+    // group is 0–255 and neither parseInt nor Color can fail.
+    if (!HEX_DIGITS.matcher(digits).matches()) {
       return null;
     }
+    final int red = Integer.parseInt(digits.substring(0, 2), 16);
+    final int green = Integer.parseInt(digits.substring(2, 4), 16);
+    final int blue = Integer.parseInt(digits.substring(4, 6), 16);
+    final int alpha = withAlpha ? Integer.parseInt(digits.substring(6, 8), 16) : 255;
+    return new Color(red, green, blue, alpha);
   }
 }

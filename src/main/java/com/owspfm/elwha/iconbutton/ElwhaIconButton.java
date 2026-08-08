@@ -844,6 +844,19 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   }
 
   /**
+   * Returns the action listeners registered on this icon button, in registration order — the {@link
+   * javax.swing.AbstractButton#getActionListeners()} analogue {@code JComponent} does not provide.
+   * The array is a fresh copy; mutating it does not change the registrations.
+   *
+   * @return the registered listeners, never {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public ActionListener[] getActionListeners() {
+    return actionListeners.toArray(new ActionListener[0]);
+  }
+
+  /**
    * Convenience: scopes a {@link PropertyChangeListener} to {@link #PROPERTY_SELECTED}.
    *
    * @param listener the listener

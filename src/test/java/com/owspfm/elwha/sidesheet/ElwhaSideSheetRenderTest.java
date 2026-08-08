@@ -29,16 +29,21 @@ class ElwhaSideSheetRenderTest {
   private static final int WIDTH = 256;
   private static final int HEIGHT = 400;
 
-  private static BufferedImage shotOf(final ElwhaSideSheet sheet) {
-    return Pixels.render(sheet, sheet.modalFootprintWidth(), HEIGHT);
-  }
-
   /**
-   * Renders against a high-contrast ground. Shape probes need one: in the baseline palette {@code
-   * SURFACE} and {@code SURFACE_CONTAINER_LOW} sit within the probe tolerance of each other, so a
-   * cut-away corner over the default ground is indistinguishable from a filled one.
+   * Renders against a high-contrast ground.
+   *
+   * <p>Every probe here needs one. In the baseline palette {@code SURFACE} and {@code
+   * SURFACE_CONTAINER_LOW} are 5/255 apart in light and 9/255 in dark — both inside the ±10 probe
+   * tolerance — and the default render ground is {@code SURFACE}. So over the default ground a
+   * probe expecting either role passes whether the sheet filled with that role, filled with the
+   * other one, or never painted at all. Against {@code PRIMARY} the three outcomes are distinct.
+   *
+   * <p>This was found vacuous rather than predicted: the shape probes already used this ground and
+   * said why, but the container-fill and divider probes did not, and the negative divider
+   * assertions ("nothing painted on this edge") were passing against the ground colour they were
+   * asserting (#707).
    */
-  private static BufferedImage shotOnContrast(final ElwhaSideSheet sheet) {
+  private static BufferedImage shotOf(final ElwhaSideSheet sheet) {
     return Pixels.render(sheet, sheet.modalFootprintWidth(), HEIGHT, GROUND);
   }
 
@@ -66,7 +71,7 @@ class ElwhaSideSheetRenderTest {
     ThemeExtension.install(mode);
     final ElwhaSideSheet sheet = standard();
 
-    Pixels.assertPixelNear(
+    Pixels.assertPixelExact(
         shotOf(sheet),
         WIDTH / 2,
         HEIGHT - 4,
@@ -82,7 +87,7 @@ class ElwhaSideSheetRenderTest {
     ThemeExtension.install(mode);
     final ElwhaSideSheet sheet = modal();
 
-    Pixels.assertPixelNear(
+    Pixels.assertPixelExact(
         shotOf(sheet),
         WIDTH / 2,
         HEIGHT - 4,
@@ -98,13 +103,13 @@ class ElwhaSideSheetRenderTest {
 
     final BufferedImage shot = shotOf(sheet);
 
-    Pixels.assertPixelNear(
+    Pixels.assertPixelExact(
         shot,
         0,
         HEIGHT / 2,
         ColorRole.OUTLINE_VARIANT.resolve(),
         "a trailing-docked sheet needs a boundary on its leading (content-facing) edge");
-    Pixels.assertPixelNear(
+    Pixels.assertPixelExact(
         shot,
         WIDTH - 1,
         HEIGHT / 2,
@@ -119,7 +124,7 @@ class ElwhaSideSheetRenderTest {
 
     final BufferedImage shot = shotOf(sheet);
 
-    Pixels.assertPixelNear(
+    Pixels.assertPixelExact(
         shot,
         WIDTH - 1,
         HEIGHT / 2,
@@ -134,7 +139,7 @@ class ElwhaSideSheetRenderTest {
 
     final BufferedImage shot = shotOf(sheet);
 
-    Pixels.assertPixelNear(
+    Pixels.assertPixelExact(
         shot,
         WIDTH - 1,
         HEIGHT / 2,
@@ -147,7 +152,7 @@ class ElwhaSideSheetRenderTest {
     final ElwhaSideSheet sheet = standard();
     sheet.setEdgeDividerVisible(false);
 
-    Pixels.assertPixelNear(
+    Pixels.assertPixelExact(
         shotOf(sheet),
         0,
         HEIGHT / 2,
@@ -159,7 +164,7 @@ class ElwhaSideSheetRenderTest {
   void aModalSheetDrawsNoEdgeDivider() {
     final ElwhaSideSheet sheet = modal();
 
-    Pixels.assertPixelNear(
+    Pixels.assertPixelExact(
         shotOf(sheet),
         0,
         HEIGHT / 2,
@@ -173,7 +178,7 @@ class ElwhaSideSheetRenderTest {
     sheet.setSheetPosture(SheetPosture.DETACHED);
     final int margin = ElwhaSideSheet.DETACHED_MARGIN_PX;
 
-    Pixels.assertPixelNear(
+    Pixels.assertPixelExact(
         shotOf(sheet),
         margin,
         HEIGHT / 2,
@@ -188,7 +193,7 @@ class ElwhaSideSheetRenderTest {
     final ElwhaSideSheet sheet = standard();
 
     Pixels.assertPixelNear(
-        shotOnContrast(sheet),
+        shotOf(sheet),
         WIDTH - 1,
         0,
         ColorRole.SURFACE.resolve(),
@@ -198,7 +203,7 @@ class ElwhaSideSheetRenderTest {
   @Test
   void aDockedModalSheetRoundsOnlyItsContentFacingCorners() {
     final ElwhaSideSheet sheet = modal();
-    final BufferedImage shot = shotOnContrast(sheet);
+    final BufferedImage shot = shotOf(sheet);
 
     Pixels.assertPixelNear(
         shot,
@@ -219,7 +224,7 @@ class ElwhaSideSheetRenderTest {
     final ElwhaSideSheet sheet = modal();
     sheet.setSheetPosture(SheetPosture.DETACHED);
     final int margin = ElwhaSideSheet.DETACHED_MARGIN_PX;
-    final BufferedImage shot = shotOnContrast(sheet);
+    final BufferedImage shot = shotOf(sheet);
     final int trailingBodyEdge = sheet.modalFootprintWidth() - margin - 1;
 
     Pixels.assertPixelNear(
@@ -262,7 +267,7 @@ class ElwhaSideSheetRenderTest {
   void roundedCornersUseTheLargeShapeToken() {
     final ElwhaSideSheet sheet = modal();
     final int radius = ShapeScale.LG.px();
-    final BufferedImage shot = shotOnContrast(sheet);
+    final BufferedImage shot = shotOf(sheet);
 
     Pixels.assertPixelNear(
         shot,

@@ -414,6 +414,23 @@ class ElwhaSliderRangeTest {
   }
 
   @Test
+  void aRangeRootNodeReportsNoValueRatherThanAStaleOne() {
+    final ElwhaSlider slider = span();
+    slider.setLowerValue(30);
+    slider.setUpperValue(70);
+
+    assertThat(slider.getAccessibleContext().getAccessibleValue())
+        .as(
+            "#703 — the root mirrored the untouched backing model, so a screen reader parked there"
+                + " read the construction-time seed forever; null is the AccessibleContext spelling"
+                + " of \"no value here\"")
+        .isNull();
+    assertThat(slider.getAccessibleContext().getAccessibleChildrenCount())
+        .as("and the live values are on the two handle nodes, whose container this is")
+        .isEqualTo(2);
+  }
+
+  @Test
   void eachHandleNodeReportsItsOwnValueAndItsNoCrossBounds() {
     final ElwhaSlider slider = span();
     final javax.accessibility.AccessibleValue lower =

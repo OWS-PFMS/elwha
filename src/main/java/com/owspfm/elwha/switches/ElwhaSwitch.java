@@ -1,10 +1,12 @@
 package com.owspfm.elwha.switches;
 
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.MorphAnimator;
+import com.owspfm.elwha.theme.RetargetTween;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
 import java.awt.AlphaComposite;
@@ -14,6 +16,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -121,7 +124,7 @@ import javax.swing.event.EventListenerList;
  * @version v0.5.0
  * @since v0.4.0
  */
-public class ElwhaSwitch extends JComponent {
+public class ElwhaSwitch extends JComponent implements BodyBearing {
 
   // --- M3 switch geometry (dp == px at 100% scale; research §T — the md-comp-switch values) ---
 
@@ -223,9 +226,10 @@ public class ElwhaSwitch extends JComponent {
    */
   public ElwhaSwitch(final boolean selected) {
     this.selected = selected;
-    this.slideTween = new RetargetTween(SLIDE_MS, selected ? 1f : 0f);
+    this.slideTween = new RetargetTween(this, SLIDE_MS, selected ? 1f : 0f);
     this.sizeTween =
-        new RetargetTween(SIZE_MORPH_MS, selected ? HANDLE_SELECTED_PX : HANDLE_UNSELECTED_PX);
+        new RetargetTween(
+            this, SIZE_MORPH_MS, selected ? HANDLE_SELECTED_PX : HANDLE_UNSELECTED_PX);
     setOpaque(false);
     setFocusable(true);
     initInteraction();
@@ -559,13 +563,32 @@ public class ElwhaSwitch extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     return new Dimension(
         TRACK_WIDTH_PX + 2 * HALO_OVERHANG_PX, TRACK_HEIGHT_PX + 2 * HALO_OVERHANG_PX);
   }
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
+  }
+
+  /**
+   * The visible painted body — the {@value #TRACK_WIDTH_PX}&times;{@value #TRACK_HEIGHT_PX} track
+   * block, excluding the state-layer halo overhang the preferred size reserves around it.
+   *
+   * @return the track rect in component coordinates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public Rectangle getBodyBounds() {
+    return new Rectangle(trackX(), trackY(), TRACK_WIDTH_PX, TRACK_HEIGHT_PX);
   }
 
   // ------------------------------------------------------------------ geometry
@@ -1212,60 +1235,4 @@ public class ElwhaSwitch extends JComponent {
    * @version v0.4.0
    * @since v0.4.0
    */
-  private final class RetargetTween {
-
-    private final MorphAnimator animator;
-    private float from;
-    private float to;
-    private Easing easing = Easing.LINEAR;
-
-    RetargetTween(final int durationMs, final float initial) {
-      this.animator = new MorphAnimator(ElwhaSwitch.this, durationMs);
-      this.from = initial;
-      this.to = initial;
-      this.animator.snapTo(1f);
-    }
-
-    float value() {
-      return from + (to - from) * easing.ease(animator.progress());
-    }
-
-    float target() {
-      return to;
-    }
-
-    void retarget(
-        final float target, final int durationMs, final Easing easing, final boolean animate) {
-      if (this.to == target) {
-        if (!animate) {
-          this.from = target;
-          animator.snapTo(1f);
-        }
-        return;
-      }
-      this.from = value();
-      this.to = target;
-      this.easing = easing;
-      animator.setDurationMs(durationMs);
-      if (animate) {
-        animator.snapTo(0f);
-        animator.start();
-      } else {
-        this.from = target;
-        animator.snapTo(1f);
-      }
-    }
-
-    /** Re-seats the tween at an externally-driven value (the drag handoff) without animating. */
-    void seed(final float value) {
-      this.from = value;
-      this.to = value;
-      animator.snapTo(1f);
-    }
-
-    /** Stops the timer and lands on the target — {@code removeNotify} cleanup. */
-    void finish() {
-      animator.immediateFinish();
-    }
-  }
 }

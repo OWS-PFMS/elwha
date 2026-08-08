@@ -2128,13 +2128,16 @@ public class ElwhaSlider extends JComponent {
   }
 
   /**
-   * The value bubble's label font. {@link #getFont()} is {@code null} on a component that has never
-   * been added to a container and never had a font installed — which is exactly the state an
-   * offscreen render (a gallery preview, a drag image) paints in — so the theme's own label role
-   * supplies the family when there is nothing to inherit.
+   * The value bubble's label font — {@link TypeRole#LABEL_LARGE} unless a consumer installed a font
+   * on this slider itself. Role-always, matching {@code ElwhaAppBar}, {@code ElwhaTab} and {@code
+   * ElwhaBadge} (#628): {@code getFont()} answers the <em>inherited</em> container font on a slider
+   * that is actually in a hierarchy, so preferring it applied the token role only to offscreen
+   * renders — the inverse of the intent. {@link #isFontSet()} is the distinction that matters: it
+   * is true only for a font set on this component, so an explicit consumer override still wins
+   * while a panel's ambient font does not.
    */
   private Font valueBubbleFont() {
-    final Font base = getFont() != null ? getFont() : TypeRole.LABEL_LARGE.resolve();
+    final Font base = isFontSet() ? getFont() : TypeRole.LABEL_LARGE.resolve();
     return base.deriveFont(Font.PLAIN, VALUE_BUBBLE_LABEL_PT);
   }
 
@@ -2503,8 +2506,14 @@ public class ElwhaSlider extends JComponent {
    * {@link javax.swing.JLabel}) as the accessible name so a screen reader announces label &rarr;
    * role &rarr; value (research §X #50).
    *
+   * <p><strong>The range variant has no root value.</strong> A {@link Variant#RANGE} slider keeps
+   * its state in two handle values and never writes the backing model, so this node's {@link
+   * #getAccessibleValue()} answers {@code null} — the {@code AccessibleContext} spelling of "no
+   * value here" — rather than a number that never changes. The live values belong to the two
+   * per-handle child nodes, and this node is their container (#703).
+   *
    * @author Charles Bryan
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   protected class AccessibleElwhaSlider extends AccessibleJComponent implements AccessibleValue {
@@ -2548,16 +2557,19 @@ public class ElwhaSlider extends JComponent {
       return null;
     }
 
+    // A RANGE slider has no single value to report: it paints from its two handle values and never
+    // touches the backing model, so answering `this` handed a screen reader parked on the root node
+    // the construction-time seed forever — documenting the carve-out (#643) did nothing for the
+    // person hearing the stale number. AccessibleContext specifies null as "not supported by this
+    // object", which is the honest answer here; the two per-handle proxies below carry the live
+    // values, and the root is their container (#703).
     @Override
     public AccessibleValue getAccessibleValue() {
-      return this;
+      return variant == Variant.RANGE ? null : this;
     }
 
     // The root node's value mirrors ElwhaSlider.getValue()/setValue(), and inherits their RANGE
-    // carve-out: a range slider paints from its two handle values and never touches the model, so
-    // this node reports the construction-time seed and writes somewhere nothing renders. Assistive
-    // tech reads a range slider through the two per-handle proxies below, each of which carries its
-    // own handle's live value; the root is their container (#643).
+    // carve-out; in RANGE it is unreachable, since getAccessibleValue() above answers null.
 
     @Override
     public Number getCurrentAccessibleValue() {

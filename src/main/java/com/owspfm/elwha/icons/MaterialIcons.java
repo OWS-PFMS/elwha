@@ -1657,9 +1657,15 @@ public final class MaterialIcons {
    * <p>Currently bundled outline/fill pairs: {@code push_pin}, {@code anchor}, {@code favorite},
    * {@code star}, {@code info}, {@code help}, {@code delete}, {@code edit}, {@code visibility},
    * {@code light_mode}, {@code dark_mode}, {@code brightness_auto}, {@code palette}, {@code
-   * colorize}, {@code widgets}, {@code layers}. Calling {@code pair} on a name that lacks a bundled
-   * {@code _fill} variant throws when the missing SVG is first painted, not on construction — see
-   * {@link FlatSVGIcon}'s lazy-load semantics.
+   * colorize}, {@code widgets}, {@code layers}.
+   *
+   * <p><strong>Graceful fallback.</strong> A name with no bundled {@code _fill} variant yields a
+   * pair whose {@code filled} member is the unfilled glyph, exactly as {@link Symbol#selected()}
+   * does — the two entry points answer identically for identical input. Nothing is thrown, either
+   * here or at paint time; a raw {@link FlatSVGIcon} over a missing resource does not throw, it
+   * paints a solid red error block, which is what this fallback exists to keep out of a consumer's
+   * UI. Use {@link Symbol#hasSelectedVariant()} to ask ahead of time whether the swap will be
+   * visible.
    *
    * <p><strong>Why a helper, not an auto-detect inside {@link
    * com.owspfm.elwha.iconbutton.ElwhaIconButton}.</strong> The button stays icon-library-agnostic
@@ -1669,7 +1675,7 @@ public final class MaterialIcons {
    *
    * @param name the bare Material Symbol name (no path, no extension, no {@code _fill} suffix)
    * @return the resting + filled pair
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public static IconPair pair(final String name) {
@@ -1677,16 +1683,18 @@ public final class MaterialIcons {
   }
 
   /**
-   * Sized variant of {@link #pair(String)}.
+   * Sized variant of {@link #pair(String)}, with the same {@link Symbol}-backed fill fallback.
    *
    * @param name the bare Material Symbol name
    * @param size pixel size for both icons in the returned pair
-   * @return the resting + filled pair at the requested size
-   * @version v0.1.0
+   * @return the resting + filled pair at the requested size; {@code filled} repeats the outline
+   *     glyph when the bundle ships no {@code _fill} variant
+   * @version v0.5.0
    * @since v0.1.0
    */
   public static IconPair pair(final String name, final int size) {
-    return new IconPair(load(name, size), load(name + "_fill", size));
+    final Symbol symbol = symbol(name);
+    return new IconPair(symbol.unselected(size), symbol.selected(size));
   }
 
   /**

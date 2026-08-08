@@ -2,7 +2,7 @@ package com.owspfm.elwha.tooltip;
 
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.overlay.AbstractElwhaOverlay;
-import com.owspfm.elwha.theme.ShadowBearing;
+import com.owspfm.elwha.theme.BodyBearing;
 import java.awt.AWTEvent;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -49,7 +49,7 @@ import javax.swing.SwingUtilities;
  * edge margin. Design: {@code docs/research/elwha-tooltip-design.md} §5.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaTooltip extends AbstractElwhaOverlay {
@@ -727,27 +727,19 @@ public final class ElwhaTooltip extends AbstractElwhaOverlay {
     return new Rectangle(x - halo.left, y - halo.top, pref.width, pref.height);
   }
 
-  // The anchor's bounds in the layered pane's coordinate space; degrades to the pane's top-left
-  // when the anchor is detached, mirroring the menu host. A ShadowBearing anchor's halo reserve is
-  // backed out — the shadow is not visual anchor, and leaving it in reads as a too-wide gap
-  // (exactly the correction the engine already applies to the tooltip's own halo). Note the
-  // residual: placement measures from the component bounds — a component stretched by a fill
-  // layout beyond its preferred size anchors at its stretched edge, not its centered body.
+  // The anchor's VISIBLE BODY in the layered pane's coordinate space; degrades to the pane's
+  // top-left when the anchor is detached, mirroring the menu host. BodyBearing.bodyBoundsOf covers
+  // both corrections the 4dp M3 gap needs: a shadow halo is not visual anchor (leaving it in reads
+  // as a too-wide gap), and neither is the centering slack a stretching layout adds around a
+  // painted pill. The halo half used to be done by hand here; the stretch half was the documented
+  // residual, and is what #493 closed.
   private Rectangle anchorBoundsInPane() {
     if (anchor == null || layeredPane == null || !anchor.isShowing()) {
       return new Rectangle(0, 0, 0, 0);
     }
-    final Point origin = SwingUtilities.convertPoint(anchor, 0, 0, layeredPane);
-    final Rectangle bounds =
-        new Rectangle(origin.x, origin.y, anchor.getWidth(), anchor.getHeight());
-    if (anchor instanceof ShadowBearing bearing) {
-      final Insets halo = bearing.getShadowInsets();
-      bounds.x += halo.left;
-      bounds.y += halo.top;
-      bounds.width = Math.max(0, bounds.width - halo.left - halo.right);
-      bounds.height = Math.max(0, bounds.height - halo.top - halo.bottom);
-    }
-    return bounds;
+    final Rectangle body = BodyBearing.bodyBoundsOf(anchor);
+    final Point origin = SwingUtilities.convertPoint(anchor, body.x, body.y, layeredPane);
+    return new Rectangle(origin.x, origin.y, body.width, body.height);
   }
 
   // A rich action: the text-button label and the consumer's listener.

@@ -16,7 +16,9 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.IllegalComponentStateException;
 import java.awt.KeyboardFocusManager;
+import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -30,6 +32,7 @@ import javax.swing.JComponent;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.JTextComponent;
@@ -49,6 +52,13 @@ import javax.swing.text.JTextComponent;
  * the chrome paint (filled fill + active indicator, or outlined stroke), the floating label, the
  * typed slots, the token mapping, and the one Swing accessibility gap — the error&#8594;"alert"
  * announcement.
+ *
+ * <p><b>Width is the consumer's call.</b> The field prefers M3's 245 dp default layout width and
+ * stretches to whatever a parent layout assigns it. M3's 488 dp <i>maximum</i> width is guidance
+ * for the surrounding layout, not a constraint the component can apply: it binds only on medium and
+ * expanded window size classes — a compact window is supposed to get a full-width field — and a
+ * component cannot see its window's size class. A form that can grow wide should cap the field's
+ * column itself (research §GD3).
  *
  * <p>Decisions and the deliberate M3 mappings: {@code docs/research/elwha-textfield-design.md} and
  * its companion {@code elwha-textfield-research.md}.
@@ -140,7 +150,6 @@ public class ElwhaTextField extends JComponent {
   static final int RESTING_STROKE = 1;
   static final int FOCUS_STROKE = 3; // Expressive bump (design §4; resting 1dp)
   static final int DEFAULT_WIDTH = 245; // M3 default layout width
-  static final int MAX_WIDTH = 488; // M3 maximum width
   static final int DEFAULT_ROWS = 3; // initial rows for the fixed text-area mode
 
   /** Distance from a field edge to the text region when that side carries an icon slot. */
@@ -256,9 +265,9 @@ public class ElwhaTextField extends JComponent {
    */
   private JTextComponent createEditor(final InputMode mode) {
     if (mode == InputMode.SINGLE_LINE) {
-      return new JTextField();
+      return new OrphanSafeTextField();
     }
-    final JTextArea area = new JTextArea();
+    final JTextArea area = new OrphanSafeTextArea();
     area.setLineWrap(true);
     area.setWrapStyleWord(true);
     area.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, null);
@@ -267,6 +276,47 @@ public class ElwhaTextField extends JComponent {
       area.setRows(rows);
     }
     return area;
+  }
+
+  // A component that has been addNotify()'d but never parented is a state Swing answers
+  // inconsistently: Component.isShowing() reports true (it checks `visible && peer != null` and
+  // treats a null parent as "nothing above me objects"), while there is no window to measure
+  // against. AccessibleJTextComponent.caretUpdate asks for the screen location on every caret
+  // move and guards that ask with `catch (IllegalComponentStateException)` — the right handler,
+  // never reached, because Component.getLocationOnScreen takes its isShowing() branch and NPEs
+  // walking to the absent window instead. The first setText therefore blows up.
+  //
+  // Elwha widens the trap: syncAccessibleName() realizes the editor's accessible context in the
+  // constructor, so every field has the caret listener installed, where a bare JTextField only
+  // does once a consumer asks for accessibility. Offscreen-render paths (gallery previews, drag
+  // images) are exactly the code that peers a component without parenting it.
+  //
+  // The fix answers the question Swing's own contract already specifies: a component with no
+  // window ancestor is not showing on the screen, so its screen location is unavailable, so the
+  // documented IllegalComponentStateException is the answer — and the JDK's existing catch
+  // absorbs it. #679.
+  private static boolean hasWindowAncestor(final JComponent editor) {
+    return SwingUtilities.getWindowAncestor(editor) != null;
+  }
+
+  private static final class OrphanSafeTextField extends JTextField {
+    @Override
+    public Point getLocationOnScreen() {
+      if (!hasWindowAncestor(this)) {
+        throw new IllegalComponentStateException("the editor has no window ancestor");
+      }
+      return super.getLocationOnScreen();
+    }
+  }
+
+  private static final class OrphanSafeTextArea extends JTextArea {
+    @Override
+    public Point getLocationOnScreen() {
+      if (!hasWindowAncestor(this)) {
+        throw new IllegalComponentStateException("the editor has no window ancestor");
+      }
+      return super.getLocationOnScreen();
+    }
   }
 
   // Editor properties are set as PLAIN (non-UIResource) values: theme resolves return
@@ -1080,6 +1130,9 @@ public class ElwhaTextField extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     final int supportingRow = SUPPORTING_TOP_PAD + lineHeight(TypeRole.BODY_SMALL);
     return new Dimension(DEFAULT_WIDTH, containerTop() + containerHeight() + supportingRow);
   }

@@ -2,7 +2,6 @@ package com.owspfm.elwha.menu;
 
 import com.owspfm.elwha.icons.MaterialIcons;
 import java.awt.AWTEvent;
-import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
@@ -117,7 +116,7 @@ public final class ElwhaSubMenuItem extends ElwhaMenuItem {
   }
 
   private Point currentPointer() {
-    return MouseInfo.getPointerInfo() != null ? MouseInfo.getPointerInfo().getLocation() : null;
+    return MenuPointer.screenLocation();
   }
 
   // The pointer is "in the chain" when it is over this opener row or anywhere in the open submenu
@@ -243,15 +242,27 @@ public final class ElwhaSubMenuItem extends ElwhaMenuItem {
   }
 
   /**
-   * Replaces the nested menu this item opens.
+   * Replaces the nested menu this item opens. A currently-open submenu is closed first: the
+   * outgoing menu is reachable only through this opener, so swapping the field out from under it
+   * would strand it on the layered pane with nothing able to close it.
    *
    * @param subMenu the new submenu; required
    * @throws NullPointerException if {@code subMenu} is {@code null}
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setSubMenu(final ElwhaMenu subMenu) {
-    this.subMenu = Objects.requireNonNull(subMenu, "subMenu");
+    final ElwhaMenu next = Objects.requireNonNull(subMenu, "subMenu");
+    if (next == this.subMenu) {
+      return;
+    }
+    if (expanded) {
+      if (ownerMenu != null) {
+        ownerMenu.requestCloseSubMenu(this);
+      }
+      setExpanded(false);
+    }
+    this.subMenu = next;
   }
 
   /**

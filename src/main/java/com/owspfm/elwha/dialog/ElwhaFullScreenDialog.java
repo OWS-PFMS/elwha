@@ -142,7 +142,7 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   @Override
   protected JComponent createSurface() {
     final FullScreenSurface s = new FullScreenSurface();
-    s.add(buildColumnHost(), BorderLayout.CENTER);
+    s.add(buildColumnHost(true), BorderLayout.CENTER);
     return s;
   }
 
@@ -212,13 +212,27 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
    * (a gallery card, documentation) where {@link #show(java.awt.Component)} would be wrong: there
    * is no modal overlay, focus management, or entrance motion. Each call returns a fresh component.
    *
+   * <p>The app bar's close affordance and {@linkplain Builder#confirmAction(ElwhaButton) confirming
+   * action} render as inert twins rather than the live controls, so a preview neither fires nor
+   * strips them out of a dialog that is currently shown, and leaves this dialog's scroll state
+   * alone.
+   *
+   * <p><strong>The {@linkplain Builder#content(JComponent) content slot} is borrowed, not twinned —
+   * do not preview a dialog while it is shown.</strong> The slot holds the consumer's own component
+   * under a hosted-as-is contract, and a Swing component has exactly one parent, so the preview
+   * re-parents it: a shown dialog loses its content to the preview, and a second preview takes it
+   * from the first. This is the deliberate limit of the {@code renderPreview} isolation (#589,
+   * ruled in #708) rather than an oversight — an arbitrary consumer component has no copy
+   * constructor, and a placeholder would misrepresent the composition the preview exists to show.
+   * Preview a dialog that is not currently shown, or build a separate instance for the gallery.
+   *
    * @return a non-modal render of the dialog surface
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public JComponent renderPreview() {
     final FullScreenSurface preview = new FullScreenSurface();
-    preview.add(buildColumnHost(), BorderLayout.CENTER);
+    preview.add(buildColumnHost(false), BorderLayout.CENTER);
     return preview;
   }
 
@@ -226,8 +240,9 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
 
   // The centered max-560 column: top app bar (+ optional divider) pinned, content below. The column
   // (incl. its 24px padding) is centered horizontally within the frame-filling surface; on a frame
-  // narrower than the column max it spans the full width.
-  private JComponent buildColumnHost() {
+  // narrower than the column max it spans the full width. A live build records the divider, scroll
+  // pane and close button it must drive later; a preview records none of them (#589).
+  private JComponent buildColumnHost(final boolean live) {
     final JPanel host = new JPanel(new CenteredColumnLayout(contentMaxWidth));
     host.setOpaque(false);
 
@@ -241,11 +256,13 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     // is scrolling" (M3 scroll affordance). Invisible → BorderLayout reserves no space for it.
     final DividerLine divider = new DividerLine();
     divider.setVisible(showDivider);
-    this.scrollDivider = divider;
+    if (live) {
+      this.scrollDivider = divider;
+    }
 
     final JPanel top = new JPanel(new BorderLayout());
     top.setOpaque(false);
-    top.add(buildAppBar(), BorderLayout.CENTER);
+    top.add(buildAppBar(live), BorderLayout.CENTER);
     top.add(divider, BorderLayout.SOUTH);
     column.add(top, BorderLayout.NORTH);
 
@@ -264,8 +281,10 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
       scroll.setOpaque(false);
       scroll.getViewport().setOpaque(false);
       scroll.setBorder(BorderFactory.createEmptyBorder(SpaceScale.LG.px(), 0, 0, 0));
-      scroll.getViewport().addChangeListener(e -> updateScrollDivider());
-      this.contentScroll = scroll;
+      if (live) {
+        scroll.getViewport().addChangeListener(e -> updateScrollDivider());
+        this.contentScroll = scroll;
+      }
       column.add(scroll, BorderLayout.CENTER);
     }
 
@@ -289,15 +308,17 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   // The top app bar (§5): leading close affordance → start-aligned headline → trailing confirm.
   // LINE_START / LINE_END (not WEST / EAST) so the edges mirror for RTL (§10) once the base applies
   // the component orientation; the headline's gap-from-close flips to the trailing side to match.
-  private JComponent buildAppBar() {
+  private JComponent buildAppBar(final boolean live) {
     final AppBar bar = new AppBar();
 
     final ElwhaIconButton close = ElwhaIconButton.standardIconButton(MaterialIcons.close());
     close.setToolTipText("Close");
     // Exit motion is the feedback; suppress the press ripple so it can't freeze on the fade (#288).
     close.setRippleEnabled(false);
-    close.addActionListener(e -> dismiss(DismissCause.CANCEL));
-    this.closeButton = close;
+    if (live) {
+      close.addActionListener(e -> dismiss(DismissCause.CANCEL));
+      this.closeButton = close;
+    }
     bar.add(verticalCenter(close), BorderLayout.LINE_START);
 
     if (headline != null) {
@@ -313,7 +334,8 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     }
 
     if (confirmAction != null) {
-      bar.add(verticalCenter(confirmAction), BorderLayout.LINE_END);
+      bar.add(
+          verticalCenter(live ? confirmAction : previewCopy(confirmAction)), BorderLayout.LINE_END);
     }
     return bar;
   }

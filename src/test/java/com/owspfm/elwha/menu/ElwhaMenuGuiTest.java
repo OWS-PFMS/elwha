@@ -8,6 +8,7 @@ import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.testkit.GuiSteps;
 import com.owspfm.elwha.testkit.GuiToolkit;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Component;
@@ -124,6 +125,19 @@ class ElwhaMenuGuiTest {
     return new Rectangle(origin, component.getSize());
   }
 
+  /**
+   * The component's <em>visible body</em> in pane coordinates — what placement measures from as of
+   * #493. An {@code ElwhaButton} trigger pads its bounds with a shadow reserve and, at XS/S, with
+   * a11y target inflation; a menu row paints a 44 dp band inside a 48 dp target. Anchoring to raw
+   * bounds put the spec gap against those invisible edges.
+   */
+  private Rectangle bodyInPane(final Component component) {
+    final Rectangle body = BodyBearing.bodyBoundsOf(component);
+    final Point origin =
+        SwingUtilities.convertPoint(component, new Point(body.x, body.y), frame.getLayeredPane());
+    return new Rectangle(origin.x, origin.y, body.width, body.height);
+  }
+
   private static Point centerOnScreen(final Component component) {
     final Point origin = component.getLocationOnScreen();
     return new Point(origin.x + component.getWidth() / 2, origin.y + component.getHeight() / 2);
@@ -134,6 +148,48 @@ class ElwhaMenuGuiTest {
         .addItem(ElwhaMenuItem.of("Grid"))
         .addItem(ElwhaMenuItem.of("List"))
         .addItem(ElwhaMenuItem.of("Gallery"));
+  }
+
+  /**
+   * #396 — a scrollable menu used to size its viewport to the whole layered pane, and placement
+   * then clamped the too-tall surface back inside it, over the trigger. Cosmetic for a plain menu;
+   * for the editable {@code ElwhaSelectField} combo it buried the field the user was typing into,
+   * so they could not see what was filtering the list. Needs a real window: a headless anchor is
+   * never {@code isShowing()}, so the bound degrades to the viewport.
+   */
+  @Test
+  void aLongMenuScrollsRatherThanCoveringItsTrigger() throws Exception {
+    final ElwhaMenu.Builder builder = ElwhaMenu.builder();
+    for (int i = 0; i < 40; i++) {
+      builder.addItem(ElwhaMenuItem.of("Item " + i));
+    }
+
+    open(builder.build());
+
+    final Rectangle surface = read(() -> boundsInPane(mounted().get(0)));
+    final Rectangle anchorRect = read(() -> boundsInPane(trigger));
+    assertThat(surface.intersects(anchorRect))
+        .as(
+            "a menu long enough to fill the window must scroll inside the room beside its "
+                + "trigger, not grow past it and get clamped back on top of it")
+        .isFalse();
+  }
+
+  @Test
+  void aLongMenuStaysInsideTheWindow() throws Exception {
+    final ElwhaMenu.Builder builder = ElwhaMenu.builder();
+    for (int i = 0; i < 40; i++) {
+      builder.addItem(ElwhaMenuItem.of("Item " + i));
+    }
+
+    open(builder.build());
+
+    final Rectangle surface = read(() -> boundsInPane(mounted().get(0)));
+    final int paneHeight = read(() -> frame.getLayeredPane().getHeight());
+    assertThat(surface.y).as("the capped menu still starts inside the viewport").isGreaterThan(-1);
+    assertThat(surface.y + surface.height)
+        .as("and still ends inside it — the cap bounds the menu, it does not push it off-screen")
+        .isLessThanOrEqualTo(paneHeight);
   }
 
   /** Captures the whole virtual screen into surefire-reports so the CI artifact carries it. */
@@ -158,11 +214,13 @@ class ElwhaMenuGuiTest {
     open(menu);
 
     final Rectangle surface = read(() -> boundsInPane(mounted().get(0)));
-    final Rectangle anchor = read(() -> boundsInPane(trigger));
+    final Rectangle anchor = read(() -> bodyInPane(trigger));
     assertThat(surface.y)
-        .as("a real anchor puts the menu one gap below the trigger, which no headless run can show")
+        .as(
+            "a real anchor puts the menu one gap below the trigger's painted pill, which no"
+                + " headless run can show — measured from the body, not the padded bounds (#493)")
         .isEqualTo(anchor.y + anchor.height + AbstractElwhaMenuOverlay.ANCHOR_GAP_PX);
-    assertThat(surface.x).as("leading-aligned with the trigger").isEqualTo(anchor.x);
+    assertThat(surface.x).as("leading-aligned with the pill").isEqualTo(anchor.x);
   }
 
   @Test
@@ -276,11 +334,13 @@ class ElwhaMenuGuiTest {
         .as("the parent stays up — a chain is two open overlays, not a replacement")
         .hasSize(2);
     final Rectangle sub = read(() -> boundsInPane(mounted().get(0)));
-    final Rectangle opener = read(() -> boundsInPane(share));
+    final Rectangle opener = read(() -> bodyInPane(share));
     assertThat(sub.x)
         .as("the nested menu opens off the opener row's trailing edge")
         .isEqualTo(opener.x + opener.width + AbstractElwhaMenuOverlay.SUBMENU_GAP_PX);
-    assertThat(sub.y).as("top-aligned with the row that opened it").isEqualTo(opener.y);
+    assertThat(sub.y)
+        .as("top-aligned with the visible row that opened it, not its taller target box (#493)")
+        .isEqualTo(opener.y);
   }
 
   @Test
@@ -340,6 +400,12 @@ class ElwhaMenuGuiTest {
         .as("the opener's expanded state is cleared with it")
         .isFalse();
   }
+
+  // The #604 swap regression used to live here, because the submenu machinery reads the OS pointer
+  // and MouseInfo.getPointerInfo() threw headless — nothing about the behaviour itself needed a
+  // display. That read is guarded as of #709, so it moved down to
+  // ElwhaSubMenuChainTest.swappingAnOpenSubMenuClosesTheOutgoingOne. Keyboard-driven submenu
+  // opening against real focus is still covered above, by the chain-unwind test.
 
   // ---------------------------------------------------------------- selection
 

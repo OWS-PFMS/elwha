@@ -238,6 +238,83 @@ class ElwhaDialogCompositionTest {
         .isEmpty();
   }
 
+  // --------------------------------------------------------- preview isolation
+
+  @Test
+  void aPreviewCarriesTwinsOfTheActionButtonsRatherThanTheButtons() {
+    final ElwhaButton confirm = ElwhaButton.filledButton("Discard");
+    final ElwhaDialog dialog = alert().confirmAction(confirm).build();
+
+    final List<ElwhaButton> rendered = buttonsIn(dialog.renderPreview());
+
+    assertThat(rendered)
+        .as("#589 — a Swing component has one parent; the preview must not borrow the caller's")
+        .doesNotContain(confirm);
+    assertThat(rendered)
+        .singleElement()
+        .satisfies(
+            twin -> {
+              assertThat(twin.getText()).isEqualTo("Discard");
+              assertThat(twin.getVariant()).isEqualTo(confirm.getVariant());
+              assertThat(twin.isRippleEnabled()).isEqualTo(confirm.isRippleEnabled());
+            });
+  }
+
+  @Test
+  void previewingAShownDialogLeavesItsActionRowMounted() {
+    final ElwhaButton confirm = ElwhaButton.textButton("Discard");
+    final ElwhaDialog dialog = show(alert().confirmAction(confirm).build());
+    final Component surface = host.mounted().get(0);
+
+    dialog.renderPreview();
+
+    assertThat(buttonsIn((Container) surface))
+        .as("#589 — previewing stripped the action row out of the dialog that was up")
+        .contains(confirm);
+  }
+
+  @Test
+  void aPreviewsActionButtonsAreInert() {
+    final ElwhaButton confirm = ElwhaButton.textButton("Discard");
+    final List<DismissCause> causes = new ArrayList<>();
+    final ElwhaDialog dialog = show(alert().confirmAction(confirm).onClose(causes::add).build());
+
+    buttonsIn(dialog.renderPreview()).get(0).doClick();
+
+    assertThat(causes).as("a gallery tile is a picture, not a live dismiss control").isEmpty();
+    assertThat(host.mounted()).as("and the shown dialog is untouched").hasSize(2);
+  }
+
+  @Test
+  void previewingTwiceLeavesBothPreviewsWhole() {
+    final ElwhaDialog dialog = alert().confirmAction(ElwhaButton.textButton("Discard")).build();
+
+    final JComponent first = dialog.renderPreview();
+    final JComponent second = dialog.renderPreview();
+
+    assertThat(buttonsIn(first)).as("the second preview cannot empty the first").hasSize(1);
+    assertThat(buttonsIn(second)).hasSize(1);
+    assertThat(buttonsIn(first).get(0)).isNotSameAs(buttonsIn(second).get(0));
+  }
+
+  @Test
+  void aContentSlotIsTheOneChildAPreviewStillBorrows() {
+    final JTextField field = new JTextField("draft");
+    final ElwhaDialog dialog = show(alert().content(field).build());
+
+    final JComponent preview = dialog.renderPreview();
+
+    assertThat(descendants(preview))
+        .as("the content slot is the consumer's own component, hosted as-is — so it moves (#589)")
+        .contains(field);
+    assertThat(descendants((Container) host.mounted().get(0)))
+        .as(
+            "which is the documented limit of the preview's isolation — accepted as the contract in"
+                + " #708, because an arbitrary consumer component cannot be twinned and a"
+                + " placeholder would misrepresent both the composition and the settled size")
+        .doesNotContain(field);
+  }
+
   // ----------------------------------------------------------------- sizing
 
   @Test

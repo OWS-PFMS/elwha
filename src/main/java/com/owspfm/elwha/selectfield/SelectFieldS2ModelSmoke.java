@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * -Dexec.mainClass="com.owspfm.elwha.selectfield.SelectFieldS2ModelSmoke"}.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class SelectFieldS2ModelSmoke {
@@ -73,12 +73,17 @@ public final class SelectFieldS2ModelSmoke {
     failures += check(fires.get() == 1, "no-op set to current value does not fire");
     checks++;
 
-    // --- value not among options is ignored ---
-    sf.setSelectedValue("Durian");
+    // --- value not among options is rejected (conventions §9, #702) ---
+    boolean refused = false;
+    try {
+      sf.setSelectedValue("Durian");
+    } catch (final IllegalArgumentException expected) {
+      refused = true;
+    }
     failures +=
         check(
-            "Banana".equals(sf.getSelectedValue()) && fires.get() == 1,
-            "value not in options is ignored");
+            refused && "Banana".equals(sf.getSelectedValue()) && fires.get() == 1,
+            "value not in options is rejected and changes nothing");
     checks++;
 
     // --- null clears ---

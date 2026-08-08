@@ -301,6 +301,21 @@ class ElwhaButtonGroupLayoutTest {
 
   // --------------------------------------------------- group-wide stamping
 
+  /**
+   * The expected label-size to icon-size mapping, written out rather than derived. Deriving it —
+   * {@code IconButtonSize.values()[size.ordinal()]}, which both the test and the production code
+   * once did — makes the assertion agree with any mis-mapping the implementation adopts (#662).
+   */
+  private static IconButtonSize expectedIconSize(final ButtonSize size) {
+    return switch (size) {
+      case XS -> IconButtonSize.XS;
+      case S -> IconButtonSize.S;
+      case M -> IconButtonSize.M;
+      case L -> IconButtonSize.L;
+      case XL -> IconButtonSize.XL;
+    };
+  }
+
   @ParameterizedTest
   @EnumSource(ButtonSize.class)
   void groupSizeIsStampedOntoEverySegment(final ButtonSize size) {
@@ -316,7 +331,7 @@ class ElwhaButtonGroupLayoutTest {
         .isEqualTo(size);
     assertThat(((ElwhaIconButton) group.getButtonAt(1)).getButtonSize())
         .as("%s maps onto the icon segment's own size axis", size)
-        .isEqualTo(IconButtonSize.values()[size.ordinal()]);
+        .isEqualTo(expectedIconSize(size));
     assertThat(group.getButtonSize()).as("and the group reports it").isEqualTo(size);
   }
 

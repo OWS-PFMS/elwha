@@ -760,6 +760,9 @@ public class ElwhaAppBar extends JComponent implements Accessible {
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return new Dimension(SLOT_SIZE_PX * 2, getPreferredSize().height);
   }
 

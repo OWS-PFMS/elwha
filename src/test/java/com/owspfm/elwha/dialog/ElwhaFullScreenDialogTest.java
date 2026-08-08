@@ -176,8 +176,81 @@ class ElwhaFullScreenDialogTest {
 
     assertThat(descendantsOfType(preview, ElwhaButton.class))
         .as("the confirming action rides in the app bar, not a bottom row")
-        .contains(save);
+        .singleElement()
+        .satisfies(
+            twin -> {
+              // A preview renders a twin rather than the caller's button (#589), so identity is
+              // deliberately not asserted here.
+              assertThat(twin.getText()).isEqualTo("Save");
+              assertThat(twin).isNotSameAs(save);
+            });
     assertThat(save.isRippleEnabled()).isFalse();
+  }
+
+  // --------------------------------------------------------- preview isolation
+
+  @Test
+  void previewingAShownDialogLeavesItsAppBarControlsMounted() {
+    final ElwhaButton save = ElwhaButton.textButton("Save");
+    final ElwhaFullScreenDialog dialog = show(form().confirmAction(save).build());
+    final JComponent surface = surface();
+    final ElwhaIconButton close = descendantsOfType(surface, ElwhaIconButton.class).get(0);
+
+    dialog.renderPreview();
+
+    assertThat(descendantsOfType(surface, ElwhaButton.class))
+        .as("#589 — previewing stripped the confirming action out of the dialog that was up")
+        .contains(save);
+    assertThat(descendantsOfType(surface, ElwhaIconButton.class))
+        .as("and left the live close affordance where it was")
+        .contains(close);
+  }
+
+  @Test
+  void aPreviewsAppBarControlsAreInert() {
+    final List<DismissCause> causes = new ArrayList<>();
+    final ElwhaFullScreenDialog dialog =
+        show(form().confirmAction(ElwhaButton.textButton("Save")).onClose(causes::add).build());
+
+    final JComponent preview = dialog.renderPreview();
+    descendantsOfType(preview, ElwhaIconButton.class).get(0).doClick();
+    descendantsOfType(preview, ElwhaButton.class).get(0).doClick();
+
+    assertThat(causes).as("a gallery tile is a picture, not a live dismiss control").isEmpty();
+  }
+
+  @Test
+  void aContentSlotIsTheOneChildAPreviewStillBorrows() {
+    final JTextField field = new JTextField("draft");
+    final ElwhaFullScreenDialog dialog = show(form().content(field).build());
+
+    final JComponent preview = dialog.renderPreview();
+
+    assertThat(descendantsOfType(preview, JTextField.class))
+        .as("the content slot is the consumer's own component, hosted as-is — so it moves (#589)")
+        .contains(field);
+    assertThat(descendantsOfType(surface(), JTextField.class))
+        .as(
+            "the same limit the Basic Dialog carries, accepted as the contract in #708 — an"
+                + " arbitrary consumer component cannot be twinned, and a placeholder would"
+                + " misrepresent the composition the preview exists to show")
+        .doesNotContain(field);
+  }
+
+  @Test
+  void previewingTwiceLeavesBothPreviewsWhole() {
+    final ElwhaFullScreenDialog dialog =
+        form().confirmAction(ElwhaButton.textButton("Save")).build();
+
+    final JComponent first = dialog.renderPreview();
+    final JComponent second = dialog.renderPreview();
+
+    assertThat(descendantsOfType(first, ElwhaButton.class))
+        .as("the second preview cannot empty the first")
+        .hasSize(1);
+    assertThat(descendantsOfType(second, ElwhaButton.class)).hasSize(1);
+    assertThat(descendantsOfType(first, ElwhaIconButton.class)).hasSize(1);
+    assertThat(descendantsOfType(second, ElwhaIconButton.class)).hasSize(1);
   }
 
   @Test

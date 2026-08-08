@@ -379,6 +379,72 @@ class ElwhaSideSheetConfigTest {
         .isFalse();
   }
 
+  // ------------------------------------------------- open-state notification
+
+  /**
+   * #506 — a standard sheet has two close paths, the consumer's own and the header X, and only the
+   * modal presentation reported its outcome. A consumer embedding a standard sheet with a visible X
+   * had no way to learn the user had self-closed it, so any control mirroring the open state
+   * silently desynced. The Showcase worked around it by listening for componentResized and
+   * re-reading isOpen(), which is not something a real consumer should have to invent.
+   */
+  @Test
+  void aCloseAffordancePressReportsItselfToTheConsumer() {
+    final ElwhaSideSheet sheet = sheet();
+    final List<Boolean> seen = new ArrayList<>();
+    sheet.addPropertyChangeListener(
+        ElwhaSideSheet.PROPERTY_OPEN, e -> seen.add((Boolean) e.getNewValue()));
+
+    sheet.onCloseActivated();
+
+    assertThat(seen)
+        .as("the path a consumer cannot otherwise observe is the point")
+        .containsExactly(false);
+  }
+
+  @Test
+  void programmaticOpenAndCloseFireTheSameProperty() {
+    final ElwhaSideSheet sheet = sheet();
+    final List<Boolean> seen = new ArrayList<>();
+    sheet.addPropertyChangeListener(
+        ElwhaSideSheet.PROPERTY_OPEN, e -> seen.add((Boolean) e.getNewValue()));
+
+    sheet.close();
+    sheet.open();
+
+    assertThat(seen)
+        .as("one event per target flip, whichever path flipped it")
+        .containsExactly(false, true);
+  }
+
+  @Test
+  void aRedundantSetOpenFiresNothing() {
+    final ElwhaSideSheet sheet = sheet();
+    final List<Boolean> seen = new ArrayList<>();
+    sheet.addPropertyChangeListener(
+        ElwhaSideSheet.PROPERTY_OPEN, e -> seen.add((Boolean) e.getNewValue()));
+
+    sheet.setOpen(true);
+    sheet.close();
+    sheet.close();
+
+    assertThat(seen).as("the event marks a change, not a call").containsExactly(false);
+  }
+
+  @Test
+  void openStateIsReadableFromInsideTheListener() {
+    final ElwhaSideSheet sheet = sheet();
+    final List<Boolean> readBack = new ArrayList<>();
+    sheet.addPropertyChangeListener(
+        ElwhaSideSheet.PROPERTY_OPEN, e -> readBack.add(sheet.isOpen()));
+
+    sheet.close();
+
+    assertThat(readBack)
+        .as("the target flips before the event, so a listener never reads a stale value")
+        .containsExactly(false);
+  }
+
   @Test
   void backAffordanceFallsBackToClosingWhenNoHandlerIsSet() {
     final ElwhaSideSheet sheet = sheet();

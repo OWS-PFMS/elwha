@@ -24,6 +24,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.LayoutManager;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -84,6 +85,18 @@ public final class ElwhaSideSheet extends JComponent {
   /** M3 detached side sheet margin ({@code m3_side_sheet_margin_detached}). */
   public static final int DETACHED_MARGIN_PX = SpaceScale.LG.px();
 
+  /**
+   * Property name fired when the {@linkplain #isOpen() open state} of an embedded standard sheet
+   * changes — by {@link #setOpen(boolean)}, by {@link #open()} / {@link #close()}, or by the user
+   * pressing the sheet's own close affordance.
+   *
+   * <p>Fires once on the <em>target</em> flip, not per animation tick, so a listener reading {@link
+   * #isOpen()} sees the value the event carries. The modal presentation reports its outcome through
+   * {@link #setOnClose(java.util.function.Consumer)} instead, which carries the richer {@link
+   * SheetDismissCause}; a modal show or dismiss does not fire this property.
+   */
+  public static final String PROPERTY_OPEN = "open";
+
   // Release past this fraction of the sheet width (dragged toward the anchored edge) dismisses;
   // under it settles back. A position threshold reads clearly with a mouse (design doc §1/§4).
   private static final float DRAG_DISMISS_THRESHOLD = 0.5f;
@@ -117,6 +130,7 @@ public final class ElwhaSideSheet extends JComponent {
   private boolean dismissibleByScrim = true;
   private Consumer<SheetDismissCause> onClose;
   private SideSheetOverlay overlay;
+  private HostSlot hostSlot;
 
   private final JPanel body = new JPanel(new BorderLayout());
   private final JPanel header = new JPanel(new BorderLayout(SpaceScale.MD.px(), 0));
@@ -812,6 +826,10 @@ public final class ElwhaSideSheet extends JComponent {
   /**
    * Sets the open state, animating toward it — see {@link #open()} / {@link #close()}.
    *
+   * <p>Fires {@link #PROPERTY_OPEN} once, before the animation starts, so a consumer control that
+   * mirrors the sheet's state stays in step whichever path flipped it — including the sheet's own
+   * close affordance, which a consumer cannot otherwise observe.
+   *
    * @param open the target state
    * @version v0.5.0
    * @since v0.5.0
@@ -820,7 +838,9 @@ public final class ElwhaSideSheet extends JComponent {
     if (open == this.open) {
       return;
     }
+    final boolean previous = this.open;
     this.open = open;
+    firePropertyChange(PROPERTY_OPEN, previous, open);
     ensureOpenAnimator();
     if (open) {
       openAnimator.start();
@@ -833,7 +853,8 @@ public final class ElwhaSideSheet extends JComponent {
    * Returns the target open state ({@code true} from construction).
    *
    * @return the target open state ({@code true} from construction); flips immediately on {@link
-   *     #setOpen} while the width animation catches up
+   *     #setOpen} while the width animation catches up, and always agrees with the value the {@link
+   *     #PROPERTY_OPEN} event carried
    * @version v0.5.0
    * @since v0.5.0
    */
@@ -865,6 +886,13 @@ public final class ElwhaSideSheet extends JComponent {
    * restores on close. Returns immediately; the outcome is reported through {@link
    * #setOnClose(Consumer)}. A no-op while already shown.
    *
+   * <p><strong>An embedded sheet is borrowed, not taken.</strong> A Swing component has exactly one
+   * parent, so presenting a sheet that is currently in a layout lifts it out for the duration of
+   * the presentation. Its layout slot — parent, position, and {@link java.awt.BorderLayout} /
+   * {@link java.awt.GridBagLayout} constraint — is captured here and restored on teardown, along
+   * with the {@linkplain SheetType type} and open state this call forces. A consumer who re-types
+   * or re-opens the sheet while it is up keeps their value; only this call's own forcing is undone.
+   *
    * @param parent any component in the target window's tree; used to resolve the host frame and
    *     restore focus on close
    * @throws NullPointerException if {@code parent} is {@code null}
@@ -876,6 +904,7 @@ public final class ElwhaSideSheet extends JComponent {
     if (isModalShowing()) {
       return;
     }
+    this.hostSlot = captureHostSlot();
     setSheetType(SheetType.MODAL);
     if (!open) {
       open = true;
@@ -887,6 +916,85 @@ public final class ElwhaSideSheet extends JComponent {
     overlay = new SideSheetOverlay(this);
     overlay.show(parent);
   }
+
+  // What showModal borrows and the teardown gives back (#597). Presenting a sheet modally
+  // re-parents
+  // it into the overlay's slide surface, and a Swing component has exactly one parent — so an
+  // embedded standard sheet is pulled out of the consumer's layout for the duration. The forced
+  // MODAL type and the forced-open state are borrowed the same way: the design doc sanctions the
+  // forcing (§5, the "setters force, not throw" precedent) for the presentation, not for ever
+  // after.
+  private HostSlot captureHostSlot() {
+    final Container parent = getParent();
+    return new HostSlot(
+        parent,
+        parent != null ? indexIn(parent) : -1,
+        parent != null ? constraintsIn(parent) : null,
+        sheetType,
+        open);
+  }
+
+  private int indexIn(final Container parent) {
+    for (int i = 0; i < parent.getComponentCount(); i++) {
+      if (parent.getComponent(i) == this) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  // Swing exposes a child's layout constraint only per layout manager, and only these two place a
+  // sheet somewhere its index cannot express. Under any other manager the index is the whole story.
+  private Object constraintsIn(final Container parent) {
+    final LayoutManager layout = parent.getLayout();
+    if (layout instanceof BorderLayout border) {
+      return border.getConstraints(this);
+    }
+    if (layout instanceof GridBagLayout grid) {
+      return grid.getConstraints(this);
+    }
+    return null;
+  }
+
+  private void restoreHostSlot() {
+    final HostSlot slot = hostSlot;
+    hostSlot = null;
+    if (slot == null) {
+      return;
+    }
+    // Undo only the forcing showModal did: a consumer who re-typed or re-opened the sheet while it
+    // was up keeps their value.
+    if (sheetType == SheetType.MODAL) {
+      setSheetType(slot.type());
+    }
+    if (open) {
+      setOpen(slot.open());
+    }
+    final Container parent = slot.parent();
+    if (parent == null) {
+      // Nothing to give back to: leave the sheet unparented, the way it arrived, rather than inside
+      // the discarded slide surface — where a later presentation would capture *that* as its home.
+      if (getParent() != null) {
+        getParent().remove(this);
+      }
+      return;
+    }
+    if (getParent() == parent) {
+      return;
+    }
+    final int index = Math.min(Math.max(slot.index(), 0), parent.getComponentCount());
+    if (slot.constraints() != null) {
+      parent.add(this, slot.constraints(), index);
+    } else {
+      parent.add(this, index);
+    }
+    parent.revalidate();
+    parent.repaint();
+  }
+
+  /** The layout slot and forced chrome a modal presentation borrowed from the consumer. */
+  private record HostSlot(
+      Container parent, int index, Object constraints, SheetType type, boolean open) {}
 
   /**
    * Dismisses the modal presentation programmatically, reporting {@link
@@ -988,6 +1096,7 @@ public final class ElwhaSideSheet extends JComponent {
   // The overlay's teardown completion: drop the live host and relay the cause to the consumer.
   void modalClosed(final SheetDismissCause cause) {
     overlay = null;
+    restoreHostSlot();
     if (onClose != null) {
       onClose.accept(cause);
     }

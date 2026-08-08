@@ -345,30 +345,47 @@ final class WheelPane extends ColorPickerPane {
 
     private BufferedImage discImage() {
       if (cache == null) {
-        // The edge is antialiased inside the image (per-pixel coverage), never via clip() —
-        // Java2D clipping is never antialiased (the V1 shade-strip smoke-iterate finding).
-        cache = new BufferedImage(DISC_DIAMETER, DISC_DIAMETER, BufferedImage.TYPE_INT_ARGB);
-        final float radius = DISC_DIAMETER / 2f;
-        final int[] row = new int[DISC_DIAMETER];
-        for (int y = 0; y < DISC_DIAMETER; y++) {
-          final float dy = y - radius + 0.5f;
-          for (int x = 0; x < DISC_DIAMETER; x++) {
-            final float dx = x - radius + 0.5f;
-            final float dist = (float) Math.hypot(dx, dy);
-            final float coverage = Math.max(0f, Math.min(1f, radius - dist + 0.5f));
-            if (coverage == 0f) {
-              row[x] = 0;
-              continue;
-            }
-            final float hue =
-                (float) ((Math.toDegrees(Math.atan2(-dy, dx)) + 360.0) % 360.0) / 360f;
-            final int rgb = Color.HSBtoRGB(hue, Math.min(1f, dist / radius), 1f);
-            row[x] = (Math.round(coverage * 255f) << 24) | (rgb & 0xFFFFFF);
-          }
-          cache.setRGB(0, y, DISC_DIAMETER, 1, row, 0, DISC_DIAMETER);
-        }
+        cache = renderDisc(DISC_DIAMETER);
       }
       return cache;
     }
+  }
+
+  /**
+   * The hue/saturation disc, evaluated per pixel at the requested diameter — the uncached render
+   * behind {@code WheelDisc}'s cache, and the direct-render seam a cached-versus-direct probe
+   * compares against (#692).
+   *
+   * <p>The edge is antialiased inside the image (per-pixel coverage), never via {@code clip()} —
+   * Java2D clipping is never antialiased (the V1 shade-strip smoke-iterate finding). That analytic
+   * coverage is computed for the diameter passed here, which is why blitting the 1× raster onto a
+   * HiDPI surface is not the same picture as rendering at the device diameter.
+   *
+   * @param diameter the disc diameter in pixels
+   * @return a freshly evaluated disc raster
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  static BufferedImage renderDisc(final int diameter) {
+    final BufferedImage image = new BufferedImage(diameter, diameter, BufferedImage.TYPE_INT_ARGB);
+    final float radius = diameter / 2f;
+    final int[] row = new int[diameter];
+    for (int y = 0; y < diameter; y++) {
+      final float dy = y - radius + 0.5f;
+      for (int x = 0; x < diameter; x++) {
+        final float dx = x - radius + 0.5f;
+        final float dist = (float) Math.hypot(dx, dy);
+        final float coverage = Math.max(0f, Math.min(1f, radius - dist + 0.5f));
+        if (coverage == 0f) {
+          row[x] = 0;
+          continue;
+        }
+        final float hue = (float) ((Math.toDegrees(Math.atan2(-dy, dx)) + 360.0) % 360.0) / 360f;
+        final int rgb = Color.HSBtoRGB(hue, Math.min(1f, dist / radius), 1f);
+        row[x] = (Math.round(coverage * 255f) << 24) | (rgb & 0xFFFFFF);
+      }
+      image.setRGB(0, y, diameter, 1, row, 0, diameter);
+    }
+    return image;
   }
 }

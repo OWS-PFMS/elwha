@@ -1,5 +1,6 @@
 package com.owspfm.elwha.card;
 
+import com.owspfm.elwha.theme.RtlMirror;
 import com.owspfm.elwha.theme.SpaceScale;
 import java.awt.Component;
 import java.awt.Container;
@@ -324,15 +325,15 @@ public final class ElwhaCardActions extends JComponent {
       final int gap = SpaceScale.SM.px();
       final int totalW = sumWithGaps(items);
       final int startX = (align == Align.LEADING) ? 0 : Math.max(0, available - totalW);
-      // Positions are computed as if the row were left-to-right and mirrored on the way out, the
-      // same shape ElwhaItemList.flipX uses. One flip covers both halves of RTL: the LEADING
-      // segment lands against the right edge, and the items inside a segment reverse with it.
+      // Positions are computed as if the row were left-to-right and mirrored on the way out via
+      // the shared RtlMirror. One flip covers both halves of RTL: the LEADING segment lands
+      // against the right edge, and the items inside a segment reverse with it.
       final boolean ltr = getComponentOrientation().isLeftToRight();
       int curX = startX;
       for (final JComponent c : items) {
         final Dimension p = c.getPreferredSize();
         final int by = y + Math.max(0, (rowH - p.height) / 2);
-        c.setBounds(ltr ? curX : available - curX - p.width, by, p.width, p.height);
+        c.setBounds(RtlMirror.mirrorX(ltr, available, curX, p.width), by, p.width, p.height);
         curX += p.width + gap;
       }
     }

@@ -96,6 +96,13 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
 
   private boolean subscribedToModel;
   private final Timer clock;
+
+  /**
+   * Held as a field, not passed inline: {@link MorphAnimator#addReducedMotionListener} keeps only a
+   * weak reference, so an inline lambda would be collectable the moment the constructor returns.
+   */
+  private final Runnable reducedMotionWatch = this::reducedMotionChanged;
+
   private long cycleAnchorNanos;
 
   /**
@@ -132,6 +139,7 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
             updateAnimationDemand();
           }
         });
+    MorphAnimator.addReducedMotionListener(reducedMotionWatch);
   }
 
   /**
@@ -290,7 +298,9 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
   }
 
   /**
-   * Sets the active indicator's box size.
+   * Sets the active indicator's box size. In the {@linkplain #setContained(boolean) contained}
+   * configuration the {@linkplain #setContainerSize(int) container} bounds it — an indicator larger
+   * than its container paints at the container's size, not past its edge.
    *
    * @param size the size, px (clamped to ≥ 8)
    * @version v0.5.0
@@ -315,7 +325,9 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
 
   /**
    * Sets the container circle's box size. The active shape holds the M3 active-to-container ratio
-   * within it.
+   * within it, and the container is a hard bound: shrinking it below the {@linkplain
+   * #setIndicatorSize(int) indicator size} shrinks the shape to fit rather than letting it paint
+   * outside the circle.
    *
    * @param size the size, px (clamped to ≥ 8)
    * @version v0.5.0
@@ -556,7 +568,11 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
       return determinateProfile(getProgressFraction());
     }
     if (MorphAnimator.isReducedMotion()) {
-      return LoadingShapes.INDETERMINATE[0].radii();
+      // Cloned so every branch of this method hands back an array the caller owns. The other two
+      // allocate; this one would otherwise leak the backing array of a static final shape, and an
+      // in-place transform on a profile — a pulse, a clamp, a normalization — would corrupt the
+      // shape catalog for the whole JVM, and only under reduced motion (#521).
+      return LoadingShapes.INDETERMINATE[0].radii().clone();
     }
     return indeterminateProfile(elapsedMs());
   }
@@ -578,6 +594,21 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
       cycleAnchorNanos = System.nanoTime();
     }
     return (System.nanoTime() - cycleAnchorNanos) / 1_000_000L;
+  }
+
+  /**
+   * The global reduced-motion state flipped under a live indicator (#632).
+   *
+   * <p>Sampling the flag only in {@link #updateAnimationDemand()}, which runs on {@code
+   * SHOWING_CHANGED} and mode changes, left a showing spinner wrong in both directions: turning
+   * reduced motion on kept the 60 fps clock burning while the paint had already snapped to the
+   * static shape, and turning it off left the clock stopped, so the spinner stayed frozen until it
+   * was removed and re-added. The repaint is what the off→on direction needs — stopping a Timer
+   * does not schedule one, and the frozen frame is mid-rotation.
+   */
+  private void reducedMotionChanged() {
+    updateAnimationDemand();
+    repaint();
   }
 
   /** Starts/stops the repaint clock based on visibility, mode, and reduced motion. */
@@ -670,7 +701,11 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
                 containerDiameter,
                 containerDiameter));
         // Hold the M3 38/48 active-to-container ratio even if the container was shrunk to fit.
-        activeBox = containerDiameter * (indicatorSize / (float) containerSize);
+        // Capped at 1: a consumer who shrinks only the container drives the raw ratio above 1,
+        // which would paint the active shape outside the circle it is supposed to sit inside
+        // (#574). The container is the bound, so the shape shrinks with it.
+        final float ratio = Math.min(1f, indicatorSize / (float) containerSize);
+        activeBox = containerDiameter * ratio;
       }
 
       final float scale = activeBox / 2f - 1f;

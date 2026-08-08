@@ -327,11 +327,17 @@ public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator
     final float runEnd = runX + runW;
 
     final long ms = indeterminateElapsedMs() % INDETERMINATE_CYCLE_MS;
+    // Index 2 marks a line whose head is still travelling — see the emergence floor below.
     final float[][] lines = {
-      {channel(ms, FIRST_LINE_TAIL_DELAY_MS, FIRST_LINE_MS), channel(ms, 0, FIRST_LINE_MS)},
+      {
+        channel(ms, FIRST_LINE_TAIL_DELAY_MS, FIRST_LINE_MS),
+        channel(ms, 0, FIRST_LINE_MS),
+        ms < FIRST_LINE_MS ? 1f : 0f
+      },
       {
         channel(ms, SECOND_LINE_TAIL_DELAY_MS, SECOND_LINE_MS),
-        channel(ms, SECOND_LINE_HEAD_DELAY_MS, SECOND_LINE_MS)
+        channel(ms, SECOND_LINE_HEAD_DELAY_MS, SECOND_LINE_MS),
+        ms >= SECOND_LINE_HEAD_DELAY_MS && ms < SECOND_LINE_HEAD_DELAY_MS + SECOND_LINE_MS ? 1f : 0f
       }
     };
     if (lines[0][0] > lines[1][0]) {
@@ -343,7 +349,19 @@ public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator
     float cursor = runX;
     for (final float[] line : lines) {
       final float x0 = runX + line[0] * runW;
-      final float x1 = runX + line[1] * runW;
+      float x1 = runX + line[1] * runW;
+      // A line whose head has not yet reached the far end is emerging, and an emerging line is
+      // honestly tiny but it is not nothing. M3 draws the active indicator as a capsule with round
+      // ends, so the smallest it can truthfully be is one cap: a circle of diameter `thickness`.
+      // Culling below half a pixel instead is what left the bar entirely blank for the opening
+      // ~60-85 ms of every cycle (#576) — under EMPHASIZED_ACCELERATE the first line's head needs
+      // that long to clear half a pixel, and the second line has not started. Flooring the width
+      // rather than retiming the channels keeps the Compose keyframe constants exactly as spec'd;
+      // it is a no-op the moment the natural span passes `thickness`, a few frames in.
+      final boolean emerging = line[2] > 0.5f;
+      if (emerging) {
+        x1 = Math.max(x1, Math.min(x0 + thickness, runEnd));
+      }
       if (x1 - x0 < 0.5f) {
         continue;
       }
@@ -360,6 +378,9 @@ public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator
                 innerR));
       }
       g2.setColor(getIndicatorColorRole().resolve());
+      // A floored nub is a lone capsule with nothing butted against it, so both of its ends are
+      // caps; the inner radius is for an end that meets the track across the gap.
+      final boolean floored = x1 - x0 <= thickness + 0.5f;
       paintActiveSpan(
           g2,
           x0,
@@ -367,7 +388,7 @@ public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator
           midY,
           thickness,
           x0 <= runX + 0.5f ? halfT : innerR,
-          x1 >= runEnd - 0.5f ? halfT : innerR);
+          x1 >= runEnd - 0.5f || (emerging && floored) ? halfT : innerR);
       cursor = x1 + gap;
     }
     if (runEnd - cursor >= 1f) {

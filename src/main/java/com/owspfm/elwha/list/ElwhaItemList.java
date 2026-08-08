@@ -3,6 +3,7 @@ package com.owspfm.elwha.list;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.MorphAnimator;
+import com.owspfm.elwha.theme.RtlMirror;
 import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -193,7 +194,7 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
       new WindowAdapter() {
         @Override
         public void windowGainedFocus(final WindowEvent event) {
-          reapplyReorderCursors();
+          reapplyReorderCursors(event);
         }
       };
   private Window cursorWindow;
@@ -1216,11 +1217,7 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
    * @since v0.5.0
    */
   private int flipX(final Container parent, final int x, final int width) {
-    if (isLeftToRight()) {
-      return x;
-    }
-    final Insets in = parent.getInsets();
-    return in.left + (parent.getWidth() - in.right) - x - width;
+    return RtlMirror.mirrorX(isLeftToRight(), parent, x, width);
   }
 
   private void applyOrientationLayout() {
@@ -2558,7 +2555,13 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
 
     @Override
     public void actionPerformed(final ActionEvent event) {
-      moveFocusedItem(focusedItem(), delta);
+      // The reorder bindings are the block arrows, so in a GRID they walk whole rows for the same
+      // reason MoveFocus does (#598): stepping by one moves the item along the flat sequence, which
+      // in a grid reads as sideways, leaving no way to reorder vertically from the keyboard (#687).
+      // resolveMoveTarget clamps, so a row-sized step is safe in the last partial row.
+      final int step =
+          orientation == ElwhaListOrientation.GRID ? delta * Math.max(1, columns) : delta;
+      moveFocusedItem(focusedItem(), step);
     }
   }
 
@@ -2865,17 +2868,33 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
    * <p>Cursors are otherwise installed once, when items are built. macOS drops the OS-side
    * association for custom cursors across a Spaces or Mission Control transition, so a list that
    * survives one goes back to the default pointer with nothing to re-install it. Re-applying the
-   * cached instances would not help — the objects survive, the association is what dies — so {@link
-   * ReorderCursors#invalidate()} forces a rebuild first (#556).
+   * cached instances would not help — the objects survive, the association is what dies — so the
+   * cursors are rebuilt first (#556).
    *
    * @version v0.5.0
    * @since v0.5.0
    */
   void reapplyReorderCursors() {
+    reapplyReorderCursors(null);
+  }
+
+  /**
+   * The activation-aware form. The cursor cache is global while this listener is per-list, so a
+   * window holding several cursor-swap lists would otherwise rebuild once per list on every Alt-Tab
+   * — each list discarding the cursor the one before it had just decoded. Charging the rebuild to
+   * the activation event itself makes it happen once, after which the remaining lists re-apply from
+   * the warm cache (#614).
+   *
+   * @param activation the window-activation event to charge the rebuild to, or {@code null} to
+   *     rebuild unconditionally
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  void reapplyReorderCursors(final Object activation) {
     if (!usesCursorSwap() || !canReorderAnything()) {
       return;
     }
-    ReorderCursors.invalidate();
+    ReorderCursors.invalidateOnce(activation);
     final Cursor grab = ReorderCursors.grab();
     for (final Map.Entry<T, JComponent> entry : viewByItem.entrySet()) {
       if (!isAnchored(entry.getKey())) {

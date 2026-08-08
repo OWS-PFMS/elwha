@@ -449,6 +449,9 @@ public final class ElwhaBadge extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     if (variant == Variant.SMALL) {
       return new Dimension(SMALL_SIZE_DP, SMALL_SIZE_DP);
     }
@@ -461,6 +464,9 @@ public final class ElwhaBadge extends JComponent {
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 

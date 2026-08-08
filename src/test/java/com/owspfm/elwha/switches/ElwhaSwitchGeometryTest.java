@@ -69,17 +69,17 @@ class ElwhaSwitchGeometryTest {
   }
 
   @Test
-  void fixedGeometryIgnoresAnExplicitPreferredSize() {
+  void anExplicitPreferredSizeWins() {
     final ElwhaSwitch toggle = new ElwhaSwitch();
     final Dimension fixed = toggle.getPreferredSize();
+    final Dimension explicit = new Dimension(200, 90);
 
-    toggle.setPreferredSize(new Dimension(200, 90));
+    toggle.setPreferredSize(explicit);
 
     assertThat(toggle.getPreferredSize())
-        .as(
-            "the switch overrides getPreferredSize unconditionally, so a caller-set size is"
-                + " ignored — unlike ElwhaCheckbox and ElwhaRadioButton, which honour theirs")
-        .isEqualTo(fixed);
+        .as("a caller-set preferred size wins, matching ElwhaCheckbox and ElwhaRadioButton (#567)")
+        .isEqualTo(explicit)
+        .isNotEqualTo(fixed);
   }
 
   @Test

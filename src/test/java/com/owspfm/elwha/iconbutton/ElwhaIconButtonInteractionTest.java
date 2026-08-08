@@ -8,6 +8,7 @@ import com.owspfm.elwha.testkit.ThemeExtension;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.Icon;
@@ -121,6 +122,22 @@ class ElwhaIconButtonInteractionTest {
     assertThat(fired[0])
         .as("a removed listener hears nothing, and a null one was never added")
         .isZero();
+  }
+
+  // ----------------------------------------------------- listener accessor
+
+  @Test
+  void registeredActionListenersReadBack() {
+    final ElwhaIconButton button = sized();
+    final ActionListener listener = e -> {};
+
+    button.addActionListener(listener);
+
+    assertThat(button.getActionListeners())
+        .as("#678 — the accessor is uniform across the action components")
+        .containsExactly(listener);
+    button.removeActionListener(listener);
+    assertThat(button.getActionListeners()).isEmpty();
   }
 
   // -------------------------------------------------------- disabled guards

@@ -1,6 +1,7 @@
 package com.owspfm.elwha.button;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.Easing;
@@ -21,6 +22,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -104,7 +106,7 @@ import javax.swing.Timer;
  * @version v0.5.0
  * @since v0.2.0
  */
-public class ElwhaButton extends JComponent implements ShadowBearing {
+public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearing {
 
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
@@ -874,6 +876,19 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
   }
 
   /**
+   * Returns the action listeners registered on this button, in registration order — the {@link
+   * javax.swing.AbstractButton#getActionListeners()} analogue {@code JComponent} does not provide.
+   * The array is a fresh copy; mutating it does not change the registrations.
+   *
+   * @return the registered listeners, never {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public ActionListener[] getActionListeners() {
+    return actionListeners.toArray(new ActionListener[0]);
+  }
+
+  /**
    * Programmatically activates the button, firing its action listeners (and, in {@code SELECTABLE}
    * mode, toggling selection) exactly as a click or keyboard activation would — the {@link
    * javax.swing.JButton#doClick()} analogue {@code JComponent} doesn't provide. No ripple or press
@@ -1220,18 +1235,60 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
   }
 
   /**
-   * Tests whether a component-local point lies inside the click hit area. The hit area is the full
-   * component bounds (excluding the shadow reserve) — including the a11y target inflation padding
-   * around the visible body, so clicks in that padding still register and dispatch a press / ripple
-   * on the body. WCAG 2.5.5 — 48 dp minimum touch target on XS / S.
+   * The visible painted body — the round-rect pill, excluding the shadow reserve and any centering
+   * slack a stretching layout or the a11y target inflation introduced.
+   *
+   * @return the body rect in component coordinates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public Rectangle getBodyBounds() {
+    final Point origin = bodyOrigin();
+    final Rectangle body =
+        new Rectangle(origin.x, origin.y, effectiveBodyWidth(), buttonSize.containerHeightPx());
+    // A button squeezed below its content-hugging width would otherwise report a body running past
+    // its own right edge, and a consumer anchoring to the trailing edge would leave the component.
+    return body.intersection(new Rectangle(0, 0, getWidth(), getHeight()));
+  }
+
+  /**
+   * The clickable rect: the visible body, grown to the WCAG 2.5.5 minimum target (48 dp on XS / S)
+   * and kept centered on the body, then clamped to the component's own bounds.
+   *
+   * <p>The rect is clamped to the component minus its shadow reserve — a point in the transparent
+   * halo is not a click target, matching {@code ElwhaFab}.
+   *
+   * <p>This used to be the whole component minus the shadow reserve, reasoning that the a11y
+   * inflation padding should stay clickable — correct while bounds equal preferred size, and wrong
+   * the moment they do not. A stretching layout grows the bounds arbitrarily and the same test grew
+   * the hit area with them: measured in the side-sheet repro, a 40&nbsp;px pill in 162&nbsp;px of
+   * granted height accepted clicks roughly 57&nbsp;px above <em>and</em> below itself (#505).
+   * Deriving the rect from the body instead keeps the a11y target at preferred size — where the
+   * inflation is exactly what the minimum asks for — and caps it under stretch.
    */
   private boolean containsClickPoint(final Point componentPoint) {
+    return hitRect().contains(componentPoint);
+  }
+
+  /** The body inflated to the minimum touch target, centered on the body, clamped to bounds. */
+  private Rectangle hitRect() {
+    final Rectangle body = getBodyBounds();
+    final int target = buttonSize.minimumTargetPx();
+    final int growX = Math.max(0, target - body.width);
+    final int growY = Math.max(0, target - body.height);
+    final Rectangle hit =
+        new Rectangle(
+            body.x - growX / 2, body.y - growY / 2, body.width + growX, body.height + growY);
+    // Clamped to the component minus its shadow reserve, not to the raw bounds: a point in the
+    // transparent halo is not a click target, which is the rule ElwhaFab.containsPoint states.
     final Insets s = getShadowInsets();
-    final int hitW = getWidth() - s.left - s.right;
-    final int hitH = getHeight() - s.top - s.bottom;
-    final int x = componentPoint.x - s.left;
-    final int y = componentPoint.y - s.top;
-    return x >= 0 && y >= 0 && x < hitW && y < hitH;
+    return hit.intersection(
+        new Rectangle(
+            s.left,
+            s.top,
+            Math.max(0, getWidth() - s.left - s.right),
+            Math.max(0, getHeight() - s.top - s.bottom)));
   }
 
   /**
@@ -1375,24 +1432,6 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
   }
 
   /**
-   * Starts a group-driven width-ripple borrow. Called by a hosting standard {@link
-   * com.owspfm.elwha.buttongroup.ElwhaButtonGroup} on every segment when one of its segments is
-   * pressed — the pressed segment gets {@code factor = 1.0} (full pinch), ±1 neighbors get {@code
-   * 0.3} (30 % of the natural press-width delta), ±2 neighbors get {@code 0.1}, and further-out
-   * segments get {@code 0.0} (no ripple). Design doc §6.
-   *
-   * <p>The factor multiplies the natural press-width delta of <em>this</em> button (so a smaller
-   * neighbor borrows proportionally less). The morph itself is the standard {@link
-   * MorphAnimator#SHORT3_MS} (150 ms) press timing.
-   *
-   * <p>Calling with {@code factor = 0.0} is equivalent to {@link #releaseWidthBorrow()} —
-   * convenient when a group computes a borrow vector with some zero entries.
-   *
-   * @param factor the borrow factor in {@code [-1, 1]}; clamped if outside
-   * @version v0.3.0
-   * @since v0.3.0
-   */
-  /**
    * Runs one full press-in → press-out shape + width morph cycle programmatically — the same motion
    * a pointer press produces — but <em>unconditionally</em>, deliberately ignoring the {@link
    * ButtonInteractionMode#SELECTABLE} press-morph suppression that {@code firesPressMorph()}
@@ -1421,6 +1460,12 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
    * scaled by {@code factor} ({@code > 0} grows, {@code < 0} lends width to the pressed neighbor).
    * Called by the hosting {@code ElwhaButtonGroup} on each segment when a segment is pressed; a
    * factor of {@code 0} delegates to {@link #releaseWidthBorrow()}.
+   *
+   * <p>The group's ripple ladder (design doc §6): the pressed segment borrows at {@code 1.0}, its
+   * ±1 neighbors at {@code 0.3}, its ±2 neighbors at {@code 0.1}, and everything further out at
+   * {@code 0.0}. The factor scales the natural press-width delta of <em>this</em> button, so a
+   * narrower neighbor borrows proportionally less, and the morph runs at the standard {@link
+   * MorphAnimator#SHORT3_MS} press timing.
    *
    * @param factor the borrow factor, clamped to {@code [-1, 1]}
    * @version v0.5.0

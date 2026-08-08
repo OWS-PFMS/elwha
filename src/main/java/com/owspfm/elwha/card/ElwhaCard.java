@@ -776,33 +776,69 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   }
 
   /**
-   * Removes a child and forgets its collapse rule. The rule map is keyed by identity and written
-   * from three places — the public setter and both self-anchoring affordances — with no other
-   * removal path, so without this a card that cycles its content (a detail pane rebuilt per
-   * selection) would hold every child it has ever contained.
+   * Removes a content child and forgets its collapse rule. Mirrors {@link #addImpl}: under {@link
+   * ExpansionOverflow#SCROLL} the child a consumer added through {@code card.add(...)} belongs to
+   * the inner scroll body, not to the card, so a removal that did not route there silently did
+   * nothing (#677). The rule map is keyed by identity and written from three places — the public
+   * setter and both self-anchoring affordances — with no other removal path, so without the
+   * forgetting a card that cycles its content (a detail pane rebuilt per selection) would hold
+   * every child it has ever contained.
    *
-   * @param index the index of the child to remove
+   * <p>In {@code SCROLL} mode this addresses content only; the scroll pane is the card's own
+   * furniture and is installed and removed by {@link #setExpansionOverflow} alone.
+   *
+   * @param comp the child to remove
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void remove(final Component comp) {
+    collapseConstraints.remove(comp);
+    if (scrollBody != null) {
+      scrollBody.remove(comp);
+      return;
+    }
+    super.remove(comp);
+  }
+
+  /**
+   * Removes the content child at {@code index} and forgets its collapse rule. The index addresses
+   * whichever container holds the content — the inner scroll body under {@link
+   * ExpansionOverflow#SCROLL}, the card itself otherwise — matching the index {@code add(comp,
+   * index)} accepts (#677).
+   *
+   * @param index the content index to remove
    * @version v0.5.0
    * @since v0.5.0
    */
   @Override
   public void remove(final int index) {
-    collapseConstraints.remove(getComponent(index));
+    final Container host = contentHost();
+    collapseConstraints.remove(host.getComponent(index));
+    if (host != this) {
+      host.remove(index);
+      return;
+    }
     super.remove(index);
   }
 
   /**
-   * Removes every child and forgets their collapse rules. Only the children actually being removed
-   * are forgotten: in {@link ExpansionOverflow#SCROLL} mode the content lives in an inner body that
-   * this call does not touch, and its rules have to survive.
+   * Removes every content child and forgets their collapse rules. Under {@link
+   * ExpansionOverflow#SCROLL} that is the inner scroll body's children; the scroll pane itself
+   * stays, since it is the card's own furniture rather than content (#677).
    *
    * @version v0.5.0
    * @since v0.5.0
    */
   @Override
   public void removeAll() {
-    for (final Component child : getComponents()) {
+    final Container host = contentHost();
+    for (final Component child : host.getComponents()) {
       collapseConstraints.remove(child);
+    }
+    if (host != this) {
+      host.removeAll();
+      return;
     }
     super.removeAll();
   }

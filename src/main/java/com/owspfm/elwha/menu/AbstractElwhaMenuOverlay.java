@@ -1,6 +1,7 @@
 package com.owspfm.elwha.menu;
 
 import com.owspfm.elwha.overlay.AbstractElwhaOverlay;
+import com.owspfm.elwha.theme.BodyBearing;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Point;
@@ -186,7 +187,7 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
    */
   @Override
   protected void layoutSurface(final int paneWidth, final int paneHeight) {
-    final Rectangle anchorBounds = anchorBoundsInPane(paneWidth, paneHeight);
+    final Rectangle anchorBounds = anchorBoundsInPane();
     final boolean rtl = !orientation.isLeftToRight();
     final Rectangle bounds =
         sideAnchored()
@@ -250,6 +251,44 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
   }
 
   /**
+   * The vertical room an anchored menu may take without covering the anchor it belongs to.
+   *
+   * <p>A scrollable menu used to size its viewport to the whole layered pane less the margin, and
+   * {@link #placeAnchored} then clamped the too-tall surface back inside the viewport — which put
+   * it over the trigger. For a plain menu that is cosmetic; for the editable {@code
+   * ElwhaSelectField} combo it is a usability failure, because the open list buries the field the
+   * user is typing into and they cannot see what is filtering the list (#396).
+   *
+   * <p>The bound is therefore the larger of the space <em>below</em> the anchor and the space
+   * <em>above</em> it — whichever way {@code placeAnchored} ends up flipping, the surface fits on
+   * that side and the anchor row stays visible. A {@linkplain #sideAnchored() side-anchored}
+   * submenu is exempt: it opens beside its opener, so covering it vertically is not the failure
+   * mode, and the viewport is the only real bound.
+   *
+   * @param margin the viewport margin the menu keeps clear of the pane edges, in pixels
+   * @return the height bound in pixels, or {@link Integer#MAX_VALUE} while there is no pane to
+   *     measure against
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  protected final int anchoredAvailableHeight(final int margin) {
+    if (layeredPane == null) {
+      return Integer.MAX_VALUE;
+    }
+    final int viewport = layeredPane.getHeight() - 2 * margin;
+    if (sideAnchored()) {
+      return viewport;
+    }
+    final Rectangle bounds = anchorBoundsInPane();
+    if (bounds.height <= 0) {
+      return viewport;
+    }
+    final int below = layeredPane.getHeight() - margin - (bounds.y + bounds.height + ANCHOR_GAP_PX);
+    final int above = bounds.y - ANCHOR_GAP_PX - margin;
+    return Math.max(0, Math.min(viewport, Math.max(below, above)));
+  }
+
+  /**
    * Computes the menu surface bounds anchored to a trigger: leading-aligned below it, flipping
    * above when the surface would clip the bottom edge (and there is room above), and shifted
    * horizontally to stay inside the {@code paneWidth × paneHeight} viewport. A pure function of its
@@ -288,13 +327,17 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
     return new Rectangle(x, y, w, h);
   }
 
-  // The trigger's bounds in the layered pane's coordinate space. Falls back to the pane's top-left
-  // when the anchor is somehow detached, so placement degrades gracefully rather than throwing.
-  private Rectangle anchorBoundsInPane(final int paneWidth, final int paneHeight) {
+  // The trigger's VISIBLE BODY in the layered pane's coordinate space. Falls back to the pane's
+  // top-left when the anchor is somehow detached, so placement degrades gracefully rather than
+  // throwing. Measuring from the body rather than the bounds is what stops a menu opening off the
+  // bottom of an invisible rect when a fill layout stretched its trigger, and it also backs out a
+  // shadow halo this host never handled at all (#493).
+  private Rectangle anchorBoundsInPane() {
     if (anchor == null || layeredPane == null || !anchor.isShowing()) {
       return new Rectangle(0, 0, 0, 0);
     }
-    final Point origin = SwingUtilities.convertPoint(anchor, 0, 0, layeredPane);
-    return new Rectangle(origin.x, origin.y, anchor.getWidth(), anchor.getHeight());
+    final Rectangle body = BodyBearing.bodyBoundsOf(anchor);
+    final Point origin = SwingUtilities.convertPoint(anchor, body.x, body.y, layeredPane);
+    return new Rectangle(origin.x, origin.y, body.width, body.height);
   }
 }

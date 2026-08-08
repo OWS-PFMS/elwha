@@ -16,7 +16,7 @@ import com.owspfm.elwha.theme.TypeRole;
  * inflated component bounds.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public enum ButtonSize {
@@ -170,11 +170,14 @@ public enum ButtonSize {
   }
 
   /**
-   * Square-shape corner radius in pixels for this size — passed as {@code arcWidth} (round-rect
-   * full corner diameter) to the paint pipeline.
+   * Square-shape corner <em>radius</em> in pixels for this size — 12 at {@link #S}, matching the M3
+   * shape token. {@link ElwhaButton} hands it to {@link
+   * com.owspfm.elwha.theme.CornerRadii#uniform(int) CornerRadii.uniform}, which stores real radii.
+   * A caller feeding it to a {@link java.awt.geom.RoundRectangle2D} or to one of the int-arc
+   * painters must double it first: those take an {@code arcWidth}, which is the corner diameter.
    *
-   * @return the square corner arcWidth
-   * @version v0.2.0
+   * @return the square corner radius in pixels
+   * @version v0.5.0
    * @since v0.2.0
    */
   public int squareCornerPx() {

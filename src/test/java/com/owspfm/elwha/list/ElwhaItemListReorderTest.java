@@ -279,6 +279,56 @@ class ElwhaItemListReorderTest {
         .isEqualTo(Cursor.DEFAULT_CURSOR);
   }
 
+  /**
+   * #614 — the cursor cache is global, the activation listener is per-list. Every list in a window
+   * used to invalidate and re-decode the PNGs on each activation, so the second list threw away the
+   * cursor the first had just built. AWT hands one event object to every listener of a single
+   * activation, so charging the rebuild to that object collapses N rebuilds to one.
+   */
+  @Test
+  void oneActivationRebuildsTheCursorsOnceHoweverManyListsShareTheWindow() {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
+    layout();
+    final Object activation = new Object();
+    final long before = ReorderCursors.generation();
+
+    list.reapplyReorderCursors(activation);
+    list.reapplyReorderCursors(activation);
+    list.reapplyReorderCursors(activation);
+
+    assertThat(ReorderCursors.generation() - before)
+        .as("three lists answering the same Alt-Tab decode the assets once between them")
+        .isEqualTo(1);
+  }
+
+  @Test
+  void aFollowingActivationRebuildsAgain() {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
+    layout();
+    final long before = ReorderCursors.generation();
+
+    list.reapplyReorderCursors(new Object());
+    list.reapplyReorderCursors(new Object());
+
+    assertThat(ReorderCursors.generation() - before)
+        .as("#556's macOS Spaces drop is per-activation, so a new one must still rebuild")
+        .isEqualTo(2);
+  }
+
+  @Test
+  void aDirectRefreshWithNoActivationAlwaysRebuilds() {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
+    layout();
+    final long before = ReorderCursors.generation();
+
+    list.reapplyReorderCursors();
+    list.reapplyReorderCursors();
+
+    assertThat(ReorderCursors.generation() - before)
+        .as("a programmatic refresh has no event to charge to and must not be deduplicated")
+        .isEqualTo(2);
+  }
+
   // --------------------------------------------- window binding (headless half)
 
   @Test
@@ -470,6 +520,50 @@ class ElwhaItemListReorderTest {
     assertThat(model.getItems())
         .as("Ctrl-Down moves the focused item one slot later")
         .containsExactly("b", "a", "c");
+  }
+
+  @Test
+  void gridKeyboardReorderStepsAWholeRow() {
+    chipListOf("a", "b", "c", "d", "e", "f", "g", "h").setMovementMode(MovementMode.MOVABLE);
+    list.setOrientation(ElwhaListOrientation.GRID).setColumns(4);
+    layout();
+    focusOn("a");
+
+    Input.pressBoundKey(list, "ctrl pressed DOWN", "elwhaList.moveDown");
+
+    assertThat(model.getItems())
+        .as(
+            "#687 — Ctrl-Down stepped one slot, which in a grid moves sideways; #598 fixed the same"
+                + " defect one binding over, on the focus path")
+        .containsExactly("b", "c", "d", "e", "a", "f", "g", "h");
+  }
+
+  @Test
+  void gridKeyboardReorderStepsAWholeRowBackwards() {
+    chipListOf("a", "b", "c", "d", "e", "f", "g", "h").setMovementMode(MovementMode.MOVABLE);
+    list.setOrientation(ElwhaListOrientation.GRID).setColumns(4);
+    layout();
+    focusOn("f");
+
+    Input.pressBoundKey(list, "ctrl pressed UP", "elwhaList.moveUp");
+
+    assertThat(model.getItems())
+        .as("Ctrl-Up lands the item in the same column of the row above")
+        .containsExactly("a", "f", "b", "c", "d", "e", "g", "h");
+  }
+
+  @Test
+  void aGridReorderPastTheLastRowClampsRatherThanFailing() {
+    chipListOf("a", "b", "c", "d", "e", "f").setMovementMode(MovementMode.MOVABLE);
+    list.setOrientation(ElwhaListOrientation.GRID).setColumns(4);
+    layout();
+    focusOn("d");
+
+    Input.pressBoundKey(list, "ctrl pressed DOWN", "elwhaList.moveDown");
+
+    assertThat(model.getItems())
+        .as("a row-sized step from the last full row clamps into the partial one")
+        .containsExactly("a", "b", "c", "e", "f", "d");
   }
 
   @Test
