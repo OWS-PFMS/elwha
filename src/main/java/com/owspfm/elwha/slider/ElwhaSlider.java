@@ -2506,8 +2506,14 @@ public class ElwhaSlider extends JComponent {
    * {@link javax.swing.JLabel}) as the accessible name so a screen reader announces label &rarr;
    * role &rarr; value (research §X #50).
    *
+   * <p><strong>The range variant has no root value.</strong> A {@link Variant#RANGE} slider keeps
+   * its state in two handle values and never writes the backing model, so this node's {@link
+   * #getAccessibleValue()} answers {@code null} — the {@code AccessibleContext} spelling of "no
+   * value here" — rather than a number that never changes. The live values belong to the two
+   * per-handle child nodes, and this node is their container (#703).
+   *
    * @author Charles Bryan
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   protected class AccessibleElwhaSlider extends AccessibleJComponent implements AccessibleValue {
@@ -2551,16 +2557,19 @@ public class ElwhaSlider extends JComponent {
       return null;
     }
 
+    // A RANGE slider has no single value to report: it paints from its two handle values and never
+    // touches the backing model, so answering `this` handed a screen reader parked on the root node
+    // the construction-time seed forever — documenting the carve-out (#643) did nothing for the
+    // person hearing the stale number. AccessibleContext specifies null as "not supported by this
+    // object", which is the honest answer here; the two per-handle proxies below carry the live
+    // values, and the root is their container (#703).
     @Override
     public AccessibleValue getAccessibleValue() {
-      return this;
+      return variant == Variant.RANGE ? null : this;
     }
 
     // The root node's value mirrors ElwhaSlider.getValue()/setValue(), and inherits their RANGE
-    // carve-out: a range slider paints from its two handle values and never touches the model, so
-    // this node reports the construction-time seed and writes somewhere nothing renders. Assistive
-    // tech reads a range slider through the two per-handle proxies below, each of which carries its
-    // own handle's live value; the root is their container (#643).
+    // carve-out; in RANGE it is unreachable, since getAccessibleValue() above answers null.
 
     @Override
     public Number getCurrentAccessibleValue() {
