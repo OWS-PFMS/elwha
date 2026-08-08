@@ -20,11 +20,11 @@ import javax.swing.WindowConstants;
  * drag the handle across the track (release commits to the nearest half), Tab to a switch and
  * toggle with Space (press &rarr; grow, release &rarr; commit), and watch the hover/focus/pressed
  * state layers + press ripple. The readout separates {@code ActionListener} fires (user gestures
- * only) from {@code ChangeListener} fires — the dogfooded {@link ElwhaButton} flips the first
+ * only) from {@code PROPERTY_SELECTED} fires — the dogfooded {@link ElwhaButton} flips the first
  * switch programmatically and must bump only the change count.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaSwitchInteractionDemo {
@@ -65,7 +65,9 @@ public final class ElwhaSwitchInteractionDemo {
           e ->
               actionReadout.setText(
                   "action events: " + ++actions[0] + " (last: " + e.getActionCommand() + ")"));
-      s.addChangeListener(e -> changeReadout.setText("change events: " + ++changes[0]));
+      s.addPropertyChangeListener(
+          ElwhaSwitch.PROPERTY_SELECTED,
+          e -> changeReadout.setText("change events: " + ++changes[0]));
     }
 
     final JPanel rows = new JPanel(new GridLayout(0, 1, 0, 12));

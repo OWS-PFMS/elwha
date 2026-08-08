@@ -119,7 +119,7 @@ class ElwhaRadioButtonAccessibilityTest {
     final int[] actions = {0};
     final int[] changes = {0};
     radio.addActionListener(e -> actions[0]++);
-    radio.addChangeListener(e -> changes[0]++);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     final boolean performed = contextOf(radio).getAccessibleAction().doAccessibleAction(0);
 
@@ -128,7 +128,7 @@ class ElwhaRadioButtonAccessibilityTest {
     assertThat(actions[0])
         .as("assistive technology acts as the user, so the action listeners fire")
         .isEqualTo(1);
-    assertThat(changes[0]).as("along with the change listeners").isEqualTo(1);
+    assertThat(changes[0]).as("along with the selection property").isEqualTo(1);
   }
 
   @Test
@@ -177,7 +177,7 @@ class ElwhaRadioButtonAccessibilityTest {
     final int[] actions = {0};
     final int[] changes = {0};
     radio.addActionListener(e -> actions[0]++);
-    radio.addChangeListener(e -> changes[0]++);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     final boolean accepted = contextOf(radio).getAccessibleValue().setCurrentAccessibleValue(1);
 

@@ -116,7 +116,7 @@ class ElwhaSwitchDragTest {
     final ElwhaSwitch toggle = sized(new ElwhaSwitch(true));
     final int[] events = {0};
     toggle.addActionListener(e -> events[0]++);
-    toggle.addChangeListener(e -> events[0]++);
+    toggle.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> events[0]++);
 
     Input.press(toggle, TRAVEL_END_X, CENTER_Y);
     Input.drag(toggle, TRAVEL_END_X - 8, CENTER_Y);
@@ -148,7 +148,7 @@ class ElwhaSwitchDragTest {
     toggle.setEnabled(false);
     final int[] events = {0};
     toggle.addActionListener(e -> events[0]++);
-    toggle.addChangeListener(e -> events[0]++);
+    toggle.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> events[0]++);
 
     Input.press(toggle, TRAVEL_START_X, CENTER_Y);
     Input.drag(toggle, TRAVEL_END_X, CENTER_Y);
@@ -163,7 +163,7 @@ class ElwhaSwitchDragTest {
     final ElwhaSwitch toggle = sized(new ElwhaSwitch());
     final int[] events = {0};
     toggle.addActionListener(e -> events[0]++);
-    toggle.addChangeListener(e -> events[0]++);
+    toggle.addPropertyChangeListener(ElwhaSwitch.PROPERTY_SELECTED, e -> events[0]++);
 
     Input.press(toggle, TRAVEL_START_X, CENTER_Y);
     Input.drag(toggle, TRAVEL_END_X, CENTER_Y);

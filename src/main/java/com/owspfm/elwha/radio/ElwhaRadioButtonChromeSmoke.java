@@ -14,11 +14,11 @@ import java.awt.image.BufferedImage;
  * Headless render guard for the S1 {@link ElwhaRadioButton} static chrome (story #417). Paints the
  * four static cells (unselected/selected &times; enabled/disabled) over a {@link ColorRole#SURFACE}
  * ground in light <em>and</em> dark mode and pixel-asserts the ring band, the dot, the ring hole,
- * and the disabled 0.38 blends — plus the preferred-size contract and the {@code ChangeListener}
+ * and the disabled 0.38 blends — plus the preferred-size contract and the {@code PROPERTY_SELECTED}
  * change-only firing rule. Runs in CI's headless JVM ({@code -Djava.awt.headless=true} safe).
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaRadioButtonChromeSmoke {
@@ -57,13 +57,13 @@ public final class ElwhaRadioButtonChromeSmoke {
     check("convenience constructor selects", new ElwhaRadioButton(true).isSelected());
 
     final int[] fired = {0};
-    radio.addChangeListener(e -> fired[0]++);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> fired[0]++);
     radio.setSelected(true);
-    check("ChangeListener fires on change", fired[0] == 1);
+    check("PROPERTY_SELECTED fires on change", fired[0] == 1);
     radio.setSelected(true);
-    check("ChangeListener silent on no-op write", fired[0] == 1);
+    check("PROPERTY_SELECTED silent on no-op write", fired[0] == 1);
     radio.setSelected(false);
-    check("ChangeListener fires on deselect", fired[0] == 2);
+    check("PROPERTY_SELECTED fires on deselect", fired[0] == 2);
 
     final ElwhaRadioButton labeled = new ElwhaRadioButton("Compact view");
     final int textWidth =

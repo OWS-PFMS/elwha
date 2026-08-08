@@ -84,7 +84,7 @@ final class RadioButtonShowcasePanels {
     readout.setPreferredSize(readoutPref);
     readout.setMaximumSize(readoutPref);
     readout.setText("group.getSelected() → First option");
-    group.addChangeListener(
+    group.addSelectionChangeListener(
         e -> {
           final ElwhaRadioButton current = group.getSelected();
           readout.setText(
@@ -286,7 +286,7 @@ final class RadioButtonShowcasePanels {
     if (selection >= 0 && selection < vars.length) {
       code.append("group.setSelected(").append(vars[selection]).append(");\n");
     }
-    code.append("group.addChangeListener(e -> apply(group.getSelected()));");
+    code.append("group.addSelectionChangeListener(e -> apply(group.getSelected()));");
     return code.toString();
   }
 }

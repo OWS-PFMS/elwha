@@ -87,7 +87,7 @@ class ElwhaRadioButtonInteractionTest {
     radio.setSize(SIDE, SIDE);
     final int[] events = {0};
     radio.addActionListener(e -> events[0]++);
-    radio.addChangeListener(e -> events[0]++);
+    radio.addPropertyChangeListener(ElwhaRadioButton.PROPERTY_SELECTED, e -> events[0]++);
 
     Input.click(radio, CENTER, CENTER);
 

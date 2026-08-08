@@ -23,7 +23,7 @@ import javax.swing.WindowConstants;
  * clipping.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaRadioButtonChromeDemo {
@@ -66,9 +66,12 @@ public final class ElwhaRadioButtonChromeDemo {
     final ElwhaRadioButton flowA = new ElwhaRadioButton(true);
     final ElwhaRadioButton flowB = new ElwhaRadioButton();
     final ElwhaRadioButton flowC = new ElwhaRadioButton();
-    flowA.addChangeListener(e -> updateReadout(flowA, flowB, flowC));
-    flowB.addChangeListener(e -> updateReadout(flowA, flowB, flowC));
-    flowC.addChangeListener(e -> updateReadout(flowA, flowB, flowC));
+    flowA.addPropertyChangeListener(
+        ElwhaRadioButton.PROPERTY_SELECTED, e -> updateReadout(flowA, flowB, flowC));
+    flowB.addPropertyChangeListener(
+        ElwhaRadioButton.PROPERTY_SELECTED, e -> updateReadout(flowA, flowB, flowC));
+    flowC.addPropertyChangeListener(
+        ElwhaRadioButton.PROPERTY_SELECTED, e -> updateReadout(flowA, flowB, flowC));
     flowRow.add(flowA);
     flowRow.add(flowB);
     flowRow.add(flowC);

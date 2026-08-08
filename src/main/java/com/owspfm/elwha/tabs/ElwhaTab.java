@@ -95,8 +95,7 @@ import javax.swing.KeyStroke;
  * <p><strong>Listener semantics.</strong> {@link #addActionListener(ActionListener)} fires on
  * <em>user</em> activation of this tab only (click; keyboard arrives with S6) — never on
  * programmatic activation, and never when the tab was already active (clicking the active tab is a
- * no-op). Any-change observation lives on the bar's {@link
- * ElwhaTabs#addChangeListener(javax.swing.event.ChangeListener)}.
+ * no-op). Any-change observation lives on the bar's {@link ElwhaTabs#PROPERTY_ACTIVE_TAB}.
  *
  * <p>Colors resolve at paint time (the binding rule) — see {@code
  * docs/research/elwha-tabs-design.md} §4–§5.
