@@ -1125,7 +1125,20 @@ public final class ElwhaButtonGroup extends JComponent {
 
     @Override
     void applySize(final ButtonSize size) {
-      button.setButtonSize(IconButtonSize.values()[size.ordinal()]);
+      button.setButtonSize(iconSizeFor(size));
+    }
+
+    // The two size scales share their constant names but are separate enums; a switch makes the
+    // compiler check the mapping stays total, where the ordinal index this replaced would have
+    // silently mis-sized every icon segment if either scale gained or reordered a constant.
+    private static IconButtonSize iconSizeFor(final ButtonSize size) {
+      return switch (size) {
+        case XS -> IconButtonSize.XS;
+        case S -> IconButtonSize.S;
+        case M -> IconButtonSize.M;
+        case L -> IconButtonSize.L;
+        case XL -> IconButtonSize.XL;
+      };
     }
 
     @Override
