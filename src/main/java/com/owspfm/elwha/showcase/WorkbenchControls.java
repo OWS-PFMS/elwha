@@ -25,6 +25,12 @@ import javax.swing.JPanel;
  */
 public final class WorkbenchControls extends JPanel {
 
+  // Marks a section header so it is not mistaken for a row label. Both are bare JLabels in the same
+  // grid, and a section title can legitimately repeat a control's caption ("State", "Tabs") — which
+  // makes a text match alone ambiguous, and would silently resolve that caption to the header's
+  // neighbour instead of the control.
+  static final String SECTION_HEADER = "Workbench.sectionHeader";
+
   private final GridBagConstraints constraints = new GridBagConstraints();
   private int nextRow;
 
@@ -50,6 +56,7 @@ public final class WorkbenchControls extends JPanel {
   public void addSection(final String title) {
     final JLabel header = new JLabel(title);
     header.setFont(header.getFont().deriveFont(Font.BOLD));
+    header.putClientProperty(SECTION_HEADER, Boolean.TRUE);
     constraints.gridx = 0;
     constraints.gridy = nextRow++;
     constraints.gridwidth = 2;

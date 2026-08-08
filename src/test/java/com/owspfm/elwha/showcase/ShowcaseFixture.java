@@ -1,9 +1,12 @@
 package com.owspfm.elwha.showcase;
 
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.navrail.ElwhaNavigationRail;
 import com.owspfm.elwha.overlay.AbstractElwhaOverlay;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.showcase.ElwhaShowcase.LeafEntry;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Component;
@@ -191,35 +194,84 @@ final class ShowcaseFixture {
   }
 
   /**
-   * The control {@link WorkbenchControls#addControl} put after the row label {@code label}. Rows
-   * are a label then its control, added back to back, so the control is the next child along.
+   * The control captioned {@code label}, wherever that caption lives.
+   *
+   * <p>Two placements, because the dogfood sweep (#424) moved most captions off the row and into
+   * the control. A {@link javax.swing.JSpinner} has no label of its own, so it still takes the row
+   * label {@link WorkbenchControls#addControl} lays down beside it — rows are a label then its
+   * control, added back to back, so the control is the next child along. An {@code
+   * ElwhaSelectField} / {@code ElwhaCheckbox} / {@code ElwhaTextField} paints its own floating or
+   * trailing label, so its row label is empty and the caption is read off the control itself.
+   *
+   * <p>Row labels are searched first: that placement is the one that pairs a caption with a
+   * <em>different</em> component, so letting a control's own label shadow it could return the wrong
+   * neighbour.
    */
   static Component controlLabelled(final Container column, final String label) {
     final Component[] children = column.getComponents();
     for (int i = 0; i < children.length - 1; i++) {
-      if (children[i] instanceof JLabel row && label.equals(row.getText())) {
+      if (children[i] instanceof JLabel row
+          && label.equals(row.getText())
+          && !isSectionHeader(row)) {
         return children[i + 1];
+      }
+    }
+    for (final Component child : children) {
+      if (label.equals(ownLabelOf(child))) {
+        return child;
       }
     }
     return null;
   }
 
   /**
-   * The row label a control was added under, or {@code ""} for the unlabelled rows a checkbox or a
-   * trigger button takes. Used to name a control in a failure message.
+   * Whether a {@link JLabel} in a controls column is a section header rather than a row label. The
+   * two are indistinguishable by type, and a section title can repeat a control's caption, so
+   * {@link WorkbenchControls} marks its headers.
+   */
+  private static boolean isSectionHeader(final JLabel label) {
+    return Boolean.TRUE.equals(label.getClientProperty(WorkbenchControls.SECTION_HEADER));
+  }
+
+  /**
+   * The caption a control carries — its row label, or its own label for the controls that paint
+   * one. {@code ""} when it has neither, as the unlabelled rows a trigger button takes. Used to
+   * name a control in a failure message.
    */
   static String labelOf(final Component control) {
     final Container parent = control.getParent();
-    if (parent == null) {
-      return "";
-    }
-    final Component[] children = parent.getComponents();
-    for (int i = 1; i < children.length; i++) {
-      if (children[i] == control && children[i - 1] instanceof JLabel row) {
-        return row.getText() == null ? "" : row.getText();
+    if (parent != null) {
+      final Component[] children = parent.getComponents();
+      for (int i = 1; i < children.length; i++) {
+        if (children[i] == control
+            && children[i - 1] instanceof JLabel row
+            && !isSectionHeader(row)
+            && row.getText() != null
+            && !row.getText().isEmpty()) {
+          return row.getText();
+        }
       }
     }
-    return "";
+    return ownLabelOf(control);
+  }
+
+  /**
+   * The label a control paints for itself, or {@code ""} for one that paints none. The three
+   * labelled Elwha control families the Showcase rails are built from; they share no common
+   * label-bearing supertype, so the read is per-type.
+   */
+  static String ownLabelOf(final Component control) {
+    final String own;
+    if (control instanceof ElwhaSelectField<?> select) {
+      own = select.getLabel();
+    } else if (control instanceof ElwhaCheckbox box) {
+      own = box.getLabel();
+    } else if (control instanceof ElwhaTextField field) {
+      own = field.getLabel();
+    } else {
+      own = null;
+    }
+    return own == null ? "" : own;
   }
 
   // ----------------------------------------------------------- registry sweep

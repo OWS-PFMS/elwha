@@ -163,6 +163,19 @@ public class ElwhaSelectField<T> extends JComponent {
   }
 
   /**
+   * Returns the current option list — the values this select is constrained to, in menu order.
+   * Never {@code null}; a select with no options returns an empty list. The returned list is
+   * immutable, so a caller cannot reach past {@link #setOptions} to mutate what the menu offers.
+   *
+   * @return the options, in menu order
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public List<T> getOptions() {
+    return options;
+  }
+
+  /**
    * Sets the option list. The menu is rebuilt lazily on the next open (the {@code
    * rebuild-on-options-change} lifecycle locked by the S1 spike), so changing options is cheap and
    * preserves the {@code selected} mark cheaply between opens.

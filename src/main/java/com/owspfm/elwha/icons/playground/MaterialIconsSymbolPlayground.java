@@ -1,6 +1,10 @@
 package com.owspfm.elwha.icons.playground;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.button.ButtonSize;
+import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.Config;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -12,12 +16,10 @@ import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.util.List;
 import javax.swing.BorderFactory;
-import javax.swing.ButtonGroup;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
@@ -40,7 +42,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class MaterialIconsSymbolPlayground {
@@ -157,14 +159,18 @@ public final class MaterialIconsSymbolPlayground {
   private JPanel buildModeBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));
     bar.add(new JLabel("Mode:"));
-    final ButtonGroup group = new ButtonGroup();
-    for (final Mode mode : Mode.values()) {
-      final JToggleButton b = new JToggleButton(mode.name());
-      b.setSelected(mode == Mode.SYSTEM);
-      b.addActionListener(e -> applyMode(mode));
-      group.add(b);
-      bar.add(b);
+    final Mode[] modes = Mode.values();
+    final ElwhaButtonGroup group =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setColorStyle(ButtonGroupColorStyle.OUTLINED);
+    for (final Mode mode : modes) {
+      group.add(mode.name());
     }
+    group.setSelectedIndex(Mode.SYSTEM.ordinal());
+    group.addSelectionListener(g -> applyMode(modes[g.getSelectedIndex()]));
+    bar.add(group);
     return bar;
   }
 

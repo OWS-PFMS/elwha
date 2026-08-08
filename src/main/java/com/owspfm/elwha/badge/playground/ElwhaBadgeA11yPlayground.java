@@ -2,9 +2,15 @@ package com.owspfm.elwha.badge.playground;
 
 import com.owspfm.elwha.badge.ElwhaBadge;
 import com.owspfm.elwha.badge.ElwhaBadgeAnchor;
+import com.owspfm.elwha.button.ButtonSize;
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.buttongroup.ResizeMode;
+import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.Config;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -16,12 +22,9 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import javax.accessibility.AccessibleContext;
 import javax.swing.BorderFactory;
-import javax.swing.ButtonGroup;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
-import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
@@ -142,11 +145,13 @@ public final class ElwhaBadgeA11yPlayground {
     gc.insets = new Insets(4, 8, 4, 8);
     gc.anchor = GridBagConstraints.WEST;
 
-    final JTextField contentField = new JTextField("3", 8);
-    final JTextField overrideField = new JTextField("", 16);
+    final ElwhaTextField contentField = ElwhaTextField.outlined("Content");
+    contentField.setText("3");
+    final ElwhaTextField overrideField = ElwhaTextField.outlined("A11y override");
     final ElwhaButton clearOverride = ElwhaButton.filledTonalButton("Clear");
 
     contentField
+        .getEditor()
         .getDocument()
         .addDocumentListener(
             new DocumentListener() {
@@ -178,6 +183,7 @@ public final class ElwhaBadgeA11yPlayground {
             });
 
     overrideField
+        .getEditor()
         .getDocument()
         .addDocumentListener(
             new DocumentListener() {
@@ -208,21 +214,25 @@ public final class ElwhaBadgeA11yPlayground {
           badge.setAccessibilityText(null);
         });
 
-    final JToggleButton smallToggle = new JToggleButton("Small");
-    final JToggleButton largeToggle = new JToggleButton("Large", true);
-    final ButtonGroup variantGroup = new ButtonGroup();
-    variantGroup.add(smallToggle);
-    variantGroup.add(largeToggle);
-    smallToggle.addActionListener(
-        e -> {
-          swapBadge(ElwhaBadge.small());
-          contentField.setEnabled(false);
-        });
-    largeToggle.addActionListener(
-        e -> {
-          final String seed = contentField.getText().isEmpty() ? "3" : contentField.getText();
-          swapBadge(ElwhaBadge.large(seed));
-          contentField.setEnabled(true);
+    final ElwhaButtonGroup variantGroup =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL)
+            .add(new ElwhaButton("Small"))
+            .add(new ElwhaButton("Large"));
+    variantGroup.setSelectedIndex(1);
+    variantGroup.addSelectionListener(
+        g -> {
+          if (g.getSelectedIndex() == 0) {
+            swapBadge(ElwhaBadge.small());
+            contentField.setEnabled(false);
+          } else {
+            final String seed = contentField.getText().isEmpty() ? "3" : contentField.getText();
+            swapBadge(ElwhaBadge.large(seed));
+            contentField.setEnabled(true);
+          }
         });
 
     final ElwhaButton detachButton = ElwhaButton.filledTonalButton("Detach");
@@ -245,22 +255,18 @@ public final class ElwhaBadgeA11yPlayground {
     gc.gridy = 0;
     panel.add(new JLabel("Variant:"), gc);
     gc.gridx = 1;
-    panel.add(smallToggle, gc);
-    gc.gridx = 2;
-    panel.add(largeToggle, gc);
+    gc.gridwidth = 2;
+    panel.add(variantGroup, gc);
+    gc.gridwidth = 1;
 
-    gc.gridx = 0;
-    gc.gridy = 1;
-    panel.add(new JLabel("Content:"), gc);
     gc.gridx = 1;
+    gc.gridy = 1;
     gc.gridwidth = 2;
     panel.add(contentField, gc);
     gc.gridwidth = 1;
 
-    gc.gridx = 0;
-    gc.gridy = 2;
-    panel.add(new JLabel("A11y override:"), gc);
     gc.gridx = 1;
+    gc.gridy = 2;
     panel.add(overrideField, gc);
     gc.gridx = 2;
     panel.add(clearOverride, gc);
@@ -287,16 +293,26 @@ public final class ElwhaBadgeA11yPlayground {
   private JPanel buildModeBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
     bar.add(new JLabel("Mode:"));
-    final ButtonGroup group = new ButtonGroup();
-    for (Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK, Mode.SYSTEM}) {
-      final JToggleButton button = new JToggleButton(mode.name());
-      button.addActionListener(e -> applyMode(mode));
-      if (ElwhaTheme.current().mode() == mode) {
-        button.setSelected(true);
-      }
-      group.add(button);
-      bar.add(button);
+    final Mode[] modes = {Mode.LIGHT, Mode.DARK, Mode.SYSTEM};
+    final ElwhaButtonGroup group =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL);
+    for (final Mode mode : modes) {
+      group.add(new ElwhaButton(mode.name()));
     }
+    final Mode current = ElwhaTheme.current().mode();
+    for (int i = 0; i < modes.length; i++) {
+      if (modes[i] == current) {
+        group.setSelectedIndex(i);
+      }
+    }
+    // Seeded before the listener is attached so the initial selection does not re-install the
+    // theme on startup.
+    group.addSelectionListener(g -> applyMode(modes[g.getSelectedIndex()]));
+    bar.add(group);
     return bar;
   }
 

@@ -3,6 +3,7 @@ package com.owspfm.elwha.showcase;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
@@ -10,7 +11,6 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import java.awt.Component;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.swing.JComboBox;
 import javax.swing.JSpinner;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,8 +28,9 @@ class SurfaceControlPanelTest {
   }
 
   @SuppressWarnings("unchecked")
-  private static JComboBox<Object> combo(final WorkbenchControls column, final String label) {
-    return (JComboBox<Object>) ShowcaseFixture.controlLabelled(column, label);
+  private static ElwhaSelectField<Object> select(
+      final WorkbenchControls column, final String label) {
+    return (ElwhaSelectField<Object>) ShowcaseFixture.controlLabelled(column, label);
   }
 
   // ----------------------------------------------------------- the controls
@@ -79,7 +80,7 @@ class SurfaceControlPanelTest {
     final SurfaceControlPanel panel = stagePanel(column);
     final ElwhaSurface surface = panel.surface();
 
-    combo(column, "Surface role").setSelectedItem(ColorRole.TERTIARY_CONTAINER);
+    select(column, "Surface role").setSelectedValue(ColorRole.TERTIARY_CONTAINER);
 
     assertThat(panel.surface())
         .as("the workbench mounts the surface once; the panel reconfigures it in place")
@@ -91,7 +92,7 @@ class SurfaceControlPanelTest {
     final WorkbenchControls column = new WorkbenchControls();
     final SurfaceControlPanel panel = stagePanel(column);
 
-    combo(column, "Surface role").setSelectedItem(ColorRole.TERTIARY_CONTAINER);
+    select(column, "Surface role").setSelectedValue(ColorRole.TERTIARY_CONTAINER);
 
     assertThat(panel.surface().getSurfaceRole()).isEqualTo(ColorRole.TERTIARY_CONTAINER);
   }
@@ -101,7 +102,7 @@ class SurfaceControlPanelTest {
     final WorkbenchControls column = new WorkbenchControls();
     final SurfaceControlPanel panel = stagePanel(column);
 
-    combo(column, "Shape").setSelectedItem(ShapeScale.XL);
+    select(column, "Shape").setSelectedValue(ShapeScale.XL);
 
     assertThat(panel.surface().getShape()).isEqualTo(ShapeScale.XL);
   }
@@ -123,7 +124,7 @@ class SurfaceControlPanelTest {
     final AtomicInteger fired = new AtomicInteger();
     panel.addChangeListener(fired::incrementAndGet);
 
-    combo(column, "Surface role").setSelectedItem(ColorRole.TERTIARY_CONTAINER);
+    select(column, "Surface role").setSelectedValue(ColorRole.TERTIARY_CONTAINER);
     ((JSpinner) ShowcaseFixture.controlLabelled(column, "Elevation")).setValue(2);
 
     assertThat(fired.get())
@@ -170,8 +171,8 @@ class SurfaceControlPanelTest {
     final WorkbenchControls column = new WorkbenchControls();
     final SurfaceControlPanel panel = stagePanel(column);
 
-    combo(column, "Surface role").setSelectedItem(ColorRole.TERTIARY_CONTAINER);
-    combo(column, "Shape").setSelectedItem(ShapeScale.XL);
+    select(column, "Surface role").setSelectedValue(ColorRole.TERTIARY_CONTAINER);
+    select(column, "Shape").setSelectedValue(ShapeScale.XL);
 
     assertThat(panel.code()).contains("ColorRole.TERTIARY_CONTAINER").contains("ShapeScale.XL");
   }
@@ -213,7 +214,10 @@ class SurfaceControlPanelTest {
     final WorkbenchControls column = new WorkbenchControls();
     final SurfaceControlPanel panel = stagePanel(column);
 
-    combo(column, "Border role").setSelectedIndex(1);
+    // BorderOption is private to the panel, so the second option is named positionally: the list
+    // opens with NONE, and anything after it is a real role.
+    final ElwhaSelectField<Object> borderRole = select(column, "Border role");
+    borderRole.setSelectedValue(borderRole.getOptions().get(1));
 
     assertThat(panel.code()).contains("setBorderRole").contains("setBorderWidth");
   }

@@ -2,15 +2,16 @@ package com.owspfm.elwha.showcase;
 
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.slider.ElwhaSlider;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -45,14 +46,18 @@ final class SliderShowcasePanels {
   static JComponent buildWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JComboBox<ElwhaSlider.Variant> variantBox =
-        new JComboBox<>(
-            new ElwhaSlider.Variant[] {
-              ElwhaSlider.Variant.STANDARD, ElwhaSlider.Variant.CENTERED, ElwhaSlider.Variant.RANGE
-            });
-    final JComboBox<ElwhaSlider.Orientation> orientationBox =
-        new JComboBox<>(ElwhaSlider.Orientation.values());
-    final JComboBox<ElwhaSlider.Size> sizeBox = new JComboBox<>(ElwhaSlider.Size.values());
+    final ElwhaSelectField<ElwhaSlider.Variant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(
+        List.of(
+            ElwhaSlider.Variant.STANDARD, ElwhaSlider.Variant.CENTERED, ElwhaSlider.Variant.RANGE));
+    variantBox.setSelectedValue(ElwhaSlider.Variant.STANDARD);
+    final ElwhaSelectField<ElwhaSlider.Orientation> orientationBox =
+        ElwhaSelectField.outlined("Orientation");
+    orientationBox.setOptions(List.of(ElwhaSlider.Orientation.values()));
+    orientationBox.setSelectedValue(ElwhaSlider.Orientation.HORIZONTAL);
+    final ElwhaSelectField<ElwhaSlider.Size> sizeBox = ElwhaSelectField.outlined("Size");
+    sizeBox.setOptions(List.of(ElwhaSlider.Size.values()));
+    sizeBox.setSelectedValue(ElwhaSlider.Size.XS);
     final JLabel verticalRangeWarn =
         new JLabel("⚠ Vertical range is discouraged (M3) — prefer horizontal.");
     verticalRangeWarn.setVisible(false);
@@ -75,13 +80,13 @@ final class SliderShowcasePanels {
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Slider");
-    controls.addControl("Variant", variantBox);
+    controls.addControl("", variantBox);
     controls.addControl("Origin", originSpinner);
     controls.addControl("Lower", lowerSpinner);
     controls.addControl("Upper", upperSpinner);
-    controls.addControl("Orientation", orientationBox);
+    controls.addControl("", orientationBox);
     controls.addControl("", verticalRangeWarn);
-    controls.addControl("Size", sizeBox);
+    controls.addControl("", sizeBox);
     controls.addSection("Configuration");
     controls.addControl("", stopsBox);
     controls.addControl("Step", stepSpinner);
@@ -93,7 +98,7 @@ final class SliderShowcasePanels {
 
     final Runnable apply =
         () -> {
-          final ElwhaSlider.Variant variant = (ElwhaSlider.Variant) variantBox.getSelectedItem();
+          final ElwhaSlider.Variant variant = variantBox.getSelectedValue();
           final boolean centered = variant == ElwhaSlider.Variant.CENTERED;
           final boolean range = variant == ElwhaSlider.Variant.RANGE;
           final int origin = (Integer) originSpinner.getValue();
@@ -101,9 +106,8 @@ final class SliderShowcasePanels {
           final int upper = (Integer) upperSpinner.getValue();
           final boolean stops = stopsBox.isChecked();
           final int step = (Integer) stepSpinner.getValue();
-          final ElwhaSlider.Size size = (ElwhaSlider.Size) sizeBox.getSelectedItem();
-          final ElwhaSlider.Orientation orientation =
-              (ElwhaSlider.Orientation) orientationBox.getSelectedItem();
+          final ElwhaSlider.Size size = sizeBox.getSelectedValue();
+          final ElwhaSlider.Orientation orientation = orientationBox.getSelectedValue();
           final boolean vertical = orientation == ElwhaSlider.Orientation.VERTICAL;
           // Inset icon: standard variant + M/L/XL only (matches the component's own rule).
           final boolean insetEligible =
@@ -148,9 +152,9 @@ final class SliderShowcasePanels {
                   enabledBox.isChecked()));
         };
 
-    variantBox.addActionListener(e -> apply.run());
-    orientationBox.addActionListener(e -> apply.run());
-    sizeBox.addActionListener(e -> apply.run());
+    variantBox.addSelectionChangeListener(v -> apply.run());
+    orientationBox.addSelectionChangeListener(v -> apply.run());
+    sizeBox.addSelectionChangeListener(v -> apply.run());
     insetIconBox.addActionListener(e -> apply.run());
     originSpinner.addChangeListener(e -> apply.run());
     lowerSpinner.addChangeListener(e -> apply.run());

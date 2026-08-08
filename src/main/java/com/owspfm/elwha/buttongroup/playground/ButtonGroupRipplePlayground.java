@@ -5,6 +5,7 @@ import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
 import com.owspfm.elwha.buttongroup.ResizeMode;
 import com.owspfm.elwha.buttongroup.SelectionMode;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
@@ -13,7 +14,6 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -40,7 +40,7 @@ import javax.swing.SwingUtilities;
  *       width-ripple does NOT fire (the group is connected).
  * </ol>
  *
- * <p>A {@link JCheckBox} flips {@link MorphAnimator#setReducedMotion(boolean)} globally so the
+ * <p>An {@link ElwhaCheckbox} flips {@link MorphAnimator#setReducedMotion(boolean)} globally so the
  * ripple collapses to a snap. Independent of The Elwha Showcase per {@code
  * docs/research/elwha-button-anim-design.md} §14 and per [[fresh-demo-per-story]].
  *
@@ -48,7 +48,7 @@ import javax.swing.SwingUtilities;
  * -Dexec.mainClass="com.owspfm.elwha.buttongroup.playground.ButtonGroupRipplePlayground"}.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ButtonGroupRipplePlayground {
@@ -74,9 +74,9 @@ public final class ButtonGroupRipplePlayground {
     frame.setLayout(new BorderLayout());
 
     final JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
-    final JCheckBox reducedBox = new JCheckBox("Reduced motion (global)");
-    reducedBox.setSelected(MorphAnimator.isReducedMotion());
-    reducedBox.addActionListener(e -> MorphAnimator.setReducedMotion(reducedBox.isSelected()));
+    final ElwhaCheckbox reducedBox = new ElwhaCheckbox("Reduced motion (global)");
+    reducedBox.setChecked(MorphAnimator.isReducedMotion());
+    reducedBox.addActionListener(e -> MorphAnimator.setReducedMotion(reducedBox.isChecked()));
     toolbar.add(reducedBox);
     toolbar.add(
         new JLabel(

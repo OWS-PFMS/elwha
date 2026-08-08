@@ -1,6 +1,7 @@
 package com.owspfm.elwha.button.playground;
 
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -10,7 +11,6 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -42,7 +42,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class RippleToggleDemo {
@@ -112,8 +112,9 @@ public final class RippleToggleDemo {
 
   private JPanel liveToggle() {
     final ElwhaButton wired = ElwhaButton.filledTonalButton("Hold, then untick");
-    final JCheckBox box = new JCheckBox("Ripple enabled", true);
-    box.addActionListener(e -> wired.setRippleEnabled(box.isSelected()));
+    final ElwhaCheckbox box = new ElwhaCheckbox("Ripple enabled");
+    box.setChecked(true);
+    box.addActionListener(e -> wired.setRippleEnabled(box.isChecked()));
 
     final JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 16, 16));
     row.add(wired);

@@ -1,5 +1,6 @@
 package com.owspfm.elwha.surface.playground;
 
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
@@ -12,10 +13,10 @@ import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -33,7 +34,7 @@ import javax.swing.UIManager;
  * pattern, same reasons.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public final class SurfacePlaygroundPanels {
@@ -41,6 +42,7 @@ public final class SurfacePlaygroundPanels {
   private static final int CELL_WIDTH = 64;
   private static final int CELL_HEIGHT = 36;
   private static final int ROLE_LABEL_WIDTH = 200;
+  private static final int SELECT_WIDTH = 200;
 
   private SurfacePlaygroundPanels() {}
 
@@ -91,12 +93,12 @@ public final class SurfacePlaygroundPanels {
   }
 
   /**
-   * Builds the live-control panel: a single {@link ElwhaSurface} driven by combo boxes for role,
-   * shape, border role, and border width. The same {@link ElwhaSurface} instance is the live target
-   * — token mutations are visible immediately.
+   * Builds the live-control panel: a single {@link ElwhaSurface} driven by {@link ElwhaSelectField}
+   * pickers for role, shape, and border role, plus a spinner for border width. The same {@link
+   * ElwhaSurface} instance is the live target — token mutations are visible immediately.
    *
    * @return the live-control panel
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public static JPanel buildLivePanel() {
@@ -106,24 +108,23 @@ public final class SurfacePlaygroundPanels {
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
     controls.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
 
-    controls.add(new JLabel("Surface role:"));
-    final JComboBox<ColorRole> roleBox = new JComboBox<>(ColorRole.values());
-    roleBox.setSelectedItem(target.getSurfaceRole());
-    roleBox.addActionListener(e -> target.setSurfaceRole((ColorRole) roleBox.getSelectedItem()));
-    controls.add(roleBox);
+    final ElwhaSelectField<ColorRole> roleBox = ElwhaSelectField.outlined("Surface role");
+    roleBox.setOptions(List.of(ColorRole.values()));
+    roleBox.setSelectedValue(target.getSurfaceRole());
+    roleBox.addSelectionChangeListener(target::setSurfaceRole);
+    controls.add(sized(roleBox));
 
-    controls.add(new JLabel("Shape:"));
-    final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
-    shapeBox.setSelectedItem(target.getShape());
-    shapeBox.addActionListener(e -> target.setShape((ShapeScale) shapeBox.getSelectedItem()));
-    controls.add(shapeBox);
+    final ElwhaSelectField<ShapeScale> shapeBox = ElwhaSelectField.outlined("Shape");
+    shapeBox.setOptions(List.of(ShapeScale.values()));
+    shapeBox.setSelectedValue(target.getShape());
+    shapeBox.addSelectionChangeListener(target::setShape);
+    controls.add(sized(shapeBox));
 
-    controls.add(new JLabel("Border role:"));
-    final JComboBox<BorderRoleChoice> borderBox = new JComboBox<>(BorderRoleChoice.values());
-    borderBox.setSelectedItem(BorderRoleChoice.NONE);
-    borderBox.addActionListener(
-        e -> target.setBorderRole(((BorderRoleChoice) borderBox.getSelectedItem()).role));
-    controls.add(borderBox);
+    final ElwhaSelectField<BorderRoleChoice> borderBox = ElwhaSelectField.outlined("Border role");
+    borderBox.setOptions(List.of(BorderRoleChoice.values()));
+    borderBox.setSelectedValue(BorderRoleChoice.NONE);
+    borderBox.addSelectionChangeListener(choice -> target.setBorderRole(choice.role));
+    controls.add(sized(borderBox));
 
     controls.add(new JLabel("Border width:"));
     final JSpinner widthSpinner =
@@ -151,7 +152,15 @@ public final class SurfacePlaygroundPanels {
 
   // ----- private helpers -----
 
-  /** Wraps a nullable {@link ColorRole} as a combo-box entry, with {@code NONE} → null. */
+  // The control row is a single-line FlowLayout inside a vertical BoxLayout, so a row wider than
+  // the frame wraps into a second line the box never allocates height for. Narrowing the selects
+  // from their 245 dp default keeps all four controls on one line at the playground's 900 px width.
+  private static JComponent sized(final ElwhaSelectField<?> select) {
+    select.setPreferredSize(new Dimension(SELECT_WIDTH, select.getPreferredSize().height));
+    return select;
+  }
+
+  /** Wraps a nullable {@link ColorRole} as a select option, with {@code NONE} → null. */
   private enum BorderRoleChoice {
     NONE(null),
     OUTLINE(ColorRole.OUTLINE),

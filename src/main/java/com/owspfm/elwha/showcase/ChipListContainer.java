@@ -11,12 +11,13 @@ import com.owspfm.elwha.list.ElwhaListOrientation;
 import com.owspfm.elwha.list.IconAffordance;
 import com.owspfm.elwha.list.MovementMode;
 import com.owspfm.elwha.list.SelectionMode;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import java.awt.FlowLayout;
 import java.awt.Insets;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import javax.swing.BorderFactory;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -107,31 +108,31 @@ final class ChipListContainer {
   private void buildControls() {
     final WorkbenchControls controls = workbench.controls();
 
-    final JComboBox<ElwhaListOrientation> orientation =
-        new JComboBox<>(ElwhaListOrientation.values());
-    orientation.setSelectedItem(ElwhaListOrientation.VERTICAL);
-    orientation.addActionListener(
-        event -> list.setOrientation((ElwhaListOrientation) orientation.getSelectedItem()));
+    final ElwhaSelectField<ElwhaListOrientation> orientation =
+        ElwhaSelectField.outlined("Orientation");
+    orientation.setOptions(List.of(ElwhaListOrientation.values()));
+    orientation.setSelectedValue(ElwhaListOrientation.VERTICAL);
+    orientation.addSelectionChangeListener(list::setOrientation);
 
-    final JComboBox<SelectionMode> selection = new JComboBox<>(SelectionMode.values());
-    selection.setSelectedItem(list.getSelectionMode());
-    selection.addActionListener(
-        event -> list.setSelectionMode((SelectionMode) selection.getSelectedItem()));
+    final ElwhaSelectField<SelectionMode> selection = ElwhaSelectField.outlined("Selection mode");
+    selection.setOptions(List.of(SelectionMode.values()));
+    selection.setSelectedValue(list.getSelectionMode());
+    selection.addSelectionChangeListener(list::setSelectionMode);
 
-    final JComboBox<MovementMode> movement = new JComboBox<>(MovementMode.values());
-    movement.setSelectedItem(list.getMovementMode());
-    movement.addActionListener(
-        event -> {
-          final MovementMode mode = (MovementMode) movement.getSelectedItem();
+    final ElwhaSelectField<MovementMode> movement = ElwhaSelectField.outlined("Movement mode");
+    movement.setOptions(List.of(MovementMode.values()));
+    movement.setSelectedValue(list.getMovementMode());
+    movement.addSelectionChangeListener(
+        mode -> {
           list.setMovementMode(mode);
           armBindings(mode);
           workbench.logEvent("movement mode: " + mode);
         });
 
     controls.addSection("List");
-    controls.addControl("Orientation", orientation);
-    controls.addControl("Selection mode", selection);
-    controls.addControl("Movement mode", movement);
+    controls.addControl("", orientation);
+    controls.addControl("", selection);
+    controls.addControl("", movement);
 
     final JSpinner columns = new JSpinner(new SpinnerNumberModel(4, 1, 10, 1));
     columns.addChangeListener(event -> list.setColumns((Integer) columns.getValue()));
@@ -142,17 +143,18 @@ final class ChipListContainer {
     controls.addControl("Columns (grid)", columns);
     controls.addControl("Item gap", gap);
 
-    final JComboBox<IconAffordance> pin = new JComboBox<>(IconAffordance.values());
-    pin.setSelectedItem(list.getPinAffordance());
-    pin.addActionListener(event -> list.setPinAffordance((IconAffordance) pin.getSelectedItem()));
-    final JComboBox<IconAffordance> anchorAffordance = new JComboBox<>(IconAffordance.values());
-    anchorAffordance.setSelectedItem(list.getAnchorAffordance());
-    anchorAffordance.addActionListener(
-        event -> list.setAnchorAffordance((IconAffordance) anchorAffordance.getSelectedItem()));
+    final ElwhaSelectField<IconAffordance> pin = ElwhaSelectField.outlined("Pin");
+    pin.setOptions(List.of(IconAffordance.values()));
+    pin.setSelectedValue(list.getPinAffordance());
+    pin.addSelectionChangeListener(list::setPinAffordance);
+    final ElwhaSelectField<IconAffordance> anchorAffordance = ElwhaSelectField.outlined("Anchor");
+    anchorAffordance.setOptions(List.of(IconAffordance.values()));
+    anchorAffordance.setSelectedValue(list.getAnchorAffordance());
+    anchorAffordance.addSelectionChangeListener(list::setAnchorAffordance);
 
     controls.addSection("Affordances");
-    controls.addControl("Pin", pin);
-    controls.addControl("Anchor", anchorAffordance);
+    controls.addControl("", pin);
+    controls.addControl("", anchorAffordance);
 
     controls.addSection("Data");
     controls.addControl("", buildDataRow());
