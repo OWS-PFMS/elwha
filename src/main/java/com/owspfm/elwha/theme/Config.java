@@ -12,7 +12,7 @@ import java.util.Objects;
  * — {@code install(current().withMode(Mode.DARK))} is the whole dark-mode toggle.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public final class Config {
@@ -128,6 +128,66 @@ public final class Config {
    */
   public Config withReducedMotion(Boolean newReducedMotion) {
     return new Config(theme, mode, typography, newReducedMotion);
+  }
+
+  /**
+   * Value equality — two configs are equal when all four settings are.
+   *
+   * <p>The most useful of the four value types to be able to compare, because {@link
+   * ElwhaTheme#current()} hands one back and the documented switching idiom derives from it ({@code
+   * install(current().withMode(DARK))}). Without equality a consumer could not ask "is this the
+   * config already installed?" to skip a redundant {@link ElwhaTheme#install(Config)} — and
+   * installing is not cheap: it re-runs the base look-and-feel setup, writes the whole key table,
+   * and calls {@code updateComponentTreeUI} on every live window. Ruled for the 1.0 freeze in
+   * (#698).
+   *
+   * @param obj the object to compare against
+   * @return whether {@code obj} is a config with the same theme, mode, typography and
+   *     reduced-motion override
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof Config other)) {
+      return false;
+    }
+    return theme.equals(other.theme)
+        && mode == other.mode
+        && typography.equals(other.typography)
+        && Objects.equals(reducedMotion, other.reducedMotion);
+  }
+
+  /**
+   * @return a hash consistent with {@link #equals(Object)}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public int hashCode() {
+    return Objects.hash(theme, mode, typography, reducedMotion);
+  }
+
+  /**
+   * @return the four settings, with {@code reducedMotion=null} shown as the "defer to the OS"
+   *     default it means
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public String toString() {
+    return "Config[theme="
+        + theme
+        + ", mode="
+        + mode
+        + ", typography="
+        + typography
+        + ", reducedMotion="
+        + reducedMotion
+        + "]";
   }
 
   /**
