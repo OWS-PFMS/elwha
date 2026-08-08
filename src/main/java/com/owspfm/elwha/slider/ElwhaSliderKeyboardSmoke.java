@@ -18,7 +18,7 @@ import javax.swing.Action;
  * {@link AccessibleValue} (current / min / max) with the label as the accessible name.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaSliderKeyboardSmoke {

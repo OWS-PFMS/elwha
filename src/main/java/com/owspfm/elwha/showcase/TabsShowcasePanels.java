@@ -44,7 +44,7 @@ import javax.swing.SwingConstants;
  * stacked selection maps to inline when the variant flips to secondary.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 final class TabsShowcasePanels {

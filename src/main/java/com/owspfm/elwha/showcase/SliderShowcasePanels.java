@@ -31,7 +31,7 @@ import javax.swing.SpinnerNumberModel;
  * centered) rows.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 final class SliderShowcasePanels {

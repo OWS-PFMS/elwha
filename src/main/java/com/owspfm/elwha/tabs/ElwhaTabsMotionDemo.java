@@ -23,7 +23,7 @@ import javax.swing.Timer;
  * click anywhere mid-slide to watch the retarget pick up from the in-flight rect.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaTabsMotionDemo {

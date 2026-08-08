@@ -202,7 +202,7 @@ class ElwhaButtonGeometryTest {
   }
 
   @Test
-  void theIconLeadsTheLabelOnBothSidesOfTheOrientation() {
+  void iconLeadsTheLabelOnBothSidesOfTheOrientation() {
     final FixedIcon icon = new FixedIcon(18);
     final ElwhaButton button = new ElwhaButton("Save", icon);
     final Dimension pref = button.getPreferredSize();
@@ -222,7 +222,7 @@ class ElwhaButtonGeometryTest {
   }
 
   @Test
-  void theGetterHandsBackTheInstalledIconNotTheFilteredCopy() {
+  void getIconHandsBackTheInstalledIconNotTheFilteredCopy() {
     final Icon installed = MaterialIcons.add();
     final ElwhaButton button = new ElwhaButton("Save", installed).setButtonSize(ButtonSize.XL);
 

@@ -188,7 +188,6 @@ public class ElwhaSelectField<T> extends JComponent {
       reorderMultiValues();
       if (!before.equals(multiValues)) {
         writeMultiSummary();
-        this.committedText = field.getText();
         fireMultiSelectionChange();
       }
     } else if (selectedValue != null && !this.options.contains(selectedValue)) {

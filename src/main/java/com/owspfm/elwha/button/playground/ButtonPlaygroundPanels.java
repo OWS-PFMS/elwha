@@ -40,7 +40,7 @@ import javax.swing.UIManager;
  * infra; components are validated visually and both playground entry points must not drift).
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ButtonPlaygroundPanels {

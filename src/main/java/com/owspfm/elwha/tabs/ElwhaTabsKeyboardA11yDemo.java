@@ -25,7 +25,7 @@ import javax.swing.SwingUtilities;
  * and scrolling all mirror. Tab again leaves the bar to the trailing field.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaTabsKeyboardA11yDemo {

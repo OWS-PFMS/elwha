@@ -361,7 +361,7 @@ class ElwhaItemListSelectionTest {
   }
 
   @Test
-  void theChangeGuardComparesByEqualityNotByInstance() {
+  void changeGuardComparesByEqualityNotByInstance() {
     final DefaultElwhaSelectionModel<String> model = new DefaultElwhaSelectionModel<>();
     final int[] fired = {0};
     model.addSelectionListener(event -> fired[0]++);

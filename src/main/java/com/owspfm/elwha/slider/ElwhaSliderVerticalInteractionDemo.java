@@ -25,7 +25,7 @@ import javax.swing.WindowConstants;
  * sliders and use the arrows; drag with the mouse.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaSliderVerticalInteractionDemo {

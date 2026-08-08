@@ -56,7 +56,7 @@ class ElwhaCardLayoutTest {
   // ------------------------------------------------------------------- RTL
 
   @Test
-  void theHeaderRowMirrorsUnderRightToLeft() {
+  void headerRowMirrorsUnderRightToLeft() {
     final ElwhaCardHeader header = new ElwhaCardHeader().setTitle("Title");
     final Block leading = new Block(24, 24);
     final Block trailing = new Block(24, 24);
@@ -81,7 +81,7 @@ class ElwhaCardLayoutTest {
   }
 
   @Test
-  void theActionRowMirrorsUnderRightToLeft() {
+  void actionRowMirrorsUnderRightToLeft() {
     final ElwhaCardActions actions = new ElwhaCardActions();
     final Block lead = new Block(60, 30);
     final Block trail = new Block(60, 30);

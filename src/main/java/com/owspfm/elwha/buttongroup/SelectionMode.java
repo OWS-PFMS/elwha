@@ -4,7 +4,7 @@ package com.owspfm.elwha.buttongroup;
  * The three M3 selection modes an {@link ElwhaButtonGroup} can enforce across its segments.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public enum SelectionMode {

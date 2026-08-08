@@ -144,7 +144,7 @@ class ElwhaSliderRangeTest {
   }
 
   @Test
-  void theSingleValueApiIsInertOnARangeSlider() {
+  void singleValueApiIsInertOnARangeSlider() {
     final ElwhaSlider slider = span();
 
     slider.setValue(60);

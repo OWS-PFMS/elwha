@@ -68,7 +68,7 @@ class ElwhaButtonGroupLayoutTest {
   }
 
   @Test
-  void theConnectedEndCapsSwapEndsUnderRightToLeft() {
+  void connectedEndCapsSwapEndsUnderRightToLeft() {
     final ElwhaButtonGroup group = laidOut(ElwhaButtonGroup.connected().add("List", "Grid"));
     final CornerRadii ltrFirst = ((ElwhaButton) group.getButtonAt(0)).getCornerRadii();
     assertThat(ltrFirst.topLeftPx())

@@ -26,7 +26,7 @@ import javax.swing.WindowConstants;
  * every change, so what you see is literally what assistive tech is told.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaProgressA11yDemo {

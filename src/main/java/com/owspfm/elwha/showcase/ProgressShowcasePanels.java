@@ -36,7 +36,7 @@ import javax.swing.Timer;
  * indeterminate forms.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 final class ProgressShowcasePanels {
