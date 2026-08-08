@@ -12,10 +12,12 @@ import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.JPanel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -487,6 +489,61 @@ class ElwhaNavigationRailVariantTest {
 
     assertThat(rail.getSections()).isEmpty();
     assertThat(rail.getPrimary()).hasSize(3);
+  }
+
+  // -------------------------------------------------------------------- fonts
+
+  @Test
+  void aDestinationLabelUsesItsTokenRoleRatherThanTheContainersFont() {
+    final ElwhaNavRailDestination inherited = RailFixture.destination("Library");
+    final JPanel page = new JPanel();
+    page.setFont(new Font(Font.SERIF, Font.PLAIN, 40));
+    page.add(inherited);
+    inherited.setHostVariant(ElwhaNavigationRail.Variant.EXPANDED);
+    final ElwhaNavRailDestination offscreen = RailFixture.destination("Library");
+    offscreen.setHostVariant(ElwhaNavigationRail.Variant.EXPANDED);
+
+    assertThat(inherited.getPreferredSize().width)
+        .as(
+            "#628 — getFont() answers the inherited container font in any real hierarchy, so"
+                + " preferring it applied LABEL_MEDIUM only to offscreen renders")
+        .isEqualTo(offscreen.getPreferredSize().width);
+  }
+
+  @Test
+  void anExplicitFontOnADestinationStillWins() {
+    final ElwhaNavRailDestination roled = RailFixture.destination("Library");
+    roled.setHostVariant(ElwhaNavigationRail.Variant.EXPANDED);
+    final ElwhaNavRailDestination overridden = RailFixture.destination("Library");
+    overridden.setHostVariant(ElwhaNavigationRail.Variant.EXPANDED);
+
+    overridden.setFont(new Font(Font.SERIF, Font.PLAIN, 40));
+
+    assertThat(overridden.getPreferredSize().width)
+        .as(
+            "isFontSet() is the distinction: a font set on the component outranks the role, an"
+                + " inherited one does not")
+        .isGreaterThan(roled.getPreferredSize().width);
+  }
+
+  @Test
+  void aSectionHeaderUsesItsTokenRoleRatherThanTheContainersFont() {
+    final ElwhaNavigationRail inherited = ElwhaNavigationRail.expanded();
+    inherited.setPrimary(RailFixture.destinations(2));
+    inherited.addSection("Tools", RailFixture.destinations(1));
+    final JPanel page = new JPanel();
+    page.setFont(new Font(Font.SERIF, Font.PLAIN, 40));
+    page.add(inherited);
+
+    final ElwhaNavigationRail offscreen = ElwhaNavigationRail.expanded();
+    offscreen.setPrimary(RailFixture.destinations(2));
+    offscreen.addSection("Tools", RailFixture.destinations(1));
+
+    assertThat(inherited.getPreferredSize().height)
+        .as(
+            "#628 — the reserved header height followed the inherited font, so a themed panel"
+                + " silently resized the rail's chrome")
+        .isEqualTo(offscreen.getPreferredSize().height);
   }
 
   // ----------------------------------------------------------- surface knobs

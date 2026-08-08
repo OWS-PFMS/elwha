@@ -2128,13 +2128,16 @@ public class ElwhaSlider extends JComponent {
   }
 
   /**
-   * The value bubble's label font. {@link #getFont()} is {@code null} on a component that has never
-   * been added to a container and never had a font installed — which is exactly the state an
-   * offscreen render (a gallery preview, a drag image) paints in — so the theme's own label role
-   * supplies the family when there is nothing to inherit.
+   * The value bubble's label font — {@link TypeRole#LABEL_LARGE} unless a consumer installed a font
+   * on this slider itself. Role-always, matching {@code ElwhaAppBar}, {@code ElwhaTab} and {@code
+   * ElwhaBadge} (#628): {@code getFont()} answers the <em>inherited</em> container font on a slider
+   * that is actually in a hierarchy, so preferring it applied the token role only to offscreen
+   * renders — the inverse of the intent. {@link #isFontSet()} is the distinction that matters: it
+   * is true only for a font set on this component, so an explicit consumer override still wins
+   * while a panel's ambient font does not.
    */
   private Font valueBubbleFont() {
-    final Font base = getFont() != null ? getFont() : TypeRole.LABEL_LARGE.resolve();
+    final Font base = isFontSet() ? getFont() : TypeRole.LABEL_LARGE.resolve();
     return base.deriveFont(Font.PLAIN, VALUE_BUBBLE_LABEL_PT);
   }
 

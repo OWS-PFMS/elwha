@@ -1282,14 +1282,17 @@ public final class ElwhaNavigationRail extends JComponent {
   }
 
   /**
-   * The section header's font. {@link #getFont()} is {@code null} on a rail that has never been
-   * added to a container and never had a font installed — which is exactly the state an offscreen
-   * render (a gallery preview) measures and paints in — so the theme's own title role supplies the
-   * family when there is nothing to inherit. Both the reserved header height and the header paint
+   * The section header's font — {@link TypeRole#TITLE_SMALL} unless a consumer installed a font on
+   * the rail itself. Role-always, matching {@code ElwhaAppBar}, {@code ElwhaTab} and {@code
+   * ElwhaBadge} (#628): {@code getFont()} answers the <em>inherited</em> container font on a rail
+   * that is actually in a hierarchy, so preferring it applied the token role only to offscreen
+   * renders — the inverse of the intent. {@link #isFontSet()} is the distinction that matters: it
+   * is true only for a font set on this component, so an explicit consumer override still wins
+   * while a panel's ambient font does not. Both the reserved header height and the header paint
    * read this, so the space set aside can never disagree with the glyphs drawn into it.
    */
   private Font sectionHeaderFont() {
-    return getFont() != null ? getFont() : TypeRole.TITLE_SMALL.resolve();
+    return isFontSet() ? getFont() : TypeRole.TITLE_SMALL.resolve();
   }
 
   private int sectionHeaderHeight() {

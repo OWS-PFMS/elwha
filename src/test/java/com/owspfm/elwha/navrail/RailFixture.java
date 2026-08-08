@@ -11,14 +11,12 @@ import javax.swing.JRootPane;
 /**
  * Shared scaffolding for the navigation-rail tests.
  *
- * <p><strong>Why the fixture sets a font.</strong> Unlike its sibling components, the rail and its
- * destinations measure and paint text through the inherited AWT {@link
- * java.awt.Component#getFont()} rather than by resolving a {@code TypeRole}. An unparented
- * component inherits nothing, so {@code getFont()} is {@code null} — which makes an Expanded
- * destination's hug-width measurement throw and makes section headers silently not paint. In a real
- * application the look and feel puts a font on the content pane and it propagates down, so the
- * fixture supplies one too; without it these tests would be asserting against a state no running
- * app can be in.
+ * <p><strong>No font scaffolding needed.</strong> The rail and its destinations resolve their
+ * {@code TypeRole} unconditionally, like {@code ElwhaAppBar}, {@code ElwhaTab} and {@code
+ * ElwhaBadge} (#628), so an unparented rail measures and paints exactly as a mounted one does.
+ * Before that ruling they read the inherited {@link java.awt.Component#getFont()} first, which is
+ * {@code null} on an unparented component — so these tests had to be read as approximating a state
+ * a running app is never in. They no longer do.
  */
 final class RailFixture {
 
