@@ -5,10 +5,10 @@ import java.awt.Robot;
 import java.awt.Toolkit;
 import java.io.File;
 import javax.imageio.ImageIO;
+import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.ConditionEvaluationResult;
 import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.TestWatcher;
 
 /**
  * Per-platform toolkit switch for the {@code gui}-tagged tier. The gui tests themselves are
@@ -29,17 +29,19 @@ import org.junit.jupiter.api.extension.TestWatcher;
  *       selects this automatically.
  * </ul>
  *
- * <p>The condition doubles as a {@link TestWatcher}: any gui-tagged test failure dumps the whole
- * screen into {@code target/surefire-reports}, so the CI artifact carries visual evidence. The
- * per-class dump helpers only fired on zero-delivery inside a step; the failure that motivated the
- * widening burned a full {@code WaitFor} deadline after every step "succeeded" and left no evidence
- * at all (#585).
+ * <p>The condition doubles as an {@link AfterTestExecutionCallback}: any gui-tagged test failure
+ * dumps the whole screen into {@code target/surefire-reports}, so the CI artifact carries visual
+ * evidence. It must be this hook and not {@code TestWatcher} — the watcher runs after
+ * {@code @AfterEach} has disposed the frame, so every capture came back an empty black screen; this
+ * callback runs before teardown, while the window under test is still mapped. The per-class dump
+ * helpers only fired on zero-delivery inside a step; the failure that motivated the widening burned
+ * a full {@code WaitFor} deadline after every step "succeeded" and left no evidence at all (#585).
  *
  * @author Charles Bryan
  * @version v0.5.0
  * @since v0.5.0
  */
-public final class GuiToolkit implements ExecutionCondition, TestWatcher {
+public final class GuiToolkit implements ExecutionCondition, AfterTestExecutionCallback {
 
   /** System property selecting the gui-tier display stack: {@code cacio} or {@code native}. */
   public static final String PROPERTY = "elwha.guiTier.toolkit";
@@ -74,7 +76,10 @@ public final class GuiToolkit implements ExecutionCondition, TestWatcher {
   }
 
   @Override
-  public void testFailed(final ExtensionContext context, final Throwable cause) {
+  public void afterTestExecution(final ExtensionContext context) {
+    if (context.getExecutionException().isEmpty()) {
+      return;
+    }
     try {
       final Rectangle screen = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
       final File dir = new File("target/surefire-reports");
