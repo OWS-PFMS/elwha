@@ -44,6 +44,8 @@ public final class ElwhaCardLeadingIcon extends JLabel {
    */
   public ElwhaCardLeadingIcon(final Icon icon) {
     super(icon);
+    // Inert by construction: display-only, so it must not take a tab stop (#575).
+    setFocusable(false);
     setAlignmentX(LEFT_ALIGNMENT);
     applyColorFilter();
   }

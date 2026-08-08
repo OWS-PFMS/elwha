@@ -35,6 +35,9 @@ final class ColorPickerHeader extends JComponent {
 
   ColorPickerHeader(final ElwhaColorPicker picker) {
     this.picker = picker;
+    // Inert by construction: structural chrome with no event surface of its own, so it must
+    // not take a tab stop away from the controls it hosts (#575).
+    setFocusable(false);
     setOpaque(false);
     this.eyedropper =
         com.owspfm.elwha.iconbutton.ElwhaIconButton.standardIconButton(

@@ -118,6 +118,10 @@ public class ElwhaAppBar extends JComponent implements Accessible {
    */
   public ElwhaAppBar(final AppBarVariant variant) {
     this.variant = Objects.requireNonNull(variant, "variant");
+    // Structural chrome: the bar installs no keyboard bindings of its own, so it must not sit in
+    // the traversal order between the navigation glyph and the action buttons it hosts (#575).
+    // Container focusability does not cascade — the hosted controls keep their own tab stops.
+    setFocusable(false);
     setOpaque(true);
     liftAnimator.addProgressListener(this::repaint);
     addPropertyChangeListener(

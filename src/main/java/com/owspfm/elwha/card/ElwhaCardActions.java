@@ -46,6 +46,9 @@ public final class ElwhaCardActions extends JComponent {
 
   /** Creates an empty action row. */
   public ElwhaCardActions() {
+    // Inert by construction: structural chrome with no event surface of its own, so it must
+    // not take a tab stop away from the controls it hosts (#575).
+    setFocusable(false);
     setLayout(new WrappingActionRowLayout());
     setOpaque(false);
   }

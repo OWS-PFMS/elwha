@@ -117,6 +117,17 @@ class ElwhaColorPickerHostTest {
   }
 
   @Test
+  void thePickerHeaderIsInertChromeAroundItsEyedropper() {
+    final ElwhaColorPicker picker = new ElwhaColorPicker(Color.RED);
+    picker.setEyedropperEnabled(true);
+    final ColorPickerHeader header = new ColorPickerHeader(picker);
+
+    assertThat(header.isFocusable())
+        .as("the header row binds no keys; it must not take a stop in front of the eyedropper")
+        .isFalse();
+  }
+
+  @Test
   void everySwatchTierIgnoresAnIndexOutsideItsCatalog() {
     final ElwhaColorPicker picker = new ElwhaColorPicker(Color.RED);
     final SwatchesPane pane = (SwatchesPane) picker.paneFor(PickerMode.SWATCHES);

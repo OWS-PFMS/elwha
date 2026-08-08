@@ -42,6 +42,8 @@ public final class ElwhaCardDivider extends JComponent {
    */
   public ElwhaCardDivider(final DividerStyle style) {
     this.style = Objects.requireNonNull(style, "style");
+    // Inert by construction: display-only, so it must not take a tab stop (#575).
+    setFocusable(false);
     setOpaque(false);
   }
 

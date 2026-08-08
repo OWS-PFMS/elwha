@@ -45,6 +45,9 @@ public final class ElwhaCardHeader extends JComponent {
   /** Creates an empty header. Add leading / title / subtitle / trailing via the fluent setters. */
   public ElwhaCardHeader() {
     final int gap = SpaceScale.SM.px();
+    // Inert by construction: structural chrome with no event surface of its own, so it must
+    // not take a tab stop away from the controls it hosts (#575).
+    setFocusable(false);
     setOpaque(false);
     setLayout(new BaselineRowLayout(gap));
 
