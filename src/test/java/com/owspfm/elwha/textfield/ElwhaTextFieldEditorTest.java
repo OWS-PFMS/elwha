@@ -2,6 +2,7 @@ package com.owspfm.elwha.textfield;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.textfield.ElwhaTextField.InputMode;
@@ -250,6 +251,25 @@ class ElwhaTextFieldEditorTest {
     assertThat(field.getEditor().isEnabled())
         .as("and so is the editor — otherwise it would still take input")
         .isFalse();
+  }
+
+  @Test
+  void disablingTheFieldReachesTheTrailingIconButton() {
+    final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Password");
+    final ElwhaIconButton reveal = new ElwhaIconButton();
+    field.setTrailingIconButton(reveal);
+
+    field.setEnabled(false);
+
+    assertThat(reveal.isEnabled())
+        .as(
+            "Container.setEnabled does not cascade, so a disabled field's clear / show-password"
+                + " button would otherwise stay clickable and keep painting its own states")
+        .isFalse();
+
+    field.setEnabled(true);
+
+    assertThat(reveal.isEnabled()).as("and it comes back with the field").isTrue();
   }
 
   @Test

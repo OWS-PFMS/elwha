@@ -935,6 +935,12 @@ public class ElwhaTextField extends JComponent {
   public void setEnabled(final boolean enabled) {
     super.setEnabled(enabled);
     editor.setEnabled(enabled);
+    // The trailing clear / show-password button is a real child, and Container.setEnabled does not
+    // cascade — without this it stays clickable on a disabled field and paints its own hover and
+    // press states.
+    if (trailingButton != null) {
+      trailingButton.setEnabled(enabled);
+    }
     repaint();
   }
 
