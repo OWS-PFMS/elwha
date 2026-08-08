@@ -93,7 +93,7 @@ class ElwhaButtonGroupShadowTest {
   }
 
   @Test
-  void theHaloAroundAnElevatedSegmentStaysLeftRightSymmetric() {
+  void haloAroundAnElevatedSegmentStaysLeftRightSymmetric() {
     final ElwhaButtonGroup group = elevatedGroup();
     final Dimension pref = group.getPreferredSize();
     final int w = pref.width + 40;
@@ -117,7 +117,7 @@ class ElwhaButtonGroupShadowTest {
   }
 
   @Test
-  void theGroupClampsItsOwnStretchWhileItsSegmentsDoNot() {
+  void groupClampsItsOwnStretchWhileItsSegmentsDoNot() {
     final ElwhaButtonGroup group = elevatedGroup();
 
     assertThat(group.getMaximumSize())

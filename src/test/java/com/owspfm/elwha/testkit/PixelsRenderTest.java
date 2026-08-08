@@ -20,6 +20,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * (#707 — a #589 comparison passed exactly this way, both rasters equally empty). And {@link
  * Pixels#assertPixelExact} actually discriminates where {@link Pixels#assertPixelNear} cannot,
  * which is what the adjacent-surface-role probes depend on.
+ *
+ * @author Charles Bryan
+ * @version v0.5.0
+ * @since v0.5.0
  */
 @ExtendWith({EdtInterceptor.class, ThemeExtension.class})
 class PixelsRenderTest {

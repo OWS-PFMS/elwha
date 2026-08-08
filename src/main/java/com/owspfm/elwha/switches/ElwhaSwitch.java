@@ -1,6 +1,7 @@
 package com.owspfm.elwha.switches;
 
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.FocusVisible;
@@ -15,6 +16,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -122,7 +124,7 @@ import javax.swing.event.EventListenerList;
  * @version v0.5.0
  * @since v0.4.0
  */
-public class ElwhaSwitch extends JComponent {
+public class ElwhaSwitch extends JComponent implements BodyBearing {
 
   // --- M3 switch geometry (dp == px at 100% scale; research §T — the md-comp-switch values) ---
 
@@ -574,6 +576,19 @@ public class ElwhaSwitch extends JComponent {
       return super.getMinimumSize();
     }
     return getPreferredSize();
+  }
+
+  /**
+   * The visible painted body — the {@value #TRACK_WIDTH_PX}&times;{@value #TRACK_HEIGHT_PX} track
+   * block, excluding the state-layer halo overhang the preferred size reserves around it.
+   *
+   * @return the track rect in component coordinates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public Rectangle getBodyBounds() {
+    return new Rectangle(trackX(), trackY(), TRACK_WIDTH_PX, TRACK_HEIGHT_PX);
   }
 
   // ------------------------------------------------------------------ geometry

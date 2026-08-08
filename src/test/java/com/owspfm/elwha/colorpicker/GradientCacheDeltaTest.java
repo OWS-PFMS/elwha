@@ -87,7 +87,7 @@ class GradientCacheDeltaTest {
   }
 
   @Test
-  void theWheelsCacheIsTheDirectRenderAtScaleOne() {
+  void wheelsCacheIsTheDirectRenderAtScaleOne() {
     final BufferedImage cached = WheelPane.renderDisc(WheelPane.DISC_DIAMETER);
     final BufferedImage direct = WheelPane.renderDisc(WheelPane.DISC_DIAMETER);
 
@@ -102,7 +102,7 @@ class GradientCacheDeltaTest {
 
   @ParameterizedTest(name = "the wheel's upsampled cache stays close to a {0}x direct render")
   @ValueSource(ints = {2, 3})
-  void theWheelsUpsampledCacheStaysCloseToADeviceResolutionRender(final int scale) {
+  void wheelsUpsampledCacheStaysCloseToADeviceResolutionRender(final int scale) {
     final BufferedImage upsampled = upscaled(WheelPane.renderDisc(WheelPane.DISC_DIAMETER), scale);
     final BufferedImage direct = WheelPane.renderDisc(WheelPane.DISC_DIAMETER * scale);
 
@@ -116,7 +116,7 @@ class GradientCacheDeltaTest {
 
   @ParameterizedTest(name = "the wheel's rim softens by at most {1}/255 of alpha at {0}x")
   @CsvSource({"2, 120", "3, 164"})
-  void theWheelsAntialiasedRimIsWhereTheTwoRendersActuallyDisagree(
+  void wheelsAntialiasedRimIsWhereTheTwoRendersActuallyDisagree(
       final int scale, final int tolerance) {
     final BufferedImage upsampled = upscaled(WheelPane.renderDisc(WheelPane.DISC_DIAMETER), scale);
     final BufferedImage direct = WheelPane.renderDisc(WheelPane.DISC_DIAMETER * scale);
@@ -136,7 +136,7 @@ class GradientCacheDeltaTest {
   }
 
   @Test
-  void theSpectrumsCacheIsTheDirectRenderAtScaleOne() {
+  void spectrumsCacheIsTheDirectRenderAtScaleOne() {
     final BufferedImage cached = SpectrumPane.renderSvRaster(240, 160, 210);
     final BufferedImage direct = SpectrumPane.renderSvRaster(240, 160, 210);
 
@@ -147,7 +147,7 @@ class GradientCacheDeltaTest {
 
   @ParameterizedTest(name = "the spectrum's upsampled cache stays close to a {0}x direct render")
   @ValueSource(ints = {2, 3})
-  void theSpectrumsUpsampledCacheStaysCloseToADeviceResolutionRender(final int scale) {
+  void spectrumsUpsampledCacheStaysCloseToADeviceResolutionRender(final int scale) {
     final BufferedImage upsampled = upscaled(SpectrumPane.renderSvRaster(240, 160, 210), scale);
     final BufferedImage direct = SpectrumPane.renderSvRaster(240 * scale, 160 * scale, 210);
 

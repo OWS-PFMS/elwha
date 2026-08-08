@@ -1,5 +1,6 @@
 package com.owspfm.elwha.badge;
 
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ElwhaLayers;
 import java.awt.Dimension;
 import java.awt.Point;
@@ -592,12 +593,14 @@ public final class ElwhaBadgeAnchor {
     }
 
     // TRAILING_EDGE placement: the badge sits flush against the host composition's trailing edge,
-    // vertically centered on the host — the M3 "Favorites 84" pattern. The icon bounds are not
-    // consulted; the host's full bounds drive placement. RTL mirrors the trailing edge to the left.
+    // vertically centered on it — the M3 "Favorites 84" pattern. The icon bounds are not consulted;
+    // the host's VISIBLE BODY drives placement. Body rather than raw bounds because a host whose
+    // painted chrome is centered inside a stretched cell would otherwise strand the badge out in
+    // the dead space at the cell edge (#493) — the same mismatch LABEL_TRAILING was hand-fixed for
+    // during the tabs epic. RTL mirrors the trailing edge to the left.
     private void refreshTrailingEdge() {
-      final int hostW = host.getWidth();
-      final int hostH = host.getHeight();
-      if (hostW <= 0 || hostH <= 0) {
+      final Rectangle body = BodyBearing.bodyBoundsOf(host);
+      if (body.width <= 0 || body.height <= 0) {
         badge.setVisible(false);
         return;
       }
@@ -605,10 +608,10 @@ public final class ElwhaBadgeAnchor {
       final boolean ltr = host.getComponentOrientation().isLeftToRight();
       final Dimension pref = badge.getPreferredSize();
 
-      // Align the badge's trailing edge to the host's trailing edge (right in LTR, left in RTL) and
-      // center it vertically on the host.
-      final int badgeXInHost = ltr ? hostW - pref.width : 0;
-      final int badgeYInHost = (hostH - pref.height) / 2;
+      // Align the badge's trailing edge to the body's trailing edge (right in LTR, left in RTL) and
+      // center it vertically on the body.
+      final int badgeXInHost = ltr ? body.x + body.width - pref.width : body.x;
+      final int badgeYInHost = body.y + (body.height - pref.height) / 2;
       final Point topLeftInLayered =
           SwingUtilities.convertPoint(host, new Point(badgeXInHost, badgeYInHost), layeredPane);
 

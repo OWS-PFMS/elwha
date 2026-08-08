@@ -5,6 +5,7 @@ import com.owspfm.elwha.badge.ElwhaBadge;
 import com.owspfm.elwha.badge.ElwhaBadgeAnchor;
 import com.owspfm.elwha.badge.IconBearing;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.HoverTracker;
@@ -111,7 +112,7 @@ import javax.swing.KeyStroke;
  * @version v0.5.0
  * @since v0.3.0
  */
-public final class ElwhaNavRailDestination extends JComponent implements IconBearing {
+public final class ElwhaNavRailDestination extends JComponent implements IconBearing, BodyBearing {
 
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
@@ -537,6 +538,19 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   public Rectangle getIconBounds() {
     final IndicatorGeometry geom = currentIndicatorGeometry();
     return new Rectangle(geom.iconX, geom.iconY, ICON_SIZE_PX, ICON_SIZE_PX);
+  }
+
+  /**
+   * The visible painted body — the selection pill, which is centered horizontally in the
+   * destination's granted width rather than filling it.
+   *
+   * @return the pill rect in component coordinates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public Rectangle getBodyBounds() {
+    return pillRect();
   }
 
   /** Returns the pill bounds; preserved for back-compat with internal callers. */

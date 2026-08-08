@@ -119,6 +119,20 @@ Both roles honor the **same paint convention**: translate the graphics origin by
 
 **Apply when:** adding any new elevated/shadowed primitive. Implement `ShadowBearing`, pick the reserve home by role, honor the `ShadowPainter` translate convention, and obey the `getMaximumSize` rule. Contract-alignment of the existing primitives onto `ShadowBearing` is tracked in [#313](https://github.com/OWS-PFMS/elwha/issues/313).
 
+## 8b. The visible body is a contract, not a calculation — `BodyBearing`
+
+A primitive routinely paints smaller than the bounds it was granted: a fill layout hands it surplus space and the pill or track floats centered in it, a `ShadowBearing` halo lives inside the bounds, and an XS / S button inflates its height to the WCAG 48 dp target even at preferred size. Anything positioning against `getBounds()` therefore addresses an edge nobody can see, which is [#493](https://github.com/OWS-PFMS/elwha/issues/493) (anchoring) and [#505](https://github.com/OWS-PFMS/elwha/issues/505) (hit testing) — the same defect from two sides.
+
+**One accessor — `getBodyBounds()`,** declared by `BodyBearing` in `theme/`. It returns the painted body in component coordinates, excluding halo, centering slack, and target-inflation padding. A sibling of `ShadowBearing` rather than an extension of it: most body-centering primitives carry no halo at all, and making them answer `getShadowInsets()` with zeros to get a body rect would be backwards.
+
+**Consumers call the static resolver, never the method.** `BodyBearing.bodyBoundsOf(component)` degrades in three tiers — a `BodyBearing` answers for itself, a `ShadowBearing` has its halo backed out, anything else reports its bounds — so a placement helper handles the whole catalog *and* arbitrary consumer components with one call, and every consumer gets the same answer. Depending on the resolver rather than on concrete types is what kept `ElwhaTooltip`'s hand-rolled halo back-out from drifting away from the menu host's (which never had one).
+
+**Implement it when body ≠ bounds; skip it when they agree.** `ElwhaIconButton` and `ElwhaChip` fill their bounds, so the default tier is already exact and an override would be noise. `ElwhaSurface` needs none either — backing its halo out of its bounds *is* its body. Implement it on a primitive that centers, insets, or pins its body: `ElwhaButton`, `ElwhaFab`, `ElwhaSwitch`, `ElwhaCheckbox`, `ElwhaRadioButton`, `ElwhaNavRailDestination`, `ElwhaMenuItem` today.
+
+**Hit tests derive from the body too.** A hit rect is the body grown to the size's minimum touch target and centered on it — not the bounds. That keeps the WCAG target at preferred size and caps it under stretch. Hover arming uses the same rect, so pointer feedback and clickability cannot disagree.
+
+**Apply when:** adding any primitive whose painted chrome is smaller than its bounds under a stretching layout, or any helper that anchors to, or hit-tests against, another component.
+
 ## 8a. Right-to-left is a lib-wide contract, and every design doc says which case it is
 
 Any component that places content along the inline axis resolves *leading* and *trailing* through `getComponentOrientation().isLeftToRight()` — never through hardcoded left / right. This is not per-component opt-in; a consumer switching a window to an RTL locale expects the whole catalog to mirror, and one component that does not is the visible defect.

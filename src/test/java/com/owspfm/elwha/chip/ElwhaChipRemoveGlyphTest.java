@@ -64,7 +64,7 @@ class ElwhaChipRemoveGlyphTest {
   }
 
   @Test
-  void theRemoveGlyphStrokesInTheChipsResolvedForeground() {
+  void removeGlyphStrokesInTheChipsResolvedForeground() {
     final ElwhaChip chip = ElwhaChip.inputChip("Tag", null).setSurfaceRole(ColorRole.PRIMARY);
 
     final BufferedImage shot = paintGlyphOf(chip);
@@ -86,7 +86,7 @@ class ElwhaChipRemoveGlyphTest {
   }
 
   @Test
-  void theGlyphFollowsAChangeOfSurfaceRole() {
+  void glyphFollowsAChangeOfSurfaceRole() {
     final ElwhaChip chip = ElwhaChip.inputChip("Tag", null).setSurfaceRole(ColorRole.PRIMARY);
     final Color onPrimary = chip.resolveForegroundColor();
 

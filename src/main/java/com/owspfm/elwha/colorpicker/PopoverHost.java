@@ -1,6 +1,7 @@
 package com.owspfm.elwha.colorpicker;
 
 import com.owspfm.elwha.surface.ElwhaSurface;
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
@@ -91,9 +92,12 @@ final class PopoverHost extends com.owspfm.elwha.overlay.AbstractElwhaOverlay {
   @Override
   protected void layoutSurface(final int paneWidth, final int paneHeight) {
     final Dimension pref = surface.getPreferredSize();
-    final Point anchorAt = SwingUtilities.convertPoint(anchor, 0, 0, layeredPane);
-    final Rectangle anchorBounds =
-        new Rectangle(anchorAt.x, anchorAt.y, anchor.getWidth(), anchor.getHeight());
+    // The trigger's visible body, not its bounds: a stretched trigger would otherwise place the
+    // popover against an edge nobody can see, and this also backs out a ShadowBearing trigger's
+    // halo, which this host never handled (#493).
+    final Rectangle body = BodyBearing.bodyBoundsOf(anchor);
+    final Point anchorAt = SwingUtilities.convertPoint(anchor, body.x, body.y, layeredPane);
+    final Rectangle anchorBounds = new Rectangle(anchorAt.x, anchorAt.y, body.width, body.height);
     final Insets shadow = shadowInsets();
     surface.setBounds(
         place(

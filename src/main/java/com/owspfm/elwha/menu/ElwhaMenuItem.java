@@ -3,6 +3,7 @@ package com.owspfm.elwha.menu;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.badge.ElwhaBadge;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
@@ -70,7 +71,8 @@ import javax.swing.Timer;
  * @version v0.5.0
  * @since v0.4.0
  */
-public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
+public sealed class ElwhaMenuItem extends JComponent implements BodyBearing
+    permits ElwhaSubMenuItem {
 
   /** Visual row height in dp (research §I). */
   static final int VISUAL_HEIGHT_PX = 44;
@@ -630,6 +632,19 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
     } finally {
       g2.dispose();
     }
+  }
+
+  /**
+   * The visible painted body — the {@value #VISUAL_HEIGHT_PX}&nbsp;dp row, which sits centered
+   * inside the taller minimum-target height the item reserves.
+   *
+   * @return the visual row rect in component coordinates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public Rectangle getBodyBounds() {
+    return visualBounds();
   }
 
   private Rectangle visualBounds() {

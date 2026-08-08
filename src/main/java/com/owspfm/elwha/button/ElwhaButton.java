@@ -1,6 +1,7 @@
 package com.owspfm.elwha.button;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.Easing;
@@ -21,6 +22,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -104,7 +106,7 @@ import javax.swing.Timer;
  * @version v0.5.0
  * @since v0.2.0
  */
-public class ElwhaButton extends JComponent implements ShadowBearing {
+public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearing {
 
   /** Property name fired when the selected state changes. */
   public static final String PROPERTY_SELECTED = "selected";
@@ -1233,18 +1235,45 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
   }
 
   /**
-   * Tests whether a component-local point lies inside the click hit area. The hit area is the full
-   * component bounds (excluding the shadow reserve) — including the a11y target inflation padding
-   * around the visible body, so clicks in that padding still register and dispatch a press / ripple
-   * on the body. WCAG 2.5.5 — 48 dp minimum touch target on XS / S.
+   * The visible painted body — the round-rect pill, excluding the shadow reserve and any centering
+   * slack a stretching layout or the a11y target inflation introduced.
+   *
+   * @return the body rect in component coordinates
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public Rectangle getBodyBounds() {
+    final Point origin = bodyOrigin();
+    return new Rectangle(origin.x, origin.y, effectiveBodyWidth(), buttonSize.containerHeightPx());
+  }
+
+  /**
+   * The clickable rect: the visible body, grown to the WCAG 2.5.5 minimum target (48 dp on XS / S)
+   * and kept centered on the body, then clamped to the component's own bounds.
+   *
+   * <p>This used to be the whole component minus the shadow reserve, reasoning that the a11y
+   * inflation padding should stay clickable — correct while bounds equal preferred size, and wrong
+   * the moment they do not. A stretching layout grows the bounds arbitrarily and the same test grew
+   * the hit area with them: measured in the side-sheet repro, a 40&nbsp;px pill in 162&nbsp;px of
+   * granted height accepted clicks roughly 57&nbsp;px above <em>and</em> below itself (#505).
+   * Deriving the rect from the body instead keeps the a11y target at preferred size — where the
+   * inflation is exactly what the minimum asks for — and caps it under stretch.
    */
   private boolean containsClickPoint(final Point componentPoint) {
-    final Insets s = getShadowInsets();
-    final int hitW = getWidth() - s.left - s.right;
-    final int hitH = getHeight() - s.top - s.bottom;
-    final int x = componentPoint.x - s.left;
-    final int y = componentPoint.y - s.top;
-    return x >= 0 && y >= 0 && x < hitW && y < hitH;
+    return hitRect().contains(componentPoint);
+  }
+
+  /** The body inflated to the minimum touch target, centered on the body, clamped to bounds. */
+  private Rectangle hitRect() {
+    final Rectangle body = getBodyBounds();
+    final int target = buttonSize.minimumTargetPx();
+    final int growX = Math.max(0, target - body.width);
+    final int growY = Math.max(0, target - body.height);
+    final Rectangle hit =
+        new Rectangle(
+            body.x - growX / 2, body.y - growY / 2, body.width + growX, body.height + growY);
+    return hit.intersection(new Rectangle(0, 0, getWidth(), getHeight()));
   }
 
   /**
