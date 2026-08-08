@@ -136,6 +136,48 @@ class ElwhaMenuGuiTest {
         .addItem(ElwhaMenuItem.of("Gallery"));
   }
 
+  /**
+   * #396 — a scrollable menu used to size its viewport to the whole layered pane, and placement
+   * then clamped the too-tall surface back inside it, over the trigger. Cosmetic for a plain menu;
+   * for the editable {@code ElwhaSelectField} combo it buried the field the user was typing into,
+   * so they could not see what was filtering the list. Needs a real window: a headless anchor is
+   * never {@code isShowing()}, so the bound degrades to the viewport.
+   */
+  @Test
+  void aLongMenuScrollsRatherThanCoveringItsTrigger() throws Exception {
+    final ElwhaMenu.Builder builder = ElwhaMenu.builder();
+    for (int i = 0; i < 40; i++) {
+      builder.addItem(ElwhaMenuItem.of("Item " + i));
+    }
+
+    open(builder.build());
+
+    final Rectangle surface = read(() -> boundsInPane(mounted().get(0)));
+    final Rectangle anchorRect = read(() -> boundsInPane(trigger));
+    assertThat(surface.intersects(anchorRect))
+        .as(
+            "a menu long enough to fill the window must scroll inside the room beside its "
+                + "trigger, not grow past it and get clamped back on top of it")
+        .isFalse();
+  }
+
+  @Test
+  void aLongMenuStaysInsideTheWindow() throws Exception {
+    final ElwhaMenu.Builder builder = ElwhaMenu.builder();
+    for (int i = 0; i < 40; i++) {
+      builder.addItem(ElwhaMenuItem.of("Item " + i));
+    }
+
+    open(builder.build());
+
+    final Rectangle surface = read(() -> boundsInPane(mounted().get(0)));
+    final int paneHeight = read(() -> frame.getLayeredPane().getHeight());
+    assertThat(surface.y).as("the capped menu still starts inside the viewport").isGreaterThan(-1);
+    assertThat(surface.y + surface.height)
+        .as("and still ends inside it — the cap bounds the menu, it does not push it off-screen")
+        .isLessThanOrEqualTo(paneHeight);
+  }
+
   /** Captures the whole virtual screen into surefire-reports so the CI artifact carries it. */
   private void dumpScreen(final String label) {
     try {

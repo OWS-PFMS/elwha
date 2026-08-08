@@ -703,9 +703,9 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   private JComponent buildSurface(final boolean live) {
     final int width = resolveContentWidth();
 
-    final int available =
-        (layeredPane != null ? layeredPane.getHeight() : Integer.MAX_VALUE)
-            - 2 * VIEWPORT_MARGIN_PX;
+    // Bounded by the room beside the anchor rather than by the whole pane, so a long menu scrolls
+    // instead of growing tall enough that placement has to clamp it over its own trigger (#396).
+    final int available = anchoredAvailableHeight(VIEWPORT_MARGIN_PX);
     final Insets shadow = ShadowPainter.shadowInsets(ELEVATION);
     final int chromeV = 2 * (shadow.top + CONTENT_PAD_PX);
     // The scroll decision uses the FULL item set, not the currently-visible one: a menu opened
