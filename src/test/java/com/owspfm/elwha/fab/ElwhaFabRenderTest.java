@@ -286,7 +286,7 @@ class ElwhaFabRenderTest {
   @ParameterizedTest
   @EnumSource(ElwhaFab.Size.class)
   void everySizeRendersAtItsDocumentedM3Radius(final ElwhaFab.Size size) {
-    final ElwhaFab fab = fab(ElwhaFab.Color.PRIMARY_CONTAINER).setFabSize(size);
+    final ElwhaFab fab = fab(ElwhaFab.ColorStyle.PRIMARY_CONTAINER).setFabSize(size);
     final Dimension pref = fab.getPreferredSize();
     // A magenta ground, not the usual SURFACE: the corner probe classifies each pixel by which
     // reference color it sits nearer, and a shadowed body over a near-neutral ground leaves the
@@ -299,7 +299,7 @@ class ElwhaFabRenderTest {
         reserve.left,
         reserve.top,
         size.cornerRadiusPx(),
-        ElwhaFab.Color.PRIMARY_CONTAINER.containerRole().resolve(),
+        ElwhaFab.ColorStyle.PRIMARY_CONTAINER.containerRole().resolve(),
         // The FAB always carries a halo, so the outside reference is the local shadow rather than
         // the flat ground.
         new java.awt.Color(image.getRGB(reserve.left - 3, reserve.top - 3), true),
