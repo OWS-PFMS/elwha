@@ -10,6 +10,7 @@ import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
 import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.theme.CornerRadii;
+import com.owspfm.elwha.theme.RtlMirror;
 import com.owspfm.elwha.theme.ShapeScale;
 import java.awt.ComponentOrientation;
 import java.awt.Dimension;
@@ -852,7 +853,7 @@ public final class ElwhaButtonGroup extends JComponent {
     final int rowHeight = rowHeightPx();
     // Segments advance from the leading edge, so under an RTL orientation the first segment sits
     // at the right and the row reads right-to-left. Positions are computed left-to-right and
-    // mirrored on the way out, the same shape ElwhaItemList.flipX uses.
+    // mirrored on the way out via the shared RtlMirror.
     final boolean ltr = getComponentOrientation().isLeftToRight();
     final int total = getWidth();
     int x = 0;
@@ -860,13 +861,13 @@ public final class ElwhaButtonGroup extends JComponent {
       final int gap = standardGapPx(buttonSize);
       for (final Segment segment : segments) {
         final int width = segment.preferredSize().width;
-        segment.component().setBounds(ltr ? x : total - x - width, 0, width, rowHeight);
+        segment.component().setBounds(RtlMirror.mirrorX(ltr, total, x, width), 0, width, rowHeight);
         x += width + gap;
       }
     } else {
       final int width = connectedSegmentWidthPx(getWidth());
       for (final Segment segment : segments) {
-        segment.component().setBounds(ltr ? x : total - x - width, 0, width, rowHeight);
+        segment.component().setBounds(RtlMirror.mirrorX(ltr, total, x, width), 0, width, rowHeight);
         x += width + CONNECTED_GAP_PX;
       }
     }

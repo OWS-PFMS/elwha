@@ -3,6 +3,7 @@ package com.owspfm.elwha.list;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.MorphAnimator;
+import com.owspfm.elwha.theme.RtlMirror;
 import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -1216,11 +1217,7 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
    * @since v0.5.0
    */
   private int flipX(final Container parent, final int x, final int width) {
-    if (isLeftToRight()) {
-      return x;
-    }
-    final Insets in = parent.getInsets();
-    return in.left + (parent.getWidth() - in.right) - x - width;
+    return RtlMirror.mirrorX(isLeftToRight(), parent, x, width);
   }
 
   private void applyOrientationLayout() {

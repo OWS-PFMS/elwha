@@ -1,5 +1,6 @@
 package com.owspfm.elwha.card;
 
+import com.owspfm.elwha.theme.RtlMirror;
 import com.owspfm.elwha.theme.SpaceScale;
 import java.awt.Component;
 import java.awt.Container;
@@ -126,9 +127,9 @@ public final class ElwhaCardHeader extends JComponent {
       final int textY = topForBaseline(textStack, tp, targetBaseline);
       final int trailingY = topForBaseline(trailingRow, rp, targetBaseline);
       // Segment X positions are computed as if the row were left-to-right and mirrored on the way
-      // out, the same shape ElwhaItemList.flipX uses. The segments' own contents follow on their
-      // own: leadingHolder is a BoxLayout X_AXIS and trailingRow a FlowLayout, both of which
-      // reverse their children under an RTL orientation.
+      // out via the shared RtlMirror. The segments' own contents follow on their own:
+      // leadingHolder is a BoxLayout X_AXIS and trailingRow a FlowLayout, both of which reverse
+      // their children under an RTL orientation.
       final boolean ltr = parent.getComponentOrientation().isLeftToRight();
       if (leadingHolder.isVisible()) {
         leadingHolder.setBounds(flipX(ltr, width, 0, lp.width), leadingY, lp.width, lp.height);
@@ -142,7 +143,7 @@ public final class ElwhaCardHeader extends JComponent {
 
     /** Mirrors an x position across the row when the orientation is right-to-left. */
     private int flipX(final boolean ltr, final int rowWidth, final int x, final int segmentWidth) {
-      return ltr ? x : rowWidth - x - segmentWidth;
+      return RtlMirror.mirrorX(ltr, rowWidth, x, segmentWidth);
     }
 
     /** Shared baseline Y for the row = deepest top-above-baseline across all visible segments. */
