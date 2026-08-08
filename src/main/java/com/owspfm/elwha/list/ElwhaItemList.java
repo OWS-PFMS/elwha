@@ -2901,6 +2901,18 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
       super.paintChildren(g);
       paintDragHandle(g);
     }
+
+    // The drag handle is painted OVER the hovered item, so it only survives if the item's own
+    // repaints come back through here. A non-opaque view (every Elwha view is) makes Swing climb
+    // to the nearest opaque ancestor, which is above this panel, so the handle is redrawn for
+    // free — but ElwhaItemAdapter may return any JComponent, and an opaque one repaints from
+    // itself and erases the handle under the very pointer that revealed it. Declaring a painting
+    // origin makes the guarantee hold for any adapter view. Gated so the flag costs nothing when
+    // no handle is showing.
+    @Override
+    public boolean isPaintingOrigin() {
+      return handleAlpha > 0f;
+    }
   }
 
   /** Single-column stack; items keep their preferred size and align to the leading edge. */
