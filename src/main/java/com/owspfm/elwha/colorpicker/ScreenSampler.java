@@ -13,6 +13,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.awt.Image;
 import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
@@ -32,11 +33,20 @@ import javax.swing.JWindow;
 /**
  * The eyedropper's <strong>frozen-capture screen sampler</strong> (V2 design doc {@code
  * elwha-color-picker-v2-design.md} §4): on {@link #open()}, every {@link GraphicsDevice} is
- * captured once via {@link Robot#createScreenCapture} and shown in an undecorated always-on-top
- * full-screen window; a magnifier loupe (an 11×11 logical-pixel grid at 8×, center cell
- * highlighted, hex chip beneath) follows the pointer. A press or Enter samples the frozen image and
- * delivers the color; Esc cancels; arrow keys nudge the sample point one pixel. Sampling reads the
- * capture, never live pixels — one capture, no global hooks, every on-screen pixel reachable.
+ * captured once via {@link Robot} and shown in an undecorated always-on-top full-screen window; a
+ * magnifier loupe (an 11×11 logical-pixel grid at 8×, center cell highlighted, hex chip beneath)
+ * follows the pointer. A press or Enter samples the frozen image and delivers the color; Esc
+ * cancels; arrow keys nudge the sample point one pixel. Sampling reads the capture, never live
+ * pixels — one capture, no global hooks, every on-screen pixel reachable.
+ *
+ * <p><strong>HiDPI</strong> (#714): the capture is taken through {@link
+ * Robot#createMultiResolutionScreenCapture}, keeping the sharpest variant the platform offers,
+ * because a raster downsampled to logical size <em>blends</em> neighbouring device pixels and could
+ * hand a colour picker a colour that is on no pixel of the screen. Mouse coordinates stay logical,
+ * so every read maps through {@link #colorAt(BufferedImage, double, double, int, int)} using a
+ * scale {@linkplain #captureScale measured from the raster itself} rather than assumed from the
+ * platform. The loupe therefore still shows an 11×11 <em>logical</em>-pixel grid, and one logical
+ * pixel of arrow-key nudge still moves one cell.
  *
  * <p><strong>macOS requires the Screen Recording permission</strong> (System Settings → Privacy
  * &amp; Security) for {@code Robot} captures of other applications' windows. A denial is not
@@ -100,11 +110,63 @@ final class ScreenSampler {
     return resolved;
   }
 
-  /** Samples the capture at a point, clamping to the image bounds. */
+  /** Samples the capture at a raster point, clamping to the image bounds. */
   static Color colorAt(final BufferedImage capture, final int x, final int y) {
     final int cx = Math.max(0, Math.min(capture.getWidth() - 1, x));
     final int cy = Math.max(0, Math.min(capture.getHeight() - 1, y));
     return new Color(capture.getRGB(cx, cy));
+  }
+
+  /**
+   * The capture raster's pixels per logical pixel along one axis — 1.0 on a 1&times; display, 2.0
+   * when a HiDPI capture came back at device resolution.
+   *
+   * <p>Derived from the raster the platform actually handed back rather than from a {@code
+   * GraphicsConfiguration} transform, deliberately: {@code createScreenCapture} and {@code
+   * createMultiResolutionScreenCapture} do not agree about whether the result is downsampled to
+   * logical size, and the answer has moved between JDK versions. Measuring the raster is right
+   * under every combination, and collapses to the identity when there is no scaling.
+   *
+   * @param captureExtent the capture raster's width or height in pixels
+   * @param logicalExtent the device's bounds along the same axis, in logical pixels
+   * @return the scale factor, or 1.0 when the logical extent is degenerate
+   */
+  static double captureScale(final int captureExtent, final int logicalExtent) {
+    return logicalExtent > 0 ? (double) captureExtent / logicalExtent : 1.0;
+  }
+
+  /**
+   * Samples the capture at a <em>logical</em> point — a mouse coordinate — scaling into the
+   * raster's own grid first.
+   *
+   * <p>This is #714. Mouse coordinates are logical; the capture may be device-resolution. Indexing
+   * one with the other silently samples the wrong pixel on a HiDPI screen, at an offset that grows
+   * with distance from the origin, so the eyedropper delivered a <em>wrong color</em> rather than a
+   * blurry one — and worst near the far edge, where the sample point lands off the raster entirely
+   * and clamps to the last row or column.
+   *
+   * <p>Where a logical pixel covers several device pixels it samples the centre of that footprint,
+   * not its top-left corner: the crosshair marks a point the user aimed at, and the centre is the
+   * pixel under it. The loupe reads through this same method, so its highlighted centre cell and
+   * the colour a press delivers cannot disagree.
+   *
+   * @param capture the frozen screen capture
+   * @param scaleX raster pixels per logical pixel, horizontally
+   * @param scaleY raster pixels per logical pixel, vertically
+   * @param logicalX the logical x to sample
+   * @param logicalY the logical y to sample
+   * @return the sampled color, clamped to the raster
+   */
+  static Color colorAt(
+      final BufferedImage capture,
+      final double scaleX,
+      final double scaleY,
+      final int logicalX,
+      final int logicalY) {
+    return colorAt(
+        capture,
+        (int) Math.floor((logicalX + 0.5) * scaleX),
+        (int) Math.floor((logicalY + 0.5) * scaleY));
   }
 
   /**
@@ -142,8 +204,7 @@ final class ScreenSampler {
     for (final GraphicsDevice device :
         GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
       final Rectangle bounds = device.getDefaultConfiguration().getBounds();
-      final BufferedImage capture = robot.createScreenCapture(bounds);
-      final SamplerWindow window = new SamplerWindow(capture, bounds);
+      final SamplerWindow window = new SamplerWindow(sharpestCapture(robot, bounds), bounds);
       windows.add(window);
       window.setVisible(true);
     }
@@ -158,6 +219,28 @@ final class ScreenSampler {
       KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyDispatcher);
       windows.get(0).requestFocus();
     }
+  }
+
+  /**
+   * The highest-resolution variant the platform will capture for {@code bounds} (#714).
+   *
+   * <p>{@code createScreenCapture} may hand back a raster downsampled to logical size, and
+   * downsampling <em>blends</em> neighbouring device pixels — so on a HiDPI screen the eyedropper
+   * could deliver a colour that appears nowhere on the display, which for a colour picker is the
+   * whole product failing quietly. The multi-resolution API exposes the unresampled variant.
+   * Falling back to the plain capture keeps every platform that offers only one variant working
+   * unchanged; {@link #captureScale} then measures whichever raster arrived.
+   */
+  private static BufferedImage sharpestCapture(final Robot robot, final Rectangle bounds) {
+    BufferedImage sharpest = null;
+    for (final Image variant :
+        robot.createMultiResolutionScreenCapture(bounds).getResolutionVariants()) {
+      if (variant instanceof BufferedImage raster
+          && (sharpest == null || raster.getWidth() > sharpest.getWidth())) {
+        sharpest = raster;
+      }
+    }
+    return sharpest != null ? sharpest : robot.createScreenCapture(bounds);
   }
 
   private boolean dispatchKey(final KeyEvent e) {
@@ -213,8 +296,15 @@ final class ScreenSampler {
     private final BufferedImage capture;
     private final Point pointer;
 
+    /** Raster pixels per logical pixel — every sample maps through these (#714). */
+    private final double captureScaleX;
+
+    private final double captureScaleY;
+
     SamplerWindow(final BufferedImage capture, final Rectangle deviceBounds) {
       this.capture = capture;
+      this.captureScaleX = captureScale(capture.getWidth(), deviceBounds.width);
+      this.captureScaleY = captureScale(capture.getHeight(), deviceBounds.height);
       this.pointer = new Point(deviceBounds.width / 2, deviceBounds.height / 2);
       setAlwaysOnTop(true);
       setBounds(deviceBounds);
@@ -241,7 +331,7 @@ final class ScreenSampler {
     }
 
     private Color sampleAtPointer() {
-      return colorAt(capture, pointer.x, pointer.y);
+      return colorAt(capture, captureScaleX, captureScaleY, pointer.x, pointer.y);
     }
 
     private void nudge(final int dx, final int dy) {
@@ -272,7 +362,13 @@ final class ScreenSampler {
         final int half = LOUPE_GRID / 2;
         for (int row = 0; row < LOUPE_GRID; row++) {
           for (int col = 0; col < LOUPE_GRID; col++) {
-            g2.setColor(colorAt(capture, pointer.x - half + col, pointer.y - half + row));
+            g2.setColor(
+                colorAt(
+                    capture,
+                    captureScaleX,
+                    captureScaleY,
+                    pointer.x - half + col,
+                    pointer.y - half + row));
             g2.fillRect(
                 box.x + col * LOUPE_SCALE, box.y + row * LOUPE_SCALE, LOUPE_SCALE, LOUPE_SCALE);
           }
