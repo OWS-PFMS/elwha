@@ -309,8 +309,11 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
     final float sweep =
         Math.max(MIN_VISIBLE_SWEEP_DEG, (head - tail) * INDETERMINATE_MAX_TURN_FRACTION * 360f);
 
+    // Computed in double and reduced modulo a full turn: accumulated as an unbounded float this
+    // reached ~1.5e7 degrees in a day, where a float's ULP is about 1°, and the spin quantized.
     final float globalRotation =
-        (elapsed / (float) INDETERMINATE_CYCLE_MS) * GLOBAL_ROTATION_PER_CYCLE_DEG;
+        (float)
+            ((elapsed / (double) INDETERMINATE_CYCLE_MS * GLOBAL_ROTATION_PER_CYCLE_DEG) % 360.0);
     final float startAngle =
         90f
             - tail * INDETERMINATE_MAX_TURN_FRACTION * 360f
@@ -400,16 +403,48 @@ public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicat
     return amplitudeFraction() * getWaveAmplitude();
   }
 
-  private static float additionalRotationDeg(final long elapsedMs) {
+  /**
+   * The extra rotation contributed by the M3 "additional rotation" kicks, reduced to {@code [0,
+   * 360)}.
+   *
+   * <p>A kick fires every {@link #ADDITIONAL_ROTATION_DELAY_MS} and eases through a full turn over
+   * {@link #ADDITIONAL_ROTATION_MS}. Summing them one at a time cost more every second the ring
+   * stayed up — after an hour that is ~2,400 eased evaluations per frame, each an 8-step Newton
+   * solve, and after eight hours ~19,200. But a kick older than {@code ADDITIONAL_ROTATION_MS} has
+   * finished, and a finished kick contributes exactly one whole turn, which is invisible: the only
+   * term that can change the painted angle is the unfinished tail. So the settled kicks are counted
+   * rather than summed, and only the handful still easing are evaluated — a fixed number of
+   * iterations no matter how long the indicator has been showing.
+   *
+   * <p>Reducing modulo 360 also keeps the result off the float precision cliff. The old sum grew
+   * without bound (~1.5e7 degrees after a day, where a {@code float}'s ULP is about 1°), so the
+   * spin visibly quantized the longer it ran.
+   *
+   * <p>Package-private so {@code ElwhaCircularProgressIndeterminateTest} can check this against a
+   * direct summation; not API.
+   *
+   * @param elapsedMs milliseconds into the indeterminate timeline
+   * @return the additional rotation in degrees, in {@code [0, 360)}
+   */
+  static float additionalRotationDeg(final long elapsedMs) {
     final long kicks = elapsedMs / ADDITIONAL_ROTATION_DELAY_MS;
-    float total = 0f;
-    for (long i = 1; i <= kicks; i++) {
+    if (kicks <= 0) {
+      return 0f;
+    }
+    // Kick i has been running for (elapsedMs - i * DELAY) ms; it is settled once that reaches
+    // ADDITIONAL_ROTATION_MS. Everything at or below `settled` contributes a whole turn each.
+    final long settled =
+        Math.max(
+            0,
+            Math.min(kicks, (elapsedMs - ADDITIONAL_ROTATION_MS) / ADDITIONAL_ROTATION_DELAY_MS));
+    double total = 0;
+    for (long i = settled + 1; i <= kicks; i++) {
       final float t =
           Math.min(
               1f, (elapsedMs - i * ADDITIONAL_ROTATION_DELAY_MS) / (float) ADDITIONAL_ROTATION_MS);
-      total += Easing.STANDARD.ease(t) * ADDITIONAL_ROTATION_DEG;
+      total += Easing.STANDARD.ease(t) * (double) ADDITIONAL_ROTATION_DEG;
     }
-    return total;
+    return (float) (total % 360.0);
   }
 
   /**

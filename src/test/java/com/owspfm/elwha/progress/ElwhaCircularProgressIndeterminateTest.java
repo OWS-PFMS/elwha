@@ -1,15 +1,19 @@
 package com.owspfm.elwha.progress;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Easing;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tier A coverage of the circular indeterminate choreography — design doc §6: the 6000 ms
@@ -187,6 +191,63 @@ class ElwhaCircularProgressIndeterminateTest {
     ring.setIndeterminate(false);
 
     assertThat(ring.getValue()).as("mode is a display concern, not a model one").isEqualTo(70);
+  }
+
+  // ---------------------------------------------- additional-rotation kicks
+
+  /**
+   * The original per-frame summation, kept as the oracle for the closed form (#622). Every kick
+   * since the timeline began is evaluated and added, so this grows without bound.
+   */
+  private static double summedRotationDeg(final long elapsedMs) {
+    final long kicks = elapsedMs / 1500;
+    double total = 0;
+    for (long i = 1; i <= kicks; i++) {
+      total += Easing.STANDARD.ease(Math.min(1f, (elapsedMs - i * 1500) / 300f)) * 360.0;
+    }
+    return total;
+  }
+
+  private static double turnOf(final double degrees) {
+    return ((degrees % 360.0) + 360.0) % 360.0;
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      longs = {0, 1, 1499, 1500, 1501, 1650, 1799, 1800, 1801, 3000, 7400, 45_000, 150_000})
+  void theClosedFormAgreesWithSummingEveryKick(final long elapsedMs) {
+    assertThat((double) ElwhaCircularProgressIndicator.additionalRotationDeg(elapsedMs))
+        .as(
+            "#622 — settled kicks each contribute exactly one whole turn, so counting them is the "
+                + "same painted angle as summing them")
+        .isCloseTo(turnOf(summedRotationDeg(elapsedMs)), within(0.001));
+  }
+
+  @Test
+  void theKickTotalStaysBoundedHoweverLongTheRingHasSpun() {
+    // Eight hours in. The old sum ran ~19,200 eased evaluations per frame here and had accumulated
+    // far past the float precision where one degree is a single ULP.
+    final long eightHours = 8L * 60 * 60 * 1000;
+
+    final float total = ElwhaCircularProgressIndicator.additionalRotationDeg(eightHours);
+
+    assertThat(total).as("the angle is reduced to a single turn").isBetween(0f, 360f);
+    assertThat((double) total)
+        .as("and still lands where the settled-plus-easing decomposition says it should")
+        .isCloseTo(turnOf(summedRotationDeg(eightHours % 1500 + 3 * 1500)), within(0.001));
+  }
+
+  @Test
+  void aLongRunningSpinKeepsMovingFrameToFrame() {
+    final PinnedClock.Circular ring = spinner();
+    final long dayIn = 24L * 60 * 60 * 1000;
+
+    final BufferedImage first = ring.frameAt(dayIn);
+    final BufferedImage next = ring.frameAt(dayIn + 100);
+
+    assertThat(sameRaster(first, next))
+        .as("#622 — the global rotation used to quantize once its float ULP passed one degree")
+        .isFalse();
   }
 
   @Test
