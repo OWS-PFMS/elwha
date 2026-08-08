@@ -651,6 +651,9 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     int width = 0;
     int height = BAR_HEIGHT_INLINE_PX;
     for (ElwhaTab tab : tabs) {
@@ -663,6 +666,9 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 

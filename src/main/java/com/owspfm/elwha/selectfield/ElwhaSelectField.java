@@ -994,6 +994,9 @@ public class ElwhaSelectField<T> extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     return field.getPreferredSize();
   }
 

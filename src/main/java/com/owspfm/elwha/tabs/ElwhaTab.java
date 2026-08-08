@@ -519,6 +519,9 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     final FontMetrics fm = getFontMetrics(labelFont());
     final int labelWidth = hasLabel() ? fm.stringWidth(label) : 0;
     if (isStacked()) {
@@ -538,6 +541,9 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 

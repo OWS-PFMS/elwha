@@ -473,6 +473,9 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     if (currentLayoutIsExpanded()) {
       return new Dimension(expandedHugWidth(), EXPANDED_CONTENT_HEIGHT_PX);
     }
@@ -481,11 +484,17 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     if (currentLayoutIsExpanded()) {
       return new Dimension(Integer.MAX_VALUE, EXPANDED_CONTENT_HEIGHT_PX);
     }
