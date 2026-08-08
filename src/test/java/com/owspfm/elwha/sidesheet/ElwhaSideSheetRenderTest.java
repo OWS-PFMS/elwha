@@ -252,7 +252,7 @@ class ElwhaSideSheetRenderTest {
     final ElwhaSideSheet sheet = modal();
 
     Corners.assertTopLeftRadius(
-        shotOnContrast(sheet),
+        shotOf(sheet),
         0,
         0,
         ShapeScale.LG.px(),
