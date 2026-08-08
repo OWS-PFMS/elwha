@@ -42,9 +42,9 @@ import javax.swing.SwingUtilities;
 
 /**
  * The M3 Expressive <strong>vertical menu</strong> — a temporary, light-dismissed surface anchored
- * to a trigger that lists {@link ElwhaMenuItem} primitives. Built on the shared overlay host (epic
- * #298 S1): mounts at {@link javax.swing.JLayeredPane#POPUP_LAYER} above dialogs, dismisses on
- * outside-press / focus-loss / Escape, and restores focus to the trigger on an intentional close.
+ * to a trigger that lists {@link ElwhaMenuItem} primitives. Built on the shared overlay host:
+ * mounts at {@link javax.swing.JLayeredPane#POPUP_LAYER} above dialogs, dismisses on outside-press
+ * / focus-loss / Escape, and restores focus to the trigger on an intentional close.
  *
  * <p><strong>Usage.</strong>
  *
@@ -97,7 +97,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
   /**
    * Container corner radius in dp (research §I shape) — a real radius. The paint path doubles it
-   * into a RoundRectangle2D arcWidth (#663).
+   * into a RoundRectangle2D arcWidth.
    */
   static final int CONTAINER_RADIUS_PX = ShapeScale.MD.px();
 
@@ -489,10 +489,9 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
    * Closes the menu programmatically (a {@link MenuDismissCause#PROGRAMMATIC} dismiss — focus
    * restores to the trigger). A no-op when the menu is not showing or already closing. The
    * counterpart to {@link #open(Component)} for owners that manage the menu's lifecycle themselves,
-   * e.g. the select field's editable combo (#331 Phase 2), whose trailing arrow explicitly closes
-   * the open menu.
+   * e.g. the select field's editable combo, whose trailing arrow explicitly closes the open menu.
    *
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void close() {
@@ -567,19 +566,19 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
   /**
    * Live-filters the menu to the given items — the filter-as-you-type surface for the editable
-   * select field (#331 Phase 2 S2). Items not in {@code visible} are hidden (they keep their state
-   * — {@code selected} marks survive filtering); {@code null} restores every item. When the menu is
-   * currently open, the surface re-lays out in place: the item column rebuilds to the visible set,
-   * the anchored placement recomputes (the container shrinks/grows and may re-flip), and the roving
-   * focus resets to the first visible item. When closed, the visibility sticks and the next open
-   * builds the filtered column directly.
+   * select field. Items not in {@code visible} are hidden (they keep their state — {@code selected}
+   * marks survive filtering); {@code null} restores every item. When the menu is currently open,
+   * the surface re-lays out in place: the item column rebuilds to the visible set, the anchored
+   * placement recomputes (the container shrinks/grows and may re-flip), and the roving focus resets
+   * to the first visible item. When closed, the visibility sticks and the next open builds the
+   * filtered column directly.
    *
    * <p>The filter is item-level: under {@link Layout#GROUPED}, group separators are not elided when
    * a group filters down to nothing — callers filtering grouped menus should expect the separator
    * chrome to remain.
    *
    * @param visible the items to show, or {@code null} to show all
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setVisibleItems(final Collection<ElwhaMenuItem> visible) {
@@ -1378,12 +1377,11 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
     /**
      * Declares the focusable component that keeps keyboard focus while the menu is open — the ARIA
-     * editable-combobox pattern (#331 Phase 2), where the anchored field's editor stays typeable
-     * and the menu is a non-focused listbox beneath it. When set: opening the menu does not move
-     * focus onto the menu surface (initial focus goes to {@code focusHome} instead), and focus
-     * changes or mouse presses within {@code focusHome}'s hierarchy do not light-dismiss the menu.
-     * {@code null} (the default) keeps the standard menu behavior — focus moves into the menu on
-     * open.
+     * editable-combobox pattern, where the anchored field's editor stays typeable and the menu is a
+     * non-focused listbox beneath it. When set: opening the menu does not move focus onto the menu
+     * surface (initial focus goes to {@code focusHome} instead), and focus changes or mouse presses
+     * within {@code focusHome}'s hierarchy do not light-dismiss the menu. {@code null} (the
+     * default) keeps the standard menu behavior — focus moves into the menu on open.
      *
      * <p>With a focus home the menu surface never holds focus, so its own key bindings
      * (Up/Down/Enter/Space/type-ahead) do not fire; the owner routes keyboard navigation
@@ -1391,7 +1389,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
      *
      * @param focusHome the component that retains focus, or {@code null} for the default
      * @return this builder
-     * @version v0.4.0
+     * @version v0.5.0
      * @since v0.4.0
      */
     public Builder focusHome(final Component focusHome) {

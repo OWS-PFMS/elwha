@@ -10,9 +10,9 @@ import java.awt.geom.RoundRectangle2D;
 
 /**
  * Library-internal helper that paints the round-rect token-resolved surface — fill, optional
- * state-layer overlay, and optional border stroke — used by {@link com.owspfm.elwha.chip.ElwhaChip}
- * today and by {@code ElwhaSurface} (#43) / {@code ElwhaCard} V2 (#253) when they land. Living in
- * one place keeps the round-rect surface paint definitionally consistent across the component set.
+ * state-layer overlay, and optional border stroke — used by {@link
+ * com.owspfm.elwha.chip.ElwhaChip}, {@code ElwhaSurface}, and {@code ElwhaCard}. Living in one
+ * place keeps the round-rect surface paint definitionally consistent across the component set.
  *
  * <p><strong>Not part of the public API.</strong> Declared {@code public} only because Java's
  * package-private visibility doesn't cross the {@code .theme} package boundary into the component

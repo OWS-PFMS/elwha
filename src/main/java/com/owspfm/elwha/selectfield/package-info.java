@@ -4,10 +4,13 @@
  * com.owspfm.elwha.textfield.ElwhaTextField} and an anchored {@link
  * com.owspfm.elwha.menu.ElwhaMenu}. A trailing dropdown-arrow opens the option menu; choosing an
  * item writes its display text back into the field. Pure composition of two shipped primitives — it
- * paints nothing of its own. Epic #331 V1, Phase 1 (non-editable select).
+ * paints nothing of its own.
+ *
+ * <p>Design: {@code docs/research/elwha-selectfield-design.md}. Epic <a
+ * href="https://github.com/OWS-PFMS/elwha/issues/331">#331</a>.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 package com.owspfm.elwha.selectfield;

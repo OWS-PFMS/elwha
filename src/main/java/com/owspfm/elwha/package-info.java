@@ -38,8 +38,7 @@
  *
  * <p>The Elwha Showcase ({@link com.owspfm.elwha.showcase}) is the visual storefront — one leaf per
  * component — and most component packages also carry {@code *Demo} / {@code *Smoke} mains and a
- * {@code playground} subpackage; those are story-time development artifacts, not part of the
- * supported API.
+ * {@code playground} subpackage; those are development artifacts, not part of the supported API.
  *
  * @author Charles Bryan
  * @version v0.5.0

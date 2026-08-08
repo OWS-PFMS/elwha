@@ -46,23 +46,18 @@ import javax.swing.event.DocumentListener;
  * ElwhaMenu} for the option list — it paints nothing of its own. It is deliberately <em>not</em> a
  * subclass of {@link ElwhaTextField} (which would inherit a typing surface a pure select must
  * suppress) and <em>not</em> a {@code selectMode} flag on the field (which would bloat the field's
- * API with menu/option concerns). The architecture is locked by the epic #331 S1 spike; see {@code
+ * API with menu/option concerns). The architecture follows {@code
  * docs/research/elwha-selectfield-design.md} §2.
  *
  * <p><strong>The default is the non-editable (pure) select.</strong> The embedded field is
  * read-only — the field and the trailing arrow are the open/close affordance, and picking a menu
  * item is the only way to set the value. {@link #setEditable(boolean)} opts into the M3
- * <em>editable</em> exposed dropdown (Phase 2): the embedded field becomes typeable while the menu
- * keeps anchoring to the field, keyboard focus stays in the editor (the ARIA combobox pattern, via
- * the menu's {@code focusHome}), and picking an option still writes back. {@link
- * #setMultiSelect(boolean)} opts into the multi-select (Phase 3): the menu toggles any number of
- * options without closing and the field shows a summary of the selection. Editable and multi-select
- * are mutually exclusive in V1 — enabling one disables the other.
- *
- * <p>Phase 1 ships across stories #374–#378, Phase 2 across #391–#394, and Phase 3 across
- * #397–#400; this class began at the S1 skeleton (composition + menu round-trip + arrow toggle) and
- * is extended in place by the later stories (typed value API, keyboard + a11y, variant delegation,
- * Showcase, editable combo, multi-select).
+ * <em>editable</em> exposed dropdown: the embedded field becomes typeable while the menu keeps
+ * anchoring to the field, keyboard focus stays in the editor (the ARIA combobox pattern, via the
+ * menu's {@code focusHome}), and picking an option still writes back. {@link
+ * #setMultiSelect(boolean)} opts into multi-select: the menu toggles any number of options without
+ * closing and the field shows a summary of the selection. Editable and multi-select are mutually
+ * exclusive in V1 — enabling one disables the other.
  *
  * @param <T> the option value type
  * @serial exclude
@@ -178,8 +173,8 @@ public class ElwhaSelectField<T> extends JComponent {
 
   /**
    * Sets the option list. The menu is rebuilt lazily on the next open (the {@code
-   * rebuild-on-options-change} lifecycle locked by the S1 spike), so changing options is cheap and
-   * preserves the {@code selected} mark cheaply between opens.
+   * rebuild-on-options-change} lifecycle), so changing options is cheap and preserves the {@code
+   * selected} mark cheaply between opens.
    *
    * <p>An open menu is <strong>closed</strong> first — it is bound to the outgoing option list, so
    * leaving it up would strand a popup whose picks silently do nothing. A selection the new options
@@ -919,8 +914,7 @@ public class ElwhaSelectField<T> extends JComponent {
   }
 
   /**
-   * Sets the chrome variant (delegates to the embedded field). Until #727 this was reachable only
-   * through the constructor or the {@link #filled(String)} / {@link #outlined(String)} factories.
+   * Sets the chrome variant (delegates to the embedded field).
    *
    * @param variant the chrome variant
    * @version v0.5.0

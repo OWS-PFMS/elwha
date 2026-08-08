@@ -143,7 +143,7 @@ public enum ShapeScale {
    * float)}, {@link SurfacePainter#bodyShape(int, int, int)}, {@link
    * ShadowPainter#paint(java.awt.Graphics2D, int, int, int, int)}, and a hand-rolled {@code
    * RoundRectangle2D}. Passing the same {@code arcPx()} to a body and to its shadow is what keeps
-   * the two silhouettes in lock-step (#199).
+   * the two silhouettes in lock-step.
    *
    * <p>{@link #FULL} resolves to a number far past any real body; every painter clamps the arc to
    * {@code min(width, height)}, which is the pill capsule.

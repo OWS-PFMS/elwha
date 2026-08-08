@@ -15,19 +15,18 @@ import javax.swing.JLayeredPane;
  * {@link JLayeredPane#MODAL_LAYER}, a focus trap rather than light-dismiss) and adds the {@link
  * DismissCause} reporting the two dialogs share.
  *
- * <p><strong>Extraction provenance.</strong> The mount/focus/motion/teardown machinery once owned
- * here was lifted into {@link AbstractElwhaOverlay} in epic #298 S1 so the M3 Menu (#298) and the
- * pending side-sheet (#308) reuse it. This class now contributes only the modal posture and the
- * dismiss-cause plumbing; the lifecycle lives in the base. Subclasses are unaffected — the abstract
- * anatomy hooks and the {@code dismiss(...)} / {@code isDismissibleByEsc()} surface are unchanged.
+ * <p><strong>Shared lifecycle.</strong> The mount/focus/motion/teardown machinery lives in {@link
+ * AbstractElwhaOverlay}, so the menu and side sheet reuse it. This class contributes only the modal
+ * posture and the dismiss-cause plumbing. Subclasses are unaffected — the abstract anatomy hooks
+ * and the {@code dismiss(...)} / {@code isDismissibleByEsc()} surface are unchanged.
  *
  * <p><strong>Modality mechanism.</strong> The dialog is an overlay installed on {@code
  * SwingUtilities.getRootPane(parent).getLayeredPane()} at {@link JLayeredPane#MODAL_LAYER} rather
  * than a separate {@link java.awt.Window}: a subclass-supplied backdrop beneath the surface (a
  * scrim for the Basic Dialog; nothing for the frame-filling Full-screen Dialog) plus the surface on
  * top. Input is blocked by the backdrop's event-consumer and/or the surface physically covering the
- * content, backed by the base's keyboard focus trap. Reuses the {@code ElwhaFabAnchor} (#205)
- * layered-pane glue.
+ * content, backed by the base's keyboard focus trap. Reuses the {@code ElwhaFabAnchor} layered-pane
+ * glue.
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.5.0
@@ -56,9 +55,9 @@ abstract class AbstractElwhaDialog extends AbstractElwhaOverlay {
    * A detached twin of a consumer-supplied action button, for a {@code renderPreview()} surface.
    * The action buttons belong to the consumer and a Swing component has exactly one parent, so a
    * preview built on the originals would strip the action row out of a dialog that is currently
-   * shown, and out of any earlier preview (#589). The twin carries every property that affects
-   * measurement and paint and nothing that affects behavior — no action listeners, so a preview's
-   * buttons are genuinely inert rather than wired to a dismiss that no-ops.
+   * shown, and out of any earlier preview. The twin carries every property that affects measurement
+   * and paint and nothing that affects behavior — no action listeners, so a preview's buttons are
+   * genuinely inert rather than wired to a dismiss that no-ops.
    *
    * @param source the consumer's action button, or {@code null}
    * @return the twin, or {@code null} when {@code source} is {@code null}

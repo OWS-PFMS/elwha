@@ -127,14 +127,12 @@ final class WrappingLabels {
    * so every measurement is one layout pass behind the width it describes. On a first layout the
    * label holds no width at all and {@link #availableWidth} falls back to the nearest sized
    * ancestor, which can be the whole page: a blurb that wraps to six lines in its real slot reports
-   * two, and the chassis sizes itself to that
-   * ([#737](https://github.com/OWS-PFMS/elwha/issues/737)).
+   * two, and the chassis sizes itself to that.
    *
    * <p>Sizing the shared {@code "html"} view here is the same operation {@link
-   * #preferredSizeForWidth} performs, and it is storm-safe (#305) for the same reason: the caller
-   * is the layout, and the width it passes is the width it is about to hand the label, so the
-   * measure width and the later paint width agree and {@code Renderer.setSize} is a no-op between
-   * them.
+   * #preferredSizeForWidth} performs, and it is storm-safe for the same reason: the caller is the
+   * layout, and the width it passes is the width it is about to hand the label, so the measure
+   * width and the later paint width agree and {@code Renderer.setSize} is a no-op between them.
    *
    * @param label the label
    * @param width the slot width in pixels; {@code <= 0} falls back to the unconstrained span
@@ -185,15 +183,15 @@ final class WrappingLabels {
    * The width to wrap the height computation at. Once the label has an assigned width this is the
    * label's own laid-out width — the exact width {@code BasicHTML.Renderer.paint(...)} wraps at.
    *
-   * <p>Matching the measure width to the paint width is load-bearing, not cosmetic (#305): the
-   * "html" view is shared between measurement and painting. If {@code getPreferredSize} sizes it to
-   * a width that differs from the label's own bounds — e.g. the nearest sized ancestor's content
-   * width, which over-reports by {@code 2 * padH} when the parent is an {@code ElwhaCard} — then
-   * every measure flips the view to width A and every paint flips it back to width B. Each width
-   * change re-wraps the HTML view, firing {@code Renderer.preferenceChanged} → {@code
-   * host.revalidate() + repaint()}, which re-triggers measure + paint: a self-sustaining,
-   * EDT-pinning repaint storm. Wrapping at {@code label.getWidth()} makes {@code Renderer.setSize}
-   * a no-op between the two passes, so {@code preferenceChanged} never fires from the round-trip.
+   * <p>Matching the measure width to the paint width is load-bearing, not cosmetic: the "html" view
+   * is shared between measurement and painting. If {@code getPreferredSize} sizes it to a width
+   * that differs from the label's own bounds — e.g. the nearest sized ancestor's content width,
+   * which over-reports by {@code 2 * padH} when the parent is an {@code ElwhaCard} — then every
+   * measure flips the view to width A and every paint flips it back to width B. Each width change
+   * re-wraps the HTML view, firing {@code Renderer.preferenceChanged} → {@code host.revalidate() +
+   * repaint()}, which re-triggers measure + paint: a self-sustaining, EDT-pinning repaint storm.
+   * Wrapping at {@code label.getWidth()} makes {@code Renderer.setSize} a no-op between the two
+   * passes, so {@code preferenceChanged} never fires from the round-trip.
    */
   private static int availableWidth(final JComponent label) {
     final int own = label.getWidth();

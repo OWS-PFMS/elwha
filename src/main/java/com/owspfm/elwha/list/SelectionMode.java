@@ -3,9 +3,9 @@ package com.owspfm.elwha.list;
 /**
  * Selection semantics for {@link ElwhaItemList}.
  *
- * <p>Hoisted to the top level of the unified list family in story #69 — the shipped card and chip
- * lists each carried their own nested copy. The constants and their semantics are the chip
- * family's, which were the strict superset of the two (spec §4).
+ * <p>Hoisted to the top level of the unified list family — the shipped card and chip lists each
+ * carried their own nested copy. The constants and their semantics are the chip family's, which
+ * were the strict superset of the two (spec §4).
  *
  * @author Charles Bryan
  * @version v0.5.0

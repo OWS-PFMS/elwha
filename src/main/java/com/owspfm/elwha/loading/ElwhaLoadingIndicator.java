@@ -597,7 +597,7 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
   }
 
   /**
-   * The global reduced-motion state flipped under a live indicator (#632).
+   * The global reduced-motion state flipped under a live indicator.
    *
    * <p>Sampling the flag only in {@link #updateAnimationDemand()}, which runs on {@code
    * SHOWING_CHANGED} and mode changes, left a showing spinner wrong in both directions: turning

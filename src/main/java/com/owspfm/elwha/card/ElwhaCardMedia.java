@@ -209,13 +209,13 @@ public final class ElwhaCardMedia extends JComponent {
   }
 
   /**
-   * Exposes the media's role and alt-text to assistive technology per spec §5.2 / §5.5.3 + #109.
+   * Exposes the media's role and alt-text to assistive technology per spec §5.2 / §5.5.3.
    * Decorative media reports {@link AccessibleRole#LABEL} with no name / description (and AT
    * implementations skip null-name nodes); informative media reports {@link AccessibleRole#ICON}
    * with the alt-text as its accessible description so screen readers verbalize it.
    *
    * @return the accessible context
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   @Override
@@ -275,11 +275,11 @@ public final class ElwhaCardMedia extends JComponent {
    * height is a function of the slot width and this getter carries no width context, so it reports
    * the height for the intrinsic width above. The owning {@link ElwhaCard} does not read this
    * height: its {@code VerticalCardLayout} measures the slot via {@link #heightForSlotWidth(int)}
-   * against the card's own width and reports a self-consistent card preferred size (#157). Pin the
-   * height with {@link #setPreferredHeight(int)} for a width-independent media size.
+   * against the card's own width and reports a self-consistent card preferred size. Pin the height
+   * with {@link #setPreferredHeight(int)} for a width-independent media size.
    *
    * @return the intrinsic preferred size, never dependent on the current laid-out width
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   @Override

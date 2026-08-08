@@ -16,8 +16,8 @@ import javax.swing.SwingUtilities;
 
 /**
  * Package-private menu/popover host — the light-dismiss + anchored specialization of {@link
- * AbstractElwhaOverlay} that {@link ElwhaMenu} extends. Pins the menu strategy axes (epic #298 S1
- * spike, design doc §2):
+ * AbstractElwhaOverlay} that {@link ElwhaMenu} extends. Pins the menu strategy axes (design doc
+ * §2):
  *
  * <ul>
  *   <li><strong>z-band</strong> — {@link JLayeredPane#POPUP_LAYER} (300), so a menu opened from
@@ -26,8 +26,7 @@ import javax.swing.SwingUtilities;
  *   <li><strong>dismiss policy</strong> — {@linkplain #lightDismiss() light dismiss}: a mouse press
  *       outside the surface, a focus escape, or Escape closes the menu; there is no scrim.
  *   <li><strong>placement</strong> — anchored below the trigger, leading-aligned, with a vertical
- *       flip (open upward) and horizontal shift when the window edge would clip the surface (S1
- *       proves the flip minimally; S3 refines left/right placement).
+ *       flip (open upward) and horizontal shift when the window edge would clip the surface.
  * </ul>
  *
  * <p>Focus follows the menu contract: initial focus to the first item, trap-while-open inherited
@@ -257,7 +256,7 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
    * {@link #placeAnchored} then clamped the too-tall surface back inside the viewport — which put
    * it over the trigger. For a plain menu that is cosmetic; for the editable {@code
    * ElwhaSelectField} combo it is a usability failure, because the open list buries the field the
-   * user is typing into and they cannot see what is filtering the list (#396).
+   * user is typing into and they cannot see what is filtering the list.
    *
    * <p>The bound is therefore the larger of the space <em>below</em> the anchor and the space
    * <em>above</em> it — whichever way {@code placeAnchored} ends up flipping, the surface fits on

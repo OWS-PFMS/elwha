@@ -20,13 +20,13 @@ import javax.swing.JComponent;
  * <p>Either segment may be empty. M3 doctrine: lone promo actions go leading; paired actions or
  * overflow-bearing rows go trailing.
  *
- * <p><strong>Wrap behavior (#17).</strong> When the available width fits the single-row layout
- * (leading + flex + trailing), actions render on one row. When it doesn't, the leading segment
- * wraps onto its own row(s) at the top (left-aligned per row), and the trailing segment wraps onto
- * its own row(s) below (right-aligned per row). Within a segment, items pack greedily — as many fit
- * per row as possible; new row starts when the next item would overflow. At widths below a single
- * button width, the row still places one item per row but the button visually clips at the cell
- * edge (per spec §3.4 no-min-width contract).
+ * <p><strong>Wrap behavior.</strong> When the available width fits the single-row layout (leading +
+ * flex + trailing), actions render on one row. When it doesn't, the leading segment wraps onto its
+ * own row(s) at the top (left-aligned per row), and the trailing segment wraps onto its own row(s)
+ * below (right-aligned per row). Within a segment, items pack greedily — as many fit per row as
+ * possible; new row starts when the next item would overflow. At widths below a single button
+ * width, the row still places one item per row but the button visually clips at the cell edge (per
+ * spec §3.4 no-min-width contract).
  *
  * <p>The chassis's {@code VerticalCardLayout} calls {@link #heightForSlotWidth(int)} so it can
  * reserve the right amount of vertical space for the wrapped rows — without that hook,

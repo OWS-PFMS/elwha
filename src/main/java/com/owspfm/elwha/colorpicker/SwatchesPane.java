@@ -254,8 +254,8 @@ final class SwatchesPane extends ColorPickerPane {
 
     /**
      * Whether the focus indicator should paint — armed only by a keyboard traversal, so a plain
-     * click leaves no ring behind ({@link com.owspfm.elwha.theme.FocusVisible}, #630). The grid
-     * requests focus from its own mousePressed, which is exactly the case the gate exists for.
+     * click leaves no ring behind ({@link com.owspfm.elwha.theme.FocusVisible}). The grid requests
+     * focus from its own mousePressed, which is exactly the case the gate exists for.
      */
     boolean focusVisible;
 

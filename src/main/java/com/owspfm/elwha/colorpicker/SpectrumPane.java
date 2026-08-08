@@ -170,9 +170,9 @@ final class SpectrumPane extends ColorPickerPane {
 
     /**
      * Whether the focus indicator should paint — armed only by a keyboard traversal, so a plain
-     * click leaves no ring behind ({@link com.owspfm.elwha.theme.FocusVisible}, #630). Every one of
-     * these panes requests focus from its own mousePressed, which is exactly the case the gate
-     * exists for.
+     * click leaves no ring behind ({@link com.owspfm.elwha.theme.FocusVisible}). Every one of these
+     * panes requests focus from its own mousePressed, which is exactly the case the gate exists
+     * for.
      */
     private boolean focusVisible;
 
@@ -359,7 +359,7 @@ final class SpectrumPane extends ColorPickerPane {
   /**
    * The saturation/value square, evaluated per pixel at the requested size — the uncached render
    * behind {@code SvBox}'s cache, and the direct-render seam a cached-versus-direct probe compares
-   * against (#692).
+   * against.
    *
    * <p>The raster is generated at the size given, and painted through a {@code TexturePaint}
    * anchored in <em>user</em> space, so on a HiDPI surface the 1× raster is stretched rather than

@@ -39,7 +39,7 @@ import javax.swing.JWindow;
  * cancels; arrow keys nudge the sample point one pixel. Sampling reads the capture, never live
  * pixels — one capture, no global hooks, every on-screen pixel reachable.
  *
- * <p><strong>HiDPI</strong> (#714): the capture is taken through {@link
+ * <p><strong>HiDPI</strong>: the capture is taken through {@link
  * Robot#createMultiResolutionScreenCapture}, keeping the sharpest variant the platform offers,
  * because a raster downsampled to logical size <em>blends</em> neighbouring device pixels and could
  * hand a colour picker a colour that is on no pixel of the screen. Mouse coordinates stay logical,
@@ -139,11 +139,11 @@ final class ScreenSampler {
    * Samples the capture at a <em>logical</em> point — a mouse coordinate — scaling into the
    * raster's own grid first.
    *
-   * <p>This is #714. Mouse coordinates are logical; the capture may be device-resolution. Indexing
-   * one with the other silently samples the wrong pixel on a HiDPI screen, at an offset that grows
-   * with distance from the origin, so the eyedropper delivered a <em>wrong color</em> rather than a
-   * blurry one — and worst near the far edge, where the sample point lands off the raster entirely
-   * and clamps to the last row or column.
+   * <p>Mouse coordinates are logical; the capture may be device-resolution. Indexing one with the
+   * other silently samples the wrong pixel on a HiDPI screen, at an offset that grows with distance
+   * from the origin, so the eyedropper delivered a <em>wrong color</em> rather than a blurry one —
+   * and worst near the far edge, where the sample point lands off the raster entirely and clamps to
+   * the last row or column.
    *
    * <p>Where a logical pixel covers several device pixels it samples the centre of that footprint,
    * not its top-left corner: the crosshair marks a point the user aimed at, and the centre is the
@@ -222,7 +222,7 @@ final class ScreenSampler {
   }
 
   /**
-   * The highest-resolution variant the platform will capture for {@code bounds} (#714).
+   * The highest-resolution variant the platform will capture for {@code bounds}.
    *
    * <p>{@code createScreenCapture} may hand back a raster downsampled to logical size, and
    * downsampling <em>blends</em> neighbouring device pixels — so on a HiDPI screen the eyedropper
@@ -296,7 +296,7 @@ final class ScreenSampler {
     private final BufferedImage capture;
     private final Point pointer;
 
-    /** Raster pixels per logical pixel — every sample maps through these (#714). */
+    /** Raster pixels per logical pixel — every sample maps through these. */
     private final double captureScaleX;
 
     private final double captureScaleY;

@@ -43,8 +43,7 @@ import javax.swing.JComponent;
  * variant — there is no shape configuration. A {@link ButtonGroupVariant#STANDARD} group's selected
  * segment renders square while its unselected segments stay round; a {@link
  * ButtonGroupVariant#CONNECTED} group's selected segment pops to a uniform round pill out of its
- * pill-ended bar. The transient press width / shape morph is a separate polish epic and is not
- * rendered statically here.
+ * pill-ended bar. The transient press width / shape morph is not rendered statically here.
  *
  * <p><strong>Naming.</strong> Not to be confused with {@link
  * com.owspfm.elwha.button.ElwhaButtonSelectionGroup} / {@link

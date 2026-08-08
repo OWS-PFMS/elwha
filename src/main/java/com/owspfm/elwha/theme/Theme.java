@@ -87,12 +87,12 @@ public final class Theme {
    * Value equality — two themes are equal when they carry the same name and the same pair of
    * palettes.
    *
-   * <p>Its absence is what (#671) actually hit: {@code baseline.json} loaded twice gave two
+   * <p>Its absence actually hit this: {@code baseline.json} loaded twice gave two
    * equal-but-distinct themes, so {@code primary().contains(baseline())} was false and a palette
    * picker could not mark the installed theme as selected. That was fixed by caching one instance
    * per resource path, which {@link MaterialPalettes} still does — but the cache only ever covered
    * the bundled entry points, leaving a consumer who built a theme through {@link PaletteLoader} or
-   * the constructor unable to compare it against anything. Ruled for the 1.0 freeze in (#698).
+   * the constructor unable to compare it against anything.
    *
    * @param obj the object to compare against
    * @return whether {@code obj} is a theme with the same name and palettes

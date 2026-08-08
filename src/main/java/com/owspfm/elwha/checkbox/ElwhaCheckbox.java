@@ -49,8 +49,7 @@ import javax.swing.Timer;
  * an 18px rounded-square container (2px corner radius, 2px outline when unchecked, {@link
  * ColorRole#PRIMARY} fill when checked or indeterminate), a hand-stroked checkmark / indeterminate
  * dash, a 40px circular state-layer field, and a 48px minimum touch target. Spec capture and design
- * locks: {@code docs/research/elwha-checkbox-research.md} / {@code elwha-checkbox-design.md} (epic
- * #410).
+ * locks: {@code docs/research/elwha-checkbox-research.md} / {@code elwha-checkbox-design.md}.
  *
  * <p>The check state is tri-state ({@link CheckState}) with boolean conveniences mirroring the M3
  * nouns: {@link #setChecked(boolean) checked} and {@link #setIndeterminate(boolean) indeterminate}.

@@ -5,7 +5,7 @@ package com.owspfm.elwha.loading;
  * elwha-loading-indicator-design.md} §3). The shapes are visually-faithful radius-profile
  * reconstructions of the Material shape-library forms the Compose loading indicator cycles through
  * — the byte-exact vertex lists are not published, so the reconstructions are tuned by eye against
- * the spec renders (the progress-epic faithful-interpretation precedent).
+ * the spec renders (the same faithful-interpretation approach used for the progress indicators).
  *
  * <p>The <strong>indeterminate</strong> sequence is the 7-shape loop {@code SoftBurst →
  * Cookie9Sided → Pentagon → Pill → Sunny → Cookie4Sided → Oval →} (wrapping back to SoftBurst). The

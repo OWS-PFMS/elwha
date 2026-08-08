@@ -67,7 +67,7 @@ public final class ElwhaCardSubtitle extends JLabel {
    * {@code VerticalCardLayout} so the chassis measures the copy at the width it is about to assign
    * rather than the width the label happens to be holding — the same height-for-width hook {@link
    * ElwhaCardMedia#heightForSlotWidth(int)} and {@link ElwhaCardActions#heightForSlotWidth(int)}
-   * already provide (#737).
+   * already provide.
    *
    * @param slotWidth the cell width the chassis will assign in pixels
    * @return the height in pixels the chassis should reserve
