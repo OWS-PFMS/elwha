@@ -2366,8 +2366,13 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
     }
   }
 
+  // Gated on the same predicate the context menu uses, so Delete is offered and honored on exactly
+  // the same lists. Ungated, the Delete / Cmd-Backspace bindings removed from the backing model of
+  // a
+  // plain `new ElwhaItemList<>(model, adapter)` — SelectionMode.NONE, MovementMode.STATIC, a
+  // display-only list — which silently destroyed the consumer's data (#587).
   private void deleteItem(final T item) {
-    if (item == null) {
+    if (item == null || !canReorderAnything()) {
       return;
     }
     try {

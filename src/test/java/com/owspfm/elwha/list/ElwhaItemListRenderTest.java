@@ -498,7 +498,9 @@ class ElwhaItemListRenderTest {
 
   @Test
   void keyboardDeleteRemovesTheFocusedItemAndItsSelection() {
-    listOf("a", "b", "c").setSelectionMode(SelectionMode.MULTIPLE);
+    listOf("a", "b", "c")
+        .setSelectionMode(SelectionMode.MULTIPLE)
+        .setMovementMode(MovementMode.MOVABLE);
     Input.click(list.getComponentFor("b"), 4, 4);
 
     Input.pressBoundKey(list, "pressed DELETE", "elwhaList.delete");
@@ -507,6 +509,35 @@ class ElwhaItemListRenderTest {
     assertThat(list.getSelectionModel().getSelected())
         .as("a deleted item does not linger in the selection")
         .isEmpty();
+  }
+
+  @Test
+  void keyboardDeleteIsSuppressedOnAStaticList() {
+    listOf("a", "b", "c").setSelectionMode(SelectionMode.MULTIPLE);
+    Input.click(list.getComponentFor("b"), 4, 4);
+
+    Input.pressBoundKey(list, "pressed DELETE", "elwhaList.delete");
+
+    assertThat(model.getItems())
+        .as("a display-only list does not destroy its consumer's data on a stray Delete")
+        .containsExactly("a", "b", "c");
+  }
+
+  @Test
+  void keyboardDeleteIsSuppressedWhereTheContextMenuOffersNoDeleteEntry() {
+    listOf("a", "b", "c")
+        .setMovementMode(MovementMode.MOVABLE)
+        .setSortOrder(Comparator.naturalOrder());
+    Input.click(list.getComponentFor("b"), 4, 4);
+
+    Input.pressBoundKey(list, "pressed DELETE", "elwhaList.delete");
+
+    assertThat(list.createReorderMenuItems("b"))
+        .as("an active sort withdraws the whole reorder section, Delete included")
+        .isEmpty();
+    assertThat(model.getItems())
+        .as("so the keystroke must be withdrawn with it — the two paths agree")
+        .containsExactly("a", "b", "c");
   }
 
   @Test

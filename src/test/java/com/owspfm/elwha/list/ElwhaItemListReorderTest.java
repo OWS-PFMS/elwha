@@ -477,7 +477,7 @@ class ElwhaItemListReorderTest {
 
   @Test
   void bothDeleteBindingsAreInstalled() {
-    chipListOf("a", "b", "c");
+    chipListOf("a", "b", "c").setMovementMode(MovementMode.MOVABLE);
     focusOn("b");
 
     Input.pressBoundKey(list, "ctrl pressed BACK_SPACE", "elwhaList.delete");
@@ -491,7 +491,9 @@ class ElwhaItemListReorderTest {
 
   @Test
   void deleteWithNothingFocusedIsANoOp() {
-    chipListOf("a", "b");
+    // MOVABLE so the missing focus is the only thing refusing the delete (#587 gates it on the
+    // movement mode too, which would otherwise make this pass for the wrong reason).
+    chipListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
 
     Input.pressBoundKey(list, "pressed DELETE", "elwhaList.delete");
 
