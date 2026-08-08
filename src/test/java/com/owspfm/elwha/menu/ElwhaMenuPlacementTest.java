@@ -111,6 +111,29 @@ class ElwhaMenuPlacementTest {
     assertThat(bounds.height).as("and at the viewport height").isEqualTo(PANE_H);
   }
 
+  // ------------------------------------- which engine a menu picks (#238 §16.4)
+
+  @Test
+  void aRootMenuPicksTheAnchoredEngineByDefault() {
+    assertThat(ElwhaMenu.builder().addItem(ElwhaMenuItem.of("Cut")).build().sideAnchored())
+        .as("a menu opens below its trigger unless it is told otherwise")
+        .isFalse();
+  }
+
+  @Test
+  void aRootMenuCanOptIntoTheBesideEngine() {
+    assertThat(
+            ElwhaMenu.builder()
+                .sideAnchored(true)
+                .addItem(ElwhaMenuItem.of("Cut"))
+                .build()
+                .sideAnchored())
+        .as(
+            "#238 §16.4 — a trigger on a vertical window edge (a nav rail's overflow button) has "
+                + "nowhere below to open into, so it borrows the submenu's placement")
+        .isTrue();
+  }
+
   // ------------------------------------------------------- beside (submenu)
 
   @Test

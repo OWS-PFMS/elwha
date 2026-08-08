@@ -304,6 +304,46 @@ class ElwhaIconButtonInteractionTest {
         .isEqualTo(RESTING_SIDE);
   }
 
+  // ---------------------------------------------------- programmatic activation
+
+  @Test
+  void doClickDeliversTheActionSourcedAtTheButton() {
+    final ElwhaIconButton button = sized();
+    final List<Object> sources = new ArrayList<>();
+    button.addActionListener(e -> sources.add(e.getSource()));
+
+    button.doClick();
+
+    assertThat(sources)
+        .as(
+            "#238 — a caller standing in for the user (an overflow menu row) has to reach the "
+                + "consumer's handlers with the original button as the event source")
+        .containsExactly(button);
+  }
+
+  @Test
+  void doClickToggglesASelectableButton() {
+    final ElwhaIconButton button = sized().setInteractionMode(IconButtonInteractionMode.SELECTABLE);
+
+    button.doClick();
+
+    assertThat(button.isSelected())
+        .as("selection flips first, exactly as a real click orders it")
+        .isTrue();
+  }
+
+  @Test
+  void doClickIsInertOnADisabledButton() {
+    final ElwhaIconButton button = sized();
+    final int[] fired = {0};
+    button.addActionListener(e -> fired[0]++);
+    button.setEnabled(false);
+
+    button.doClick();
+
+    assertThat(fired[0]).as("#432 — every activation path shares the disabled guard").isZero();
+  }
+
   // ------------------------------------------------------------- ripple gate
 
   @Test
