@@ -2,6 +2,7 @@ package com.owspfm.elwha.tabs;
 
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.switches.ElwhaSwitch;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
@@ -13,7 +14,6 @@ import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
 /**
@@ -64,12 +64,17 @@ public final class ElwhaTabsKeyboardA11yDemo {
       scrollable.addTab("Topic " + i);
     }
 
+    final ElwhaTextField leadIn = ElwhaTextField.outlined("Before the bar");
+    leadIn.setText("Tab from here — focus enters on the ACTIVE tab");
+    final ElwhaTextField trailOut = ElwhaTextField.outlined("After the bar");
+    trailOut.setText("…and Tab leaves the bar to here");
+
     final JPanel bars = new JPanel(new GridLayout(0, 1, 0, 14));
     bars.setBorder(BorderFactory.createEmptyBorder(14, 14, 14, 14));
-    bars.add(new JTextField("Tab from here — focus enters on the ACTIVE tab"));
+    bars.add(leadIn);
     bars.add(titled("Primary fixed — arrows wrap; Space/Enter activate", fixed));
     bars.add(titled("Secondary scrollable — focused tab scrolls into view", scrollable));
-    bars.add(new JTextField("…and Tab leaves the bar to here"));
+    bars.add(trailOut);
 
     final ElwhaSwitch auto = new ElwhaSwitch();
     auto.setAccessibleLabel("Auto-activate on focus");

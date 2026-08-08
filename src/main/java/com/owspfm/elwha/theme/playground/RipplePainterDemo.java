@@ -1,5 +1,6 @@
 package com.owspfm.elwha.theme.playground;
 
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -16,8 +17,8 @@ import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.List;
 import javax.swing.BorderFactory;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -62,20 +63,21 @@ public final class RipplePainterDemo {
           final RippleCanvas canvas = new RippleCanvas(360, 200, 24);
 
           final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
-          controls.add(new JLabel("Mode:"));
-          final JComboBox<Mode> modeBox = new JComboBox<>(new Mode[] {Mode.LIGHT, Mode.DARK});
-          modeBox.addActionListener(
-              e -> {
-                ElwhaTheme.install(ElwhaTheme.current().withMode((Mode) modeBox.getSelectedItem()));
+          final ElwhaSelectField<Mode> modeBox = ElwhaSelectField.outlined("Mode");
+          modeBox.setOptions(List.of(Mode.LIGHT, Mode.DARK));
+          modeBox.setSelectedValue(Mode.LIGHT);
+          modeBox.addSelectionChangeListener(
+              mode -> {
+                ElwhaTheme.install(ElwhaTheme.current().withMode(mode));
                 canvas.repaint();
               });
           controls.add(modeBox);
-          controls.add(new JLabel("Corner radius:"));
-          final JComboBox<Integer> arcBox = new JComboBox<>(new Integer[] {0, 8, 16, 24, 999});
-          arcBox.setSelectedItem(24);
-          arcBox.addActionListener(
-              e -> {
-                canvas.setArc((Integer) arcBox.getSelectedItem());
+          final ElwhaSelectField<Integer> arcBox = ElwhaSelectField.outlined("Corner radius");
+          arcBox.setOptions(List.of(0, 8, 16, 24, 999));
+          arcBox.setSelectedValue(24);
+          arcBox.addSelectionChangeListener(
+              arc -> {
+                canvas.setArc(arc);
                 canvas.repaint();
               });
           controls.add(arcBox);

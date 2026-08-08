@@ -7,8 +7,9 @@ import com.owspfm.elwha.card.ElwhaCardChevron;
 import com.owspfm.elwha.card.ElwhaCardHeader;
 import com.owspfm.elwha.card.ElwhaCardSupportingText;
 import com.owspfm.elwha.card.ExpansionOverflow;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -18,10 +19,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
@@ -88,23 +86,26 @@ public final class LiveConfigPanel extends JPanel {
     gbc.weightx = 1;
     gbc.insets = new Insets(4, 4, 4, 4);
 
-    final JComboBox<CardVariant> variantBox = new JComboBox<>(CardVariant.values());
-    variantBox.setSelectedItem(variant);
-    variantBox.addActionListener(
-        e -> {
-          variant = (CardVariant) variantBox.getSelectedItem();
+    final ElwhaSelectField<CardVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(List.of(CardVariant.values()));
+    variantBox.setSelectedValue(variant);
+    variantBox.addSelectionChangeListener(
+        v -> {
+          variant = v;
           applyAll();
         });
-    addLabeledRow(panel, gbc, "Variant", variantBox);
+    addRow(panel, gbc, variantBox);
 
-    final JComboBox<ExpansionOverflow> overflowBox = new JComboBox<>(ExpansionOverflow.values());
-    overflowBox.setSelectedItem(overflow);
-    overflowBox.addActionListener(
-        e -> {
-          overflow = (ExpansionOverflow) overflowBox.getSelectedItem();
+    final ElwhaSelectField<ExpansionOverflow> overflowBox =
+        ElwhaSelectField.outlined("Expansion overflow");
+    overflowBox.setOptions(List.of(ExpansionOverflow.values()));
+    overflowBox.setSelectedValue(overflow);
+    overflowBox.addSelectionChangeListener(
+        v -> {
+          overflow = v;
           applyAll();
         });
-    addLabeledRow(panel, gbc, "Expansion overflow", overflowBox);
+    addRow(panel, gbc, overflowBox);
 
     addRow(
         panel,
@@ -159,7 +160,7 @@ public final class LiveConfigPanel extends JPanel {
 
     gbc.weighty = 1;
     panel.add(Box.createVerticalGlue(), gbc);
-    panel.setPreferredSize(new Dimension(260, 1));
+    panel.setPreferredSize(new Dimension(260, panel.getPreferredSize().height));
 
     final JScrollPane scroll = new JScrollPane(panel);
     scroll.setBorder(null);
@@ -168,19 +169,12 @@ public final class LiveConfigPanel extends JPanel {
     return scroll;
   }
 
-  private static JCheckBox newCheck(
+  private static ElwhaCheckbox newCheck(
       final String label, final boolean initial, final Consumer<Boolean> onChange) {
-    final JCheckBox c = new JCheckBox(label, initial);
-    c.addActionListener(e -> onChange.accept(c.isSelected()));
+    final ElwhaCheckbox c = new ElwhaCheckbox(label);
+    c.setChecked(initial);
+    c.addActionListener(e -> onChange.accept(c.isChecked()));
     return c;
-  }
-
-  private static void addLabeledRow(
-      final JPanel p, final GridBagConstraints gbc, final String label, final JComponent comp) {
-    final JLabel l = new JLabel(label);
-    l.setAlignmentX(Component.LEFT_ALIGNMENT);
-    addRow(p, gbc, l);
-    addRow(p, gbc, comp);
   }
 
   private static void addRow(final JPanel p, final GridBagConstraints gbc, final JComponent comp) {

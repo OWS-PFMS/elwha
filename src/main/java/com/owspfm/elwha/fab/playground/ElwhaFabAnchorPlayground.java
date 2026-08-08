@@ -1,23 +1,25 @@
 package com.owspfm.elwha.fab.playground;
 
+import com.owspfm.elwha.button.ButtonInteractionMode;
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.fab.ElwhaFabAnchor;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import java.awt.BorderLayout;
 import java.awt.ComponentOrientation;
 import java.awt.FlowLayout;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
-import javax.swing.JToggleButton;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
@@ -46,7 +48,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaFabAnchorPlayground {
@@ -96,13 +98,13 @@ public final class ElwhaFabAnchorPlayground {
   private JPanel buildControlBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEADING, 12, 8));
 
-    final JComboBox<ElwhaFabAnchor.Corner> cornerBox =
-        new JComboBox<>(ElwhaFabAnchor.Corner.values());
-    cornerBox.setSelectedItem(anchor.getCorner());
-    cornerBox.addActionListener(
-        e -> anchor.setCorner((ElwhaFabAnchor.Corner) cornerBox.getSelectedItem()));
+    final ElwhaSelectField<ElwhaFabAnchor.Corner> cornerBox = ElwhaSelectField.outlined("Corner");
+    cornerBox.setOptions(List.of(ElwhaFabAnchor.Corner.values()));
+    cornerBox.setSelectedValue(anchor.getCorner());
+    cornerBox.addSelectionChangeListener(anchor::setCorner);
 
-    final JToggleButton rtl = new JToggleButton("RTL");
+    final ElwhaButton rtl =
+        new ElwhaButton("RTL").setInteractionMode(ButtonInteractionMode.SELECTABLE);
     rtl.addActionListener(
         e -> {
           anchor.applyComponentOrientation(
@@ -116,7 +118,6 @@ public final class ElwhaFabAnchorPlayground {
     final JSpinner inset = new JSpinner(new SpinnerNumberModel(anchor.getInsetDp(), 0, 96, 4));
     inset.addChangeListener(e -> anchor.setInsetDp((Integer) inset.getValue()));
 
-    bar.add(new JLabel("Corner:"));
     bar.add(cornerBox);
     bar.add(Box.createHorizontalStrut(8));
     bar.add(rtl);

@@ -12,6 +12,7 @@ import com.owspfm.elwha.list.ElwhaListOrientation;
 import com.owspfm.elwha.list.IconAffordance;
 import com.owspfm.elwha.list.MovementMode;
 import com.owspfm.elwha.list.SelectionMode;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
@@ -21,11 +22,12 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
+import java.util.List;
+import java.util.function.Consumer;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
@@ -182,12 +184,11 @@ public final class ChipPlaygroundPanels {
     // the variant moves to or from GHOST.
     final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
 
-    bar.add(new JLabel("Variant:"));
-    final JComboBox<ChipVariant> variantBox = new JComboBox<>(ChipVariant.values());
-    variantBox.setSelectedItem(target.getVariant());
-    variantBox.addActionListener(
-        e -> {
-          final ChipVariant v = (ChipVariant) variantBox.getSelectedItem();
+    final ElwhaSelectField<ChipVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(List.of(ChipVariant.values()));
+    variantBox.setSelectedValue(target.getVariant());
+    variantBox.addSelectionChangeListener(
+        v -> {
           target.setVariant(v);
           final boolean ghost = v == ChipVariant.GHOST;
           selectedBox.setEnabled(!ghost);
@@ -199,31 +200,28 @@ public final class ChipPlaygroundPanels {
         });
     bar.add(variantBox);
 
-    bar.add(new JLabel("Surface role:"));
-    final JComboBox<SurfaceRoleChoice> roleBox = new JComboBox<>(SurfaceRoleChoice.values());
-    roleBox.setSelectedItem(SurfaceRoleChoice.VARIANT_DEFAULT);
-    roleBox.addActionListener(
-        e -> target.setSurfaceRole(((SurfaceRoleChoice) roleBox.getSelectedItem()).role));
+    final ElwhaSelectField<SurfaceRoleChoice> roleBox = ElwhaSelectField.outlined("Surface role");
+    roleBox.setOptions(List.of(SurfaceRoleChoice.values()));
+    roleBox.setSelectedValue(SurfaceRoleChoice.VARIANT_DEFAULT);
+    roleBox.addSelectionChangeListener(choice -> target.setSurfaceRole(choice.role));
     bar.add(roleBox);
 
-    bar.add(new JLabel("Shape:"));
-    final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
-    shapeBox.setSelectedItem(target.getShape());
-    shapeBox.addActionListener(e -> target.setShape((ShapeScale) shapeBox.getSelectedItem()));
+    final ElwhaSelectField<ShapeScale> shapeBox = ElwhaSelectField.outlined("Shape");
+    shapeBox.setOptions(List.of(ShapeScale.values()));
+    shapeBox.setSelectedValue(target.getShape());
+    shapeBox.addSelectionChangeListener(target::setShape);
     bar.add(shapeBox);
 
-    bar.add(new JLabel("Padding (h × v):"));
-    final JComboBox<SpaceScale> horizontalBox = new JComboBox<>(SpaceScale.values());
-    horizontalBox.setSelectedItem(SpaceScale.MD);
-    final JComboBox<SpaceScale> verticalBox = new JComboBox<>(SpaceScale.values());
-    verticalBox.setSelectedItem(SpaceScale.XS);
-    java.awt.event.ActionListener pad =
-        e ->
-            target.setPadding(
-                (SpaceScale) horizontalBox.getSelectedItem(),
-                (SpaceScale) verticalBox.getSelectedItem());
-    horizontalBox.addActionListener(pad);
-    verticalBox.addActionListener(pad);
+    final ElwhaSelectField<SpaceScale> horizontalBox = ElwhaSelectField.outlined("Padding h");
+    horizontalBox.setOptions(List.of(SpaceScale.values()));
+    horizontalBox.setSelectedValue(SpaceScale.MD);
+    final ElwhaSelectField<SpaceScale> verticalBox = ElwhaSelectField.outlined("Padding v");
+    verticalBox.setOptions(List.of(SpaceScale.values()));
+    verticalBox.setSelectedValue(SpaceScale.XS);
+    final Consumer<SpaceScale> pad =
+        v -> target.setPadding(horizontalBox.getSelectedValue(), verticalBox.getSelectedValue());
+    horizontalBox.addSelectionChangeListener(pad);
+    verticalBox.addSelectionChangeListener(pad);
     bar.add(horizontalBox);
     bar.add(verticalBox);
 
@@ -242,7 +240,7 @@ public final class ChipPlaygroundPanels {
     return bar;
   }
 
-  /** Wraps a {@link ColorRole} as a combo-box entry, with {@code VARIANT_DEFAULT} → null. */
+  /** Wraps a {@link ColorRole} as a select option, with {@code VARIANT_DEFAULT} → null. */
   private enum SurfaceRoleChoice {
     VARIANT_DEFAULT(null),
     PRIMARY(ColorRole.PRIMARY),
@@ -403,19 +401,18 @@ public final class ChipPlaygroundPanels {
     private JPanel buildControls() {
       final JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
 
-      p.add(new JLabel("Orientation:"));
-      final JComboBox<ElwhaListOrientation> orient = new JComboBox<>(ElwhaListOrientation.values());
-      orient.setSelectedItem(ElwhaListOrientation.VERTICAL);
-      orient.addActionListener(
-          e -> list.setOrientation((ElwhaListOrientation) orient.getSelectedItem()));
+      final ElwhaSelectField<ElwhaListOrientation> orient =
+          ElwhaSelectField.outlined("Orientation");
+      orient.setOptions(List.of(ElwhaListOrientation.values()));
+      orient.setSelectedValue(ElwhaListOrientation.VERTICAL);
+      orient.addSelectionChangeListener(list::setOrientation);
       p.add(orient);
 
-      p.add(new JLabel("Mode:"));
-      final JComboBox<MovementMode> mode = new JComboBox<>(MovementMode.values());
-      mode.setSelectedItem(list.getMovementMode());
-      mode.addActionListener(
-          e -> {
-            final MovementMode next = (MovementMode) mode.getSelectedItem();
+      final ElwhaSelectField<MovementMode> mode = ElwhaSelectField.outlined("Mode");
+      mode.setOptions(List.of(MovementMode.values()));
+      mode.setSelectedValue(list.getMovementMode());
+      mode.addSelectionChangeListener(
+          next -> {
             list.setMovementMode(next);
             armBindingsForMode(next);
           });
@@ -431,24 +428,22 @@ public final class ChipPlaygroundPanels {
       gap.addChangeListener(e -> list.setItemGap((Integer) gap.getValue()));
       p.add(gap);
 
-      p.add(new JLabel("Pin:"));
-      final JComboBox<IconAffordance> pinAff = new JComboBox<>(IconAffordance.values());
-      pinAff.setSelectedItem(list.getPinAffordance());
-      pinAff.addActionListener(
-          e -> list.setPinAffordance((IconAffordance) pinAff.getSelectedItem()));
+      final ElwhaSelectField<IconAffordance> pinAff = ElwhaSelectField.outlined("Pin");
+      pinAff.setOptions(List.of(IconAffordance.values()));
+      pinAff.setSelectedValue(list.getPinAffordance());
+      pinAff.addSelectionChangeListener(list::setPinAffordance);
       p.add(pinAff);
 
-      p.add(new JLabel("Anchor:"));
-      final JComboBox<IconAffordance> anchorAff = new JComboBox<>(IconAffordance.values());
-      anchorAff.setSelectedItem(list.getAnchorAffordance());
-      anchorAff.addActionListener(
-          e -> list.setAnchorAffordance((IconAffordance) anchorAff.getSelectedItem()));
+      final ElwhaSelectField<IconAffordance> anchorAff = ElwhaSelectField.outlined("Anchor");
+      anchorAff.setOptions(List.of(IconAffordance.values()));
+      anchorAff.setSelectedValue(list.getAnchorAffordance());
+      anchorAff.addSelectionChangeListener(list::setAnchorAffordance);
       p.add(anchorAff);
 
-      p.add(new JLabel("Select:"));
-      final JComboBox<SelectionMode> sel = new JComboBox<>(SelectionMode.values());
-      sel.setSelectedItem(list.getSelectionMode());
-      sel.addActionListener(e -> list.setSelectionMode((SelectionMode) sel.getSelectedItem()));
+      final ElwhaSelectField<SelectionMode> sel = ElwhaSelectField.outlined("Select");
+      sel.setOptions(List.of(SelectionMode.values()));
+      sel.setSelectedValue(list.getSelectionMode());
+      sel.addSelectionChangeListener(list::setSelectionMode);
       p.add(sel);
 
       return p;

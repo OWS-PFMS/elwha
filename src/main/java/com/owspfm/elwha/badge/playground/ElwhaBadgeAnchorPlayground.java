@@ -2,9 +2,15 @@ package com.owspfm.elwha.badge.playground;
 
 import com.owspfm.elwha.badge.ElwhaBadge;
 import com.owspfm.elwha.badge.ElwhaBadgeAnchor;
+import com.owspfm.elwha.button.ButtonSize;
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.buttongroup.ResizeMode;
+import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.Config;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -15,12 +21,9 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import javax.swing.BorderFactory;
-import javax.swing.ButtonGroup;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
-import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
@@ -42,7 +45,7 @@ import javax.swing.event.DocumentListener;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaBadgeAnchorPlayground {
@@ -98,10 +101,12 @@ public final class ElwhaBadgeAnchorPlayground {
     gc.insets = new Insets(4, 8, 4, 8);
     gc.anchor = GridBagConstraints.WEST;
 
-    final JTextField contentField = new JTextField("3", 8);
+    final ElwhaTextField contentField = ElwhaTextField.outlined("Content");
+    contentField.setText("3");
     final JLabel storedLabel = new JLabel("stored: \"3\"");
 
     contentField
+        .getEditor()
         .getDocument()
         .addDocumentListener(
             new DocumentListener() {
@@ -134,23 +139,27 @@ public final class ElwhaBadgeAnchorPlayground {
               }
             });
 
-    final JToggleButton smallToggle = new JToggleButton("Small");
-    final JToggleButton largeToggle = new JToggleButton("Large", true);
-    final ButtonGroup variantGroup = new ButtonGroup();
-    variantGroup.add(smallToggle);
-    variantGroup.add(largeToggle);
-    smallToggle.addActionListener(
-        e -> {
-          swapBadge(ElwhaBadge.small());
-          contentField.setEnabled(false);
-          storedLabel.setText("stored: (none — small badge)");
-        });
-    largeToggle.addActionListener(
-        e -> {
-          final String seed = contentField.getText().isEmpty() ? "3" : contentField.getText();
-          swapBadge(ElwhaBadge.large(seed));
-          contentField.setEnabled(true);
-          storedLabel.setText("stored: \"" + badge.getContent() + "\"");
+    final ElwhaButtonGroup variantGroup =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL)
+            .add(new ElwhaButton("Small"))
+            .add(new ElwhaButton("Large"));
+    variantGroup.setSelectedIndex(1);
+    variantGroup.addSelectionListener(
+        g -> {
+          if (g.getSelectedIndex() == 0) {
+            swapBadge(ElwhaBadge.small());
+            contentField.setEnabled(false);
+            storedLabel.setText("stored: (none — small badge)");
+          } else {
+            final String seed = contentField.getText().isEmpty() ? "3" : contentField.getText();
+            swapBadge(ElwhaBadge.large(seed));
+            contentField.setEnabled(true);
+            storedLabel.setText("stored: \"" + badge.getContent() + "\"");
+          }
         });
 
     final ElwhaButton detachButton = ElwhaButton.filledTonalButton("Detach");
@@ -173,14 +182,12 @@ public final class ElwhaBadgeAnchorPlayground {
     gc.gridy = 0;
     panel.add(new JLabel("Variant:"), gc);
     gc.gridx = 1;
-    panel.add(smallToggle, gc);
-    gc.gridx = 2;
-    panel.add(largeToggle, gc);
+    gc.gridwidth = 2;
+    panel.add(variantGroup, gc);
+    gc.gridwidth = 1;
 
-    gc.gridx = 0;
-    gc.gridy = 1;
-    panel.add(new JLabel("Content:"), gc);
     gc.gridx = 1;
+    gc.gridy = 1;
     gc.gridwidth = 2;
     panel.add(contentField, gc);
     gc.gridwidth = 1;
@@ -211,16 +218,26 @@ public final class ElwhaBadgeAnchorPlayground {
   private JPanel buildModeBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
     bar.add(new JLabel("Mode:"));
-    final ButtonGroup group = new ButtonGroup();
-    for (Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK, Mode.SYSTEM}) {
-      final JToggleButton button = new JToggleButton(mode.name());
-      button.addActionListener(e -> applyMode(mode));
-      if (ElwhaTheme.current().mode() == mode) {
-        button.setSelected(true);
-      }
-      group.add(button);
-      bar.add(button);
+    final Mode[] modes = {Mode.LIGHT, Mode.DARK, Mode.SYSTEM};
+    final ElwhaButtonGroup group =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL);
+    for (final Mode mode : modes) {
+      group.add(new ElwhaButton(mode.name()));
     }
+    final Mode current = ElwhaTheme.current().mode();
+    for (int i = 0; i < modes.length; i++) {
+      if (modes[i] == current) {
+        group.setSelectedIndex(i);
+      }
+    }
+    // Seeded before the listener is attached so the initial selection does not re-install the
+    // theme on startup.
+    group.addSelectionListener(g -> applyMode(modes[g.getSelectedIndex()]));
+    bar.add(group);
     return bar;
   }
 

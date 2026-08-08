@@ -1,6 +1,8 @@
 package com.owspfm.elwha.theme.playground;
 
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.Easing;
@@ -16,9 +18,8 @@ import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.util.List;
 import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -40,7 +41,7 @@ import javax.swing.SwingUtilities;
  * -Dexec.mainClass="com.owspfm.elwha.theme.playground.ShapeMorphPlayground"}.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ShapeMorphPlayground {
@@ -69,7 +70,6 @@ public final class ShapeMorphPlayground {
 
     final JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
 
-    toolbar.add(new JLabel("Easing:"));
     final EasingPreset[] easings = {
       new EasingPreset("STANDARD", Easing.STANDARD),
       new EasingPreset("STANDARD_DECELERATE", Easing.STANDARD_DECELERATE),
@@ -82,35 +82,35 @@ public final class ShapeMorphPlayground {
       new EasingPreset("SPRING (0.70 — playful)", Easing.spring(0.70f)),
       new EasingPreset("LINEAR", Easing.LINEAR),
     };
-    final JComboBox<EasingPreset> easingBox = new JComboBox<>(easings);
-    easingBox.addActionListener(
-        e -> canvas.setEasing(((EasingPreset) easingBox.getSelectedItem()).easing));
+    final ElwhaSelectField<EasingPreset> easingBox = ElwhaSelectField.outlined("Easing");
+    easingBox.setOptions(List.of(easings));
+    easingBox.setSelectedValue(easings[0]);
+    easingBox.setPreferredSize(new Dimension(330, easingBox.getPreferredSize().height));
+    easingBox.addSelectionChangeListener(preset -> canvas.setEasing(preset.easing));
     toolbar.add(easingBox);
 
-    toolbar.add(new JLabel("Duration:"));
     final DurationPreset[] durations = {
       new DurationPreset("SHORT3 (150 ms — press)", MorphAnimator.SHORT3_MS),
       new DurationPreset("MEDIUM2 (300 ms — select)", MorphAnimator.MEDIUM2_MS),
       new DurationPreset("600 ms — slow", 600),
       new DurationPreset("1500 ms — very slow", 1500),
     };
-    final JComboBox<DurationPreset> durationBox = new JComboBox<>(durations);
-    durationBox.setSelectedIndex(1);
-    durationBox.addActionListener(
-        e -> canvas.setDuration(((DurationPreset) durationBox.getSelectedItem()).ms));
+    final ElwhaSelectField<DurationPreset> durationBox = ElwhaSelectField.outlined("Duration");
+    durationBox.setOptions(List.of(durations));
+    durationBox.setSelectedValue(durations[1]);
+    durationBox.addSelectionChangeListener(preset -> canvas.setDuration(preset.ms));
     canvas.setDuration(durations[1].ms);
 
     toolbar.add(durationBox);
 
-    toolbar.add(new JLabel("Multiplier:"));
-    final Integer[] multipliers = {1, 2, 5, 10};
-    final JComboBox<Integer> multiplierBox = new JComboBox<>(multipliers);
-    multiplierBox.addActionListener(
-        e -> canvas.setMultiplier((Integer) multiplierBox.getSelectedItem()));
+    final ElwhaSelectField<Integer> multiplierBox = ElwhaSelectField.outlined("Multiplier");
+    multiplierBox.setOptions(List.of(1, 2, 5, 10));
+    multiplierBox.setSelectedValue(1);
+    multiplierBox.addSelectionChangeListener(canvas::setMultiplier);
     toolbar.add(multiplierBox);
 
-    final JCheckBox reducedBox = new JCheckBox("Reduced motion");
-    reducedBox.addActionListener(e -> MorphAnimator.setReducedMotion(reducedBox.isSelected()));
+    final ElwhaCheckbox reducedBox = new ElwhaCheckbox("Reduced motion");
+    reducedBox.addActionListener(e -> MorphAnimator.setReducedMotion(reducedBox.isChecked()));
     toolbar.add(reducedBox);
 
     final ElwhaButton toggle = ElwhaButton.filledTonalButton("Toggle morph");

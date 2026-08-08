@@ -10,6 +10,8 @@ import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.ColorRole;
 import java.awt.Color;
 import java.awt.Component;
@@ -19,14 +21,13 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 
@@ -340,7 +341,8 @@ public final class BadgePlaygroundPanels {
             .setColorStyle(ButtonGroupColorStyle.FILLED)
             .setSelectionMode(SelectionMode.REQUIRED)
             .add("Small", "Large");
-    final JTextField contentField = new JTextField(BADGE_DEFAULT_CONTENT, 8);
+    final ElwhaTextField contentField = ElwhaTextField.outlined("Content");
+    contentField.setText(BADGE_DEFAULT_CONTENT);
 
     // Lib-native stepper buttons (ElwhaIconButton XS, remove / add / cached). setFocusable(false)
     // keeps focus on the content field so each click doesn't shift focus to the next button.
@@ -364,10 +366,12 @@ public final class BadgePlaygroundPanels {
     stepperRow.add(incrementButton);
     stepperRow.add(contentResetButton);
 
-    final JComboBox<ColorRole> containerColorBox = new JComboBox<>(ColorRole.values());
-    containerColorBox.setSelectedItem(ColorRole.ERROR);
-    final JComboBox<ColorRole> labelColorBox = new JComboBox<>(ColorRole.values());
-    labelColorBox.setSelectedItem(ColorRole.ON_ERROR);
+    final ElwhaSelectField<ColorRole> containerColorBox = ElwhaSelectField.outlined("Container");
+    containerColorBox.setOptions(List.of(ColorRole.values()));
+    containerColorBox.setSelectedValue(ColorRole.ERROR);
+    final ElwhaSelectField<ColorRole> labelColorBox = ElwhaSelectField.outlined("Label");
+    labelColorBox.setOptions(List.of(ColorRole.values()));
+    labelColorBox.setSelectedValue(ColorRole.ON_ERROR);
     final JLabel colorGuidance =
         new JLabel(
             "<html><i>M3 strongly prefers Error / On&nbsp;error.</i></html>",
@@ -379,7 +383,7 @@ public final class BadgePlaygroundPanels {
             + "Pick a different pair only when the consumer has a clear contrast story and"
             + " accessible defaults — see design doc §6.</html>");
 
-    final JTextField a11yOverrideField = new JTextField("", 16);
+    final ElwhaTextField a11yOverrideField = ElwhaTextField.outlined("Override");
     final ElwhaButton clearOverrideButton = ElwhaButton.outlinedButton("Reset");
 
     // Seed the variant from whatever badge the slot already holds (default Large).
@@ -406,11 +410,11 @@ public final class BadgePlaygroundPanels {
           final ElwhaBadge badge;
           if (isLarge) {
             badge = ElwhaBadge.large(contentText.isEmpty() ? BADGE_DEFAULT_CONTENT : contentText);
-            badge.setLabelColor((ColorRole) labelColorBox.getSelectedItem());
+            badge.setLabelColor(labelColorBox.getSelectedValue());
           } else {
             badge = ElwhaBadge.small();
           }
-          badge.setContainerColor((ColorRole) containerColorBox.getSelectedItem());
+          badge.setContainerColor(containerColorBox.getSelectedValue());
           final String overrideText =
               a11yOverrideField.getText() == null ? "" : a11yOverrideField.getText();
           if (!overrideText.isEmpty()) {
@@ -442,24 +446,24 @@ public final class BadgePlaygroundPanels {
         });
     contentResetButton.addActionListener(event -> contentField.setText(BADGE_DEFAULT_CONTENT));
     variantGroup.addSelectionListener(group -> apply.run());
-    containerColorBox.addActionListener(event -> apply.run());
-    labelColorBox.addActionListener(event -> apply.run());
-    contentField.getDocument().addDocumentListener(onTextChange(apply));
-    a11yOverrideField.getDocument().addDocumentListener(onTextChange(apply));
+    containerColorBox.addSelectionChangeListener(role -> apply.run());
+    labelColorBox.addSelectionChangeListener(role -> apply.run());
+    contentField.getEditor().getDocument().addDocumentListener(onTextChange(apply));
+    a11yOverrideField.getEditor().getDocument().addDocumentListener(onTextChange(apply));
 
     final JPanel panel = new JPanel();
     panel.setOpaque(false);
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
     panel.add(editorSection("Badge"));
     panel.add(editorRow("Variant", variantGroup));
-    panel.add(editorRow("Content", contentField));
+    panel.add(editorRow("", contentField));
     panel.add(editorRow("", stepperRow));
     panel.add(editorSection("Color"));
     panel.add(editorRow("", colorGuidance));
-    panel.add(editorRow("Container", containerColorBox));
-    panel.add(editorRow("Label", labelColorBox));
+    panel.add(editorRow("", containerColorBox));
+    panel.add(editorRow("", labelColorBox));
     panel.add(editorSection("Accessibility"));
-    panel.add(editorRow("Override", a11yOverrideField));
+    panel.add(editorRow("", a11yOverrideField));
     panel.add(editorRow("", clearOverrideButton));
 
     apply.run();

@@ -4,6 +4,7 @@ import com.owspfm.elwha.button.ButtonInteractionMode;
 import com.owspfm.elwha.button.ButtonShape;
 import com.owspfm.elwha.button.ButtonSize;
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
@@ -12,7 +13,6 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -22,7 +22,7 @@ import javax.swing.SwingUtilities;
  * Visual smoke-test for the Phase 2 morph wiring on {@link ElwhaButton}. A grid of buttons in each
  * variant × size × interaction mode, all wired with the press shape + press width morph (held while
  * pressed, release reverses) and the select round↔square morph (toggles on click for {@link
- * ButtonInteractionMode#SELECTABLE}). A {@link JCheckBox} flips {@link
+ * ButtonInteractionMode#SELECTABLE}). An {@link ElwhaCheckbox} flips {@link
  * MorphAnimator#setReducedMotion(boolean)} globally so the visual collapses to the v1 static
  * behavior.
  *
@@ -33,7 +33,7 @@ import javax.swing.SwingUtilities;
  * -Dexec.mainClass="com.owspfm.elwha.button.playground.ButtonMorphPlayground"}.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ButtonMorphPlayground {
@@ -59,9 +59,9 @@ public final class ButtonMorphPlayground {
     frame.setLayout(new BorderLayout());
 
     final JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8));
-    final JCheckBox reducedBox = new JCheckBox("Reduced motion (global)");
-    reducedBox.setSelected(MorphAnimator.isReducedMotion());
-    reducedBox.addActionListener(e -> MorphAnimator.setReducedMotion(reducedBox.isSelected()));
+    final ElwhaCheckbox reducedBox = new ElwhaCheckbox("Reduced motion (global)");
+    reducedBox.setChecked(MorphAnimator.isReducedMotion());
+    reducedBox.addActionListener(e -> MorphAnimator.setReducedMotion(reducedBox.isChecked()));
     toolbar.add(reducedBox);
     toolbar.add(
         new JLabel(

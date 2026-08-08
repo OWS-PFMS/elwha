@@ -7,6 +7,7 @@ import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
 import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import java.awt.BorderLayout;
@@ -17,12 +18,12 @@ import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.List;
 import java.util.function.Supplier;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -217,13 +218,14 @@ public final class IconButtonPlaygroundPanels {
   }
 
   /**
-   * Builds the live panel: a single {@link ElwhaIconButton} driven by combo boxes, a spinner, and a
-   * checkbox covering every axis the class exposes — variant, interaction mode, size, shape,
-   * surface-role override, border width, icon pair, and selected state. Mirrors the surface and
-   * chip playgrounds' live tabs; lets the viewer feel every property change live without recompile.
+   * Builds the live panel: a single {@link ElwhaIconButton} driven by {@link ElwhaSelectField}s, a
+   * spinner, and {@link ElwhaCheckbox}es covering every axis the class exposes — variant,
+   * interaction mode, size, shape, surface-role override, border width, icon pair, and selected
+   * state. Mirrors the surface and chip playgrounds' live tabs; lets the viewer feel every property
+   * change live without recompile.
    *
    * @return the live-control panel
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public static JPanel buildLivePanel() {
@@ -239,24 +241,24 @@ public final class IconButtonPlaygroundPanels {
 
     int row = 0;
 
-    final JComboBox<IconButtonVariant> variantBox = new JComboBox<>(IconButtonVariant.values());
-    variantBox.setSelectedItem(target.getVariant());
-    variantBox.addActionListener(
-        e -> target.setVariant((IconButtonVariant) variantBox.getSelectedItem()));
-    addControlRow(controls, gbc, row++, "Variant", variantBox);
+    final ElwhaSelectField<IconButtonVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(List.of(IconButtonVariant.values()));
+    variantBox.setSelectedValue(target.getVariant());
+    variantBox.addSelectionChangeListener(target::setVariant);
+    addControlRow(controls, gbc, row++, "", variantBox);
 
-    final JComboBox<IconButtonInteractionMode> modeBox =
-        new JComboBox<>(IconButtonInteractionMode.values());
-    modeBox.setSelectedItem(target.getInteractionMode());
-    modeBox.addActionListener(
-        e -> target.setInteractionMode((IconButtonInteractionMode) modeBox.getSelectedItem()));
-    addControlRow(controls, gbc, row++, "Interaction mode", modeBox);
+    final ElwhaSelectField<IconButtonInteractionMode> modeBox =
+        ElwhaSelectField.outlined("Interaction mode");
+    modeBox.setOptions(List.of(IconButtonInteractionMode.values()));
+    modeBox.setSelectedValue(target.getInteractionMode());
+    modeBox.addSelectionChangeListener(target::setInteractionMode);
+    addControlRow(controls, gbc, row++, "", modeBox);
 
-    final JComboBox<IconButtonSize> sizeBox = new JComboBox<>(IconButtonSize.values());
-    sizeBox.setSelectedItem(target.getButtonSize());
-    sizeBox.addActionListener(
-        e -> {
-          final IconButtonSize chosen = (IconButtonSize) sizeBox.getSelectedItem();
+    final ElwhaSelectField<IconButtonSize> sizeBox = ElwhaSelectField.outlined("Size");
+    sizeBox.setOptions(List.of(IconButtonSize.values()));
+    sizeBox.setSelectedValue(target.getButtonSize());
+    sizeBox.addSelectionChangeListener(
+        chosen -> {
           target.setButtonSize(chosen);
           // Reload current icon pair at the new pixel size so the icon stays sharp.
           final IconPairChoice currentPair =
@@ -267,35 +269,37 @@ public final class IconButtonPlaygroundPanels {
                 currentPair.pair(chosen.iconPx()).filled());
           }
         });
-    addControlRow(controls, gbc, row++, "Size", sizeBox);
+    addControlRow(controls, gbc, row++, "", sizeBox);
 
-    final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
-    shapeBox.setSelectedItem(target.getShape());
-    shapeBox.addActionListener(e -> target.setShape((ShapeScale) shapeBox.getSelectedItem()));
-    addControlRow(controls, gbc, row++, "Shape", shapeBox);
+    final ElwhaSelectField<ShapeScale> shapeBox = ElwhaSelectField.outlined("Shape");
+    shapeBox.setOptions(List.of(ShapeScale.values()));
+    shapeBox.setSelectedValue(target.getShape());
+    shapeBox.addSelectionChangeListener(target::setShape);
+    addControlRow(controls, gbc, row++, "", shapeBox);
 
-    final JComboBox<SurfaceRoleChoice> surfaceBox = new JComboBox<>(SurfaceRoleChoice.values());
-    surfaceBox.setSelectedItem(SurfaceRoleChoice.VARIANT_DEFAULT);
-    surfaceBox.addActionListener(
-        e -> target.setSurfaceRole(((SurfaceRoleChoice) surfaceBox.getSelectedItem()).role));
-    addControlRow(controls, gbc, row++, "Surface role override", surfaceBox);
+    final ElwhaSelectField<SurfaceRoleChoice> surfaceBox =
+        ElwhaSelectField.outlined("Surface role override");
+    surfaceBox.setOptions(List.of(SurfaceRoleChoice.values()));
+    surfaceBox.setSelectedValue(SurfaceRoleChoice.VARIANT_DEFAULT);
+    surfaceBox.addSelectionChangeListener(choice -> target.setSurfaceRole(choice.role));
+    addControlRow(controls, gbc, row++, "", surfaceBox);
 
     final JSpinner borderWidth =
         new JSpinner(new SpinnerNumberModel(target.getBorderWidth(), 0, 4, 1));
     borderWidth.addChangeListener(e -> target.setBorderWidth((Integer) borderWidth.getValue()));
     addControlRow(controls, gbc, row++, "Border width (px)", borderWidth);
 
-    final JComboBox<IconPairChoice> iconBox = new JComboBox<>(IconPairChoice.values());
-    iconBox.setSelectedItem(IconPairChoice.PIN);
+    final ElwhaSelectField<IconPairChoice> iconBox = ElwhaSelectField.outlined("Icon pair");
+    iconBox.setOptions(List.of(IconPairChoice.values()));
+    iconBox.setSelectedValue(IconPairChoice.PIN);
     controls.putClientProperty("currentPair", IconPairChoice.PIN);
-    iconBox.addActionListener(
-        e -> {
-          final IconPairChoice chosen = (IconPairChoice) iconBox.getSelectedItem();
+    iconBox.addSelectionChangeListener(
+        chosen -> {
           controls.putClientProperty("currentPair", chosen);
           final int iconPx = target.getButtonSize().iconPx();
           target.setIcons(chosen.pair(iconPx).resting(), chosen.pair(iconPx).filled());
         });
-    addControlRow(controls, gbc, row++, "Icon pair", iconBox);
+    addControlRow(controls, gbc, row++, "", iconBox);
 
     final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
     selectedBox.addActionListener(e -> target.setSelected(selectedBox.isChecked()));
@@ -335,7 +339,7 @@ public final class IconButtonPlaygroundPanels {
     panel.add(control, gbc);
   }
 
-  /** Wraps a nullable {@link ColorRole} as a combo-box entry — {@code VARIANT_DEFAULT} → null. */
+  /** Wraps a nullable {@link ColorRole} as a select option — {@code VARIANT_DEFAULT} → null. */
   private enum SurfaceRoleChoice {
     VARIANT_DEFAULT(null),
     PRIMARY(ColorRole.PRIMARY),
@@ -353,7 +357,7 @@ public final class IconButtonPlaygroundPanels {
     }
   }
 
-  /** Bundled outline/fill icon pairs, used by the live-control icon picker. */
+  /** Bundled outline/fill icon pairs, used by the live-control icon select. */
   private enum IconPairChoice {
     PIN("push_pin"),
     ANCHOR("anchor"),

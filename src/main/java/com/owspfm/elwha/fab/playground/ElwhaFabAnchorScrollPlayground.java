@@ -3,14 +3,15 @@ package com.owspfm.elwha.fab.playground;
 import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.fab.ElwhaFabAnchor;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -43,7 +44,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaFabAnchorScrollPlayground {
@@ -92,14 +93,11 @@ public final class ElwhaFabAnchorScrollPlayground {
 
   private JPanel buildControlBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEADING, 12, 8));
-    final JComboBox<ElwhaFabAnchor.ScrollResponse> responseBox =
-        new JComboBox<>(ElwhaFabAnchor.ScrollResponse.values());
-    responseBox.setSelectedItem(anchor.getScrollResponse());
-    responseBox.addActionListener(
-        e ->
-            anchor.setScrollResponse(
-                (ElwhaFabAnchor.ScrollResponse) responseBox.getSelectedItem()));
-    bar.add(new JLabel("Scroll response:"));
+    final ElwhaSelectField<ElwhaFabAnchor.ScrollResponse> responseBox =
+        ElwhaSelectField.outlined("Scroll response");
+    responseBox.setOptions(List.of(ElwhaFabAnchor.ScrollResponse.values()));
+    responseBox.setSelectedValue(anchor.getScrollResponse());
+    responseBox.addSelectionChangeListener(anchor::setScrollResponse);
     bar.add(responseBox);
     bar.add(new JLabel("   (scroll down → hide / shrink; scroll up → restore)"));
     return bar;
