@@ -68,14 +68,14 @@ public final class MorphAnimator {
   // the window is being assembled) forked `gsettings` and waited on it. It is now requested on
   // first use and answered on a background daemon thread, so nothing blocks: until the probe
   // lands, the current value stands.
-  private static final AtomicBoolean osSignalRequested = new AtomicBoolean();
+  private static final AtomicBoolean OS_SIGNAL_REQUESTED = new AtomicBoolean();
 
   // An explicit setReducedMotion always outranks the OS signal — same precedence the static block
   // had, where the probe ran first and the setter then overrode it.
   private static boolean explicitOverride;
 
   private static void requestOsSignal() {
-    if (!osSignalRequested.compareAndSet(false, true)) {
+    if (!OS_SIGNAL_REQUESTED.compareAndSet(false, true)) {
       return;
     }
     final Thread probe = new Thread(MorphAnimator::applyOsReducedMotion, OS_PROBE_THREAD);
@@ -194,7 +194,7 @@ public final class MorphAnimator {
       explicitOverride = true;
       reducedMotion = reduced;
     }
-    osSignalRequested.set(true);
+    OS_SIGNAL_REQUESTED.set(true);
   }
 
   /**

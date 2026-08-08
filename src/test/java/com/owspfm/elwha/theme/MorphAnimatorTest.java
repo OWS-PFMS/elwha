@@ -149,7 +149,7 @@ class MorphAnimatorTest {
   void classInitialisationProbesNothing() throws Exception {
     final Class<?> fresh = freshlyInitialisedAnimator();
 
-    assertThat(((AtomicBoolean) staticField(fresh, "osSignalRequested")).get())
+    assertThat(((AtomicBoolean) staticField(fresh, "OS_SIGNAL_REQUESTED")).get())
         .as("class init is triggered by the first ElwhaButton, so it must not shell out to the OS")
         .isFalse();
     assertThat(staticField(fresh, "reducedMotion"))
@@ -158,12 +158,12 @@ class MorphAnimatorTest {
   }
 
   @Test
-  void theFirstReadIsWhatRequestsTheOsSignal() throws Exception {
+  void firstUseIsWhatRequestsTheOsSignal() throws Exception {
     final Class<?> fresh = freshlyInitialisedAnimator();
 
     fresh.getMethod("isReducedMotion").invoke(null);
 
-    assertThat(((AtomicBoolean) staticField(fresh, "osSignalRequested")).get())
+    assertThat(((AtomicBoolean) staticField(fresh, "OS_SIGNAL_REQUESTED")).get())
         .as("the probe is deferred to first use, not skipped altogether")
         .isTrue();
   }
@@ -174,7 +174,7 @@ class MorphAnimatorTest {
 
     fresh.getMethod("setReducedMotion", boolean.class).invoke(null, false);
 
-    assertThat(((AtomicBoolean) staticField(fresh, "osSignalRequested")).get())
+    assertThat(((AtomicBoolean) staticField(fresh, "OS_SIGNAL_REQUESTED")).get())
         .as("an explicit override outranks the OS, so asking it costs a subprocess for nothing")
         .isTrue();
     assertThat(fresh.getMethod("isReducedMotion").invoke(null))

@@ -199,7 +199,7 @@ class MaterialIconsTest {
   }
 
   @Test
-  void theFillVariantAnswerIsHeldPerSymbolRatherThanReAskedTheClasspath() {
+  void fillVariantAnswerIsHeldPerSymbolRatherThanReAskedTheClasspath() {
     final MaterialIcons.Symbol withFill = MaterialIcons.symbol(SYMBOL_WITH_FILL);
     final MaterialIcons.Symbol withoutFill = MaterialIcons.symbol(SYMBOL_WITHOUT_FILL);
 
