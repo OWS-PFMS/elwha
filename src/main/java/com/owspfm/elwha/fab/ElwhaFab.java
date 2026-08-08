@@ -788,6 +788,13 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
             if (!isEnabled() || e.getButton() != MouseEvent.BUTTON1) {
               return;
             }
+            // The component is larger than its painted body by the shadow reserve, so a press can
+            // land on transparent pixels. Only the release was gated, which meant no false
+            // activation but a pressed layer and ripple flashing from a click that never touched
+            // the FAB (#564). ElwhaButton refuses at the press for the same reason.
+            if (!containsPoint(e.getPoint())) {
+              return;
+            }
             pressed = true;
             // A pointer press is not a focus-visible interaction: clear the ring even if the click
             // grabs focus (or the FAB was already keyboard-focused). The ring is re-armed only by a
