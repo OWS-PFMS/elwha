@@ -67,7 +67,8 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
   }
 
   // Esc → dismiss, honored live so a toggle while shown takes effect (unlike the dialog's
-  // build-time snapshot — the sheet is a long-lived component with mutable config).
+  // build-time snapshot — the sheet is a long-lived component with mutable config). Registered
+  // through topmostAction so a dialog stacked above the sheet keeps Escape (#599).
   @Override
   protected void installKeyBindings() {
     final InputMap im = surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
@@ -75,7 +76,7 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-sidesheet-esc");
     am.put(
         "elwha-sidesheet-esc",
-        action(
+        topmostAction(
             () -> {
               if (sheet.isDismissibleByEsc()) {
                 dismissSheet(SheetDismissCause.ESC);

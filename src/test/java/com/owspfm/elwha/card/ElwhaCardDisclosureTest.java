@@ -10,6 +10,7 @@ import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.event.MouseEvent;
 import java.awt.font.TextAttribute;
 import javax.accessibility.AccessibleRole;
 import javax.swing.JComponent;
@@ -219,6 +220,60 @@ class ElwhaCardDisclosureTest {
 
     Input.pressBoundKey(link, "released ENTER", "toggle");
     assertThat(card.isCollapsed()).as("and Enter toggles it back").isFalse();
+  }
+
+  @Test
+  void pointerActivationTogglesTheCardOnPressAndRelease() {
+    final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
+    final ElwhaCardExpandLink link = new ElwhaCardExpandLink(card, "Show more", "Show less");
+    link.setSize(80, 20);
+
+    Input.click(link, 10, 10);
+    assertThat(card.isCollapsed()).as("a click toggles the disclosure").isTrue();
+
+    Input.click(link, 10, 10);
+    assertThat(card.isCollapsed()).as("and the next one toggles it back").isFalse();
+  }
+
+  @Test
+  void aReleaseDraggedOffTheLinkDoesNotToggle() {
+    final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
+    final ElwhaCardExpandLink link = new ElwhaCardExpandLink(card, "Show more", "Show less");
+    link.setSize(80, 20);
+
+    Input.press(link, 10, 10);
+    Input.release(link, 400, 10);
+
+    assertThat(card.isCollapsed())
+        .as("pressing then sliding off is the standard escape hatch from a mis-aimed press")
+        .isFalse();
+  }
+
+  @Test
+  void linkDoesNotDependOnTheClickEventMacOsDrops() {
+    final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
+    final ElwhaCardExpandLink link = new ElwhaCardExpandLink(card, "Show more", "Show less");
+    link.setSize(80, 20);
+
+    link.dispatchEvent(
+        new MouseEvent(
+            link,
+            MouseEvent.MOUSE_CLICKED,
+            System.nanoTime(),
+            0,
+            10,
+            10,
+            10,
+            10,
+            1,
+            false,
+            MouseEvent.BUTTON1));
+
+    assertThat(card.isCollapsed())
+        .as(
+            "MOUSE_CLICKED is coalesced away under rapid clicking on macOS (#299), so the toggle"
+                + " must not be the thing listening for it")
+        .isFalse();
   }
 
   @Test

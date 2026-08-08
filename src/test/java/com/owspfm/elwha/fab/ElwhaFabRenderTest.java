@@ -147,6 +147,26 @@ class ElwhaFabRenderTest {
   }
 
   @Test
+  void aPressInTheShadowReserveLeavesTheChromeAtRest() {
+    final ElwhaFab fab = fab(ElwhaFab.Color.PRIMARY_CONTAINER);
+    final Dimension pref = fab.getPreferredSize();
+    fab.setSize(pref.width, pref.height);
+    final Insets reserve = fab.getShadowInsets();
+    assertThat(reserve.left).as("the fixture depends on a non-empty reserve").isPositive();
+
+    Input.press(fab, reserve.left / 2, reserve.top / 2);
+
+    final Point center = bodyCenter(fab);
+    Pixels.assertPixelNear(
+        render(fab),
+        center.x,
+        center.y,
+        ColorRole.PRIMARY_CONTAINER.resolve(),
+        "the release was already gated, so a reserve press never activated — but it still flashed"
+            + " the pressed layer from a click that missed the FAB entirely");
+  }
+
+  @Test
   void keyboardActivationFlashesThePressedLayerToo() {
     final ElwhaFab fab = fab(ElwhaFab.Color.PRIMARY_CONTAINER);
 

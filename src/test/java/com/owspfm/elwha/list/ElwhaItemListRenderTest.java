@@ -498,7 +498,9 @@ class ElwhaItemListRenderTest {
 
   @Test
   void keyboardDeleteRemovesTheFocusedItemAndItsSelection() {
-    listOf("a", "b", "c").setSelectionMode(SelectionMode.MULTIPLE);
+    listOf("a", "b", "c")
+        .setSelectionMode(SelectionMode.MULTIPLE)
+        .setMovementMode(MovementMode.MOVABLE);
     Input.click(list.getComponentFor("b"), 4, 4);
 
     Input.pressBoundKey(list, "pressed DELETE", "elwhaList.delete");
@@ -507,6 +509,35 @@ class ElwhaItemListRenderTest {
     assertThat(list.getSelectionModel().getSelected())
         .as("a deleted item does not linger in the selection")
         .isEmpty();
+  }
+
+  @Test
+  void keyboardDeleteIsSuppressedOnAStaticList() {
+    listOf("a", "b", "c").setSelectionMode(SelectionMode.MULTIPLE);
+    Input.click(list.getComponentFor("b"), 4, 4);
+
+    Input.pressBoundKey(list, "pressed DELETE", "elwhaList.delete");
+
+    assertThat(model.getItems())
+        .as("a display-only list does not destroy its consumer's data on a stray Delete")
+        .containsExactly("a", "b", "c");
+  }
+
+  @Test
+  void keyboardDeleteIsSuppressedWhereTheContextMenuOffersNoDeleteEntry() {
+    listOf("a", "b", "c")
+        .setMovementMode(MovementMode.MOVABLE)
+        .setSortOrder(Comparator.naturalOrder());
+    Input.click(list.getComponentFor("b"), 4, 4);
+
+    Input.pressBoundKey(list, "pressed DELETE", "elwhaList.delete");
+
+    assertThat(list.createReorderMenuItems("b"))
+        .as("an active sort withdraws the whole reorder section, Delete included")
+        .isEmpty();
+    assertThat(model.getItems())
+        .as("so the keystroke must be withdrawn with it — the two paths agree")
+        .containsExactly("a", "b", "c");
   }
 
   @Test
@@ -537,6 +568,36 @@ class ElwhaItemListRenderTest {
     assertThat(list.createReorderMenuItems("a"))
         .as("the section is Move up, Move down, Delete")
         .hasSize(3);
+  }
+
+  @Test
+  void contextMenuEntriesRespectTheAnchorPartition() {
+    listOf("a", "b", "c").setAnchorPredicate("a"::equals);
+
+    assertThat(list.createReorderMenuItems("a").get(1).isEnabled())
+        .as("the anchor is locked to the leading slot, so Move down would do nothing")
+        .isFalse();
+    assertThat(list.createReorderMenuItems("b").get(0).isEnabled())
+        .as("its neighbour cannot move up into the slot the anchor holds either")
+        .isFalse();
+    assertThat(list.createReorderMenuItems("b").get(1).isEnabled())
+        .as("but moving down is a real move")
+        .isTrue();
+  }
+
+  @Test
+  void contextMenuEntriesRespectThePinPartition() {
+    listOf("a", "b", "c", "d").setPinPredicate(item -> "a".equals(item) || "b".equals(item));
+
+    assertThat(list.createReorderMenuItems("b").get(1).isEnabled())
+        .as("the last pinned item cannot move down out of the pinned partition")
+        .isFalse();
+    assertThat(list.createReorderMenuItems("c").get(0).isEnabled())
+        .as("nor can the first unpinned item move up into it")
+        .isFalse();
+    assertThat(list.createReorderMenuItems("c").get(1).isEnabled())
+        .as("moves inside a partition stay available")
+        .isTrue();
   }
 
   @Test
@@ -612,6 +673,72 @@ class ElwhaItemListRenderTest {
                 .get(javax.swing.KeyStroke.getKeyStroke("pressed SPACE")))
         .as("Space activates the focused item")
         .isEqualTo("elwhaList.activate");
+  }
+
+  /**
+   * Focus position is private, so each case reads it back the way a user would: move focus, then
+   * activate, and see which item the activation landed on.
+   */
+  private void focusThen(final String start, final String keystroke, final String actionKey) {
+    Input.click(list.getComponentFor(start), 4, 4);
+    Input.pressBoundKey(list, keystroke, actionKey);
+    Input.pressBoundKey(list, "pressed SPACE", "elwhaList.activate");
+  }
+
+  @Test
+  void gridBlockArrowsStepAWholeRow() {
+    listOf("a", "b", "c", "d", "e", "f", "g", "h")
+        .setOrientation(ElwhaListOrientation.GRID)
+        .setColumns(4)
+        .setSelectionMode(SelectionMode.SINGLE);
+    layout();
+
+    focusThen("a", "pressed DOWN", "elwhaList.next");
+
+    assertThat(list.getSelectionModel().getSelected())
+        .as("Down moves one row, not one item — otherwise it does exactly what Right does")
+        .containsExactly("e");
+  }
+
+  @Test
+  void gridBlockArrowsStepAWholeRowBackwards() {
+    listOf("a", "b", "c", "d", "e", "f", "g", "h")
+        .setOrientation(ElwhaListOrientation.GRID)
+        .setColumns(4)
+        .setSelectionMode(SelectionMode.SINGLE);
+    layout();
+
+    focusThen("f", "pressed UP", "elwhaList.previous");
+
+    assertThat(list.getSelectionModel().getSelected())
+        .as("Up lands in the same column of the row above")
+        .containsExactly("b");
+  }
+
+  @Test
+  void gridInlineArrowsStillStepOneItem() {
+    listOf("a", "b", "c", "d", "e", "f", "g", "h")
+        .setOrientation(ElwhaListOrientation.GRID)
+        .setColumns(4)
+        .setSelectionMode(SelectionMode.SINGLE);
+    layout();
+
+    focusThen("a", "pressed RIGHT", "elwhaList.nextInline");
+
+    assertThat(list.getSelectionModel().getSelected())
+        .as("the inline arrows walk within the row, which is what makes the two axes distinct")
+        .containsExactly("b");
+  }
+
+  @Test
+  void blockArrowsStillStepOneItemOutsideAGrid() {
+    listOf("a", "b", "c", "d").setSelectionMode(SelectionMode.SINGLE);
+
+    focusThen("a", "pressed DOWN", "elwhaList.next");
+
+    assertThat(list.getSelectionModel().getSelected())
+        .as("a flat orientation has one axis, so the row step must not leak into it")
+        .containsExactly("b");
   }
 
   @Test

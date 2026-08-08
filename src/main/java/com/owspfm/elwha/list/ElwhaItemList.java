@@ -1017,12 +1017,11 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
     if (!canReorderAnything()) {
       return List.of();
     }
-    final int index = visibleItems.indexOf(item);
     final JMenuItem up = new JMenuItem("Move up");
-    up.setEnabled(index > 0);
+    up.setEnabled(wouldMove(item, -1));
     up.addActionListener(event -> moveFocusedItem(item, -1));
     final JMenuItem down = new JMenuItem("Move down");
-    down.setEnabled(index >= 0 && index < visibleItems.size() - 1);
+    down.setEnabled(wouldMove(item, 1));
     down.addActionListener(event -> moveFocusedItem(item, 1));
     final JMenuItem delete = new JMenuItem("Delete");
     delete.addActionListener(event -> deleteItem(item));
@@ -2318,27 +2317,44 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
 
   // ------------------------------------------------------- reorder commands
 
-  private void moveFocusedItem(final T item, final int delta) {
+  // The single source of truth for "would this move land anywhere" — every refusal the move path
+  // has, resolved once. The context menu enabled its entries on list-end position alone, which
+  // ignores the anchor refusal and the pin-partition clamp below and so offered enabled-but-dead
+  // entries (#569); it now asks this instead.
+  private int resolveMoveTarget(final T item, final int delta) {
     if (!canReorderAnything() || item == null || isAnchored(item)) {
-      return;
+      return -1;
     }
     final int fromVisible = visibleItems.indexOf(item);
     if (fromVisible < 0) {
-      return;
+      return -1;
     }
     final int toVisible = Math.max(0, Math.min(visibleItems.size() - 1, fromVisible + delta));
     if (toVisible == fromVisible) {
-      return;
+      return -1;
     }
     final int clamped = clampSlotToPartition(toVisible, item);
     if (clamped == fromVisible) {
-      return;
+      return -1;
     }
     final int fromModel = model.indexOf(item);
     final int toModel = translateVisibleSlotToModelIndex(clamped, item);
     if (fromModel < 0 || toModel < 0 || fromModel == toModel || toModel >= model.getSize()) {
+      return -1;
+    }
+    return toModel;
+  }
+
+  private boolean wouldMove(final T item, final int delta) {
+    return resolveMoveTarget(item, delta) >= 0;
+  }
+
+  private void moveFocusedItem(final T item, final int delta) {
+    final int toModel = resolveMoveTarget(item, delta);
+    if (toModel < 0) {
       return;
     }
+    final int fromModel = model.indexOf(item);
     if (!commitMove(fromModel, toModel)) {
       return;
     }
@@ -2350,8 +2366,13 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
     }
   }
 
+  // Gated on the same predicate the context menu uses, so Delete is offered and honored on exactly
+  // the same lists. Ungated, the Delete / Cmd-Backspace bindings removed from the backing model of
+  // a
+  // plain `new ElwhaItemList<>(model, adapter)` — SelectionMode.NONE, MovementMode.STATIC, a
+  // display-only list — which silently destroyed the consumer's data (#587).
   private void deleteItem(final T item) {
-    if (item == null) {
+    if (item == null || !canReorderAnything()) {
       return;
     }
     try {
@@ -2478,9 +2499,16 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
 
     @Override
     public void actionPerformed(final ActionEvent event) {
+      // In a GRID the block arrows walk whole rows. Stepping them by one, as the flat orientations
+      // do, made Down identical to Right and left a keyboard user no way to move vertically at all
+      // — the grid read as a flat sequence (#598).
+      final int step =
+          !inline && orientation == ElwhaListOrientation.GRID
+              ? delta * Math.max(1, columns)
+              : delta;
       final boolean mirrored =
           inline && !isLeftToRight() && orientation != ElwhaListOrientation.VERTICAL;
-      moveFocus(mirrored ? -delta : delta);
+      moveFocus(mirrored ? -step : step);
     }
   }
 

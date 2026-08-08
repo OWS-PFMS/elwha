@@ -1,6 +1,7 @@
 package com.owspfm.elwha.fab;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.owspfm.elwha.icons.MaterialIcons;
@@ -446,15 +447,34 @@ class ElwhaFabAnchorTest {
   }
 
   @Test
-  void shrinkNeedsAFabThatCarriesBothMorphEndpoints() {
+  void aLabelOnlyFabMakesShrinkInertRatherThanThrowingThroughTheScrollBar() {
     final JScrollPane pane = scrollable();
-    scrollAnchor(pane, ElwhaFab.extended("Compose"), ElwhaFabAnchor.ScrollResponse.SHRINK);
+    final ElwhaFab fab = ElwhaFab.extended("Compose");
+    scrollAnchor(pane, fab, ElwhaFabAnchor.ScrollResponse.SHRINK);
 
-    assertThatThrownBy(() -> pane.getVerticalScrollBar().setValue(200))
+    assertThatCode(() -> pane.getVerticalScrollBar().setValue(200))
         .as(
-            "a label-only FAB has no Standard endpoint to shrink into, and the first scroll-down"
-                + " says so rather than silently doing nothing")
-        .isInstanceOf(IllegalStateException.class);
+            "#564 — onScroll runs from a ChangeListener on the scroll bar's model, so a morph"
+                + " refusal would unwind through setValue into whatever consumer code scrolled")
+        .doesNotThrowAnyException();
+    assertThat(fab.getForm())
+        .as("a label-only FAB has no Standard endpoint, so it simply stays as it is")
+        .isEqualTo(ElwhaFab.Form.EXTENDED);
+  }
+
+  @Test
+  void anIconOnlyFabMakesShrinkInertInBothScrollDirections() {
+    final JScrollPane pane = scrollable();
+    final ElwhaFab fab = ElwhaFab.standard(MaterialIcons.add());
+    scrollAnchor(pane, fab, ElwhaFabAnchor.ScrollResponse.SHRINK);
+
+    pane.getVerticalScrollBar().setValue(200);
+    assertThatCode(() -> pane.getVerticalScrollBar().setValue(0))
+        .as(
+            "the icon-only case threw on the scroll back UP, not down — morphTo(STANDARD) was"
+                + " already satisfied, so only the return to EXTENDED had no endpoint")
+        .doesNotThrowAnyException();
+    assertThat(fab.getForm()).isEqualTo(ElwhaFab.Form.STANDARD);
   }
 
   // ------------------------------------------------------- response switch

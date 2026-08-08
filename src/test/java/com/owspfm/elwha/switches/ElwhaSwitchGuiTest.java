@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.testkit.GuiSteps;
 import com.owspfm.elwha.testkit.GuiToolkit;
+import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Mode;
@@ -170,6 +171,71 @@ class ElwhaSwitchGuiTest {
               && Math.abs(got.getGreen() - want.getGreen()) <= 10
               && Math.abs(got.getBlue() - want.getBlue()) <= 10;
         });
+  }
+
+  // ------------------------------------------------- focus-visible (#630)
+
+  /** Render size for the chrome comparison — the switch's natural size. */
+  private static final int PROBE_W = 60;
+
+  private static final int PROBE_H = 40;
+
+  private static final Color PROBE_GROUND = Color.MAGENTA;
+
+  /**
+   * An offscreen repaint of the live switch with the pointer states cleared, so two shots differ
+   * only by the focus treatment.
+   *
+   * <p>The disable/re-enable round trip is what makes the comparison mean "focus". Hover, press,
+   * drag and focus all fill the same halo, and this tier cannot quiesce the first three: parking
+   * the pointer does not reliably deliver a {@code MOUSE_EXITED} before the shot, and a Robot click
+   * can leave the drag flag set with no public setter to clear it. {@code setEnabled(false)} clears
+   * exactly those three (the #627 contract) and leaves the focus state alone, so what survives the
+   * round trip is the focus treatment. That hover paints its own layer, and that press outranks it,
+   * are pinned headless in {@code ElwhaSwitchStateLayerTest}.
+   *
+   * <p>Shots are compared against another shot of the <em>same live switch</em> rather than a
+   * freshly constructed one: a realized switch paints chrome inside the halo bounds that an
+   * unrealized one does not, so a fresh reference would differ for reasons unrelated to focus.
+   */
+  private BufferedImage chromeOf(final ElwhaSwitch toggle) {
+    toggle.setEnabled(false);
+    toggle.setEnabled(true);
+    return Pixels.render(toggle, PROBE_W, PROBE_H, PROBE_GROUND);
+  }
+
+  private <T> T read(final java.util.function.Supplier<T> supplier) throws Exception {
+    final AtomicReference<T> value = new AtomicReference<>();
+    SwingUtilities.invokeAndWait(() -> value.set(supplier.get()));
+    return value.get();
+  }
+
+  private static boolean rastersMatch(final BufferedImage a, final BufferedImage b) {
+    for (int y = 0; y < a.getHeight(); y++) {
+      for (int x = 0; x < a.getWidth(); x++) {
+        if (a.getRGB(x, y) != b.getRGB(x, y)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  @Test
+  void aKeyboardTraversalArmsTheFocusTreatment() throws Exception {
+    SwingUtilities.invokeAndWait(() -> first.requestFocusInWindow());
+    waitFor("the first switch owns focus", () -> first.isFocusOwner());
+    final BufferedImage secondAtRest = read(() -> chromeOf(second));
+
+    GuiSteps.keyUntil(
+        robot,
+        KeyEvent.VK_TAB,
+        "Tab moves real focus onto the second switch",
+        () -> second.isFocusOwner());
+
+    waitFor(
+        "#630 — a keyboard traversal arms the focus treatment, so the chrome changes",
+        () -> !rastersMatch(chromeOf(second), secondAtRest));
   }
 
   /** Captures the whole virtual screen into surefire-reports so the CI artifact carries it. */

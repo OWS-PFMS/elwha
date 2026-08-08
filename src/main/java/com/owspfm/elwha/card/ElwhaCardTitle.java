@@ -46,6 +46,8 @@ public final class ElwhaCardTitle extends JLabel {
    */
   public ElwhaCardTitle(final String text) {
     super("");
+    // Inert by construction: display-only, so it must not take a tab stop (#575).
+    setFocusable(false);
     setHorizontalAlignment(SwingConstants.LEADING);
     setAlignmentX(LEFT_ALIGNMENT);
     setText(text);

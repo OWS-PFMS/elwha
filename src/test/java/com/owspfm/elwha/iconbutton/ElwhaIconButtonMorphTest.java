@@ -141,7 +141,7 @@ class ElwhaIconButtonMorphTest {
   }
 
   @Test
-  void keyboardActivationPulsesTheSameMorphWithoutThePressedLayer() {
+  void keyboardActivationGivesTheSameConfirmationAPointerPressDoes() {
     final ElwhaIconButton button = bigButton(ShapeScale.FULL);
 
     Input.pressBoundKey(button, "pressed SPACE", "elwhaiconbutton.activate");
@@ -150,9 +150,10 @@ class ElwhaIconButtonMorphTest {
         Pixels.render(button, SIDE, SIDE),
         ROUND_PROBE,
         ROUND_PROBE,
-        ColorRole.PRIMARY.resolve(),
-        "a tap has no press-and-hold, so keyboard activation pulses the shape morph — and only"
-            + " the shape: the container keeps its resting fill with no pressed layer");
+        pressedFill(),
+        "#562 — a keyboard activation flashes every press affordance this button has, the shape"
+            + " morph and the pressed layer together, exactly as a pointer press does; the three"
+            + " members of the actions family used to give three different answers here");
   }
 
   @Test

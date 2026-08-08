@@ -8,6 +8,7 @@ import java.awt.Dimension;
 import java.awt.Insets;
 import java.beans.PropertyChangeListener;
 import java.util.Objects;
+import java.util.logging.Logger;
 import javax.swing.JLayeredPane;
 import javax.swing.JScrollPane;
 import javax.swing.Timer;
@@ -108,8 +109,11 @@ public final class ElwhaFabAnchor extends JLayeredPane {
   private JScrollPane scrollSource;
   private final MorphAnimator hideAnim;
   private final ScrollSourceBinding scrollBinding = new ScrollSourceBinding(this::onScroll);
+  private static final Logger LOG = Logger.getLogger(ElwhaFabAnchor.class.getName());
+
   private boolean hidden;
   private boolean shrunk;
+  private boolean shrinkUnsupportedLogged;
   private Timer shrinkTracker;
 
   /**
@@ -231,8 +235,9 @@ public final class ElwhaFabAnchor extends JLayeredPane {
    * to its shown / Extended baseline first.
    *
    * <p>{@link ScrollResponse#SHRINK} requires a FAB built via {@link ElwhaFab#extended(javax.swing
-   * .Icon, String)} — it must carry both morph endpoints; otherwise the first scroll-down's {@link
-   * ElwhaFab#morphTo(ElwhaFab.Form)} throws {@link IllegalStateException}.
+   * .Icon, String)} — it must carry both morph endpoints. A FAB with only one (a {@code
+   * standard(Icon)} FAB has no label, an {@code extended(String)} FAB no icon) cannot shrink, so
+   * the response is inert on it and logs a warning on the first scroll rather than morphing.
    *
    * @param response the scroll response
    * @throws NullPointerException if {@code response} is {@code null}
@@ -394,7 +399,7 @@ public final class ElwhaFabAnchor extends JLayeredPane {
         hidden = false;
         hideAnim.reverse();
       }
-    } else if (scrollResponse == ScrollResponse.SHRINK) {
+    } else if (scrollResponse == ScrollResponse.SHRINK && fabCarriesBothMorphEndpoints()) {
       if (down && !shrunk) {
         shrunk = true;
         fab.morphTo(ElwhaFab.Form.STANDARD);
@@ -435,8 +440,28 @@ public final class ElwhaFabAnchor extends JLayeredPane {
     }
     if (shrunk) {
       shrunk = false;
-      fab.morphTo(ElwhaFab.Form.EXTENDED);
-      startShrinkTracker();
+      if (fabCarriesBothMorphEndpoints()) {
+        fab.morphTo(ElwhaFab.Form.EXTENDED);
+        startShrinkTracker();
+      }
     }
+  }
+
+  // SHRINK needs a FAB that can morph both ways; morphTo throws otherwise. onScroll runs from a
+  // ChangeListener on the scroll source's BoundedRangeModel, so that exception would unwind out of
+  // JScrollBar.setValue and through whatever consumer code moved the scroll bar — breaking the
+  // consumer's scrolling over a FAB's decoration (#564). Refuse the response instead, once loudly,
+  // and leave the FAB alone.
+  private boolean fabCarriesBothMorphEndpoints() {
+    if (fab.getIcon() != null && fab.getText() != null) {
+      return true;
+    }
+    if (!shrinkUnsupportedLogged) {
+      LOG.warning(
+          "ElwhaFabAnchor: SHRINK needs a FAB built via ElwhaFab.extended(Icon, String) — this one"
+              + " carries only one morph endpoint, so the scroll response is inert");
+      shrinkUnsupportedLogged = true;
+    }
+    return false;
   }
 }

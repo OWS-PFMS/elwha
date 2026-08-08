@@ -21,6 +21,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Objects;
 import javax.swing.AbstractAction;
+import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
@@ -789,7 +790,8 @@ public abstract class AbstractElwhaOverlay {
   }
 
   /**
-   * Depth-first search for the first focus-accepting descendant, skipping container panels.
+   * Depth-first search for the first focus-accepting descendant, skipping container panels and
+   * display-only components.
    *
    * @param root the container to search
    * @return the first focusable descendant, or {@code null}
@@ -800,7 +802,8 @@ public abstract class AbstractElwhaOverlay {
           && child.isEnabled()
           && child.isVisible()
           && child.isDisplayable()
-          && !(child instanceof JPanel)) {
+          && !(child instanceof JPanel)
+          && respondsToTheKeyboard(child)) {
         return child;
       }
       if (child instanceof Container) {
@@ -813,6 +816,27 @@ public abstract class AbstractElwhaOverlay {
     return null;
   }
 
+  // Swing keeps display-only components out of Tab traversal by POLICY, not by the focusable flag —
+  // JLabel reports isFocusable() true — so the flag alone let a dialog open with focus on its
+  // headline (#578). LayoutFocusTraversalPolicy's own test is "has a WHEN_FOCUSED binding", which
+  // is
+  // what really distinguishes something the keyboard can operate; mirror it, walking the parent
+  // chain because a component's own map is usually an empty child of the UI-installed one. A
+  // decorator that delegates to an embedded editor (ElwhaTextField, ElwhaSelectField) fails this
+  // and
+  // is descended into instead, landing on the editor that owns the keystrokes — the right target
+  // anyway.
+  private static boolean respondsToTheKeyboard(final Component child) {
+    if (!(child instanceof JComponent jc)) {
+      return true;
+    }
+    InputMap map = jc.getInputMap(JComponent.WHEN_FOCUSED);
+    while (map != null && map.size() == 0) {
+      map = map.getParent();
+    }
+    return map != null;
+  }
+
   /**
    * Wraps a {@link Runnable} as an {@link AbstractAction} for key-binding action maps.
    *
@@ -821,6 +845,42 @@ public abstract class AbstractElwhaOverlay {
    */
   protected static AbstractAction action(final Runnable body) {
     return new AbstractAction() {
+      @Override
+      public void actionPerformed(final ActionEvent e) {
+        body.run();
+      }
+    };
+  }
+
+  /**
+   * Wraps a {@link Runnable} as an {@link AbstractAction} that is <em>enabled only while this
+   * overlay is topmost</em> — the form every {@code WHEN_IN_FOCUSED_WINDOW} binding on a stackable
+   * overlay must use.
+   *
+   * <p>Window-wide bindings are resolved by {@code KeyboardManager}, which walks the components
+   * registered for the keystroke newest-first and stops at the first one whose action fires. That
+   * order is registration recency, not z-order, so it agrees with {@code isTopmost()} only while
+   * show order and layer order happen to coincide: a modal side sheet ({@code OVERLAY_LAYER}) shown
+   * while a dialog ({@code MODAL_LAYER}) is already up registers last but paints underneath, and
+   * took Escape out from under the dialog on top of it (#599).
+   *
+   * <p>Reporting {@code isEnabled() == false} rather than no-op'ing the body is what makes the fix
+   * work: {@code SwingUtilities.notifyAction} treats a disabled action as not-fired, so the search
+   * <em>continues</em> to the next registered candidate — the overlay that really is on top. A body
+   * that silently returned would consume the keystroke and leave the topmost overlay unreachable.
+   *
+   * @param body the action body
+   * @return an action that runs {@code body}, enabled only while this overlay is topmost
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  protected final AbstractAction topmostAction(final Runnable body) {
+    return new AbstractAction() {
+      @Override
+      public boolean isEnabled() {
+        return isTopmost();
+      }
+
       @Override
       public void actionPerformed(final ActionEvent e) {
         body.run();

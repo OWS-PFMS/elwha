@@ -117,6 +117,35 @@ class ElwhaColorPickerHostTest {
   }
 
   @Test
+  void pickerHeaderIsInertChromeAroundItsEyedropper() {
+    final ElwhaColorPicker picker = new ElwhaColorPicker(Color.RED);
+    picker.setEyedropperEnabled(true);
+    final ColorPickerHeader header = new ColorPickerHeader(picker);
+
+    assertThat(header.isFocusable())
+        .as("the header row binds no keys; it must not take a stop in front of the eyedropper")
+        .isFalse();
+  }
+
+  @Test
+  void everySwatchTierIgnoresAnIndexOutsideItsCatalog() {
+    final ElwhaColorPicker picker = new ElwhaColorPicker(Color.RED);
+    final SwatchesPane pane = (SwatchesPane) picker.paneFor(PickerMode.SWATCHES);
+
+    pane.selectHue(-1);
+    pane.selectHue(9999);
+    pane.selectShade(-1);
+    pane.selectShade(9999);
+    pane.selectRecent(-1);
+
+    assertThat(picker.getColor())
+        .as(
+            "indexAt answers -1 for a press between cells, so an out-of-range index has to be a"
+                + " no-op rather than an exception out of a mouse handler")
+        .isEqualTo(Color.RED);
+  }
+
+  @Test
   void recentsStripIgnoresACellPastTheEndOfTheList() {
     final ElwhaColorPicker picker = new ElwhaColorPicker(Color.RED);
     final SwatchesPane pane = (SwatchesPane) picker.paneFor(PickerMode.SWATCHES);

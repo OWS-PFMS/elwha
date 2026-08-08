@@ -938,8 +938,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
             if (!ElwhaIconButton.this.isEnabled()) {
               return;
             }
-            startRipple(new Point(getWidth() / 2, getHeight() / 2));
-            pulsePressMorph();
+            keyboardPressFlash();
             activate(0);
           }
         };
@@ -1070,13 +1069,29 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   }
 
   // M3 Expressive keyboard activation (#295) — a tap has no press-and-hold, so the morph is pulsed:
-  // animate in, then auto-reverse one short3 window later so a Space / Enter activation reads the
-  // same shape feedback a mouse press does. ElwhaButton does not pulse on keyboard (its ripple is
-  // its keyboard cue); the icon button pulses because, with the ripple suppressible (#288), the
-  // morph is its only guaranteed press confirmation.
-  private void pulsePressMorph() {
+  // The family's keyboard press-confirmation (#562). A pointer press holds `pressed` for as long as
+  // the button is down; a Space / Enter activation is instantaneous, so it flashes every press
+  // affordance the component has for one SHORT3 window and unwinds them together: the M3 10%
+  // PRESSED state layer, a centered ripple, and the press shape morph where the component has one.
+  // The ruling is that keyboard activation reads exactly like that component's own pointer press —
+  // ElwhaButton, ElwhaIconButton and ElwhaFab previously gave three different confirmations (a
+  // ripple, a shape pulse, a state-layer flash), so a keyboard user got a different answer from
+  // each member of one family.
+  private void keyboardPressFlash() {
+    pressed = true;
     pressMorph.start();
-    final Timer release = new Timer(MorphAnimator.SHORT3_MS, e -> pressMorph.reverse());
+    startRipple(new Point(getWidth() / 2, getHeight() / 2));
+    repaint();
+    // One-shot release. Repeated activations inside the window each schedule their own timer;
+    // redundant fires are harmless because every step here is idempotent.
+    final Timer release =
+        new Timer(
+            MorphAnimator.SHORT3_MS,
+            e -> {
+              pressed = false;
+              pressMorph.reverse();
+              repaint();
+            });
     release.setRepeats(false);
     release.start();
   }

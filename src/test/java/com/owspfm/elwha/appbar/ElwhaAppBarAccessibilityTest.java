@@ -37,6 +37,22 @@ class ElwhaAppBarAccessibilityTest {
   }
 
   @Test
+  void barIsNotItselfATabStopButItsControlsAre() {
+    final ElwhaAppBar bar = ElwhaAppBar.small();
+    final ElwhaIconButton action = ElwhaIconButton.standardIconButton(MaterialIcons.close());
+    bar.addAction(action);
+
+    assertThat(bar.isFocusable())
+        .as(
+            "§9 — chrome that binds no keys must not sit in the traversal order between the"
+                + " controls it hosts")
+        .isFalse();
+    assertThat(action.isFocusable())
+        .as("container focusability does not cascade, so the hosted button keeps its own stop")
+        .isTrue();
+  }
+
+  @Test
   void barTakesItsNameFromItsTitle() {
     final ElwhaAppBar bar = ElwhaAppBar.small();
 

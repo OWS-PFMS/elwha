@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
@@ -287,6 +288,33 @@ class ElwhaCardAtomsTest {
     assertThat(thumb.getPreferredSize())
         .as("and asks for a square of that size")
         .isEqualTo(new Dimension(40, 40));
+  }
+
+  @Test
+  void everyDisplayOnlyAtomIsInertByConstruction() {
+    assertThat(new ElwhaCardTitle("Title").isFocusable())
+        .as("a card title is text, not a control")
+        .isFalse();
+    assertThat(new ElwhaCardSubtitle("Subtitle").isFocusable()).isFalse();
+    assertThat(new ElwhaCardSupportingText("Body").isFocusable()).isFalse();
+    assertThat(new ElwhaCardLeadingIcon().isFocusable()).isFalse();
+    assertThat(new ElwhaCardDivider().isFocusable()).isFalse();
+  }
+
+  @Test
+  void structuralSlotsAreInertButPassTheirChildrensStopsThrough() {
+    final ElwhaCardHeader header = new ElwhaCardHeader();
+    final ElwhaCardActions actions = new ElwhaCardActions();
+    final ElwhaButton save = ElwhaButton.textButton("Save");
+    actions.addTrailing(save);
+
+    assertThat(header.isFocusable())
+        .as("a slot that hosts controls must not become a stop in front of them")
+        .isFalse();
+    assertThat(actions.isFocusable()).isFalse();
+    assertThat(save.isFocusable())
+        .as("container focusability does not cascade — the hosted button keeps its stop")
+        .isTrue();
   }
 
   @Test

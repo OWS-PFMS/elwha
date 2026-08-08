@@ -1,6 +1,7 @@
 package com.owspfm.elwha.colorpicker;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.StateLayer;
 import java.awt.AlphaComposite;
@@ -167,6 +168,14 @@ final class WheelPane extends ColorPickerPane {
 
     private BufferedImage cache;
 
+    /**
+     * Whether the focus indicator should paint — armed only by a keyboard traversal, so a plain
+     * click leaves no ring behind ({@link com.owspfm.elwha.theme.FocusVisible}, #630). Every one of
+     * these panes requests focus from its own mousePressed, which is exactly the case the gate
+     * exists for.
+     */
+    private boolean focusVisible;
+
     WheelDisc() {
       setOpaque(false);
       setFocusable(true);
@@ -177,6 +186,8 @@ final class WheelPane extends ColorPickerPane {
             public void mousePressed(final MouseEvent e) {
               if (isInteractive()) {
                 requestFocusInWindow();
+                // A pointer press is not a focus-visible interaction, even though it grabs focus.
+                focusVisible = false;
                 pointAt(e, true);
               }
             }
@@ -201,11 +212,13 @@ final class WheelPane extends ColorPickerPane {
           new FocusAdapter() {
             @Override
             public void focusGained(final FocusEvent e) {
+              focusVisible = FocusVisible.isKeyboardCause(e.getCause());
               repaint();
             }
 
             @Override
             public void focusLost(final FocusEvent e) {
+              focusVisible = false;
               repaint();
             }
           });
@@ -296,7 +309,7 @@ final class WheelPane extends ColorPickerPane {
       g2.setColor(ColorRole.OUTLINE.resolve());
       g2.setStroke(new BasicStroke(1f));
       g2.drawOval(x - 9, y - 9, 18, 18);
-      if (isFocusOwner()) {
+      if (focusVisible) {
         g2.setColor(ColorRole.PRIMARY.resolve());
         g2.setStroke(new BasicStroke(2f));
         g2.drawOval(x - 12, y - 12, 24, 24);

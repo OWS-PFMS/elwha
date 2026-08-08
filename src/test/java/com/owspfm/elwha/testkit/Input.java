@@ -40,6 +40,40 @@ public final class Input {
   }
 
   /**
+   * Dispatches a mouse press at {@code (x, y)} with a specific button — the seam for asserting that
+   * a gesture filters on {@link MouseEvent#BUTTON1}. {@link #press(Component, int, int)} always
+   * presses button 1, so it cannot reach the refusal path.
+   *
+   * @param target the component under test
+   * @param x press x in component coordinates
+   * @param y press y in component coordinates
+   * @param button the {@link MouseEvent} button constant to press
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static void press(final Component target, final int x, final int y, final int button) {
+    final int mask =
+        switch (button) {
+          case MouseEvent.BUTTON2 -> MouseEvent.BUTTON2_DOWN_MASK;
+          case MouseEvent.BUTTON3 -> MouseEvent.BUTTON3_DOWN_MASK;
+          default -> MouseEvent.BUTTON1_DOWN_MASK;
+        };
+    target.dispatchEvent(
+        new MouseEvent(
+            target,
+            MouseEvent.MOUSE_PRESSED,
+            System.nanoTime(),
+            mask,
+            x,
+            y,
+            x,
+            y,
+            1,
+            false,
+            button));
+  }
+
+  /**
    * Dispatches a mouse drag to {@code (x, y)}.
    *
    * @param target the component under test

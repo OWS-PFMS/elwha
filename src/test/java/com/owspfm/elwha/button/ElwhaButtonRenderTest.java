@@ -3,6 +3,7 @@ package com.owspfm.elwha.button;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.testkit.EdtInterceptor;
+import com.owspfm.elwha.testkit.Input;
 import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
@@ -157,6 +158,26 @@ class ElwhaButtonRenderTest {
             basis.on().orElse(ColorRole.ON_SURFACE).resolve(),
             StateLayer.PRESSED.opacity()),
         variant + " paints only the pressed layer while both states are live");
+  }
+
+  @Test
+  void keyboardActivationFlashesThePressedLayerToo() {
+    final ElwhaButton button = chromeOnly(ButtonVariant.FILLED);
+
+    Input.pressBoundKey(button, "pressed SPACE", "elwhabutton.activate");
+
+    final ColorRole basis = overlayBasis(ButtonVariant.FILLED);
+    final Point center = bodyCenter(button);
+    Pixels.assertPixelNear(
+        render(button),
+        center.x,
+        center.y,
+        Pixels.mix(
+            basis.resolve(),
+            basis.on().orElse(ColorRole.ON_SURFACE).resolve(),
+            StateLayer.PRESSED.opacity()),
+        "#562 — a keyboard user gets the same press confirmation a pointer user does; the button"
+            + " used to seed only a ripple, which is suppressible, and paint no pressed layer");
   }
 
   // ------------------------------------------------------------ disabled

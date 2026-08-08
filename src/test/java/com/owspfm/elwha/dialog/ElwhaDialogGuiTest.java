@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+import javax.swing.text.JTextComponent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -38,14 +39,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * where nothing owns focus and no press is delivered.
  *
  * <p>This is also where the base host's {@code firstFocusable} fallback becomes reachable at all:
- * it requires displayable components, so a headless tree offers it no candidates.
- *
- * <p><b>Known gap, deliberately not asserted here.</b> With no confirming action the fallback lands
- * on the <em>headline label</em> rather than the first form control, because the search accepts any
- * non-{@code JPanel} whose {@code isFocusable()} is true and Swing leaves that flag on for display-
- * only components (labels are kept out of traversal by policy, not by the flag). The test below
- * asserts only the part of the contract that holds — focus enters the surface and leaves the inert
- * background — so the suite neither goes red nor enshrines the wrong target.
+ * it requires displayable components, so a headless tree offers it no candidates. Until #578 that
+ * fallback landed on the <em>headline label</em> — {@code isFocusable()} stays true on display-only
+ * components, and Swing keeps labels out of traversal by policy rather than by the flag — so the
+ * test below now pins the target it was previously only able to bound.
  */
 @Tag("gui")
 @ExtendWith(GuiToolkit.class)
@@ -127,6 +124,11 @@ class ElwhaDialogGuiTest {
     return mounted().get(0);
   }
 
+  /** The current focus owner. Call on the EDT. */
+  private Component focusOwner() {
+    return KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+  }
+
   private boolean focusIsInsideTheDialog() {
     final Component owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
     return owner != null
@@ -166,7 +168,7 @@ class ElwhaDialogGuiTest {
   }
 
   @Test
-  void withNoConfirmingActionFocusStillEntersTheSurface() throws Exception {
+  void withNoConfirmingActionFocusFallsThroughTheHeadlineToTheFirstControl() throws Exception {
     final ElwhaTextField field = new ElwhaTextField(ElwhaTextField.Variant.FILLED, "Name");
     show(ElwhaDialog.builder().headline("Rename").content(field).build());
 
@@ -176,6 +178,15 @@ class ElwhaDialogGuiTest {
     assertThat(onEdt(() -> sink.isFocusOwner()))
         .as("never on the inert background behind the scrim")
         .isFalse();
+    assertThat(read(this::focusOwner))
+        .as(
+            "the headline label is skipped and focus lands on the editor that actually takes"
+                + " keystrokes — a label reports isFocusable() true but operates no keyboard"
+                + " binding")
+        .isInstanceOf(JTextComponent.class);
+    assertThat(read(() -> SwingUtilities.isDescendingFrom(focusOwner(), field)))
+        .as("and that editor is the field's own")
+        .isTrue();
   }
 
   // ------------------------------------------------------------- focus trap

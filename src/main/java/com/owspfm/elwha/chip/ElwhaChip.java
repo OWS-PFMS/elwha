@@ -3,6 +3,7 @@ package com.owspfm.elwha.chip;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.list.ElwhaListItemView;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.FocusVisible;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
@@ -117,6 +118,13 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
   private int borderWidth = DEFAULT_BORDER_WIDTH;
 
   // State ------------------------------------------------------------------
+  /**
+   * Whether the focus treatment (the 2 px PRIMARY border) should paint — armed only by a keyboard
+   * traversal, so a plain click leaves no focus outline behind ({@link
+   * com.owspfm.elwha.theme.FocusVisible}, #630).
+   */
+  private boolean focusVisible;
+
   private boolean hovered;
   private boolean pressed;
   private boolean selected;
@@ -1122,6 +1130,8 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
                 || interactionMode == ChipInteractionMode.SELECTABLE) {
               pressed = true;
               requestFocusInWindow();
+              // A pointer press is not a focus-visible interaction, even though it grabs focus.
+              focusVisible = false;
               startRipple(toChipPoint(e));
               repaint();
             }
@@ -1159,11 +1169,13 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
         new FocusAdapter() {
           @Override
           public void focusGained(final FocusEvent e) {
+            focusVisible = FocusVisible.isKeyboardCause(e.getCause());
             repaint();
           }
 
           @Override
           public void focusLost(final FocusEvent e) {
+            focusVisible = false;
             pressed = false;
             repaint();
           }
@@ -1375,7 +1387,7 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
     final int h = getHeight();
     final int arc = shape.px();
     final boolean interactive = interactionMode != ChipInteractionMode.STATIC && isEnabled();
-    final boolean focused = isFocusOwner() && interactive;
+    final boolean focused = focusVisible && interactive;
 
     final ColorRole surfaceRole = getSurfaceRole();
     final StateLayer overlay = activeOverlay(interactive);

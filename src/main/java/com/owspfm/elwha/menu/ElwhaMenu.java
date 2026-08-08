@@ -780,6 +780,11 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     return focusHome != null ? focusHome : menuSurface;
   }
 
+  @Override
+  protected Component focusHomeComponent() {
+    return focusHome;
+  }
+
   // With a focus home, the anchored field keeps keyboard focus while the menu is open (the
   // editable-combobox pattern): focus changes and presses within its hierarchy must not read as
   // an escape/outside-press, or every keystroke in the field would dismiss the menu.
