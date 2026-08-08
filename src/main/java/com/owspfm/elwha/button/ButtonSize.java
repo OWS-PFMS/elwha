@@ -170,11 +170,15 @@ public enum ButtonSize {
   }
 
   /**
-   * Square-shape corner radius in pixels for this size — passed as {@code arcWidth} (round-rect
-   * full corner diameter) to the paint pipeline.
+   * Square-shape corner <em>radius</em> in pixels for this size — 12 at {@link #S}, matching the M3
+   * shape token. {@link ElwhaButton} hands it to {@link
+   * com.owspfm.elwha.theme.CornerRadii#uniform(int) CornerRadii.uniform}, which stores real radii;
+   * a caller feeding it to a {@link java.awt.geom.RoundRectangle2D} or to one of the int-arc
+   * painters must double it first, since those take a corner diameter (the {@link
+   * com.owspfm.elwha.theme.ShapeScale#arcPx() ShapeScale.arcPx()} convention).
    *
-   * @return the square corner arcWidth
-   * @version v0.2.0
+   * @return the square corner radius in pixels
+   * @version v0.5.0
    * @since v0.2.0
    */
   public int squareCornerPx() {
