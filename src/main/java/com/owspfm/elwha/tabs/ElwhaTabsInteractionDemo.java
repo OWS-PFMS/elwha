@@ -25,7 +25,7 @@ import javax.swing.SwingUtilities;
  * and a whole-bar enabled switch.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaTabsInteractionDemo {
@@ -86,7 +86,7 @@ public final class ElwhaTabsInteractionDemo {
 
     final ElwhaSwitch enabled = new ElwhaSwitch();
     enabled.setSelected(true);
-    enabled.setLabel("Bars enabled");
+    enabled.setAccessibleLabel("Bars enabled");
     enabled.addActionListener(
         e -> {
           primary.setEnabled(enabled.isSelected());

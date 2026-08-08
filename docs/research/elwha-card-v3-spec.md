@@ -261,7 +261,15 @@ public enum ExpansionOverflow { GROW, SCROLL }
 | `getBorderRole()` | Same. |
 | `setBorderWidth(int)` | **Inherited.** Variant supplies default; consumer may override. |
 | `getBorderWidth()` | Inherited. |
+| `setClipChildrenToCorners(boolean)` | **Inherited.** Default `false`; the card forces it on automatically for an edge-bleed `ElwhaCardMedia`. |
 | `paintComponent(Graphics)` | **Extended.** V3 calls `super.paintComponent` (surface paint) then layers: drop shadow → state-layer overlay → border (per variant) → focus ring (if focused) → ripple (if rippling). Selection-overlay badge paints in `paintChildren` to stay above media. |
+
+**Covariant returns ([#570](https://github.com/OWS-PFMS/elwha/issues/570), 2026-08-07).** Every
+inherited setter marked *Inherited* above is re-declared on `ElwhaCard` solely to narrow the fluent
+return type from `ElwhaSurface` to `ElwhaCard`, so a chain can pass through one and keep reaching
+card-only setters. `setBorderRole` is the deliberate exception: it is inherited-but-not-advertised
+per #62 §4, so it keeps the `ElwhaSurface` return and breaking a chain there is the intended signal.
+See `docs/development/component-api-conventions.md` §5a.
 
 ### 3.3 Layout responsibility
 

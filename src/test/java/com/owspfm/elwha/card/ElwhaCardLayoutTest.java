@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.SpaceScale;
+import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import java.awt.Insets;
 import javax.swing.JComponent;
@@ -50,6 +51,55 @@ class ElwhaCardLayoutTest {
 
   private static ElwhaCardMedia media() {
     return ElwhaCardMedia.painter((g, w, h) -> {});
+  }
+
+  // ------------------------------------------------------------------- RTL
+
+  @Test
+  void headerRowMirrorsUnderRightToLeft() {
+    final ElwhaCardHeader header = new ElwhaCardHeader().setTitle("Title");
+    final Block leading = new Block(24, 24);
+    final Block trailing = new Block(24, 24);
+    header.setLeading(leading);
+    header.addTrailing(trailing);
+    header.setSize(WIDTH, header.getPreferredSize().height);
+
+    header.applyComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+    header.doLayout();
+    assertThat(leading.getX()).as("left-to-right puts the leading slot at the left").isZero();
+    final int ltrTrailingX = trailing.getParent().getX();
+
+    header.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+    header.doLayout();
+
+    assertThat(leading.getParent().getX() + leading.getParent().getWidth())
+        .as("under RTL the leading slot mirrors to the right edge (#607)")
+        .isEqualTo(WIDTH);
+    assertThat(trailing.getParent().getX())
+        .as("and the trailing affordances swap to the left")
+        .isLessThan(ltrTrailingX);
+  }
+
+  @Test
+  void actionRowMirrorsUnderRightToLeft() {
+    final ElwhaCardActions actions = new ElwhaCardActions();
+    final Block lead = new Block(60, 30);
+    final Block trail = new Block(60, 30);
+    actions.addLeading(lead);
+    actions.addTrailing(trail);
+    actions.setSize(WIDTH, actions.getPreferredSize().height);
+
+    actions.applyComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+    actions.doLayout();
+    assertThat(lead.getX()).as("left-to-right anchors the leading action at the left").isZero();
+
+    actions.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+    actions.doLayout();
+
+    assertThat(lead.getX() + lead.getWidth())
+        .as("under RTL the leading action anchors to the right edge (#607)")
+        .isEqualTo(WIDTH);
+    assertThat(trail.getX()).as("and the trailing action to the left").isZero();
   }
 
   // ------------------------------------------------------------ stack order

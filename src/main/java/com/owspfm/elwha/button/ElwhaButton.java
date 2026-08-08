@@ -467,25 +467,40 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
   }
 
   /**
-   * Returns the resting leading icon, or {@code null}.
+   * Returns the resting leading icon as installed, or {@code null}.
    *
-   * @return the resting leading icon
-   * @version v0.2.0
+   * <p>This is the {@link Icon} the caller handed to {@link #setIcon(Icon)} / {@link
+   * #setIcons(Icon, Icon)}, not the glyph this button paints. The painted glyph is a private
+   * derivation — a copy re-sized to the active tier's icon slot and bound to <em>this</em> button's
+   * color filter — and is deliberately not exposed, so an icon round-tripped through this getter
+   * into another component does not arrive with its tint slaved to this one.
+   *
+   * @return the resting leading icon, or {@code null}
+   * @version v0.5.0
    * @since v0.2.0
    */
   public Icon getIcon() {
-    return icon;
+    return rawIcon;
   }
 
   /**
-   * Returns the selected-state leading icon, or {@code null} if only a resting icon was installed.
+   * Returns the selected-state leading icon as installed, or {@code null} if only a resting icon
+   * was installed. Like {@link #getIcon()}, this is the caller's own {@link Icon} rather than the
+   * derived glyph the button paints.
    *
    * @return the selected leading icon, or {@code null}
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public Icon getSelectedIcon() {
-    return selectedIcon;
+    return rawSelectedIcon;
+  }
+
+  // The glyph actually painted at the active tier — a filtered, re-sized copy of the installed
+  // icon. Package-private on purpose (#664): handing the filtered clone to a consumer would slave
+  // its tint to this instance, which is the very sharing bug themeIcon() exists to prevent.
+  Icon paintedIcon() {
+    return icon;
   }
 
   // Binds this button's per-instance color filter to its own copy of the glyph, sized to the active
@@ -1655,18 +1670,24 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
       final Icon paintedIcon = currentIcon();
       final int contentW =
           (paintedIcon != null ? iconSlot + (labelW > 0 ? iconGap : 0) : 0) + labelW;
-      int x = (bodyW - contentW) / 2;
+      final int x = (bodyW - contentW) / 2;
       final int y = bodyH / 2;
+
+      // Icon leads the label — which under an RTL orientation means the icon sits on the *right*
+      // and the label to its left, so the pair swaps within the centered content block. Matches
+      // ElwhaFab's Extended form (design doc §11); design doc §17 for this button.
+      final boolean ltr = getComponentOrientation().isLeftToRight();
+      final int iconX = (ltr || labelW == 0) ? x : x + labelW + iconGap;
+      final int labelX = (!ltr || paintedIcon == null) ? x : x + iconSlot + iconGap;
 
       if (paintedIcon != null) {
         final int iconY = y - iconSlot / 2;
-        paintedIcon.paintIcon(this, g2, x, iconY);
-        x += iconSlot + (labelW > 0 ? iconGap : 0);
+        paintedIcon.paintIcon(this, g2, iconX, iconY);
       }
       if (labelW > 0) {
         final int baseline = y + (fm.getAscent() - fm.getDescent()) / 2;
         g2.setColor(resolveForegroundColor());
-        g2.drawString(text, x, baseline);
+        g2.drawString(text, labelX, baseline);
       }
     } finally {
       g2.dispose();
@@ -1776,6 +1797,10 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
 
     @Override
     public String getAccessibleName() {
+      final String declared = super.getAccessibleName();
+      if (declared != null && !declared.isEmpty()) {
+        return declared;
+      }
       if (text != null && !text.isEmpty()) {
         return text;
       }

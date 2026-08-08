@@ -372,25 +372,41 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   }
 
   /**
-   * Returns the resting icon, or {@code null} if none is installed.
+   * Returns the resting icon as installed, or {@code null} if none is installed.
+   *
+   * <p>This is the {@link Icon} the caller handed to {@link #setIcon(Icon)} / {@link
+   * #setIcons(Icon, Icon)}, not the glyph this button paints. The painted glyph is a private
+   * derivation — a copy re-sized to {@link #getIconSize()} and bound to <em>this</em> button's
+   * color filter — and is deliberately not exposed, so an icon round-tripped through this getter
+   * into another component does not arrive with its tint slaved to this one. For the painted
+   * glyph's geometry use {@link #getIconBounds()}.
    *
    * @return the resting icon, or {@code null}
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public Icon getIcon() {
-    return restingIcon;
+    return rawRestingIcon;
   }
 
   /**
-   * Returns the selected-state icon, or {@code null} if only the resting icon was installed.
+   * Returns the selected-state icon as installed, or {@code null} if only the resting icon was
+   * installed. Like {@link #getIcon()}, this is the caller's own {@link Icon} rather than the
+   * derived glyph the button paints.
    *
    * @return the selected icon, or {@code null}
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public Icon getSelectedIcon() {
-    return selectedIcon;
+    return rawSelectedIcon;
+  }
+
+  // The glyph actually painted at the active icon size — a filtered, re-sized copy of the installed
+  // icon. Package-private on purpose (#664): handing the filtered clone to a consumer would slave
+  // its tint to this instance, which is the very sharing bug themeIcon() exists to prevent.
+  Icon paintedIcon() {
+    return restingIcon;
   }
 
   /**

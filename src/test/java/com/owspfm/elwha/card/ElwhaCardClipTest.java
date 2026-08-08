@@ -45,6 +45,32 @@ class ElwhaCardClipTest {
     return new ElwhaCardSupportingText("body");
   }
 
+  // ------------------------------------------------------ inherited chrome
+
+  /**
+   * The chain below is the assertion: every inherited {@code ElwhaSurface} setter the V3 spec §3.2
+   * advertises as card API returns {@code ElwhaCard}, so a fluent chain can pass through one and
+   * still reach a card-only setter. Before #570 only {@code setElevation} was covariant and this
+   * did not compile.
+   */
+  @Test
+  void aFluentChainSurvivesEveryInheritedSurfaceSetter() {
+    final ElwhaCard card =
+        ElwhaCard.filledCard()
+            .setShape(ShapeScale.XL)
+            .setSurfaceRole(ColorRole.SURFACE_CONTAINER_HIGH)
+            .setBorderWidth(2)
+            .setClipChildrenToCorners(true)
+            .setElevation(3)
+            .setActionable(true);
+
+    assertThat(card.getShape()).as("and each call still lands").isEqualTo(ShapeScale.XL);
+    assertThat(card.getSurfaceRole()).isEqualTo(ColorRole.SURFACE_CONTAINER_HIGH);
+    assertThat(card.getBorderWidth()).isEqualTo(2);
+    assertThat(card.getElevation()).isEqualTo(3);
+    assertThat(card.isActionable()).isTrue();
+  }
+
   // --------------------------------------------------------- atom clip rule
 
   @Test

@@ -2,6 +2,7 @@ package com.owspfm.elwha.theme;
 
 import java.awt.Toolkit;
 import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JComponent;
 import javax.swing.Timer;
 
@@ -27,7 +28,7 @@ import javax.swing.Timer;
  * is Phase 5.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class MorphAnimator {
@@ -55,15 +56,42 @@ public final class MorphAnimator {
   // the multiplier is workbench-only.
   private static volatile float durationMultiplier = 1f;
 
-  // #176 Phase 2 / Phase 5 — auto-detect OS reduced-motion at class-load (design doc §9). Each
-  // platform check is wrapped independently so a failure on one (a JVM without an AWT Toolkit, a
-  // Linux box without {@code gsettings}, a Windows box with the property unset) doesn't shadow
-  // the others. Consumers can still flip the global toggle via {@link
-  // #setReducedMotion(boolean)} regardless of platform — or via {@code
-  // ElwhaTheme.config(...).reducedMotion(...)} for the public surface.
-  static {
-    if (detectMacReducedMotion() || detectWindowsReducedMotion() || detectLinuxReducedMotion()) {
-      reducedMotion = true;
+  /** Name of the one-shot probe thread; package-private so a test can assert it never runs. */
+  static final String OS_PROBE_THREAD = "elwha-reduced-motion-probe";
+
+  // #176 Phase 2 / Phase 5 — auto-detect OS reduced-motion (design doc §9). Each platform check is
+  // wrapped independently so a failure on one (a JVM without an AWT Toolkit, a Linux box without
+  // {@code gsettings}, a Windows box with the property unset) doesn't shadow the others.
+  //
+  // #668 — this used to run in a static block, so class init (triggered by the first
+  // `new MorphAnimator(...)`, i.e. constructing the first ElwhaButton, typically on the EDT while
+  // the window is being assembled) forked `gsettings` and waited on it. It is now requested on
+  // first use and answered on a background daemon thread, so nothing blocks: until the probe
+  // lands, the current value stands.
+  private static final AtomicBoolean OS_SIGNAL_REQUESTED = new AtomicBoolean();
+
+  // An explicit setReducedMotion always outranks the OS signal — same precedence the static block
+  // had, where the probe ran first and the setter then overrode it.
+  private static boolean explicitOverride;
+
+  private static void requestOsSignal() {
+    if (!OS_SIGNAL_REQUESTED.compareAndSet(false, true)) {
+      return;
+    }
+    final Thread probe = new Thread(MorphAnimator::applyOsReducedMotion, OS_PROBE_THREAD);
+    probe.setDaemon(true);
+    probe.start();
+  }
+
+  private static void applyOsReducedMotion() {
+    final boolean osReduced =
+        detectMacReducedMotion() || detectWindowsReducedMotion() || detectLinuxReducedMotion();
+    synchronized (MorphAnimator.class) {
+      // Only ever turns reduced motion on, never off — an OS that isn't asking for it has no
+      // opinion about a consumer that is.
+      if (osReduced && !explicitOverride) {
+        reducedMotion = true;
+      }
     }
   }
 
@@ -119,7 +147,10 @@ public final class MorphAnimator {
 
   private final WeakReference<JComponent> hostRef;
   private final Timer timer;
-  private final java.util.List<Runnable> progressListeners = new java.util.ArrayList<>();
+  // Copy-on-write rather than a defensive copy per dispatch: the list changes at most once per
+  // host lifetime, and fireProgress runs on every tick of every running animator.
+  private final java.util.List<Runnable> progressListeners =
+      new java.util.concurrent.CopyOnWriteArrayList<>();
 
   private int durationMs;
   private float progress;
@@ -151,22 +182,34 @@ public final class MorphAnimator {
    * flag does not retroactively cancel a running animation — {@link #stop()} is the explicit kill
    * path.
    *
+   * <p>An explicit call outranks the OS reduced-motion signal, and suppresses the probe for it
+   * entirely if nothing has asked for it yet.
+   *
    * @param reduced whether reduced-motion is on
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public static void setReducedMotion(final boolean reduced) {
-    reducedMotion = reduced;
+    synchronized (MorphAnimator.class) {
+      explicitOverride = true;
+      reducedMotion = reduced;
+    }
+    OS_SIGNAL_REQUESTED.set(true);
   }
 
   /**
    * Returns whether reduced-motion mode is on.
    *
+   * <p>Reading this is a "use" — it requests the OS reduced-motion probe if nothing has yet. The
+   * probe answers on a background thread, so this returns the value known right now rather than
+   * waiting for it.
+   *
    * @return {@code true} if morph animations should snap to the destination
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public static boolean isReducedMotion() {
+    requestOsSignal();
     return reducedMotion;
   }
 
@@ -315,6 +358,7 @@ public final class MorphAnimator {
   }
 
   private void animateTo(final float to) {
+    requestOsSignal();
     this.target = to;
     if (reducedMotion) {
       progress = to;
@@ -395,11 +439,8 @@ public final class MorphAnimator {
   }
 
   private void fireProgress() {
-    if (progressListeners.isEmpty()) {
-      return;
-    }
-    for (final Runnable r : new java.util.ArrayList<>(progressListeners)) {
-      r.run();
+    for (final Runnable listener : progressListeners) {
+      listener.run();
     }
   }
 }

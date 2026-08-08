@@ -1,9 +1,8 @@
 package com.owspfm.elwha.theme;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The light/dark mode a {@link Config} installs under.
@@ -14,7 +13,7 @@ import java.util.Locale;
  * OS-change listener is a deliberately-deferred fast follow.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public enum Mode {
@@ -42,6 +41,9 @@ public enum Mode {
    */
   SYSTEM;
 
+  /** How long an OS-appearance probe may run before it is killed and read as "unknown". */
+  private static final long PROBE_TIMEOUT_MS = 500L;
+
   /**
    * Returns whether this mode is already concrete ({@link #LIGHT} or {@link #DARK}) rather than
    * needing OS resolution.
@@ -61,8 +63,13 @@ public enum Mode {
    * install-time OS appearance check (macOS and Windows are detected; any other platform, or a
    * failed probe, falls back to {@link #LIGHT}).
    *
+   * <p>The check shells out, so it is bounded: a probe that has not answered within half a second
+   * is killed and read as a failure. A stalled {@code defaults} or {@code reg} therefore costs the
+   * caller that half-second and a {@link #LIGHT} theme, not an indefinite block — which matters
+   * because {@code ElwhaTheme.install} runs this on the Event Dispatch Thread.
+   *
    * @return {@link #LIGHT} or {@link #DARK}
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public Mode resolved() {
@@ -98,25 +105,25 @@ public enum Mode {
     return false;
   }
 
+  // Bounded exactly like MorphAnimator's gsettings probe: wait with a deadline, kill on expiry,
+  // and only then drain the pipe — reading first would reintroduce the unbounded block, since a
+  // stalled child holds its output stream open. Both probes print a single short line, so the
+  // output cannot outgrow the pipe buffer while the process runs.
   private static String runProbe(String... command) {
+    Process process = null;
     try {
-      Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
-      String output;
-      try (BufferedReader reader =
-          new BufferedReader(
-              new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-        StringBuilder builder = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-          builder.append(line).append('\n');
-        }
-        output = builder.toString();
+      process = new ProcessBuilder(command).redirectErrorStream(true).start();
+      if (!process.waitFor(PROBE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+        process.destroyForcibly();
+        return null;
       }
-      process.waitFor();
-      return output;
+      return new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
     } catch (Exception probeFailed) {
       if (probeFailed instanceof InterruptedException) {
         Thread.currentThread().interrupt();
+      }
+      if (process != null) {
+        process.destroyForcibly();
       }
       return null;
     }

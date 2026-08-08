@@ -45,9 +45,9 @@ import javax.swing.Timer;
 /**
  * The M3 Expressive Floating Action Button primitive — a single class covering both the Standard
  * (icon-only) and Extended (icon + label) forms across three sizes ({@link Size#SMALL} / {@link
- * Size#MEDIUM} / {@link Size#LARGE}) and six color styles ({@link Color}). Spec lives in {@code
- * docs/research/elwha-fab-design.md}; tracks M3 Expressive post-May-2025 (drops baseline Small,
- * Surface, baseline Extended, and Lowered FABs).
+ * Size#MEDIUM} / {@link Size#LARGE}) and six color styles ({@link ColorStyle}). Spec lives in
+ * {@code docs/research/elwha-fab-design.md}; tracks M3 Expressive post-May-2025 (drops baseline
+ * Small, Surface, baseline Extended, and Lowered FABs).
  *
  * <p><strong>Phase 1 + 2 + 3 scope.</strong> Phase 1 (#187–#189) shipped the Standard form: {@link
  * #standard(Icon)} factory + container rendering across all three sizes and six color styles + the
@@ -255,10 +255,10 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
    * Extended pages). Design doc §5.
    *
    * @author Charles Bryan
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
-  public enum Color {
+  public enum ColorStyle {
 
     /**
      * Primary container — the default color style. Resolves {@code primaryContainer} surface and
@@ -313,7 +313,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
 
     private final ColorRole containerRole;
 
-    Color(final ColorRole containerRole) {
+    ColorStyle(final ColorRole containerRole) {
       this.containerRole = containerRole;
     }
 
@@ -409,7 +409,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
   private final Form form;
   private Form currentForm;
   private Size size = Size.SMALL;
-  private Color color = Color.PRIMARY_CONTAINER;
+  private ColorStyle color = ColorStyle.PRIMARY_CONTAINER;
   private final Icon rawIcon;
   private Icon icon;
   private final String text;
@@ -485,7 +485,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
    *
    * @param icon the icon to render (required)
    * @return a configured Standard FAB at the default {@link Size#SMALL} size and {@link
-   *     Color#PRIMARY_CONTAINER} color
+   *     ColorStyle#PRIMARY_CONTAINER} color
    * @throws NullPointerException if {@code icon} is {@code null}
    * @version v0.3.0
    * @since v0.3.0
@@ -504,7 +504,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
    *
    * @param text the label text to render (required)
    * @return a configured Extended FAB at the default {@link Size#SMALL} size and {@link
-   *     Color#PRIMARY_CONTAINER} color
+   *     ColorStyle#PRIMARY_CONTAINER} color
    * @throws NullPointerException if {@code text} is {@code null}
    * @version v0.3.0
    * @since v0.3.0
@@ -526,7 +526,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
    *     no-icon case)
    * @param text the label text (required)
    * @return a configured Extended FAB at the default {@link Size#SMALL} size and {@link
-   *     Color#PRIMARY_CONTAINER} color
+   *     ColorStyle#PRIMARY_CONTAINER} color
    * @throws NullPointerException if {@code icon} or {@code text} is {@code null}
    * @version v0.3.0
    * @since v0.3.0
@@ -580,10 +580,10 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
    *
    * @param color the new color style; ignored if {@code null}
    * @return {@code this} for fluent chaining
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
-  public ElwhaFab setColor(final Color color) {
+  public ElwhaFab setColorStyle(final ColorStyle color) {
     if (color == null || color == this.color) {
       return this;
     }
@@ -596,10 +596,10 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
    * Returns the active color style.
    *
    * @return the active color (never {@code null})
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
-  public Color getColor() {
+  public ColorStyle getColorStyle() {
     return color;
   }
 
@@ -607,11 +607,24 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
    * Returns the installed icon. Standard FAB always has an icon; Extended FAB created via {@link
    * #extended(String)} has none. Extended FAB created via {@link #extended(Icon, String)} has one.
    *
+   * <p>This is the {@link Icon} the caller handed to the factory, not the glyph this FAB paints.
+   * The painted glyph is a private derivation — a copy re-sized to the active size tier's icon slot
+   * and bound to <em>this</em> FAB's color filter — and is deliberately not exposed, so an icon
+   * round-tripped through this getter into another component does not arrive with its tint slaved
+   * to this one.
+   *
    * @return the icon, or {@code null} when none is installed
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public Icon getIcon() {
+    return rawIcon;
+  }
+
+  // The glyph actually painted at the active tier — a filtered, re-sized copy of the installed
+  // icon. Package-private on purpose (#664): handing the filtered clone to a consumer would slave
+  // its tint to this instance, which is the very sharing bug themeIcon() exists to prevent.
+  Icon paintedIcon() {
     return icon;
   }
 

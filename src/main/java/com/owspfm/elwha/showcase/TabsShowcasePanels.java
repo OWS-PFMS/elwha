@@ -44,7 +44,7 @@ import javax.swing.SwingConstants;
  * stacked selection maps to inline when the variant flips to secondary.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 final class TabsShowcasePanels {
@@ -387,12 +387,12 @@ final class TabsShowcasePanels {
     code.append("ElwhaBadge badge = ElwhaBadge.");
     code.append(small ? "small()" : "large(\"" + current.getContent() + "\")");
     if (current.getContainerColor() != ColorRole.ERROR) {
-      code.append("\n    .withContainerColor(ColorRole.")
+      code.append("\n    .setContainerColor(ColorRole.")
           .append(current.getContainerColor().name())
           .append(")");
     }
     if (!small && current.getLabelColor() != ColorRole.ON_ERROR) {
-      code.append("\n    .withLabelColor(ColorRole.")
+      code.append("\n    .setLabelColor(ColorRole.")
           .append(current.getLabelColor().name())
           .append(")");
     }

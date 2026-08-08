@@ -40,13 +40,13 @@ class ElwhaSwitchLabelAccessibilityTest {
   @Test
   void labelRoundTripsAndClears() {
     final ElwhaSwitch toggle = new ElwhaSwitch();
-    assertThat(toggle.getLabel()).as("a new switch carries no label").isNull();
+    assertThat(toggle.getAccessibleLabel()).as("a new switch carries no label").isNull();
 
-    toggle.setLabel("Wi-Fi");
-    assertThat(toggle.getLabel()).as("the label round-trips").isEqualTo("Wi-Fi");
+    toggle.setAccessibleLabel("Wi-Fi");
+    assertThat(toggle.getAccessibleLabel()).as("the label round-trips").isEqualTo("Wi-Fi");
 
-    toggle.setLabel(null);
-    assertThat(toggle.getLabel()).as("and null clears it").isNull();
+    toggle.setAccessibleLabel(null);
+    assertThat(toggle.getAccessibleLabel()).as("and null clears it").isNull();
   }
 
   @Test
@@ -74,7 +74,7 @@ class ElwhaSwitchLabelAccessibilityTest {
     final ElwhaSwitch toggle = new ElwhaSwitch();
     labelFor(toggle, "Wi-Fi");
 
-    toggle.setLabel("Wireless network");
+    toggle.setAccessibleLabel("Wireless network");
 
     assertThat(contextOf(toggle).getAccessibleName())
         .as("setLabel takes precedence over the labelFor fallback")
@@ -85,9 +85,9 @@ class ElwhaSwitchLabelAccessibilityTest {
   void anEmptyLabelFallsBackRatherThanBlankingTheName() {
     final ElwhaSwitch toggle = new ElwhaSwitch();
     labelFor(toggle, "Wi-Fi");
-    toggle.setLabel("Wireless network");
+    toggle.setAccessibleLabel("Wireless network");
 
-    toggle.setLabel("");
+    toggle.setAccessibleLabel("");
 
     assertThat(contextOf(toggle).getAccessibleName())
         .as("an empty label counts as absent, so the association takes over again")
@@ -98,9 +98,9 @@ class ElwhaSwitchLabelAccessibilityTest {
   void clearingTheLabelFallsBackToTheAssociation() {
     final ElwhaSwitch toggle = new ElwhaSwitch();
     labelFor(toggle, "Wi-Fi");
-    toggle.setLabel("Wireless network");
+    toggle.setAccessibleLabel("Wireless network");
 
-    toggle.setLabel(null);
+    toggle.setAccessibleLabel(null);
 
     assertThat(contextOf(toggle).getAccessibleName())
         .as("null falls back the same way empty does")

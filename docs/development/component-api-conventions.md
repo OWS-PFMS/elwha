@@ -48,6 +48,18 @@ Components with a single "primary content" concept get one convenience construct
 
 Both the setter and the getter are exposed on every component that has a paintable border (Surface, IconButton, Chip, future variant-bearing primitives). Asymmetric setter-without-getter is drift; fix it in the next pass.
 
+## 5a. Setter return type — fluent `this`, and a subclass re-types every setter it advertises
+
+A component mutator returns `this`, typed as the **concrete component class**, so a construction chain reads as one expression. `void` is acceptable only where the component has no fluent chain to join (the progress indicators, `ElwhaLoadingIndicator`); a `withX()` prefix is not — the name is `setX` regardless of what it returns ([#636](https://github.com/OWS-PFMS/elwha/issues/636), which converted `ElwhaBadge`'s three `withX` mutators).
+
+**The subclass rule.** When a component extends another component, **every inherited setter it advertises as its own API gets a covariant override narrowing the return type to the subclass.** Java resolves the return type statically, so one un-narrowed setter mid-chain silently ends the chain at the *parent* type and the next call fails to compile — an error the consumer reads as "that setter doesn't exist" rather than "you passed through a base-class setter."
+
+**Apply when:** adding a component that extends `ElwhaSurface` (or any other component). Go through the parent's fluent setters, decide which ones your component advertises, and re-type all of them in the same change. The override body is `super.setX(...); return this;` — behavior stays on the parent.
+
+**Deliberate exception — the un-advertised setter.** A setter the subclass does *not* advertise is left un-narrowed on purpose. Java cannot hide an inherited public method, so it stays callable; leaving the chain broken there is the closest the language gets to a "not part of this component's API" marker. `ElwhaCard` does exactly this with `setBorderRole` — §4 says a variant-bearing component does not expose a border-role override, and the V3 spec §3.2 records it as inherited-but-not-advertised.
+
+**Precedent.** `ElwhaCard` shipped with only `setElevation` narrowed, so `ElwhaCard.filledCard().setShape(XL).setVariant(...)` did not compile even though the V3 spec advertised `setShape` as per-instance card API ([#570](https://github.com/OWS-PFMS/elwha/issues/570)). It now narrows `setSurfaceRole`, `setShape`, `setBorderWidth`, and `setClipChildrenToCorners` as well.
+
 ## 6. Leaf vs container — different API shapes are sanctioned
 
 Components split into two roles, and the role determines the API shape:
@@ -104,6 +116,64 @@ Both roles honor the **same paint convention**: translate the graphics origin by
 **Reserve elevation.** Size the reserve for the worst-case elevation the primitive can actually paint, not its resting level: `ElwhaCard` reserves for `MAX_ELEVATION` (transient hover/drag bumps never clip), `ElwhaFab` for its `HOVER_ELEVATION` bump, `ElwhaButton` for its variant's elevation (zero when the variant is flat). Document the chosen worst-case in the reserve accessor's javadoc.
 
 **Apply when:** adding any new elevated/shadowed primitive. Implement `ShadowBearing`, pick the reserve home by role, honor the `ShadowPainter` translate convention, and obey the `getMaximumSize` rule. Contract-alignment of the existing primitives onto `ShadowBearing` is tracked in [#313](https://github.com/OWS-PFMS/elwha/issues/313).
+
+## 8a. Right-to-left is a lib-wide contract, and every design doc says which case it is
+
+Any component that places content along the inline axis resolves *leading* and *trailing* through `getComponentOrientation().isLeftToRight()` — never through hardcoded left / right. This is not per-component opt-in; a consumer switching a window to an RTL locale expects the whole catalog to mirror, and one component that does not is the visible defect.
+
+**The house shape.** Compute positions as if the container were left-to-right, then mirror on the way out: `x' = totalWidth - x - width`. `ElwhaItemList.flipX` is the reference implementation (it notes the mapping is its own inverse, so the same method serves layout going out and pointer coordinates coming in); `ElwhaCardHeader`, `ElwhaCardActions` and `ElwhaButtonGroup.doLayout` follow it, and `AbstractElwhaMenuOverlay.placeBeside` / `ElwhaSideSheet.isDockedRight` are the overlay-side equivalents. One flip covers both halves of the problem — the segments swap ends *and* the items inside a segment reverse.
+
+**Cached geometry needs an orientation hook; live geometry does not.** A layout that reads the orientation each pass is correct for free. State *derived* from the orientation and stored — `ElwhaButtonGroup`'s per-segment corner radii are the case in point — goes stale, so the component overrides `setComponentOrientation` to re-derive it.
+
+**Every component's design doc carries an RTL section, including when the answer is "nothing".** A symmetric component genuinely needs no mirroring — `ElwhaIconButton` is one centered glyph in a square, so mirroring maps it onto itself — but silence in the doc is indistinguishable from an oversight, which is what [#565](https://github.com/OWS-PFMS/elwha/issues/565) filed. Write the no-op case down, and say *why* it is a no-op, so the next reader does not have to re-derive it. If the component later grows a second slot, that section is the thing that has to change.
+
+**Apply when:** adding any component with a leading or trailing slot, a row or column of children, or an anchored overlay. Mirror it, add the design-doc section either way, and add an RTL case to its Tier A suite.
+
+## 9. "Requested configuration not available" — force when the request is satisfiable, throw when it is not
+
+Two components appeared to disagree about what a setter does when the caller asks for something the component's current configuration does not allow: `ElwhaColorPicker.setMode` / `setSwatchSource` **throw** `IllegalArgumentException`, while `ElwhaSelectField`'s `setEditable` / `setMultiSelect` **force** the conflicting axis off. Ruled in [#573](https://github.com/OWS-PFMS/elwha/issues/573): they are answering different questions, and both are right.
+
+**The test is whether the caller's request has a satisfying state at all.**
+
+| Situation | Behavior | Why |
+|---|---|---|
+| The request *is* satisfiable; only a sibling setting has to yield | **Force.** Change the sibling, honor the request, return normally. | There is exactly one consistent state the caller can have meant. Making them clear the sibling first is ceremony that carries no information — and forces every call site to order its setters defensively. |
+| The request cannot be satisfied in any state the component is allowed to reach | **Throw** `IllegalArgumentException`. | The alternatives both lose information: activating something else silently substitutes a different result for the one asked for, and widening the offered set silently overrides a restriction the consumer deliberately configured. |
+
+`setEditable(true)` on a multi-select is the first row — the caller wants an editable combo, and multi-select is simply the thing that gives way (a locked [#331](https://github.com/OWS-PFMS/elwha/issues/331) decision). `setMode(WHEEL)` on a picker whose consumer called `setModes(SWATCHES)` is the second — there is no WHEEL to activate, and inventing one would defeat the consumer's own restriction.
+
+**Never the third option: silently doing nothing.** A programmatic setter that no-ops leaves the caller reading a getter that disagrees with what they just wrote, with no signal either way. That is the defect class [#619](https://github.com/OWS-PFMS/elwha/issues/619) fixed in `ElwhaSelectField.setOptions`.
+
+**Null is a separate question** and this rule does not cover it. A `null` argument conventionally means "no opinion" — reset to the default (`setDisplayFunction(null)`), clear (`setSelectedValue(null)`), or ignore (`ElwhaFab.setColorStyle(null)`) — and each setter documents which. Where `null` is genuinely invalid, reject it eagerly at the setter rather than deferring the failure to paint time ([#637](https://github.com/OWS-PFMS/elwha/issues/637)).
+
+**Apply when:** adding a setter that names one member of a closed set the component was configured with, or a setting that conflicts with another. Pick the row, and say which in the javadoc.
+
+## 10. Observable change — named state fires a property change, model-backed value fires a `ChangeListener`
+
+Ruled in [#446](https://github.com/OWS-PFMS/elwha/issues/446). The library was split on how a component reports a change, and the split did not fall where it looked like it did: framed as "the checkbox is the odd one out among the selection controls" it is 3-to-1 for `ChangeListener`, but counted across every *toggle* in the catalog it is 3-to-2 the other way (`ElwhaButton`, `ElwhaIconButton` and `ElwhaCheckbox` fire property changes; `ElwhaSwitch` and `ElwhaRadioButton` expose `addChangeListener`). Numbers do not settle it, so the rule is about what the change *is*.
+
+| The observable change is… | Surface | Components |
+|---|---|---|
+| A **discrete named state** — selected, checked, expanded, collapsed, the active item | `firePropertyChange(PROPERTY_X, old, new)`, observed with `addPropertyChangeListener(PROPERTY_X, l)` | `ElwhaButton`, `ElwhaIconButton`, `ElwhaCheckbox`, `ElwhaBadge`, `ElwhaButtonSelectionGroup`, `ElwhaNavigationRail` |
+| A **value from a model** — a `BoundedRangeModel` position, progress | `addChangeListener(ChangeListener)` | `ElwhaSlider`, the progress indicators |
+
+**Why named state gets the property change.** It carries typed old and new values, which a tri-state control genuinely needs (`ChangeListener` has no payload, so a checkbox consumer would have to cache the previous value to learn *which* transition happened — and the checkbox already needs old/new internally for its accessible-state firing). Subscription is key-scoped, so a listener watching selection is not woken when the component later grows a second observable property. And `JComponent.firePropertyChange` is inherited, so it needs no `listenerList` plumbing and composes with the `AccessibleContext` property events these components already fire.
+
+**Why a model-backed value keeps `ChangeListener`.** `BoundedRangeModel` fires `ChangeEvent` natively; wrapping that in a property change would translate an event into a different shape for no gain, and `JSlider`'s own contract is the thing consumers expect to find.
+
+**User gesture vs programmatic change stays orthogonal, and is already uniform:** `ActionListener` fires only for user-driven commits, on every interactive component. That axis is not what this rule is about.
+
+**Not yet applied.** `ElwhaSwitch`, `ElwhaRadioButton` / `ElwhaRadioGroup` and `ElwhaTabs` report discrete named state through `addChangeListener` and sit on the wrong side of this table. Converting them is a real change across three components, two of them with group-level listeners, plus their suites, playgrounds and Showcase panels — filed separately rather than folded into the #440 doctrine batch. Until it lands, do not add a *new* component on the `ChangeListener` side for a named state.
+
+## 10a. The attached-label contract — and who is exempt from it
+
+`ElwhaCheckbox.setLabel` and `ElwhaRadioButton.setLabel` attach a **visible, clickable** label: it widens the preferred size, extends the click target, and supplies the accessible name. Both also expose `setAccessibleLabel` for the label-less case, where only the accessible name is wanted.
+
+**`ElwhaSwitch` is exempt, deliberately.** M3 places switches in list rows where the *row* owns the label, the tap target, and the arrangement; an attached label on the switch would duplicate that container instead of completing it (switch design doc §10 / §16). The checkbox and radio have no equivalent M3 container idiom — a bare box or dot with a caption beside it *is* the anatomy — so the label has to live on the component there.
+
+**But an exempt component must not reuse the name.** `ElwhaSwitch.setLabel` and `ElwhaSlider.setLabel` set the accessible name only, which is exactly what the checkbox and radio call `setAccessibleLabel`. One method name meaning two different things across one family is the trap [#436](https://github.com/OWS-PFMS/elwha/issues/436) fixed for the radio; both are now `setAccessibleLabel` / `getAccessibleLabel`.
+
+**Apply when:** adding a component that takes a caption. If it attaches a visible label, name it `setLabel` and add `setAccessibleLabel` for the label-less case. If it only names itself for assistive tech, `setAccessibleLabel` is the only accessor it gets — `setLabel` is reserved.
 
 ---
 

@@ -12,6 +12,7 @@ import java.awt.Stroke;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
+import java.util.Objects;
 import javax.swing.BoundedRangeModel;
 import javax.swing.DefaultBoundedRangeModel;
 
@@ -179,11 +180,12 @@ public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator
    * Re-roles the stop-indicator dot.
    *
    * @param role the new role (never {@code null})
-   * @version v0.4.0
+   * @throws NullPointerException if {@code role} is {@code null}
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setStopIndicatorColorRole(final ColorRole role) {
-    this.stopIndicatorColorRole = role;
+    this.stopIndicatorColorRole = Objects.requireNonNull(role, "role");
     repaint();
   }
 

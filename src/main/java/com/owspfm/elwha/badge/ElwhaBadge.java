@@ -27,7 +27,7 @@ import javax.swing.JComponent;
  * ColorRole#ERROR} / {@link ColorRole#ON_ERROR} mapping enforced by construction, Large label paint
  * at {@link TypeRole#LABEL_SMALL} with 4 dp interior padding (§4.2), content-driven Large width via
  * {@link #setContent(String)}, the push-model accessibility surface ({@link
- * #getAccessibilityText()} / {@link #withAccessibilityText(String)} with hardcoded English defaults
+ * #getAccessibilityText()} / {@link #setAccessibilityText(String)} with hardcoded English defaults
  * per §10.3, custom {@link AccessibleContext} reporting {@link AccessibleRole#LABEL} with a {@link
  * AccessibleRelation#LABEL_FOR} relation set by the anchor). Placement geometry, RTL mirroring, and
  * host-name splicing live in the companion {@link ElwhaBadgeAnchor}.
@@ -87,7 +87,7 @@ public final class ElwhaBadge extends JComponent {
 
   /**
    * Property name fired when {@link #getAccessibilityText()} effectively changes (either via {@link
-   * #withAccessibilityText(String)} or because {@link #setContent(String)} altered the
+   * #setAccessibilityText(String)} or because {@link #setContent(String)} altered the
    * default-derived value). {@link ElwhaBadgeAnchor} listens to keep {@code host.accessibleName} in
    * sync.
    *
@@ -333,7 +333,7 @@ public final class ElwhaBadge extends JComponent {
   /**
    * Returns the accessibility announcement for this badge. Default values per design doc §10.3:
    * Small returns {@code "New notification"}; Large returns {@code "{content} new notifications"}.
-   * Overridden by {@link #withAccessibilityText(String)} when the consumer wants a custom string.
+   * Overridden by {@link #setAccessibilityText(String)} when the consumer wants a custom string.
    *
    * <p>{@link ElwhaBadgeAnchor} splices the returned value into the host's accessible name on
    * attach and on change, so AT users discover the badge via the host destination per the M3
@@ -360,10 +360,10 @@ public final class ElwhaBadge extends JComponent {
    *
    * @param text the override string, or {@code null} to clear
    * @return this badge for fluent chaining
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
-  public ElwhaBadge withAccessibilityText(final String text) {
+  public ElwhaBadge setAccessibilityText(final String text) {
     final String previous = getAccessibilityText();
     this.accessibilityTextOverride = text;
     firePropertyChange(PROPERTY_ACCESSIBILITY_TEXT, previous, getAccessibilityText());
@@ -412,10 +412,10 @@ public final class ElwhaBadge extends JComponent {
    * @param role the new container color role
    * @return this badge for fluent chaining
    * @throws NullPointerException if {@code role} is {@code null}
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
-  public ElwhaBadge withContainerColor(final ColorRole role) {
+  public ElwhaBadge setContainerColor(final ColorRole role) {
     if (role == null) {
       throw new NullPointerException("containerColor");
     }
@@ -432,10 +432,10 @@ public final class ElwhaBadge extends JComponent {
    * @return this badge for fluent chaining
    * @throws IllegalStateException if this is a Small badge
    * @throws NullPointerException if {@code role} is {@code null}
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
-  public ElwhaBadge withLabelColor(final ColorRole role) {
+  public ElwhaBadge setLabelColor(final ColorRole role) {
     if (variant == Variant.SMALL) {
       throw new IllegalStateException("Small badge has no label sub-part — cannot set label color");
     }

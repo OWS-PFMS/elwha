@@ -216,6 +216,27 @@ The playground sub-issue exercises the full matrix:
 
 Both panels factored into `IconButtonPlaygroundPanels` so the standalone `ElwhaIconButtonPlayground` and `ThemePlayground`'s new `Icon Button` tab compose the same instances. Same factored-builder pattern `ChipPlaygroundPanels` / `SurfacePlaygroundPanels` already establish.
 
+## 14. RTL mirroring
+
+**No mirroring — by anatomy**, ruled 2026-08-07 by
+[#565](https://github.com/OWS-PFMS/elwha/issues/565). The spec had said nothing about right-to-left;
+the answer is that there is nothing to say. An icon button is a single glyph centred on both axes of
+a square container (`paintIcon`, and the `getIconBounds()` the badge anchor reads), so mirroring the
+component maps it onto itself. It carries no label, no second slot, and no leading/trailing
+vocabulary of its own.
+
+Two neighbours *do* mirror, and neither is this component's job:
+
+- **`ElwhaBadgeAnchor`** places a badge at the icon's upper-**trailing** corner, which is the
+  upper-left under RTL. The anchor resolves that from the orientation itself.
+- **`ElwhaButtonGroup`** mirrors segment order and end-cap corners for a row of icon buttons
+  (`elwha-button-group-design.md` §20).
+
+If a future variant grows a label or a second slot, this section is void — take the
+`elwha-button-design.md` §17 rule instead.
+
+---
+
 ## 13. CHANGELOG
 
 `[Unreleased]` gets a new `### Added` entry for the epic, with sub-entries:

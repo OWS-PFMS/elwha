@@ -68,7 +68,7 @@ class ElwhaBadgeAccessibilityTest {
   void anAccessibilityOverrideReplacesTheDefault() {
     assertThat(
             ElwhaBadge.large(3)
-                .withAccessibilityText("three unread messages")
+                .setAccessibilityText("three unread messages")
                 .getAccessibilityText())
         .as("§10.3 — the default is a fallback, not a ceiling")
         .isEqualTo("three unread messages");
@@ -76,9 +76,9 @@ class ElwhaBadgeAccessibilityTest {
 
   @Test
   void aNullOverrideRevertsToTheDefault() {
-    final ElwhaBadge badge = ElwhaBadge.large(3).withAccessibilityText("custom");
+    final ElwhaBadge badge = ElwhaBadge.large(3).setAccessibilityText("custom");
 
-    badge.withAccessibilityText(null);
+    badge.setAccessibilityText(null);
 
     assertThat(badge.getAccessibilityText())
         .as("clearing the override restores the derived string")
@@ -89,7 +89,7 @@ class ElwhaBadgeAccessibilityTest {
   void accessibilityOverrideIsFluent() {
     final ElwhaBadge badge = ElwhaBadge.small();
 
-    assertThat(badge.withAccessibilityText("x")).isSameAs(badge);
+    assertThat(badge.setAccessibilityText("x")).isSameAs(badge);
   }
 
   @Test
@@ -103,7 +103,7 @@ class ElwhaBadgeAccessibilityTest {
 
   @Test
   void anOverrideSurvivesAContentChange() {
-    final ElwhaBadge badge = ElwhaBadge.large(1).withAccessibilityText("pinned");
+    final ElwhaBadge badge = ElwhaBadge.large(1).setAccessibilityText("pinned");
 
     badge.setContent(9);
 
@@ -120,7 +120,7 @@ class ElwhaBadgeAccessibilityTest {
     final List<PropertyChangeEvent> events = new ArrayList<>();
     badge.addPropertyChangeListener(ElwhaBadge.PROPERTY_ACCESSIBILITY_TEXT, events::add);
 
-    badge.withAccessibilityText("custom");
+    badge.setAccessibilityText("custom");
 
     assertThat(events).hasSize(1);
     assertThat(events.get(0).getOldValue()).isEqualTo("1 new notifications");
@@ -143,7 +143,7 @@ class ElwhaBadgeAccessibilityTest {
 
   @Test
   void aContentChangeUnderAnOverrideFiresNoAnnouncementEvent() {
-    final ElwhaBadge badge = ElwhaBadge.large(1).withAccessibilityText("pinned");
+    final ElwhaBadge badge = ElwhaBadge.large(1).setAccessibilityText("pinned");
     final List<PropertyChangeEvent> events = new ArrayList<>();
     badge.addPropertyChangeListener(ElwhaBadge.PROPERTY_ACCESSIBILITY_TEXT, events::add);
 
@@ -264,7 +264,7 @@ class ElwhaBadgeAccessibilityTest {
     final ElwhaBadge badge = ElwhaBadge.large(3);
     ElwhaBadgeAnchor.attach(host, badge);
 
-    badge.withAccessibilityText("three unread");
+    badge.setAccessibilityText("three unread");
 
     assertThat(hostName(host)).isEqualTo("Inbox three unread");
   }

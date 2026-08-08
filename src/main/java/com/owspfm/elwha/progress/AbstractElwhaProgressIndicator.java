@@ -3,6 +3,7 @@ package com.owspfm.elwha.progress;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
 import java.awt.event.HierarchyEvent;
+import java.util.Objects;
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
@@ -298,11 +299,12 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
    * Re-roles the active indicator.
    *
    * @param role the new role (never {@code null})
-   * @version v0.4.0
+   * @throws NullPointerException if {@code role} is {@code null}
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setIndicatorColorRole(final ColorRole role) {
-    this.indicatorColorRole = role;
+    this.indicatorColorRole = Objects.requireNonNull(role, "role");
     repaint();
   }
 
@@ -321,11 +323,12 @@ public abstract class AbstractElwhaProgressIndicator extends JComponent implemen
    * Re-roles the track.
    *
    * @param role the new role (never {@code null})
-   * @version v0.4.0
+   * @throws NullPointerException if {@code role} is {@code null}
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setTrackColorRole(final ColorRole role) {
-    this.trackColorRole = role;
+    this.trackColorRole = Objects.requireNonNull(role, "role");
     repaint();
   }
 

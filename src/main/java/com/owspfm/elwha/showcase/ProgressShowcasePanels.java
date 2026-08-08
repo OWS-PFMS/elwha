@@ -36,7 +36,7 @@ import javax.swing.Timer;
  * indeterminate forms.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 final class ProgressShowcasePanels {
@@ -67,7 +67,7 @@ final class ProgressShowcasePanels {
 
     final DefaultBoundedRangeModel model = new DefaultBoundedRangeModel(60, 0, 0, 100);
     final ElwhaSlider valueSlider = new ElwhaSlider(model);
-    valueSlider.setLabel("Value");
+    valueSlider.setAccessibleLabel("Value");
     final ElwhaButton simulate = ElwhaButton.filledTonalButton("Simulate load");
 
     final WorkbenchControls controls = workbench.controls();

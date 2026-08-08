@@ -11,8 +11,9 @@ import org.junit.jupiter.api.extension.ExtensionContext;
  * Installs the deterministic test theme before every test: the baseline palette in {@link
  * Mode#LIGHT}, with {@link MorphAnimator#setReducedMotion(boolean) reduced motion} pinned on so no
  * assertion ever races a wall-clock animation ({@code MorphAnimator} otherwise auto-detects the
- * host OS accessibility setting at class load — an unpinned run can behave differently on a
- * developer's machine than on CI). Tests that need another mode call {@link #install(Mode)}
+ * host OS accessibility setting on first use — an unpinned run can behave differently on a
+ * developer's machine than on CI). Pinning it first also suppresses that probe outright, so no run
+ * of the suite forks {@code gsettings}. Tests that need another mode call {@link #install(Mode)}
  * mid-test; the next test's {@code beforeEach} restores the baseline.
  *
  * <p>Register via {@code @ExtendWith({EdtInterceptor.class, ThemeExtension.class})} — after the EDT

@@ -199,6 +199,21 @@ class MaterialIconsTest {
   }
 
   @Test
+  void fillVariantAnswerIsHeldPerSymbolRatherThanReAskedTheClasspath() {
+    final MaterialIcons.Symbol withFill = MaterialIcons.symbol(SYMBOL_WITH_FILL);
+    final MaterialIcons.Symbol withoutFill = MaterialIcons.symbol(SYMBOL_WITHOUT_FILL);
+
+    for (int call = 0; call < 3; call++) {
+      assertThat(withFill.hasSelectedVariant())
+          .as("call %d — memoising must not drift from the bundle's answer", call)
+          .isTrue();
+      assertThat(withoutFill.hasSelectedVariant())
+          .as("call %d — and the held answer is per symbol, not one shared flag", call)
+          .isFalse();
+    }
+  }
+
+  @Test
   void aSymbolWithNoFillAssetFallsBackToTheOutlineRatherThanBreaking() {
     final MaterialIcons.Symbol symbol = MaterialIcons.symbol(SYMBOL_WITHOUT_FILL);
 

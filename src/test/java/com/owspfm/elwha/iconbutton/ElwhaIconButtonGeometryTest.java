@@ -168,7 +168,7 @@ class ElwhaIconButtonGeometryTest {
   void aScalableGlyphIsRederivedToTheTiersIconSize(final IconButtonSize size) {
     final ElwhaIconButton button = new ElwhaIconButton(MaterialIcons.add()).setButtonSize(size);
 
-    assertThat(button.getIcon().getIconWidth())
+    assertThat(button.paintedIcon().getIconWidth())
         .as("%s paints its glyph at the size the layout reserves", size)
         .isEqualTo(size.iconPx());
   }
@@ -178,7 +178,7 @@ class ElwhaIconButtonGeometryTest {
     final ElwhaIconButton button =
         new ElwhaIconButton(new RecordingIcon(9)).setButtonSize(IconButtonSize.XL);
 
-    assertThat(button.getIcon().getIconWidth())
+    assertThat(button.paintedIcon().getIconWidth())
         .as("a non-vector icon cannot be rescaled losslessly, so it is left alone")
         .isEqualTo(9);
   }

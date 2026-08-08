@@ -180,7 +180,8 @@ class ElwhaColorPickerModelTest {
     assertThatThrownBy(() -> picker.setMode(PickerMode.WHEEL))
         .as(
             "asking for a mode the consumer removed is a programming error, not a preference —"
-                + " unlike the select field's mode axes, which force rather than throw")
+                + " conventions §9: no state satisfies the request, so it throws rather than"
+                + " forcing the way the select field's mode axes do")
         .isInstanceOf(IllegalArgumentException.class);
     assertThat(picker.getMode())
         .as("and the picker is left as it was")

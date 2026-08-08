@@ -22,7 +22,7 @@ import javax.swing.SwingUtilities;
  * and a mixed bar showing inline-height tabs bottom-aligning in a 64&nbsp;px bar.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaTabsIconsBadgesDemo {
@@ -94,7 +94,7 @@ public final class ElwhaTabsIconsBadgesDemo {
 
     final ElwhaSwitch inlineToggle = new ElwhaSwitch();
     inlineToggle.setSelected(true);
-    inlineToggle.setLabel("Second bar inline icons");
+    inlineToggle.setAccessibleLabel("Second bar inline icons");
     inlineToggle.addActionListener(
         e -> {
           for (int i = 0; i < inline.getTabCount(); i++) {
