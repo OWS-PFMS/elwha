@@ -505,15 +505,18 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
    * Not a substitute for {@link #open(Component)}, which presents the menu for real. Each call
    * returns a fresh component.
    *
+   * <p>The preview is fully detached: its rows are stand-ins built from the authored items, so it
+   * shares no component with a menu that is currently open (or with an earlier preview) and leaves
+   * this menu's state untouched. The one property a stand-in cannot carry is a {@linkplain
+   * ElwhaMenuItem#setSlot(JComponent) slot} — a consumer component belongs to one hierarchy — so a
+   * slotted item previews with its label instead.
+   *
    * @return a non-modal render of the menu surface
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public JComponent renderPreview() {
-    final JComponent preview = createSurface();
-    this.focusedIndex = -1;
-    pushFocusedState();
-    return preview;
+    return buildSurface(false);
   }
 
   /**
@@ -665,7 +668,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
         }
       }
     }
-    final int columnHeight = totalColumnHeight(contentWidth);
+    final int columnHeight = totalColumnHeight(effectiveSeparator);
     column.setPreferredSize(new Dimension(contentWidth, columnHeight));
     if (scrollPane != null) {
       scrollPane.setPreferredSize(
@@ -687,8 +690,18 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
 
   @Override
   protected JComponent createSurface() {
-    this.contentWidth = resolveContentWidth();
-    this.effectiveSeparator = separator;
+    return buildSurface(true);
+  }
+
+  // Builds one generation of the menu surface. A live build commits its products to the overlay's
+  // fields — the open menu's column, group panels, scroll pane and roving-focus order all read them
+  // — and mounts the consumer's own item instances. A preview build commits nothing and mounts
+  // detached stand-in rows instead, so rendering a preview can neither empty an open menu nor
+  // re-parent the rows out of an earlier preview (#589). Geometry is measured from the real items
+  // either way (a stand-in mirrors every property that affects measurement), so the two builds lay
+  // out identically.
+  private JComponent buildSurface(final boolean live) {
+    final int width = resolveContentWidth();
 
     final int available =
         (layeredPane != null ? layeredPane.getHeight() : Integer.MAX_VALUE)
@@ -699,56 +712,84 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     // under a filter can have its filter cleared while open, and a non-scrollable column cannot
     // grow a scrollbar after the fact. It also reads the authored separator, not the effective one
     // — "would this menu scroll as written" is the question the downgrade answers.
-    this.scrollable = allColumnHeight(contentWidth) + chromeV > available;
-    if (scrollable && effectiveSeparator == Separator.GAP) {
-      // M3: gaps are unsupported in a scrollable menu — force the subtle divider.
-      this.effectiveSeparator = Separator.DIVIDER;
-    }
+    final boolean scrolls = allColumnHeight(separator) + chromeV > available;
+    // M3: gaps are unsupported in a scrollable menu — force the subtle divider.
+    final Separator effective =
+        scrolls && separator == Separator.GAP ? Separator.DIVIDER : separator;
     // Measured after the downgrade so the column height matches the separators actually built.
-    final int columnHeight = totalColumnHeight(contentWidth);
+    final int columnHeight = totalColumnHeight(effective);
 
-    this.groupPanels = new ArrayList<>();
-    this.column = buildColumn(contentWidth);
+    final List<List<ElwhaMenuItem>> rows = live ? groups : standInGroups();
+    final List<List<ElwhaMenuItem>> display =
+        layout == Layout.STANDARD ? List.of(flatten(rows)) : rows;
+    final List<JComponent> panels = new ArrayList<>();
+    final JComponent builtColumn = buildColumn(width, effective, display, panels);
 
     final JComponent content;
-    if (scrollable) {
-      final JScrollPane scroll =
+    final JScrollPane scroll;
+    final int bodyH;
+    if (scrolls) {
+      scroll =
           new JScrollPane(
-              column,
+              builtColumn,
               ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
               ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
       scroll.setOpaque(false);
       scroll.getViewport().setOpaque(false);
       scroll.setBorder(BorderFactory.createEmptyBorder());
       scroll.getVerticalScrollBar().setUnitIncrement(16);
-      this.scrollBodyH = Math.max(ElwhaMenuItem.MIN_TARGET_PX, available - chromeV);
+      bodyH = Math.max(ElwhaMenuItem.MIN_TARGET_PX, available - chromeV);
       scroll.setPreferredSize(
           new Dimension(
-              contentWidth + SCROLLBAR_WIDTH_PX,
-              Math.min(scrollBodyH, Math.max(columnHeight, ElwhaMenuItem.MIN_TARGET_PX))));
-      this.scrollPane = scroll;
+              width + SCROLLBAR_WIDTH_PX,
+              Math.min(bodyH, Math.max(columnHeight, ElwhaMenuItem.MIN_TARGET_PX))));
       content = scroll;
     } else {
-      this.scrollPane = null;
-      content = column;
+      scroll = null;
+      bodyH = 0;
+      content = builtColumn;
     }
 
-    final boolean gapCards =
-        layout == Layout.GROUPED && effectiveSeparator == Separator.GAP && !scrollable;
-    this.menuSurface = new MenuSurface(content, gapCards);
+    final boolean gapCards = layout == Layout.GROUPED && effective == Separator.GAP && !scrolls;
+    final MenuSurface built = new MenuSurface(content, gapCards, panels, live);
 
-    // A fresh surface snaps to the MD rest — including a just-opened submenu, which only morphs
-    // once
-    // the pointer/focus moves onto it. The morph animates later hover changes, never the entrance.
-    this.shapeMorph = null;
-    this.shapeFromRadius = CONTAINER_ARC_PX;
-    this.shapeToRadius = CONTAINER_ARC_PX;
+    if (live) {
+      this.contentWidth = width;
+      this.scrollable = scrolls;
+      this.effectiveSeparator = effective;
+      this.groupPanels = panels;
+      this.effectiveGroups = display;
+      this.column = builtColumn;
+      this.scrollPane = scroll;
+      this.scrollBodyH = bodyH;
+      this.menuSurface = built;
 
-    this.itemOrder = flattenVisible();
-    this.focusedIndex = itemOrder.isEmpty() ? -1 : 0;
-    this.keyboardFocusVisible = false;
-    pushFocusedState();
-    return menuSurface;
+      // A fresh surface snaps to the MD rest — including a just-opened submenu, which only morphs
+      // once the pointer/focus moves onto it. The morph animates later hover changes, never the
+      // entrance.
+      this.shapeMorph = null;
+      this.shapeFromRadius = CONTAINER_ARC_PX;
+      this.shapeToRadius = CONTAINER_ARC_PX;
+
+      this.itemOrder = flattenVisible();
+      this.focusedIndex = itemOrder.isEmpty() ? -1 : 0;
+      this.keyboardFocusVisible = false;
+      pushFocusedState();
+    }
+    return built;
+  }
+
+  // The preview's rows: one detached twin per authored item, grouped exactly as the originals are.
+  private List<List<ElwhaMenuItem>> standInGroups() {
+    final List<List<ElwhaMenuItem>> twins = new ArrayList<>();
+    for (final List<ElwhaMenuItem> group : groups) {
+      final List<ElwhaMenuItem> row = new ArrayList<>();
+      for (final ElwhaMenuItem item : group) {
+        row.add(item.previewStandIn());
+      }
+      twins.add(row);
+    }
+    return twins;
   }
 
   @Override
@@ -807,12 +848,12 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     return Math.max(MIN_WIDTH_PX, Math.min(MAX_WIDTH_PX, max));
   }
 
-  private int totalColumnHeight(final int contentWidth) {
+  private int totalColumnHeight(final Separator separator) {
     int h = 0;
     boolean first = true;
     for (final List<ElwhaMenuItem> group : groups) {
       if (!first) {
-        h += layout == Layout.GROUPED ? separatorGapHeight() : 0;
+        h += layout == Layout.GROUPED ? separatorGapHeight(separator) : 0;
       }
       first = false;
       for (final ElwhaMenuItem item : group) {
@@ -824,12 +865,12 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     return h;
   }
 
-  private int allColumnHeight(final int contentWidth) {
+  private int allColumnHeight(final Separator separator) {
     int h = 0;
     boolean first = true;
     for (final List<ElwhaMenuItem> group : groups) {
       if (!first) {
-        h += layout == Layout.GROUPED ? separatorGapHeight() : 0;
+        h += layout == Layout.GROUPED ? separatorGapHeight(separator) : 0;
       }
       first = false;
       for (final ElwhaMenuItem item : group) {
@@ -839,27 +880,26 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     return h;
   }
 
-  private int separatorGapHeight() {
-    return effectiveSeparator == Separator.GAP
-        ? GROUP_GAP_PX
-        : DIVIDER_THICKNESS_PX + 2 * CONTENT_PAD_PX;
+  private int separatorGapHeight(final Separator separator) {
+    return separator == Separator.GAP ? GROUP_GAP_PX : DIVIDER_THICKNESS_PX + 2 * CONTENT_PAD_PX;
   }
 
   // Builds the vertical item column from group panels, inserting gap/divider separators between
-  // groups (GROUPED). STANDARD collapses to a single flat group.
-  private JComponent buildColumn(final int contentWidth) {
+  // groups (GROUPED). STANDARD arrives here already collapsed to a single flat group. Each group's
+  // panel is appended to {@code panelsOut} for the caller to keep (the gap-card painter walks it).
+  private JComponent buildColumn(
+      final int contentWidth,
+      final Separator separator,
+      final List<List<ElwhaMenuItem>> display,
+      final List<JComponent> panelsOut) {
     final JPanel columnPanel = new JPanel();
     columnPanel.setOpaque(false);
     columnPanel.setLayout(new BoxLayout(columnPanel, BoxLayout.Y_AXIS));
 
-    final List<List<ElwhaMenuItem>> effective =
-        layout == Layout.STANDARD ? List.of(flatten()) : groups;
-    this.effectiveGroups = effective;
-
     boolean first = true;
-    for (final List<ElwhaMenuItem> group : effective) {
+    for (final List<ElwhaMenuItem> group : display) {
       if (!first && layout == Layout.GROUPED) {
-        columnPanel.add(separatorComponent(contentWidth));
+        columnPanel.add(separatorComponent(contentWidth, separator));
       }
       first = false;
       final JPanel groupPanel = new JPanel();
@@ -876,16 +916,20 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       }
       groupPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
       columnPanel.add(groupPanel);
-      groupPanels.add(groupPanel);
+      panelsOut.add(groupPanel);
     }
-    columnPanel.setPreferredSize(new Dimension(contentWidth, totalColumnHeight(contentWidth)));
+    columnPanel.setPreferredSize(new Dimension(contentWidth, totalColumnHeight(separator)));
     columnPanel.setMaximumSize(new Dimension(contentWidth, Integer.MAX_VALUE));
     return columnPanel;
   }
 
   private List<ElwhaMenuItem> flatten() {
+    return flatten(groups);
+  }
+
+  private static List<ElwhaMenuItem> flatten(final List<List<ElwhaMenuItem>> source) {
     final List<ElwhaMenuItem> flat = new ArrayList<>();
-    for (final List<ElwhaMenuItem> group : groups) {
+    for (final List<ElwhaMenuItem> group : source) {
       flat.addAll(group);
     }
     return flat;
@@ -910,8 +954,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     return effectiveSeparator;
   }
 
-  private Component separatorComponent(final int contentWidth) {
-    if (effectiveSeparator == Separator.GAP) {
+  private Component separatorComponent(final int contentWidth, final Separator separator) {
+    if (separator == Separator.GAP) {
       return Box.createVerticalStrut(GROUP_GAP_PX);
     }
     final JPanel wrap = new JPanel();
@@ -933,7 +977,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     wrap.add(line);
     wrap.add(Box.createVerticalStrut(CONTENT_PAD_PX));
     wrap.setAlignmentX(Component.LEFT_ALIGNMENT);
-    wrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, separatorGapHeight()));
+    wrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, separatorGapHeight(separator)));
     return wrap;
   }
 
@@ -1083,10 +1127,21 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   private final class MenuSurface extends JPanel {
 
     private final boolean gapCards;
+    // This surface's own group panels and morph participation — a preview surface paints its cards
+    // from the generation it was built with and always at the MD rest radius, so it neither reads
+    // nor follows the live menu's shape morph (#589).
+    private final List<JComponent> cards;
+    private final boolean live;
 
-    MenuSurface(final JComponent content, final boolean gapCards) {
+    MenuSurface(
+        final JComponent content,
+        final boolean gapCards,
+        final List<JComponent> cards,
+        final boolean live) {
       super(new java.awt.BorderLayout());
       this.gapCards = gapCards;
+      this.cards = cards;
+      this.live = live;
       setOpaque(false);
       setFocusable(true);
       setFocusTraversalKeysEnabled(false);
@@ -1125,7 +1180,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
         final int bh = getHeight() - shadow.top - shadow.bottom;
         // The container corner radius is morph-driven (S3): the shadow silhouette and the body fill
         // both use the same arc (= radius × 2) so they stay in agreement through the morph.
-        final int arc = currentContainerRadius() * 2;
+        final int arc = (live ? currentContainerRadius() : CONTAINER_ARC_PX) * 2;
 
         if (gapCards) {
           // Each group is its own floating card: shadow + fill per card, so the transparent gap
@@ -1146,12 +1201,9 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
 
     private void paintGroupCards(final Graphics2D g2, final int bx, final int bw, final int arc) {
-      if (groupPanels == null) {
-        return;
-      }
       // Pass 1: every card's shadow, before any fill, so a card's shadow can't darken an adjacent
       // card's body — only the inter-card gap and the outer edges keep the shadow.
-      for (final JComponent gp : groupPanels) {
+      for (final JComponent gp : cards) {
         if (gp.getParent() == null) {
           continue;
         }
@@ -1163,7 +1215,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       }
       // Pass 2: every card's fill.
       g2.setColor(containerColor());
-      for (final JComponent gp : groupPanels) {
+      for (final JComponent gp : cards) {
         if (gp.getParent() == null) {
           continue;
         }

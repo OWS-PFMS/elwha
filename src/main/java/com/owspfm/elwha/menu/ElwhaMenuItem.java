@@ -418,6 +418,44 @@ public sealed class ElwhaMenuItem extends JComponent permits ElwhaSubMenuItem {
     return focused;
   }
 
+  // A detached twin for ElwhaMenu#renderPreview (#589). A Swing component has exactly one parent,
+  // so a preview that mounted the real rows would empty an open menu; the twin carries every
+  // property that affects measurement and paint and none that affects behavior — no action
+  // listeners, no owner menu, no roving focus. Icons are adopted by reference *without* re-applying
+  // the color filter: the filter the source installed resolves through the source's state, which is
+  // exactly the resting color the live surface paints, and re-applying it would re-point a shared
+  // icon at the twin (#197). The consumer's slot component has one parent too and so cannot be
+  // twinned; the twin falls back to the painted label, the shape setSlot(null) already defines.
+  ElwhaMenuItem previewStandIn() {
+    final ElwhaMenuItem twin = new ElwhaMenuItem(label);
+    twin.leadingIcon = leadingIcon;
+    twin.trailingIcon = trailingIcon;
+    twin.supportingText = supportingText;
+    twin.trailingText = trailingText;
+    twin.selected = selected;
+    twin.reserveLeading = reserveLeading;
+    twin.checkable = checkable;
+    twin.colorStyle = colorStyle;
+    twin.setEnabled(isEnabled());
+    twin.setVisible(isVisible());
+    twin.setComponentOrientation(getComponentOrientation());
+    if (badge != null) {
+      twin.setBadge(previewBadge(badge));
+    }
+    return twin;
+  }
+
+  // The twin's own badge — rebuilt from the source badge's public state rather than shared.
+  private static ElwhaBadge previewBadge(final ElwhaBadge source) {
+    final boolean small = source.getVariant() == ElwhaBadge.Variant.SMALL;
+    final ElwhaBadge copy = small ? ElwhaBadge.small() : ElwhaBadge.large(source.getContent());
+    copy.setContainerColor(source.getContainerColor());
+    if (!small && source.getLabelColor() != null) {
+      copy.setLabelColor(source.getLabelColor());
+    }
+    return copy.setAccessibilityText(source.getAccessibilityText());
+  }
+
   // Pushed by the container; STANDARD (surface) or VIBRANT (tertiary-tinted), research §K.
   void setColorStyle(final ColorStyle style) {
     this.colorStyle = Objects.requireNonNull(style, "style");

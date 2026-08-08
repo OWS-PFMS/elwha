@@ -143,7 +143,7 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
   @Override
   protected JComponent createSurface() {
     final DialogSurface s = new DialogSurface();
-    populateSurface(s, availableContentWidth());
+    populateSurface(s, availableContentWidth(), true);
     return s;
   }
 
@@ -221,8 +221,12 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
 
   // Builds the 24px-padded body — icon/headline/supporting header pinned NORTH, optional content
   // slot CENTER, action row SOUTH — into the given surface. The icon-present centering rule (§7) is
-  // the single layout conditional. Shared by createSurface() and renderPreview().
-  private void populateSurface(final DialogSurface target, final int contentWidth) {
+  // the single layout conditional. Shared by createSurface() and renderPreview(): a live build
+  // mounts the consumer's action buttons and records the scroll pane / divider it must drive later;
+  // a preview mounts inert twins and records nothing, so it cannot strip the action row out of a
+  // shown dialog or clobber the live scroll state (#589).
+  private void populateSurface(
+      final DialogSurface target, final int contentWidth, final boolean live) {
     final boolean centered = icon != null;
 
     final JPanel body = new JPanel(new BorderLayout());
@@ -233,11 +237,15 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
 
     body.add(buildHeader(centered, contentWidth), BorderLayout.NORTH);
 
-    if (content != null) {
-      body.add(buildContentScroll(), BorderLayout.CENTER);
+    final JScrollPane scroll = content != null ? buildContentScroll() : null;
+    if (scroll != null) {
+      if (live) {
+        this.contentScroll = scroll;
+      }
+      body.add(scroll, BorderLayout.CENTER);
     }
 
-    final JComponent south = buildSouth();
+    final JComponent south = buildSouth(scroll, live);
     if (south != null) {
       body.add(south, BorderLayout.SOUTH);
     }
@@ -253,20 +261,27 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
    * Each call returns a fresh component. Not a substitute for {@link #show(Component)} — that
    * presents the dialog for real.
    *
+   * <p>The action row is rendered with inert twins of the {@linkplain
+   * Builder#confirmAction(ElwhaButton) action buttons} rather than the buttons themselves, so a
+   * preview neither fires nor strips the action row out of a dialog that is currently shown. The
+   * {@linkplain Builder#content(JComponent) content slot} is the exception: it is the consumer's
+   * own component, hosted as-is, and a Swing component has one parent — so previewing a shown
+   * dialog that carries a content slot moves that slot into the preview.
+   *
    * @return a non-modal render of the dialog surface
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public JComponent renderPreview() {
     final DialogSurface preview = new DialogSurface();
-    populateSurface(preview, availableContentWidth());
+    populateSurface(preview, availableContentWidth(), false);
     return preview;
   }
 
   // The optional content slot, wrapped so it scrolls (vertically only) when taller than the space
   // the host frame leaves the dialog — the headline/icon (NORTH) and action row (SOUTH) stay pinned
   // while only this CENTER region scrolls (M3 scrollable-content behavior).
-  private JComponent buildContentScroll() {
+  private JScrollPane buildContentScroll() {
     content.setOpaque(false);
     final JScrollPane scroll =
         new JScrollPane(
@@ -276,28 +291,29 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
     scroll.setOpaque(false);
     scroll.getViewport().setOpaque(false);
     scroll.setBorder(BorderFactory.createEmptyBorder(SpaceScale.LG.px(), 0, 0, 0));
-    this.contentScroll = scroll;
     return scroll;
   }
 
   // The bottom region: the action row, preceded by a 1px scroll divider (M3 affordance) shown only
   // when the content slot is actually scrolling. No divider without a scrolling content slot.
-  private JComponent buildSouth() {
-    final JComponent actions = buildActionRow();
+  private JComponent buildSouth(final JScrollPane scroll, final boolean live) {
+    final JComponent actions = buildActionRow(live);
     if (actions == null) {
       return null;
     }
-    if (content == null) {
+    if (scroll == null) {
       return actions;
     }
     final JPanel south = new JPanel(new BorderLayout());
     south.setOpaque(false);
     final ScrollDivider divider = new ScrollDivider();
     divider.setVisible(false);
-    this.scrollDivider = divider;
     south.add(divider, BorderLayout.NORTH);
     south.add(actions, BorderLayout.CENTER);
-    contentScroll.getViewport().addChangeListener(e -> updateScrollDivider());
+    if (live) {
+      this.scrollDivider = divider;
+      scroll.getViewport().addChangeListener(e -> updateScrollDivider());
+    }
     return south;
   }
 
@@ -316,23 +332,24 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
   // (trailing); a trailing FlowLayout plus that add order parks the confirming action at the
   // trailing edge regardless of which roles are present. 8px between buttons, 24px above the row.
   // Returns null when no action role is set.
-  private JComponent buildActionRow() {
+  private JComponent buildActionRow(final boolean live) {
     if (confirmAction == null && alternateAction == null && cancelAction == null) {
       return null;
     }
     final JPanel row = new JPanel(new FlowLayout(FlowLayout.TRAILING, SpaceScale.SM.px(), 0));
     row.setOpaque(false);
     row.setBorder(BorderFactory.createEmptyBorder(SpaceScale.XL.px(), 0, 0, 0));
-    addAction(row, cancelAction);
-    addAction(row, alternateAction);
-    addAction(row, confirmAction);
+    addAction(row, cancelAction, live);
+    addAction(row, alternateAction, live);
+    addAction(row, confirmAction, live);
     return row;
   }
 
-  // Adds one action button to the row. Its dismiss listener was wired once at construction.
-  private void addAction(final JPanel row, final ElwhaButton button) {
+  // Adds one action button to the row — the consumer's own button on a live surface (its dismiss
+  // listener was wired once at construction), an inert twin on a preview (#589).
+  private void addAction(final JPanel row, final ElwhaButton button, final boolean live) {
     if (button != null) {
-      row.add(button);
+      row.add(live ? button : previewCopy(button));
     }
   }
 

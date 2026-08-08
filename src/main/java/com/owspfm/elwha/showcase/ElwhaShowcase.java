@@ -4148,9 +4148,8 @@ public final class ElwhaShowcase {
   }
 
   // Static, non-modal snapshots via ElwhaDialog.renderPreview() — real rendered surfaces (their
-  // buttons are live but inert: clicking calls dismiss(), a no-op with no overlay attached),
-  // stacked
-  // vertically so each variant reads as its own dialog card without competing for one row's width.
+  // buttons are inert twins of the action buttons, #589), stacked vertically so each variant reads
+  // as its own dialog card without competing for one row's width.
   private static JComponent buildDialogGallery() {
     final JPanel column = new JPanel();
     column.setOpaque(false);
@@ -4189,8 +4188,8 @@ public final class ElwhaShowcase {
 
   // Static, non-modal full-screen-dialog snapshot via renderPreview() — the surface rendered at its
   // natural (560-column) preferred size rather than filling a frame, so it reads as a preview card
-  // alongside the Basic snapshots (a live full-screen dialog would cover the whole frame). Buttons
-  // are live but inert (dismiss() no-ops with no overlay attached).
+  // alongside the Basic snapshots (a live full-screen dialog would cover the whole frame). Its app
+  // bar controls are inert twins (#589).
   private static JComponent buildFullScreenDialogGallery() {
     final JPanel column = new JPanel();
     column.setOpaque(false);
