@@ -3,6 +3,7 @@ package com.owspfm.elwha.chip;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.testkit.EdtInterceptor;
+import com.owspfm.elwha.testkit.Input;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import java.awt.Component;
 import java.awt.Container;
@@ -177,6 +178,38 @@ class ElwhaChipSlotTest {
     assertThat(returned)
         .as(slot + ": the setter returns the chip for inline configuration")
         .isSameAs(chip);
+  }
+
+  // ------------------------------------------------------ enablement cascade
+
+  @Test
+  void disablingTheChipReachesBothSlotAffordances() {
+    final ElwhaChip chip = chip();
+    final int[] pinned = {0};
+    chip.setLeadingAffordance(IDLE, ACTIVE, false, false, "Pin", () -> pinned[0]++);
+    chip.setTrailingAffordance(IDLE, ACTIVE, false, false, "Clear", () -> {});
+    final JLabel pin = leadingButton(chip);
+    pin.setSize(24, 24);
+
+    Input.click(pin, 12, 12);
+    assertThat(pinned[0]).as("the affordance is live on an enabled chip").isEqualTo(1);
+
+    chip.setEnabled(false);
+
+    assertThat(pin.isEnabled())
+        .as(
+            "Container.setEnabled does not cascade, and the leading handler gates on its own"
+                + " isEnabled() — so the chip has to hand the state down")
+        .isFalse();
+    assertThat(chip.getTrailingButton().isEnabled())
+        .as("the trailing side was already cascaded; it stays that way")
+        .isFalse();
+
+    Input.click(pin, 12, 12);
+    assertThat(pinned[0]).as("and a disabled chip's affordance swallows the click").isEqualTo(1);
+
+    chip.setEnabled(true);
+    assertThat(pin.isEnabled()).as("both come back with the chip").isTrue();
   }
 
   // --------------------------------------------------------- leading slot

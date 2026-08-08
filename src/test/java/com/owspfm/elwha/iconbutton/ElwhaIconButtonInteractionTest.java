@@ -184,7 +184,7 @@ class ElwhaIconButtonInteractionTest {
 
   @Test
   void programmaticSetSelectedFiresTheSelectedPropertyAndNoAction() {
-    final ElwhaIconButton button = sized();
+    final ElwhaIconButton button = sized().setInteractionMode(IconButtonInteractionMode.SELECTABLE);
     final int[] actions = {0};
     final int[] changes = {0};
     button.addActionListener(e -> actions[0]++);
@@ -260,6 +260,47 @@ class ElwhaIconButtonInteractionTest {
 
     assertThat(button.getIconBounds().width)
         .as("with no selected glyph installed the resting one renders in every state")
+        .isEqualTo(RESTING_SIDE);
+  }
+
+  // --------------------------------------------------------- interaction mode
+
+  @Test
+  void aPushButtonCannotBeLatchedIntoItsSelectedGlyph() {
+    final ElwhaIconButton button = withIconPair();
+    final int[] changes = {0};
+    button.addSelectionChangeListener(e -> changes[0]++);
+
+    button.setSelected(true);
+
+    assertThat(button.isSelected())
+        .as("CLICKABLE has no persistent selected state, so the setter is inert")
+        .isFalse();
+    assertThat(changes[0]).as("and an inert setter fires nothing").isZero();
+    assertThat(button.getIconBounds().width)
+        .as(
+            "the resting glyph stays live — currentIcon reads `selected`, so a latched flag would"
+                + " have pinned the filled glyph on a push button forever")
+        .isEqualTo(RESTING_SIDE);
+  }
+
+  @Test
+  void droppingOutOfSelectableModeClearsAndReportsTheSelection() {
+    final ElwhaIconButton button =
+        withIconPair().setInteractionMode(IconButtonInteractionMode.SELECTABLE);
+    button.setSelected(true);
+    final List<Object> selected = new ArrayList<>();
+    button.addPropertyChangeListener(
+        ElwhaIconButton.PROPERTY_SELECTED, e -> selected.add(e.getNewValue()));
+
+    button.setInteractionMode(IconButtonInteractionMode.CLICKABLE);
+
+    assertThat(button.isSelected()).as("a push button holds no selection").isFalse();
+    assertThat(selected)
+        .as("and a selection listener is told, rather than left believing the old value")
+        .containsExactly(false);
+    assertThat(button.getIconBounds().width)
+        .as("the glyph follows the state back to resting")
         .isEqualTo(RESTING_SIDE);
   }
 

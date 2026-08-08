@@ -314,6 +314,34 @@ class ElwhaChipRenderTest {
         "the disabled treatment is a paint-time branch, not a latched state");
   }
 
+  // ---------------------------------------------------------- disabled content
+
+  @Test
+  void aDisabledChipCarriesItsContentDownToTheDisabledOpacity() {
+    final ElwhaChip chip = chip(ChipVariant.FILLED);
+    final Color enabled = chip.resolveForegroundColor();
+
+    assertThat(enabled.getAlpha()).as("an enabled chip's content is opaque").isEqualTo(255);
+
+    chip.setEnabled(false);
+    final Color disabled = chip.resolveForegroundColor();
+
+    assertThat(disabled.getRGB() & 0xFFFFFF)
+        .as("the role resolution is unchanged — only the alpha carries the dimming")
+        .isEqualTo(enabled.getRGB() & 0xFFFFFF);
+    assertThat(disabled.getAlpha())
+        .as(
+            "text and icons paint from paintChildren, after paintComponent's disabled composite has"
+                + " been disposed, so the 38% has to ride on the color itself or the content stays"
+                + " at full contrast on a ghosted container")
+        .isEqualTo(Math.round(StateLayer.disabledContentOpacity() * 255f));
+
+    chip.setEnabled(true);
+    assertThat(chip.resolveForegroundColor().getAlpha())
+        .as("and it is a resolution-time branch, not a latched color")
+        .isEqualTo(255);
+  }
+
   // ----------------------------------------------------------------- re-skin
 
   @Test

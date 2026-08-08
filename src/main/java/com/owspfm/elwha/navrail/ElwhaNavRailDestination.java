@@ -703,7 +703,19 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     if (icon == null) {
       return;
     }
-    icon.paintIcon(this, g2, geom.iconX, geom.iconY);
+    final Graphics2D i = (Graphics2D) g2.create();
+    try {
+      i.setComposite(AlphaComposite.SrcOver.derive(contentOpacity()));
+      icon.paintIcon(this, i, geom.iconX, geom.iconY);
+    } finally {
+      i.dispose();
+    }
+  }
+
+  // M3 disabled content, as ElwhaTab paints it. A disabled destination silently swallows clicks and
+  // keystrokes, so without the dimming the row reads as live while doing nothing.
+  private float contentOpacity() {
+    return isEnabled() ? 1f : StateLayer.disabledContentOpacity();
   }
 
   private boolean paintSelectedForm() {
@@ -740,7 +752,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     }
     final Graphics2D l = (Graphics2D) g2.create();
     try {
-      l.setComposite(AlphaComposite.SrcOver.derive(alpha));
+      l.setComposite(AlphaComposite.SrcOver.derive(alpha * contentOpacity()));
       l.setColor(labelColor());
       final int x = (getWidth() - labelWidth) / 2;
       final int y = INDICATOR_HEIGHT_COLLAPSED_PX + ICON_LABEL_GAP_COLLAPSED + fm.getAscent();
@@ -761,7 +773,7 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     }
     final Graphics2D l = (Graphics2D) g2.create();
     try {
-      l.setComposite(AlphaComposite.SrcOver.derive(alpha));
+      l.setComposite(AlphaComposite.SrcOver.derive(alpha * contentOpacity()));
       l.setColor(labelColor());
       final int x = LEADING_PAD_EXPANDED + ICON_SIZE_PX + ICON_LABEL_GAP_EXPANDED;
       final int rowHeight = geom.pillHeight > 0 ? geom.pillHeight : EXPANDED_CONTENT_HEIGHT_PX;

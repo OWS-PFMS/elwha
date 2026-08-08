@@ -140,12 +140,15 @@ class ElwhaIconButtonRenderTest {
   void selectionIsInertWhileTheButtonIsMerelyClickable() {
     final ElwhaIconButton button = button(IconButtonVariant.FILLED).setSelected(true);
 
+    assertThat(button.isSelected())
+        .as("the setter is refused outright in CLICKABLE mode, so the flag never latches")
+        .isFalse();
     Pixels.assertPixelNear(
         render(button),
         SIDE / 2,
         SIDE / 2,
         ColorRole.PRIMARY.resolve(),
-        "a CLICKABLE icon button paints no selected layer even when its flag is set");
+        "and a CLICKABLE icon button paints no selected layer");
   }
 
   @ParameterizedTest

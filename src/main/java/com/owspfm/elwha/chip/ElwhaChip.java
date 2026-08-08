@@ -921,11 +921,12 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
 
   /**
    * Resolves the effective text + icon foreground color — the {@code on}-pair of the effective
-   * surface role (or {@link ColorRole#ON_SURFACE} when the surface role is null / unpaired). Always
+   * surface role (or {@link ColorRole#ON_SURFACE} when the surface role is null / unpaired),
+   * carried down to {@link StateLayer#disabledContentOpacity()} while the chip is disabled. Always
    * correct by construction; there is no per-instance foreground override.
    *
    * @return the resolved foreground color (never null)
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   protected Color resolveForegroundColor() {
@@ -933,7 +934,20 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
     if (basis == null) {
       basis = ColorRole.SURFACE;
     }
-    return basis.on().orElse(ColorRole.ON_SURFACE).resolve();
+    final Color resolved = basis.on().orElse(ColorRole.ON_SURFACE).resolve();
+    if (isEnabled()) {
+      return resolved;
+    }
+    // M3 disabled content is the resolved role at 38%. The dimming has to ride on the color rather
+    // than on a compositing pass, because the chip's text and icons paint from paintChildren —
+    // after paintComponent's disabled composite has already been disposed. Icons come along for
+    // free: iconFilter calls this at paint time.
+    final float opacity = StateLayer.disabledContentOpacity();
+    return new Color(
+        resolved.getRed(),
+        resolved.getGreen(),
+        resolved.getBlue(),
+        Math.round(Math.max(0f, Math.min(1f, opacity)) * 255f));
   }
 
   // ------------------------------------------------------------ listeners
@@ -1445,7 +1459,21 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
         enabled && interactionMode != ChipInteractionMode.STATIC
             ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             : Cursor.getDefaultCursor());
+    // Container.setEnabled does not cascade, and LeadingButton's click handler gates on its own
+    // isEnabled() — so without this a disabled chip's pin / anchor affordance still takes clicks.
+    leadingButton.setEnabled(enabled);
     trailingButton.setEnabled(enabled);
+    if (!enabled) {
+      hovered = false;
+      pressed = false;
+      stopHoverPolling();
+      if (rippleTimer != null) {
+        rippleTimer.stop();
+      }
+      rippleProgress = 1f;
+      refreshLeadingAffordanceIcon();
+      refreshTrailingAffordanceIcon();
+    }
     repaint();
   }
 

@@ -126,9 +126,13 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   private final SelectionMode selectionMode;
   private final Consumer<ElwhaMenuItem> onSelectionChange;
   private final Component focusHome;
-  private Separator separator;
+  private final Separator separator;
 
   // Live state — non-null while shown.
+  // The separator actually rendered this open. M3 forbids gaps in a scrollable menu, but that is a
+  // property of one presentation, not of the menu: resolving it into its own field per open is what
+  // lets a menu that scrolled in a short window get its gaps back in a taller one.
+  private Separator effectiveSeparator;
   private List<JComponent> groupPanels;
   private List<List<ElwhaMenuItem>> effectiveGroups;
   private List<ElwhaMenuItem> itemOrder;
@@ -164,6 +168,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     this.groups = b.groups;
     this.layout = b.layout;
     this.separator = b.separator;
+    this.effectiveSeparator = b.separator;
     this.colorStyle = b.colorStyle;
     this.colorStyleExplicit = b.colorStyleExplicit;
     this.selectionMode = b.selectionMode;
@@ -680,7 +685,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   @Override
   protected JComponent createSurface() {
     this.contentWidth = resolveContentWidth();
-    final int columnHeight = totalColumnHeight(contentWidth);
+    this.effectiveSeparator = separator;
 
     final int available =
         (layeredPane != null ? layeredPane.getHeight() : Integer.MAX_VALUE)
@@ -689,12 +694,15 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     final int chromeV = 2 * (shadow.top + CONTENT_PAD_PX);
     // The scroll decision uses the FULL item set, not the currently-visible one: a menu opened
     // under a filter can have its filter cleared while open, and a non-scrollable column cannot
-    // grow a scrollbar after the fact.
+    // grow a scrollbar after the fact. It also reads the authored separator, not the effective one
+    // — "would this menu scroll as written" is the question the downgrade answers.
     this.scrollable = allColumnHeight(contentWidth) + chromeV > available;
-    if (scrollable && separator == Separator.GAP) {
+    if (scrollable && effectiveSeparator == Separator.GAP) {
       // M3: gaps are unsupported in a scrollable menu — force the subtle divider.
-      this.separator = Separator.DIVIDER;
+      this.effectiveSeparator = Separator.DIVIDER;
     }
+    // Measured after the downgrade so the column height matches the separators actually built.
+    final int columnHeight = totalColumnHeight(contentWidth);
 
     this.groupPanels = new ArrayList<>();
     this.column = buildColumn(contentWidth);
@@ -722,7 +730,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       content = column;
     }
 
-    final boolean gapCards = layout == Layout.GROUPED && separator == Separator.GAP && !scrollable;
+    final boolean gapCards =
+        layout == Layout.GROUPED && effectiveSeparator == Separator.GAP && !scrollable;
     this.menuSurface = new MenuSurface(content, gapCards);
 
     // A fresh surface snaps to the MD rest — including a just-opened submenu, which only morphs
@@ -751,6 +760,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
     openChildMenu = null;
     openerSubItem = null;
+    effectiveSeparator = separator;
     groupPanels = null;
     effectiveGroups = null;
     itemOrder = null;
@@ -822,7 +832,9 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   }
 
   private int separatorGapHeight() {
-    return separator == Separator.GAP ? GROUP_GAP_PX : DIVIDER_THICKNESS_PX + 2 * CONTENT_PAD_PX;
+    return effectiveSeparator == Separator.GAP
+        ? GROUP_GAP_PX
+        : DIVIDER_THICKNESS_PX + 2 * CONTENT_PAD_PX;
   }
 
   // Builds the vertical item column from group panels, inserting gap/divider separators between
@@ -883,8 +895,15 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     return flat;
   }
 
+  /**
+   * The separator this open actually rendered — the builder value, downgraded if it had to scroll.
+   */
+  Separator effectiveSeparator() {
+    return effectiveSeparator;
+  }
+
   private Component separatorComponent(final int contentWidth) {
-    if (separator == Separator.GAP) {
+    if (effectiveSeparator == Separator.GAP) {
       return Box.createVerticalStrut(GROUP_GAP_PX);
     }
     final JPanel wrap = new JPanel();

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Input;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
@@ -310,6 +311,93 @@ class ElwhaButtonInteractionTest {
     Input.release(button, centerX(button), centerY(button));
 
     assertThat(pressed).as("a disabled button reports no press at all").isEmpty();
+  }
+
+  @Test
+  void disablingMidPressReleasesThePressAsIfTheCursorHadLeft() {
+    final ElwhaButton button = sized(new ElwhaButton("Save"));
+    Input.press(button, centerX(button), centerY(button));
+    final List<Object> pressed = new ArrayList<>();
+    button.addPropertyChangeListener(
+        ElwhaButton.PROPERTY_PRESSED, e -> pressed.add(e.getNewValue()));
+
+    button.setEnabled(false);
+
+    assertThat(pressed)
+        .as("the group's width-borrow is released rather than stranded by the disable")
+        .containsExactly(false);
+    assertThat(button.getCursor().getType())
+        .as("and a disabled button stops advertising itself as clickable")
+        .isEqualTo(Cursor.DEFAULT_CURSOR);
+  }
+
+  @Test
+  void reEnablingStartsFromRestRatherThanReplayingTheOldPress() {
+    final ElwhaButton button = sized(new ElwhaButton("Save"));
+    Input.enter(button, centerX(button), centerY(button));
+    Input.press(button, centerX(button), centerY(button));
+
+    button.setEnabled(false);
+    final List<Object> pressed = new ArrayList<>();
+    button.addPropertyChangeListener(
+        ElwhaButton.PROPERTY_PRESSED, e -> pressed.add(e.getNewValue()));
+    button.setEnabled(true);
+
+    assertThat(pressed)
+        .as("re-enabling revives nothing — the press was already cleared on the way down")
+        .isEmpty();
+    assertThat(button.getCursor().getType())
+        .as("and the pointer cursor comes back with the button")
+        .isEqualTo(Cursor.HAND_CURSOR);
+  }
+
+  @Test
+  void aPollDetectedExitReleasesThePressLikeAMouseExit() {
+    final ElwhaButton button = sized(new ElwhaButton("Save"));
+    Input.enter(button, centerX(button), centerY(button));
+    Input.press(button, centerX(button), centerY(button));
+    final List<Object> pressed = new ArrayList<>();
+    button.addPropertyChangeListener(
+        ElwhaButton.PROPERTY_PRESSED, e -> pressed.add(e.getNewValue()));
+
+    // The poll's own guard: an unrealized button is not showing, which is the case the poll exists
+    // to catch — the pointer left the window (or the button was hidden) with the press still down,
+    // so no mouseExited will ever arrive.
+    button.pollHoverState();
+
+    assertThat(pressed)
+        .as("a press ended by the poll is still a press the button group hears end")
+        .containsExactly(false);
+  }
+
+  // --------------------------------------------------------- interaction mode
+
+  @Test
+  void droppingOutOfSelectableModeReportsTheDeselection() {
+    final ElwhaButton button = selectable(ButtonVariant.FILLED);
+    button.setSelected(true);
+    final List<Object> selected = new ArrayList<>();
+    button.addPropertyChangeListener(
+        ElwhaButton.PROPERTY_SELECTED, e -> selected.add(e.getNewValue()));
+
+    button.setInteractionMode(ButtonInteractionMode.CLICKABLE);
+
+    assertThat(button.isSelected()).as("a push button holds no selection").isFalse();
+    assertThat(selected)
+        .as("and a selection listener is told, rather than left believing the old value")
+        .containsExactly(false);
+  }
+
+  @Test
+  void droppingOutOfSelectableModeIsSilentWhenNothingWasSelected() {
+    final ElwhaButton button = selectable(ButtonVariant.FILLED);
+    final List<Object> selected = new ArrayList<>();
+    button.addPropertyChangeListener(
+        ElwhaButton.PROPERTY_SELECTED, e -> selected.add(e.getNewValue()));
+
+    button.setInteractionMode(ButtonInteractionMode.CLICKABLE);
+
+    assertThat(selected).as("there is no transition to report").isEmpty();
   }
 
   // ------------------------------------------------------------- ripple gate

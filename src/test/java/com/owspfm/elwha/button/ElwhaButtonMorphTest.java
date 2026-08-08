@@ -185,6 +185,22 @@ class ElwhaButtonMorphTest {
   }
 
   @Test
+  void leavingSelectableModeFlipsTheShapeBackTooNotJustTheFlag() {
+    final ElwhaButton button =
+        bigButton().setInteractionMode(ButtonInteractionMode.SELECTABLE).setSelected(true);
+
+    button.setInteractionMode(ButtonInteractionMode.CLICKABLE);
+
+    Pixels.assertPixelNear(
+        render(button),
+        CORNER_PROBE,
+        CORNER_PROBE,
+        ColorRole.SURFACE.resolve(),
+        "morphedRadii interpolates on the animator's progress, not on `selected` — so the mode"
+            + " switch has to snap the flip back or the push button rests squared-up forever");
+  }
+
+  @Test
   void aSquareButtonFlipsTheOtherWayWhenSelected() {
     final ElwhaButton button =
         bigButton()
