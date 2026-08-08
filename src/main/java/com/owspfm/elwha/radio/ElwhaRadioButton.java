@@ -42,8 +42,6 @@ import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 import javax.swing.Timer;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.EventListenerList;
 
 /**
@@ -77,8 +75,8 @@ import javax.swing.event.EventListenerList;
  * {@link RipplePainter} ripple bounded to the same circle — in the <strong>swapped</strong> tint
  * (research §C′): pressing an unselected radio shows {@link ColorRole#PRIMARY} (the press
  * anticipates selection), pressing a selected one shows {@link ColorRole#ON_SURFACE}. User-gesture
- * selection commits fire the registered {@link ActionListener}s <em>and</em> {@link
- * ChangeListener}s; programmatic {@code setSelected} fires only the latter.
+ * selection commits fire the registered {@link ActionListener}s <em>and</em> a {@link
+ * #PROPERTY_SELECTED} property change; programmatic {@code setSelected} fires only the latter.
  *
  * <p><strong>Motion (design §6 / research §Mo — M3 verbatim).</strong> Selecting grows the dot
  * {@code 0→1} over {@value #DOT_GROW_MS}&nbsp;ms on {@link Easing#EMPHASIZED_DECELERATE}
@@ -115,6 +113,12 @@ import javax.swing.event.EventListenerList;
  */
 public class ElwhaRadioButton extends JComponent implements BodyBearing {
 
+  /**
+   * Property-change key fired whenever the selection state changes — user-driven or programmatic.
+   * The event's {@code oldValue} and {@code newValue} are {@link Boolean}s.
+   */
+  public static final String PROPERTY_SELECTED = "selected";
+
   // --- M3 radio-button geometry (dp == px at 100% scale; research §T/§G) ---
 
   /** Icon size — the ring's outer diameter. */
@@ -145,7 +149,6 @@ public class ElwhaRadioButton extends JComponent implements BodyBearing {
   private static final int RIPPLE_TICK_MS = 16;
 
   private final EventListenerList listenerList = new EventListenerList();
-  private final ChangeEvent changeEvent = new ChangeEvent(this);
 
   private final RetargetTween dotScale;
   private final RetargetTween dotAlpha;
@@ -235,13 +238,13 @@ public class ElwhaRadioButton extends JComponent implements BodyBearing {
   }
 
   /**
-   * Sets the selection state. Fires the registered {@link ChangeListener}s only when the state
-   * actually changes; never fires the user-gesture {@link ActionListener}s (material-web parity:
-   * {@code change} fires on user interaction only). Both directions are legal programmatically —
-   * only <em>user gestures</em> are select-only (research §B).
+   * Sets the selection state, firing {@link #PROPERTY_SELECTED} only when the state actually
+   * changes; never fires the user-gesture {@link ActionListener}s (material-web parity: {@code
+   * change} fires on user interaction only). Both directions are legal programmatically — only
+   * <em>user gestures</em> are select-only (research §B).
    *
    * @param selected the new selection state
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setSelected(final boolean selected) {
@@ -253,7 +256,7 @@ public class ElwhaRadioButton extends JComponent implements BodyBearing {
     if (group != null) {
       group.memberSelectionChanged(this, selected);
     }
-    fireStateChanged();
+    firePropertyChange(PROPERTY_SELECTED, !selected, selected);
     if (accessibleContext != null) {
       accessibleContext.firePropertyChange(
           AccessibleContext.ACCESSIBLE_STATE_PROPERTY,
@@ -385,36 +388,6 @@ public class ElwhaRadioButton extends JComponent implements BodyBearing {
   /** Whether state changes may tween — never while undisplayable (first paint) or disabled. */
   private boolean animateAllowed() {
     return isDisplayable() && isEnabled();
-  }
-
-  /**
-   * Adds a {@link ChangeListener} notified on every selection-state change, user-driven or
-   * programmatic.
-   *
-   * @param listener the listener to add
-   * @version v0.4.0
-   * @since v0.4.0
-   */
-  public void addChangeListener(final ChangeListener listener) {
-    listenerList.add(ChangeListener.class, listener);
-  }
-
-  /**
-   * Removes a previously added {@link ChangeListener}.
-   *
-   * @param listener the listener to remove
-   * @version v0.4.0
-   * @since v0.4.0
-   */
-  public void removeChangeListener(final ChangeListener listener) {
-    listenerList.remove(ChangeListener.class, listener);
-  }
-
-  /** Notifies registered {@link ChangeListener}s of a selection-state change. */
-  private void fireStateChanged() {
-    for (final ChangeListener listener : listenerList.getListeners(ChangeListener.class)) {
-      listener.stateChanged(changeEvent);
-    }
   }
 
   /**
@@ -804,8 +777,8 @@ public class ElwhaRadioButton extends JComponent implements BodyBearing {
    * AccessibleRole#RADIO_BUTTON}, {@link AccessibleState#CHECKED} while selected, one "click"
    * {@link AccessibleAction} performing the user-gesture select (assistive tech acts as the user,
    * so it fires {@code ActionListener}s), an {@link AccessibleValue} of 0/1 (programmatic, so it
-   * fires {@code ChangeListener}s only and routes the group exclusion), and an {@link
-   * AccessibleRelation#MEMBER_OF} relation computed live from the {@link ElwhaRadioGroup}
+   * fires {@link ElwhaRadioButton#PROPERTY_SELECTED} only and routes the group exclusion), and an
+   * {@link AccessibleRelation#MEMBER_OF} relation computed live from the {@link ElwhaRadioGroup}
    * membership. The accessible name comes from {@link ElwhaRadioButton#setLabel(String)}, falling
    * back to an associated {@code labelFor} {@link javax.swing.JLabel}.
    *
