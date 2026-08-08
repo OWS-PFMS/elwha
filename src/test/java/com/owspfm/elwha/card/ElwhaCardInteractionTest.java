@@ -594,6 +594,44 @@ class ElwhaCardInteractionTest {
   }
 
   @Test
+  void removeRoutesIntoTheScrollBodyJustAsAddDoes() {
+    final ElwhaCard card = ElwhaCard.filledCard();
+    final Block body = new Block(40);
+    card.setExpansionOverflow(ExpansionOverflow.SCROLL);
+    card.add(body);
+
+    card.remove(body);
+
+    assertThat(body.getParent())
+        .as("#677 — remove ignored the routing addImpl performs, so it silently did nothing")
+        .isNull();
+  }
+
+  @Test
+  void removeByIndexAndRemoveAllAddressTheScrollBodysContent() {
+    final ElwhaCard card = ElwhaCard.filledCard();
+    card.setExpansionOverflow(ExpansionOverflow.SCROLL);
+    final Block first = new Block(40);
+    final Block second = new Block(40);
+    card.add(first);
+    card.add(second);
+
+    card.remove(0);
+    assertThat(first.getParent()).as("the index is a content index, as it is for add").isNull();
+    assertThat(second.getParent()).isNotNull();
+
+    card.removeAll();
+    assertThat(second.getParent()).as("and removeAll clears the content").isNull();
+    assertThat(card.getPreferredSize())
+        .as("the scroll chrome is the card's own furniture and survives")
+        .isNotNull();
+    card.add(new Block(600));
+    assertThat(card.getPreferredSize().height)
+        .as("a card that still scrolls after removeAll never lost its wrapper")
+        .isLessThanOrEqualTo(320);
+  }
+
+  @Test
   void switchingBackToGrowReturnsTheChildrenToTheChassis() {
     final ElwhaCard card = ElwhaCard.filledCard();
     final Block body = new Block(40);

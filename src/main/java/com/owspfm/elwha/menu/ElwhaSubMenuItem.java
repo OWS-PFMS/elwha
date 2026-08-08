@@ -243,15 +243,27 @@ public final class ElwhaSubMenuItem extends ElwhaMenuItem {
   }
 
   /**
-   * Replaces the nested menu this item opens.
+   * Replaces the nested menu this item opens. A currently-open submenu is closed first: the
+   * outgoing menu is reachable only through this opener, so swapping the field out from under it
+   * would strand it on the layered pane with nothing able to close it.
    *
    * @param subMenu the new submenu; required
    * @throws NullPointerException if {@code subMenu} is {@code null}
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void setSubMenu(final ElwhaMenu subMenu) {
-    this.subMenu = Objects.requireNonNull(subMenu, "subMenu");
+    final ElwhaMenu next = Objects.requireNonNull(subMenu, "subMenu");
+    if (next == this.subMenu) {
+      return;
+    }
+    if (expanded) {
+      if (ownerMenu != null) {
+        ownerMenu.requestCloseSubMenu(this);
+      }
+      setExpanded(false);
+    }
+    this.subMenu = next;
   }
 
   /**

@@ -226,16 +226,28 @@ public class ElwhaSelectField<T> extends JComponent {
   /**
    * Selects the given option value programmatically: writes its display text into the field and
    * marks the matching menu item {@code selected} (single-select — the others clear). Passing
-   * {@code null} clears the selection (empty field, the floating label rests). A value that is not
-   * among the current {@linkplain #setOptions options} is ignored — a select is constrained to its
-   * options. Fires the {@linkplain #addSelectionChangeListener selection-change listeners} only
-   * when the value actually changes. In a {@linkplain #setMultiSelect multi-select} this delegates
-   * to {@link #setSelectedValues} with a one-element (or, for {@code null}, empty) collection — the
-   * value becomes the entire selection.
+   * {@code null} clears the selection (empty field, the floating label rests). Fires the
+   * {@linkplain #addSelectionChangeListener selection-change listeners} only when the value
+   * actually changes. In a {@linkplain #setMultiSelect multi-select} this delegates to {@link
+   * #setSelectedValues} with a one-element (or, for {@code null}, empty) collection — the value
+   * becomes the entire selection.
+   *
+   * <p>A value that is not among the current {@linkplain #setOptions options} is <strong>rejected
+   * </strong>: a select is constrained to its options, so no reachable state satisfies the request
+   * — conventions §9's throw row. It was formerly ignored, which is the silent no-op that rule
+   * exists to forbid, and left the caller reading a getter that disagreed with what they had just
+   * written. Use {@link #setSelectedValues} where lenient filtering is what you want; that is a
+   * set-replacement operation and keeps its documented prune.
    *
    * @param value the option to select, or {@code null} to clear
+   * @throws IllegalArgumentException if {@code value} is not among the current options
+   * @version v0.5.0
    */
   public void setSelectedValue(final T value) {
+    if (value != null && !options.contains(value)) {
+      throw new IllegalArgumentException(
+          "value is not among this select's options (conventions §9): " + value);
+    }
     if (multiSelect) {
       setSelectedValues(value == null ? List.of() : List.of(value));
       return;

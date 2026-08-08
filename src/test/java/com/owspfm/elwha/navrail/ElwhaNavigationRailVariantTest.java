@@ -12,10 +12,12 @@ import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.JPanel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -487,6 +489,137 @@ class ElwhaNavigationRailVariantTest {
 
     assertThat(rail.getSections()).isEmpty();
     assertThat(rail.getPrimary()).hasSize(3);
+  }
+
+  @Test
+  void addingASectionToARailWithNoPrimaryStillLeavesItOneSelection() {
+    final ElwhaNavigationRail rail = ElwhaNavigationRail.expanded();
+    final List<ElwhaNavRailDestination> secondary = RailFixture.destinations(2);
+
+    rail.addSection("Tools", secondary);
+
+    assertThat(rail.getSelected())
+        .as(
+            "#633 — the single-mandatory invariant held for setPrimary but not for addSection, and"
+                + " setSelected(null) throws, so the consumer had no way to repair it")
+        .isSameAs(secondary.get(0));
+  }
+
+  @Test
+  void addingASectionDoesNotStealAnExistingSelection() {
+    final ElwhaNavigationRail rail = ElwhaNavigationRail.expanded();
+    final List<ElwhaNavRailDestination> primary = RailFixture.destinations(3);
+    rail.setPrimary(primary);
+    rail.setSelected(primary.get(2));
+
+    rail.addSection("Tools", RailFixture.destinations(2));
+
+    assertThat(rail.getSelected()).as("the fallback only fills a vacancy").isSameAs(primary.get(2));
+  }
+
+  // ------------------------------------------------------- sections and the morph
+
+  @Test
+  void aCollapseInFlightKeepsItsSectionsOnScreen() {
+    final ElwhaNavigationRail rail = ElwhaNavigationRail.expanded();
+    rail.setPrimary(RailFixture.destinations(2));
+    final List<ElwhaNavRailDestination> secondary = RailFixture.destinations(2);
+    rail.addSection("Tools", secondary);
+    rail.setSize(rail.getPreferredSize());
+    rail.doLayout();
+    final int expandedHeight = rail.getPreferredSize().height;
+
+    MorphAnimator.setReducedMotion(false);
+    rail.morphTo(ElwhaNavigationRail.Variant.COLLAPSED);
+    // Re-pinned before asserting: the animator is latched at progress 0 (a Swing timer cannot tick
+    // while this test holds the dispatch thread), and the restore keeps the teardown synchronous.
+    MorphAnimator.setReducedMotion(true);
+    rail.setSize(rail.getPreferredSize());
+    rail.doLayout();
+
+    assertThat(secondary.get(0).getY())
+        .as("#635 — frame 0 of the collapse parked every section destination off-screen")
+        .isGreaterThanOrEqualTo(0);
+    assertThat(rail.getPreferredSize().height)
+        .as("and dropped the height the sections occupy, so the band jumped under the tween")
+        .isEqualTo(expandedHeight);
+    assertThat(PaintLog.capture(rail, rail.getWidth(), rail.getHeight()).painted("Tools"))
+        .as("the header rides the morph out rather than vanishing on frame 0")
+        .isTrue();
+  }
+
+  @Test
+  void anExpandInFlightAlreadyShowsItsSections() {
+    final ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
+    rail.setPrimary(RailFixture.destinations(2));
+    rail.addSection("Tools", RailFixture.destinations(2));
+    rail.setSize(rail.getPreferredSize());
+    rail.doLayout();
+
+    MorphAnimator.setReducedMotion(false);
+    rail.morphTo(ElwhaNavigationRail.Variant.EXPANDED);
+    MorphAnimator.setReducedMotion(true);
+    rail.setSize(rail.getPreferredSize());
+    rail.doLayout();
+
+    assertThat(PaintLog.capture(rail, rail.getWidth(), rail.getHeight()).painted("Tools"))
+        .as("#635 — sections join the tween from its first frame, like the destination band")
+        .isTrue();
+  }
+
+  // -------------------------------------------------------------------- fonts
+
+  @Test
+  void aDestinationLabelUsesItsTokenRoleRatherThanTheContainersFont() {
+    final ElwhaNavRailDestination inherited = RailFixture.destination("Library");
+    final JPanel page = new JPanel();
+    page.setFont(new Font(Font.SERIF, Font.PLAIN, 40));
+    page.add(inherited);
+    inherited.setHostVariant(ElwhaNavigationRail.Variant.EXPANDED);
+    final ElwhaNavRailDestination offscreen = RailFixture.destination("Library");
+    offscreen.setHostVariant(ElwhaNavigationRail.Variant.EXPANDED);
+
+    assertThat(inherited.getPreferredSize().width)
+        .as(
+            "#628 — getFont() answers the inherited container font in any real hierarchy, so"
+                + " preferring it applied LABEL_MEDIUM only to offscreen renders")
+        .isEqualTo(offscreen.getPreferredSize().width);
+  }
+
+  @Test
+  void anExplicitFontOnADestinationStillWins() {
+    final ElwhaNavRailDestination roled = RailFixture.destination("Library");
+    roled.setHostVariant(ElwhaNavigationRail.Variant.EXPANDED);
+    final ElwhaNavRailDestination overridden = RailFixture.destination("Library");
+    overridden.setHostVariant(ElwhaNavigationRail.Variant.EXPANDED);
+
+    overridden.setFont(new Font(Font.SERIF, Font.PLAIN, 40));
+
+    assertThat(overridden.getPreferredSize().width)
+        .as(
+            "isFontSet() is the distinction: a font set on the component outranks the role, an"
+                + " inherited one does not")
+        .isGreaterThan(roled.getPreferredSize().width);
+  }
+
+  @Test
+  void aSectionHeaderUsesItsTokenRoleRatherThanTheContainersFont() {
+    final ElwhaNavigationRail inherited = ElwhaNavigationRail.expanded();
+    inherited.setPrimary(RailFixture.destinations(2));
+    inherited.addSection("Tools", RailFixture.destinations(1));
+    final JPanel page = new JPanel();
+    page.setFont(new Font(Font.SERIF, Font.PLAIN, 40));
+    page.add(inherited);
+
+    final ElwhaNavigationRail offscreen = ElwhaNavigationRail.expanded();
+    offscreen.setPrimary(RailFixture.destinations(2));
+    offscreen.addSection("Tools", RailFixture.destinations(1));
+
+    assertThat(inherited.getPreferredSize().height)
+        .as(
+            "#628 — the reserved header height followed the inherited font, so a themed panel"
+                + " silently resized the rail's chrome")
+        .isEqualTo(offscreen.getPreferredSize().height);
   }
 
   // ----------------------------------------------------------- surface knobs

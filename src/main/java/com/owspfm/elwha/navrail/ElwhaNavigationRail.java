@@ -716,21 +716,23 @@ public final class ElwhaNavigationRail extends JComponent {
               + ". This is advisory only — paint and layout still work.");
     }
 
-    final ElwhaNavRailDestination prior = selected;
-    final ElwhaNavRailDestination next;
-    if (allDestinations().isEmpty()) {
-      next = null;
-    } else if (prior != null && allDestinations().contains(prior)) {
-      next = prior;
-    } else if (!primary.isEmpty()) {
-      next = primary.get(0);
-    } else {
-      next = allDestinations().get(0);
-    }
-    applySelection(prior, next);
+    applySelection(selected, resolveSelection(selected));
 
     revalidate();
     repaint();
+  }
+
+  // The single-mandatory invariant: a rail with any destination has one selected. Keeps the current
+  // selection when it survived the change, else falls to the first primary destination, else the
+  // first destination of any kind.
+  private ElwhaNavRailDestination resolveSelection(final ElwhaNavRailDestination current) {
+    if (allDestinations().isEmpty()) {
+      return null;
+    }
+    if (current != null && allDestinations().contains(current)) {
+      return current;
+    }
+    return primary.isEmpty() ? allDestinations().get(0) : primary.get(0);
   }
 
   /**
@@ -761,6 +763,12 @@ public final class ElwhaNavigationRail extends JComponent {
       d.addActionListener(destinationClickListener);
       installKeyboardNavigation(d);
     }
+    // The same selection fallback setPrimary runs (#633). Without it, adding a section to a rail
+    // with no primary destinations left getSelected() null while allDestinations() was non-empty —
+    // violating the single-mandatory invariant — and setSelected(null) throws, so the consumer had
+    // no way back.
+    applySelection(selected, resolveSelection(selected));
+
     revalidate();
     repaint();
   }
@@ -1216,6 +1224,16 @@ public final class ElwhaNavigationRail extends JComponent {
         COLLAPSED_WIDTH_PX, expandedWidthPx, variantMorph.progress());
   }
 
+  // Sections join the 350 ms variant morph instead of popping (#635). `variant` is already the
+  // target when the animator starts, so gating sections on it alone dropped a header and parked
+  // its destinations off-screen on frame 0 of a collapse, and snapped them in at full size while
+  // the primary band was still mid-lerp on an expand. This is the gate that band has always used.
+  // Row height is the same in both variants, so header positions stay exact throughout the tween —
+  // only the row width and x are interpolated.
+  private boolean expandedish() {
+    return variant == Variant.EXPANDED || variantMorph.isRunning();
+  }
+
   private int preferredContentHeight() {
     int h = CHROME_PAD_PX;
     if (menuButton != null) {
@@ -1225,7 +1243,7 @@ public final class ElwhaNavigationRail extends JComponent {
       h += fab.getPreferredSize().height + CHROME_GAP_PX;
     }
     h += primaryStackHeight();
-    if (variant == Variant.EXPANDED) {
+    if (expandedish()) {
       h += sectionsStackHeight();
     }
     if (!trailingActions.isEmpty()) {
@@ -1260,7 +1278,9 @@ public final class ElwhaNavigationRail extends JComponent {
     for (final ElwhaNavRailDestination d : primary) {
       h += ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX;
     }
-    if (variant == Variant.COLLAPSED) {
+    // doLayout only inserts the Collapsed gap once the morph has settled, so reserving it from
+    // frame 0 would ask the host for height the laid-out band does not use (#635).
+    if (!expandedish()) {
       h += DESTINATION_GAP_PX * (primary.size() - 1);
     }
     return h;
@@ -1282,14 +1302,17 @@ public final class ElwhaNavigationRail extends JComponent {
   }
 
   /**
-   * The section header's font. {@link #getFont()} is {@code null} on a rail that has never been
-   * added to a container and never had a font installed — which is exactly the state an offscreen
-   * render (a gallery preview) measures and paints in — so the theme's own title role supplies the
-   * family when there is nothing to inherit. Both the reserved header height and the header paint
+   * The section header's font — {@link TypeRole#TITLE_SMALL} unless a consumer installed a font on
+   * the rail itself. Role-always, matching {@code ElwhaAppBar}, {@code ElwhaTab} and {@code
+   * ElwhaBadge} (#628): {@code getFont()} answers the <em>inherited</em> container font on a rail
+   * that is actually in a hierarchy, so preferring it applied the token role only to offscreen
+   * renders — the inverse of the intent. {@link #isFontSet()} is the distinction that matters: it
+   * is true only for a font set on this component, so an explicit consumer override still wins
+   * while a panel's ambient font does not. Both the reserved header height and the header paint
    * read this, so the space set aside can never disagree with the glyphs drawn into it.
    */
   private Font sectionHeaderFont() {
-    return getFont() != null ? getFont() : TypeRole.TITLE_SMALL.resolve();
+    return isFontSet() ? getFont() : TypeRole.TITLE_SMALL.resolve();
   }
 
   private int sectionHeaderHeight() {
@@ -1324,7 +1347,7 @@ public final class ElwhaNavigationRail extends JComponent {
     // the destination's own paint lerps the indicator inside those bounds, and Collapsed paint
     // self-clips to the centered 56-wide pill region. Using the wider bounds avoids a bounds-jump
     // mid-morph that would otherwise crop the indicator.
-    final boolean expandedish = variant == Variant.EXPANDED || variantMorph.isRunning();
+    final boolean expandedish = expandedish();
 
     int topY = CHROME_PAD_PX;
     if (menuButton != null) {
@@ -1358,7 +1381,7 @@ public final class ElwhaNavigationRail extends JComponent {
       }
     }
 
-    if (variant == Variant.EXPANDED && !sections.isEmpty()) {
+    if (expandedish && !sections.isEmpty()) {
       final int headerH = sectionHeaderHeight();
       for (final Section s : sections) {
         topY += SECTION_HEADER_TOP_PAD_PX;
@@ -1369,7 +1392,7 @@ public final class ElwhaNavigationRail extends JComponent {
           destinationsBottom = topY;
         }
       }
-    } else if (variant == Variant.COLLAPSED) {
+    } else if (!expandedish) {
       // Hide secondary destinations in Collapsed by parking them off-screen — they remain in the
       // selection-model union but neither paint nor accept input. (Setting them invisible would
       // also work; off-screen parking matches the Phase 2 pattern of the rail layout-managing its
@@ -1457,7 +1480,7 @@ public final class ElwhaNavigationRail extends JComponent {
         g2.fillRect(x, 0, DIVIDER_WIDTH_PX, h);
       }
 
-      if (variant == Variant.EXPANDED && !sections.isEmpty()) {
+      if (expandedish() && !sections.isEmpty()) {
         paintSectionHeaders(g2);
       }
     } finally {

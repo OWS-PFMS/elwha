@@ -1,5 +1,6 @@
 package com.owspfm.elwha.dialog;
 
+import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.overlay.AbstractElwhaOverlay;
 import java.awt.Component;
 import java.util.function.Consumer;
@@ -47,6 +48,43 @@ abstract class AbstractElwhaDialog extends AbstractElwhaOverlay {
       final boolean dismissibleByEsc, final Consumer<DismissCause> onClose) {
     this.dismissibleByEsc = dismissibleByEsc;
     this.onClose = onClose;
+  }
+
+  // ------------------------------------------------------- preview support
+
+  /**
+   * A detached twin of a consumer-supplied action button, for a {@code renderPreview()} surface.
+   * The action buttons belong to the consumer and a Swing component has exactly one parent, so a
+   * preview built on the originals would strip the action row out of a dialog that is currently
+   * shown, and out of any earlier preview (#589). The twin carries every property that affects
+   * measurement and paint and nothing that affects behavior — no action listeners, so a preview's
+   * buttons are genuinely inert rather than wired to a dismiss that no-ops.
+   *
+   * @param source the consumer's action button, or {@code null}
+   * @return the twin, or {@code null} when {@code source} is {@code null}
+   */
+  static ElwhaButton previewCopy(final ElwhaButton source) {
+    if (source == null) {
+      return null;
+    }
+    final ElwhaButton twin = new ElwhaButton(source.getText());
+    twin.setVariant(source.getVariant());
+    twin.setInteractionMode(source.getInteractionMode());
+    twin.setButtonSize(source.getButtonSize());
+    twin.setShape(source.getShape());
+    twin.setCornerRadii(source.getCornerRadii());
+    // getSurfaceRole() reports the *effective* role rather than the override, so pinning it as the
+    // twin's override is faithful only because a preview never leaves its resting state — which is
+    // exactly the state it exists to show.
+    twin.setSurfaceRole(source.getSurfaceRole());
+    twin.setBorderWidth(source.getBorderWidth());
+    twin.setIcons(source.getIcon(), source.getSelectedIcon());
+    twin.setSelected(source.isSelected());
+    twin.setRippleEnabled(source.isRippleEnabled());
+    twin.setEnabled(source.isEnabled());
+    twin.setComponentOrientation(source.getComponentOrientation());
+    twin.setToolTipText(source.getToolTipText());
+    return twin;
   }
 
   // ------------------------------------------------ modal anatomy hooks

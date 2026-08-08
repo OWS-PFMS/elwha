@@ -1,6 +1,8 @@
 package com.owspfm.elwha.selectfield;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
@@ -51,12 +53,14 @@ class ElwhaSelectFieldModelTest {
     select.setSelectedValue("Earth");
 
     select.setOptions(null);
-    select.setSelectedValue("Earth");
 
     assertThat(select.getSelectedValue())
         .as("with the options gone nothing is selectable — a null list is not a crash (#619)")
         .isNull();
     assertThat(select.getText()).as("and the field text goes with the dropped value").isEmpty();
+    assertThatThrownBy(() -> select.setSelectedValue("Earth"))
+        .as("and an empty option list offers nothing to select (#702)")
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -186,15 +190,33 @@ class ElwhaSelectFieldModelTest {
   }
 
   @Test
-  void aValueOutsideTheOptionsIsIgnored() {
+  void aValueOutsideTheOptionsIsRejected() {
     final ElwhaSelectField<String> select = planets();
     select.setSelectedValue("Earth");
 
-    select.setSelectedValue("Pluto");
-
+    assertThatThrownBy(() -> select.setSelectedValue("Pluto"))
+        .as(
+            "conventions §9 — a select is constrained to its options, so no reachable state"
+                + " satisfies the request; #702 changed this from the silent no-op §9 forbids")
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Pluto");
     assertThat(select.getSelectedValue())
-        .as("a select is constrained to its options — an unknown value changes nothing")
+        .as("and the refusal leaves the existing selection alone")
         .isEqualTo("Earth");
+  }
+
+  @Test
+  void anUnknownValueIsRejectedInMultiSelectToo() {
+    final ElwhaSelectField<String> select = planets();
+    select.setMultiSelect(true);
+
+    assertThatThrownBy(() -> select.setSelectedValue("Pluto"))
+        .as("the singular setter answers the same way in both modes")
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatCode(() -> select.setSelectedValues(List.of("Pluto")))
+        .as("setSelectedValues is a set replacement and keeps its documented lenient prune")
+        .doesNotThrowAnyException();
+    assertThat(select.getSelectedValues()).isEmpty();
   }
 
   @Test
