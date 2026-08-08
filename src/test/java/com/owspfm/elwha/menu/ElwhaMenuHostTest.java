@@ -58,6 +58,55 @@ class ElwhaMenuHostTest {
         .addItem(ElwhaMenuItem.of("Paste"));
   }
 
+  // ---------------------------------------------------------------- separator
+
+  private static ElwhaMenu.Builder twoGappedGroups(final int perGroup) {
+    final ElwhaMenu.Builder builder =
+        ElwhaMenu.builder().layout(Layout.GROUPED).separator(Separator.GAP);
+    for (int group = 0; group < 2; group++) {
+      if (group > 0) {
+        builder.addGroup();
+      }
+      for (int i = 0; i < perGroup; i++) {
+        builder.addItem(ElwhaMenuItem.of("Group " + group + " item " + i));
+      }
+    }
+    return builder;
+  }
+
+  @Test
+  void oneScrollableOpenDoesNotCostAMenuItsGapsForever() {
+    final ElwhaMenu menu = twoGappedGroups(4).build();
+    opened.add(menu);
+
+    host.resize(700, 160);
+    menu.open(host.anchor());
+    assertThat(menu.effectiveSeparator())
+        .as("M3 forbids gaps in a scrollable menu, so a short window forces the divider")
+        .isEqualTo(Separator.DIVIDER);
+    menu.close();
+
+    host.resize(700, 900);
+    menu.open(host.anchor());
+
+    assertThat(menu.effectiveSeparator())
+        .as(
+            "the downgrade belongs to that one presentation — reopened with room to breathe, the"
+                + " menu renders the gaps it was built with")
+        .isEqualTo(Separator.GAP);
+  }
+
+  @Test
+  void aMenuThatNeverScrollsKeepsItsAuthoredSeparator() {
+    final ElwhaMenu menu = twoGappedGroups(2).build();
+
+    open(menu);
+
+    assertThat(menu.effectiveSeparator())
+        .as("nothing to downgrade when the column fits")
+        .isEqualTo(Separator.GAP);
+  }
+
   // ------------------------------------------------------------------ builder
 
   @Test
