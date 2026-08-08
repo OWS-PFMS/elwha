@@ -1018,6 +1018,33 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
    */
   @Override
   public void removeNotify() {
+    clearTransientInputState();
+    super.removeNotify();
+  }
+
+  /**
+   * Clears the transient input state alongside the hover poll and any in-flight ripple, so a
+   * disabled tab neither paints nor keeps animating what the pointer left on it.
+   *
+   * @param enabled whether the tab is enabled
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void setEnabled(final boolean enabled) {
+    super.setEnabled(enabled);
+    if (!enabled) {
+      clearTransientInputState();
+    }
+    repaint();
+  }
+
+  // Shared by removeNotify and setEnabled(false): both leave the tab unable to hear the pointer
+  // again, and the hover poll is the only path that self-corrects `hovered` / `pressed` (#625,
+  // #683). Completing the ripple matters as much as stopping its timer here — unlike the button
+  // primitives, neither paintComponent nor paintRippleLayer consults isEnabled(), so a stopped
+  // timer with progress short of 1 would freeze a half-drawn ripple on the tab permanently.
+  private void clearTransientInputState() {
     stopHoverPolling();
     hovered = false;
     pressed = false;
@@ -1025,7 +1052,7 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
     if (rippleTimer != null) {
       rippleTimer.stop();
     }
-    super.removeNotify();
+    rippleProgress = 1f;
   }
 
   // ----------------------------------------------------------- accessibility

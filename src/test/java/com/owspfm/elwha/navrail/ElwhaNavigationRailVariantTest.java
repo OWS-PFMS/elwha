@@ -557,6 +557,27 @@ class ElwhaNavigationRailVariantTest {
   }
 
   @Test
+  void aDestinationDisabledWhileHoveredComesBackUnhovered() {
+    final ElwhaNavigationRail rail = RailFixture.laidOut(ElwhaNavigationRail.collapsed(), 3);
+    final ElwhaNavRailDestination hovered = rail.getPrimary().get(1);
+    final BufferedImage atRest = shot(RailFixture.destination("Item 1"));
+
+    Input.enter(hovered, 4, 4);
+    assertThat(rastersMatch(shot(hovered), atRest))
+        .as("the hover layer is really on — otherwise the disable assertion proves nothing")
+        .isFalse();
+
+    hovered.setEnabled(false);
+    hovered.setEnabled(true);
+
+    assertThat(rastersMatch(shot(hovered), atRest))
+        .as(
+            "#683 — a disabled destination receives no mouse events and the hover poll is the "
+                + "only self-correction, so re-enabling must not replay the hover layer")
+        .isTrue();
+  }
+
+  @Test
   void aNonMemberDestinationCannotBeSelected() {
     final ElwhaNavigationRail rail = RailFixture.laidOut(ElwhaNavigationRail.collapsed(), 3);
 

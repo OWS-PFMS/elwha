@@ -367,6 +367,41 @@ class ElwhaTabsSelectionTest {
   }
 
   @Test
+  void aTabDisabledWhileHoveredComesBackUnhovered() {
+    final ElwhaTabs bar = barOf("", "");
+    final ElwhaTab inactive = bar.getTabAt(1);
+    inactive.setHovered(true);
+
+    inactive.setEnabled(false);
+    inactive.setEnabled(true);
+
+    Pixels.assertPixelNear(
+        Pixels.render(inactive, 80, 48, GROUND),
+        4,
+        4,
+        GROUND,
+        "#683 — the hover poll is the only self-correction and a disabled tab receives no mouse"
+            + " events, so re-enabling without moving the pointer must not replay the hover layer");
+  }
+
+  @Test
+  void aTabDisabledWhilePressedComesBackUnpressed() {
+    final ElwhaTabs bar = barOf("", "");
+    final ElwhaTab inactive = bar.getTabAt(1);
+    inactive.setPressed(true);
+
+    inactive.setEnabled(false);
+    inactive.setEnabled(true);
+
+    Pixels.assertPixelNear(
+        Pixels.render(inactive, 80, 48, GROUND),
+        4,
+        4,
+        GROUND,
+        "#683 — a press latched at the moment of the disable is never released either");
+  }
+
+  @Test
   void aTabRemovedWhilePressedComesBackUnpressed() {
     final ElwhaTabs bar = barOf("", "");
     final ElwhaTab inactive = bar.getTabAt(1);

@@ -1031,14 +1031,41 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
    */
   @Override
   public void removeNotify() {
+    clearTransientInputState();
+    selectionAnimator.stop();
+    super.removeNotify();
+  }
+
+  /**
+   * Clears the transient input state alongside the hover poll and any in-flight ripple, so a
+   * disabled destination neither paints nor keeps animating what the pointer left on it.
+   *
+   * @param enabled whether the destination is enabled
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void setEnabled(final boolean enabled) {
+    super.setEnabled(enabled);
+    if (!enabled) {
+      clearTransientInputState();
+    }
+    repaint();
+  }
+
+  // Shared by removeNotify and setEnabled(false): both leave the destination unable to hear the
+  // pointer again, and the hover poll is the only path that self-corrects `hovered` / `pressed`
+  // (#625, #683). Completing the ripple matters as much as stopping its timer — paintRippleLayer
+  // does not consult isEnabled(), so a stopped timer with progress short of 1 would freeze a
+  // half-drawn ripple on the row permanently.
+  private void clearTransientInputState() {
     stopHoverPolling();
     hovered = false;
     pressed = false;
     if (rippleTimer != null) {
       rippleTimer.stop();
     }
-    selectionAnimator.stop();
-    super.removeNotify();
+    rippleProgress = 1f;
   }
 
   // ----------------------------------------------------------- accessibility
