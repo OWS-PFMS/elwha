@@ -1,11 +1,11 @@
 package com.owspfm.elwha.button.playground;
 
-import com.owspfm.elwha.button.ButtonGroup;
 import com.owspfm.elwha.button.ButtonInteractionMode;
 import com.owspfm.elwha.button.ButtonShape;
 import com.owspfm.elwha.button.ButtonSize;
 import com.owspfm.elwha.button.ButtonVariant;
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.button.ElwhaButtonSelectionGroup;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
@@ -198,10 +198,11 @@ public final class ButtonPlaygroundPanels {
   /**
    * Builds the toggle-examples panel: one row per {@code SELECTABLE}-capable variant ({@link
    * ButtonVariant#ELEVATED} / {@link ButtonVariant#FILLED} / {@link ButtonVariant#FILLED_TONAL} /
-   * {@link ButtonVariant#OUTLINED}), each row a three-button {@link ButtonGroup} demonstrating
-   * mutex selection. The FILLED and FILLED_TONAL rows are mandatory groups (always one selected);
-   * ELEVATED and OUTLINED are non-mandatory (the active button can be cleared by re-click). Each
-   * row has a live status label fed from the group's {@code PROPERTY_SELECTED_BUTTON} listener.
+   * {@link ButtonVariant#OUTLINED}), each row a three-button {@link ElwhaButtonSelectionGroup}
+   * demonstrating mutex selection. The FILLED and FILLED_TONAL rows are mandatory groups (always
+   * one selected); ELEVATED and OUTLINED are non-mandatory (the active button can be cleared by
+   * re-click). Each row has a live status label fed from the group's {@code
+   * PROPERTY_SELECTED_BUTTON} listener.
    *
    * @return the toggle-examples panel
    * @version v0.2.0
@@ -214,10 +215,10 @@ public final class ButtonPlaygroundPanels {
 
     column.add(
         captionLabel(
-            "Each row is a 3-button ButtonGroup — mutex selection. FILLED + FILLED_TONAL rows "
-                + "are mandatory (always one selected); ELEVATED + OUTLINED are non-mandatory "
-                + "(re-click the active button to clear). Status label updates from the group's "
-                + "PROPERTY_SELECTED_BUTTON listener."));
+            "Each row is a 3-button ElwhaButtonSelectionGroup — mutex selection. FILLED +"
+                + " FILLED_TONAL rows are mandatory (always one selected); ELEVATED + OUTLINED are"
+                + " non-mandatory (re-click the active button to clear). Status label updates from"
+                + " the group's PROPERTY_SELECTED_BUTTON listener."));
     column.add(Box.createVerticalStrut(16));
 
     column.add(buildToggleRow(ButtonVariant.ELEVATED, false, "Day", "Week", "Month"));
@@ -249,7 +250,7 @@ public final class ButtonPlaygroundPanels {
     buttons.setOpaque(false);
     buttons.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-    final ButtonGroup group = new ButtonGroup().setMandatory(mandatory);
+    final ElwhaButtonSelectionGroup group = new ElwhaButtonSelectionGroup().setMandatory(mandatory);
     ElwhaButton firstButton = null;
     for (final String label : labels) {
       final ElwhaButton button =

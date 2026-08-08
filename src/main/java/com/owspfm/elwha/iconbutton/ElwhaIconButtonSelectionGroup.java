@@ -12,11 +12,11 @@ import java.util.Optional;
  * javax.swing.JComponent} directly rather than {@code AbstractButton}, so {@code ButtonGroup} can't
  * accept it.
  *
- * <p><strong>Mode.</strong> A non-mandatory group ({@link #IconButtonGroup()}) lets the user
- * deselect the active button by clicking it again, leaving the group with no selection — matches
- * Swing's {@code ButtonGroup} default. A mandatory group ({@link #IconButtonGroup(boolean)} with
- * {@code true}) refuses the deselect, mirroring the chip side's {@code SINGLE_MANDATORY} mode
- * (always exactly one selected once a selection exists).
+ * <p><strong>Mode.</strong> A non-mandatory group ({@link #ElwhaIconButtonSelectionGroup()}) lets
+ * the user deselect the active button by clicking it again, leaving the group with no selection —
+ * matches Swing's {@code ButtonGroup} default. A mandatory group ({@link
+ * #ElwhaIconButtonSelectionGroup(boolean)} with {@code true}) refuses the deselect, mirroring the
+ * chip side's {@code SINGLE_MANDATORY} mode (always exactly one selected once a selection exists).
  *
  * <p><strong>Lifecycle.</strong> The group only enforces single-selection while it's listening;
  * removing a button via {@link #remove(ElwhaIconButton)} detaches the listener so the button
@@ -26,7 +26,7 @@ import java.util.Optional;
  * <p><strong>Quick start:</strong>
  *
  * <pre>{@code
- * IconButtonGroup viewMode = new IconButtonGroup(true)  // mandatory
+ * ElwhaIconButtonSelectionGroup viewMode = new ElwhaIconButtonSelectionGroup(true)  // mandatory
  *     .add(gridButton)
  *     .add(tableButton)
  *     .add(tilesButton);
@@ -34,10 +34,10 @@ import java.util.Optional;
  * }</pre>
  *
  * @author Charles Bryan
- * @version v0.1.0
- * @since v0.1.0
+ * @version v0.5.0
+ * @since v0.5.0
  */
-public final class IconButtonGroup {
+public final class ElwhaIconButtonSelectionGroup {
 
   private final boolean mandatory;
   private final List<ElwhaIconButton> buttons = new ArrayList<>();
@@ -45,7 +45,7 @@ public final class IconButtonGroup {
   private boolean adjusting;
 
   /** Creates a non-mandatory group — the user may deselect the active button. */
-  public IconButtonGroup() {
+  public ElwhaIconButtonSelectionGroup() {
     this(false);
   }
 
@@ -54,10 +54,10 @@ public final class IconButtonGroup {
    *
    * @param mandatory {@code true} to forbid deselect (one button always selected once a selection
    *     exists); {@code false} to allow deselect (Swing's {@code ButtonGroup} default behavior)
-   * @version v0.1.0
-   * @since v0.1.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
-  public IconButtonGroup(final boolean mandatory) {
+  public ElwhaIconButtonSelectionGroup(final boolean mandatory) {
     this.mandatory = mandatory;
     this.listener = this::onSelectionChanged;
   }
@@ -71,16 +71,17 @@ public final class IconButtonGroup {
    * @return {@code this}
    * @throws NullPointerException if {@code button} is {@code null}
    * @throws IllegalArgumentException if {@code button} is not in {@code SELECTABLE} mode
-   * @version v0.1.0
-   * @since v0.1.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
-  public IconButtonGroup add(final ElwhaIconButton button) {
+  public ElwhaIconButtonSelectionGroup add(final ElwhaIconButton button) {
     if (button == null) {
       throw new NullPointerException("button");
     }
     if (button.getInteractionMode() != IconButtonInteractionMode.SELECTABLE) {
       throw new IllegalArgumentException(
-          "IconButtonGroup requires SELECTABLE buttons; got " + button.getInteractionMode());
+          "ElwhaIconButtonSelectionGroup requires SELECTABLE buttons; got "
+              + button.getInteractionMode());
     }
     if (!buttons.contains(button)) {
       buttons.add(button);
@@ -94,10 +95,10 @@ public final class IconButtonGroup {
    *
    * @param button the button to remove
    * @return {@code this}
-   * @version v0.1.0
-   * @since v0.1.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
-  public IconButtonGroup remove(final ElwhaIconButton button) {
+  public ElwhaIconButtonSelectionGroup remove(final ElwhaIconButton button) {
     if (buttons.remove(button) && button != null) {
       button.removePropertyChangeListener(ElwhaIconButton.PROPERTY_SELECTED, listener);
     }
@@ -108,8 +109,8 @@ public final class IconButtonGroup {
    * Returns the currently-selected button, or {@link Optional#empty()} if none is selected.
    *
    * @return the selected button, or empty
-   * @version v0.1.0
-   * @since v0.1.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public Optional<ElwhaIconButton> getSelected() {
     return buttons.stream().filter(ElwhaIconButton::isSelected).findFirst();
@@ -119,8 +120,8 @@ public final class IconButtonGroup {
    * Returns the number of buttons in the group.
    *
    * @return the group size
-   * @version v0.1.0
-   * @since v0.1.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public int size() {
     return buttons.size();
@@ -131,8 +132,8 @@ public final class IconButtonGroup {
    * selected.
    *
    * @return {@code true} if mandatory
-   * @version v0.1.0
-   * @since v0.1.0
+   * @version v0.5.0
+   * @since v0.5.0
    */
   public boolean isMandatory() {
     return mandatory;

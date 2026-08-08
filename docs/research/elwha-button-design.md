@@ -346,7 +346,7 @@ Story 5 of epic #103 builds the playground surface. Three tabs exercise the full
 
 - **Variant gallery tab.** 5 variants × 6 states (Enabled / Disabled / Hovered / Focused / Pressed + Selected for the four toggleable ones) at default size S, live-rerendered on theme/mode switch — the binding-rule contract end-to-end. For toggleable variants, also shows the 2×5 selection grid.
 - **Sizes tab.** 5 sizes (XS / S / M / L / XL) × 2 shapes (Round / Square) × default variant (FILLED), demonstrating per-size measurements (height, padding, icon size, gap) and per-size corner radius for square. Shows the 48dp target inflation visually on XS / S.
-- **Toggle examples tab.** Realistic toggle patterns — Filter ON/OFF rows (FILLED toggle), Pin/Unpin rows (FILLED_TONAL toggle), Active/Inactive rows (OUTLINED toggle), Subscribed/Unsubscribed rows (ELEVATED toggle). Each row also demonstrates `ButtonGroup` mutex-selection across 3 buttons.
+- **Toggle examples tab.** Realistic toggle patterns — Filter ON/OFF rows (FILLED toggle), Pin/Unpin rows (FILLED_TONAL toggle), Active/Inactive rows (OUTLINED toggle), Subscribed/Unsubscribed rows (ELEVATED toggle). Each row also demonstrates `ElwhaButtonSelectionGroup` mutex-selection across 3 buttons.
 
 All three tabs factored into `ButtonPlaygroundPanels` so the standalone `ElwhaButtonPlayground` and `ThemePlayground`'s new `Button` tab compose the same instances. Same factored-builder pattern `ChipPlaygroundPanels` / `IconButtonPlaygroundPanels` / `SurfacePlaygroundPanels` already establish.
 

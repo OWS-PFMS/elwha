@@ -8,6 +8,7 @@ import com.owspfm.elwha.button.ButtonShape;
 import com.owspfm.elwha.button.ButtonSize;
 import com.owspfm.elwha.button.ButtonVariant;
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.button.ElwhaButtonSelectionGroup;
 import com.owspfm.elwha.button.playground.ButtonPlaygroundPanels;
 import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
 import com.owspfm.elwha.buttongroup.ButtonGroupVariant;
@@ -41,7 +42,7 @@ import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.fab.ElwhaFabAnchor;
 import com.owspfm.elwha.fab.playground.FabPlaygroundPanels;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
-import com.owspfm.elwha.iconbutton.IconButtonGroup;
+import com.owspfm.elwha.iconbutton.ElwhaIconButtonSelectionGroup;
 import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
 import com.owspfm.elwha.iconbutton.IconButtonSize;
 import com.owspfm.elwha.iconbutton.IconButtonVariant;
@@ -1466,8 +1467,8 @@ public final class ElwhaShowcase {
           final ButtonVariant variant = (ButtonVariant) variantBox.getSelectedItem();
           final boolean mandatory = mandatoryBox.isChecked();
           final JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
-          final com.owspfm.elwha.button.ButtonGroup group =
-              new com.owspfm.elwha.button.ButtonGroup().setMandatory(mandatory);
+          final ElwhaButtonSelectionGroup group =
+              new ElwhaButtonSelectionGroup().setMandatory(mandatory);
           ElwhaButton first = null;
           for (final String label : new String[] {"List", "Grid", "Compact"}) {
             final ElwhaButton item =
@@ -2327,7 +2328,7 @@ public final class ElwhaShowcase {
           final IconButtonVariant variant = (IconButtonVariant) variantBox.getSelectedItem();
           final boolean mandatory = mandatoryBox.isChecked();
           final JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
-          final IconButtonGroup group = new IconButtonGroup(mandatory);
+          final ElwhaIconButtonSelectionGroup group = new ElwhaIconButtonSelectionGroup(mandatory);
           for (final String[] entry :
               new String[][] {
                 {"favorite", "Favorite"},

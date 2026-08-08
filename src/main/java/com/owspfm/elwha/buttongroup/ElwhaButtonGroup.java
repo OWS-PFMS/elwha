@@ -44,9 +44,10 @@ import javax.swing.JComponent;
  * pill-ended bar. The transient press width / shape morph is a separate polish epic and is not
  * rendered statically here.
  *
- * <p><strong>Naming.</strong> Not to be confused with {@link com.owspfm.elwha.button.ButtonGroup} /
- * {@link com.owspfm.elwha.iconbutton.IconButtonGroup}, which are pure selection-mutex helpers with
- * no layout or paint. {@code ElwhaButtonGroup} is the visual container.
+ * <p><strong>Naming.</strong> Not to be confused with {@link
+ * com.owspfm.elwha.button.ElwhaButtonSelectionGroup} / {@link
+ * com.owspfm.elwha.iconbutton.ElwhaIconButtonSelectionGroup}, which are pure selection-mutex
+ * helpers with no layout or paint. {@code ElwhaButtonGroup} is the visual container.
  *
  * <p><strong>Quick start:</strong>
  *
