@@ -279,9 +279,9 @@ final class SpectrumPane extends ColorPickerPane {
         if (width < 2 || height < 2) {
           return;
         }
-        final int arc = ShapeScale.SM.px();
+        final int arc = ShapeScale.SM.arcPx();
         final RoundRectangle2D.Double box =
-            new RoundRectangle2D.Double(0, 0, width, height, arc * 2.0, arc * 2.0);
+            new RoundRectangle2D.Double(0, 0, width, height, arc, arc);
         // TexturePaint fill instead of a rounded clip — Java2D clipping is never antialiased,
         // so clipped corners stair-step (the shade-strip smoke-iterate finding).
         g2.setPaint(

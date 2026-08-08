@@ -2,6 +2,7 @@ package com.owspfm.elwha.chip;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.owspfm.elwha.testkit.Corners;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
@@ -360,5 +361,36 @@ class ElwhaChipRenderTest {
     assertThat(render(chip).getRGB(CENTER_X, CENTER_Y))
         .as("and the two schemes really do differ, so the probe above proves something")
         .isNotEqualTo(light);
+  }
+
+  // ------------------------------------------------------------ corner radius (#663)
+
+  @Test
+  void defaultSmShapeRendersAtItsFullEightPixelRadius() {
+    Corners.assertTopLeftRadius(
+        render(chip(ChipVariant.FILLED)),
+        0,
+        0,
+        ShapeScale.SM.px(),
+        ColorRole.PRIMARY_CONTAINER.resolve(),
+        GROUND,
+        ShapeScale.SM.px(),
+        "the M3 chip shape value is a radius; the chip used to hand it to the painter as an"
+            + " arcWidth and render at 4");
+  }
+
+  @Test
+  void aFullShapeChipIsACapsule() {
+    final ElwhaChip chip = chip(ChipVariant.FILLED).setShape(ShapeScale.FULL);
+
+    Corners.assertTopLeftRadius(
+        render(chip),
+        0,
+        0,
+        HEIGHT / 2,
+        ColorRole.PRIMARY_CONTAINER.resolve(),
+        GROUND,
+        HEIGHT / 2,
+        "FULL still clamps to the pill end-cap after the radius normalization");
   }
 }

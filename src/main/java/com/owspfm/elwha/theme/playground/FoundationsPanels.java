@@ -838,9 +838,12 @@ public final class FoundationsPanels {
 
     @Override
     protected void paintComponent(final Graphics g) {
-      final int radius = Math.min(shape.px(), Math.min(getWidth(), getHeight()));
+      // fillRoundRect's arcWidth is the corner diameter, same as RoundRectangle2D — so the
+      // swatch gallery has to convert too, or it advertises every step at half what the
+      // components paint (#663).
+      final int arc = Math.min(shape.arcPx(), Math.min(getWidth(), getHeight()));
       g.setColor(ColorRole.SECONDARY_CONTAINER.resolve());
-      g.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, radius, radius);
+      g.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, arc, arc);
       g.setColor(ColorRole.ON_SECONDARY_CONTAINER.resolve());
       g.setFont(getFont().deriveFont(Font.PLAIN, 11f));
       g.drawString(shape.key(), 8, getHeight() / 2 + 4);

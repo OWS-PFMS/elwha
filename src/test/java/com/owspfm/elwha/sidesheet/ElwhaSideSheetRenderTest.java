@@ -1,5 +1,6 @@
 package com.owspfm.elwha.sidesheet;
 
+import com.owspfm.elwha.testkit.Corners;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
@@ -239,6 +240,22 @@ class ElwhaSideSheetRenderTest {
         HEIGHT / 2,
         ColorRole.SURFACE_CONTAINER_LOW.resolve(),
         "with the body itself filling the space inside the margin");
+  }
+
+  @Test
+  void roundedCornerMeasuresTheFullSixteenPixelLargeToken() {
+    final ElwhaSideSheet sheet = modal();
+
+    Corners.assertTopLeftRadius(
+        shotOnContrast(sheet),
+        0,
+        0,
+        ShapeScale.LG.px(),
+        ColorRole.SURFACE_CONTAINER_LOW.resolve(),
+        GROUND,
+        ShapeScale.LG.px(),
+        "the sheet feeds its shape step to CornerRadii, which stores real radii — one of the"
+            + " already-correct sites #663 had to leave alone");
   }
 
   @Test

@@ -1242,7 +1242,7 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
     }
     final java.awt.Rectangle b = bodyBounds();
     final float inset = strokeW / 2f;
-    final int arc = Math.max(0, Math.min(getShape().px(), Math.min(b.width, b.height)));
+    final int arc = Math.max(0, Math.min(getShape().arcPx(), Math.min(b.width, b.height)));
     final float strokeArc = Math.max(0f, arc - strokeW);
     g2.setColor(role.resolve());
     g2.setStroke(new BasicStroke(strokeW));
@@ -1262,7 +1262,7 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
     g2.setColor(stroke);
     g2.setStroke(new BasicStroke(1f));
     final java.awt.Rectangle b = bodyBounds();
-    final int arc = getShape().px();
+    final int arc = getShape().arcPx();
     // Center the stroke on the body edge (inset by 0.5 px) so the outer edge tracks the chassis
     // corner exactly, matching the geometry SurfacePainter uses for the resting border.
     g2.draw(
@@ -1278,7 +1278,7 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    */
   private void paintFocusRing(final Graphics2D g2) {
     final java.awt.Rectangle b = bodyBounds();
-    final int arc = getShape().px();
+    final int arc = getShape().arcPx();
     if (variant == CardVariant.OUTLINED) {
       g2.setColor(ColorRole.ON_SURFACE.resolve());
       g2.setStroke(new BasicStroke(2f));
@@ -1309,7 +1309,7 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
           b.height,
           new Point(rippleOrigin.x - b.x, rippleOrigin.y - b.y),
           rippleProgress,
-          getShape().px(),
+          getShape().arcPx(),
           ColorRole.ON_SURFACE.resolve());
     } finally {
       rg.dispose();

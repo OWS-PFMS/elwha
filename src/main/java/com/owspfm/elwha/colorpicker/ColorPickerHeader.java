@@ -128,7 +128,7 @@ final class ColorPickerHeader extends JComponent {
   }
 
   private void paintSwatch(final Graphics2D g2, final int x, final int y) {
-    final int arc = ShapeScale.SM.px();
+    final int arc = ShapeScale.SM.arcPx();
     final java.awt.geom.RoundRectangle2D.Double shape =
         new java.awt.geom.RoundRectangle2D.Double(x, y, SWATCH_SIZE, SWATCH_SIZE, arc, arc);
     if (picker.isAlphaEnabled() && picker.getColor().getAlpha() < 255) {

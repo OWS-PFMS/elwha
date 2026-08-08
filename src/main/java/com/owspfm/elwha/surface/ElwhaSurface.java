@@ -202,7 +202,7 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
    *
    * <p><strong>Geometry note.</strong> The stroke is centered on a path inset by {@code px / 2} so
    * the outer edge tracks the fill corner exactly at any width. The <em>inner</em> corner radius is
-   * therefore {@code shape.px() / 2 - px}, which goes to zero (a visibly square inner edge) as the
+   * therefore {@code shape.px() - px}, which goes to zero (a visibly square inner edge) as the
    * stroke width approaches the corner radius. In practice the design system uses {@code 1} and
    * {@code 2} (focus ring) almost everywhere; thicker strokes are best paired with {@link
    * com.owspfm.elwha.theme.ShapeScale#LG} or {@link com.owspfm.elwha.theme.ShapeScale#XL} so the
@@ -210,7 +210,7 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
    *
    * @param px the stroke width in pixels
    * @return {@code this} for fluent chaining
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public ElwhaSurface setBorderWidth(final int px) {
@@ -461,7 +461,7 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
     final int bodyY = s.top;
     final int bodyW = Math.max(0, getWidth() - s.left - s.right);
     final int bodyH = Math.max(0, getHeight() - s.top - s.bottom);
-    final int arc = shape.px();
+    final int arc = shape.arcPx();
     final int paintElevation = currentElevationForPaint();
 
     final Graphics2D g2 = (Graphics2D) g.create();
@@ -502,8 +502,10 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
    * @param g the body-local graphics context (already antialiased)
    * @param bodyW the visible body width in pixels
    * @param bodyH the visible body height in pixels
-   * @param arc the corner radius in pixels
-   * @version v0.4.0
+   * @param arc the chassis {@link java.awt.geom.RoundRectangle2D} {@code arcWidth} — the corner
+   *     <em>diameter</em>, not the radius (see {@link ShapeScale#arcPx()}). Overlays must use it
+   *     verbatim so the tint's corner tracks the fill's
+   * @version v0.5.0
    * @since v0.4.0
    */
   protected void paintSurfaceOverlay(
@@ -547,7 +549,7 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
     if (bodyW <= 0 || bodyH <= 0) {
       return;
     }
-    final int arc = shape.px();
+    final int arc = shape.arcPx();
 
     // Device-resolution offscreen buffer: the current Graphics transform carries the HiDPI scale,
     // so painting at 1x then upscaling would blur the children (text especially).

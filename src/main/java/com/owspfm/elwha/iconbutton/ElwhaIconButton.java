@@ -1125,14 +1125,14 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   protected void paintComponent(final Graphics g) {
     final int w = getWidth();
     final int h = getHeight();
-    final int arc = shape.px();
+    final int radiusPx = shape.px();
     final boolean focused = focusVisible && isEnabled();
 
     final ColorRole surfaceRole = getSurfaceRole();
     final StateLayer overlay = activeOverlay();
     final ColorRole borderRole = effectiveBorderRole(focused);
     final float borderStroke = focused ? Math.max(borderWidth, FOCUSED_BORDER_WIDTH) : borderWidth;
-    final CornerRadii bodyRadii = morphedRadii(w, h, arc);
+    final CornerRadii bodyRadii = morphedRadii(w, h, radiusPx);
 
     if (!isEnabled()) {
       // M3 disabled is a compositing pass (container at 12%, content at 38%) over the resolved
@@ -1179,12 +1179,11 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
 
   // #295 — resolves the corner geometry for the current frame: the connected-group override if
   // installed, else the shape-derived uniform radius, with the press shape morph applied on top.
-  // Works in real-radius CornerRadii space; the resting radius converts the int-arc (diameter)
-  // shape value via /2 so the CornerRadii render matches the prior int-arc paint exactly (the
-  // cornerRadiusPx convention foot-gun — see CHANGELOG #218 / #285).
-  private CornerRadii morphedRadii(final int w, final int h, final int arc) {
+  // Everything here is real-radius CornerRadii space, which is also ShapeScale.px()'s unit, so the
+  // token passes through untouched apart from the pill clamp (#663).
+  private CornerRadii morphedRadii(final int w, final int h, final int radiusPx) {
     final CornerRadii base =
-        cornerRadii != null ? cornerRadii : CornerRadii.uniform(restingRadiusPx(w, h, arc));
+        cornerRadii != null ? cornerRadii : CornerRadii.uniform(restingRadiusPx(w, h, radiusPx));
     final float easedPress = easedPressProgress();
     if (easedPress <= 0f) {
       return base;
@@ -1194,8 +1193,10 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
         base, pressedRadii(base, maxRadius), easedPress, Easing.LINEAR);
   }
 
-  private static int restingRadiusPx(final int w, final int h, final int arc) {
-    return Math.min(arc, Math.min(w, h)) / 2;
+  // The clamp is half the shorter axis, not the axis itself: past that a corner stops rounding and
+  // starts eating the opposite corner. ShapeScale.FULL lands on it exactly, which is the pill.
+  private static int restingRadiusPx(final int w, final int h, final int radiusPx) {
+    return Math.min(radiusPx, Math.min(w, h) / 2);
   }
 
   // Bidirectional pressed geometry: round-ish corners (in the rounder half of [0, maxRadius]) lose

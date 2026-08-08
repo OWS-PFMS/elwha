@@ -3,6 +3,7 @@ package com.owspfm.elwha.surface;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.owspfm.elwha.testkit.Corners;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
@@ -245,5 +246,41 @@ class ElwhaSurfaceRenderTest {
     assertThat(render(surface).getRGB(WIDTH / 2, HEIGHT / 2))
         .as("swapping the palette moves the fill just as swapping the mode does")
         .isNotEqualTo(baselinePrimary);
+  }
+
+  // ------------------------------------------------------------ corner radius (#663)
+
+  @ParameterizedTest
+  @EnumSource(
+      value = ShapeScale.class,
+      names = {"XS", "SM", "MD", "LG", "XL"})
+  void everyShapeStepRendersAtItsFullTokenRadius(final ShapeScale step) {
+    final ElwhaSurface surface = new ElwhaSurface().setShape(step);
+
+    Corners.assertTopLeftRadius(
+        render(surface),
+        0,
+        0,
+        step.px(),
+        ColorRole.SURFACE.resolve(),
+        GROUND,
+        step.px(),
+        "the chassis corner is the token's dp figure, not half of it — the ShapeScale"
+            + " radius-vs-arcWidth normalization");
+  }
+
+  @Test
+  void aFullShapeRoundsToAPillRatherThanOverrunningTheBody() {
+    final ElwhaSurface surface = new ElwhaSurface().setShape(ShapeScale.FULL);
+
+    Corners.assertTopLeftRadius(
+        render(surface),
+        0,
+        0,
+        HEIGHT / 2,
+        ColorRole.SURFACE.resolve(),
+        GROUND,
+        HEIGHT / 2,
+        "FULL clamps to half the shorter axis — the capsule end-cap, not a runaway arc");
   }
 }

@@ -96,8 +96,11 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
    */
   static final int ELEVATION = 2;
 
-  /** Container corner radius in dp (research §I shape). */
-  static final int CONTAINER_ARC_PX = ShapeScale.MD.px();
+  /**
+   * Container corner radius in dp (research §I shape) — a real radius. The paint path doubles it
+   * into a RoundRectangle2D arcWidth (#663).
+   */
+  static final int CONTAINER_RADIUS_PX = ShapeScale.MD.px();
 
   /** Padding inside the container around the item column (single-slab modes). */
   static final int CONTENT_PAD_PX = 4;
@@ -155,8 +158,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   // keyboard, the focus. shapeMorph interpolates the container radius from shapeFromRadius to
   // shapeToRadius.
   private MorphAnimator shapeMorph;
-  private int shapeFromRadius = CONTAINER_ARC_PX;
-  private int shapeToRadius = CONTAINER_ARC_PX;
+  private int shapeFromRadius = CONTAINER_RADIUS_PX;
+  private int shapeToRadius = CONTAINER_RADIUS_PX;
   private AWTEventListener chainHoverWatch;
   private int focusedIndex = -1;
   // The roving focus ring is keyboard-visible (M3 focus-visible): the index tracks always, but the
@@ -351,7 +354,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
       } else if (hoveredIndex > 0 && i == hoveredIndex - 1) {
         target = ShapeScale.SM.px();
       } else {
-        target = CONTAINER_ARC_PX;
+        target = CONTAINER_RADIUS_PX;
       }
       levels.get(i).animateShapeTo(target);
     }
@@ -448,7 +451,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     // level (the level the user is now over / focused rounds back up).
     if (chainChildOverlay() == null && chainParentOverlay() == null) {
       removeChainHoverWatch();
-      animateShapeTo(CONTAINER_ARC_PX);
+      animateShapeTo(CONTAINER_RADIUS_PX);
     } else {
       recomputeChainActive();
       SwingUtilities.invokeLater(this::recomputeChainActive);
@@ -741,8 +744,8 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     // once
     // the pointer/focus moves onto it. The morph animates later hover changes, never the entrance.
     this.shapeMorph = null;
-    this.shapeFromRadius = CONTAINER_ARC_PX;
-    this.shapeToRadius = CONTAINER_ARC_PX;
+    this.shapeFromRadius = CONTAINER_RADIUS_PX;
+    this.shapeToRadius = CONTAINER_RADIUS_PX;
 
     this.itemOrder = flattenVisible();
     this.focusedIndex = itemOrder.isEmpty() ? -1 : 0;

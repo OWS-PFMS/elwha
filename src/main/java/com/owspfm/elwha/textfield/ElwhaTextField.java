@@ -1231,11 +1231,13 @@ public class ElwhaTextField extends JComponent {
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       final int w = getWidth();
-      final int arc = ShapeScale.XS.px();
+      // A real radius: both chrome paths below build their corners by hand from r, so this is
+      // one of the few sites that consumes ShapeScale.px() undoubled (#663).
+      final int radius = ShapeScale.XS.px();
       if (variant == Variant.FILLED) {
-        paintFilledChrome(g2, w, arc);
+        paintFilledChrome(g2, w, radius);
       } else {
-        paintOutlinedChrome(g2, w, arc);
+        paintOutlinedChrome(g2, w, radius);
       }
       paintIcons(g2, w);
       paintAffixes(g2);
@@ -1370,23 +1372,23 @@ public class ElwhaTextField extends JComponent {
     return getFontMetrics(TypeRole.BODY_LARGE.resolve()).stringWidth(text);
   }
 
-  private void paintFilledChrome(final Graphics2D g2, final int w, final int arc) {
+  private void paintFilledChrome(final Graphics2D g2, final int w, final int radius) {
     final int h = containerHeight();
     final Color fill = containerFill();
     if (fill != null) {
       g2.setColor(fill);
-      g2.fill(topRoundedRect(w, h, arc));
+      g2.fill(topRoundedRect(w, h, radius));
     }
     final int stroke = focused ? FOCUS_STROKE : RESTING_STROKE;
     g2.setColor(indicatorColor());
     g2.fillRect(0, h - stroke, w, stroke);
   }
 
-  private void paintOutlinedChrome(final Graphics2D g2, final int w, final int arc) {
+  private void paintOutlinedChrome(final Graphics2D g2, final int w, final int radius) {
     final int stroke = focused ? FOCUS_STROKE : RESTING_STROKE;
     g2.setColor(indicatorColor());
     g2.setStroke(new java.awt.BasicStroke(stroke));
-    g2.draw(outlinedPath(w, arc, stroke));
+    g2.draw(outlinedPath(w, radius, stroke));
   }
 
   /**
@@ -1394,14 +1396,14 @@ public class ElwhaTextField extends JComponent {
    * for the floated label (the M3 label-notch). The notch opens during the second half of the float
    * so the gap only appears once the label has risen onto the stroke.
    */
-  private Path2D outlinedPath(final int w, final int arc, final int stroke) {
+  private Path2D outlinedPath(final int w, final int radius, final int stroke) {
     final float inset = stroke / 2f;
     final float top = containerTop();
     final float x0 = inset;
     final float y0 = top + inset;
     final float x1 = w - inset;
     final float y1 = top + containerHeight() - inset;
-    final float r = arc;
+    final float r = radius;
 
     float gapStart = 0f;
     float gapEnd = 0f;
