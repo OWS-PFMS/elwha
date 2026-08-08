@@ -1725,12 +1725,16 @@ public final class MaterialIcons {
    * decide whether the fill swap will be visible.
    *
    * @author Charles Bryan
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public static final class Symbol {
 
     private final String name;
+    // The bundle is fixed for the life of the JVM, so the fill-variant answer is too. Held rather
+    // than re-asked because a getResource miss walks the whole classpath and selected(int) — a
+    // per-state-change call on the nav rail — asks on every invocation.
+    private Boolean selectedVariant;
 
     Symbol(final String name) {
       this.name = name;
@@ -1800,11 +1804,17 @@ public final class MaterialIcons {
      * #selected()} will visibly differ from {@link #unselected()}.
      *
      * @return {@code true} if a {@code <name>_fill.svg} resource exists; {@code false} otherwise
-     * @version v0.3.0
+     * @version v0.5.0
      * @since v0.3.0
      */
     public boolean hasSelectedVariant() {
-      return MaterialIcons.class.getClassLoader().getResource(BASE + name + "_fill.svg") != null;
+      Boolean resolved = selectedVariant;
+      if (resolved == null) {
+        resolved =
+            MaterialIcons.class.getClassLoader().getResource(BASE + name + "_fill.svg") != null;
+        selectedVariant = resolved;
+      }
+      return resolved;
     }
   }
 
