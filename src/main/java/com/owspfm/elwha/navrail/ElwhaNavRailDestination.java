@@ -7,7 +7,9 @@ import com.owspfm.elwha.badge.IconBearing;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
+import com.owspfm.elwha.theme.HoverTracker;
 import com.owspfm.elwha.theme.MorphAnimator;
+import com.owspfm.elwha.theme.RippleAnimation;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.TypeRole;
@@ -44,7 +46,6 @@ import javax.swing.Icon;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
-import javax.swing.Timer;
 
 /**
  * One slot of an M3 Expressive Navigation Rail — the "rail button". A {@link JComponent}
@@ -128,9 +129,6 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   static final int TRAILING_PAD_EXPANDED = 16;
   static final float LABEL_ANCHOR_SWITCH_PROGRESS = 0.5f;
 
-  private static final int RIPPLE_TOTAL_MS = 400;
-  private static final int RIPPLE_TICK_MS = 16;
-  private static final int HOVER_POLL_INTERVAL_MS = 100;
   private static final float FOCUS_RING_STROKE = 2f;
   private static final float ICON_SWAP_PROGRESS = 0.5f;
 
@@ -146,10 +144,8 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   private ElwhaBadgeAnchor.Attachment badgeAttachment;
   private ElwhaNavigationRail.Variant badgeAnchoredVariant;
 
-  private Point rippleOrigin;
-  private float rippleProgress = 1f;
-  private Timer rippleTimer;
-  private Timer hoverPollTimer;
+  private final RippleAnimation ripple = new RippleAnimation(this);
+  private final HoverTracker hoverTracker = new HoverTracker(this, this::onPointerGone);
 
   private final List<ActionListener> actionListeners = new ArrayList<>();
 
@@ -680,19 +676,20 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   }
 
   private void paintRippleLayer(final Graphics2D g2, final IndicatorGeometry geom) {
-    if (rippleOrigin == null || rippleProgress >= 1f) {
+    if (!ripple.isActive()) {
       return;
     }
+    final Point origin = ripple.origin();
     final Graphics2D r = (Graphics2D) g2.create();
     try {
       r.translate(geom.pillX, geom.pillY);
-      final Point localOrigin = new Point(rippleOrigin.x - geom.pillX, rippleOrigin.y - geom.pillY);
+      final Point localOrigin = new Point(origin.x - geom.pillX, origin.y - geom.pillY);
       RipplePainter.paint(
           r,
           geom.pillWidth,
           geom.pillHeight,
           localOrigin,
-          rippleProgress,
+          ripple.progress(),
           geom.pillHeight,
           stateLayerColor());
     } finally {
@@ -937,84 +934,32 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   }
 
   private boolean containsPoint(final Point p) {
-    return p.x >= 0 && p.y >= 0 && p.x < getWidth() && p.y < getHeight();
+    return hoverTracker.containsPoint(p);
   }
 
   private boolean isCursorStillInside(final MouseEvent event) {
-    if (!isShowing()) {
-      return false;
-    }
-    final java.awt.PointerInfo info = java.awt.MouseInfo.getPointerInfo();
-    final Point screenPt =
-        info != null ? info.getLocation() : new Point(event.getXOnScreen(), event.getYOnScreen());
-    final Point local = new Point(screenPt);
-    javax.swing.SwingUtilities.convertPointFromScreen(local, this);
-    return containsPoint(local);
+    return hoverTracker.cursorStillInside(event);
   }
 
   private void ensureHoverPolling() {
-    if (hoverPollTimer != null && hoverPollTimer.isRunning()) {
-      return;
-    }
-    hoverPollTimer = new Timer(HOVER_POLL_INTERVAL_MS, e -> pollHoverState());
-    hoverPollTimer.setRepeats(true);
-    hoverPollTimer.start();
+    hoverTracker.start();
   }
 
   private void stopHoverPolling() {
-    if (hoverPollTimer != null) {
-      hoverPollTimer.stop();
-    }
+    hoverTracker.stop();
   }
 
-  private void pollHoverState() {
-    if (!hovered) {
-      stopHoverPolling();
-      return;
-    }
-    if (!isShowing()) {
-      hovered = false;
-      pressed = false;
-      stopHoverPolling();
-      return;
-    }
-    final java.awt.PointerInfo info = java.awt.MouseInfo.getPointerInfo();
-    if (info == null) {
-      return;
-    }
-    final Point local = new Point(info.getLocation());
-    javax.swing.SwingUtilities.convertPointFromScreen(local, this);
-    if (!containsPoint(local)) {
-      hovered = false;
-      pressed = false;
-      stopHoverPolling();
-      repaint();
-    }
+  // What the tracker calls once it has established the pointer is no longer on this row.
+  private void onPointerGone() {
+    hovered = false;
+    pressed = false;
+    repaint();
   }
 
   // --------------------------------------------------------------------- ripple
 
   private void startRipple(final Point origin) {
-    rippleOrigin = origin;
-    rippleProgress = 0f;
-    if (rippleTimer != null && rippleTimer.isRunning()) {
-      rippleTimer.stop();
-    }
-    final long startNanos = System.nanoTime();
-    rippleTimer =
-        new Timer(
-            RIPPLE_TICK_MS,
-            e -> {
-              rippleProgress =
-                  Math.min(1f, (System.nanoTime() - startNanos) / (RIPPLE_TOTAL_MS * 1_000_000f));
-              repaint();
-              if (rippleProgress >= 1f) {
-                rippleTimer.stop();
-              }
-            });
-    rippleTimer.setRepeats(true);
-    rippleTimer.start();
-    repaint();
+    ripple.start(origin);
   }
 
   @Override
@@ -1057,17 +1002,15 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
 
   // Shared by removeNotify and setEnabled(false): both leave the destination unable to hear the
   // pointer again, and the hover poll is the only path that self-corrects `hovered` / `pressed`
-  // (#625, #683). Completing the ripple matters as much as stopping its timer — paintRippleLayer
-  // does not consult isEnabled(), so a stopped timer with progress short of 1 would freeze a
-  // half-drawn ripple on the row permanently.
+  // (#625, #683). Completing the ripple matters as much as stopping its timer: a stopped timer
+  // with progress short of 1 would otherwise leave a half-drawn ripple parked on the row.
+  // RippleAnimation additionally refuses to report itself active on a disabled host (#686), so no
+  // future state combination can paint interactive chrome on a row that is not accepting input.
   private void clearTransientInputState() {
-    stopHoverPolling();
+    hoverTracker.stop();
     hovered = false;
     pressed = false;
-    if (rippleTimer != null) {
-      rippleTimer.stop();
-    }
-    rippleProgress = 1f;
+    ripple.finish();
   }
 
   // ----------------------------------------------------------- accessibility

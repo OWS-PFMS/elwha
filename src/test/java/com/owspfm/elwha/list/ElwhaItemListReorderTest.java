@@ -302,7 +302,7 @@ class ElwhaItemListReorderTest {
   }
 
   @Test
-  void theNextActivationRebuildsAgain() {
+  void aFollowingActivationRebuildsAgain() {
     slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
     layout();
     final long before = ReorderCursors.generation();

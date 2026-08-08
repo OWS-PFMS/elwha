@@ -330,7 +330,7 @@ class ElwhaTextFieldEditorTest {
   }
 
   @Test
-  void theWindowlessEditorAnswersWithTheExceptionSwingAlreadyCatches() {
+  void aWindowlessEditorAnswersWithTheExceptionSwingAlreadyCatches() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
     field.addNotify();
 
