@@ -50,6 +50,13 @@ import javax.swing.text.JTextComponent;
  * typed slots, the token mapping, and the one Swing accessibility gap — the error&#8594;"alert"
  * announcement.
  *
+ * <p><b>Width is the consumer's call.</b> The field prefers M3's 245 dp default layout width and
+ * stretches to whatever a parent layout assigns it. M3's 488 dp <i>maximum</i> width is guidance
+ * for the surrounding layout, not a constraint the component can apply: it binds only on medium and
+ * expanded window size classes — a compact window is supposed to get a full-width field — and a
+ * component cannot see its window's size class. A form that can grow wide should cap the field's
+ * column itself (research §GD3).
+ *
  * <p>Decisions and the deliberate M3 mappings: {@code docs/research/elwha-textfield-design.md} and
  * its companion {@code elwha-textfield-research.md}.
  *
@@ -140,7 +147,6 @@ public class ElwhaTextField extends JComponent {
   static final int RESTING_STROKE = 1;
   static final int FOCUS_STROKE = 3; // Expressive bump (design §4; resting 1dp)
   static final int DEFAULT_WIDTH = 245; // M3 default layout width
-  static final int MAX_WIDTH = 488; // M3 maximum width
   static final int DEFAULT_ROWS = 3; // initial rows for the fixed text-area mode
 
   /** Distance from a field edge to the text region when that side carries an icon slot. */
