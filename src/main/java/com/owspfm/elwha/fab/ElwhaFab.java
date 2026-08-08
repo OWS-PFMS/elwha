@@ -177,10 +177,12 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
     }
 
     /**
-     * Returns the corner radius in pixels for this size.
+     * Returns the corner radius in pixels for this size — a real radius, the M3 dp figure, not a
+     * {@link java.awt.geom.RoundRectangle2D} {@code arcWidth}. The int-arc painters take the
+     * diameter, so a caller handing them this value must double it first (#654).
      *
      * @return the corner radius
-     * @version v0.3.0
+     * @version v0.5.0
      * @since v0.3.0
      */
     public int cornerRadiusPx() {
@@ -1065,7 +1067,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
   protected void paintComponent(final Graphics g) {
     final int bodyW = bodyWidthPx();
     final int bodyH = bodyHeightPx();
-    final int arc = size.cornerRadiusPx();
+    final int arc = size.cornerRadiusPx() * 2;
     final boolean focused = focusVisible && isEnabled();
     final int elevation = (hovered && isEnabled()) ? HOVER_ELEVATION : RESTING_ELEVATION;
 
@@ -1076,13 +1078,12 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
     // §9.1 step 1 — container shape change. In Phase 3 today, Standard and Extended share the same
     // per-size corner radius — the visible "shape morph" is the width morph that bodyWidthPx()
     // already drives, plus the SurfacePainter clamp Math.min(arc, min(w, h)) keeping the rounded
-    // ends well-formed at every interpolated width. Routing through the int-arc SurfacePainter /
-    // ShadowPainter paths matches the convention every other shadowed Elwha primitive uses (a
-    // value that's a RoundRectangle2D arcWidth — corner diameter, not radius — so body and shadow
-    // silhouette agree on the same corner). A future asymmetric-radii variant routes through
-    // {@link com.owspfm.elwha.theme.ShapeMorphPainter#interpolate} + the per-corner SurfacePainter
-    // overload — the per-corner painter uses the same numeric value as a real radius, so callers
-    // mixing it with ShadowPainter must reconcile the convention.
+    // ends well-formed at every interpolated width. The int-arc SurfacePainter / ShadowPainter
+    // paths both take a RoundRectangle2D arcWidth — a corner diameter — hence the ×2 on the M3
+    // radius above (#654); one shared value is also what keeps body and shadow on one silhouette.
+    // A future asymmetric-radii variant routes through {@link
+    // com.owspfm.elwha.theme.ShapeMorphPainter#interpolate} + the per-corner SurfacePainter
+    // overload, which stores real radii — pass cornerRadiusPx() undoubled there.
 
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
