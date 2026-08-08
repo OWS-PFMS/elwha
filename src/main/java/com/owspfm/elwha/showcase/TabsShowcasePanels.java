@@ -465,8 +465,9 @@ final class TabsShowcasePanels {
     code.append("\n// Content switching is consumer composition — the CardLayout recipe:\n");
     code.append("JPanel pages = new JPanel(new CardLayout());\n");
     code.append("// pages.add(panel, \"0\"), \"1\", … per tab\n");
-    code.append("tabs.addChangeListener(e -> ((CardLayout) pages.getLayout())\n");
-    code.append("    .show(pages, String.valueOf(tabs.getActiveTabIndex())));");
+    code.append("tabs.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB,\n");
+    code.append("    e -> ((CardLayout) pages.getLayout())\n");
+    code.append("        .show(pages, String.valueOf(tabs.getActiveTabIndex())));");
     return code.toString();
   }
 }
