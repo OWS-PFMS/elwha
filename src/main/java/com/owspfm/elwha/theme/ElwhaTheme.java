@@ -3,6 +3,7 @@ package com.owspfm.elwha.theme;
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.Window;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Objects;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -35,7 +36,7 @@ import javax.swing.plaf.FontUIResource;
  * keys, apply typography, and repaint every live window.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public final class ElwhaTheme {
@@ -75,19 +76,32 @@ public final class ElwhaTheme {
    *
    * <p>Idempotent and re-callable: calling it again with a different config is exactly how a
    * runtime theme or mode switch is performed. All live windows are re-skinned via {@link
-   * SwingUtilities#updateComponentTreeUI} as the final step; if called off the Event Dispatch
-   * Thread, that final repaint is dispatched to the EDT.
+   * SwingUtilities#updateComponentTreeUI} as the final step.
+   *
+   * <p>Callable from any thread. Every component in the library resolves its tokens out of {@code
+   * UIManager} from {@code paintComponent}, so the writes have to be ordered against painting or a
+   * live window can render one frame from a half-swapped palette. Called off the Event Dispatch
+   * Thread, this therefore dispatches the writes to the EDT and <em>blocks</em> until they land —
+   * so when it returns, the theme is installed on whatever thread the caller was on. Only the mode
+   * resolution stays on the calling thread, because {@link Mode#SYSTEM} shells out to the OS and
+   * that is work the EDT should not do when the caller has already volunteered another thread.
    *
    * @param config the config to install
-   * @version v0.1.0
+   * @throws IllegalStateException if the calling thread is interrupted while waiting for the EDT
+   * @version v0.5.0
    * @since v0.1.0
    */
   public static void install(Config config) {
     Objects.requireNonNull(config, "config");
 
     Mode resolvedMode = config.mode().resolved();
-    installBaseLaf(resolvedMode);
     Palette palette = config.theme().paletteFor(resolvedMode);
+
+    onEventDispatchThread(() -> applyToUiManager(config, resolvedMode, palette));
+  }
+
+  private static void applyToUiManager(Config config, Mode resolvedMode, Palette palette) {
+    installBaseLaf(resolvedMode);
 
     writeTokenKeys(palette);
     FlatLafKeyMapping.applyStaticKeys(palette);
@@ -96,12 +110,34 @@ public final class ElwhaTheme {
 
     current = config;
     // #176 Phase 5 — apply the reduced-motion override if the config carries one. {@code null}
-    // means "defer to the OS reduced-motion signal" (which MorphAnimator detects at class-load
+    // means "defer to the OS reduced-motion signal" (which MorphAnimator detects on first use
     // per design doc §9); a non-null Boolean forces the global toggle.
     if (config.reducedMotion() != null) {
       MorphAnimator.setReducedMotion(config.reducedMotion());
     }
     repaintAllWindows();
+  }
+
+  private static void onEventDispatchThread(Runnable work) {
+    if (SwingUtilities.isEventDispatchThread()) {
+      work.run();
+      return;
+    }
+    try {
+      SwingUtilities.invokeAndWait(work);
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Interrupted while installing the theme", interrupted);
+    } catch (InvocationTargetException failed) {
+      Throwable cause = failed.getCause();
+      if (cause instanceof RuntimeException runtime) {
+        throw runtime;
+      }
+      if (cause instanceof Error error) {
+        throw error;
+      }
+      throw new IllegalStateException("Failed to install the theme", cause);
+    }
   }
 
   private static void installBaseLaf(Mode resolvedMode) {
@@ -142,18 +178,10 @@ public final class ElwhaTheme {
   }
 
   // Step 8: the only step that touches live components — they re-resolve tokens per the binding
-  // rule and re-skin.
+  // rule and re-skin. Already on the EDT: the whole write sequence is dispatched there.
   private static void repaintAllWindows() {
-    Runnable repaint =
-        () -> {
-          for (Window window : Window.getWindows()) {
-            SwingUtilities.updateComponentTreeUI(window);
-          }
-        };
-    if (SwingUtilities.isEventDispatchThread()) {
-      repaint.run();
-    } else {
-      SwingUtilities.invokeLater(repaint);
+    for (Window window : Window.getWindows()) {
+      SwingUtilities.updateComponentTreeUI(window);
     }
   }
 }
