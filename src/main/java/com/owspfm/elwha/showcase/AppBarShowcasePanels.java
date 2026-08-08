@@ -4,6 +4,7 @@ import com.owspfm.elwha.appbar.AppBarVariant;
 import com.owspfm.elwha.appbar.ElwhaAppBar;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
+import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.menu.ElwhaMenu;
 import com.owspfm.elwha.menu.ElwhaMenuItem;
@@ -88,6 +89,18 @@ final class AppBarShowcasePanels {
     controls.addControl("", enabledBox);
     controls.addControl("", rtlBox);
 
+    // --- Icon buttons facet (#318) ---
+    // The bar's nav button and its actions are real ElwhaIconButton children with a public
+    // accessor apiece, and the main column owns only whether they exist. Their own presentation is
+    // otherwise unreachable once embedded, so it goes in a facet driving every button on the bar at
+    // once — which is also how M3 reads a bar's icon buttons: one treatment, not per-slot styling.
+    // The bar is rebuilt on every control change, so the editor re-applies to the fresh buttons at
+    // the end of each apply rather than holding a reference to any of them.
+    final ComponentWorkbench.Facet[] iconFacet = new ComponentWorkbench.Facet[1];
+    final Runnable[] reapply = new Runnable[1];
+    final IconButtonPlaygroundPanels.IconButtonEditor iconEditor =
+        IconButtonPlaygroundPanels.buildIconButtonEditor(() -> reapply[0].run());
+
     final Runnable apply =
         () -> {
           final AppBarVariant variant =
@@ -130,6 +143,17 @@ final class AppBarShowcasePanels {
           scroller.setBorder(BorderFactory.createEmptyBorder());
           scroller.getVerticalScrollBar().setUnitIncrement(16);
 
+          iconEditor.applyTo(bar.getNavigationIcon());
+          for (final ElwhaIconButton action : bar.getActions()) {
+            iconEditor.applyTo(action);
+          }
+          if (iconFacet[0] != null) {
+            iconFacet[0].setCode(
+                "ElwhaIconButton action = bar.addAction(MaterialIcons.search(), \"Search\","
+                    + " null);\n"
+                    + iconEditor.code("action"));
+          }
+
           bar.setScrollSource(scroller);
           bar.setLiftOnScroll(liftBox.isChecked());
           bar.setEnabled(enabledBox.isChecked());
@@ -156,6 +180,13 @@ final class AppBarShowcasePanels {
                   enabledBox.isChecked(),
                   rtlBox.isChecked()));
         };
+
+    reapply[0] = apply;
+    // Wrapped in a WorkbenchControls so the facet column insets the editor exactly like the main
+    // column does — a raw editor handed to addFacet stretches full-width and reads left-shifted.
+    final WorkbenchControls iconControls = new WorkbenchControls();
+    iconControls.addControl("", iconEditor.panel());
+    iconFacet[0] = workbench.addFacet("Icon buttons", iconControls);
 
     variantBox.addSelectionChangeListener(v -> apply.run());
     countBox.addSelectionChangeListener(v -> apply.run());

@@ -76,7 +76,9 @@ import javax.swing.UIManager;
  */
 public final class ComponentWorkbench extends JPanel {
 
-  private static final int CONTROLS_WIDTH = 480;
+  // Package-private: the Showcase suite asserts the switcher bar fits inside it (#318 — a
+  // fourth segment overflows a FIXED connected group past this width and clips the last one).
+  static final int CONTROLS_WIDTH = 480;
   private static final int CODE_HEIGHT = 200;
   // Breathing room (combined; ~half per side) kept between the live component and the stage
   // surface's rounded edge. Sized so the floor is comfortable for the library's tallest live
@@ -324,7 +326,7 @@ public final class ComponentWorkbench extends JPanel {
    * @since v0.4.0
    */
   public Facet addFacet(final String name, final JComponent controls) {
-    final Facet facet = new Facet(name);
+    final Facet facet = new Facet(name, controls);
     facets.add(facet);
     controlsCards.add(controls, name);
     rebuildSwitcher();
@@ -342,10 +344,12 @@ public final class ComponentWorkbench extends JPanel {
    */
   public final class Facet {
     private final String name;
+    private final JComponent controls;
     private String code = "";
 
-    private Facet(final String name) {
+    private Facet(final String name, final JComponent controls) {
       this.name = name;
+      this.controls = controls;
     }
 
     /**
@@ -420,11 +424,22 @@ public final class ComponentWorkbench extends JPanel {
     codeView.setCode(codeFor(name));
   }
 
-  // Test seams — the staged component, the active switcher segment, the code view and the pinned
-  // band, none of which a builder needs but all of which the Showcase suite asserts against
-  // (#544).
+  // Test seams — the staged component, the active switcher segment, the code view, the facet
+  // control columns and the pinned band, none of which a builder needs but all of which the
+  // Showcase suite asserts against (#544).
   JComponent stage() {
     return liveComponent;
+  }
+
+  // Every controls column a builder populated, in switcher order: the Component segment's, then
+  // each facet's. The Surface segment's column is the scaffold's own and is not a builder surface.
+  List<JComponent> controlColumns() {
+    final List<JComponent> columns = new ArrayList<>();
+    columns.add(componentControls);
+    for (final Facet facet : facets) {
+      columns.add(facet.controls);
+    }
+    return columns;
   }
 
   JComponent pinnedActionFor(final String name) {

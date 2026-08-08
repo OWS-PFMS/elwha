@@ -599,4 +599,185 @@ public final class IconButtonPlaygroundPanels {
     inner.addTab("Live", buildLivePanel());
     return inner;
   }
+
+  /**
+   * Builds the reusable editor for an icon button a <em>host</em> component embeds — an app bar's
+   * navigation and action buttons, say — for mounting as a Workbench sub-component facet (#318).
+   *
+   * <p>Deliberately omits the glyph, the accessible name, {@code enabled}, and {@link
+   * IconButtonSize}: all four are host-owned. A host mints its own glyphs with its own semantics,
+   * propagates its own enabled state, and lays its buttons out in slots it sizes — so a size
+   * control here would fight the host's layout and leave the glyph behind at its minted resolution.
+   * What remains is the presentation a host does <em>not</em> own, and which is otherwise
+   * unreachable once a button is embedded.
+   *
+   * @param onChange invoked after each control change, once the editor's gating has settled — the
+   *     host re-applies through {@link IconButtonEditor#applyTo(ElwhaIconButton)} and refreshes any
+   *     derived view
+   * @return the editor
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static IconButtonEditor buildIconButtonEditor(final Runnable onChange) {
+    return new IconButtonEditor(onChange);
+  }
+
+  /**
+   * A live editor for the {@link ElwhaIconButton}s a host component embeds, built by {@link
+   * #buildIconButtonEditor(Runnable)}.
+   *
+   * <p>The editor holds the configuration rather than a reference to any one button, so a host that
+   * rebuilds its subject on every change — the usual Workbench shape — re-applies to the fresh
+   * instances with {@link #applyTo(ElwhaIconButton)} instead of re-binding the editor.
+   *
+   * @author Charles Bryan
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static final class IconButtonEditor {
+
+    private final JPanel panel = new JPanel();
+    private final ElwhaSelectField<IconButtonVariant> variantBox =
+        ElwhaSelectField.outlined("Variant");
+    private final ElwhaSelectField<IconButtonInteractionMode> modeBox =
+        ElwhaSelectField.outlined("Interaction mode");
+    private final ElwhaSelectField<ShapeScale> shapeBox = ElwhaSelectField.outlined("Shape");
+    private final JSpinner borderWidthSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
+    private final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
+
+    private IconButtonEditor(final Runnable onChange) {
+      variantBox.setOptions(List.of(IconButtonVariant.values()));
+      variantBox.setSelectedValue(IconButtonVariant.STANDARD);
+      modeBox.setOptions(List.of(IconButtonInteractionMode.values()));
+      modeBox.setSelectedValue(IconButtonInteractionMode.CLICKABLE);
+      shapeBox.setOptions(List.of(ShapeScale.values()));
+      shapeBox.setSelectedValue(ShapeScale.FULL);
+
+      panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+      panel.setOpaque(false);
+      panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+      panel.add(editorSection("Presentation"));
+      panel.add(editorRow(variantBox));
+      panel.add(editorRow(modeBox));
+      panel.add(editorRow(shapeBox));
+      panel.add(editorRow("Border width", borderWidthSpinner));
+      panel.add(editorSection("State"));
+      panel.add(editorRow(selectedBox));
+
+      final Runnable changed =
+          () -> {
+            syncGates();
+            onChange.run();
+          };
+      variantBox.addSelectionChangeListener(value -> changed.run());
+      modeBox.addSelectionChangeListener(value -> changed.run());
+      shapeBox.addSelectionChangeListener(value -> changed.run());
+      borderWidthSpinner.addChangeListener(event -> changed.run());
+      selectedBox.addActionListener(event -> changed.run());
+      syncGates();
+    }
+
+    // Border width paints only on the outlined variant, and selection only exists in the
+    // selectable mode — a control that cannot reach the button reads as broken rather than as
+    // inapplicable, so both are disabled instead.
+    private void syncGates() {
+      borderWidthSpinner.setEnabled(variantBox.getSelectedValue() == IconButtonVariant.OUTLINED);
+      selectedBox.setEnabled(modeBox.getSelectedValue() == IconButtonInteractionMode.SELECTABLE);
+    }
+
+    /**
+     * The editor's control panel, for mounting in a {@code WorkbenchControls} column.
+     *
+     * @return the control panel
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    public JComponent panel() {
+      return panel;
+    }
+
+    /**
+     * Applies the current configuration to {@code button}. Call once per embedded button, and again
+     * after the host rebuilds them.
+     *
+     * @param button the embedded button to configure; ignored when {@code null}
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    public void applyTo(final ElwhaIconButton button) {
+      if (button == null) {
+        return;
+      }
+      button
+          .setVariant(variantBox.getSelectedValue())
+          .setInteractionMode(modeBox.getSelectedValue())
+          .setShape(shapeBox.getSelectedValue())
+          .setBorderWidth((Integer) borderWidthSpinner.getValue());
+      if (modeBox.getSelectedValue() == IconButtonInteractionMode.SELECTABLE) {
+        button.setSelected(selectedBox.isChecked());
+      }
+    }
+
+    /**
+     * The equivalent Java for the current configuration, as calls against {@code receiver}.
+     *
+     * @param receiver the variable name to render the calls against
+     * @return the equivalent-Java snippet, one call per line
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    public String code(final String receiver) {
+      final StringBuilder code = new StringBuilder(240);
+      code.append(receiver)
+          .append(".setVariant(IconButtonVariant.")
+          .append(variantBox.getSelectedValue())
+          .append(");\n");
+      code.append(receiver)
+          .append(".setInteractionMode(IconButtonInteractionMode.")
+          .append(modeBox.getSelectedValue())
+          .append(");\n");
+      code.append(receiver)
+          .append(".setShape(ShapeScale.")
+          .append(shapeBox.getSelectedValue())
+          .append(");");
+      if (variantBox.getSelectedValue() == IconButtonVariant.OUTLINED) {
+        code.append("\n")
+            .append(receiver)
+            .append(".setBorderWidth(")
+            .append(borderWidthSpinner.getValue())
+            .append(");");
+      }
+      if (modeBox.getSelectedValue() == IconButtonInteractionMode.SELECTABLE) {
+        code.append("\n")
+            .append(receiver)
+            .append(".setSelected(")
+            .append(selectedBox.isChecked())
+            .append(");");
+      }
+      return code.toString();
+    }
+  }
+
+  private static JComponent editorSection(final String title) {
+    final JLabel label = new JLabel(title);
+    label.setFont(label.getFont().deriveFont(java.awt.Font.BOLD));
+    label.setAlignmentX(Component.LEFT_ALIGNMENT);
+    label.setBorder(BorderFactory.createEmptyBorder(10, 0, 2, 0));
+    return label;
+  }
+
+  private static JComponent editorRow(final JComponent field) {
+    return editorRow("", field);
+  }
+
+  private static JComponent editorRow(final String label, final JComponent field) {
+    final JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+    row.setOpaque(false);
+    row.setAlignmentX(Component.LEFT_ALIGNMENT);
+    if (!label.isEmpty()) {
+      row.add(rowLabel(label));
+    }
+    row.add(field);
+    return row;
+  }
 }
