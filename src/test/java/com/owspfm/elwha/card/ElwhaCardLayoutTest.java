@@ -369,7 +369,7 @@ class ElwhaCardLayoutTest {
   }
 
   @Test
-  void theReuseBufferOverloadCarriesTheCardsOwnWorstCaseReserve() {
+  void reuseBufferOverloadCarriesTheCardsOwnWorstCaseReserve() {
     final ElwhaCard card = new ElwhaCard();
     final Insets buffer = new Insets(0, 0, 0, 0);
 

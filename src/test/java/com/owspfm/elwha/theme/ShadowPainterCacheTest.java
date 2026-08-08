@@ -148,7 +148,7 @@ class ShadowPainterCacheTest {
     "220, 160, 24",
     "96, 40, 8",
   })
-  void theCachedHaloMatchesADirectRenderAtEveryElevation(final int w, final int h, final int arc) {
+  void cachedHaloMatchesADirectRenderAtEveryElevation(final int w, final int h, final int arc) {
     for (int elevation = 1; elevation <= ShadowPainter.MAX_ELEVATION; elevation++) {
       assertThat(haloDelta(w, h, arc, elevation))
           .as("%dx%d arc %d at elevation %d", w, h, arc, elevation)

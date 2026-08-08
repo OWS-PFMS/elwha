@@ -215,7 +215,7 @@ class ElwhaCircularProgressIndeterminateTest {
   @ParameterizedTest
   @ValueSource(
       longs = {0, 1, 1499, 1500, 1501, 1650, 1799, 1800, 1801, 3000, 7400, 45_000, 150_000})
-  void theClosedFormAgreesWithSummingEveryKick(final long elapsedMs) {
+  void closedFormAgreesWithSummingEveryKick(final long elapsedMs) {
     assertThat((double) ElwhaCircularProgressIndicator.additionalRotationDeg(elapsedMs))
         .as(
             "#622 — settled kicks each contribute exactly one whole turn, so counting them is the "
@@ -224,7 +224,7 @@ class ElwhaCircularProgressIndeterminateTest {
   }
 
   @Test
-  void theKickTotalStaysBoundedHoweverLongTheRingHasSpun() {
+  void kickTotalStaysBoundedHoweverLongTheRingHasSpun() {
     // Eight hours in. The old sum ran ~19,200 eased evaluations per frame here and had accumulated
     // far past the float precision where one degree is a single ULP.
     final long eightHours = 8L * 60 * 60 * 1000;

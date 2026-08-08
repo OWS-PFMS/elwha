@@ -401,7 +401,7 @@ class ElwhaTextFieldRenderTest {
   // ------------------------------------------------------------- error glyph
 
   @Test
-  void theHeldErrorGlyphStillRetintsAcrossAModeSwitch() {
+  void aHeldErrorGlyphStillRetintsAcrossAModeSwitch() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
     field.setError(true);
     final Dimension size = field.getPreferredSize();

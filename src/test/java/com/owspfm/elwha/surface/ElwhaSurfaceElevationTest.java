@@ -145,7 +145,7 @@ class ElwhaSurfaceElevationTest {
   // ------------------------------------------------- both getInsets overloads
 
   @Test
-  void theReuseBufferOverloadReportsTheSameReserve() {
+  void reuseBufferOverloadReportsTheSameReserve() {
     final ElwhaSurface surface = new ElwhaSurface().setElevation(4);
     final Insets buffer = new Insets(0, 0, 0, 0);
 
@@ -158,7 +158,7 @@ class ElwhaSurfaceElevationTest {
   }
 
   @Test
-  void theReuseBufferOverloadAllocatesWhenGivenNoBuffer() {
+  void reuseBufferOverloadAllocatesWhenGivenNoBuffer() {
     final ElwhaSurface surface = new ElwhaSurface().setElevation(2);
 
     assertThat(surface.getInsets(null))
@@ -182,7 +182,7 @@ class ElwhaSurfaceElevationTest {
   }
 
   @Test
-  void theLookAndFeelsOwnBorderPlumbingStillWorks() {
+  void lookAndFeelBorderPlumbingStillWorks() {
     final ElwhaSurface surface = new ElwhaSurface();
     final Border installed = new LineBorderUiResource();
 

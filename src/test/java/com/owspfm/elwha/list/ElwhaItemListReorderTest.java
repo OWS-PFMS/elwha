@@ -331,7 +331,7 @@ class ElwhaItemListReorderTest {
   }
 
   @Test
-  void theContentPanelIsAPaintingOriginOnlyWhileAHandleIsShowing() {
+  void contentPanelIsAPaintingOriginOnlyWhileAHandleIsShowing() {
     slabListOf("a", "b")
         .setMovementMode(MovementMode.MOVABLE)
         .setReorderAffordance(ReorderAffordance.HOVER_ICON);
