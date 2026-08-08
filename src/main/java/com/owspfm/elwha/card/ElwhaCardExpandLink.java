@@ -7,6 +7,7 @@ import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.beans.PropertyChangeListener;
 import java.util.Objects;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
@@ -46,6 +47,11 @@ public final class ElwhaCardExpandLink extends JLabel {
   private final String collapseText;
   private ColorRole colorRole = ColorRole.PRIMARY;
 
+  /** Held as a field, not a bare lambda, so {@link #removeNotify()} can unregister it. */
+  private final PropertyChangeListener expansionSync = e -> syncText();
+
+  private boolean subscribed;
+
   /**
    * Creates an expand-link bound to the given card. Registers an expansion-change listener and
    * mouse / keyboard activation toggling the card's collapsed state.
@@ -63,7 +69,6 @@ public final class ElwhaCardExpandLink extends JLabel {
     setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     setFocusable(true);
     setText(card.isCollapsed() ? expandText : collapseText);
-    card.addExpansionChangeListener(e -> syncText());
     addMouseListener(
         new MouseAdapter() {
           @Override
@@ -72,6 +77,24 @@ public final class ElwhaCardExpandLink extends JLabel {
           }
         });
     installKeyboardActivation();
+    subscribe();
+  }
+
+  // Idempotent so the constructor and addNotify can both ask for it: a link tracks its card from
+  // birth (an unparented one still reports the right text), and re-add after a detach has to
+  // restore the subscription without stacking a second copy.
+  private void subscribe() {
+    if (!subscribed) {
+      card.addExpansionChangeListener(expansionSync);
+      subscribed = true;
+    }
+  }
+
+  private void unsubscribe() {
+    if (subscribed) {
+      card.removeExpansionChangeListener(expansionSync);
+      subscribed = false;
+    }
   }
 
   /**
@@ -191,12 +214,17 @@ public final class ElwhaCardExpandLink extends JLabel {
    * ElwhaCardChevron). Defensive: silently does nothing if the link is added outside the card's
    * subtree.
    *
-   * @version v0.2.0
+   * <p>Also subscribes the label text to the card's expansion state and resyncs it, since the card
+   * can have been toggled while the link was detached.
+   *
+   * @version v0.5.0
    * @since v0.2.0
    */
   @Override
   public void addNotify() {
     super.addNotify();
+    subscribe();
+    syncText();
     // Walk up to find the direct child of `card` that contains us — anchor THAT child as
     // ALWAYS_VISIBLE. ExpandLink is typically added directly to the card (M3 placement: body
     // bottom, after divider), so cursor starts at `this` and the loop usually exits immediately
@@ -209,5 +237,19 @@ public final class ElwhaCardExpandLink extends JLabel {
     if (cursor != null) {
       card.setCollapseConstraint(cursor, CollapseRule.ALWAYS_VISIBLE);
     }
+  }
+
+  /**
+   * Unsubscribes from the card's expansion state. The card's {@code PropertyChangeSupport} holds
+   * its listeners strongly, so a link swapped out of a card's body would otherwise stay alive — and
+   * keep reacting — for the card's whole lifetime.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void removeNotify() {
+    unsubscribe();
+    super.removeNotify();
   }
 }

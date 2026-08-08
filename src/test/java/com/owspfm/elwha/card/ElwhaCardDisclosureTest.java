@@ -292,6 +292,126 @@ class ElwhaCardDisclosureTest {
         .isEqualTo(CollapseRule.COLLAPSIBLE);
   }
 
+  // ----------------------------------------------------------- rule pruning
+
+  @Test
+  void removingAChildForgetsItsCollapseRule() {
+    final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
+    final Block pinned = new Block();
+    card.add(pinned);
+    card.setCollapseConstraint(pinned, CollapseRule.ALWAYS_VISIBLE);
+
+    card.remove(pinned);
+
+    assertThat(card.collapseConstraintCount())
+        .as(
+            "#594 — nothing pruned the rule map, so a card that cycled its content held every "
+                + "child it had ever shown")
+        .isZero();
+  }
+
+  @Test
+  void clearingACardForgetsEveryCollapseRule() {
+    final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
+    final ElwhaCardHeader header = new ElwhaCardHeader().setTitle("Title");
+    final ElwhaCardChevron chevron = new ElwhaCardChevron(card);
+    header.addTrailing(chevron);
+    card.add(header);
+    card.add(new Block());
+    chevron.addNotify();
+    assertThat(card.collapseConstraintCount()).as("the chevron self-anchored its header").isOne();
+
+    card.removeAll();
+
+    assertThat(card.collapseConstraintCount())
+        .as("#594 — a full rebuild starts from an empty rule map")
+        .isZero();
+  }
+
+  @Test
+  void aReAddedChildIsRuledAfresh() {
+    final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
+    final ElwhaCardChevron chevron = new ElwhaCardChevron(card);
+    card.add(chevron);
+    chevron.addNotify();
+
+    card.remove(chevron);
+    card.add(chevron);
+    chevron.addNotify();
+
+    assertThat(card.getCollapseConstraint(chevron))
+        .as("pruning on remove must not cost a re-added affordance its #23 anchor")
+        .isEqualTo(CollapseRule.ALWAYS_VISIBLE);
+  }
+
+  // -------------------------------------------------------------- teardown
+
+  @Test
+  void aRemovedChevronStopsTrackingItsCard() {
+    final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
+    final ElwhaCardChevron chevron = new ElwhaCardChevron(card);
+    card.add(chevron);
+    chevron.addNotify();
+
+    card.remove(chevron);
+    chevron.removeNotify();
+    card.setCollapsed(true);
+
+    assertThat(card.expansionListenerCount())
+        .as("#595 — the card holds its listeners strongly, so a swapped-out chevron must let go")
+        .isZero();
+  }
+
+  @Test
+  void aRemovedExpandLinkStopsTrackingItsCard() {
+    final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
+    final ElwhaCardExpandLink link = new ElwhaCardExpandLink(card, "Show more", "Show less");
+    card.add(link);
+    link.addNotify();
+
+    card.remove(link);
+    link.removeNotify();
+
+    assertThat(card.expansionListenerCount())
+        .as("#595 — same leak, same fix, on the other disclosure affordance")
+        .isZero();
+  }
+
+  @Test
+  void aReAddedChevronTracksItsCardAgainAndCatchesUpOnWhatItMissed() {
+    final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
+    final ElwhaCardChevron chevron = new ElwhaCardChevron(card);
+    card.add(chevron);
+    chevron.addNotify();
+    chevron.removeNotify();
+
+    card.setCollapsed(true);
+    chevron.addNotify();
+
+    assertThat(card.expansionListenerCount())
+        .as("a stage swap re-adds the affordance; one subscription, not two")
+        .isOne();
+    assertThat(chevron.getIcon())
+        .as("and it resyncs, so it never paints the state the card left behind")
+        .isNotNull();
+    card.setCollapsed(false);
+    assertThat(card.expansionListenerCount())
+        .as("still exactly one after the card toggles again")
+        .isOne();
+  }
+
+  @Test
+  void anUnparentedAffordanceStillTracksItsCard() {
+    final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
+    final ElwhaCardExpandLink link = new ElwhaCardExpandLink(card, "Show more", "Show less");
+
+    card.setCollapsed(true);
+
+    assertThat(link.getText())
+        .as("the subscription starts at construction — an offscreen render reads the right text")
+        .isEqualTo("Show more");
+  }
+
   @Test
   void aChevronAndALinkCanDriveTheSameCardTogether() {
     final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);

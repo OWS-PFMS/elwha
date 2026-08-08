@@ -193,6 +193,49 @@ class ElwhaDialogCompositionTest {
     assertThat(cancel.isRippleEnabled()).isFalse();
   }
 
+  /** Counts the listeners a dialog installs on a caller-supplied action button. */
+  private static final class CountingButton extends ElwhaButton {
+    private int wired;
+
+    CountingButton(final String label) {
+      super(label);
+    }
+
+    @Override
+    public void addActionListener(final java.awt.event.ActionListener listener) {
+      wired++;
+      super.addActionListener(listener);
+    }
+  }
+
+  @Test
+  void anActionButtonIsWiredForDismissExactlyOnceForTheDialogsLife() {
+    final CountingButton confirm = new CountingButton("Discard");
+    final ElwhaDialog dialog = alert().confirmAction(confirm).build();
+
+    show(dialog).dismiss();
+    show(dialog).dismiss();
+    dialog.renderPreview();
+
+    assertThat(confirm.wired)
+        .as("#590 — the surface is rebuilt on every show and preview; the button is wired once")
+        .isEqualTo(1);
+  }
+
+  @Test
+  void aReShownDialogStillClosesFromItsActionButton() {
+    final ElwhaButton confirm = ElwhaButton.textButton("Discard");
+    final ElwhaDialog dialog = alert().confirmAction(confirm).build();
+    show(dialog).dismiss();
+
+    show(dialog);
+    confirm.doClick();
+
+    assertThat(host.mounted())
+        .as("wiring once must not cost the second presentation its dismiss")
+        .isEmpty();
+  }
+
   // ----------------------------------------------------------------- sizing
 
   @Test

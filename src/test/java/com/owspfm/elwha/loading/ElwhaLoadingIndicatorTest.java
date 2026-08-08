@@ -461,6 +461,40 @@ class ElwhaLoadingIndicatorTest {
   }
 
   @Test
+  void leavingTheHierarchyReleasesTheValueModel() {
+    final DefaultBoundedRangeModel shared = new DefaultBoundedRangeModel(40, 0, 0, 100);
+    final ElwhaLoadingIndicator indicator = ElwhaLoadingIndicator.determinate(shared);
+    assertThat(shared.getChangeListeners())
+        .as("the indicator subscribes at construction")
+        .hasSize(1);
+
+    indicator.addNotify();
+    indicator.removeNotify();
+
+    assertThat(shared.getChangeListeners())
+        .as("#621 — a shared model would otherwise pin every readout it has ever driven")
+        .isEmpty();
+  }
+
+  @Test
+  void aReAddedIndicatorIsSubscribedOnceAndReadsTheModelAsItStandsNow() {
+    final DefaultBoundedRangeModel shared = new DefaultBoundedRangeModel(40, 0, 0, 100);
+    final ElwhaLoadingIndicator indicator = ElwhaLoadingIndicator.determinate(shared);
+    indicator.addNotify();
+    indicator.removeNotify();
+
+    shared.setValue(90);
+    indicator.addNotify();
+
+    assertThat(shared.getChangeListeners())
+        .as("a stage swap re-arms the subscription exactly once")
+        .hasSize(1);
+    assertThat(indicator.getProgressFraction())
+        .as("and the readout reflects the model as it stands now, not as it left it")
+        .isCloseTo(0.9f, within(0.001f));
+  }
+
+  @Test
   void consumersCanNameTheActivity() {
     final ElwhaLoadingIndicator indicator = new ElwhaLoadingIndicator();
 

@@ -69,6 +69,17 @@ final class ScrollFixture {
     return pane.getVerticalScrollBar().getValue();
   }
 
+  /**
+   * How many change listeners are on the scroll bar's model — the subscription an app bar's {@code
+   * ScrollSourceBinding} adds, and the thing a leaked binding leaves behind. The scroll pane
+   * installs its own, so tests compare against a baseline rather than against zero.
+   */
+  int modelListenerCount() {
+    return ((javax.swing.DefaultBoundedRangeModel) pane.getVerticalScrollBar().getModel())
+        .getChangeListeners()
+        .length;
+  }
+
   // Container.validate() is a no-op without a peer, so the tree is laid out by hand — the scroll
   // pane's UI needs the viewport's extent and view sizes to be real before it can compute a range.
   private void layOutFully() {

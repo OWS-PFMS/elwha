@@ -2695,7 +2695,13 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
   }
 
   /**
-   * Releases the ancestor window binding, so a list that outlives its window leaks no listener.
+   * Releases the ancestor window binding and every animation the list can have in flight, so a list
+   * that outlives its window leaks neither a listener nor a ticking {@code Timer}.
+   *
+   * <p>Aborting the drag is what makes this more than timer hygiene: the reflow timer only
+   * self-stops once {@code drag} is cleared, and the sole path that clears it is the mouse release
+   * {@link #endDrag()} handles. A list pulled out of the hierarchy mid-drag never sees that
+   * release.
    *
    * @version v0.5.0
    * @since v0.5.0
@@ -2703,7 +2709,79 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
   @Override
   public void removeNotify() {
     untrackAncestorWindow();
+    abortDrag();
+    stopFade();
+    stopHandleFade();
     super.removeNotify();
+  }
+
+  /**
+   * Ends an in-flight drag without committing the move, returning the dragged view and the content
+   * order to their pre-drag resting state. A teardown is not a drop, so no reorder is reported.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  private void abortDrag() {
+    if (dragAnimTimer != null) {
+      dragAnimTimer.stop();
+    }
+    displacedX.clear();
+    displacedY.clear();
+    targetX.clear();
+    targetY.clear();
+    if (drag == null) {
+      return;
+    }
+    if (drag.view instanceof ElwhaListItemView itemView) {
+      itemView.setDragged(false);
+    }
+    if (usesCursorSwap()) {
+      drag.view.setCursor(ReorderCursors.grab());
+    }
+    drag = null;
+    restoreContentOrder();
+  }
+
+  /**
+   * Stops the drag-handle fade and returns the handle to hidden — the resting state a re-added list
+   * must start from, since nothing else clears a handle the pointer has since left.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  private void stopHandleFade() {
+    if (handleTimer != null) {
+      handleTimer.stop();
+    }
+    handleAlpha = 0f;
+    handleHoverItem = null;
+  }
+
+  /**
+   * Whether any of the list's three animation timers is ticking — the drag reflow, the content
+   * fade, or the drag-handle fade. A package-private seam for the teardown contract; not API.
+   *
+   * @return {@code true} while at least one animation timer is running
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  boolean hasRunningAnimationTimers() {
+    return dragAnimTimer != null && dragAnimTimer.isRunning()
+        || fadeTimer != null && fadeTimer.isRunning()
+        || handleTimer != null && handleTimer.isRunning();
+  }
+
+  /**
+   * Whether a drag is currently in flight. A package-private seam for the teardown contract; not
+   * API.
+   *
+   * @return {@code true} while a drag gesture is being tracked
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  boolean isDragInFlight() {
+    return drag != null;
   }
 
   /**

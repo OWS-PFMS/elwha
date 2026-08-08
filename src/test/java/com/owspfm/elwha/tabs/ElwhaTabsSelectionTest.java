@@ -5,7 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Input;
+import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.StateLayer;
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -331,5 +335,50 @@ class ElwhaTabsSelectionTest {
     bar.setEnabled(true);
 
     assertThat(bar.getTabAt(1).isEnabled()).isTrue();
+  }
+
+  // ---------------------------------------------------------- teardown state
+
+  /** A ground no bundled palette carries, so "the tab painted nothing here" is unambiguous. */
+  private static final Color GROUND = Color.MAGENTA;
+
+  @Test
+  void aTabRemovedWhileHoveredComesBackUnhovered() {
+    // Labels are empty so no glyph pixels can land on the probe.
+    final ElwhaTabs bar = barOf("", "");
+    final ElwhaTab inactive = bar.getTabAt(1);
+    inactive.setHovered(true);
+    Pixels.assertPixelNear(
+        Pixels.render(inactive, 80, 48, GROUND),
+        4,
+        4,
+        Pixels.mix(GROUND, ColorRole.ON_SURFACE.resolve(), StateLayer.HOVER.opacity()),
+        "the hover layer paints while the pointer is over the tab");
+
+    inactive.removeNotify();
+
+    Pixels.assertPixelNear(
+        Pixels.render(inactive, 80, 48, GROUND),
+        4,
+        4,
+        GROUND,
+        "#625 — the hover poll is the only self-correction, so teardown has to clear the flag "
+            + "or a re-added tab paints its hover layer for good");
+  }
+
+  @Test
+  void aTabRemovedWhilePressedComesBackUnpressed() {
+    final ElwhaTabs bar = barOf("", "");
+    final ElwhaTab inactive = bar.getTabAt(1);
+    inactive.setPressed(true);
+
+    inactive.removeNotify();
+
+    Pixels.assertPixelNear(
+        Pixels.render(inactive, 80, 48, GROUND),
+        4,
+        4,
+        GROUND,
+        "#625 — the pressed flag is stranded by the same stopped poll");
   }
 }

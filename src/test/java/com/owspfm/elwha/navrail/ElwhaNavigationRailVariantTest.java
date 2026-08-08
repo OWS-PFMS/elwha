@@ -8,8 +8,11 @@ import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Input;
 import com.owspfm.elwha.testkit.PaintLog;
+import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.MorphAnimator;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -510,6 +513,47 @@ class ElwhaNavigationRailVariantTest {
     assertThat(rail.isSurfaceFilled()).isTrue();
     assertThat(rail.hasDivider()).isTrue();
     assertThat(rail.getElevation()).isEqualTo(1);
+  }
+
+  // ---------------------------------------------------------- teardown state
+
+  /**
+   * The destination's state layer fills a pill, not its whole box, so a corner probe would miss it
+   * and a center probe would land on the glyph. Comparing whole rasters sidesteps both.
+   */
+  private static boolean rastersMatch(final BufferedImage a, final BufferedImage b) {
+    for (int y = 0; y < a.getHeight(); y++) {
+      for (int x = 0; x < a.getWidth(); x++) {
+        if (a.getRGB(x, y) != b.getRGB(x, y)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private static BufferedImage shot(final ElwhaNavRailDestination destination) {
+    return Pixels.render(destination, 90, 60, Color.MAGENTA);
+  }
+
+  @Test
+  void aDestinationRemovedWhileHoveredComesBackUnhovered() {
+    final ElwhaNavigationRail rail = RailFixture.laidOut(ElwhaNavigationRail.collapsed(), 3);
+    final ElwhaNavRailDestination hovered = rail.getPrimary().get(1);
+    final BufferedImage atRest = shot(RailFixture.destination("Item 1"));
+
+    Input.enter(hovered, 4, 4);
+    assertThat(rastersMatch(shot(hovered), atRest))
+        .as("the hover layer is really on — otherwise the teardown assertion proves nothing")
+        .isFalse();
+
+    hovered.removeNotify();
+
+    assertThat(rastersMatch(shot(hovered), atRest))
+        .as(
+            "#625 — the hover poll is the only self-correction, so teardown has to clear the "
+                + "flag or a re-added destination paints its hover layer for good")
+        .isTrue();
   }
 
   @Test

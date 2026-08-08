@@ -1009,9 +1009,19 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     selectionAnimator.snapTo(selected ? 1f : 0f);
   }
 
+  /**
+   * Clears the transient input state alongside the hover poll. The poll is the only path that ever
+   * self-corrects {@code hovered} / {@code pressed}, so stopping it while the pointer is over the
+   * destination would otherwise leave it painting its hover layer for good once it is re-added.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
   @Override
   public void removeNotify() {
     stopHoverPolling();
+    hovered = false;
+    pressed = false;
     if (rippleTimer != null) {
       rippleTimer.stop();
     }

@@ -305,6 +305,23 @@ public class ElwhaTextField extends JComponent {
   public void addNotify() {
     super.addNotify();
     configureEditorStyle(editor);
+    // stop() resets the animator to 0 but `labelFloated` survives the teardown, and
+    // updateLabelFloat early-returns when the flag already matches — so without this a field torn
+    // down with its label floated would come back painting the label over its own text.
+    labelMorph.snapTo(labelFloated ? 1f : 0f);
+  }
+
+  /**
+   * Stops the floating-label animation. Every sibling in the family stops its animators here; this
+   * one was the exception, leaving a Timer repainting a detached field for the rest of its tween.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void removeNotify() {
+    labelMorph.stop();
+    super.removeNotify();
   }
 
   private void wireEditor(final JTextComponent ed) {

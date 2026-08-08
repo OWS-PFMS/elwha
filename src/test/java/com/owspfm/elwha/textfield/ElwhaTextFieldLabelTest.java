@@ -482,4 +482,26 @@ class ElwhaTextFieldLabelTest {
         .as("and the suffix trails against the far text edge")
         .isEqualTo(field.getWidth() - ElwhaTextField.PAD_LR_NO_ICON - suffixWidth);
   }
+
+  // ---------------------------------------------------------------- teardown
+
+  @Test
+  void aFieldReAddedWithItsLabelFloatedStillPaintsItFloated() {
+    // setText before the mount: on a peered-but-unparented field the editor's accessible caret
+    // hook walks to a window that is not there and NPEs — a Swing quirk, nothing to do with this.
+    final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
+    field.setText("ada@x.io");
+    field.addNotify();
+    final double floatedY = label(field, "Email").y();
+
+    field.removeNotify();
+    field.addNotify();
+
+    assertThat(label(field, "Email").y())
+        .as(
+            "#641 — stopping labelMorph resets it to 0 while the float flag survives, and"
+                + " updateLabelFloat early-returns on a matching flag, so without a resync the"
+                + " label would come back painted over the field's own text")
+        .isEqualTo(floatedY);
+  }
 }

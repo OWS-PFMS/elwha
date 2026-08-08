@@ -67,7 +67,7 @@ import javax.swing.SwingUtilities;
  * programmatically.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaDialog extends AbstractElwhaDialog {
@@ -106,6 +106,25 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
     this.alternateAction = b.alternateAction;
     this.cancelAction = b.cancelAction;
     this.dismissibleByScrim = b.dismissibleByScrim;
+    wireDismiss(cancelAction, DismissCause.CANCEL);
+    wireDismiss(alternateAction, DismissCause.ALTERNATE);
+    wireDismiss(confirmAction, DismissCause.CONFIRM);
+  }
+
+  // Gives one action button its close-after-fire listener, once, for the dialog's lifetime. The
+  // action buttons are fixed at build time, and the surface is rebuilt on every show() and every
+  // renderPreview(), so wiring from the row builder instead would stack a fresh listener — each
+  // capturing that generation of the dialog — on the caller's button per presentation (#590).
+  // The consumer's own listener was registered before the button reached the builder, so it still
+  // runs first and this trailing one closes with the role's cause (§9).
+  private void wireDismiss(final ElwhaButton button, final DismissCause cause) {
+    if (button == null) {
+      return;
+    }
+    // The dialog's exit motion is the press feedback; a live press ripple would freeze mid-stroke
+    // on the exit-fade snapshot (#288), so suppress it on every dismiss action button.
+    button.setRippleEnabled(false);
+    button.addActionListener(e -> dismiss(cause));
   }
 
   /**
@@ -303,24 +322,17 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
     final JPanel row = new JPanel(new FlowLayout(FlowLayout.TRAILING, SpaceScale.SM.px(), 0));
     row.setOpaque(false);
     row.setBorder(BorderFactory.createEmptyBorder(SpaceScale.XL.px(), 0, 0, 0));
-    addAction(row, cancelAction, DismissCause.CANCEL);
-    addAction(row, alternateAction, DismissCause.ALTERNATE);
-    addAction(row, confirmAction, DismissCause.CONFIRM);
+    addAction(row, cancelAction);
+    addAction(row, alternateAction);
+    addAction(row, confirmAction);
     return row;
   }
 
-  // Adds one action button to the row with the dialog's close-after-fire listener. The consumer's
-  // own listener was registered before the button reached the builder, so it runs first; this
-  // trailing listener then closes the dialog with the role's cause (§9).
-  private void addAction(final JPanel row, final ElwhaButton button, final DismissCause cause) {
-    if (button == null) {
-      return;
+  // Adds one action button to the row. Its dismiss listener was wired once at construction.
+  private void addAction(final JPanel row, final ElwhaButton button) {
+    if (button != null) {
+      row.add(button);
     }
-    // The dialog's exit motion is the press feedback; a live press ripple would freeze mid-stroke
-    // on the exit-fade snapshot (#288), so suppress it on every dismiss action button.
-    button.setRippleEnabled(false);
-    button.addActionListener(e -> dismiss(cause));
-    row.add(button);
   }
 
   // The width (inside the shadow reserve + 24px padding) the dialog's body will actually get,

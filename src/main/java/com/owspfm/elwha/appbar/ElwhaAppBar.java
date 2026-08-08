@@ -506,7 +506,13 @@ public class ElwhaAppBar extends JComponent implements Accessible {
     scrollSource = source;
     scrollBinding.setSource(source);
     if (source != null) {
-      scrollBinding.attach();
+      // Only a displayed bar attaches: removeNotify is the one detach path, and it does not fire
+      // again for a bar that has already left the hierarchy. Attaching unconditionally therefore
+      // stranded a subscription on the scroll bar's model with nothing left to release it
+      // (ScrollSourceBinding's own contract, #631). addNotify arms it when the bar comes back.
+      if (isDisplayable()) {
+        scrollBinding.attach();
+      }
       applyScrollState(scrollBinding.value());
     } else {
       updateLift(false);
@@ -642,9 +648,21 @@ public class ElwhaAppBar extends JComponent implements Accessible {
     repaint();
   }
 
+  /**
+   * Arms the scroll binding and re-syncs the lift animator to the flag it left behind.
+   *
+   * <p>{@code liftAnimator.stop()} resets its progress to 0 but {@code lifted} survives the
+   * teardown, and {@link #updateLift(boolean)} early-returns when the flag already matches — so
+   * without the resync a bar that left the hierarchy lifted came back reporting {@code isLifted()
+   * == true} while painting {@code SURFACE}.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
   @Override
   public void addNotify() {
     super.addNotify();
+    liftAnimator.snapTo(lifted ? 1f : 0f);
     if (scrollSource != null) {
       scrollBinding.attach();
       applyScrollState(scrollBinding.value());

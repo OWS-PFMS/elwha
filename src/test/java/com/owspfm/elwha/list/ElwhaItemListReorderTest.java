@@ -6,6 +6,7 @@ import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Input;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -731,6 +732,77 @@ class ElwhaItemListReorderTest {
     assertThat(list.getComponentFor("c"))
         .as("and the new item is rendered immediately rather than waiting on a tween")
         .isNotNull();
+  }
+
+  // ------------------------------------------------------------- teardown
+
+  /** Presses on an item and drags past the threshold, leaving an active drag in flight. */
+  private JComponent beginDragOn(final String item) {
+    final JComponent view = list.getComponentFor(item);
+    Input.press(view, 4, 4);
+    Input.drag(view, 4, 4 + 3 * ElwhaItemList.DRAG_THRESHOLD);
+    return view;
+  }
+
+  @Test
+  void leavingTheHierarchyMidDragAbortsTheDrag() {
+    slabListOf("a", "b", "c").setMovementMode(MovementMode.MOVABLE);
+    layout();
+    beginDragOn("a");
+    assertThat(list.isDragInFlight()).as("the drag is what the teardown has to clean up").isTrue();
+
+    list.removeNotify();
+
+    assertThat(list.isDragInFlight())
+        .as("#588 — a removed list never sees the release, so removeNotify has to end the drag")
+        .isFalse();
+    assertThat(model.getItems())
+        .as("a teardown is not a drop, so the interrupted move is not committed")
+        .containsExactly("a", "b", "c");
+  }
+
+  @Test
+  void aReAddedListCanStartAFreshDrag() {
+    slabListOf("a", "b", "c").setMovementMode(MovementMode.MOVABLE);
+    layout();
+    beginDragOn("a");
+
+    list.removeNotify();
+    list.addNotify();
+    beginDragOn("b");
+
+    assertThat(list.isDragInFlight())
+        .as("the teardown must leave the list armed, not dead — Showcase swaps re-add constantly")
+        .isTrue();
+  }
+
+  @Test
+  void leavingTheHierarchyStopsEveryAnimationTimer() {
+    // The three timers this asserts on all no-op under the pinned reduced motion, so this is the
+    // one case that has to run with motion live. Nothing here samples a tween — the test body and
+    // every timer share the EDT, so no tick can interleave with the assertions.
+    MorphAnimator.setReducedMotion(false);
+    try {
+      slabListOf("a", "b", "c")
+          .setMovementMode(MovementMode.MOVABLE)
+          .setReorderAffordance(ReorderAffordance.BOTH)
+          .setAnimateChanges(true);
+      layout();
+      model.add("d");
+      layout();
+      beginDragOn("a");
+      assertThat(list.hasRunningAnimationTimers())
+          .as("the drag reflow and the content fade are both ticking")
+          .isTrue();
+
+      list.removeNotify();
+
+      assertThat(list.hasRunningAnimationTimers())
+          .as("#588 — a 16ms timer that outlives its list pins the whole model graph")
+          .isFalse();
+    } finally {
+      MorphAnimator.setReducedMotion(true);
+    }
   }
 
   /** A model that supports reads and moves but refuses removal. */
