@@ -20,48 +20,9 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Install X server utilities (xset — not on all runner images)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends x11-xserver-utils xkb-data x11-xkb-utils xvfb
-
       - name: Build with Maven
-        # xvfb-run hosts the gui-tagged test tier: on Linux the JDK 21 X11 font natives need a
-        # real display (Cacio segfaults there — see docs/research/elwha-test-suite-research.md §5),
-        # so the linux-gui-native Maven profile selects the native toolkit and Xvfb provides the
-        # display. Preinstalled on ubuntu runner images. Headless Tier A is unaffected.
-        run: |
-          xvfb-run -a -s "-screen 0 1920x1080x24 -ardelay 3600000 -arinterval 3600000" bash -c '
-            ok=0
-            for i in $(seq 1 15); do
-              if xset r off; then ok=1; break; fi
-              sleep 1
-            done
-            if [ "$ok" != 1 ]; then
-              echo "FATAL - xset r off never succeeded (missing binary or server not ready); failing fast instead of flaking"
-              exit 1
-            fi
-            echo "--- xset q keyboard state (informational - Xvfb query does not reflect the toggle) ---"
-            xset q | sed -n "/Keyboard Control/,+3p"
-            exec mvn -B clean package --file pom.xml
-          '
-
-      - name: Upload test reports and crash dumps
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-failure-diagnostics
-          path: |
-            target/surefire-reports/**
-            hs_err_pid*.log
-            core*
-          retention-days: 7
-          if-no-files-found: ignore
-
-      - name: Upload build artifacts
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: elwha-jars
-          path: |
-            target/*.jar
-            !target/original-*.jar
-          retention-days: 7
+        # The suite runs in the dedicated Test workflow (test.yml), which is the required
+        # test check. Running it here too doubled the gui-tier flake exposure and CI cost
+        # for zero extra signal, so this workflow gates what is uniquely its own: compile,
+        # jar, sources jar, and javadoc-jar assembly under doclint. No tests, no display.
+        run: mvn -B clean package -DskipTests --file pom.xml
