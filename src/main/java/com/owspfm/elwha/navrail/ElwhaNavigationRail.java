@@ -294,6 +294,9 @@ public final class ElwhaNavigationRail extends JComponent {
     this.variant = Objects.requireNonNull(variant, "variant");
     setLayout(null);
     setOpaque(false);
+    // Conventions §12 — the rail routes traversal but operates no keyboard itself; the arrow-key
+    // bindings live on each destination.
+    setFocusable(false);
     setFocusTraversalPolicyProvider(true);
     setFocusTraversalPolicy(new RailFocusTraversalPolicy());
     variantMorph.snapTo(variant == Variant.EXPANDED ? 1f : 0f);

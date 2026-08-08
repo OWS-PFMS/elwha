@@ -130,6 +130,7 @@ public class ElwhaSelectField<T> extends JComponent {
 
     setLayout(new BorderLayout());
     setOpaque(false);
+    setFocusable(false);
     add(field, BorderLayout.CENTER);
 
     arrow.addActionListener(e -> toggle());
@@ -1011,6 +1012,33 @@ public class ElwhaSelectField<T> extends JComponent {
       return super.getPreferredSize();
     }
     return field.getPreferredSize();
+  }
+
+  /**
+   * Routes a focus request to the embedded field, which routes it on to its editor. The select
+   * field is not itself a tab stop (conventions §12); forwarding is what keeps {@code
+   * select.requestFocusInWindow()} from being the silent no-op §9 rules out.
+   *
+   * @return whether the editor is likely to receive focus, per {@link
+   *     java.awt.Component#requestFocusInWindow()}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public boolean requestFocusInWindow() {
+    return field.requestFocusInWindow();
+  }
+
+  /**
+   * Routes a focus request to the embedded field — the {@link #requestFocusInWindow()} rationale
+   * applies unchanged.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void requestFocus() {
+    field.requestFocus();
   }
 
   private void installFieldMouse() {

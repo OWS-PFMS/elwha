@@ -223,6 +223,27 @@ public Dimension getPreferredSize() {
 
 **Apply when:** overriding any sizing hook on a top-level component. Add the escape to *every* hook you override, not just preferred — an explicit minimum is as much an instruction as an explicit preferred — and add the component to `SizingHookEscapeTest`'s parameterized sweep, which tests the doctrine rather than any one geometry.
 
+## 12. The focusable flag states whether the component itself operates the keyboard — and every component states it
+
+`setFocusable` is declared explicitly on every component, `true` or `false`, and it means one thing: *does this component, and not a child of it, respond to keystrokes.* A component that binds keys says `true`; painted chrome and wrappers that delegate to an embedded focusable say `false`. Ruled in [#688](https://github.com/OWS-PFMS/elwha/issues/688), which found `ElwhaSurface` and the `ElwhaTextField` / `ElwhaSelectField` / `ElwhaColorPicker` / `ElwhaSideSheet` decorators declaring nothing at all.
+
+**The flag bites in one direction, which is why silence is not good enough.** `LayoutFocusTraversalPolicy.accept` takes a component into the Tab order if it has a non-empty `WHEN_FOCUSED` `InputMap` **or**, failing that, if `Component.isFocusTraversableOverridden()` — i.e. if anyone ever called `setFocusable`. Measured on all five plus controls:
+
+| | never called | `setFocusable(true)` | `setFocusable(false)` |
+|---|---|---|---|
+| No `WHEN_FOCUSED` bindings (the five, `JLabel`, `JPanel`) | skipped | **tab stop** | skipped |
+| Bindings present (`JButton`) | tab stop | tab stop | skipped |
+
+So the default was already correct for the five — none of them was a live stray tab stop — but `setFocusable(true)` on a component that binds no keys **bypasses the binding test and manufactures an inert stop**. That is the same defect [#578](https://github.com/OWS-PFMS/elwha/issues/578) fixed inside `firstFocusable`, arriving through the ordinary Tab path instead. Declaring `false` is therefore not decoration: it converts a correct-by-accident default into a stated contract that a later edit cannot silently flip, and that `FocusStopDoctrineTest` pins.
+
+**A wrapper that declines the stop must forward the focus request.** `ElwhaTextField` and `ElwhaSelectField` override `requestFocusInWindow()` / `requestFocus()` onto the embedded editor. Without that, `field.requestFocusInWindow()` returns `false` and nothing happens — the silent no-op §9 rules out, in the one place a consumer is most likely to reach for. A wrapper with no single obvious inner target (`ElwhaColorPicker`, `ElwhaSideSheet`, `ElwhaSurface`) forwards nothing; there is no honest answer to forward to, and the consumer focuses the child they actually mean.
+
+**Dynamic is fine when the bindings are dynamic.** `ElwhaCard` calls `setFocusable(actionable)` because its `WHEN_FOCUSED` bindings only exist while it is actionable. The flag tracking the bindings *is* the rule, not an exception to it.
+
+**Container focusability does not cascade**, so declaring `false` on a host never costs its children their stops — pinned since `ElwhaAppBarAccessibilityTest`.
+
+**Apply when:** adding any component. Declare the flag in the constructor next to `setOpaque`, match it to whether you install `WHEN_FOCUSED` bindings, add a `requestFocus*` forward if you are a decorator over an embedded focusable, and add the component to `FocusStopDoctrineTest`'s parameterized sweep.
+
 ---
 
 ## Cross-reference
