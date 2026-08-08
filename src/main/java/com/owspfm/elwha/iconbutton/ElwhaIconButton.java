@@ -25,7 +25,6 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -854,17 +853,6 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
    */
   public ActionListener[] getActionListeners() {
     return actionListeners.toArray(new ActionListener[0]);
-  }
-
-  /**
-   * Convenience: scopes a {@link PropertyChangeListener} to {@link #PROPERTY_SELECTED}.
-   *
-   * @param listener the listener
-   * @version v0.1.0
-   * @since v0.1.0
-   */
-  public void addSelectionChangeListener(final PropertyChangeListener listener) {
-    addPropertyChangeListener(PROPERTY_SELECTED, listener);
   }
 
   // ------------------------------------------------------------ foreground

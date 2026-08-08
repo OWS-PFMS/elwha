@@ -297,7 +297,7 @@ class ElwhaChipInteractionTest {
   void selectionFiresAPropertyChangeWithBothValues() {
     final ElwhaChip chip = sized(ChipInteractionMode.SELECTABLE);
     final List<PropertyChangeEvent> events = new ArrayList<>();
-    chip.addSelectionChangeListener(events::add);
+    chip.addPropertyChangeListener(ElwhaChip.PROPERTY_SELECTED, events::add);
 
     chip.setSelected(true);
 
@@ -311,7 +311,7 @@ class ElwhaChipInteractionTest {
     final ElwhaChip chip = sized(ChipInteractionMode.SELECTABLE);
     chip.setSelected(true);
     final int[] events = {0};
-    chip.addSelectionChangeListener(e -> events[0]++);
+    chip.addPropertyChangeListener(ElwhaChip.PROPERTY_SELECTED, e -> events[0]++);
 
     chip.setSelected(true);
 
@@ -322,7 +322,7 @@ class ElwhaChipInteractionTest {
   void aClickOnASelectableChipAnnouncesTheToggle() {
     final ElwhaChip chip = sized(ChipInteractionMode.SELECTABLE);
     final int[] events = {0};
-    chip.addSelectionChangeListener(e -> events[0]++);
+    chip.addPropertyChangeListener(ElwhaChip.PROPERTY_SELECTED, e -> events[0]++);
 
     Input.click(chip, CENTER_X, CENTER_Y);
 

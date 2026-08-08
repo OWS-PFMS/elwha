@@ -161,7 +161,7 @@ class ElwhaIconButtonInteractionTest {
     final ElwhaIconButton button = sized().setInteractionMode(IconButtonInteractionMode.SELECTABLE);
     button.setEnabled(false);
     final int[] changes = {0};
-    button.addSelectionChangeListener(e -> changes[0]++);
+    button.addPropertyChangeListener(ElwhaIconButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     Input.click(button, SIDE / 2, SIDE / 2);
     Input.pressBoundKey(button, "pressed SPACE", ACTIVATE);
@@ -178,7 +178,8 @@ class ElwhaIconButtonInteractionTest {
     final int[] actions = {0};
     final List<Object> selections = new ArrayList<>();
     button.addActionListener(e -> actions[0]++);
-    button.addSelectionChangeListener(e -> selections.add(e.getNewValue()));
+    button.addPropertyChangeListener(
+        ElwhaIconButton.PROPERTY_SELECTED, e -> selections.add(e.getNewValue()));
 
     Input.click(button, SIDE / 2, SIDE / 2);
     Input.click(button, SIDE / 2, SIDE / 2);
@@ -205,7 +206,7 @@ class ElwhaIconButtonInteractionTest {
     final int[] actions = {0};
     final int[] changes = {0};
     button.addActionListener(e -> actions[0]++);
-    button.addSelectionChangeListener(e -> changes[0]++);
+    button.addPropertyChangeListener(ElwhaIconButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     button.setSelected(true);
     button.setSelected(true);
@@ -286,7 +287,7 @@ class ElwhaIconButtonInteractionTest {
   void aPushButtonCannotBeLatchedIntoItsSelectedGlyph() {
     final ElwhaIconButton button = withIconPair();
     final int[] changes = {0};
-    button.addSelectionChangeListener(e -> changes[0]++);
+    button.addPropertyChangeListener(ElwhaIconButton.PROPERTY_SELECTED, e -> changes[0]++);
 
     button.setSelected(true);
 

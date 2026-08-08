@@ -303,7 +303,8 @@ public final class IconButtonPlaygroundPanels {
 
     final ElwhaCheckbox selectedBox = new ElwhaCheckbox("Selected");
     selectedBox.addActionListener(e -> target.setSelected(selectedBox.isChecked()));
-    target.addSelectionChangeListener(
+    target.addPropertyChangeListener(
+        ElwhaIconButton.PROPERTY_SELECTED,
         evt -> selectedBox.setChecked(Boolean.TRUE.equals(evt.getNewValue())));
     addControlRow(controls, gbc, row++, "", selectedBox);
 

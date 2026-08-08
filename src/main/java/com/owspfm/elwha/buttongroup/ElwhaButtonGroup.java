@@ -1076,7 +1076,7 @@ public final class ElwhaButtonGroup extends JComponent {
 
     @Override
     void addSelectionListener(final PropertyChangeListener listener) {
-      button.addSelectionChangeListener(listener);
+      button.addPropertyChangeListener(ElwhaButton.PROPERTY_SELECTED, listener);
     }
 
     @Override
@@ -1185,7 +1185,7 @@ public final class ElwhaButtonGroup extends JComponent {
 
     @Override
     void addSelectionListener(final PropertyChangeListener listener) {
-      button.addSelectionChangeListener(listener);
+      button.addPropertyChangeListener(ElwhaIconButton.PROPERTY_SELECTED, listener);
     }
 
     @Override

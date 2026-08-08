@@ -100,7 +100,7 @@ public final class ElwhaButtonSelectionGroup {
       return this;
     }
     buttons.add(button);
-    button.addSelectionChangeListener(memberListener);
+    button.addPropertyChangeListener(ElwhaButton.PROPERTY_SELECTED, memberListener);
     if (button.isSelected()) {
       adjusting = true;
       try {
