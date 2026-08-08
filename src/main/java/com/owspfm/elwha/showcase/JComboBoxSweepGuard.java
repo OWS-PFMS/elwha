@@ -18,14 +18,7 @@ import java.util.Map;
 public final class JComboBoxSweepGuard {
 
   // Justified survivors: file simple name -> why that file may keep raw sites.
-  static final Map<String, String> ALLOWLIST =
-      Map.of(
-          "ThemePlayground.java",
-              "deferred — the in-flight ShapeScale PR #706 edits this file; sweeping it here would"
-                  + " collide",
-          "FoundationsPanels.java",
-              "deferred — the in-flight ShapeScale PR #706 edits this file; sweeping it here would"
-                  + " collide");
+  static final Map<String, String> ALLOWLIST = Map.of();
 
   private JComboBoxSweepGuard() {}
 

@@ -1,17 +1,29 @@
 package com.owspfm.elwha.theme.playground;
 
+import com.owspfm.elwha.button.ButtonInteractionMode;
+import com.owspfm.elwha.button.ButtonSize;
 import com.owspfm.elwha.button.ButtonVariant;
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.button.playground.ButtonPlaygroundPanels;
+import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.buttongroup.ResizeMode;
+import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.card.playground.CursorReferencePanel;
 import com.owspfm.elwha.card.playground.ElwhaCardListShowcase;
 import com.owspfm.elwha.card.playground.GalleryPanel;
 import com.owspfm.elwha.card.playground.LiveConfigPanel;
 import com.owspfm.elwha.card.playground.SnippetPanel;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.chip.playground.ChipPlaygroundPanels;
+import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.playground.IconButtonPlaygroundPanels;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.radio.ElwhaRadioButton;
+import com.owspfm.elwha.radio.ElwhaRadioGroup;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.surface.playground.SurfacePlaygroundPanels;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Config;
 import com.owspfm.elwha.theme.ElwhaTheme;
@@ -31,25 +43,19 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
-import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.JToggleButton;
 import javax.swing.JTree;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
@@ -64,9 +70,10 @@ import javax.swing.tree.DefaultMutableTreeNode;
  *   <li><strong>Color Roles</strong> — the 49 role swatches resolving live from {@code Elwha.*}
  *       UIManager keys.
  *   <li><strong>Type Scale</strong> — the 12 type roles.
- *   <li><strong>Swing Comps</strong> — raw Swing widgets ({@code JButton}, {@code JTextField}, …)
- *       inheriting the theme through the FlatLaf-native key mapping. Chip-specific widgets have
- *       moved to their own top-level {@code Chip} tab.
+ *   <li><strong>Swing Comps</strong> — the widgets Elwha has no primitive for ({@code JTextArea},
+ *       {@code JSpinner}, {@code JList}, {@code JTree}, …) inheriting the theme through the
+ *       FlatLaf-native key mapping, alongside the Elwha controls that replaced their raw
+ *       counterparts. Chip-specific widgets have moved to their own top-level {@code Chip} tab.
  *   <li><strong>Chip</strong> — the canonical chip playground panels (variant gallery + live list),
  *       reused from {@link ChipPlaygroundPanels} so the standalone {@code ElwhaChipPlayground} and
  *       this tab stay in lockstep.
@@ -145,16 +152,26 @@ public final class ThemePlayground {
     JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
     bar.add(new JLabel("Mode:"));
 
-    ButtonGroup group = new ButtonGroup();
-    for (Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK, Mode.SYSTEM}) {
-      JToggleButton button = new JToggleButton(mode.name());
-      button.addActionListener(event -> switchMode(mode));
-      if (ElwhaTheme.current().mode() == mode) {
-        button.setSelected(true);
-      }
-      group.add(button);
-      bar.add(button);
+    final Mode[] modes = {Mode.LIGHT, Mode.DARK, Mode.SYSTEM};
+    final ElwhaButtonGroup group =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL);
+    for (Mode mode : modes) {
+      group.add(new ElwhaButton(mode.name()));
     }
+    Mode current = ElwhaTheme.current().mode();
+    for (int i = 0; i < modes.length; i++) {
+      if (modes[i] == current) {
+        group.setSelectedIndex(i);
+      }
+    }
+    // Seeded before the listener is attached so the initial selection does not re-install the
+    // theme on startup.
+    group.addSelectionListener(g -> switchMode(modes[g.getSelectedIndex()]));
+    bar.add(group);
 
     statusLabel = new JLabel();
     updateStatus();
@@ -237,7 +254,11 @@ public final class ThemePlayground {
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
     panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
-    panel.add(sectionLabel("Raw Swing — inherits the theme via the FlatLaf-native key mapping"));
+    panel.add(
+        sectionLabel(
+            "Native Swing — the widgets Elwha has no primitive for, inheriting the theme via"
+                + " the FlatLaf-native key mapping, beside the Elwha controls that replaced the"
+                + " rest"));
     panel.add(Box.createVerticalStrut(8));
     panel.add(buildRawSwingRow());
     panel.add(Box.createVerticalStrut(24));
@@ -340,8 +361,10 @@ public final class ThemePlayground {
     // Becomes the frame's default button in buildAndShow() — the genuine FlatLaf mechanism for
     // the emphasis-button look, rather than a client property.
     defaultButton = new JButton("Default");
-    JToggleButton toggle = new JToggleButton("Toggle");
-    toggle.setSelected(true);
+    ElwhaButton toggle =
+        ElwhaButton.filledTonalButton("Toggle")
+            .setInteractionMode(ButtonInteractionMode.SELECTABLE)
+            .setSelected(true);
     row.add(normal);
     row.add(defaultButton);
     row.add(toggle);
@@ -364,8 +387,11 @@ public final class ThemePlayground {
         new ElwhaButton("Add", MaterialIcons.add()).setVariant(ButtonVariant.FILLED_TONAL);
     iconText.setToolTipText("Icon + text button");
 
-    JToggleButton iconToggle = new JToggleButton(MaterialIcons.visibility());
-    iconToggle.setSelected(true);
+    ElwhaButton iconToggle =
+        new ElwhaButton(null, MaterialIcons.visibility())
+            .setVariant(ButtonVariant.FILLED_TONAL)
+            .setInteractionMode(ButtonInteractionMode.SELECTABLE)
+            .setSelected(true);
     iconToggle.setToolTipText("Icon toggle button");
 
     // Borderless click-toggle: a plain JButton whose icon swaps between an M3 fill-0 and
@@ -385,22 +411,21 @@ public final class ThemePlayground {
           pinToggle.setIcon(!pinned ? MaterialIcons.pushPinFilled() : MaterialIcons.pushPin());
         });
 
-    // Segmented icon-toggle group — the OWS app uses this pattern for view-mode pickers.
-    JToggleButton viewGrid = new JToggleButton(MaterialIcons.gridView());
-    JToggleButton viewTable = new JToggleButton(MaterialIcons.table());
-    JToggleButton viewBackground = new JToggleButton(MaterialIcons.backgroundGridSmall());
+    // Segmented icon-toggle group — the OWS app uses this pattern for view-mode pickers, and
+    // ElwhaButtonGroup's connected treatment is the primitive for it: one segment always
+    // selected, no separate ButtonGroup + FlowLayout scaffolding.
+    ElwhaIconButton viewGrid = new ElwhaIconButton(MaterialIcons.gridView());
+    ElwhaIconButton viewTable = new ElwhaIconButton(MaterialIcons.table());
+    ElwhaIconButton viewBackground = new ElwhaIconButton(MaterialIcons.backgroundGridSmall());
     viewGrid.setToolTipText("Grid view");
     viewTable.setToolTipText("Table view");
     viewBackground.setToolTipText("Background view");
-    ButtonGroup viewGroup = new ButtonGroup();
-    viewGroup.add(viewGrid);
-    viewGroup.add(viewTable);
-    viewGroup.add(viewBackground);
-    viewGrid.setSelected(true);
-    JPanel segmented = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    ElwhaButtonGroup segmented =
+        ElwhaButtonGroup.connected().setSelectionMode(SelectionMode.REQUIRED);
     segmented.add(viewGrid);
     segmented.add(viewTable);
     segmented.add(viewBackground);
+    segmented.setSelectedIndex(0);
 
     row.add(bordered);
     row.add(borderless);
@@ -437,11 +462,12 @@ public final class ThemePlayground {
   }
 
   private JComponent buildTextRow() {
-    // Intentionally raw Swing (not ElwhaTextField): this row demonstrates how the token foundation
-    // themes native JTextField / JTextArea — swapping in the Elwha primitive would defeat its
-    // point.
+    // The raw JTextArea is the one that stays: it is what proves the token foundation themes a
+    // native text widget, and Elwha has no text-area primitive to replace it with. The single-line
+    // field next to it has one, so it dogfoods (#718 finishing #424).
     JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-    JTextField field = new JTextField("Text field", 14);
+    ElwhaTextField field = ElwhaTextField.outlined("Text field");
+    field.setText("Text field");
     JTextArea area = new JTextArea("Multi-line\ntext area\nfor longer input", 3, 18);
     area.setLineWrap(true);
     area.setWrapStyleWord(true);
@@ -455,10 +481,11 @@ public final class ThemePlayground {
   private JComponent buildSelectionRow() {
     JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
 
-    JCheckBox check = new JCheckBox("Checkbox", true);
-    JRadioButton radioA = new JRadioButton("Radio A", true);
-    JRadioButton radioB = new JRadioButton("Radio B");
-    ButtonGroup radios = new ButtonGroup();
+    ElwhaCheckbox check = new ElwhaCheckbox("Checkbox");
+    check.setChecked(true);
+    ElwhaRadioButton radioA = new ElwhaRadioButton("Radio A", true);
+    ElwhaRadioButton radioB = new ElwhaRadioButton("Radio B");
+    ElwhaRadioGroup radios = new ElwhaRadioGroup();
     radios.add(radioA);
     radios.add(radioB);
     JPanel selectionStack = new JPanel();
@@ -467,7 +494,10 @@ public final class ThemePlayground {
     selectionStack.add(radioA);
     selectionStack.add(radioB);
 
-    JComboBox<String> combo = new JComboBox<>(new String[] {"One", "Two", "Three"});
+    ElwhaSelectField<String> combo = ElwhaSelectField.outlined("Choice");
+    combo.setOptions(List.of("One", "Two", "Three"));
+    // JComboBox showed index 0 implicitly; ElwhaSelectField starts empty, so parity is explicit.
+    combo.setSelectedValue("One");
     JSpinner spinner = new JSpinner(new SpinnerNumberModel(50, 0, 100, 1));
 
     row.add(selectionStack);

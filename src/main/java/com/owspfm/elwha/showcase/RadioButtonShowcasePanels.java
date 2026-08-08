@@ -39,6 +39,9 @@ final class RadioButtonShowcasePanels {
 
   private static final String[] MEMBER_NAMES = {"First option", "Second option", "Third option"};
 
+  /** The one option that names no member — the picker's "clear the selection" entry. */
+  private static final String NONE = "(none)";
+
   private RadioButtonShowcasePanels() {}
 
   /** Builds the interactive Workbench (live radio-group stage + control rail + generated code). */
@@ -54,7 +57,7 @@ final class RadioButtonShowcasePanels {
     group.setSelected(radios[0]);
 
     final List<String> selectionOptions =
-        List.of("First option", "Second option", "Third option", "(none)");
+        List.of("First option", "Second option", "Third option", NONE);
     final ElwhaSelectField<String> selectedBox = ElwhaSelectField.outlined("Selected");
     selectedBox.setOptions(selectionOptions);
     selectedBox.setSelectedValue(selectionOptions.get(0));
@@ -89,14 +92,10 @@ final class RadioButtonShowcasePanels {
           final ElwhaRadioButton current = group.getSelected();
           readout.setText(
               "group.getSelected() → " + (current == null ? "null" : current.getLabel()));
-          // Reflect user-driven changes (click / arrows on the stage) back into the control.
-          int index = selectionOptions.size() - 1;
-          for (int i = 0; i < radios.length; i++) {
-            if (current == radios[i]) {
-              index = i;
-            }
-          }
-          selectedBox.setSelectedValue(selectionOptions.get(index));
+          // Reflect user-driven changes (click / arrows on the stage) back into the control. The
+          // member's own label IS the option value, so the round trip needs no position
+          // (conventions §13).
+          selectedBox.setSelectedValue(current == null ? NONE : current.getLabel());
         });
 
     // The stage is built ONCE; apply mutates state in place. Rebuilding per event re-parents the
@@ -106,10 +105,10 @@ final class RadioButtonShowcasePanels {
 
     final Runnable apply =
         () -> {
-          final int selection = selectionOptions.indexOf(selectedBox.getSelectedValue());
-          if (selection >= 0 && selection < radios.length) {
-            if (group.getSelected() != radios[selection]) {
-              group.setSelected(radios[selection]);
+          final ElwhaRadioButton chosen = memberLabelled(radios, selectedBox.getSelectedValue());
+          if (chosen != null) {
+            if (group.getSelected() != chosen) {
+              group.setSelected(chosen);
             }
           } else if (group.getSelected() != null) {
             group.clearSelection();
@@ -127,7 +126,7 @@ final class RadioButtonShowcasePanels {
           MorphAnimator.setReducedMotion(reducedBox.isChecked());
           workbench.setCode(
               renderCode(
-                  selection,
+                  chosen,
                   new boolean[] {
                     enabledBoxes[0].isChecked(),
                     enabledBoxes[1].isChecked(),
@@ -264,7 +263,7 @@ final class RadioButtonShowcasePanels {
   }
 
   private static String renderCode(
-      final int selection, final boolean[] enabled, final boolean rtl) {
+      final ElwhaRadioButton selected, final boolean[] enabled, final boolean rtl) {
     final StringBuilder code = new StringBuilder(320);
     code.append("ElwhaRadioGroup group = new ElwhaRadioGroup();\n");
     final String[] vars = {"first", "second", "third"};
@@ -283,10 +282,25 @@ final class RadioButtonShowcasePanels {
       }
       code.append("group.add(").append(vars[i]).append(");\n");
     }
-    if (selection >= 0 && selection < vars.length) {
-      code.append("group.setSelected(").append(vars[selection]).append(");\n");
+    // The one place a position is still the right answer: it names the local variable the
+    // snippet declares, which is a property of the generated text and not of the group.
+    for (int i = 0; selected != null && i < vars.length; i++) {
+      if (MEMBER_NAMES[i].equals(selected.getLabel())) {
+        code.append("group.setSelected(").append(vars[i]).append(");\n");
+      }
     }
     code.append("group.addSelectionChangeListener(e -> apply(group.getSelected()));");
     return code.toString();
+  }
+
+  /** The member carrying {@code label}, or {@code null} for the {@link #NONE} entry. */
+  private static ElwhaRadioButton memberLabelled(
+      final ElwhaRadioButton[] radios, final String label) {
+    for (final ElwhaRadioButton radio : radios) {
+      if (radio.getLabel().equals(label)) {
+        return radio;
+      }
+    }
+    return null;
   }
 }

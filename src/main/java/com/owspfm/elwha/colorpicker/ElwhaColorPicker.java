@@ -113,6 +113,7 @@ public class ElwhaColorPicker extends JComponent {
     this.paneHost = new JPanel(paneCards);
     paneHost.setOpaque(false);
     setLayout(new BorderLayout());
+    setFocusable(false);
     add(header, BorderLayout.NORTH);
     final JPanel body = new JPanel(new BorderLayout());
     body.setOpaque(false);

@@ -20,12 +20,6 @@ public final class JTextFieldSweepGuard {
   // Justified survivors: file simple name -> why that file may keep raw sites.
   static final Map<String, String> ALLOWLIST =
       Map.of(
-          "ThemePlayground.java",
-          "deferred — the in-flight ShapeScale PR #706 edits this file; sweeping it here would"
-              + " collide",
-          "FoundationsPanels.java",
-          "deferred — the in-flight ShapeScale PR #706 edits this file; sweeping it here would"
-              + " collide",
           "DialogAccessibilityDemo.java",
           "the focus trap's tab-order probe — an ElwhaTextField delegates focus to an embedded "
               + "editor, which is the very tab cycle under test",

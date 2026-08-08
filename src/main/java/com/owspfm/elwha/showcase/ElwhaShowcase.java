@@ -146,7 +146,6 @@ import javax.swing.event.DocumentListener;
  */
 public final class ElwhaShowcase {
 
-  private static final int RAIL_COLLAPSED_WIDTH = 96;
   // The catalog, the card keys, and the routing entry points are package-private rather than
   // private so the Showcase suite (#544) can reach them: buildAndShow starts by constructing a
   // JFrame, which throws under headless, but everything it wires up afterwards is testable
@@ -303,12 +302,11 @@ public final class ElwhaShowcase {
     // The rail spans the full window height on the layered pane, so the header bar lives INSIDE
     // the content area (above the CardLayout content) rather than across the top of the frame.
     // Without this, the header would extend across the rail's leading column and the rail would
-    // read as a sidebar pocket rather than a real-app shell. Content pane gets a 96-dp leading
-    // inset matching the Collapsed rail width; the Expanded morph overlays into the inset area
-    // without reflowing content. Mirrors the FAB Phase 5 layered-pane recipe (#206) at a
-    // structural level.
+    // read as a sidebar pocket rather than a real-app shell. The content pane gets a leading inset
+    // the width of the Collapsed rail; the Expanded morph overlays into the inset area without
+    // reflowing content. Mirrors the FAB Phase 5 layered-pane recipe (#206) at a structural level.
+    // The inset itself is applied below, once the rail exists to be asked for its width (#729).
     final JPanel contentWrapper = new JPanel(new BorderLayout());
-    contentWrapper.setBorder(BorderFactory.createEmptyBorder(0, RAIL_COLLAPSED_WIDTH, 0, 0));
     contentWrapper.add(buildHeaderBar(), BorderLayout.NORTH);
     contentWrapper.add(content, BorderLayout.CENTER);
 
@@ -322,7 +320,12 @@ public final class ElwhaShowcase {
     populateLandingCards();
     populateLeafCards();
 
-    mountRailOnLayeredPane(frame, buildShowcaseRail());
+    final ElwhaNavigationRail showcaseRail = buildShowcaseRail();
+    // Read the inset off the rail rather than keeping a private copy of 96 — getCollapsedWidth is
+    // variant-independent, which getPreferredSize().width is not (#729).
+    contentWrapper.setBorder(
+        BorderFactory.createEmptyBorder(0, showcaseRail.getCollapsedWidth(), 0, 0));
+    mountRailOnLayeredPane(frame, showcaseRail);
 
     floatingFabAnchor = buildFloatingFabAnchor(root);
     frame.setContentPane(floatingFabAnchor);
@@ -3454,13 +3457,14 @@ public final class ElwhaShowcase {
     }
     destinations.get(0).setSelected(true);
 
-    final List<String> targetLabels = new ArrayList<>();
-    for (final String[] entry : entries) {
-      targetLabels.add(entry[1]);
-    }
-    final ElwhaSelectField<String> targetBox = ElwhaSelectField.outlined("Target");
-    targetBox.setOptions(targetLabels);
-    targetBox.setSelectedValue(targetLabels.get(0));
+    // Typed on the destination rather than on its label: the picker's job is to name a
+    // destination, and a label-typed field would only be a handle to recover one by position
+    // (conventions §13).
+    final ElwhaSelectField<com.owspfm.elwha.navrail.ElwhaNavRailDestination> targetBox =
+        ElwhaSelectField.outlined("Target");
+    targetBox.setDisplayFunction(com.owspfm.elwha.navrail.ElwhaNavRailDestination::getLabel);
+    targetBox.setOptions(destinations);
+    targetBox.setSelectedValue(destinations.get(0));
     final JLabel badgeStatus = new JLabel(" ");
 
     // --- Badge facet (#318) ---
@@ -3470,7 +3474,7 @@ public final class ElwhaShowcase {
     // color axis is reachable here exactly as it is on the standalone Badge leaf. Which
     // destination wears it stays a host axis and stays in the main column; the badge is held so
     // retargeting moves the same badge rather than minting a new one.
-    final int[] targetIndex = {0};
+    final com.owspfm.elwha.navrail.ElwhaNavRailDestination[] target = {destinations.get(0)};
     final com.owspfm.elwha.badge.ElwhaBadge[] held = new com.owspfm.elwha.badge.ElwhaBadge[1];
     final BadgePlaygroundPanels.BadgeSlot badgeSlot =
         new BadgePlaygroundPanels.BadgeSlot() {
@@ -3482,25 +3486,26 @@ public final class ElwhaShowcase {
           @Override
           public void set(final com.owspfm.elwha.badge.ElwhaBadge badge) {
             held[0] = badge;
-            destinations.get(targetIndex[0]).setBadge(badge);
+            target[0].setBadge(badge);
           }
         };
     final ComponentWorkbench.Facet[] badgeFacet = new ComponentWorkbench.Facet[1];
     final Runnable refreshBadgeCode =
         () -> {
-          final com.owspfm.elwha.navrail.ElwhaNavRailDestination target =
-              destinations.get(targetIndex[0]);
-          badgeStatus.setText(target.getLabel());
+          badgeStatus.setText(target[0].getLabel());
           if (badgeFacet[0] != null) {
             badgeFacet[0].setCode(
-                renderBadgeSlotCode(badgeSlot, target.getLabel().toLowerCase(Locale.ROOT), ""));
+                renderBadgeSlotCode(badgeSlot, target[0].getLabel().toLowerCase(Locale.ROOT), ""));
           }
         };
     targetBox.addSelectionChangeListener(
         value -> {
-          destinations.get(targetIndex[0]).setBadge(null);
-          targetIndex[0] = Math.max(0, targetLabels.indexOf(targetBox.getSelectedValue()));
-          destinations.get(targetIndex[0]).setBadge(held[0]);
+          if (value == null) {
+            return;
+          }
+          target[0].setBadge(null);
+          target[0] = value;
+          target[0].setBadge(held[0]);
           refreshBadgeCode.run();
         });
 

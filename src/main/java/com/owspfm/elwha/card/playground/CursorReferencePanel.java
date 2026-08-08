@@ -104,14 +104,14 @@ public final class CursorReferencePanel extends JPanel {
         table,
         row++,
         "GRAB",
-        "Open hand — surface is draggable (Capitaine, CC BY-SA 4.0)",
+        "Open hand — surface is draggable",
         loadCustomCursor("grab"),
         loadCustomImage("grab"));
     addRowWithIcon(
         table,
         row++,
         "GRABBING",
-        "Closed fist — currently dragging (Capitaine, CC BY-SA 4.0)",
+        "Closed fist — currently dragging",
         loadCustomCursor("grabbing"),
         loadCustomImage("grabbing"));
 

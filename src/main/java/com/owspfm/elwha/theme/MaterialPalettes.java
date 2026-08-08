@@ -68,10 +68,11 @@ public final class MaterialPalettes {
 
   // One Theme per palette resource, shared by every accessor that reaches it. baseline.json lives
   // *inside* the primary tier, so loading it twice — once by path, once by directory sweep — gave
-  // two equal-but-distinct objects and Theme declares no value equality, which left
-  // primary().contains(baseline()) false and a palette picker unable to mark the installed
-  // baseline as selected (#671). Keying the cache on the resource path is what makes the two
-  // entry points agree, without making baseline() depend on the sweep finding it.
+  // two equal-but-distinct objects, which left primary().contains(baseline()) false and a palette
+  // picker unable to mark the installed baseline as selected (#671). Theme has since gained value
+  // equality (#698), so the cache is no longer what makes the two entry points agree — but the
+  // identity guarantee in the class javadoc is a published contract, and one parse per resource
+  // beats forty-nine Color comparisons per contains() check.
   private static final Map<String, Theme> BY_RESOURCE = new ConcurrentHashMap<>();
 
   private static volatile List<Theme> primary;

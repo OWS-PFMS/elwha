@@ -129,6 +129,9 @@ public final class ElwhaFabAnchor extends JLayeredPane {
   public ElwhaFabAnchor(final Component content, final ElwhaFab fab) {
     this.content = Objects.requireNonNull(content, "content");
     this.fab = Objects.requireNonNull(fab, "fab");
+    // Conventions §12 — a placement wrapper binds no keys; the FAB and the content keep their own
+    // stops.
+    setFocusable(false);
     add(content, JLayeredPane.DEFAULT_LAYER);
     add(fab, JLayeredPane.PALETTE_LAYER);
     addPropertyChangeListener("componentOrientation", orientationListener);

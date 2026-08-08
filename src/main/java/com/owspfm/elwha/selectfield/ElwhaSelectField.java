@@ -130,6 +130,7 @@ public class ElwhaSelectField<T> extends JComponent {
 
     setLayout(new BorderLayout());
     setOpaque(false);
+    setFocusable(false);
     add(field, BorderLayout.CENTER);
 
     arrow.addActionListener(e -> toggle());
@@ -896,6 +897,179 @@ public class ElwhaSelectField<T> extends JComponent {
   }
 
   /**
+   * Returns the leading icon.
+   *
+   * @return the leading icon, or {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public Icon getLeadingIcon() {
+    return field.getLeadingIcon();
+  }
+
+  /**
+   * Returns the chrome variant the embedded field carries.
+   *
+   * @return the variant
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public ElwhaTextField.Variant getVariant() {
+    return field.getVariant();
+  }
+
+  /**
+   * Sets the chrome variant (delegates to the embedded field). Until #727 this was reachable only
+   * through the constructor or the {@link #filled(String)} / {@link #outlined(String)} factories.
+   *
+   * @param variant the chrome variant
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setVariant(final ElwhaTextField.Variant variant) {
+    field.setVariant(variant);
+  }
+
+  /**
+   * Returns the prefix text shown before the selected value.
+   *
+   * @return the prefix text
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public String getPrefixText() {
+    return field.getPrefixText();
+  }
+
+  /**
+   * Sets the prefix text shown before the selected value — a unit or currency marker (delegates to
+   * the embedded field).
+   *
+   * @param prefix the prefix text
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setPrefixText(final String prefix) {
+    field.setPrefixText(prefix);
+  }
+
+  /**
+   * Returns the suffix text shown after the selected value.
+   *
+   * @return the suffix text
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public String getSuffixText() {
+    return field.getSuffixText();
+  }
+
+  /**
+   * Sets the suffix text shown after the selected value (delegates to the embedded field).
+   *
+   * @param suffix the suffix text
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setSuffixText(final String suffix) {
+    field.setSuffixText(suffix);
+  }
+
+  /**
+   * Whether the select is marked required.
+   *
+   * @return {@code true} if required
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public boolean isRequired() {
+    return field.isRequired();
+  }
+
+  /**
+   * Marks the select required, which appends the M3 asterisk to the label unless {@link
+   * #setNoAsterisk(boolean)} suppresses it (delegates to the embedded field).
+   *
+   * @param required {@code true} to mark required
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setRequired(final boolean required) {
+    field.setRequired(required);
+  }
+
+  /**
+   * Whether the required marker is suppressed.
+   *
+   * @return {@code true} if the asterisk is suppressed
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public boolean isNoAsterisk() {
+    return field.isNoAsterisk();
+  }
+
+  /**
+   * Suppresses the required asterisk — for a form that marks optional fields instead (delegates to
+   * the embedded field).
+   *
+   * @param noAsterisk {@code true} to suppress the marker
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setNoAsterisk(final boolean noAsterisk) {
+    field.setNoAsterisk(noAsterisk);
+  }
+
+  /**
+   * Returns when the supporting row is shown.
+   *
+   * @return the supporting-text visibility policy
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public ElwhaTextField.SupportingTextVisibility getSupportingTextVisibility() {
+    return field.getSupportingTextVisibility();
+  }
+
+  /**
+   * Sets when the supporting row is shown (delegates to the embedded field). Pairs with {@link
+   * #setSupportingText(String)}, which shipped without its visibility policy.
+   *
+   * @param visibility the visibility policy
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setSupportingTextVisibility(
+      final ElwhaTextField.SupportingTextVisibility visibility) {
+    field.setSupportingTextVisibility(visibility);
+  }
+
+  /**
+   * Returns the typed-input character cap.
+   *
+   * @return the maximum length, or a non-positive value when uncapped
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int getMaxLength() {
+    return field.getMaxLength();
+  }
+
+  /**
+   * Caps typed input (delegates to the embedded field). Only reachable in {@linkplain
+   * #setEditable(boolean) editable} mode — a plain select derives its text from the selection, so
+   * there is nothing for the cap to govern.
+   *
+   * @param maxLength the maximum length, or a non-positive value to uncap
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setMaxLength(final int maxLength) {
+    field.setMaxLength(maxLength);
+  }
+
+  /**
    * Returns the supporting text shown below the field.
    *
    * @return the supporting text
@@ -1011,6 +1185,33 @@ public class ElwhaSelectField<T> extends JComponent {
       return super.getPreferredSize();
     }
     return field.getPreferredSize();
+  }
+
+  /**
+   * Routes a focus request to the embedded field, which routes it on to its editor. The select
+   * field is not itself a tab stop (conventions §12); forwarding is what keeps {@code
+   * select.requestFocusInWindow()} from being the silent no-op §9 rules out.
+   *
+   * @return whether the editor is likely to receive focus, per {@link
+   *     java.awt.Component#requestFocusInWindow()}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public boolean requestFocusInWindow() {
+    return field.requestFocusInWindow();
+  }
+
+  /**
+   * Routes a focus request to the embedded field — the {@link #requestFocusInWindow()} rationale
+   * applies unchanged.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void requestFocus() {
+    field.requestFocus();
   }
 
   private void installFieldMouse() {

@@ -223,6 +223,53 @@ public Dimension getPreferredSize() {
 
 **Apply when:** overriding any sizing hook on a top-level component. Add the escape to *every* hook you override, not just preferred — an explicit minimum is as much an instruction as an explicit preferred — and add the component to `SizingHookEscapeTest`'s parameterized sweep, which tests the doctrine rather than any one geometry.
 
+## 12. The focusable flag states whether the component itself operates the keyboard — and every component states it
+
+`setFocusable` is declared explicitly on every component, `true` or `false`, and it means one thing: *does this component, and not a child of it, respond to keystrokes.* A component that binds keys says `true`; painted chrome and wrappers that delegate to an embedded focusable say `false`. Ruled in [#688](https://github.com/OWS-PFMS/elwha/issues/688), which found `ElwhaSurface` and the `ElwhaTextField` / `ElwhaSelectField` / `ElwhaColorPicker` / `ElwhaSideSheet` decorators declaring nothing at all.
+
+**The flag bites in one direction, which is why silence is not good enough.** `LayoutFocusTraversalPolicy.accept` takes a component into the Tab order if it has a non-empty `WHEN_FOCUSED` `InputMap` **or**, failing that, if `Component.isFocusTraversableOverridden()` — i.e. if anyone ever called `setFocusable`. Measured on all five plus controls:
+
+| | never called | `setFocusable(true)` | `setFocusable(false)` |
+|---|---|---|---|
+| No `WHEN_FOCUSED` bindings (the five, `JLabel`, `JPanel`) | skipped | **tab stop** | skipped |
+| Bindings present (`JButton`) | tab stop | tab stop | skipped |
+
+So the default was already correct for the five — none of them was a live stray tab stop — but `setFocusable(true)` on a component that binds no keys **bypasses the binding test and manufactures an inert stop**. That is the same defect [#578](https://github.com/OWS-PFMS/elwha/issues/578) fixed inside `firstFocusable`, arriving through the ordinary Tab path instead. Declaring `false` is therefore not decoration: it converts a correct-by-accident default into a stated contract that a later edit cannot silently flip, and that `FocusStopDoctrineTest` pins.
+
+**A wrapper that declines the stop must forward the focus request.** `ElwhaTextField` and `ElwhaSelectField` override `requestFocusInWindow()` / `requestFocus()` onto the embedded editor. Without that, `field.requestFocusInWindow()` returns `false` and nothing happens — the silent no-op §9 rules out, in the one place a consumer is most likely to reach for. A wrapper with no single obvious inner target (`ElwhaColorPicker`, `ElwhaSideSheet`, `ElwhaSurface`) forwards nothing; there is no honest answer to forward to, and the consumer focuses the child they actually mean.
+
+**Dynamic is fine when the bindings are dynamic.** `ElwhaCard` calls `setFocusable(actionable)` because its `WHEN_FOCUSED` bindings only exist while it is actionable. The flag tracking the bindings *is* the rule, not an exception to it.
+
+**Container focusability does not cascade**, so declaring `false` on a host never costs its children their stops — pinned since `ElwhaAppBarAccessibilityTest`.
+
+**Apply when:** adding any component. Declare the flag in the constructor next to `setOpaque`, match it to whether you install `WHEN_FOCUSED` bindings, add a `requestFocus*` forward if you are a decorator over an embedded focusable, and add the component to `FocusStopDoctrineTest`'s parameterized sweep.
+
+## 13. A component names its items the way it models them — by value, or by position when there is nothing else
+
+`ElwhaSelectField<T>` exposes no `getSelectedIndex` / `setSelectedIndex` / `getItemCount`, and will not gain them. `ElwhaButtonGroup` exposes `getSelectedIndex`, `setSelectedIndex`, `getSelectedIndices`, `getButtonAt(int)` and `getButtonCount`, and keeps them. [#719](https://github.com/OWS-PFMS/elwha/issues/719) asked whether that asymmetry was drift. It is not — the two components have different things to name with.
+
+**The test is whether the component owns a value model.** A select field is generic over `T` and holds `setOptions(List<T>)`, `getOptions()` and a `setDisplayFunction`; its selection *is* a `T`, and its listeners already deliver one. An index there is a second name for something that already has a name, and a worse one: it goes stale when the options change, it cannot survive a re-sort, and `Consumer<T>` would have to grow an `int` overload to stay symmetric. A button group has no value model at all — its "items" are live `ElwhaButton` / `ElwhaIconButton` children it lays out itself, and position is the only handle they have. Position is also *load-bearing geometry* there: `connectedRadii(i, count, …)` gives the outer segments pill caps and butts the inner ones, so the index is not an addressing convenience layered on top, it is what the component already computes with.
+
+The same rule already held elsewhere without being written down: `ElwhaColorPicker.getMode()` / `setMode(PickerMode)` are index-mediated internally (`tabs.getActiveTabIndex()`) and expose only the enum, and §10 requires a group's selection event to carry the *member* rather than an index precisely so identity survives a member being replaced at the same position.
+
+**A caller who wants a position from a value model is usually holding the wrong value.** All three sites #424 found were parallel-array workarounds — a select field carrying labels so a position could be recovered to index a second array — and all three read better rewritten: the nav rail badge picker became `ElwhaSelectField<ElwhaNavRailDestination>` with a display function and the parallel `List<String>` disappeared; the radio panel's round trip became label equality against the member's own `getLabel()`. What survived is one genuine positional use, and it is not an API question: the code-rendering helper picks which local variable name to emit, which is a property of the generated text.
+
+**Apply when:** designing a selection surface. If the component owns the values, name them by value everywhere — getter, setter and event. If it owns laid-out children and nothing else, position is the honest name, and it is fine for that component to expose it.
+
+## 14. A host exposes children the consumer owns; it does not expose its own implementation
+
+`ElwhaAppBar.getNavigationIcon()` and `getActions()` hand back live `ElwhaIconButton`s and are correct. `ElwhaSelectField`'s embedded `ElwhaTextField` / `ElwhaIconButton` / `ElwhaMenu` and `ElwhaColorPicker`'s embedded `ElwhaTabs` stay private and will stay private. Ruled in [#727](https://github.com/OWS-PFMS/elwha/issues/727), which asked whether to expose them so the Showcase's [#318](https://github.com/OWS-PFMS/elwha/issues/318) workbench facets could bind to them.
+
+**The line is who put the child there.** The app bar's buttons exist because the consumer asked for them (`addAction(...)`), the bar never destroys them, and the bar owns none of their presentation — so handing back the reference gives the consumer their own object back. A select field's arrow, chassis and menu exist because the select field needs them to be a select field; they are how it is built, not what it holds.
+
+**Exposing them would not even work, which is the tell.** The facet contract needs a live reference that stays valid across the host's own mutations, and two of the four cannot supply one: `ElwhaSelectField.rebuildMenu()` reassigns `menu` on every `setOptions` / `setDisplayFunction` / `setMultiSelect` / `setEditable`, and `ElwhaColorPicker.rebuildModes()` destroys and recreates every `ElwhaTab` on `setModes`. An accessor there hands out a reference that goes stale on the next ordinary call — it does not satisfy the facet, it relocates the breakage into consumer code. And a reachable `ElwhaTextField` would let a caller do `setTrailingIconButton(...)` and displace the arrow the select field is documented to own.
+
+**Say no, then close the gap the request was really about.** Refusing an accessor is only honest if the wrapper's own API can express what the caller wanted, so #727 also added the twelve `ElwhaSelectField` delegations that were genuinely missing — `getVariant` / `setVariant` (constructor-only before), `getLeadingIcon` (§5: the setter shipped without it), `setRequired` / `setNoAsterisk`, `setPrefixText` / `setSuffixText`, `setSupportingTextVisibility`, `setMaxLength`. The arrow stays unreachable on purpose: it is chrome the select field sizes and animates, and every axis of it is a decision the component has already made.
+
+**Not the same rule as `getEditor()`.** `ElwhaTextField.getEditor()` returns the raw Swing `JTextComponent` so a consumer can attach document and input listeners and reach the accessible context — capabilities the wrapper cannot mirror without re-exporting all of `javax.swing.text`. It hands out a *Swing* object for observation, not an *Elwha* component for restyling, and its javadoc says the chrome stays Elwha-owned.
+
+**Apply when:** a composed component is asked to expose something it holds. Ask who created the child and whether the host ever replaces it. If the consumer supplied it and the host keeps it, expose it. Otherwise forward the specific settings, and record here what you deliberately did not forward.
+
 ---
 
 ## Cross-reference

@@ -11,9 +11,11 @@ This product includes Material Symbols icon SVG assets from Google,
 licensed under the Apache License 2.0
 (https://github.com/google/material-design-icons).
 
-This product includes the Capitaine cursor theme PNG assets,
-licensed under CC BY-SA 4.0
-(see src/main/resources/com/owspfm/elwha/list/cursors/LICENSE-capitaine.txt).
+The reorder cursor PNG assets under
+src/main/resources/com/owspfm/elwha/list/cursors/ are the work of Open Water
+Systems (Charles Bryan) and are covered by this product's own Apache License 2.0.
+Their 32 px hand outline is derived from the Material Symbols "back_hand" glyph,
+which the Google attribution above covers.
 
 This product includes the Inter font (Regular and Medium faces) by The Inter
 Project Authors, licensed under the SIL Open Font License, Version 1.1

@@ -211,6 +211,7 @@ public final class ElwhaSideSheet extends JComponent {
     body.add(header, BorderLayout.NORTH);
     body.add(contentHolder, BorderLayout.CENTER);
     body.add(footer, BorderLayout.SOUTH);
+    setFocusable(false);
     add(body);
     // The resize hot zone sits over the body's content-facing edge; z-order 0 keeps it the topmost
     // hit target there (it is transparent, so it changes nothing visually).
