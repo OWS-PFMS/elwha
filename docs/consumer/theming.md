@@ -188,6 +188,38 @@ touched, and it is what makes incremental adoption practical: install the theme,
 widgets with Elwha components where the richer behavior earns its keep. The mapping itself is
 library-internal — you configure it by choosing a palette, not by calling into it.
 
+## Using your own icons
+
+The bundled Material Symbols (see [the component index](components.md) and the
+[`MaterialIcons` Javadoc](https://ows-pfms.github.io/elwha/com/owspfm/elwha/icons/MaterialIcons.html))
+are fixed at build time — client code cannot add to the bundle. To bring your own icons and have
+them follow the installed theme exactly like the bundled set, keep the SVGs in **your own
+resources** at a client-owned classpath location and wrap the loaded icon with
+`MaterialIcons.themed(...)`:
+
+```java
+import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.icons.MaterialIcons;
+
+Icon rocket = MaterialIcons.themed(new FlatSVGIcon("com/acme/icons/rocket.svg", 24, 24));
+```
+
+`themed` attaches Elwha's theme-aware color filter: every painted color remaps to the current
+`Label.foreground` at paint time, so the icon re-skins live on a light/dark switch with no
+re-allocation. Monochrome artwork themes cleanly; multicolor artwork will flatten to the
+foreground color — for icons that must keep their own colors, skip `themed` and manage color
+yourself.
+
+Two notes for a consistent result:
+
+- **Match the house style axes** when sourcing from
+  [fonts.google.com/icons](https://fonts.google.com/icons): Rounded, weight 400, fill 0, optical
+  size 20px — fill 1 only for selected/active states. Mixed axes read as mismatched weight at
+  small sizes.
+- **Keep your icons in your own namespace.** Dropping SVGs into Elwha's
+  `com/owspfm/icons/material/` path and calling `MaterialIcons.get(String)` appears to work, but
+  your names race the bundle on the classpath with undefined resolution order.
+
 ## Reduced motion
 
 `Config.reducedMotion()` is a `Boolean`, deliberately nullable. `null` (the default) means "defer
