@@ -60,7 +60,7 @@ class ElwhaChipPassThroughListenerTest {
   // ------------------------------------------------------------- the reach
 
   @Test
-  void theAddReachesTheBodyAndAllThreeInnerComponents() {
+  void addReachesTheBodyAndAllThreeInnerComponents() {
     final ElwhaChip chip = sized();
     final MouseListener listener = new MouseAdapter() {};
 
@@ -74,7 +74,7 @@ class ElwhaChipPassThroughListenerTest {
   }
 
   @Test
-  void theRemoveDetachesFromAllFour() {
+  void removeDetachesFromAllFour() {
     final ElwhaChip chip = sized();
     final MouseListener listener = new MouseAdapter() {};
     chip.addChipMouseListener(listener);
@@ -93,7 +93,7 @@ class ElwhaChipPassThroughListenerTest {
    * detaches the one registration they can see and leaves the three they cannot.
    */
   @Test
-  void theInheritedRemoveAloneWouldStrandThreeRegistrations() {
+  void inheritedRemoveAloneWouldStrandThreeRegistrations() {
     final ElwhaChip chip = sized();
     final MouseListener listener = new MouseAdapter() {};
     chip.addChipMouseListener(listener);
@@ -131,7 +131,7 @@ class ElwhaChipPassThroughListenerTest {
   // ------------------------------------------------------------ the mirror
 
   @Test
-  void theMotionAddAndRemoveCoverTheSameFour() {
+  void motionAddAndRemoveCoverTheSameFour() {
     final ElwhaChip chip = sized();
     final MouseMotionListener listener = new MouseMotionAdapter() {};
 

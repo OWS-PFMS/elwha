@@ -150,7 +150,7 @@ class SelectionObservationTest {
    * one held for the other (#732).
    */
   @Test
-  void theCardHoldsNoPrivateChannelBesideTheInheritedOne() {
+  void aCardHoldsNoPrivateChannelBesideTheInheritedOne() {
     assertThat(JComponent.class.isAssignableFrom(ElwhaCard.class))
         .as("the card is a component, not a controller — that is what decides the shape")
         .isTrue();
