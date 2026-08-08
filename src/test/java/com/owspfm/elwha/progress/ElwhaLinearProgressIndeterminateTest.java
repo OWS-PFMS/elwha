@@ -20,15 +20,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * <p><strong>This class is the deterministic replacement for {@code
  * ElwhaLinearProgressIndeterminateSmoke}</strong>, the one reproducibly-flaky incumbent. That smoke
  * slept 60 ms between samples for 1.9 s and asserted "a line is visible in nearly every frame",
- * with a tolerance of three blank samples. The cycle genuinely opens with a blank window — both
- * line spans are degenerate while the {@code EMPHASIZED_ACCELERATE} channels leave their flat start
- * — so how many blank samples a run collected depended on where the sleeps happened to land in the
- * cycle. That is a race, and it failed about three runs in five.
+ * with a tolerance of three blank samples. The cycle used to open with a genuinely blank window —
+ * the first line's head needs ~84 ms to clear half a pixel under {@code EMPHASIZED_ACCELERATE} and
+ * the second line has not started — so how many blank samples a run collected depended on where the
+ * sleeps happened to land. That is a race, and it failed about three runs in five.
  *
  * <p>Every frame below is rendered at an <em>injected</em> clock value ({@link PinnedClock}), so
- * "visible at 400 ms" is a fact rather than a sample. The blank window is then measured
- * exhaustively — every millisecond of the cycle, not thirty-one samples of it — which both closes
- * the flake class and states the property far more sharply than the smoke could.
+ * "visible at 400 ms" is a fact rather than a sample. #576 closed the window itself by flooring an
+ * emerging line at one capsule cap, so the property asserted here is now the strong one:
+ * <em>every</em> millisecond of the cycle paints a line.
  */
 @ExtendWith({EdtInterceptor.class, ThemeExtension.class})
 class ElwhaLinearProgressIndeterminateTest {
@@ -36,9 +36,6 @@ class ElwhaLinearProgressIndeterminateTest {
   private static final int WIDTH = ElwhaLinearProgressIndicator.PREFERRED_WIDTH_PX;
   private static final int MID_Y = 2;
   private static final int CYCLE_MS = 1750;
-
-  /** The measured length of the blank window that opens each cycle. */
-  private static final int BLANK_WINDOW_MS = 84;
 
   private static PinnedClock.Linear indeterminateBar() {
     final PinnedClock.Linear bar = new PinnedClock.Linear();
@@ -65,6 +62,17 @@ class ElwhaLinearProgressIndeterminateTest {
       inside = hit;
     }
     return starts;
+  }
+
+  /** Total px along the mid row painted in the active role. */
+  private static int activeWidth(final BufferedImage image) {
+    int count = 0;
+    for (int x = 0; x < WIDTH; x++) {
+      if (near(image, x, ColorRole.PRIMARY.resolve())) {
+        count++;
+      }
+    }
+    return count;
   }
 
   private static int activeRunCount(final BufferedImage image) {
@@ -134,8 +142,12 @@ class ElwhaLinearProgressIndeterminateTest {
   void leadingEdgeAdvancesAcrossTheRun() {
     final PinnedClock.Linear bar = indeterminateBar();
 
-    final int earlier = runsOf(bar.frameAt(300), ColorRole.PRIMARY.resolve()).get(0);
-    final int later = runsOf(bar.frameAt(700), ColorRole.PRIMARY.resolve()).get(0);
+    // The rightmost run, not the leftmost: by 700 ms the second line has emerged at the leading
+    // edge (#576's floor makes that visible), so run 0 is no longer the line under test.
+    final List<Integer> at300 = runsOf(bar.frameAt(300), ColorRole.PRIMARY.resolve());
+    final List<Integer> at700 = runsOf(bar.frameAt(700), ColorRole.PRIMARY.resolve());
+    final int earlier = at300.get(at300.size() - 1);
+    final int later = at700.get(at700.size() - 1);
 
     assertThat(later)
         .as("§6 — the first line sweeps toward the trailing end as the cycle runs")
@@ -145,11 +157,11 @@ class ElwhaLinearProgressIndeterminateTest {
   // -------------------------------------------------- the flake class, closed
 
   @Test
-  void aLineIsVisibleAtEveryMillisecondAfterTheCycleOpens() {
+  void aLineIsVisibleAtEveryMillisecondOfTheCycle() {
     final PinnedClock.Linear bar = indeterminateBar();
 
     final List<Long> blank = new ArrayList<>();
-    for (long ms = BLANK_WINDOW_MS; ms < CYCLE_MS; ms++) {
+    for (long ms = 0; ms < CYCLE_MS; ms++) {
       if (activeRunCount(bar.frameAt(ms)) == 0) {
         blank.add(ms);
       }
@@ -157,36 +169,61 @@ class ElwhaLinearProgressIndeterminateTest {
 
     assertThat(blank)
         .as(
-            "every one of the %d ms after the opening window paints an active line — the "
-                + "property the incumbent smoke could only sample",
-            CYCLE_MS - BLANK_WINDOW_MS)
+            "every one of the %d ms of the cycle paints an active line — the property the "
+                + "incumbent smoke could only sample, and #576 closed the last hole in",
+            CYCLE_MS)
         .isEmpty();
   }
 
+  /**
+   * #576 — the cycle used to open with ~84 ms of empty bar, recurring every 1750 ms. It followed
+   * from the spec-mandated easing rather than from a coding error: the first line's span is {@code
+   * [tail=0, head]}, and {@code EMPHASIZED_ACCELERATE} keeps the head under half a pixel for that
+   * long, while the second line does not start until 650 ms. Retiming the channels would have meant
+   * abandoning the Compose keyframe constants, so instead an emerging line is floored at one
+   * capsule cap — the smallest a round-ended M3 indicator can honestly be.
+   */
   @Test
-  void blankWindowIsContiguousAndConfinedToTheStartOfTheCycle() {
+  void anEmergingLineIsFlooredAtOneCapsuleCapRatherThanCulled() {
     final PinnedClock.Linear bar = indeterminateBar();
 
-    long lastBlank = -1;
-    long blankCount = 0;
-    for (long ms = 0; ms < CYCLE_MS; ms++) {
-      if (activeRunCount(bar.frameAt(ms)) == 0) {
-        blankCount++;
-        lastBlank = ms;
-      }
-    }
+    final List<Integer> atCycleStart = runsOf(bar.frameAt(0), ColorRole.PRIMARY.resolve());
 
-    assertThat(blankCount)
+    assertThat(atCycleStart)
+        .as("the very first millisecond of the cycle already paints the first line's leading cap")
+        .isNotEmpty();
+    assertThat(atCycleStart.get(0))
+        .as("and it is born at the leading edge, where the span's tail is pinned")
+        .isLessThanOrEqualTo(2);
+  }
+
+  @Test
+  void theFloorStopsBitingOnceTheLineHasRealWidth() {
+    final PinnedClock.Linear bar = indeterminateBar();
+
+    final int nub = activeWidth(bar.frameAt(0));
+    final int grown = activeWidth(bar.frameAt(400));
+
+    assertThat(nub)
+        .as("an emerging line is one cap wide — the track thickness, not a stub of arbitrary size")
+        .isLessThanOrEqualTo(8);
+    assertThat(grown)
+        .as("and the floor is a no-op the moment the natural span passes the track thickness")
+        .isGreaterThan(nub * 4);
+  }
+
+  @Test
+  void aFinishingLineStillCollapsesToNothing() {
+    final PinnedClock.Linear bar = indeterminateBar();
+
+    final int late = activeWidth(bar.frameAt(1740));
+    final int earlier = activeWidth(bar.frameAt(1500));
+
+    assertThat(late)
         .as(
-            "both EMPHASIZED_ACCELERATE channels leave their flat start together, so the cycle "
-                + "opens blank; it is one contiguous run, not scattered dropouts")
-        .isEqualTo(lastBlank + 1);
-    assertThat(blankCount)
-        .as(
-            "and it is the measured %d ms — a characterization of the shipped choreography, "
-                + "which is what made a 60 ms-interval sampler flaky",
-            BLANK_WINDOW_MS)
-        .isEqualTo(BLANK_WINDOW_MS);
+            "the floor is for a line coming in, not one going out — the second line's tail must "
+                + "still be able to catch its head and vanish at the trailing edge")
+        .isLessThan(earlier);
   }
 
   @Test
