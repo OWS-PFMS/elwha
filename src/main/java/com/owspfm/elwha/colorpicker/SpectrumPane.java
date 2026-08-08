@@ -349,18 +349,39 @@ final class SpectrumPane extends ColorPickerPane {
           || cache.getWidth() != width
           || cache.getHeight() != height
           || cachedHue != hue) {
-        cache = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        final int[] row = new int[width];
-        for (int y = 0; y < height; y++) {
-          final float v = 1f - y / (float) (height - 1);
-          for (int x = 0; x < width; x++) {
-            row[x] = Color.HSBtoRGB(hue / 360f, x / (float) (width - 1), v);
-          }
-          cache.setRGB(0, y, width, 1, row, 0, width);
-        }
+        cache = renderSvRaster(width, height, hue);
         cachedHue = hue;
       }
       return cache;
     }
+  }
+
+  /**
+   * The saturation/value square, evaluated per pixel at the requested size — the uncached render
+   * behind {@code SvBox}'s cache, and the direct-render seam a cached-versus-direct probe compares
+   * against (#692).
+   *
+   * <p>The raster is generated at the size given, and painted through a {@code TexturePaint}
+   * anchored in <em>user</em> space, so on a HiDPI surface the 1× raster is stretched rather than
+   * re-evaluated at the device resolution.
+   *
+   * @param width raster width in pixels
+   * @param height raster height in pixels
+   * @param hue the hue in whole degrees
+   * @return a freshly evaluated saturation/value raster
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  static BufferedImage renderSvRaster(final int width, final int height, final int hue) {
+    final BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+    final int[] row = new int[width];
+    for (int y = 0; y < height; y++) {
+      final float v = 1f - y / (float) (height - 1);
+      for (int x = 0; x < width; x++) {
+        row[x] = Color.HSBtoRGB(hue / 360f, x / (float) (width - 1), v);
+      }
+      image.setRGB(0, y, width, 1, row, 0, width);
+    }
+    return image;
   }
 }
