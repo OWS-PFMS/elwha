@@ -467,3 +467,72 @@ All previously-flagged `[OPEN]` items from prior drafts of this doc, with the re
 | 11 | `AccessibleRole` | `PAGE_TAB_LIST` + `PAGE_TAB` (§10.1) |
 | 12 | `Escape` in Expanded | Consumer-controlled; not handled by the lib (§10.2) |
 | 13 | Phase 5 cadence | Separate phase (§13) |
+
+---
+
+## §16. Trailing-actions overflow — epic [#238](https://github.com/OWS-PFMS/elwha/issues/238)
+
+Filed out of the Phase 2 smoke test and built for `v0.5.0`, after `ElwhaMenu` ([#298](https://github.com/OWS-PFMS/elwha/issues/298)) shipped the popover this consumes. The §3 trailing-actions slot is an unbounded list on a container whose height the consumer does not control, so a rail with more utility buttons than the window has room for degrades to a clipped stack (the "Vertical-space contract" in the class Javadoc). This section is the affordance that replaces the clipping, and the record of where the epic's 2025 sketch had to be reconciled against what `ElwhaMenu` actually turned out to be.
+
+### §16.1 Mode axis [LOCKED]
+
+`setOverflowMode(OverflowMode)` — `NEVER` / `WHEN_NEEDED` / `ALWAYS`, defaulting to **`WHEN_NEEDED`**. The epic left static-vs-adaptive collapsing open ("always collapse — cleaner; vs collapse only when overflow detected — more compact"). Resolved in favour of adaptive, because the two candidates are not symmetric here:
+
+- `WHEN_NEEDED` is invisible on a rail that has the height it asked for, so every rail already built keeps the appearance it had, and the mode only engages where the alternative was a stack running off the bottom edge. It converts a bug into an affordance and changes nothing else.
+- `ALWAYS` as the default would restyle the foot of every existing rail — the Showcase's, the playgrounds', the consumer's — to buy consistency nobody asked for, on rails with two utility buttons and room for ten.
+- `NEVER` as the default would leave the clipping as the out-of-the-box behaviour and make the epic opt-in, which inverts what the operator asked for ("the right long-term answer is the actions compress into a single button that allows overflow").
+
+`ALWAYS` remains available for the consumer who wants one affordance at every window height.
+
+**The `WHEN_NEEDED` predicate** asks whether the *full* stack fits below the destinations: `destinationsBottom + CHROME_GAP + trailingHeight > height − CHROME_PAD`. It is deliberately a question about the uncollapsed geometry, never about the current state — a predicate that measured what is on screen would collapse, find that it now fits, expand, and oscillate. One extra condition: `WHEN_NEEDED` never collapses a *lone* action, because the entry point is the same height as the row it hides, so a one-action collapse costs a click and saves zero pixels. `ALWAYS` does collapse a lone action — consistency is the whole point of asking for it.
+
+**Preferred / minimum height** reports the full stack under `NEVER` and `WHEN_NEEDED` (the rail wants room for its actions; collapsing is what it settles for) and the single entry point under `ALWAYS` (a stack that will never be shown is not space the rail can use).
+
+### §16.2 Handler routing — reconciling the epic's wording [LOCKED]
+
+The epic asks that "the pop-list inherits the same `ElwhaIconButton` instances the consumer passed via `setTrailingActions(...)` (no construction-time forking) so click-handlers route correctly." It was written before `ElwhaMenu` existed and assumed the menu could host arbitrary components. It cannot: an `ElwhaMenu` hosts `ElwhaMenuItem` rows, which are a distinct M3 row anatomy (leading icon, label, supporting/trailing text, check column) and not a container for a foreign button. Mounting the consumer's live button inside a menu row would also *move* it out of the rail's containment hierarchy for as long as the menu is open.
+
+What the epic is actually protecting is the routing, not the instance: no forked copy of the handler, no second listener list, no chance of the menu and the rail disagreeing about what a click does. That is preserved exactly, one level down:
+
+> Each menu row stands in for one trailing action. Activating the row calls `doClick()` on **that very button**, so the consumer's own listeners fire with the original `ElwhaIconButton` as the `ActionEvent` source, and a `SELECTABLE` action toggles exactly as it would have in the rail.
+
+`ElwhaIconButton.doClick()` is new for this epic (`v0.5.0`) — the `AbstractButton.doClick()` counterpart for a component that is not an `AbstractButton`. It delivers the event without playing press state, ripple, or press-morph: the caller is standing in for the user, not simulating a gesture on a button that is not on screen.
+
+Rows are rebuilt on every open, so an action the consumer disables, re-labels, or re-icons between opens is current the next time the menu appears. A disabled action produces a disabled row rather than a missing one — the action still exists, and hiding it would misreport the rail's contents.
+
+### §16.3 Label source [LOCKED]
+
+A trailing action is icon-only; a menu row needs words. The label is the action's **accessible name**, which `ElwhaIconButton` already resolves through its own documented chain — the name set on it, else its tooltip text, else its component name, else the literal `"Icon button"`. Overflow deliberately reuses that chain rather than duplicating a parallel one: the label a sighted user reads in the menu is then the same string a screen-reader user hears on the button, and there is one place to fix it.
+
+The consequence is stated in the API doc: an action with no accessible name, no tooltip, and no component name reaches the menu effectively unlabelled. That is not a new obligation — an icon-only button has always needed one of the three — but overflow makes the omission visible, which is the right place for it to surface.
+
+The row's leading icon is the action's own glyph, re-derived to the 20 dp `ElwhaMenuItem` icon size. Deriving is not only a sizing nicety: a menu row stamps its own colour filter onto any `FlatSVGIcon` handed to it, so passing the button's live instance would repaint the icon still on screen in the rail (the #197 shared-icon class of bug). A non-SVG `Icon` is passed through untouched — the row's filter only reaches `FlatSVGIcon`.
+
+### §16.4 Anchoring [LOCKED]
+
+The entry point sits at the foot of a rail that typically runs the full height of the window, so `ElwhaMenu`'s default placement — leading-aligned *below* the trigger, flipping *above* when the bottom clips — has nowhere to go but up and over the rail's own destinations. The epic asked for the trailing edge instead, and the geometry for it already existed: `placeBeside`, the M3 `START_END` placement a submenu uses (trailing side first, flipping leading when it would clip, shifted vertically to stay in the viewport, RTL mirrored).
+
+`ElwhaMenu.Builder.sideAnchored(boolean)` (new, `v0.5.0`) opts a root menu into that placement. It exposes an existing engine to a second caller rather than adding a second engine; a submenu is still side-anchored regardless of the flag.
+
+### §16.5 What the menu already provided
+
+Verified against the shipped `ElwhaMenu` rather than assumed, since the epic predates it:
+
+| Requirement | Where it comes from |
+|---|---|
+| ↑ / ↓ move within the popup | `ElwhaMenu.installKeyBindings` — bound on the menu surface, which takes focus on open (Home / End / type-ahead come with it) |
+| `Esc` closes | `AbstractElwhaOverlay` base bindings |
+| Light-dismiss on outside press, focus restored to the trigger | `AbstractElwhaOverlay` |
+| Reduced motion respected in the pop | The overlay's entrance is a `MorphAnimator`, and `MorphAnimator.animateTo` snaps to the end state when reduced motion is on — no per-consumer path |
+| Tab reaches the entry point | **Added here.** The rail's focus-traversal policy listed the trailing actions verbatim; collapsed, it lists the entry point instead, so Tab cannot walk into hidden buttons |
+| `Space` / `Enter` open the menu | `ElwhaIconButton`'s own `WHEN_FOCUSED` bindings fire the action listener that opens it — free, because the entry point is an ordinary icon button |
+
+### §16.6 Accessibility
+
+The entry point carries the accessible name **"More actions"** and reports `PUSH_BUTTON` (it is a `CLICKABLE` icon button — deliberately not `SELECTABLE`, which would leave it painted as a toggle after the menu light-dismissed). The menu surface it opens already reports `POPUP_MENU` from #298, which is the popup half of the relationship; Swing's accessibility API has no `aria-haspopup` / `aria-expanded` equivalent to hang on the trigger, so the button does not fake one.
+
+### §16.7 Out of scope
+
+- **Overflowing the destination stack.** Only the trailing-actions slot collapses. M3 caps primary destinations at 3–7 and the rail already warns outside that range; a rail whose *destinations* do not fit is over-populated, not short of an affordance.
+- **A consumer-supplied overflow glyph or entry-point styling.** The rail owns the `more_vert` glyph, the accessible name, and the click behaviour, exactly as it owns the menu button's ☰ / ☰-open swap (§4.3). `getOverflowButton()` exposes the instance for restyling; file a follow-up if a consumer needs to replace it outright.
+- **Grouping, separators, or selection in the overflow menu.** The collapsed actions are a flat action list in slot order — `Layout.STANDARD`, `SelectionMode.NONE`.
