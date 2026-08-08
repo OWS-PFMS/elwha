@@ -57,7 +57,7 @@ class ScreenSamplerScaleTest {
 
   @ParameterizedTest(name = "a {0}x capture measures as scale {0}")
   @CsvSource({"1, 1.0", "2, 2.0", "3, 3.0"})
-  void theScaleIsMeasuredFromTheRasterNotAssumed(final int scale, final double expected) {
+  void captureScaleIsMeasuredFromTheRasterNotAssumed(final int scale, final double expected) {
     final BufferedImage capture = captureWithTargetAt(scale, 0, 0);
 
     assertThat(ScreenSampler.captureScale(capture.getWidth(), LOGICAL_W)).isEqualTo(expected);
@@ -102,7 +102,7 @@ class ScreenSamplerScaleTest {
    * never looked out of range — it just answered from the middle of the screen.
    */
   @Test
-  void theFarCornerIsReachableRatherThanClamped() {
+  void aFarCornerLogicalPointIsReachableRatherThanClamped() {
     final BufferedImage capture = captureWithTargetAt(2, LOGICAL_W - 1, LOGICAL_H - 1);
 
     assertThat(ScreenSampler.colorAt(capture, 2.0, 2.0, LOGICAL_W - 1, LOGICAL_H - 1))

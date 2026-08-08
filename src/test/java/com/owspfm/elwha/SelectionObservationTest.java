@@ -78,7 +78,7 @@ class SelectionObservationTest {
 
   @ParameterizedTest(name = "{0} announces selection on the inherited key-scoped subscription")
   @MethodSource("toggles")
-  void theInheritedKeyedSubscriptionCarriesSelection(
+  void anInheritedKeyedSubscriptionCarriesSelection(
       final String name,
       final String key,
       final Function<Boolean, JComponent> factory,
@@ -99,7 +99,7 @@ class SelectionObservationTest {
    */
   @ParameterizedTest(name = "{0} lets a listener unsubscribe through the same key")
   @MethodSource("toggles")
-  void theInheritedKeyedSubscriptionCanBeUndone(
+  void anInheritedKeyedSubscriptionCanBeUndone(
       final String name,
       final String key,
       final Function<Boolean, JComponent> factory,

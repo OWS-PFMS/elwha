@@ -52,7 +52,7 @@ class ElwhaSwitchGlyphCacheTest {
   }
 
   @Test
-  void theCachedGlyphIsRecoloredWhenTheThemeFlipsUnderTheSameSwitch() {
+  void aThemeFlipRecolorsTheCachedGlyphOnTheSameSwitch() {
     ThemeExtension.install(Mode.LIGHT);
     final ElwhaSwitch toggle = selectedWithIcons();
     final Color light = ColorRole.ON_PRIMARY_CONTAINER.resolve();
@@ -81,7 +81,7 @@ class ElwhaSwitchGlyphCacheTest {
   }
 
   @Test
-  void theCachedGlyphIsReplacedWhenTheIconChangesUnderTheSameSwitch() {
+  void anIconReplacementReachesTheHandleOnTheSameSwitch() {
     final ElwhaSwitch toggle = selectedWithIcons();
     final BufferedImage before = render(toggle);
 

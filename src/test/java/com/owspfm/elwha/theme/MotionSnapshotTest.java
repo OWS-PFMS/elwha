@@ -54,7 +54,7 @@ class MotionSnapshotTest {
   }
 
   @Test
-  void theRasterIsRenderedOnceAndReusedAcrossFrames() {
+  void oneRenderServesEveryFrameOfATween() {
     final MotionSnapshot snapshot = new MotionSnapshot();
     final CountingRender render = new CountingRender();
     final Graphics2D frame = frameAt(1.0);
@@ -129,7 +129,7 @@ class MotionSnapshotTest {
   }
 
   @Test
-  void theRasterIsSizedInDevicePixelsSoHiDpiRendersAtFullFidelity() {
+  void aHiDpiFrameRasterizesAtDeviceResolution() {
     final MotionSnapshot snapshot = new MotionSnapshot();
     final CountingRender render = new CountingRender();
 
