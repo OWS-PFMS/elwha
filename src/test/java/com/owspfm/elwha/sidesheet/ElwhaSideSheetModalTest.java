@@ -10,6 +10,7 @@ import com.owspfm.elwha.testkit.PaintOrigin;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ElwhaLayers;
 import com.owspfm.elwha.theme.MorphAnimator;
+import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Rectangle;
@@ -18,6 +19,8 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.AfterEach;
@@ -382,6 +385,85 @@ class ElwhaSideSheetModalTest {
 
     assertThat(sheet.isModalShowing()).isTrue();
     assertThat(host.mounted()).hasSize(2);
+  }
+
+  // ------------------------------------------------- borrow and return (#597)
+
+  @Test
+  void anEmbeddedSheetGoesBackToItsLayoutSlotAfterAModalPresentation() {
+    final JPanel page = new JPanel(new BorderLayout());
+    final JLabel main = new JLabel("main content");
+    page.add(main, BorderLayout.CENTER);
+    final ElwhaSideSheet sheet = ElwhaSideSheet.standardSheet("Filters");
+    page.add(sheet, BorderLayout.LINE_END);
+
+    present(sheet);
+    assertThat(sheet.getParent())
+        .as("the presentation lifts the sheet out of the page")
+        .isNotSameAs(page);
+    sheet.dismiss();
+
+    assertThat(sheet.getParent())
+        .as("#597 — the sheet never came back and the page lost its trailing pane for good")
+        .isSameAs(page);
+    assertThat(((BorderLayout) page.getLayout()).getConstraints(sheet))
+        .as("and it came back to the edge it was placed on, not merely into the container")
+        .isEqualTo(BorderLayout.LINE_END);
+    assertThat(page.getComponents()).contains(main);
+  }
+
+  @Test
+  void aStandardSheetGetsItsChromeBackAfterAModalPresentation() {
+    final ElwhaSideSheet sheet = ElwhaSideSheet.standardSheet("Filters");
+
+    present(sheet);
+    assertThat(sheet.getSheetType())
+        .as("the presentation forces MODAL chrome, per design doc §5")
+        .isEqualTo(SheetType.MODAL);
+    sheet.dismiss();
+
+    assertThat(sheet.getSheetType())
+        .as("#597 — the forcing outlived the presentation and left standard chrome behind")
+        .isEqualTo(SheetType.STANDARD);
+  }
+
+  @Test
+  void aClosedEmbeddedSheetComesBackClosed() {
+    final JPanel page = new JPanel(new BorderLayout());
+    final ElwhaSideSheet sheet = ElwhaSideSheet.standardSheet("Filters");
+    page.add(sheet, BorderLayout.LINE_END);
+    sheet.close();
+
+    present(sheet);
+    assertThat(sheet.isOpen()).as("a modal presentation is open by definition").isTrue();
+    sheet.dismiss();
+
+    assertThat(sheet.isOpen())
+        .as("the collapsed pane must not reappear expanded in the layout it returns to")
+        .isFalse();
+  }
+
+  @Test
+  void aConsumerRetypeWhileShownOutranksTheRestore() {
+    final ElwhaSideSheet sheet = ElwhaSideSheet.standardSheet("Filters");
+
+    present(sheet);
+    sheet.setSheetType(SheetType.STANDARD);
+    sheet.dismiss();
+
+    assertThat(sheet.getSheetType())
+        .as("the teardown undoes only the forcing showModal itself did")
+        .isEqualTo(SheetType.STANDARD);
+  }
+
+  @Test
+  void aModalTypedSheetThatWasNeverEmbeddedIsUnaffected() {
+    final ElwhaSideSheet sheet = present(sheet());
+
+    sheet.dismiss();
+
+    assertThat(sheet.getSheetType()).isEqualTo(SheetType.MODAL);
+    assertThat(sheet.getParent()).as("there was no layout slot to give back").isNull();
   }
 
   // ---------------------------------------------------------------- gestures
