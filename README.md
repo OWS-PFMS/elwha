@@ -4,20 +4,28 @@
 [![JDK 21](https://img.shields.io/badge/JDK-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![FlatLaf 3.2.5](https://img.shields.io/badge/FlatLaf-3.2.5-green.svg)](https://www.formdev.com/flatlaf/)
 
-**Elwha is a Material 3-flavored design language for Swing.** Its public API is a vocabulary of design tokens — color roles, shape and type scales, spacing steps, state-layer overlays — that every screen in a consuming app paints against, so cohesion is enforced by construction instead of relying on developer discipline. Components (`ElwhaCard`, `ElwhaChip`, `ElwhaSurface`, `ElwhaIconButton`, their list containers) and raw Swing widgets (`JButton`, `JTextField`, scrollbars, dialogs, …) both resolve the same tokens at paint time.
+**Elwha brings Material 3 Expressive to desktop Java.** It is a Swing component library built on
+[FlatLaf](https://www.formdev.com/flatlaf/): a design-token foundation, about 25 components, and
+the containers, overlays and anchors that go around them — cards, chips, dialogs, menus, tooltips,
+side sheets, app bars, navigation rails, tabs, sliders, a color picker, and the rest.
 
-> Elwha is a Pacific Northwest river restored after the largest dam removal in US history — the name puts the library on [Open Water Systems](https://openwatersystems.com)' clean-water mission.
+The tokens are the point. Color roles, shape and type scales, spacing steps and state-layer
+overlays are written into `UIManager` by a single install call, and every component resolves them
+at paint time — Elwha's components *and* the plain `JButton`s and `JTextField`s you already have.
+Consistency holds because there is one vocabulary, not because everyone remembered the hex code.
 
-## What this is — and isn't
+> The Elwha is a Pacific Northwest river restored after the largest dam removal in US history — the
+> name puts the library on [Open Water Systems](https://openwatersystems.com)' clean-water mission.
 
-- **A token-first design system, not a component grab-bag.** Tokens are the API; components are downstream of the design language. The cohesion problem ("our pages feel inconsistent") is a vocabulary problem, not a component problem — Elwha solves it by giving every component, raw or Elwha-built, the same fixed surface to paint against.
-- **Material 3-flavored, not spec-compliant.** Elwha lifts the M3 *token taxonomy* as its semantic API. It does not chase spec compliance and does not claim the Material brand. (Drift is expected — e.g., the v1 surface treatment is intentionally flat; M3-style tonal-lift elevation is queued for v2.)
-- **A Swing-native design system.** Elwha is implemented on top of [FlatLaf](https://www.formdev.com/flatlaf/) as its rendering substrate, but FlatLaf is plumbing — Elwha owns the design vocabulary, configures FlatLaf via `UIManager`, and ships the higher-level components Swing itself doesn't have (Chip, Card, their list containers).
-- **Pre-1.0.** API is not yet stable; breaking changes between minor versions are expected until 1.0.0. Components are mid-migration onto the just-landed token foundation — see [Roadmap](#roadmap).
+<!-- TODO(#530): add a Showcase screenshot here once one is captured. -->
+
+*No screenshots yet — the fastest way to see what Elwha looks like is to run The Elwha Showcase
+from a checkout (see [Seeing everything](#seeing-everything) below).*
 
 ## Install
 
-### Maven (GitHub Packages)
+Elwha publishes to **GitHub Packages**, which requires an authenticated request even for public
+artifacts. Add the repository and the dependency:
 
 ```xml
 <repositories>
@@ -31,12 +39,13 @@
   <dependency>
     <groupId>com.owspfm</groupId>
     <artifactId>elwha</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
   </dependency>
 </dependencies>
 ```
 
-You'll need a GitHub Personal Access Token with `read:packages` scope in your `~/.m2/settings.xml`:
+…then put a GitHub personal access token with the **`read:packages`** scope in `~/.m2/settings.xml`
+under a matching server id:
 
 ```xml
 <servers>
@@ -48,194 +57,134 @@ You'll need a GitHub Personal Access Token with `read:packages` scope in your `~
 </servers>
 ```
 
+Mismatched ids are the usual cause of a first-time `401`. Full walkthrough, Gradle setup and
+troubleshooting: **[docs/consumer/install.md](docs/consumer/install.md)**.
+
 ## Quick start
 
-Install the theme **before** building any UI, then build normally — raw Swing and Elwha components both inherit the design language from a single install call.
+Install the theme before you build any UI — that call installs FlatLaf, selects a palette, and
+writes the tokens every component reads.
 
 ```java
+import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.card.ElwhaCard;
+import com.owspfm.elwha.card.ElwhaCardHeader;
+import com.owspfm.elwha.card.ElwhaCardSupportingText;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
-import com.owspfm.elwha.card.v1.ElwhaCard;
-import com.owspfm.elwha.chip.ElwhaChip;
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BorderLayout;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 
-public class Demo {
+public final class ReadmeSnippet {
+
   public static void main(String[] args) {
-    SwingUtilities.invokeLater(() -> {
-      // One call wires up FlatLaf, the M3 baseline theme (light + dark palettes),
-      // Inter typography, shape/space/state-layer scales, and the FlatLaf-native key bridge.
-      ElwhaTheme.install(
-          ElwhaTheme.config()
-              .theme(MaterialPalettes.baseline())
-              .mode(Mode.SYSTEM)
-              .build());
+    SwingUtilities.invokeLater(
+        () -> {
+          // Install the theme before creating any UI.
+          ElwhaTheme.install(
+              ElwhaTheme.config()
+                  .theme(MaterialPalettes.baseline())
+                  .mode(Mode.SYSTEM)
+                  .build());
 
-      JFrame frame = new JFrame("Elwha Demo");
-      frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-      frame.getContentPane().setLayout(new FlowLayout());
+          ElwhaCard card = ElwhaCard.elevatedCard();
+          card.add(new ElwhaCardHeader().setTitle("Recent activity").setSubtitle("Last 30 days"));
+          card.add(new ElwhaCardSupportingText("12 cycles found across 4 factors."));
 
-      // Elwha components resolve tokens at paint time.
-      frame.add(new ElwhaCard().setHeader("Recent activity", "Last 30 days"));
-      frame.add(new ElwhaChip("Tag"));
-
-      // Raw Swing inherits the design language via the FlatLaf-native key bridge.
-      frame.add(new JButton("Save"));
-
-      frame.pack();
-      frame.setLocationRelativeTo(null);
-      frame.setVisible(true);
-    });
+          JFrame frame = new JFrame("Elwha");
+          frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+          frame.add(card, BorderLayout.CENTER);
+          frame.add(ElwhaButton.filledButton("Refresh"), BorderLayout.SOUTH);
+          frame.setSize(400, 240);
+          frame.setLocationRelativeTo(null);
+          frame.setVisible(true);
+        });
   }
 }
 ```
 
-Switch modes at runtime by re-installing — `ElwhaTheme.install` is idempotent, and every color/font is stored as a `ColorUIResource` / `FontUIResource` so `SwingUtilities.updateComponentTreeUI` re-skins live components correctly.
+`Mode.SYSTEM` follows the OS appearance. Switch at runtime with
+`ElwhaTheme.install(ElwhaTheme.current().withMode(Mode.DARK))`.
 
-## The token foundation
+A longer walkthrough — what each call does, how raw Swing inherits the theme, runtime mode
+switching: **[docs/consumer/quick-start.md](docs/consumer/quick-start.md)**.
 
-`ElwhaTheme.install(Config)` writes five token families into `UIManager` under the `Elwha.*` namespace:
+## Documentation
 
-| Family | Type | What it is |
-|---|---|---|
-| **Color roles** | `ColorRole` (49 enums) | The full M3 color scheme — `PRIMARY` / `ON_PRIMARY` / `PRIMARY_CONTAINER` / `SURFACE` / `OUTLINE` / `ERROR` / `SURFACE_CONTAINER_HIGH` / … with mandatory `on`-pairings for foreground-on-container contrast. |
-| **Shape scale** | `ShapeScale` (7 enums) | Corner radii: `NONE` / `XS` / `SM` / `MD` / `LG` / `XL` / `FULL`. |
-| **Space scale** | `SpaceScale` (6 enums) | 4dp-based ladder: `XS` (4) / `SM` (8) / `MD` (12) / `LG` (16) / `XL` (24) / `XXL` (32). For padding, gaps, insets. |
-| **Type roles** | `TypeRole` (12 enums) | M3 type roles (`TITLE_LARGE` / `BODY_MEDIUM` / `LABEL_SMALL` / …), rendered with the bundled Inter (Regular + Medium). |
-| **State layers** | `StateLayer` (5 enums) | Hover / focus / pressed / dragged / selected as **opacity overlays** on a role color, not separate colors. M3 defaults: 8 % / 10 % / 10 % / 16 % / 12 %. |
-
-Every token resolves at paint time from `UIManager`. **Components must not cache resolved values** in fields — the rule that makes runtime theme/mode switching work.
-
-```java
-// Typed access from inside a component's paint code:
-Color fill   = ColorRole.PRIMARY.resolve();
-int   radius = ShapeScale.MD.px();
-Font  label  = TypeRole.LABEL_MEDIUM.resolve();
-int   pad    = SpaceScale.MD.px();
-Color hover  = StateLayer.HOVER.over(fill, ColorRole.ON_PRIMARY);   // tint-on-base composite at hover opacity
-```
-
-### Customizing the palette
-
-`MaterialPalettes.baseline()` ships the M3 baseline scheme. For one-off tweaks, override specific roles via `UIManager` **after** `install` returns:
-
-```java
-ElwhaTheme.install(ElwhaTheme.config().theme(MaterialPalettes.baseline()).build());
-UIManager.put("Elwha.color.primary",          new ColorUIResource(0x0F6FCB));
-UIManager.put("Elwha.color.primaryContainer", new ColorUIResource(0xD8E9FF));
-SwingUtilities.updateComponentTreeUI(yourRootFrame);
-```
-
-For a brand palette, build a full `Palette` (`Palette.builder().set(ColorRole.PRIMARY, …)…build()` — all 49 roles required), wrap it in a `Theme(name, light, dark)`, and pass that to `ElwhaTheme.install`. A `Palette.from(baseline)` derive-and-tweak affordance is queued for a future release.
-
-The full token taxonomy and the FlatLaf-native key bridge (which keys FlatLaf reads, which token each is wired to) live in `docs/research/elwha-token-taxonomy.md` and `docs/research/elwha-theme-install-api.md`.
-
-## Components
-
-Built on top of the token foundation; depend only on Swing + FlatLaf.
-
-| Component | What it is |
+| | |
 |---|---|
-| **`ElwhaCard`** | A surface primitive: header, body, surface variants (`ELEVATED` / `OUTLINED` / `FILLED`), hover/pressed/selected states, optional collapse/expand, leading icon, trailing actions. V2 rebuild on the token foundation tracked in #253. |
-| **`ElwhaCardList<T>`** | A list of `ElwhaCard` items with selection, drag-to-reorder, filter, sort, and orientation modes (vertical / horizontal / wrap / grid). |
-| **`ElwhaChip`** | A token-native chip primitive: text + optional leading icon + optional trailing action button. Treatment via `ChipVariant` (`FILLED` / `OUTLINED` / `GHOST`); the surface role is independently overridable per instance; foreground is always derived as the `on`-pair of the effective surface role. Four M3 chip-type factory presets (`assistChip` / `filterChip` / `inputChip` / `suggestionChip`) sit over the orthogonal axes. |
-| **`ElwhaChipList<T>`** | A list of `ElwhaChip` items with selection modes (`NONE` / `SINGLE` / `SINGLE_MANDATORY` / `MULTIPLE`), drag-to-reorder, pinned-partition + anchored modes, icon affordances. |
-| **`ElwhaSurface`** | A token-native rounded surface primitive — a `JPanel` subclass that paints a role-filled, round-rect, optionally outlined background through the shared `SurfacePainter`. Elwha's equivalent of Material's *Paper*; the foundation `ElwhaCard` V2 (#253) will compose for its background paint. Four typed setters: `surfaceRole` / `shape` / `borderRole` / `borderWidth`. |
-| **`ElwhaIconButton`** | A token-native M3 icon-button primitive with four emphasis variants (`FILLED` / `FILLED_TONAL` / `OUTLINED` / `STANDARD`), `CLICKABLE` / `SELECTABLE` interaction modes, a declarative `setIcons(resting, selected)` toggle pattern, and the five M3 sizes via `IconButtonSize` (`XS` / `S` / `M` / `L` / `XL`). Drops into `JToolBar` directly. |
-| **`IconButtonGroup`** | Mutually-exclusive selection across a set of `ElwhaIconButton`s — the toolbar "radio" pattern Swing's `ButtonGroup` provides for `AbstractButton`s. Non-mandatory (deselect-allowed) and mandatory (one always selected) modes. |
-| **`ElwhaSlider`** | The M3 Expressive slider — a token-themed range input over a `BoundedRangeModel`, painting the split active / inactive track with the rounded-end gap, a tall pill handle that narrows on focus/press, optional **stops** (snap-to-step with stop indicators + a contrast end stop), and an optional value-indicator bubble. `Variant.STANDARD` fills from the leading edge; `Variant.CENTERED` fills from a settable **origin** outward to the handle (positive/negative range, default in the middle); `Variant.RANGE` adds a second handle and fills **between** the two, selecting a `[lower, upper]` span. The M3 **size** scale `XS`–`XL` (`setSizeVariant`) grows the chrome, and an optional **inset icon** (`setInsetIcon`, standard M/L/XL) sits in the track with M3 swap-at-zero. Full keyboard (arrows / Space+arrows / Home·End — per-handle with two foci in range), the `slider` accessibility role + `AccessibleValue` (one child per range handle), and RTL mirroring. `Orientation.VERTICAL` transposes to a tall, bottom-up track (the inset icon pins at the top; vertical range is doc-warned). **Phases 1–5 (V1 complete)** ship the standard + centered + range variants, horizontal + vertical, the XS–XL sizes + inset icon (#340). |
-| **`ElwhaList<T>`** | The cross-cutting list contract implemented by both list containers — orientation, gap, padding, empty / loading state, filter, sort. |
-| **`MaterialIcons`** | Helper that loads bundled Material Symbols (Rounded / weight 400 / 20-dp optical-size axis, rendered at 24 px by default with sized overloads) via `FlatSVGIcon`, theme-coloured via the shared `Label.foreground` filter. Includes `MaterialIcons.pair(name)` returning an outline / fill `IconPair` for the canonical M3 toggle-icon-swap pattern. Bundled outline/fill pairs: `push_pin`, `anchor`, `favorite`, `star`, `info`, `help`, `delete`, `edit`, `visibility`. |
+| **[Install & authenticate](docs/consumer/install.md)** | Coordinates, the `read:packages` token flow, Gradle, and the 401/403 troubleshooting list. |
+| **[Quick start](docs/consumer/quick-start.md)** | A program that compiles, annotated. |
+| **[Theming](docs/consumer/theming.md)** | The token families, dark mode, the bundled palette tiers, shipping your own palette, typography. |
+| **[Component index](docs/consumer/components.md)** | Every component, its class, and where to see it in the Showcase. |
+| **[Stability policy](docs/consumer/stability.md)** | What 1.x promises, what counts as public API, the deprecation policy, and upgrading from 0.1.0. |
 
-### ElwhaSlider
+## What's in the box
 
-```java
-ElwhaSlider brightness = new ElwhaSlider(0, 100, 40);   // min, max, value
-brightness.setLabel("Brightness");                       // accessible name (or JLabel.setLabelFor)
-brightness.setValueIndicatorEnabled(true);               // show the value bubble on focus/press
-brightness.setValueFormatter(v -> v + "%");              // optional bubble text
-brightness.addChangeListener(e -> applyBrightness(brightness.getValue()));
+| Family | Components |
+|---|---|
+| **Foundations** | Design tokens (`ColorRole`, `ShapeScale`, `SpaceScale`, `TypeRole`, `StateLayer`), `ElwhaTheme` install API, `ElwhaSurface`, `MaterialIcons` |
+| **Actions** | `ElwhaButton`, `ElwhaIconButton`, `ElwhaButtonGroup`, `ElwhaFab` + `ElwhaFabAnchor` |
+| **Selection controls** | `ElwhaCheckbox`, `ElwhaRadioButton` + `ElwhaRadioGroup`, `ElwhaSwitch`, `ElwhaChip` |
+| **Fields** | `ElwhaTextField`, `ElwhaSelectField<T>`, `ElwhaSlider`, `ElwhaColorPicker` (+ dialog and popover) |
+| **Containers & surfaces** | `ElwhaCard` and its composition primitives, `ElwhaItemList<T>`, `ElwhaSideSheet` |
+| **Overlays** | `ElwhaDialog`, `ElwhaFullScreenDialog`, `ElwhaMenu`, `ElwhaTooltip` |
+| **Navigation** | `ElwhaAppBar`, `ElwhaNavigationRail` + `ElwhaNavRailDestination`, `ElwhaTabs` |
+| **Feedback** | `ElwhaBadge` + `ElwhaBadgeAnchor`, `ElwhaLinearProgressIndicator`, `ElwhaCircularProgressIndicator`, `ElwhaLoadingIndicator` |
 
-ElwhaSlider quality = new ElwhaSlider(0, 100, 60);
-quality.setStops(20);    // stops mode: snap to 0/20/40/60/80/100, painted stop indicators
+One-line descriptions and Showcase leaves for all of them:
+**[docs/consumer/components.md](docs/consumer/components.md)**.
 
-ElwhaSlider balance = new ElwhaSlider(-50, 50, 0);
-balance.setVariant(ElwhaSlider.Variant.CENTERED);   // active fill grows out of the origin
-// origin defaults to 0 here (0 is in range); set it explicitly with balance.setOrigin(int)
+## Theming in one paragraph
 
-ElwhaSlider priceRange = ElwhaSlider.range(0, 100, 30, 70);   // min, max, lower, upper
-priceRange.setValueIndicatorEnabled(true);   // only the active handle's bubble shows
-priceRange.addChangeListener(e -> apply(priceRange.getLowerValue(), priceRange.getUpperValue()));
+`MaterialPalettes` ships the M3 baseline scheme plus two tiers of demo palettes, discovered from
+resource directories rather than a hardcoded list. A `Theme` carries both a light and a dark
+`Palette`, so dark mode is a `Mode`, not a second theme. To ship your own colors, write an
+Elwha-format palette JSON (49 color roles, light and dark) and load it with
+`PaletteLoader.loadTheme(...)`; `scripts/convert_mtb_palette.py` converts a Material Theme Builder
+export into that format. Full guide: **[docs/consumer/theming.md](docs/consumer/theming.md)**.
 
-ElwhaSlider hero = new ElwhaSlider(0, 100, 60);
-hero.setSizeVariant(ElwhaSlider.Size.XL);                // M3 size scale: XS (default) … XL
-hero.setInsetIcon(MaterialIcons.brightnessAuto());       // glyph inside the track (standard, M/L/XL)
+## Seeing everything
 
-ElwhaSlider lights = new ElwhaSlider(0, 100, 70);
-lights.setOrientation(ElwhaSlider.Orientation.VERTICAL); // tall track, fills bottom-up
-lights.setSizeVariant(ElwhaSlider.Size.M);
-lights.setInsetIcon(MaterialIcons.brightnessAuto());     // bulb pinned at the top (max) end
+Every shipped component has a leaf in **The Elwha Showcase**. From a checkout:
+
+```bash
+mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"
 ```
 
-The value lives in the slider's `BoundedRangeModel`; `getValueIsAdjusting()` is true mid-drag, so a `ChangeListener` can distinguish live drag updates from the committed value.
-
-**Use `Variant.CENTERED`** when the value spans a positive/negative range with a meaningful midpoint (a balance / bias / pan control): the active track emanates from the origin and fills toward the handle in whichever direction the value moves, instead of always from the leading edge. The origin defaults to `0` when `0` is in range, otherwise the range midpoint; override it with `setOrigin(int)`.
-
-**Use `Variant.RANGE`** when the user selects a *span* rather than a point (a price filter, a min/max threshold). Build it with `ElwhaSlider.range(min, max, lower, upper)`; the two handles can't cross (each clamps at the other's value). The two handles are independent keyboard tab stops (Tab moves into the lower, again to the upper, then out; Shift+Tab reverses) and separate `AccessibleValue` children; with the value indicator on, only the focused/dragged handle shows a bubble (M3 — never both at once).
-
-**Size the slider** with `setSizeVariant(Size)` — the M3 scale `XS` (the default) / `S` / `M` / `L` / `XL` grows the track, handle, and corner together (track 16 / 24 / 40 / 56 / 96 dp), giving a bigger touch target and more visual emphasis (`XL` for hero moments). It is named `getSizeVariant()` / `setSizeVariant(Size)` rather than `getSize()` to avoid shadowing `Component.getSize()`.
-
-**Add an inset icon** with `setInsetIcon(Icon)` — a glyph (source it via `MaterialIcons`) painted inside the track at the leading/origin end to say what the slider controls (brightness, volume). It renders on the **standard variant at sizes M/L/XL only** (a track below 40 dp is too thin); on `XS`/`S`, centered, or range it is a documented no-op (one advisory log, paints nothing). The icon sits in the active fill and **swaps into the inactive track** when the value drops too low to contain it (M3 swap-at-zero); the leading end and swap direction mirror under RTL.
-
-**Orient the slider vertically** with `setOrientation(Orientation.VERTICAL)` — a tall track whose active fill grows **bottom-up** (minimum at the bottom, maximum at the top) with a horizontal pill handle. The preferred size swaps its long/short axes; sizes, stops, value indicator, keyboard (Up/Down drive the value), and accessibility all carry over. Vertical is **never RTL-mirrored** (it always fills bottom-up). The inset icon pins at the **top (max) end** (the M3 bulb-at-top pattern) and recolors as the fill reaches it. **Vertical `RANGE` is discouraged** (M3 cognitive-load guidance — a two-handle range is harder to scan vertically): it is allowed but doc-warned, so prefer a horizontal range slider.
-
-**Phase 1–5 surface (V1 complete):** the `STANDARD`, `CENTERED`, **and** `RANGE` variants, **horizontal and vertical** orientation, the `XS`–`XL` size scale, the inset icon, continuous **and** stops, with an optional value indicator, full keyboard + `slider` accessibility, and RTL.
-
-**Documented deferrals (not silently cut):** a **vertical range** slider is allowed but **doc-warned** — M3 cognitive-load guidance discourages combining the two-handle range with the harder-to-scan vertical orientation, so prefer a horizontal range or a vertical single slider; an external value text field that two-way-syncs with the slider is a Showcase recipe composing `ElwhaTextField` (#286), not a built-in; density follows M3 (don't-apply-by-default) and is out of scope.
-
-## Playgrounds
-
-The library ships five interactive playground apps:
-
-- **`com.owspfm.elwha.theme.playground.ThemePlayground`** — the central harness. Color-role swatches (all 49), the 12-role type scale, a raw-Swing components gallery, and top-level tabs for each of the token-native components (`Chip`, `Icon Button`, `Surface`). Live light / dark / system mode toggle. This is the place to verify a custom palette before wiring it into your app.
-- **`com.owspfm.elwha.card.v1.playground.ElwhaCardPlayground`** — exercises every variant, mode, and configurable property of `ElwhaCard` and `ElwhaCardList`.
-- **`com.owspfm.elwha.chip.ElwhaChipPlayground`** — exercises every variant and selection mode of `ElwhaChip` and `ElwhaChipList`.
-- **`com.owspfm.elwha.surface.playground.ElwhaSurfacePlayground`** — the 49 × 7 `ColorRole × ShapeScale` matrix for `ElwhaSurface` and a live combo-driven panel.
-- **`com.owspfm.elwha.iconbutton.playground.ElwhaIconButtonPlayground`** — variant gallery (4 × 6 states), toggle examples (icon-swap pairs across all variants), the 5 × 4 size × variant matrix, a `JToolBar` mockup, and a live combo-driven panel.
-
-Run them from a checkout:
+Around thirty per-component playgrounds live alongside it — for example:
 
 ```bash
 mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.theme.playground.ThemePlayground"
-mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.v1.playground.ElwhaCardPlayground"
+mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.playground.ElwhaCardPlayground"
 mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.chip.ElwhaChipPlayground"
-mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.surface.playground.ElwhaSurfacePlayground"
-mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.iconbutton.playground.ElwhaIconButtonPlayground"
 ```
 
 ## Requirements
 
-- **JDK 21** or later (target bytecode 65)
-- **FlatLaf 3.2.5+** (transitive — pulled in automatically)
-- Pure Swing — no JavaFX, no Compose, no AWT-only fallback
+- **JDK 21** or later (bytecode 65 — JDK 17 cannot load the jar)
+- **Swing** — no JavaFX, no Compose, no AWT-only fallback
+- **FlatLaf 3.2.5** and `jsvg`, pulled in transitively
 
-## Roadmap
+Elwha depends on Swing and FlatLaf only. That is a deliberate constraint — see
+[Dependency stance](docs/consumer/stability.md#dependency-stance).
 
-The token foundation (epic [#30](https://github.com/OWS-PFMS/elwha/issues/30)) landed. `ElwhaChip` is rebuilt onto it ([#31](https://github.com/OWS-PFMS/elwha/issues/31)), `ElwhaSurface` ([#43](https://github.com/OWS-PFMS/elwha/issues/43)) and `ElwhaIconButton` ([#45](https://github.com/OWS-PFMS/elwha/issues/45)) shipped on top. The remaining v1 component cut is still being finalized.
+## Stability
 
-**1.0.0 ships after** these still-open epics complete:
-
-- **`ElwhaCard` V2 rebuild** ([#253](https://github.com/OWS-PFMS/OWS-Local-Search-GUI/issues/253)) — retire Card V1's raw-typed escape hatches (`setSurfaceColor`, `setKeepSummaryWhenExpanded`, the `setHeader` overload pattern) by composing `ElwhaSurface` for the background paint and exposing only typed token setters. Card V1 still ships as-is in the meantime.
-- **Shared list surface** ([#252](https://github.com/OWS-PFMS/OWS-Local-Search-GUI/issues/252)) — extend `ElwhaList<T>` to share selection and drag-reorder across both list families, replacing the family-specific `CardSelectionModel` / `ChipSelectionModel` split.
-- **Tonal-lift elevation (v2)** — replace the current flat treatment with M3-style elevation as a tonal shift on `surface`, not drop shadows.
-
-Expect breaking changes between minor versions until 1.0.0. Org-level project board tracking the work: [Project #5 — Material Flat Component Library](https://github.com/orgs/OWS-PFMS/projects/5).
+From 1.0.0 the API follows semantic versioning: `1.x` minors are additive, patches are fixes only,
+and anything slated for removal is deprecated for the rest of the 1.x line first. Elwha implements
+Material 3 Expressive closely but is not spec-compliant; each component's design doc under
+`docs/research/` records its deliberate divergences. Details:
+**[docs/consumer/stability.md](docs/consumer/stability.md)**.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Maintainer-facing conventions — code style, Javadoc and
+`@version` rules, the changelog policy — live in [`docs/development/`](docs/development/).
 
 ## License
 
-Apache License, Version 2.0 — see [LICENSE](LICENSE). Bundled third-party assets (Material Symbols, Inter font) carry their own licenses; see [`NOTICE`](NOTICE).
+Apache License, Version 2.0 — see [LICENSE](LICENSE). Bundled third-party assets (Material Symbols,
+the Inter font) carry their own licenses; see [`NOTICE`](NOTICE).
