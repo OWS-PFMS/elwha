@@ -81,6 +81,20 @@ The unified playground is **The Elwha Showcase**. Main class: `ElwhaShowcase`.
   | **Components** | Button · Chip · Icon Button · Card · Surface |
   | **Containers** | Chip List · Card List · Button group · Icon Button group |
 
+  (Entries as of v0.3.0; the catalog has grown well past this table. The three **sections** are the
+  structure — they are the rail's three primary destinations — and they have not changed.)
+
+- **Leaf order within a section (#441).** Registration order is chronological shipping order and is
+  not what renders. Landing pages group each section's leaves by **component family**, using the
+  same taxonomy — Actions · Selection controls · Fields · Containers & surfaces · Overlays ·
+  Navigation · Feedback — and the same order that `CLAUDE.md` documents the source packages with,
+  alphabetically within a family. One taxonomy for the source tree and the storefront, and a rule a
+  reader can apply without knowing the spec.
+
+  Only **Components** subdivides; Foundations and Containers are each a single family and render one
+  unheaded grid, exactly as before. The three sections stay as they are — a flat 25-leaf
+  alphabetical wall was the problem, and eight rail destinations would have been a different one.
+
 - Each **Component** entry is one single-level inner `JTabbedPane`: **Workbench** (primary) +
   **Gallery** (secondary). No deeper nesting anywhere in the Showcase.
 
@@ -112,7 +126,16 @@ multi-instance — a single live instance cannot express list/group behavior. Co
 - The container with a representative set of children.
 - Controls for the container's options.
 - A **live event log** (selection, reorder, group-selection changes).
+- An **equivalent-Java code view**, beside the log in the bottom band.
 - `ElwhaCardListShowcase` already implements this pattern and is the reference.
+
+**Ruling on the code view (#582, resolved under #441).** The container scaffold shipped without
+one, and the asymmetry read as an omission because it was one. A container's construction — model,
+renderer, container, listeners — is *more* opaque from the live surface than a component's, not
+less, so it is the case that most needs the snippet. The code view therefore sits on the leading
+edge of the bottom band, the position it occupies on the Component Workbench, with the event log
+beside it; each leaf regenerates its snippet from the **live container's own getters** on every
+control change, so the code and the stage cannot drift apart.
 
 ## 5. Component Workbench layout — "pro", not POC-ish
 

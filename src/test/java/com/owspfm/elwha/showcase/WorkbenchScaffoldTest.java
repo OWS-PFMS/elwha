@@ -227,9 +227,42 @@ class WorkbenchScaffoldTest {
     assertThat(logOf(new ContainerWorkbench()).getText()).isEmpty();
   }
 
+  @Test
+  void aContainerWorkbenchCarriesACodeViewToo() {
+    final ContainerWorkbench workbench = new ContainerWorkbench();
+
+    assertThat(ShowcaseFixture.descendants(workbench))
+        .as(
+            "#582 — the equivalent-Java promise is the storefront's, not one scaffold's: a list is"
+                + " the construction a reader can least infer from the live surface")
+        .contains(workbench.codeView());
+  }
+
+  @Test
+  void aContainerWorkbenchShowsTheCodeItIsGiven() {
+    final ContainerWorkbench workbench = new ContainerWorkbench();
+
+    workbench.setCode("ElwhaItemList<String> list = new ElwhaItemList<>(model, renderer);");
+
+    assertThat(workbench.codeView().code())
+        .isEqualTo("ElwhaItemList<String> list = new ElwhaItemList<>(model, renderer);");
+  }
+
+  @Test
+  void aContainerWorkbenchsCodeViewAndLogAreDistinctSurfaces() {
+    final ContainerWorkbench workbench = new ContainerWorkbench();
+
+    workbench.setCode("new ElwhaItemList<>(model, renderer);");
+    workbench.logEvent("selection = [0]");
+
+    assertThat(workbench.log().getText())
+        .as("#582 — the code view was added alongside the log, not over it")
+        .isEqualTo("selection = [0]\n");
+    assertThat(workbench.codeView().code()).isEqualTo("new ElwhaItemList<>(model, renderer);");
+  }
+
   private static JTextArea logOf(final ContainerWorkbench workbench) {
-    final java.util.List<JTextArea> areas = ShowcaseFixture.findAll(workbench, JTextArea.class);
-    return areas.get(areas.size() - 1);
+    return workbench.log();
   }
 
   // ------------------------------------------------------ constraint sanity
