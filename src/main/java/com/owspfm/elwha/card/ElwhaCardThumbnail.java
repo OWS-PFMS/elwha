@@ -135,7 +135,10 @@ public final class ElwhaCardThumbnail extends JComponent {
       final int w = getWidth();
       final int h = getHeight();
       if (shape == ThumbnailShape.CIRCULAR) {
-        g2.setClip(new Ellipse2D.Float(0, 0, w, h));
+        // clip(), not setClip(): Graphics2D.setClip REPLACES, which would discard the rounded-body
+        // clip ElwhaSurface.paintChildren installed for the chassis and let a corner-placed
+        // thumbnail overhang the card's rounded edge — the leak ElwhaCardMedia documents.
+        g2.clip(new Ellipse2D.Float(0, 0, w, h));
       }
       g2.drawImage(image, 0, 0, w, h, this);
     } finally {

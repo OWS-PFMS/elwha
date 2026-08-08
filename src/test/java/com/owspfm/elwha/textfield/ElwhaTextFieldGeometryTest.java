@@ -400,6 +400,64 @@ class ElwhaTextFieldGeometryTest {
     assertThat(field.getText()).as("preserving the text across both swaps").isEqualTo("kept");
   }
 
+  // ------------------------------------------------- auto-grow measurement
+
+  private static ElwhaTextField autoGrow(final String text) {
+    final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Notes");
+    field.setInputMode(InputMode.MULTI_LINE);
+    field.setText(text);
+    field.setSize(field.getPreferredSize());
+    field.doLayout();
+    return field;
+  }
+
+  @Test
+  void measuringAnAutoGrowFieldLeavesTheLiveEditorAlone() {
+    final ElwhaTextField field =
+        autoGrow("alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi");
+    final java.awt.Dimension editorSize = field.getEditor().getSize();
+
+    field.getPreferredSize();
+
+    assertThat(field.getEditor().getSize())
+        .as(
+            "#623 — measuring used to resize the mounted editor, invalidating the tree mid-validate"
+                + " and leaving it Short.MAX_VALUE tall until the next layout")
+        .isEqualTo(editorSize);
+    assertThat(field.getEditor().getHeight())
+        .as("and specifically nowhere near the measuring sentinel")
+        .isLessThan(Short.MAX_VALUE);
+  }
+
+  @Test
+  void autoGrowStillReportsATallerBoxAsTheTextWraps() {
+    final int oneLine = autoGrow("alpha").getPreferredSize().height;
+
+    final int manyLines =
+        autoGrow(
+                "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron "
+                    + "pi rho sigma tau upsilon phi chi psi omega")
+            .getPreferredSize()
+            .height;
+
+    assertThat(manyLines)
+        .as("the detached twin measures the same wrapping the live editor would have")
+        .isGreaterThan(oneLine);
+  }
+
+  @Test
+  void autoGrowMeasurementTracksLaterEdits() {
+    final ElwhaTextField field = autoGrow("alpha");
+    final int before = field.getPreferredSize().height;
+
+    field.setText(
+        "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho");
+
+    assertThat(field.getPreferredSize().height)
+        .as("the twin shares the editor's Document, so it can never hold stale text")
+        .isGreaterThan(before);
+  }
+
   @Test
   void aNullInputModeFallsBackToSingleLine() {
     final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Notes");

@@ -6,7 +6,9 @@ import com.owspfm.elwha.slider.ElwhaSlider.Handle;
 import com.owspfm.elwha.slider.ElwhaSlider.Variant;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Input;
+import com.owspfm.elwha.testkit.PaintPass;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import java.awt.Rectangle;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
 import org.junit.jupiter.api.Test;
@@ -202,6 +204,39 @@ class ElwhaSliderRangeTest {
     assertThat(slider.getLowerValue())
         .as("the no-cross clamp holds through a gesture, not just a setter")
         .isEqualTo(80);
+  }
+
+  // ----------------------------------------------------- focus-proxy bounds
+
+  @Test
+  void aValueChangeMovesTheFocusProxyWithoutWaitingForALayout() {
+    final ElwhaSlider slider = span();
+    slider.doLayout();
+    final Rectangle before = slider.getComponent(0).getBounds();
+
+    slider.setLowerValue(60);
+
+    assertThat(slider.getComponent(0).getBounds())
+        .as(
+            "#620 — a drag only repaints, never revalidates, so the proxy has to follow the value "
+                + "or the focus ring and the screen-reader bounds lag the handle all gesture")
+        .isNotEqualTo(before);
+  }
+
+  @Test
+  void paintingDoesNotMoveTheFocusProxies() {
+    final ElwhaSlider slider = span();
+    slider.doLayout();
+    slider.setLowerValue(60);
+    final Rectangle lower = slider.getComponent(0).getBounds();
+    final Rectangle upper = slider.getComponent(1).getBounds();
+
+    PaintPass.capture(slider, LENGTH, slider.getPreferredSize().height);
+
+    assertThat(slider.getComponent(0).getBounds())
+        .as("#620 — a paint pass must not mutate child bounds; setBounds repaints from inside it")
+        .isEqualTo(lower);
+    assertThat(slider.getComponent(1).getBounds()).isEqualTo(upper);
   }
 
   // --------------------------------------------------------- focus model

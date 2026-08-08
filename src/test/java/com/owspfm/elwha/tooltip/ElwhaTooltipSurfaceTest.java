@@ -181,6 +181,30 @@ class ElwhaTooltipSurfaceTest {
         .isLessThanOrEqualTo(pref.height);
   }
 
+  // ------------------------------------------------------------ paint origin
+
+  @Test
+  void aFadingSurfaceIsAPaintingOriginSoItsActionButtonsCannotPopInAtFullAlpha() {
+    final TooltipSurface surface = rich("Layers", "Stack order of the canvas");
+    surface.addActionButton(ElwhaButton.textButton("Learn more"));
+    surface.setAlphaSupplier(() -> 0.4f);
+
+    assertThat(surface.isPaintingOrigin())
+        .as("mid-entrance the composite owns every child's render, so child repaints route here")
+        .isTrue();
+  }
+
+  @Test
+  void aSettledSurfaceIsNotAPaintingOrigin() {
+    final TooltipSurface surface = rich("Layers", "Stack order of the canvas");
+    surface.addActionButton(ElwhaButton.textButton("Learn more"));
+    surface.setAlphaSupplier(() -> 1f);
+
+    assertThat(surface.isPaintingOrigin())
+        .as("at rest the composite is a no-op, so children keep their own repaint optimization")
+        .isFalse();
+  }
+
   // -------------------------------------------------------------------- a11y
 
   @Test

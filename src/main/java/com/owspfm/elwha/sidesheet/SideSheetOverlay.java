@@ -211,9 +211,13 @@ final class SideSheetOverlay extends AbstractElwhaOverlay {
     // ripple tick, a caret blink) would otherwise paint untranslated mid-motion. Declaring a
     // painting origin forces descendant repaints through paint() (the #305/#176 Swing contract for
     // transformed children).
+    //
+    // Gated on the tween, not unconditional: past full progress paint() short-circuits to
+    // super.paint() and translates nothing, so a bare `true` would keep forcing a whole-surface
+    // re-composite for every caret blink and hover tick for as long as the sheet is open.
     @Override
     public boolean isPaintingOrigin() {
-      return true;
+      return motionProgress < 1f;
     }
   }
 

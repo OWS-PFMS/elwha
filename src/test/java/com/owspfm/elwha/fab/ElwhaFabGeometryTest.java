@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.testkit.EdtInterceptor;
+import com.owspfm.elwha.testkit.PaintPass;
 import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ContentMorphPainter;
@@ -18,6 +19,7 @@ import java.awt.Graphics;
 import java.awt.Insets;
 import java.awt.Rectangle;
 import javax.swing.Icon;
+import javax.swing.JPanel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -319,6 +321,46 @@ class ElwhaFabGeometryTest {
     assertThat(fab.isMorphing())
         .as("so no consumer polling isMorphing can ever race a Timer in this suite")
         .isFalse();
+  }
+
+  @Test
+  void aMorphingFabSchedulesNoRelayoutFromInsideItsPaintPass() {
+    final ElwhaFab fab = ElwhaFab.extended(MaterialIcons.add(), "Compose");
+    // Parented deliberately: JComponent.revalidate() returns early on an orphan, so an unparented
+    // FAB would report zero whether or not the paint asked for one.
+    new JPanel(null).add(fab);
+    MorphAnimator.setReducedMotion(false);
+    fab.morphTo(ElwhaFab.Form.STANDARD);
+    // Re-pinned before painting: the morph is live (a Swing timer cannot tick while this test
+    // holds the dispatch thread) and the restore keeps the rest of the test snapping as usual.
+    MorphAnimator.setReducedMotion(true);
+    assertThat(fab.isMorphing()).as("the morph really is running").isTrue();
+
+    final PaintPass pass = PaintPass.capture(fab);
+
+    assertThat(pass.revalidations())
+        .as("#656 — revalidating from paint re-enters the invalidation queue from the paint pass")
+        .isZero();
+  }
+
+  @Test
+  void aMorphTickIsWhatDrivesTheRelayout() {
+    final ElwhaFab fab = ElwhaFab.extended(MaterialIcons.add(), "Compose");
+    final JPanel parent = new JPanel(null);
+    parent.add(fab);
+    final PaintPass idle = PaintPass.capture(fab);
+
+    final PaintPass duringTick = tickCounted(fab);
+
+    assertThat(idle.revalidations()).as("a settled FAB asks for nothing").isZero();
+    assertThat(duringTick.revalidations())
+        .as("the animator's own progress tick is where the parent learns the body width changed")
+        .isPositive();
+  }
+
+  /** Counts what a morph tick schedules, with the FAB parented so revalidate() is not short-cut. */
+  private static PaintPass tickCounted(final ElwhaFab fab) {
+    return PaintPass.captureDuring(fab, () -> fab.morphTo(ElwhaFab.Form.STANDARD));
   }
 
   @Test

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.owspfm.elwha.chip.ElwhaChip;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Input;
+import com.owspfm.elwha.testkit.PaintOrigin;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.Color;
@@ -326,6 +327,27 @@ class ElwhaItemListReorderTest {
 
     assertThat(handleInkNear(view))
         .as("§7 — HOVER_ICON fades a drag handle in over the item's leading edge")
+        .isTrue();
+  }
+
+  @Test
+  void contentPanelIsAPaintingOriginOnlyWhileAHandleIsShowing() {
+    slabListOf("a", "b")
+        .setMovementMode(MovementMode.MOVABLE)
+        .setReorderAffordance(ReorderAffordance.HOVER_ICON);
+    layout();
+    final JComponent view = list.getComponentFor("a");
+    final JComponent content = (JComponent) view.getParent();
+    assertThat(PaintOrigin.of(content))
+        .as("with no handle up there is nothing painted over the items")
+        .isFalse();
+
+    crossing(view, MouseEvent.MOUSE_ENTERED);
+
+    assertThat(PaintOrigin.of(content))
+        .as(
+            "the handle is painted over the item, so the item's own repaints must come back "
+                + "through the panel — otherwise an opaque adapter view erases it")
         .isTrue();
   }
 

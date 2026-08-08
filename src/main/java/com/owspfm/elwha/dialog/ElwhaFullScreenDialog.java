@@ -406,13 +406,16 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     // This surface overrides paint() to apply the slide + fade transform over a cached snapshot. A
     // descendant's partial repaint (e.g. a button's per-tick ripple, a text caret blink) would
     // otherwise be painted directly — bypassing this paint() — which freezes the animation
-    // mid-frame
-    // and, during the slide, would paint the child untransformed. Declaring this a painting origin
-    // forces every descendant repaint to repaint the whole surface through paint(). (Swing contract
-    // for any component that transforms/composites its children's rendering.)
+    // mid-frame and, during the slide, would paint the child untransformed. Declaring this a
+    // painting origin forces every descendant repaint to repaint the whole surface through paint().
+    // (Swing contract for any component that transforms/composites its children's rendering.)
+    //
+    // Gated on the tween, not unconditional: past full progress paint() short-circuits to
+    // super.paint() and transforms nothing, so a bare `true` would keep forcing a whole-surface
+    // re-composite for every caret blink and hover tick for as long as the dialog is open.
     @Override
     public boolean isPaintingOrigin() {
-      return true;
+      return motionProgress < 1f;
     }
 
     // Reports AccessibleRole.DIALOG so assistive tech announces this as a dialog (§9); the

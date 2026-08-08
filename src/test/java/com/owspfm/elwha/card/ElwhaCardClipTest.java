@@ -8,6 +8,7 @@ import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.image.BufferedImage;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,33 @@ class ElwhaCardClipTest {
     return new ElwhaCardSupportingText("body");
   }
 
+  // --------------------------------------------------------- atom clip rule
+
+  @Test
+  void aCircularThumbnailIntersectsTheInheritedClipRatherThanReplacingIt() {
+    final BufferedImage source = new BufferedImage(40, 40, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D ink = source.createGraphics();
+    ink.setColor(MEDIA_INK);
+    ink.fillRect(0, 0, 40, 40);
+    ink.dispose();
+    final ElwhaCardThumbnail thumbnail = new ElwhaCardThumbnail(source);
+    thumbnail.setSize(40, 40);
+
+    final BufferedImage shot = new BufferedImage(40, 40, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D g = shot.createGraphics();
+    // Stands in for the rounded-body clip ElwhaSurface.paintChildren hands every card child.
+    g.setClip(0, 0, 20, 40);
+    thumbnail.paint(g);
+    g.dispose();
+
+    assertThat(new Color(shot.getRGB(30, 20), true).getAlpha())
+        .as("a point inside the thumbnail's circle but outside the chassis clip stays unpainted")
+        .isZero();
+    assertThat(new Color(shot.getRGB(10, 20), true).getAlpha())
+        .as("while the part inside both clips still paints")
+        .isNotZero();
+  }
+
   // ------------------------------------------------------------ the trigger
 
   @Test
@@ -75,6 +103,18 @@ class ElwhaCardClipTest {
 
     assertThat(card.clipsChildrenToCorners())
         .as("a trailing media cover reaches the bottom corners and must be cut to them")
+        .isTrue();
+  }
+
+  @Test
+  void mediaStillForcesTheClipWhenTheCardScrollsItsOverflow() {
+    final ElwhaCard card = ElwhaCard.filledCard();
+    card.setExpansionOverflow(ExpansionOverflow.SCROLL);
+    card.add(media());
+    card.add(text());
+
+    assertThat(card.clipsChildrenToCorners())
+        .as("SCROLL re-parents children into the scroll body; the rule must follow them there")
         .isTrue();
   }
 

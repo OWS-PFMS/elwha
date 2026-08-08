@@ -442,6 +442,12 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
     this.rawIcon = icon;
     this.icon = themeIcon(icon, size.iconPx());
     this.text = text;
+    // Mid-morph the body width changes every frame, so the parent layout has to grow / shrink the
+    // FAB's reserved footprint in lockstep. Driven from the animator's own tick rather than from
+    // paintComponent: revalidating during a paint re-enters RepaintManager's invalidation queue
+    // from inside the paint pass, scheduling an extra layout+paint cycle on top of the one the
+    // animator already drives. ElwhaFabAnchor binds its own relayout the same way.
+    formMorph.addProgressListener(this::revalidate);
     formMorph.snapTo(form == Form.EXTENDED ? 1f : 0f);
     setOpaque(false);
     setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -1057,13 +1063,6 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
 
   @Override
   protected void paintComponent(final Graphics g) {
-    // Mid-morph the body width changes every frame; revalidate so the parent layout can grow /
-    // shrink the FAB's reserved footprint in lockstep with the painted body. Outside of an active
-    // morph this is a no-op — preferred size is stable.
-    if (formMorph.isRunning()) {
-      revalidate();
-    }
-
     final int bodyW = bodyWidthPx();
     final int bodyH = bodyHeightPx();
     final int arc = size.cornerRadiusPx();

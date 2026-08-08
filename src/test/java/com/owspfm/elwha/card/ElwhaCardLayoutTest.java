@@ -369,6 +369,16 @@ class ElwhaCardLayoutTest {
   }
 
   @Test
+  void reuseBufferOverloadCarriesTheCardsOwnWorstCaseReserve() {
+    final ElwhaCard card = new ElwhaCard();
+    final Insets buffer = new Insets(0, 0, 0, 0);
+
+    assertThat(card.getInsets(buffer))
+        .as("the card reserves for MAX_ELEVATION; both overloads must say so")
+        .isEqualTo(card.getInsets());
+  }
+
+  @Test
   void aLeadingMediaCoverDropsOneOfThePaddingRowsFromThePreferredHeight() {
     final ElwhaCard withMedia = new ElwhaCard();
     withMedia.add(media().setPreferredHeight(50));
