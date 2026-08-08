@@ -389,7 +389,7 @@ class ElwhaSideSheetConfigTest {
    * re-reading isOpen(), which is not something a real consumer should have to invent.
    */
   @Test
-  void theCloseAffordanceReportsItselfToTheConsumer() {
+  void aCloseAffordancePressReportsItselfToTheConsumer() {
     final ElwhaSideSheet sheet = sheet();
     final List<Boolean> seen = new ArrayList<>();
     sheet.addPropertyChangeListener(
@@ -432,7 +432,7 @@ class ElwhaSideSheetConfigTest {
   }
 
   @Test
-  void theOpenStateIsReadableFromInsideTheListener() {
+  void openStateIsReadableFromInsideTheListener() {
     final ElwhaSideSheet sheet = sheet();
     final List<Boolean> readBack = new ArrayList<>();
     sheet.addPropertyChangeListener(

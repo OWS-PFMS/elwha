@@ -423,7 +423,7 @@ class ElwhaBadgeAnchorPlacementTest {
   }
 
   @Test
-  void theOpticalSeatIsSmallEnoughToStayInsideTheRow() {
+  void anOpticalSeatIsSmallEnoughToStayInsideTheRow() {
     final Rectangle label = new Rectangle(40, 12, 60, 16);
     final IconHost host = new IconHost(label);
     AnchorFixture.with(host, 20, 16, 160, 40);

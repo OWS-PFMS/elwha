@@ -198,7 +198,7 @@ class ElwhaLinearProgressIndeterminateTest {
   }
 
   @Test
-  void theFloorStopsBitingOnceTheLineHasRealWidth() {
+  void aFlooredLineStopsBeingFlooredOnceItHasRealWidth() {
     final PinnedClock.Linear bar = indeterminateBar();
 
     final int nub = activeWidth(bar.frameAt(0));
