@@ -42,10 +42,10 @@ import javax.swing.SwingUtilities;
  *
  * <p><strong>Selection is exactly-one-mandatory</strong> (the {@code SINGLE_MANDATORY} tab-strip
  * semantics): the first tab added auto-activates silently; removing the active tab re-activates the
- * first remaining tab; programmatic activation flows through {@link #setActiveTabIndex(int)} /
- * {@link #setActiveTab(ElwhaTab)}. {@link #PROPERTY_ACTIVE_TAB} fires on <em>any</em> active-tab
- * change (programmatic included) — except the initial silent auto-activation, matching
- * material-web.
+ * first remaining tab, or clears the selection when it was the last one; programmatic activation
+ * flows through {@link #setActiveTabIndex(int)} / {@link #setActiveTab(ElwhaTab)}. {@link
+ * #PROPERTY_ACTIVE_TAB} fires on <em>any</em> active-tab change (programmatic included) — except
+ * the initial silent auto-activation, matching material-web.
  *
  * <p><strong>Content panels are consumer composition</strong> — M3 ships the bar; pair it with a
  * {@link java.awt.CardLayout} panel:
@@ -242,11 +242,12 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
   /**
    * Removes a tab from the bar. Removing the active tab re-activates the first remaining tab
-   * (firing {@link #PROPERTY_ACTIVE_TAB} — the selection did change); removing a tab before the
-   * active one keeps the same tab active.
+   * (firing {@link #PROPERTY_ACTIVE_TAB} — the selection did change); removing the <em>last</em>
+   * tab leaves the bar with no active tab and fires with a {@code null} {@code newValue}; removing
+   * a tab before the active one keeps the same tab active.
    *
    * @param tab the tab to remove; unknown tabs are ignored
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void removeTab(final ElwhaTab tab) {
@@ -260,7 +261,11 @@ public class ElwhaTabs extends JComponent implements Accessible {
     if (index == activeTabIndex) {
       activeTabIndex = -1;
       tab.setActive(false);
-      if (!tabs.isEmpty()) {
+      if (tabs.isEmpty()) {
+        // Emptying the bar is an active-tab change like any other, and the only one with no tab to
+        // hand forward: activate() cannot carry it because there is no index to activate (#724).
+        firePropertyChange(PROPERTY_ACTIVE_TAB, tab, null);
+      } else {
         activate(0, false);
       }
     } else if (index < activeTabIndex) {

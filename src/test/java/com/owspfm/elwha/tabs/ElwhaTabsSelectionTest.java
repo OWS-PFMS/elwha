@@ -487,4 +487,29 @@ class ElwhaTabsSelectionTest {
         .hasSize(1);
     assertThat(events.get(0).getNewValue()).isSameAs(second);
   }
+
+  /**
+   * The one active-tab change with no arriving tab to carry. It used to pass silently: {@code
+   * removeTab} set {@code activeTabIndex = -1} and returned without firing, because the fire lives
+   * inside {@code activate(int)} and there was no index left to activate — so a consumer tracking
+   * the selection was never told it had gone away (#724).
+   */
+  @Test
+  void removingTheLastTabAnnouncesThatTheSelectionIsGone() {
+    final ElwhaTabs bar = barOf("Only");
+    final ElwhaTab only = bar.getTabAt(0);
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, events::add);
+
+    bar.removeTab(only);
+
+    assertThat(bar.getActiveTab()).as("the bar is left with no active tab").isNull();
+    assertThat(events).as("emptying the bar is an active-tab change and must announce").hasSize(1);
+    assertThat(events.get(0).getOldValue())
+        .as("the departing tab is carried, so a consumer can tell which selection ended")
+        .isSameAs(only);
+    assertThat(events.get(0).getNewValue())
+        .as("null is the honest new value — there is no tab to hand forward")
+        .isNull();
+  }
 }
