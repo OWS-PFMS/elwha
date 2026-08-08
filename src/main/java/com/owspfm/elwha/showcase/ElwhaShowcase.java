@@ -29,6 +29,7 @@ import com.owspfm.elwha.card.ElwhaCardSupportingText;
 import com.owspfm.elwha.card.ElwhaCardThumbnail;
 import com.owspfm.elwha.card.ExpansionOverflow;
 import com.owspfm.elwha.card.ThumbnailShape;
+import com.owspfm.elwha.card.playground.CardPlaygroundPanels;
 import com.owspfm.elwha.card.playground.CursorReferencePanel;
 import com.owspfm.elwha.card.playground.GalleryPanel;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
@@ -94,6 +95,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -272,9 +274,9 @@ public final class ElwhaShowcase {
     final JPanel root = new JPanel(new BorderLayout());
     root.add(contentWrapper, BorderLayout.CENTER);
 
-    // Populate the catalog of leaves + build all CardLayout cards (4 landings + 19 wrapped
-    // leaves). Must run before the rail is built so the rail's primary action listeners can
-    // resolve landing keys that already have cards registered.
+    // Populate the catalog of leaves + build all CardLayout cards (the area landings plus one
+    // wrapped card per leaf). Must run before the rail is built so the rail's primary action
+    // listeners can resolve landing keys that already have cards registered.
     populateCatalog();
     populateLandingCards();
     populateLeafCards();
@@ -853,7 +855,7 @@ public final class ElwhaShowcase {
 
   // The four landing cards, populated into the CardLayout content panel. Each is a grid of
   // ElwhaCards — title + supporting text + an actionable click that routes to the leaf surface.
-  // Home is the master index (all 33 leaves, grouped by area heading); each area landing covers
+  // Home is the master index (every leaf, grouped by area heading); each area landing covers
   // just its own leaves. ElwhaCard's actionable mode is the entire raison-d'être here: the cards
   // are the navigation surface, not decoration.
   void populateLandingCards() {
@@ -2798,6 +2800,17 @@ public final class ElwhaShowcase {
     controls.addSection("State");
     controls.addControl("", enabledBox);
 
+    // --- Media + Header facets (#318) ---
+    // The main column owns which slots the card carries; each of those slots is a composition
+    // primitive with configuration of its own that the card does not own — the media's frame and
+    // accessibility posture, the header's typography roles — and a Workbench that exposes only the
+    // slot toggles renders every primitive in exactly one configuration. Editors live with the
+    // card (CardPlaygroundPanels) so a future host reuses them, and re-apply after each rebuild.
+    final ComponentWorkbench.Facet[] mediaFacet = new ComponentWorkbench.Facet[1];
+    final Runnable[] reapply = new Runnable[1];
+    final CardPlaygroundPanels.MediaEditor mediaEditor =
+        CardPlaygroundPanels.buildMediaEditor(() -> reapply[0].run());
+
     final Runnable apply =
         () -> {
           headerLeadingBox.setEnabled(headerBox.isChecked());
@@ -2824,9 +2837,27 @@ public final class ElwhaShowcase {
                   animateBox.isChecked(),
                   overflowBox.getSelectedValue(),
                   enabledBox.isChecked());
-          workbench.setStage(buildCard(cfg));
+          final StagedCard staged = buildCard(cfg);
+          mediaEditor.applyTo(staged.media());
+          workbench.setStage(staged.card());
           workbench.setCode(renderCardCode(cfg));
+          if (mediaFacet[0] != null) {
+            mediaFacet[0].setCode(
+                staged.media() == null
+                    ? "// No media slot — turn Media on in the Component segment."
+                    : "ElwhaCardMedia media = ElwhaCardMedia.image(image);\n"
+                        + mediaEditor.code("media")
+                        + "\ncard.add(media);");
+          }
         };
+    reapply[0] = apply;
+    // Wrapped in a WorkbenchControls apiece so each facet column insets its editor the way the
+    // main column does — a raw editor handed to addFacet stretches full-width and reads
+    // left-shifted (the nav-rail precedent).
+    final WorkbenchControls mediaControls = new WorkbenchControls();
+    mediaControls.addControl("", mediaEditor.panel());
+    mediaFacet[0] = workbench.addFacet("Media", mediaControls);
+
     variantBox.addSelectionChangeListener(value -> apply.run());
     elevationBox.addChangeListener(event -> apply.run());
     padHBox.addSelectionChangeListener(value -> apply.run());
@@ -2849,7 +2880,13 @@ public final class ElwhaShowcase {
     return workbench;
   }
 
-  private static ElwhaCard buildCard(final CardConfig cfg) {
+  // The staged card plus the composition primitive its facet drives. The Workbench rebuilds the
+  // card from scratch on every control change, so the facet editor needs the fresh instance handed
+  // back rather than dug out of the tree — and it can legitimately be absent, since the main column
+  // owns whether the slot exists at all.
+  private record StagedCard(ElwhaCard card, ElwhaCardMedia media) {}
+
+  private static StagedCard buildCard(final CardConfig cfg) {
     final ElwhaCard card =
         switch (cfg.variant()) {
           case FILLED -> ElwhaCard.filledCard();
@@ -2859,10 +2896,14 @@ public final class ElwhaShowcase {
     card.setElevation(cfg.elevation());
     card.setPadding(cfg.padH(), cfg.padV());
 
+    ElwhaCardMedia media = null;
     if (cfg.media() == CardMediaSlot.IMAGE) {
-      card.add(ElwhaCardMedia.image(demoImage()));
+      media = ElwhaCardMedia.image(demoImage());
     } else if (cfg.media() == CardMediaSlot.RENDERED) {
-      card.add(ElwhaCardMedia.painter(ElwhaShowcase::paintDemoMedia));
+      media = ElwhaCardMedia.painter(ElwhaShowcase::paintDemoMedia);
+    }
+    if (media != null) {
+      card.add(media);
     }
 
     ElwhaCardHeader header = null;
@@ -2908,7 +2949,7 @@ public final class ElwhaShowcase {
       card.setSelected(cfg.selected());
     }
     card.setEnabled(cfg.enabled());
-    return card;
+    return new StagedCard(card, media);
   }
 
   private static String renderCardCode(final CardConfig cfg) {
@@ -3197,9 +3238,17 @@ public final class ElwhaShowcase {
   // The Badge-facet code for the Nav Rail Workbench: the rail anchors the badge itself via
   // setBadge, so the snippet ends with liked.setBadge(badge) rather than a bare anchor call.
   private static String renderNavRailBadgeCode(final BadgePlaygroundPanels.BadgeSlot slot) {
+    return renderBadgeSlotCode(slot, "liked", "  // rail anchors trailing-edge when expanded");
+  }
+
+  // The badge a host installed through its slot, as equivalent Java against the host's own
+  // receiver. Shared by every badge facet: the badge editor is one reusable panel, so the snippet
+  // it produces should differ only in what the host calls the thing it hangs the badge on.
+  private static String renderBadgeSlotCode(
+      final BadgePlaygroundPanels.BadgeSlot slot, final String receiver, final String trailer) {
     final ElwhaBadge badge = slot.get();
     if (badge == null) {
-      return "liked.setBadge(null);";
+      return receiver + ".setBadge(null);";
     }
     final boolean small = badge.getVariant() == ElwhaBadge.Variant.SMALL;
     final StringBuilder code = new StringBuilder(220);
@@ -3215,7 +3264,7 @@ public final class ElwhaShowcase {
           .append(badge.getLabelColor().name())
           .append(")");
     }
-    code.append(";\nliked.setBadge(badge);  // rail anchors trailing-edge when expanded");
+    code.append(";\n").append(receiver).append(".setBadge(badge);").append(trailer);
     return code.toString();
   }
 
@@ -3266,9 +3315,6 @@ public final class ElwhaShowcase {
     }
     destinations.get(0).setSelected(true);
 
-    final ElwhaSelectField<String> badgeBox = ElwhaSelectField.outlined("Variant");
-    badgeBox.setOptions(List.of("None", "Small (dot)", "Large · 3", "Large · 999+"));
-    badgeBox.setSelectedValue("None");
     final List<String> targetLabels = new ArrayList<>();
     for (final String[] entry : entries) {
       targetLabels.add(entry[1]);
@@ -3276,19 +3322,48 @@ public final class ElwhaShowcase {
     final ElwhaSelectField<String> targetBox = ElwhaSelectField.outlined("Target");
     targetBox.setOptions(targetLabels);
     targetBox.setSelectedValue(targetLabels.get(0));
-
-    // Live edit (no Apply button — matches every other Workbench): changing either the target
-    // destination or the badge variant applies the badge immediately.
     final JLabel badgeStatus = new JLabel(" ");
-    final Runnable applyBadge =
+
+    // --- Badge facet (#318) ---
+    // The destination is an IconBearing host with a badge slot, and the leaf used to expose that
+    // slot as four canned variants in the main column — which demonstrated the anchoring but none
+    // of the badge's own axes. The facet mounts the reusable editor instead, so every content and
+    // color axis is reachable here exactly as it is on the standalone Badge leaf. Which
+    // destination wears it stays a host axis and stays in the main column; the badge is held so
+    // retargeting moves the same badge rather than minting a new one.
+    final int[] targetIndex = {0};
+    final com.owspfm.elwha.badge.ElwhaBadge[] held = new com.owspfm.elwha.badge.ElwhaBadge[1];
+    final BadgePlaygroundPanels.BadgeSlot badgeSlot =
+        new BadgePlaygroundPanels.BadgeSlot() {
+          @Override
+          public com.owspfm.elwha.badge.ElwhaBadge get() {
+            return held[0];
+          }
+
+          @Override
+          public void set(final com.owspfm.elwha.badge.ElwhaBadge badge) {
+            held[0] = badge;
+            destinations.get(targetIndex[0]).setBadge(badge);
+          }
+        };
+    final ComponentWorkbench.Facet[] badgeFacet = new ComponentWorkbench.Facet[1];
+    final Runnable refreshBadgeCode =
         () -> {
           final com.owspfm.elwha.navrail.ElwhaNavRailDestination target =
-              destinations.get(targetLabels.indexOf(targetBox.getSelectedValue()));
-          target.setBadge(badgeFor(badgeBox.getSelectedValue()));
-          badgeStatus.setText(badgeBox.getSelectedValue() + " → " + target.getLabel());
+              destinations.get(targetIndex[0]);
+          badgeStatus.setText(target.getLabel());
+          if (badgeFacet[0] != null) {
+            badgeFacet[0].setCode(
+                renderBadgeSlotCode(badgeSlot, target.getLabel().toLowerCase(Locale.ROOT), ""));
+          }
         };
-    targetBox.addSelectionChangeListener(value -> applyBadge.run());
-    badgeBox.addSelectionChangeListener(value -> applyBadge.run());
+    targetBox.addSelectionChangeListener(
+        value -> {
+          destinations.get(targetIndex[0]).setBadge(null);
+          targetIndex[0] = Math.max(0, targetLabels.indexOf(targetBox.getSelectedValue()));
+          destinations.get(targetIndex[0]).setBadge(held[0]);
+          refreshBadgeCode.run();
+        });
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Selection");
@@ -3296,8 +3371,13 @@ public final class ElwhaShowcase {
         "", new JLabel("Click any destination to select it (tab-strip semantics)."));
     controls.addSection("Badge");
     controls.addControl("", targetBox);
-    controls.addControl("", badgeBox);
-    controls.addControl("Applied:", badgeStatus);
+    controls.addControl("Applied to:", badgeStatus);
+
+    final WorkbenchControls badgeControls = new WorkbenchControls();
+    badgeControls.addControl(
+        "", BadgePlaygroundPanels.buildBadgeEditor(badgeSlot, refreshBadgeCode));
+    badgeFacet[0] = workbench.addFacet("Badge", badgeControls);
+    refreshBadgeCode.run();
 
     workbench.setStage(row);
     workbench.setCode(
@@ -3646,18 +3726,6 @@ public final class ElwhaShowcase {
       actions.add(action);
     }
     return actions;
-  }
-
-  private static com.owspfm.elwha.badge.ElwhaBadge badgeFor(final String label) {
-    if (label == null) {
-      return null;
-    }
-    return switch (label) {
-      case "Small (dot)" -> com.owspfm.elwha.badge.ElwhaBadge.small();
-      case "Large · 3" -> com.owspfm.elwha.badge.ElwhaBadge.large(3);
-      case "Large · 999+" -> com.owspfm.elwha.badge.ElwhaBadge.large("999+");
-      default -> null;
-    };
   }
 
   // --- helpers ---

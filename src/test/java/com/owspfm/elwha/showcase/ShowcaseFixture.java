@@ -194,6 +194,21 @@ final class ShowcaseFixture {
   }
 
   /**
+   * A workbench's switcher segments, in bar order — read off the segment buttons rather than any
+   * internal list, so a facet that was registered but never reached the switcher reads as missing.
+   */
+  static List<String> segmentsOf(final ComponentWorkbench workbench) {
+    final List<String> names = new ArrayList<>();
+    for (final com.owspfm.elwha.button.ElwhaButton segment :
+        findAll(
+            findFirst(workbench, com.owspfm.elwha.buttongroup.ElwhaButtonGroup.class),
+            com.owspfm.elwha.button.ElwhaButton.class)) {
+      names.add(segment.getText());
+    }
+    return names;
+  }
+
+  /**
    * The control captioned {@code label}, wherever that caption lives.
    *
    * <p>Two placements, because the dogfood sweep (#424) moved most captions off the row and into

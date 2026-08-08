@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.owspfm.elwha.button.ButtonSize;
 import com.owspfm.elwha.button.ButtonVariant;
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.card.ElwhaCardMedia;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.chip.ChipVariant;
 import com.owspfm.elwha.chip.ElwhaChip;
@@ -21,6 +23,7 @@ import javax.swing.JSpinner;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
@@ -41,6 +44,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 @ExtendWith({EdtInterceptor.class, ThemeExtension.class})
 class WorkbenchControlApplyTest {
 
+  // The switcher bar's own horizontal padding, 8 px a side.
+  private static final int SWITCHER_BAR_PADDING = 16;
+
   static List<String> workbenchLeaves() {
     final List<String> labels = new ArrayList<>();
     for (final String label : ShowcaseFixture.leafLabels()) {
@@ -57,9 +63,20 @@ class WorkbenchControlApplyTest {
     return ShowcaseFixture.findFirst(ShowcaseFixture.surfaceOf(label), ComponentWorkbench.class);
   }
 
+  /**
+   * Every builder-populated control of {@code type} on a workbench — the {@code Component}
+   * segment's column and each facet's, since the facet rollout (#318) moved real control surface
+   * out of the main column and a sweep that still read only {@code controls()} would stop seeing
+   * it. The {@code Surface} column is excluded: it is the scaffold's, not a builder's, and {@link
+   * SurfaceControlPanelTest} owns it.
+   */
   private static <T> List<T> controlsOfType(
       final ComponentWorkbench workbench, final Class<T> type) {
-    return ShowcaseFixture.findAll(workbench.controls(), type);
+    final List<T> found = new ArrayList<>();
+    for (final JComponent column : workbench.controlColumns()) {
+      found.addAll(ShowcaseFixture.findAll(column, type));
+    }
+    return found;
   }
 
   // -------------------------------------------------- the sweep sweeps something
@@ -87,10 +104,10 @@ class WorkbenchControlApplyTest {
       spinners += controlsOfType(workbench, JSpinner.class).size();
     }
 
-    assertThat(selects).as("select fields the choice sweep walks").isGreaterThanOrEqualTo(65);
-    assertThat(options).as("choices the choice sweep applies").isGreaterThanOrEqualTo(400);
-    assertThat(toggles).as("checkboxes the toggle sweeps click").isGreaterThanOrEqualTo(75);
-    assertThat(spinners).as("spinners the spinner sweep steps").isGreaterThanOrEqualTo(20);
+    assertThat(selects).as("select fields the choice sweep walks").isGreaterThanOrEqualTo(80);
+    assertThat(options).as("choices the choice sweep applies").isGreaterThanOrEqualTo(720);
+    assertThat(toggles).as("checkboxes the toggle sweeps click").isGreaterThanOrEqualTo(90);
+    assertThat(spinners).as("spinners the spinner sweep steps").isGreaterThanOrEqualTo(22);
   }
 
   /**
@@ -318,6 +335,142 @@ class WorkbenchControlApplyTest {
 
       assertThat(((ElwhaIconButton) workbench.stage()).getVariant()).isEqualTo(variant);
     }
+  }
+
+  // ------------------------------------------------- the facet rollout (#318)
+
+  /**
+   * The hosts that expose an embedded sub-component as a facet, and the segment each one adds. The
+   * rollout is a judgment per host rather than blanket coverage, so the roster is asserted by name:
+   * a facet quietly dropped from one of these leaves is a regression, and a host that grew one
+   * without a recorded call belongs in the audit before it belongs in the switcher.
+   */
+  static List<Arguments> facetHosts() {
+    return List.of(
+        Arguments.of("Card", List.of("Media")),
+        Arguments.of("App Bar", List.of("Icon buttons")),
+        Arguments.of("Nav Rail Destination", List.of("Badge")),
+        Arguments.of("Navigation Rail", List.of("Badge")),
+        Arguments.of("Tabs", List.of("Badge")),
+        Arguments.of("Side Sheet", List.of("Modal")));
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("facetHosts")
+  void aFacetHostCarriesItsSegmentsBetweenTheBookends(
+      final String label, final List<String> facets) {
+    final List<String> expected = new ArrayList<>();
+    expected.add("Component");
+    expected.addAll(facets);
+    expected.add("Surface");
+
+    assertThat(ShowcaseFixture.segmentsOf(workbenchOf(label)))
+        .as("%s — #318: the sub-component facets this host was judged to warrant", label)
+        .isEqualTo(expected);
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("facetHosts")
+  void everyFacetCarriesRealControlSurface(final String label, final List<String> facets) {
+    final ComponentWorkbench workbench = workbenchOf(label);
+    final List<JComponent> columns = workbench.controlColumns();
+
+    for (int i = 0; i < facets.size(); i++) {
+      final JComponent column = columns.get(i + 1);
+      assertThat(ShowcaseFixture.descendants(column))
+          .as(
+              "%s — the %s facet column is empty, so its segment shows a blank card",
+              label, facets.get(i))
+          .hasSizeGreaterThan(1);
+    }
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("facetHosts")
+  void everyFacetRendersEquivalentJava(final String label, final List<String> facets) {
+    final ComponentWorkbench workbench = workbenchOf(label);
+
+    for (final String facet : facets) {
+      assertThat(workbench.codeFor(facet))
+          .as("%s — the %s facet tracks its own snippet, or the code view goes blank", label, facet)
+          .isNotBlank();
+    }
+  }
+
+  @Test
+  void cardMediaFacetReachesTheStagedCardsMediaSlot() {
+    final ComponentWorkbench workbench = workbenchOf("Card");
+    choose(select(workbench, "Media"), namedChoice(select(workbench, "Media"), "IMAGE"));
+    final ElwhaSelectField<?> aspect = facetSelect(workbench, 0, "Aspect ratio");
+
+    choose(aspect, namedChoice(aspect, "1:1"));
+
+    final ElwhaCardMedia media = ShowcaseFixture.findFirst(workbench.stage(), ElwhaCardMedia.class);
+    assertThat(media).as("#318 — the Media facet needs a media slot to drive").isNotNull();
+    assertThat(media.getAspectRatio())
+        .as("the facet does not merely record a choice; it reaches the rebuilt card's own media")
+        .isEqualTo(1.0);
+  }
+
+  /**
+   * A facet host's switcher has to fit the column it lives in. The switcher is a {@code FIXED}
+   * connected group, so every segment takes the width of the widest — measured at {@code XS} with
+   * the bookends' icons, three segments come to 376 px and a fourth to 502 px against a 480 px
+   * column, where {@code BorderLayout.WEST} hands the group its full preferred width and the region
+   * clips whatever runs past the edge. Nothing throws and nothing logs; the last segment simply
+   * loses its end. So the fourth segment is the constraint on this rollout, and it is asserted
+   * rather than remembered.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("facetHosts")
+  void aFacetHostsSwitcherFitsTheControlsColumn(final String label, final List<String> facets) {
+    final ElwhaButtonGroup switcher =
+        ShowcaseFixture.findFirst(workbenchOf(label), ElwhaButtonGroup.class);
+
+    assertThat(switcher.getPreferredSize().width)
+        .as(
+            "%s — %d segments overflow the %d px controls column and the last one clips",
+            label, facets.size() + 2, ComponentWorkbench.CONTROLS_WIDTH)
+        .isLessThanOrEqualTo(ComponentWorkbench.CONTROLS_WIDTH - SWITCHER_BAR_PADDING);
+  }
+
+  @Test
+  void appBarIconButtonFacetReachesEveryButtonOnTheBar() {
+    final ComponentWorkbench workbench = workbenchOf("App Bar");
+
+    choose(facetSelect(workbench, 0, "Variant"), IconButtonVariant.FILLED_TONAL);
+
+    final List<ElwhaIconButton> buttons =
+        ShowcaseFixture.findAll(workbench.stage(), ElwhaIconButton.class);
+    assertThat(buttons).as("the bar stages a nav button and its actions").isNotEmpty();
+    assertThat(buttons)
+        .as("#318 — one treatment across the whole bar, navigation button included")
+        .allMatch(button -> button.getVariant() == IconButtonVariant.FILLED_TONAL);
+  }
+
+  // A select in the facet column at {@code facetIndex}, found by the caption it paints. Facet
+  // columns nest their editor a few levels deep, and a caption can repeat across columns ("Variant"
+  // means the app bar's on the Component segment and the icon button's on the facet), so the column
+  // is named rather than searched for.
+  private static ElwhaSelectField<?> facetSelect(
+      final ComponentWorkbench workbench, final int facetIndex, final String caption) {
+    final JComponent column = workbench.controlColumns().get(facetIndex + 1);
+    for (final ElwhaSelectField<?> candidate :
+        ShowcaseFixture.findAll(column, ElwhaSelectField.class)) {
+      if (caption.equals(ShowcaseFixture.labelOf(candidate))) {
+        return candidate;
+      }
+    }
+    throw new AssertionError("no " + caption + " control in facet column " + facetIndex);
+  }
+
+  private static Object namedChoice(final ElwhaSelectField<?> select, final String name) {
+    for (final Object choice : select.getOptions()) {
+      if (name.equals(String.valueOf(choice))) {
+        return choice;
+      }
+    }
+    throw new AssertionError("no " + name + " choice on this control");
   }
 
   // ----------------------------------------------------------------- detail
