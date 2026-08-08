@@ -15,9 +15,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 /**
  * Tier A coverage of {@link ElwhaSelectField}'s mode axes and its delegation to the embedded field
  * — the <b>editable / multi-select mutual exclusion</b> (which <em>forces</em> the other mode off
- * rather than throwing, so a consumer never has to order its setters defensively), the read-only /
- * disabled propagation, the expanded state with its arrow rotation and announcement, and the
- * deliberate absence of a trailing-slot passthrough.
+ * rather than throwing, so a consumer never has to order its setters defensively — conventions §9,
+ * the satisfiable-request row), the read-only / disabled propagation, the expanded state with its
+ * arrow rotation and announcement, and the deliberate absence of a trailing-slot passthrough.
  */
 @ExtendWith({EdtInterceptor.class, ThemeExtension.class})
 class ElwhaSelectFieldModeTest {

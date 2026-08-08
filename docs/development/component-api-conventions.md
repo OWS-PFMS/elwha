@@ -117,6 +117,25 @@ Both roles honor the **same paint convention**: translate the graphics origin by
 
 **Apply when:** adding any new elevated/shadowed primitive. Implement `ShadowBearing`, pick the reserve home by role, honor the `ShadowPainter` translate convention, and obey the `getMaximumSize` rule. Contract-alignment of the existing primitives onto `ShadowBearing` is tracked in [#313](https://github.com/OWS-PFMS/elwha/issues/313).
 
+## 9. "Requested configuration not available" — force when the request is satisfiable, throw when it is not
+
+Two components appeared to disagree about what a setter does when the caller asks for something the component's current configuration does not allow: `ElwhaColorPicker.setMode` / `setSwatchSource` **throw** `IllegalArgumentException`, while `ElwhaSelectField`'s `setEditable` / `setMultiSelect` **force** the conflicting axis off. Ruled in [#573](https://github.com/OWS-PFMS/elwha/issues/573): they are answering different questions, and both are right.
+
+**The test is whether the caller's request has a satisfying state at all.**
+
+| Situation | Behavior | Why |
+|---|---|---|
+| The request *is* satisfiable; only a sibling setting has to yield | **Force.** Change the sibling, honor the request, return normally. | There is exactly one consistent state the caller can have meant. Making them clear the sibling first is ceremony that carries no information — and forces every call site to order its setters defensively. |
+| The request cannot be satisfied in any state the component is allowed to reach | **Throw** `IllegalArgumentException`. | The alternatives both lose information: activating something else silently substitutes a different result for the one asked for, and widening the offered set silently overrides a restriction the consumer deliberately configured. |
+
+`setEditable(true)` on a multi-select is the first row — the caller wants an editable combo, and multi-select is simply the thing that gives way (a locked [#331](https://github.com/OWS-PFMS/elwha/issues/331) decision). `setMode(WHEEL)` on a picker whose consumer called `setModes(SWATCHES)` is the second — there is no WHEEL to activate, and inventing one would defeat the consumer's own restriction.
+
+**Never the third option: silently doing nothing.** A programmatic setter that no-ops leaves the caller reading a getter that disagrees with what they just wrote, with no signal either way. That is the defect class [#619](https://github.com/OWS-PFMS/elwha/issues/619) fixed in `ElwhaSelectField.setOptions`.
+
+**Null is a separate question** and this rule does not cover it. A `null` argument conventionally means "no opinion" — reset to the default (`setDisplayFunction(null)`), clear (`setSelectedValue(null)`), or ignore (`ElwhaFab.setColorStyle(null)`) — and each setter documents which. Where `null` is genuinely invalid, reject it eagerly at the setter rather than deferring the failure to paint time ([#637](https://github.com/OWS-PFMS/elwha/issues/637)).
+
+**Apply when:** adding a setter that names one member of a closed set the component was configured with, or a setting that conflicts with another. Pick the row, and say which in the javadoc.
+
 ---
 
 ## Cross-reference
