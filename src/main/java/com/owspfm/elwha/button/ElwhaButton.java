@@ -1779,6 +1779,9 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     final Insets s = getShadowInsets();
     final int rawW = bodyWidthPx() + s.left + s.right;
     final int rawH = buttonSize.containerHeightPx() + s.top + s.bottom;
@@ -1793,6 +1796,9 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 

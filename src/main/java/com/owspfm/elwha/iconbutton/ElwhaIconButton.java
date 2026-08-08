@@ -1332,16 +1332,25 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     return new Dimension(containerSize, containerSize);
   }
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     return getPreferredSize();
   }
 

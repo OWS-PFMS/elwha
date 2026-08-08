@@ -1479,6 +1479,9 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
 
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     return new Dimension(getPreferredSize().width, getPreferredSize().height);
   }
 

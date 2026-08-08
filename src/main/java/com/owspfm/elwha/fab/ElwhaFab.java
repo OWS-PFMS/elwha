@@ -1300,6 +1300,9 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     return new Dimension(
         bodyWidthPx() + SHADOW_RESERVE.left + SHADOW_RESERVE.right,
         bodyHeightPx() + SHADOW_RESERVE.top + SHADOW_RESERVE.bottom);
@@ -1307,6 +1310,9 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 

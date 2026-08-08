@@ -513,6 +513,9 @@ public sealed class ElwhaMenuItem extends JComponent implements BodyBearing
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     final FontMetrics labelFm = getFontMetrics(TypeRole.LABEL_LARGE.resolve());
     int contentWidth = 0;
     if (hasLeadingColumn()) {
@@ -564,11 +567,17 @@ public sealed class ElwhaMenuItem extends JComponent implements BodyBearing
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
   }
 

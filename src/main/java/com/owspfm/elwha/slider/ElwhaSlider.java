@@ -1100,16 +1100,25 @@ public class ElwhaSlider extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     return sized(DEFAULT_TRACK_LENGTH_PX, contentHeight());
   }
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return sized(handleHeight(), contentHeight());
   }
 
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     return sized(Integer.MAX_VALUE, contentHeight());
   }
 

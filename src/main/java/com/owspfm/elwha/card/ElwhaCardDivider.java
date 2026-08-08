@@ -60,16 +60,25 @@ public final class ElwhaCardDivider extends JComponent {
 
   @Override
   public Dimension getPreferredSize() {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize();
+    }
     return new Dimension(1, DIVIDER_HEIGHT_PX);
   }
 
   @Override
   public Dimension getMinimumSize() {
+    if (isMinimumSizeSet()) {
+      return super.getMinimumSize();
+    }
     return getPreferredSize();
   }
 
   @Override
   public Dimension getMaximumSize() {
+    if (isMaximumSizeSet()) {
+      return super.getMaximumSize();
+    }
     return new Dimension(Integer.MAX_VALUE, DIVIDER_HEIGHT_PX);
   }
 

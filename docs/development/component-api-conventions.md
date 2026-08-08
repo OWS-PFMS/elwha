@@ -199,6 +199,30 @@ The distinction that decides it is **inheritance, not visibility**: a non-visual
 
 **Apply when:** adding a component that takes a caption. If it attaches a visible label, name it `setLabel` and add `setAccessibleLabel` for the label-less case. If it only names itself for assistive tech, `setAccessibleLabel` is the only accessor it gets — `setLabel` is reserved.
 
+## 11. A sizing hook stands down when the caller sets a size — and "fixed geometry" is not an exemption
+
+Every override of `getPreferredSize()` / `getMinimumSize()` / `getMaximumSize()` opens with the escape, per hook:
+
+```java
+@Override
+public Dimension getPreferredSize() {
+  if (isPreferredSizeSet()) {
+    return super.getPreferredSize();
+  }
+  return /* the component's own M3 geometry */;
+}
+```
+
+**Why it is not optional.** `setPreferredSize` records the value on `JComponent` and flips `isPreferredSizeSet()`, so the call *appears* to succeed. An override that never reads the flag then answers the layout manager with its own number. No exception, no warning — the consumer reads a getter that disagrees with what they just wrote, which is the same silent-no-op class §9 rules out for setters. [#567](https://github.com/OWS-PFMS/elwha/issues/567) swept nine sites; [#712](https://github.com/OWS-PFMS/elwha/issues/712) ruled on and swept the remaining thirty-six.
+
+**"But the geometry is fixed" is not a reason — that was ruled and rejected.** It is the most natural objection (an M3 switch really is 52×32; a FAB's halo really does have to fit) and #567 already settled it against, on the two hardest cases: `ElwhaSwitch` has fixed M3 track geometry *and* bakes `2 × HALO_OVERHANG_PX` of shadow halo into its preferred size, and it took the escape anyway, with the test that pinned the old behavior flipped. So **§8's halo-in-preferred does not license ignoring an explicit size.** Honoring a caller who leaves no room for the halo clips the halo — a visible consequence of their own instruction, not a broken component — and every leaf degrades that way gracefully. The alternative is a component that cannot be placed in a layout the consumer controls.
+
+**Scope: the declaring class's reachability, not the geometry.** The rule binds a **top-level** class, whatever its visibility — a caller who can name the type can set a size on it, which is why #567 swept the package-private `ColorTrackSlider` alongside the public eight, and why #712 swept `ColorPickerHeader` and `TooltipSurface`. A **private nested** composition child is exempt: it is laid out solely by the component that declares it, nothing outside can name its type, and the enclosing component computes its geometry rather than setting it. Adding an escape there is dead code — verified, not assumed: no library code calls `setXxxSize` on any of them. The twenty-four exempt sites are the colour picker's panes (`SvBox`, `HueGrid`, `ShadeStrip`, `RecentRow`, `ThemeGrid`, `FavoritesGrid`, `WheelDisc`, `ChannelRow`), the dialogs' inner surfaces and dividers, the chip's slot buttons, and the side sheet's footer divider.
+
+**Do not confuse this with §8's `getMaximumSize` rule.** They govern the same methods and answer different questions: this one is *may the caller override the answer*, §8's is *may a halo-in-preferred leaf clamp `max = preferred`* (it may not — [#199](https://github.com/OWS-PFMS/elwha/issues/199)). Both hold at once. #712 audited the second across the catalog and found no violations: the three `ShadowBearing` primitives (`ElwhaButton`, `ElwhaFab`, `ElwhaSurface`) override no maximum at all, `ElwhaChip` and `ElwhaIconButton` carry `max = preferred` legitimately because they paint no shadow, and `ElwhaButtonGroup`'s clamp is the [#660](https://github.com/OWS-PFMS/elwha/issues/660) case §8 already refuted.
+
+**Apply when:** overriding any sizing hook on a top-level component. Add the escape to *every* hook you override, not just preferred — an explicit minimum is as much an instruction as an explicit preferred — and add the component to `SizingHookEscapeTest`'s parameterized sweep, which tests the doctrine rather than any one geometry.
+
 ---
 
 ## Cross-reference

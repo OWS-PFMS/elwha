@@ -265,4 +265,32 @@ class ElwhaTooltipSurfaceTest {
         .as("empty text still yields one (empty) line, so the caller never divides by zero")
         .hasSize(1);
   }
+
+  /**
+   * The #712 ruling pass: the surface publishes its own variant-driven geometry from {@code
+   * getPreferredSize}, and has to stand down when a caller sets one — the doctrine #567 established
+   * and this top-level (if package-private) class was missing.
+   */
+  @Test
+  void anExplicitPreferredSizeWins() {
+    final TooltipSurface surface = plain("Rename");
+    final Dimension natural = surface.getPreferredSize();
+    final Dimension explicit = new Dimension(321, 177);
+
+    surface.setPreferredSize(explicit);
+
+    assertThat(surface.getPreferredSize())
+        .as("the surface discards a caller-set preferred size (natural was %s)", natural)
+        .isEqualTo(explicit);
+  }
+
+  @Test
+  void anUnsetSurfaceKeepsItsOwnGeometry() {
+    final TooltipSurface surface = plain("Rename");
+
+    assertThat(surface.getPreferredSize())
+        .as("with nothing set the surface still measures its own plain-variant body")
+        .isNotEqualTo(new Dimension(321, 177))
+        .isNotEqualTo(new Dimension(0, 0));
+  }
 }

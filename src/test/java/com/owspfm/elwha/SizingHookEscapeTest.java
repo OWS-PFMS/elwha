@@ -4,9 +4,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.appbar.ElwhaAppBar;
 import com.owspfm.elwha.badge.ElwhaBadge;
+import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.card.ElwhaCard;
+import com.owspfm.elwha.card.ElwhaCardDivider;
+import com.owspfm.elwha.card.ElwhaCardMedia;
+import com.owspfm.elwha.card.ElwhaCardSubtitle;
+import com.owspfm.elwha.card.ElwhaCardSupportingText;
+import com.owspfm.elwha.card.ElwhaCardThumbnail;
+import com.owspfm.elwha.card.ElwhaCardTitle;
+import com.owspfm.elwha.chip.ElwhaChip;
+import com.owspfm.elwha.colorpicker.ElwhaColorPicker;
+import com.owspfm.elwha.fab.ElwhaFab;
+import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.menu.ElwhaMenuItem;
 import com.owspfm.elwha.navrail.ElwhaNavRailDestination;
 import com.owspfm.elwha.selectfield.ElwhaSelectField;
+import com.owspfm.elwha.slider.ElwhaSlider;
 import com.owspfm.elwha.switches.ElwhaSwitch;
 import com.owspfm.elwha.tabs.ElwhaTab;
 import com.owspfm.elwha.tabs.ElwhaTabs;
@@ -14,6 +29,8 @@ import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.textfield.ElwhaTextField;
 import java.awt.Dimension;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import javax.swing.JComponent;
@@ -58,7 +75,36 @@ class SizingHookEscapeTest {
             "ElwhaNavRailDestination",
             (Supplier<JComponent>)
                 () -> ElwhaNavRailDestination.of(MaterialIcons.symbol("home"), "Home")),
-        Arguments.of("ElwhaAppBar", (Supplier<JComponent>) ElwhaAppBar::small));
+        Arguments.of("ElwhaAppBar", (Supplier<JComponent>) ElwhaAppBar::small),
+        // #712's ruling pass — every remaining consumer-reachable site.
+        Arguments.of("ElwhaButton", (Supplier<JComponent>) () -> new ElwhaButton("Save")),
+        Arguments.of("ElwhaIconButton", (Supplier<JComponent>) ElwhaIconButton::new),
+        Arguments.of(
+            "ElwhaButtonGroup",
+            (Supplier<JComponent>) () -> ElwhaButtonGroup.standard().add("One", "Two")),
+        Arguments.of(
+            "ElwhaFab", (Supplier<JComponent>) () -> ElwhaFab.standard(MaterialIcons.add())),
+        Arguments.of("ElwhaChip", (Supplier<JComponent>) () -> new ElwhaChip("Tag")),
+        Arguments.of("ElwhaSlider", (Supplier<JComponent>) () -> new ElwhaSlider(0, 100, 50)),
+        Arguments.of("ElwhaMenuItem", (Supplier<JComponent>) () -> ElwhaMenuItem.of("Item")),
+        Arguments.of("ElwhaColorPicker", (Supplier<JComponent>) ElwhaColorPicker::new),
+        Arguments.of("ElwhaCard", (Supplier<JComponent>) ElwhaCard::filledCard),
+        Arguments.of("ElwhaCardTitle", (Supplier<JComponent>) () -> new ElwhaCardTitle("Title")),
+        Arguments.of(
+            "ElwhaCardSubtitle", (Supplier<JComponent>) () -> new ElwhaCardSubtitle("Subtitle")),
+        Arguments.of(
+            "ElwhaCardSupportingText",
+            (Supplier<JComponent>) () -> new ElwhaCardSupportingText("Body")),
+        Arguments.of("ElwhaCardDivider", (Supplier<JComponent>) ElwhaCardDivider::new),
+        Arguments.of(
+            "ElwhaCardThumbnail", (Supplier<JComponent>) () -> new ElwhaCardThumbnail(swatch())),
+        Arguments.of(
+            "ElwhaCardMedia", (Supplier<JComponent>) () -> ElwhaCardMedia.image(swatch())));
+  }
+
+  /** A tiny opaque image, so the image-bearing card slots measure something real. */
+  private static Image swatch() {
+    return new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
   }
 
   @ParameterizedTest(name = "{0} honours an explicit preferred size")
