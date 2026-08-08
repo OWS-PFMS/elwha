@@ -1136,16 +1136,46 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
             if (!ElwhaButton.this.isEnabled()) {
               return;
             }
-            // Center-of-body ripple for keyboard activation — body-local coords, not
-            // component-local, so the ripple seeds inside the visible chrome even when the
-            // component is inflated for a11y target.
-            startRipple(new Point(effectiveBodyWidth() / 2, buttonSize.containerHeightPx() / 2));
+            keyboardPressFlash();
             activate(0);
           }
         };
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "elwhabutton.activate");
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "elwhabutton.activate");
     am.put("elwhabutton.activate", activate);
+  }
+
+  // The family's keyboard press-confirmation (#562). A pointer press holds `pressed` for as long as
+  // the button is down; a Space / Enter activation is instantaneous, so it flashes every press
+  // affordance the component has for one SHORT3 window and unwinds them together: the M3 10%
+  // PRESSED state layer, a centered ripple, and the press shape morph where the component has one.
+  // The ruling is that keyboard activation reads exactly like that component's own pointer press —
+  // ElwhaButton, ElwhaIconButton and ElwhaFab previously gave three different confirmations (a
+  // ripple, a shape pulse, a state-layer flash), so a keyboard user got a different answer from
+  // each member of one family.
+  private void keyboardPressFlash() {
+    setPressedInternal(true);
+    if (firesPressMorph()) {
+      pressMorph.start();
+    }
+    // Body-local coords, not component-local, so the ripple seeds inside the visible chrome even
+    // when the component is inflated for the a11y target.
+    startRipple(new Point(effectiveBodyWidth() / 2, buttonSize.containerHeightPx() / 2));
+    repaint();
+    // One-shot release. Repeated activations inside the window each schedule their own timer;
+    // redundant fires are harmless because every step here is idempotent.
+    final Timer release =
+        new Timer(
+            MorphAnimator.SHORT3_MS,
+            e -> {
+              setPressedInternal(false);
+              if (firesPressMorph()) {
+                pressMorph.reverse();
+              }
+              repaint();
+            });
+    release.setRepeats(false);
+    release.start();
   }
 
   private void activate(final int modifiers) {

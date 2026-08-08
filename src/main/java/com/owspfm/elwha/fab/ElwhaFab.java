@@ -353,7 +353,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
   // mouse-down duration; keyboard activation is instantaneous so this paints the M3 10% PRESSED
   // state-layer overlay for ~150 ms to give screen-reader / keyboard users the same visual
   // confirmation a mouse user gets. Pairs with the ripple lifecycle (~400 ms total).
-  private static final int KEYBOARD_PRESS_FLASH_MS = 150;
+  private static final int KEYBOARD_PRESS_FLASH_MS = MorphAnimator.SHORT3_MS;
 
   // M3 placement-diagram annotation: Extended FAB width is "Dynamic, min 80". The floor binds only
   // for the smallest size with a very short label — Medium/Large Extended naturally exceed 80 dp
@@ -852,27 +852,38 @@ public final class ElwhaFab extends JComponent implements ShadowBearing {
             if (!ElwhaFab.this.isEnabled()) {
               return;
             }
-            pressed = true;
-            repaint();
-            startRipple(new Point(bodyWidthPx() / 2, bodyHeightPx() / 2));
+            keyboardPressFlash();
             activate(0);
-            // One-shot press-flash release. Repeated activations within the flash window each
-            // schedule a new release Timer; redundant fires after pressed is already false are
-            // harmless (state is idempotent).
-            final Timer release =
-                new Timer(
-                    KEYBOARD_PRESS_FLASH_MS,
-                    ev -> {
-                      pressed = false;
-                      repaint();
-                    });
-            release.setRepeats(false);
-            release.start();
           }
         };
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "elwhafab.activate");
     im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "elwhafab.activate");
     am.put("elwhafab.activate", activate);
+  }
+
+  // The family's keyboard press-confirmation (#562). A pointer press holds `pressed` for as long as
+  // the button is down; a Space / Enter activation is instantaneous, so it flashes every press
+  // affordance the component has for one SHORT3 window and unwinds them together: the M3 10%
+  // PRESSED state layer, a centered ripple, and the press shape morph where the component has one.
+  // The ruling is that keyboard activation reads exactly like that component's own pointer press —
+  // ElwhaButton, ElwhaIconButton and ElwhaFab previously gave three different confirmations (a
+  // ripple, a shape pulse, a state-layer flash), so a keyboard user got a different answer from
+  // each member of one family.
+  private void keyboardPressFlash() {
+    pressed = true;
+    startRipple(new Point(bodyWidthPx() / 2, bodyHeightPx() / 2));
+    repaint();
+    // One-shot release. Repeated activations inside the window each schedule their own timer;
+    // redundant fires are harmless because every step here is idempotent.
+    final Timer release =
+        new Timer(
+            KEYBOARD_PRESS_FLASH_MS,
+            e -> {
+              pressed = false;
+              repaint();
+            });
+    release.setRepeats(false);
+    release.start();
   }
 
   private void activate(final int modifiers) {
