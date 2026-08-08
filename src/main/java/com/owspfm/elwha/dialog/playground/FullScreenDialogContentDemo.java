@@ -2,11 +2,11 @@ package com.owspfm.elwha.dialog.playground;
 
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.dialog.ElwhaFullScreenDialog;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -14,7 +14,6 @@ import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
@@ -39,7 +38,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class FullScreenDialogContentDemo {
@@ -103,13 +102,7 @@ public final class FullScreenDialogContentDemo {
     gc.insets = new Insets(8, 0, 8, 0);
     for (int i = 1; i <= 16; i++) {
       gc.gridy = i;
-      final JPanel row = new JPanel(new BorderLayout(12, 0));
-      row.setOpaque(false);
-      row.add(new JLabel("Field " + i), BorderLayout.WEST);
-      final JTextField tf = new JTextField();
-      tf.setPreferredSize(new Dimension(0, 28));
-      row.add(tf, BorderLayout.CENTER);
-      form.add(row, gc);
+      form.add(ElwhaTextField.outlined("Field " + i), gc);
     }
     return form;
   }

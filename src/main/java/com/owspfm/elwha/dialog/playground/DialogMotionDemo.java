@@ -1,6 +1,7 @@
 package com.owspfm.elwha.dialog.playground;
 
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.dialog.ElwhaDialog;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -10,7 +11,6 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -36,7 +36,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class DialogMotionDemo {
@@ -62,10 +62,10 @@ public final class DialogMotionDemo {
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     frame.setLayout(new BorderLayout());
 
-    final JCheckBox reduced = new JCheckBox("reduced motion");
-    reduced.addActionListener(e -> MorphAnimator.setReducedMotion(reduced.isSelected()));
-    final JCheckBox slow = new JCheckBox("slow-mo (5×)");
-    slow.addActionListener(e -> MorphAnimator.setDurationMultiplier(slow.isSelected() ? 5f : 1f));
+    final ElwhaCheckbox reduced = new ElwhaCheckbox("reduced motion");
+    reduced.addActionListener(e -> MorphAnimator.setReducedMotion(reduced.isChecked()));
+    final ElwhaCheckbox slow = new ElwhaCheckbox("slow-mo (5×)");
+    slow.addActionListener(e -> MorphAnimator.setDurationMultiplier(slow.isChecked() ? 5f : 1f));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
     controls.add(new JLabel("Motion:"));

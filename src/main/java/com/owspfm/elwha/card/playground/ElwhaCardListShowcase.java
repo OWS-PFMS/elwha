@@ -4,11 +4,13 @@ import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.card.ElwhaCard;
 import com.owspfm.elwha.card.ElwhaCardHeader;
 import com.owspfm.elwha.card.ElwhaCardSupportingText;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.list.DefaultElwhaListModel;
 import com.owspfm.elwha.list.ElwhaItemList;
 import com.owspfm.elwha.list.ElwhaListOrientation;
 import com.owspfm.elwha.list.MovementMode;
 import com.owspfm.elwha.list.SelectionMode;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
@@ -18,10 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -95,22 +94,23 @@ public final class ElwhaCardListShowcase extends JPanel {
     gbc.weightx = 1;
     gbc.insets = new Insets(4, 4, 4, 4);
 
-    final JComboBox<ElwhaListOrientation> orientationBox =
-        new JComboBox<>(ElwhaListOrientation.values());
-    orientationBox.setSelectedItem(ElwhaListOrientation.VERTICAL);
-    orientationBox.addActionListener(
-        e -> {
-          list.setOrientation((ElwhaListOrientation) orientationBox.getSelectedItem());
+    final ElwhaSelectField<ElwhaListOrientation> orientationBox =
+        ElwhaSelectField.outlined("Orientation");
+    orientationBox.setOptions(List.of(ElwhaListOrientation.values()));
+    orientationBox.setSelectedValue(ElwhaListOrientation.VERTICAL);
+    orientationBox.addSelectionChangeListener(
+        v -> {
+          list.setOrientation(v);
           list.revalidate();
           list.repaint();
         });
-    addLabeled(p, gbc, "Orientation", orientationBox);
+    addRow(p, gbc, orientationBox);
 
-    final JComboBox<SelectionMode> modeBox = new JComboBox<>(SelectionMode.values());
-    modeBox.setSelectedItem(SelectionMode.MULTIPLE);
-    modeBox.addActionListener(
-        e -> list.setSelectionMode((SelectionMode) modeBox.getSelectedItem()));
-    addLabeled(p, gbc, "Selection mode", modeBox);
+    final ElwhaSelectField<SelectionMode> modeBox = ElwhaSelectField.outlined("Selection mode");
+    modeBox.setOptions(List.of(SelectionMode.values()));
+    modeBox.setSelectedValue(SelectionMode.MULTIPLE);
+    modeBox.addSelectionChangeListener(list::setSelectionMode);
+    addRow(p, gbc, modeBox);
 
     addRow(p, gbc, newCheck("Enabled", true, list::setEnabled));
 
@@ -130,7 +130,7 @@ public final class ElwhaCardListShowcase extends JPanel {
 
     gbc.weighty = 1;
     p.add(Box.createVerticalGlue(), gbc);
-    p.setPreferredSize(new Dimension(260, 220));
+    p.setPreferredSize(new Dimension(260, p.getPreferredSize().height));
     return p;
   }
 
@@ -148,12 +148,13 @@ public final class ElwhaCardListShowcase extends JPanel {
     status.setCaretPosition(status.getDocument().getLength());
   }
 
-  private static JCheckBox newCheck(
+  private static ElwhaCheckbox newCheck(
       final String label,
       final boolean initial,
       final java.util.function.Consumer<Boolean> onChange) {
-    final JCheckBox c = new JCheckBox(label, initial);
-    c.addActionListener(e -> onChange.accept(c.isSelected()));
+    final ElwhaCheckbox c = new ElwhaCheckbox(label);
+    c.setChecked(initial);
+    c.addActionListener(e -> onChange.accept(c.isChecked()));
     return c;
   }
 
@@ -161,12 +162,6 @@ public final class ElwhaCardListShowcase extends JPanel {
     final ElwhaButton b = ElwhaButton.outlinedButton(label);
     b.addActionListener(e -> action.run());
     return b;
-  }
-
-  private static void addLabeled(
-      final JPanel p, final GridBagConstraints gbc, final String label, final JComponent c) {
-    addRow(p, gbc, new JLabel(label));
-    addRow(p, gbc, c);
   }
 
   private static void addRow(final JPanel p, final GridBagConstraints gbc, final JComponent c) {

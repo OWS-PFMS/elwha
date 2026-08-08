@@ -1,8 +1,10 @@
 package com.owspfm.elwha.dialog.playground;
 
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.dialog.DismissCause;
 import com.owspfm.elwha.dialog.ElwhaDialog;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
@@ -10,11 +12,9 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
@@ -36,7 +36,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class DialogModalityDemo {
@@ -64,8 +64,10 @@ public final class DialogModalityDemo {
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     frame.setLayout(new BorderLayout());
 
-    final JCheckBox scrimDismiss = new JCheckBox("scrim-dismissible", true);
-    final JCheckBox escDismiss = new JCheckBox("esc-dismissible", true);
+    final ElwhaCheckbox scrimDismiss = new ElwhaCheckbox("scrim-dismissible");
+    scrimDismiss.setChecked(true);
+    final ElwhaCheckbox escDismiss = new ElwhaCheckbox("esc-dismissible");
+    escDismiss.setChecked(true);
 
     final ElwhaButton bg = ElwhaButton.filledTonalButton("Background button");
     bg.addActionListener(
@@ -73,10 +75,10 @@ public final class DialogModalityDemo {
           backgroundClicks++;
           refresh("—");
         });
-    final JTextField field = new JTextField("type here when no dialog is open", 28);
+    final ElwhaTextField field = ElwhaTextField.outlined("Type here when no dialog is open");
 
     final ElwhaButton open = ElwhaButton.filledButton("Open dialog");
-    open.addActionListener(e -> openDialog(scrimDismiss.isSelected(), escDismiss.isSelected()));
+    open.addActionListener(e -> openDialog(scrimDismiss.isChecked(), escDismiss.isChecked()));
 
     final JPanel center = new JPanel(new GridLayout(0, 1, 0, 12));
     center.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));

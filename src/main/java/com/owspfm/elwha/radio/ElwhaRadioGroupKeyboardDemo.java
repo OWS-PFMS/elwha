@@ -1,5 +1,7 @@
 package com.owspfm.elwha.radio;
 
+import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
@@ -8,8 +10,6 @@ import java.awt.ComponentOrientation;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -24,7 +24,7 @@ import javax.swing.WindowConstants;
  * skip, and the RTL checkbox flips the horizontal group's Left/Right sense live.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaRadioGroupKeyboardDemo {
@@ -82,11 +82,11 @@ public final class ElwhaRadioGroupKeyboardDemo {
       wireReadout(horizontal, horizontalRadios[i], "horizontal/" + horizontalNames[i]);
       horizontalRow.add(horizontalRadios[i]);
     }
-    final JCheckBox rtl = new JCheckBox("Right-to-left orientation");
+    final ElwhaCheckbox rtl = new ElwhaCheckbox("Right-to-left orientation");
     rtl.addActionListener(
         e -> {
           final ComponentOrientation orientation =
-              rtl.isSelected()
+              rtl.isChecked()
                   ? ComponentOrientation.RIGHT_TO_LEFT
                   : ComponentOrientation.LEFT_TO_RIGHT;
           for (final ElwhaRadioButton radio : horizontalRadios) {
@@ -99,11 +99,16 @@ public final class ElwhaRadioGroupKeyboardDemo {
     horizontalPane.add(rtl, BorderLayout.SOUTH);
     center.add(horizontalPane);
 
-    frame.add(new JButton("Before the groups (Tab from here)"), BorderLayout.NORTH);
+    final JPanel beforeRow = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 8));
+    beforeRow.add(ElwhaButton.outlinedButton("Before the groups (Tab from here)"));
+    final JPanel afterRow = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 8));
+    afterRow.add(ElwhaButton.outlinedButton("After the groups"));
+
+    frame.add(beforeRow, BorderLayout.NORTH);
     frame.add(center, BorderLayout.CENTER);
     final JPanel south = new JPanel(new BorderLayout());
     south.add(readout, BorderLayout.NORTH);
-    south.add(new JButton("After the groups"), BorderLayout.SOUTH);
+    south.add(afterRow, BorderLayout.SOUTH);
     frame.add(south, BorderLayout.SOUTH);
     frame.setMinimumSize(new java.awt.Dimension(720, 360));
     frame.pack();

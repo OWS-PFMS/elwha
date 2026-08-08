@@ -1,13 +1,13 @@
 package com.owspfm.elwha.card.playground;
 
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import javax.swing.JComboBox;
+import java.util.List;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
@@ -101,12 +101,11 @@ public final class ElwhaCardPlayground {
     final JToolBar bar = new JToolBar();
     bar.setFloatable(false);
     bar.setBorderPainted(false);
-    bar.add(new JLabel("Mode: "));
-    final JComboBox<Mode> modeBox = new JComboBox<>(Mode.values());
-    modeBox.setSelectedItem(Mode.SYSTEM);
-    modeBox.addActionListener(
-        e -> {
-          final Mode m = (Mode) modeBox.getSelectedItem();
+    final ElwhaSelectField<Mode> modeBox = ElwhaSelectField.outlined("Mode");
+    modeBox.setOptions(List.of(Mode.values()));
+    modeBox.setSelectedValue(Mode.SYSTEM);
+    modeBox.addSelectionChangeListener(
+        m -> {
           if (m != null) {
             ElwhaTheme.install(
                 ElwhaTheme.config().theme(MaterialPalettes.baseline()).mode(m).build());

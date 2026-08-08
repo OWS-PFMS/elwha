@@ -8,6 +8,7 @@ import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.button.ElwhaButtonSelectionGroup;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.ColorRole;
 import java.awt.Color;
 import java.awt.Component;
@@ -15,10 +16,10 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -284,13 +285,14 @@ public final class ButtonPlaygroundPanels {
   // --------------------------------------------------------------- live
 
   /**
-   * Builds the live-control panel: a single {@link ElwhaButton} driven by combo boxes, a spinner,
-   * and checkboxes covering every axis the class exposes (variant, interaction mode, size, shape,
-   * surface-role override, border width, leading icon, selected, enabled). A live config-snippet
-   * text area shows the equivalent Java construction code, refreshed on every change.
+   * Builds the live-control panel: a single {@link ElwhaButton} driven by {@link
+   * ElwhaSelectField}s, a spinner, and {@link ElwhaCheckbox}es covering every axis the class
+   * exposes (variant, interaction mode, size, shape, surface-role override, border width, leading
+   * icon, selected, enabled). A live config-snippet text area shows the equivalent Java
+   * construction code, refreshed on every change.
    *
    * @return the live-control panel
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public static JPanel buildLivePanel() {
@@ -303,23 +305,32 @@ public final class ButtonPlaygroundPanels {
     gbc.anchor = GridBagConstraints.WEST;
     int row = 0;
 
-    final JComboBox<ButtonVariant> variantBox = new JComboBox<>(ButtonVariant.values());
-    variantBox.setSelectedItem(ButtonVariant.FILLED);
-    addControlRow(controls, gbc, row++, "Variant", variantBox);
+    final ElwhaSelectField<ButtonVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(List.of(ButtonVariant.values()));
+    variantBox.setSelectedValue(ButtonVariant.FILLED);
+    addControlRow(controls, gbc, row++, "", variantBox);
 
-    final JComboBox<ButtonInteractionMode> modeBox =
-        new JComboBox<>(ButtonInteractionMode.values());
-    addControlRow(controls, gbc, row++, "Interaction mode", modeBox);
+    final ElwhaSelectField<ButtonInteractionMode> modeBox =
+        ElwhaSelectField.outlined("Interaction mode");
+    modeBox.setOptions(List.of(ButtonInteractionMode.values()));
+    modeBox.setSelectedValue(ButtonInteractionMode.CLICKABLE);
+    addControlRow(controls, gbc, row++, "", modeBox);
 
-    final JComboBox<ButtonSize> sizeBox = new JComboBox<>(ButtonSize.values());
-    sizeBox.setSelectedItem(ButtonSize.S);
-    addControlRow(controls, gbc, row++, "Size", sizeBox);
+    final ElwhaSelectField<ButtonSize> sizeBox = ElwhaSelectField.outlined("Size");
+    sizeBox.setOptions(List.of(ButtonSize.values()));
+    sizeBox.setSelectedValue(ButtonSize.S);
+    addControlRow(controls, gbc, row++, "", sizeBox);
 
-    final JComboBox<ButtonShape> shapeBox = new JComboBox<>(ButtonShape.values());
-    addControlRow(controls, gbc, row++, "Shape", shapeBox);
+    final ElwhaSelectField<ButtonShape> shapeBox = ElwhaSelectField.outlined("Shape");
+    shapeBox.setOptions(List.of(ButtonShape.values()));
+    shapeBox.setSelectedValue(ButtonShape.ROUND);
+    addControlRow(controls, gbc, row++, "", shapeBox);
 
-    final JComboBox<SurfaceRoleChoice> surfaceBox = new JComboBox<>(SurfaceRoleChoice.values());
-    addControlRow(controls, gbc, row++, "Surface role override", surfaceBox);
+    final ElwhaSelectField<SurfaceRoleChoice> surfaceBox =
+        ElwhaSelectField.outlined("Surface role override");
+    surfaceBox.setOptions(List.of(SurfaceRoleChoice.values()));
+    surfaceBox.setSelectedValue(SurfaceRoleChoice.VARIANT_DEFAULT);
+    addControlRow(controls, gbc, row++, "", surfaceBox);
 
     final JSpinner borderWidth = new JSpinner(new SpinnerNumberModel(1, 0, 4, 1));
     addControlRow(controls, gbc, row++, "Border width (px)", borderWidth);
@@ -345,11 +356,11 @@ public final class ButtonPlaygroundPanels {
 
     final Runnable rebuild =
         () -> {
-          state.variant = (ButtonVariant) variantBox.getSelectedItem();
-          state.mode = (ButtonInteractionMode) modeBox.getSelectedItem();
-          state.size = (ButtonSize) sizeBox.getSelectedItem();
-          state.shape = (ButtonShape) shapeBox.getSelectedItem();
-          state.surface = (SurfaceRoleChoice) surfaceBox.getSelectedItem();
+          state.variant = variantBox.getSelectedValue();
+          state.mode = modeBox.getSelectedValue();
+          state.size = sizeBox.getSelectedValue();
+          state.shape = shapeBox.getSelectedValue();
+          state.surface = surfaceBox.getSelectedValue();
           state.borderWidth = (Integer) borderWidth.getValue();
           state.icon = iconBox.isChecked();
           state.selected = selectedBox.isChecked();
@@ -358,17 +369,17 @@ public final class ButtonPlaygroundPanels {
           if (state.mode == ButtonInteractionMode.SELECTABLE
               && state.variant == ButtonVariant.TEXT) {
             state.mode = ButtonInteractionMode.CLICKABLE;
-            modeBox.setSelectedItem(ButtonInteractionMode.CLICKABLE);
+            modeBox.setSelectedValue(ButtonInteractionMode.CLICKABLE);
           }
           rebuildStage(stage, state);
           snippet.setText(renderSnippet(state));
         };
 
-    variantBox.addActionListener(e -> rebuild.run());
-    modeBox.addActionListener(e -> rebuild.run());
-    sizeBox.addActionListener(e -> rebuild.run());
-    shapeBox.addActionListener(e -> rebuild.run());
-    surfaceBox.addActionListener(e -> rebuild.run());
+    variantBox.addSelectionChangeListener(v -> rebuild.run());
+    modeBox.addSelectionChangeListener(v -> rebuild.run());
+    sizeBox.addSelectionChangeListener(v -> rebuild.run());
+    shapeBox.addSelectionChangeListener(v -> rebuild.run());
+    surfaceBox.addSelectionChangeListener(v -> rebuild.run());
     borderWidth.addChangeListener(e -> rebuild.run());
     iconBox.addActionListener(e -> rebuild.run());
     selectedBox.addActionListener(e -> rebuild.run());
@@ -455,7 +466,7 @@ public final class ButtonPlaygroundPanels {
     boolean enabled = true;
   }
 
-  /** Wraps a nullable {@link ColorRole} as a combo-box entry — {@code VARIANT_DEFAULT} → null. */
+  /** Wraps a nullable {@link ColorRole} as a select option — {@code VARIANT_DEFAULT} → null. */
   private enum SurfaceRoleChoice {
     VARIANT_DEFAULT(null),
     PRIMARY(ColorRole.PRIMARY),

@@ -1,6 +1,7 @@
 package com.owspfm.elwha.dialog.playground;
 
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.dialog.ElwhaFullScreenDialog;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -13,7 +14,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -43,14 +43,14 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class FullScreenDialogA11yDemo {
 
   private final JFrame frame = new JFrame("ElwhaFullScreenDialog — S5 a11y + RTL (#280)");
   private final JLabel status = new JLabel("last close: —");
-  private final JCheckBox rtl = new JCheckBox("RTL (next dialog)", false);
+  private final ElwhaCheckbox rtl = new ElwhaCheckbox("RTL (next dialog)");
 
   private FullScreenDialogA11yDemo() {}
 
@@ -94,7 +94,7 @@ public final class FullScreenDialogA11yDemo {
     // The dialog reads its orientation from the parent passed to show(...); flip the frame so the
     // dialog mirrors. (The background controls flip too, but the dialog covers them.)
     frame.applyComponentOrientation(
-        rtl.isSelected() ? ComponentOrientation.RIGHT_TO_LEFT : ComponentOrientation.LEFT_TO_RIGHT);
+        rtl.isChecked() ? ComponentOrientation.RIGHT_TO_LEFT : ComponentOrientation.LEFT_TO_RIGHT);
 
     ElwhaFullScreenDialog.builder()
         .headline("New event")

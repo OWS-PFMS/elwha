@@ -2,17 +2,18 @@ package com.owspfm.elwha.showcase;
 
 import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.tooltip.ElwhaTooltip;
 import com.owspfm.elwha.tooltip.TooltipAlignment;
 import com.owspfm.elwha.tooltip.TooltipPlacement;
 import com.owspfm.elwha.tooltip.TooltipVariant;
 import java.awt.Dimension;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -30,11 +31,11 @@ import javax.swing.event.DocumentListener;
  * (plain / rich / persistent rich), texts, action count, placement, alignment, and both trigger
  * delays — plus a programmatic "Show now", with the generated-code view tracking every control; and
  * a static gallery of {@code renderPreview()} tiles covering the plain short / wrapped forms and
- * the rich subhead / no-subhead / one- and two-action forms. Boolean controls and text inputs
- * dogfood {@code ElwhaCheckbox} / {@code ElwhaTextField}.
+ * the rich subhead / no-subhead / one- and two-action forms. Boolean controls, selectors, and text
+ * inputs dogfood {@code ElwhaCheckbox} / {@code ElwhaSelectField} / {@code ElwhaTextField}.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 final class TooltipShowcasePanels {
@@ -53,7 +54,9 @@ final class TooltipShowcasePanels {
   static JComponent buildWorkbench() {
     final ComponentWorkbench workbench = new ComponentWorkbench();
 
-    final JComboBox<TooltipVariant> variantBox = new JComboBox<>(TooltipVariant.values());
+    final ElwhaSelectField<TooltipVariant> variantBox = ElwhaSelectField.outlined("Variant");
+    variantBox.setOptions(List.of(TooltipVariant.values()));
+    variantBox.setSelectedValue(TooltipVariant.PLAIN);
     final ElwhaCheckbox persistentCtl = new ElwhaCheckbox("Persistent (rich only)");
     final ElwhaTextField textCtl = ElwhaTextField.outlined("");
     textCtl.setText("Save to favorites");
@@ -61,25 +64,30 @@ final class TooltipShowcasePanels {
     subheadCtl.setText("Rich tooltip");
     final ElwhaTextField supportingCtl = ElwhaTextField.outlined("");
     supportingCtl.setText("Supporting text wraps at 320 px and sits on the M3 baseline rhythm.");
-    final JComboBox<Integer> actionsBox = new JComboBox<>(new Integer[] {0, 1, 2});
-    final JComboBox<TooltipPlacement> placementBox = new JComboBox<>(TooltipPlacement.values());
-    final JComboBox<TooltipAlignment> alignmentBox = new JComboBox<>(TooltipAlignment.values());
-    alignmentBox.setSelectedItem(TooltipAlignment.CENTER);
+    final ElwhaSelectField<Integer> actionsBox = ElwhaSelectField.outlined("Actions (rich)");
+    actionsBox.setOptions(List.of(0, 1, 2));
+    actionsBox.setSelectedValue(0);
+    final ElwhaSelectField<TooltipPlacement> placementBox = ElwhaSelectField.outlined("Prefer");
+    placementBox.setOptions(List.of(TooltipPlacement.values()));
+    placementBox.setSelectedValue(TooltipPlacement.ABOVE);
+    final ElwhaSelectField<TooltipAlignment> alignmentBox = ElwhaSelectField.outlined("Alignment");
+    alignmentBox.setOptions(List.of(TooltipAlignment.values()));
+    alignmentBox.setSelectedValue(TooltipAlignment.CENTER);
     final JSpinner showDelay = new JSpinner(new SpinnerNumberModel(500, 0, 5000, 100));
     final JSpinner hideDelay = new JSpinner(new SpinnerNumberModel(600, 0, 5000, 100));
     final ElwhaButton showNow = ElwhaButton.textButton("Show now");
 
     final WorkbenchControls controls = workbench.controls();
     controls.addSection("Tooltip");
-    controls.addControl("Variant", variantBox);
+    controls.addControl("", variantBox);
     controls.addControl("", persistentCtl);
     controls.addControl("Text (plain)", textCtl);
     controls.addControl("Subhead (rich)", subheadCtl);
     controls.addControl("Supporting (rich)", supportingCtl);
-    controls.addControl("Actions (rich)", actionsBox);
+    controls.addControl("", actionsBox);
     controls.addSection("Placement");
-    controls.addControl("Prefer", placementBox);
-    controls.addControl("Alignment", alignmentBox);
+    controls.addControl("", placementBox);
+    controls.addControl("", alignmentBox);
     controls.addSection("Triggers");
     controls.addControl("Show delay ms", showDelay);
     controls.addControl("Hide delay ms", hideDelay);
@@ -94,7 +102,7 @@ final class TooltipShowcasePanels {
           if (previous != null) {
             previous.detach();
           }
-          final TooltipVariant variant = (TooltipVariant) variantBox.getSelectedItem();
+          final TooltipVariant variant = variantBox.getSelectedValue();
           final boolean persistent = persistentCtl.isChecked() && variant == TooltipVariant.RICH;
           final ElwhaTooltip tip;
           if (variant == TooltipVariant.PLAIN) {
@@ -107,7 +115,7 @@ final class TooltipShowcasePanels {
             if (!subheadCtl.getText().isBlank()) {
               builder.subhead(subheadCtl.getText());
             }
-            final int actionCount = (Integer) actionsBox.getSelectedItem();
+            final int actionCount = actionsBox.getSelectedValue();
             if (actionCount >= 1) {
               builder.action("Learn more", e -> System.out.println("tooltip action: learn more"));
             }
@@ -116,8 +124,8 @@ final class TooltipShowcasePanels {
             }
             tip = builder.build();
           }
-          tip.setPreferredPlacement((TooltipPlacement) placementBox.getSelectedItem());
-          tip.setAlignment((TooltipAlignment) alignmentBox.getSelectedItem());
+          tip.setPreferredPlacement(placementBox.getSelectedValue());
+          tip.setAlignment(alignmentBox.getSelectedValue());
           tip.setShowDelayMs((Integer) showDelay.getValue());
           tip.setHideDelayMs((Integer) hideDelay.getValue());
 
@@ -134,9 +142,9 @@ final class TooltipShowcasePanels {
                   textCtl.getText(),
                   subheadCtl.getText(),
                   supportingCtl.getText(),
-                  (Integer) actionsBox.getSelectedItem(),
-                  (TooltipPlacement) placementBox.getSelectedItem(),
-                  (TooltipAlignment) alignmentBox.getSelectedItem()));
+                  actionsBox.getSelectedValue(),
+                  placementBox.getSelectedValue(),
+                  alignmentBox.getSelectedValue()));
         };
 
     showNow.addActionListener(
@@ -148,14 +156,14 @@ final class TooltipShowcasePanels {
           }
         });
 
-    variantBox.addActionListener(e -> apply.run());
+    variantBox.addSelectionChangeListener(v -> apply.run());
     persistentCtl.addActionListener(e -> apply.run());
     onChange(textCtl, apply);
     onChange(subheadCtl, apply);
     onChange(supportingCtl, apply);
-    actionsBox.addActionListener(e -> apply.run());
-    placementBox.addActionListener(e -> apply.run());
-    alignmentBox.addActionListener(e -> apply.run());
+    actionsBox.addSelectionChangeListener(v -> apply.run());
+    placementBox.addSelectionChangeListener(v -> apply.run());
+    alignmentBox.addSelectionChangeListener(v -> apply.run());
     showDelay.addChangeListener(e -> apply.run());
     hideDelay.addChangeListener(e -> apply.run());
     apply.run();

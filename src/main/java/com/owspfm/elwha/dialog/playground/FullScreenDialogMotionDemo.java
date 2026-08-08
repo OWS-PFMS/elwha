@@ -1,7 +1,9 @@
 package com.owspfm.elwha.dialog.playground;
 
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.dialog.ElwhaFullScreenDialog;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
@@ -9,9 +11,8 @@ import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.util.List;
 import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -38,7 +39,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class FullScreenDialogMotionDemo {
@@ -65,16 +66,18 @@ public final class FullScreenDialogMotionDemo {
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     frame.setLayout(new BorderLayout());
 
-    final JCheckBox reduced = new JCheckBox("reduced motion", false);
-    reduced.addActionListener(e -> MorphAnimator.setReducedMotion(reduced.isSelected()));
+    final ElwhaCheckbox reduced = new ElwhaCheckbox("reduced motion");
+    reduced.addActionListener(e -> MorphAnimator.setReducedMotion(reduced.isChecked()));
 
-    final JComboBox<String> slowmo = new JComboBox<>(new String[] {"1×", "2×", "5×"});
-    slowmo.addActionListener(
-        e -> {
+    final ElwhaSelectField<String> slowmo = ElwhaSelectField.outlined("slow-mo");
+    slowmo.setOptions(List.of("1×", "2×", "5×"));
+    slowmo.setSelectedValue("1×");
+    slowmo.addSelectionChangeListener(
+        v -> {
           final float mult =
-              switch (slowmo.getSelectedIndex()) {
-                case 1 -> 2f;
-                case 2 -> 5f;
+              switch (v == null ? "1×" : v) {
+                case "2×" -> 2f;
+                case "5×" -> 5f;
                 default -> 1f;
               };
           MorphAnimator.setDurationMultiplier(mult);
@@ -85,7 +88,6 @@ public final class FullScreenDialogMotionDemo {
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
     controls.add(reduced);
-    controls.add(new JLabel("slow-mo:"));
     controls.add(slowmo);
 
     final JPanel center = new JPanel(new GridLayout(0, 1, 0, 12));

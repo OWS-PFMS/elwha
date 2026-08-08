@@ -4,6 +4,7 @@ import com.owspfm.elwha.button.ElwhaButton;
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.dialog.ElwhaDialog;
 import com.owspfm.elwha.selectfield.ElwhaSelectField;
+import com.owspfm.elwha.textfield.ElwhaTextField;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
@@ -16,7 +17,6 @@ import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
 /**
@@ -59,8 +59,10 @@ public final class SideSheetModalDemo {
     final JPanel form = new JPanel();
     form.setOpaque(false);
     form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
-    final JTextField field = new JTextField("initial focus lands here");
-    field.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 32));
+    final ElwhaTextField field = ElwhaTextField.outlined("Reach name");
+    field.setText("initial focus lands here");
+    field.setMaximumSize(
+        new java.awt.Dimension(Integer.MAX_VALUE, field.getPreferredSize().height));
     form.add(field);
     form.add(Box.createVerticalStrut(16));
     final ElwhaButton dialogFromSheet = ElwhaButton.filledTonalButton("Open dialog above sheet");

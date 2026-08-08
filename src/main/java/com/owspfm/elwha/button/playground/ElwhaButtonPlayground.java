@@ -1,17 +1,20 @@
 package com.owspfm.elwha.button.playground;
 
+import com.owspfm.elwha.button.ButtonSize;
+import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.theme.Config;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import javax.swing.ButtonGroup;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
-import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
@@ -31,7 +34,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class ElwhaButtonPlayground {
@@ -69,16 +72,22 @@ public final class ElwhaButtonPlayground {
   private JPanel buildModeBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
     bar.add(new JLabel("Mode:"));
-    final ButtonGroup group = new ButtonGroup();
-    for (Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK, Mode.SYSTEM}) {
-      final JToggleButton button = new JToggleButton(mode.name());
-      button.addActionListener(e -> applyMode(mode));
-      if (ElwhaTheme.current().mode() == mode) {
-        button.setSelected(true);
-      }
-      group.add(button);
-      bar.add(button);
+    final Mode[] modes = {Mode.LIGHT, Mode.DARK, Mode.SYSTEM};
+    final ElwhaButtonGroup group =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setColorStyle(ButtonGroupColorStyle.OUTLINED);
+    for (Mode mode : modes) {
+      group.add(new ElwhaButton(mode.name()));
     }
+    for (int i = 0; i < modes.length; i++) {
+      if (ElwhaTheme.current().mode() == modes[i]) {
+        group.setSelectedIndex(i);
+      }
+    }
+    group.addSelectionListener(g -> applyMode(modes[g.getSelectedIndex()]));
+    bar.add(group);
     return bar;
   }
 

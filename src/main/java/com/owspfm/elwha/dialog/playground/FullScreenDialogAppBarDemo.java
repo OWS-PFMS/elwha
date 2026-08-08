@@ -1,6 +1,7 @@
 package com.owspfm.elwha.dialog.playground;
 
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.dialog.ElwhaFullScreenDialog;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -9,7 +10,6 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -36,7 +36,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class FullScreenDialogAppBarDemo {
@@ -63,11 +63,13 @@ public final class FullScreenDialogAppBarDemo {
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     frame.setLayout(new BorderLayout());
 
-    final JCheckBox withConfirm = new JCheckBox("confirm action", true);
-    final JCheckBox withDivider = new JCheckBox("divider", true);
+    final ElwhaCheckbox withConfirm = new ElwhaCheckbox("confirm action");
+    withConfirm.setChecked(true);
+    final ElwhaCheckbox withDivider = new ElwhaCheckbox("divider");
+    withDivider.setChecked(true);
 
     final ElwhaButton open = ElwhaButton.filledButton("Open full-screen dialog");
-    open.addActionListener(e -> openDialog(withConfirm.isSelected(), withDivider.isSelected()));
+    open.addActionListener(e -> openDialog(withConfirm.isChecked(), withDivider.isChecked()));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 8));
     controls.add(new JLabel("Next dialog:"));

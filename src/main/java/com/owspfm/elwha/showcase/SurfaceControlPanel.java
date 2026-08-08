@@ -1,13 +1,13 @@
 package com.owspfm.elwha.showcase;
 
 import com.owspfm.elwha.checkbox.ElwhaCheckbox;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ShapeScale;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.JComboBox;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 
@@ -31,7 +31,7 @@ import javax.swing.SpinnerNumberModel;
  * change.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class SurfaceControlPanel {
@@ -40,13 +40,13 @@ public final class SurfaceControlPanel {
   private final boolean stage;
   private final List<Runnable> changeListeners = new ArrayList<>();
 
-  private final JComboBox<ColorRole> roleBox = new JComboBox<>(ColorRole.values());
-  private final JComboBox<ShapeScale> shapeBox = new JComboBox<>(ShapeScale.values());
-  private final JComboBox<BorderOption> borderBox = new JComboBox<>(BorderOption.values());
+  private final ElwhaSelectField<ColorRole> roleBox = ElwhaSelectField.outlined("Surface role");
+  private final ElwhaSelectField<ShapeScale> shapeBox = ElwhaSelectField.outlined("Shape");
+  private final ElwhaSelectField<BorderOption> borderBox = ElwhaSelectField.outlined("Border role");
   private final JSpinner widthSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 2, 1));
   private final JSpinner elevationSpinner =
       new JSpinner(new SpinnerNumberModel(0, 0, ElwhaSurface.MAX_ELEVATION, 1));
-  private final JComboBox<StageSize> sizeBox = new JComboBox<>(StageSize.values());
+  private final ElwhaSelectField<StageSize> sizeBox = ElwhaSelectField.outlined("Size");
   private final ElwhaCheckbox visibleBox = new ElwhaCheckbox("Show surface");
 
   /**
@@ -56,35 +56,40 @@ public final class SurfaceControlPanel {
    * @param into the controls column to populate
    * @param stage {@code true} to add the stage-only Size + visibility controls and default the fill
    *     to a container role; {@code false} for a bare surface configurator
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public SurfaceControlPanel(final WorkbenchControls into, final boolean stage) {
     this.stage = stage;
     visibleBox.setChecked(true);
-    roleBox.setSelectedItem(stage ? ColorRole.SURFACE_CONTAINER_HIGH : ColorRole.SURFACE);
-    shapeBox.setSelectedItem(surface.getShape());
-    sizeBox.setSelectedItem(StageSize.MEDIUM);
+    roleBox.setOptions(List.of(ColorRole.values()));
+    roleBox.setSelectedValue(stage ? ColorRole.SURFACE_CONTAINER_HIGH : ColorRole.SURFACE);
+    shapeBox.setOptions(List.of(ShapeScale.values()));
+    shapeBox.setSelectedValue(surface.getShape());
+    borderBox.setOptions(List.of(BorderOption.values()));
+    borderBox.setSelectedValue(BorderOption.NONE);
+    sizeBox.setOptions(List.of(StageSize.values()));
+    sizeBox.setSelectedValue(StageSize.MEDIUM);
 
     into.addSection("Surface");
-    into.addControl("Surface role", roleBox);
-    into.addControl("Shape", shapeBox);
+    into.addControl("", roleBox);
+    into.addControl("", shapeBox);
     into.addControl("Elevation", elevationSpinner);
     into.addSection("Border");
-    into.addControl("Border role", borderBox);
+    into.addControl("", borderBox);
     into.addControl("Border width", widthSpinner);
     if (stage) {
       into.addSection("Stage");
-      into.addControl("Size", sizeBox);
+      into.addControl("", sizeBox);
       into.addControl("", visibleBox);
     }
 
-    roleBox.addActionListener(event -> fireChanged());
-    shapeBox.addActionListener(event -> fireChanged());
-    borderBox.addActionListener(event -> fireChanged());
+    roleBox.addSelectionChangeListener(value -> fireChanged());
+    shapeBox.addSelectionChangeListener(value -> fireChanged());
+    borderBox.addSelectionChangeListener(value -> fireChanged());
     widthSpinner.addChangeListener(event -> fireChanged());
     elevationSpinner.addChangeListener(event -> fireChanged());
-    sizeBox.addActionListener(event -> fireChanged());
+    sizeBox.addSelectionChangeListener(value -> fireChanged());
     visibleBox.addActionListener(event -> fireChanged());
 
     applyToSurface();
@@ -118,11 +123,11 @@ public final class SurfaceControlPanel {
    * sizes its stage surface to before growing it to fit a larger component.
    *
    * @return the chosen stage size
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public Dimension chosenStageSize() {
-    return ((StageSize) sizeBox.getSelectedItem()).size();
+    return sizeBox.getSelectedValue().size();
   }
 
   /**
@@ -141,7 +146,7 @@ public final class SurfaceControlPanel {
    * Renders the equivalent Java for the current configuration.
    *
    * @return the equivalent-Java snippet
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public String code() {
@@ -150,20 +155,20 @@ public final class SurfaceControlPanel {
     }
     final StringBuilder code = new StringBuilder(224);
     code.append(stage ? "ElwhaSurface stage = new ElwhaSurface()\n" : "new ElwhaSurface()\n");
-    code.append("    .setSurfaceRole(ColorRole.").append(roleBox.getSelectedItem()).append(")\n");
-    code.append("    .setShape(ShapeScale.").append(shapeBox.getSelectedItem()).append(")");
+    code.append("    .setSurfaceRole(ColorRole.").append(roleBox.getSelectedValue()).append(")\n");
+    code.append("    .setShape(ShapeScale.").append(shapeBox.getSelectedValue()).append(")");
     final int elevation = (Integer) elevationSpinner.getValue();
     if (elevation > 0) {
       code.append("\n    .setElevation(").append(elevation).append(")");
     }
-    final BorderOption border = (BorderOption) borderBox.getSelectedItem();
+    final BorderOption border = borderBox.getSelectedValue();
     if (border != null && border.role != null) {
       code.append("\n    .setBorderRole(ColorRole.").append(border.role).append(")");
       code.append("\n    .setBorderWidth(").append(widthSpinner.getValue()).append(")");
     }
     code.append(";");
     if (stage) {
-      final Dimension size = ((StageSize) sizeBox.getSelectedItem()).size();
+      final Dimension size = sizeBox.getSelectedValue().size();
       code.append("\nstage.setPreferredSize(new Dimension(")
           .append(size.width)
           .append(", ")
@@ -180,10 +185,10 @@ public final class SurfaceControlPanel {
   }
 
   private void applyToSurface() {
-    surface.setSurfaceRole((ColorRole) roleBox.getSelectedItem());
-    surface.setShape((ShapeScale) shapeBox.getSelectedItem());
+    surface.setSurfaceRole(roleBox.getSelectedValue());
+    surface.setShape(shapeBox.getSelectedValue());
     surface.setElevation((Integer) elevationSpinner.getValue());
-    final BorderOption border = (BorderOption) borderBox.getSelectedItem();
+    final BorderOption border = borderBox.getSelectedValue();
     surface.setBorderRole(border == null ? null : border.role);
     surface.setBorderWidth((Integer) widthSpinner.getValue());
     // In stage mode the hosting ComponentWorkbench owns the surface's preferred size (it grows the
@@ -193,7 +198,7 @@ public final class SurfaceControlPanel {
     }
   }
 
-  /** Wraps a nullable border {@link ColorRole} as a combo-box entry — {@code NONE} maps to null. */
+  /** Wraps a nullable border {@link ColorRole} as a select option — {@code NONE} maps to null. */
   private enum BorderOption {
     NONE(null),
     OUTLINE(ColorRole.OUTLINE),

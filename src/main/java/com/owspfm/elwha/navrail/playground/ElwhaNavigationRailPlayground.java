@@ -1,11 +1,17 @@
 package com.owspfm.elwha.navrail.playground;
 
 import com.owspfm.elwha.badge.ElwhaBadge;
+import com.owspfm.elwha.button.ButtonSize;
+import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.buttongroup.SelectionMode;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.navrail.ElwhaNavRailDestination;
 import com.owspfm.elwha.navrail.ElwhaNavigationRail;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import com.owspfm.elwha.theme.Config;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
@@ -17,16 +23,12 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
-import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
@@ -48,7 +50,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaNavigationRailPlayground {
@@ -152,34 +154,34 @@ public final class ElwhaNavigationRailPlayground {
     panel.setBorder(BorderFactory.createEmptyBorder(8, 16, 12, 16));
 
     final JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 4));
-    final JCheckBox surface = new JCheckBox("Surface filled");
-    surface.addActionListener(e -> rail.setSurfaceFilled(surface.isSelected()));
+    final ElwhaCheckbox surface = new ElwhaCheckbox("Surface filled");
+    surface.addActionListener(e -> rail.setSurfaceFilled(surface.isChecked()));
     row1.add(surface);
 
-    final JCheckBox divider = new JCheckBox("Divider");
-    divider.addActionListener(e -> rail.setDivider(divider.isSelected()));
+    final ElwhaCheckbox divider = new ElwhaCheckbox("Divider");
+    divider.addActionListener(e -> rail.setDivider(divider.isChecked()));
     row1.add(divider);
 
-    final JCheckBox elevation = new JCheckBox("Elevation 1");
-    elevation.addActionListener(e -> rail.setElevation(elevation.isSelected() ? 1 : 0));
+    final ElwhaCheckbox elevation = new ElwhaCheckbox("Elevation 1");
+    elevation.addActionListener(e -> rail.setElevation(elevation.isChecked() ? 1 : 0));
     row1.add(elevation);
 
-    final JCheckBox menu = new JCheckBox("Menu button");
+    final ElwhaCheckbox menu = new ElwhaCheckbox("Menu button");
     menu.addActionListener(
         e ->
             rail.setMenuButton(
-                menu.isSelected() ? new ElwhaIconButton(MaterialIcons.menu()) : null));
+                menu.isChecked() ? new ElwhaIconButton(MaterialIcons.menu()) : null));
     row1.add(menu);
 
-    final JCheckBox fab = new JCheckBox("FAB");
+    final ElwhaCheckbox fab = new ElwhaCheckbox("FAB");
     fab.addActionListener(
-        e -> rail.setFab(fab.isSelected() ? ElwhaFab.standard(MaterialIcons.edit()) : null));
+        e -> rail.setFab(fab.isChecked() ? ElwhaFab.standard(MaterialIcons.edit()) : null));
     row1.add(fab);
 
-    final JCheckBox trailing = new JCheckBox("Trailing actions");
+    final ElwhaCheckbox trailing = new ElwhaCheckbox("Trailing actions");
     trailing.addActionListener(
         e -> {
-          if (trailing.isSelected()) {
+          if (trailing.isChecked()) {
             final List<ElwhaIconButton> actions = new ArrayList<>();
             actions.add(new ElwhaIconButton(MaterialIcons.help()));
             actions.add(new ElwhaIconButton(MaterialIcons.info()));
@@ -193,24 +195,24 @@ public final class ElwhaNavigationRailPlayground {
     panel.add(row1);
 
     final JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEADING, 16, 4));
-    row2.add(new JLabel("Destinations:"));
-    final JComboBox<Integer> count = new JComboBox<>(new Integer[] {3, 5, 7});
-    count.setSelectedItem(5);
-    count.addActionListener(e -> applyDestinationCount((Integer) count.getSelectedItem()));
+    final ElwhaSelectField<Integer> count = ElwhaSelectField.outlined("Destinations");
+    count.setOptions(List.of(3, 5, 7));
+    count.setSelectedValue(5);
+    count.addSelectionChangeListener(this::applyDestinationCount);
     row2.add(count);
 
     row2.add(Box.createHorizontalStrut(16));
-    row2.add(new JLabel("Badge on \"Liked\":"));
-    final JComboBox<String> badge = new JComboBox<>(new String[] {"None", "Small dot", "Large 3"});
-    badge.setSelectedIndex(1);
-    badge.addActionListener(
-        e -> {
+    final ElwhaSelectField<String> badge = ElwhaSelectField.outlined("Badge on \"Liked\"");
+    badge.setOptions(List.of("None", "Small dot", "Large 3"));
+    badge.setSelectedValue("Small dot");
+    badge.addSelectionChangeListener(
+        picked -> {
           final List<ElwhaNavRailDestination> dests = rail.getPrimary();
           if (dests.size() < 2) {
             return;
           }
           final ElwhaNavRailDestination liked = dests.get(1);
-          switch ((String) badge.getSelectedItem()) {
+          switch (picked) {
             case "Small dot" -> liked.setBadge(ElwhaBadge.small());
             case "Large 3" -> liked.setBadge(ElwhaBadge.large(3));
             default -> liked.setBadge(null);
@@ -247,14 +249,18 @@ public final class ElwhaNavigationRailPlayground {
   private JPanel buildModeBar() {
     final JPanel bar = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));
     bar.add(new JLabel("Mode:"));
-    final ButtonGroup group = new ButtonGroup();
-    for (final Mode mode : Mode.values()) {
-      final JToggleButton b = new JToggleButton(mode.name());
-      b.setSelected(mode == Mode.SYSTEM);
-      b.addActionListener(e -> applyMode(mode));
-      group.add(b);
-      bar.add(b);
+    final Mode[] modes = Mode.values();
+    final ElwhaButtonGroup group =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setColorStyle(ButtonGroupColorStyle.OUTLINED);
+    for (final Mode mode : modes) {
+      group.add(mode.name());
     }
+    group.setSelectedIndex(Mode.SYSTEM.ordinal());
+    group.addSelectionListener(g -> applyMode(modes[g.getSelectedIndex()]));
+    bar.add(group);
     return bar;
   }
 

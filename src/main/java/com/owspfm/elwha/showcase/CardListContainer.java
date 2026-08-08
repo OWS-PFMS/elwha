@@ -9,11 +9,11 @@ import com.owspfm.elwha.list.ElwhaItemList;
 import com.owspfm.elwha.list.ElwhaListOrientation;
 import com.owspfm.elwha.list.MovementMode;
 import com.owspfm.elwha.list.SelectionMode;
+import com.owspfm.elwha.selectfield.ElwhaSelectField;
 import java.awt.FlowLayout;
 import java.awt.Insets;
 import java.util.List;
 import javax.swing.BorderFactory;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -86,20 +86,20 @@ final class CardListContainer {
   private void buildControls() {
     final WorkbenchControls controls = workbench.controls();
 
-    final JComboBox<ElwhaListOrientation> orientation =
-        new JComboBox<>(ElwhaListOrientation.values());
-    orientation.setSelectedItem(ElwhaListOrientation.VERTICAL);
-    orientation.addActionListener(
-        event -> list.setOrientation((ElwhaListOrientation) orientation.getSelectedItem()));
+    final ElwhaSelectField<ElwhaListOrientation> orientation =
+        ElwhaSelectField.outlined("Orientation");
+    orientation.setOptions(List.of(ElwhaListOrientation.values()));
+    orientation.setSelectedValue(ElwhaListOrientation.VERTICAL);
+    orientation.addSelectionChangeListener(list::setOrientation);
 
-    final JComboBox<SelectionMode> selection = new JComboBox<>(SelectionMode.values());
-    selection.setSelectedItem(list.getSelectionMode());
-    selection.addActionListener(
-        event -> list.setSelectionMode((SelectionMode) selection.getSelectedItem()));
+    final ElwhaSelectField<SelectionMode> selection = ElwhaSelectField.outlined("Selection mode");
+    selection.setOptions(List.of(SelectionMode.values()));
+    selection.setSelectedValue(list.getSelectionMode());
+    selection.addSelectionChangeListener(list::setSelectionMode);
 
     controls.addSection("List");
-    controls.addControl("Orientation", orientation);
-    controls.addControl("Selection mode", selection);
+    controls.addControl("", orientation);
+    controls.addControl("", selection);
 
     final JSpinner columns = new JSpinner(new SpinnerNumberModel(1, 1, 6, 1));
     columns.addChangeListener(event -> list.setColumns((Integer) columns.getValue()));

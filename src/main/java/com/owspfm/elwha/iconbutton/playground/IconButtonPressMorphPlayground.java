@@ -1,5 +1,6 @@
 package com.owspfm.elwha.iconbutton.playground;
 
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.iconbutton.IconButtonInteractionMode;
 import com.owspfm.elwha.iconbutton.IconButtonSize;
@@ -17,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -55,7 +55,7 @@ import javax.swing.SwingUtilities;
  * -Dexec.mainClass="com.owspfm.elwha.iconbutton.playground.IconButtonPressMorphPlayground"}.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class IconButtonPressMorphPlayground {
@@ -95,19 +95,19 @@ public final class IconButtonPressMorphPlayground {
   private static JPanel buildToolbar() {
     final JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 8));
 
-    final JCheckBox slowMo = new JCheckBox("5× slow motion");
+    final ElwhaCheckbox slowMo = new ElwhaCheckbox("5× slow motion");
     slowMo.addActionListener(
-        e ->
-            MorphAnimator.setDurationMultiplier(slowMo.isSelected() ? SLOW_MOTION_MULTIPLIER : 1f));
+        e -> MorphAnimator.setDurationMultiplier(slowMo.isChecked() ? SLOW_MOTION_MULTIPLIER : 1f));
     toolbar.add(slowMo);
 
-    final JCheckBox ripple = new JCheckBox("Ripple", true);
-    ripple.addActionListener(e -> BUTTONS.forEach(b -> b.setRippleEnabled(ripple.isSelected())));
+    final ElwhaCheckbox ripple = new ElwhaCheckbox("Ripple");
+    ripple.setChecked(true);
+    ripple.addActionListener(e -> BUTTONS.forEach(b -> b.setRippleEnabled(ripple.isChecked())));
     toolbar.add(ripple);
 
-    final JCheckBox reduced = new JCheckBox("Reduced motion (global)");
-    reduced.setSelected(MorphAnimator.isReducedMotion());
-    reduced.addActionListener(e -> MorphAnimator.setReducedMotion(reduced.isSelected()));
+    final ElwhaCheckbox reduced = new ElwhaCheckbox("Reduced motion (global)");
+    reduced.setChecked(MorphAnimator.isReducedMotion());
+    reduced.addActionListener(e -> MorphAnimator.setReducedMotion(reduced.isChecked()));
     toolbar.add(reduced);
 
     toolbar.add(

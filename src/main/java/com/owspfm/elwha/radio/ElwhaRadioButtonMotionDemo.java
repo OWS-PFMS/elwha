@@ -1,17 +1,17 @@
 package com.owspfm.elwha.radio;
 
+import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.checkbox.ElwhaCheckbox;
+import com.owspfm.elwha.slider.ElwhaSlider;
 import com.owspfm.elwha.theme.ElwhaTheme;
 import com.owspfm.elwha.theme.MaterialPalettes;
 import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.MorphAnimator;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JSlider;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.WindowConstants;
@@ -24,7 +24,7 @@ import javax.swing.WindowConstants;
  * checkbox proves the global snap.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaRadioButtonMotionDemo {
@@ -56,7 +56,7 @@ public final class ElwhaRadioButtonMotionDemo {
     row.add(left);
     row.add(right);
 
-    final JButton swap = new JButton("Swap selection (animated)");
+    final ElwhaButton swap = ElwhaButton.filledTonalButton("Swap selection (animated)");
     swap.addActionListener(
         e -> {
           final boolean leftWas = left.isSelected();
@@ -64,7 +64,7 @@ public final class ElwhaRadioButtonMotionDemo {
           right.setSelected(leftWas);
         });
 
-    final JButton rapidFlip = new JButton("Rapid flip (retarget mid-grow)");
+    final ElwhaButton rapidFlip = ElwhaButton.outlinedButton("Rapid flip (retarget mid-grow)");
     rapidFlip.addActionListener(
         e -> {
           right.setSelected(true);
@@ -77,11 +77,12 @@ public final class ElwhaRadioButtonMotionDemo {
               .start();
         });
 
-    final JCheckBox reduced = new JCheckBox("Reduced motion (global snap)");
-    reduced.setSelected(MorphAnimator.isReducedMotion());
-    reduced.addActionListener(e -> MorphAnimator.setReducedMotion(reduced.isSelected()));
+    final ElwhaCheckbox reduced = new ElwhaCheckbox("Reduced motion (global snap)");
+    reduced.setChecked(MorphAnimator.isReducedMotion());
+    reduced.addActionListener(e -> MorphAnimator.setReducedMotion(reduced.isChecked()));
 
-    final JSlider multiplier = new JSlider(1, 10, 1);
+    final ElwhaSlider multiplier = new ElwhaSlider(1, 10, 1);
+    multiplier.setAccessibleLabel("Duration multiplier");
     multiplier.addChangeListener(e -> MorphAnimator.setDurationMultiplier(multiplier.getValue()));
 
     final JPanel controls = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));

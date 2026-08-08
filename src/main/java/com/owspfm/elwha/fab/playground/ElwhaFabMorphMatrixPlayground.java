@@ -1,6 +1,11 @@
 package com.owspfm.elwha.fab.playground;
 
+import com.owspfm.elwha.button.ButtonSize;
 import com.owspfm.elwha.button.ElwhaButton;
+import com.owspfm.elwha.buttongroup.ButtonGroupColorStyle;
+import com.owspfm.elwha.buttongroup.ElwhaButtonGroup;
+import com.owspfm.elwha.buttongroup.ResizeMode;
+import com.owspfm.elwha.buttongroup.SelectionMode;
 import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.Config;
@@ -17,11 +22,9 @@ import java.awt.Insets;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
-import javax.swing.ButtonGroup;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
@@ -44,7 +47,7 @@ import javax.swing.WindowConstants;
  * </pre>
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaFabMorphMatrixPlayground {
@@ -177,28 +180,44 @@ public final class ElwhaFabMorphMatrixPlayground {
     bar.add(toggleAll);
 
     bar.add(new JLabel("    Orientation:"));
-    final ButtonGroup orientGroup = new ButtonGroup();
-    final JToggleButton ltrButton = new JToggleButton("LTR");
-    ltrButton.setSelected(true);
-    ltrButton.addActionListener(e -> applyOrientation(ComponentOrientation.LEFT_TO_RIGHT));
-    orientGroup.add(ltrButton);
-    bar.add(ltrButton);
-    final JToggleButton rtlButton = new JToggleButton("RTL");
-    rtlButton.addActionListener(e -> applyOrientation(ComponentOrientation.RIGHT_TO_LEFT));
-    orientGroup.add(rtlButton);
-    bar.add(rtlButton);
+    final ElwhaButtonGroup orientGroup =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL)
+            .add(new ElwhaButton("LTR"))
+            .add(new ElwhaButton("RTL"));
+    orientGroup.setSelectedIndex(0);
+    orientGroup.addSelectionListener(
+        g ->
+            applyOrientation(
+                g.getSelectedIndex() == 1
+                    ? ComponentOrientation.RIGHT_TO_LEFT
+                    : ComponentOrientation.LEFT_TO_RIGHT));
+    bar.add(orientGroup);
 
     bar.add(new JLabel("    Mode:"));
-    final ButtonGroup modeGroup = new ButtonGroup();
-    for (Mode mode : new Mode[] {Mode.LIGHT, Mode.DARK, Mode.SYSTEM}) {
-      final JToggleButton button = new JToggleButton(mode.name());
-      button.addActionListener(e -> applyMode(mode));
-      if (ElwhaTheme.current().mode() == mode) {
-        button.setSelected(true);
-      }
-      modeGroup.add(button);
-      bar.add(button);
+    final Mode[] modes = {Mode.LIGHT, Mode.DARK, Mode.SYSTEM};
+    final ElwhaButtonGroup modeGroup =
+        ElwhaButtonGroup.connected()
+            .setSelectionMode(SelectionMode.REQUIRED)
+            .setButtonSize(ButtonSize.XS)
+            .setResizeMode(ResizeMode.FIXED)
+            .setColorStyle(ButtonGroupColorStyle.TONAL);
+    for (final Mode mode : modes) {
+      modeGroup.add(new ElwhaButton(mode.name()));
     }
+    final Mode current = ElwhaTheme.current().mode();
+    for (int i = 0; i < modes.length; i++) {
+      if (modes[i] == current) {
+        modeGroup.setSelectedIndex(i);
+      }
+    }
+    // Seeded before the listener is attached so the initial selection does not re-install the
+    // theme on startup.
+    modeGroup.addSelectionListener(g -> applyMode(modes[g.getSelectedIndex()]));
+    bar.add(modeGroup);
     return bar;
   }
 
