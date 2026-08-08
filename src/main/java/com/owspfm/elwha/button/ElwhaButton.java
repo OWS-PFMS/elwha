@@ -1245,12 +1245,19 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
   @Override
   public Rectangle getBodyBounds() {
     final Point origin = bodyOrigin();
-    return new Rectangle(origin.x, origin.y, effectiveBodyWidth(), buttonSize.containerHeightPx());
+    final Rectangle body =
+        new Rectangle(origin.x, origin.y, effectiveBodyWidth(), buttonSize.containerHeightPx());
+    // A button squeezed below its content-hugging width would otherwise report a body running past
+    // its own right edge, and a consumer anchoring to the trailing edge would leave the component.
+    return body.intersection(new Rectangle(0, 0, getWidth(), getHeight()));
   }
 
   /**
    * The clickable rect: the visible body, grown to the WCAG 2.5.5 minimum target (48 dp on XS / S)
    * and kept centered on the body, then clamped to the component's own bounds.
+   *
+   * <p>The rect is clamped to the component minus its shadow reserve — a point in the transparent
+   * halo is not a click target, matching {@code ElwhaFab}.
    *
    * <p>This used to be the whole component minus the shadow reserve, reasoning that the a11y
    * inflation padding should stay clickable — correct while bounds equal preferred size, and wrong
@@ -1273,7 +1280,15 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
     final Rectangle hit =
         new Rectangle(
             body.x - growX / 2, body.y - growY / 2, body.width + growX, body.height + growY);
-    return hit.intersection(new Rectangle(0, 0, getWidth(), getHeight()));
+    // Clamped to the component minus its shadow reserve, not to the raw bounds: a point in the
+    // transparent halo is not a click target, which is the rule ElwhaFab.containsPoint states.
+    final Insets s = getShadowInsets();
+    return hit.intersection(
+        new Rectangle(
+            s.left,
+            s.top,
+            Math.max(0, getWidth() - s.left - s.right),
+            Math.max(0, getHeight() - s.top - s.bottom)));
   }
 
   /**

@@ -656,9 +656,12 @@ public class ElwhaCheckbox extends JComponent implements BodyBearing {
   // ---------------------------------------------------------------- paint
 
   /**
-   * The visible painted body — the {@value #TOUCH_TARGET}&nbsp;dp control block plus its label: the
-   * full width, but only the control band vertically, centered when a layout grants more height
-   * than the control needs.
+   * The visible painted body — the {@value #TOUCH_TARGET}&nbsp;dp control block plus its label.
+   *
+   * <p>Both axes are content-sized rather than granted: a layout that stretches this control leaves
+   * dead space past the label and below the block, and anchoring to either would put a tooltip or
+   * badge out in that space. The block hugs the leading edge, so under a right-to-left orientation
+   * the content sits against the trailing edge instead.
    *
    * @return the body rect in component coordinates
    * @version v0.5.0
@@ -666,8 +669,11 @@ public class ElwhaCheckbox extends JComponent implements BodyBearing {
    */
   @Override
   public Rectangle getBodyBounds() {
-    final int band = Math.min(getHeight(), Math.max(TOUCH_TARGET, getPreferredSize().height));
-    return new Rectangle(0, Math.max(0, (getHeight() - band) / 2), getWidth(), band);
+    final Dimension content = getPreferredSize();
+    final int width = Math.min(getWidth(), content.width);
+    final int band = Math.min(getHeight(), Math.max(TOUCH_TARGET, content.height));
+    final int x = getComponentOrientation().isLeftToRight() ? 0 : Math.max(0, getWidth() - width);
+    return new Rectangle(x, Math.max(0, (getHeight() - band) / 2), width, band);
   }
 
   @Override

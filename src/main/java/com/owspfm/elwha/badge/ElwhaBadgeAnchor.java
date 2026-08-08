@@ -599,6 +599,12 @@ public final class ElwhaBadgeAnchor {
     // the dead space at the cell edge (#493) — the same mismatch LABEL_TRAILING was hand-fixed for
     // during the tabs epic. RTL mirrors the trailing edge to the left.
     private void refreshTrailingEdge() {
+      // Both guards matter: the host may not be laid out yet (refresh runs on mount), and a body
+      // is derived from content rather than bounds, so it stays non-empty on a zero-sized host.
+      if (host.getWidth() <= 0 || host.getHeight() <= 0) {
+        badge.setVisible(false);
+        return;
+      }
       final Rectangle body = BodyBearing.bodyBoundsOf(host);
       if (body.width <= 0 || body.height <= 0) {
         badge.setVisible(false);

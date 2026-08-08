@@ -255,6 +255,9 @@ public final class MorphAnimator {
    */
   public static void addReducedMotionListener(final Runnable listener) {
     if (listener != null) {
+      // Collected entries are otherwise only pruned when the flag actually changes, so a JVM that
+      // never toggles reduced motion would keep one dead reference per component ever constructed.
+      REDUCED_MOTION_LISTENERS.removeIf(ref -> ref.get() == null);
       REDUCED_MOTION_LISTENERS.add(new WeakReference<>(listener));
     }
   }
@@ -291,8 +294,14 @@ public final class MorphAnimator {
       final Runnable listener = ref.get();
       if (listener == null) {
         REDUCED_MOTION_LISTENERS.remove(ref);
-      } else {
+        continue;
+      }
+      try {
         listener.run();
+      } catch (final RuntimeException failed) {
+        // One consumer's broken callback must not leave every other component's clock wrong.
+        System.getLogger(MorphAnimator.class.getName())
+            .log(System.Logger.Level.WARNING, "reduced-motion listener failed", failed);
       }
     }
   }

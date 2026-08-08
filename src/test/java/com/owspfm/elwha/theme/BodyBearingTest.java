@@ -152,6 +152,44 @@ class BodyBearingTest {
   }
 
   @Test
+  void aStretchedCheckboxDoesNotClaimTheDeadSpacePastItsLabel() {
+    final ElwhaCheckbox box = atPreferred(new ElwhaCheckbox("Remember me"));
+    final int contentWidth = box.getBodyBounds().width;
+
+    box.setSize(box.getWidth() + 300, box.getHeight());
+
+    assertThat(box.getBodyBounds().width)
+        .as("a trailing-anchored consumer must land against the label, not the stretched edge")
+        .isEqualTo(contentWidth);
+  }
+
+  @Test
+  void aNavRailDestinationReportsItsWholePaintedContent() {
+    // Its pill is only the active indicator; the collapsed variant paints a label BELOW the pill,
+    // so claiming the pill as the body would anchor a tooltip on top of that label. The default
+    // resolver tier is the honest answer here, which is why the destination implements nothing.
+    final com.owspfm.elwha.navrail.ElwhaNavRailDestination destination =
+        atPreferred(
+            com.owspfm.elwha.navrail.ElwhaNavRailDestination.of(
+                MaterialIcons.symbol("home"), "Home"));
+
+    assertThat(BodyBearing.bodyBoundsOf(destination))
+        .isEqualTo(new Rectangle(0, 0, destination.getWidth(), destination.getHeight()));
+  }
+
+  @Test
+  void aSqueezedButtonsBodyStaysInsideItsOwnBounds() {
+    final ElwhaButton button = atPreferred(ElwhaButton.filledButton("A long label"));
+
+    button.setSize(40, button.getHeight());
+
+    final Rectangle body = button.getBodyBounds();
+    assertThat(body.x + body.width)
+        .as("a content-hugging body must not report an edge outside the component")
+        .isLessThanOrEqualTo(button.getWidth());
+  }
+
+  @Test
   void aBodyRectIsAFreshInstanceCallersCannotMutate() {
     final ElwhaButton button = atPreferred(ElwhaButton.filledButton("Save"));
 

@@ -49,7 +49,7 @@ import javax.swing.SwingUtilities;
  * edge margin. Design: {@code docs/research/elwha-tooltip-design.md} §5.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaTooltip extends AbstractElwhaOverlay {
