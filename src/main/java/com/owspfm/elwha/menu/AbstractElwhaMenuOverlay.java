@@ -186,7 +186,7 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
    */
   @Override
   protected void layoutSurface(final int paneWidth, final int paneHeight) {
-    final Rectangle anchorBounds = anchorBoundsInPane(paneWidth, paneHeight);
+    final Rectangle anchorBounds = anchorBoundsInPane();
     final boolean rtl = !orientation.isLeftToRight();
     final Rectangle bounds =
         sideAnchored()
@@ -290,7 +290,7 @@ abstract class AbstractElwhaMenuOverlay extends AbstractElwhaOverlay {
 
   // The trigger's bounds in the layered pane's coordinate space. Falls back to the pane's top-left
   // when the anchor is somehow detached, so placement degrades gracefully rather than throwing.
-  private Rectangle anchorBoundsInPane(final int paneWidth, final int paneHeight) {
+  private Rectangle anchorBoundsInPane() {
     if (anchor == null || layeredPane == null || !anchor.isShowing()) {
       return new Rectangle(0, 0, 0, 0);
     }
