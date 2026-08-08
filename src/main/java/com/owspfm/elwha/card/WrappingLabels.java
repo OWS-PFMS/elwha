@@ -119,9 +119,12 @@ final class WrappingLabels {
 
   /**
    * Measures the natural single-line width of {@code label.getText()} using the label's current
-   * font. HTML tags are stripped (a rough measurement — bold / styled runs render slightly wider
-   * than the plain-text measurement, but that's an acceptable approximation for a preferred-size
-   * hint). Returns 0 for null or empty text.
+   * font. HTML tags are stripped and the entities {@link #escapeMarkup} produces are decoded back
+   * to the one character each of them renders as — without that, {@code setTitle("Price < 5")},
+   * stored as {@code Price &lt; 5}, measures four glyphs where one is drawn. Still a rough
+   * measurement: bold / styled runs render slightly wider than the plain-text measurement, and
+   * entities an author supplied in their own markup are left alone, but that's an acceptable
+   * approximation for a preferred-size hint. Returns 0 for null or empty text.
    */
   private static int naturalSingleLineWidth(final JLabel label) {
     final String text = label.getText();
@@ -130,12 +133,17 @@ final class WrappingLabels {
     }
     final String plain;
     if (text.toLowerCase().startsWith("<html>")) {
-      plain = text.replaceAll("<[^>]+>", "");
+      plain = unescapeMarkup(text.replaceAll("<[^>]+>", ""));
     } else {
       plain = text;
     }
     final FontMetrics fm = label.getFontMetrics(label.getFont());
     return fm.stringWidth(plain);
+  }
+
+  /** The exact inverse of {@link #escapeMarkup}, so ampersand comes last rather than first. */
+  private static String unescapeMarkup(final String text) {
+    return text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&");
   }
 
   /**

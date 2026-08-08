@@ -279,6 +279,56 @@ class ElwhaItemListReorderTest {
         .isEqualTo(Cursor.DEFAULT_CURSOR);
   }
 
+  /**
+   * #614 — the cursor cache is global, the activation listener is per-list. Every list in a window
+   * used to invalidate and re-decode the PNGs on each activation, so the second list threw away the
+   * cursor the first had just built. AWT hands one event object to every listener of a single
+   * activation, so charging the rebuild to that object collapses N rebuilds to one.
+   */
+  @Test
+  void oneActivationRebuildsTheCursorsOnceHoweverManyListsShareTheWindow() {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
+    layout();
+    final Object activation = new Object();
+    final long before = ReorderCursors.generation();
+
+    list.reapplyReorderCursors(activation);
+    list.reapplyReorderCursors(activation);
+    list.reapplyReorderCursors(activation);
+
+    assertThat(ReorderCursors.generation() - before)
+        .as("three lists answering the same Alt-Tab decode the assets once between them")
+        .isEqualTo(1);
+  }
+
+  @Test
+  void aFollowingActivationRebuildsAgain() {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
+    layout();
+    final long before = ReorderCursors.generation();
+
+    list.reapplyReorderCursors(new Object());
+    list.reapplyReorderCursors(new Object());
+
+    assertThat(ReorderCursors.generation() - before)
+        .as("#556's macOS Spaces drop is per-activation, so a new one must still rebuild")
+        .isEqualTo(2);
+  }
+
+  @Test
+  void aDirectRefreshWithNoActivationAlwaysRebuilds() {
+    slabListOf("a", "b").setMovementMode(MovementMode.MOVABLE);
+    layout();
+    final long before = ReorderCursors.generation();
+
+    list.reapplyReorderCursors();
+    list.reapplyReorderCursors();
+
+    assertThat(ReorderCursors.generation() - before)
+        .as("a programmatic refresh has no event to charge to and must not be deduplicated")
+        .isEqualTo(2);
+  }
+
   // --------------------------------------------- window binding (headless half)
 
   @Test

@@ -384,6 +384,29 @@ class ElwhaTabsSelectionTest {
             + " events, so re-enabling without moving the pointer must not replay the hover layer");
   }
 
+  /**
+   * #686 — #683 completed the ripple on the way through {@code setEnabled}, which covers the
+   * component's own disable path and nothing else. A tab that starts a ripple while already
+   * disabled never passes through that path, and until the guard moved into the shared {@code
+   * RippleAnimation} the paint layer was willing to draw it.
+   */
+  @Test
+  void aDisabledTabPaintsNoRippleEvenWhenOneIsStarted() {
+    final ElwhaTabs bar = barOf("", "");
+    final ElwhaTab inactive = bar.getTabAt(1);
+    inactive.setEnabled(false);
+
+    inactive.startRipple(new java.awt.Point(40, 24));
+
+    Pixels.assertPixelNear(
+        Pixels.render(inactive, 80, 48, GROUND),
+        40,
+        24,
+        GROUND,
+        "the ripple paint path now consults isEnabled(), so no state combination can put"
+            + " interactive chrome on a tab that refuses interaction");
+  }
+
   @Test
   void aTabDisabledWhilePressedComesBackUnpressed() {
     final ElwhaTabs bar = barOf("", "");

@@ -864,8 +864,10 @@ public final class ElwhaNavigationRail extends JComponent {
   }
 
   /**
-   * Selects the given destination. Pass {@code null} only when the primary list is empty
-   * (clearing); otherwise the destination must be a member of the current primary list.
+   * Selects the given destination. Membership is checked against <em>every</em> destination the
+   * rail holds — the primary list and every {@linkplain #getSections() section} — so a section
+   * destination is as selectable as a primary one. Pass {@code null} only when the rail holds no
+   * destinations at all (clearing).
    *
    * <p>Same-instance calls are no-ops (clicks on the already-selected destination cause no
    * selection events). On a state change, the previous destination's selected flag is pushed to
@@ -873,11 +875,12 @@ public final class ElwhaNavigationRail extends JComponent {
    * property-change event and a {@link NavRailSelectionListener#selectionChanged} notification are
    * fired in that order.
    *
-   * @param destination the destination to select, or {@code null} only when {@link #getPrimary()
-   *     primary} is empty
-   * @throws IllegalArgumentException if {@code destination} is non-null but not in the current
-   *     primary list
-   * @version v0.3.0
+   * @param destination the destination to select, or {@code null} only when both {@link
+   *     #getPrimary() primary} and every {@linkplain #getSections() section} are empty
+   * @throws IllegalArgumentException if {@code destination} is non-null but is not one of the
+   *     rail's primary or section destinations, or if it is {@code null} while the rail still holds
+   *     destinations
+   * @version v0.5.0
    * @since v0.3.0
    */
   public void setSelected(final ElwhaNavRailDestination destination) {
@@ -1274,10 +1277,7 @@ public final class ElwhaNavigationRail extends JComponent {
     if (primary.isEmpty()) {
       return 0;
     }
-    int h = 0;
-    for (final ElwhaNavRailDestination d : primary) {
-      h += ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX;
-    }
+    int h = primary.size() * ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX;
     // doLayout only inserts the Collapsed gap once the morph has settled, so reserving it from
     // frame 0 would ask the host for height the laid-out band does not use (#635).
     if (!expandedish()) {

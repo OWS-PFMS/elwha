@@ -1388,24 +1388,6 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
   }
 
   /**
-   * Starts a group-driven width-ripple borrow. Called by a hosting standard {@link
-   * com.owspfm.elwha.buttongroup.ElwhaButtonGroup} on every segment when one of its segments is
-   * pressed — the pressed segment gets {@code factor = 1.0} (full pinch), ±1 neighbors get {@code
-   * 0.3} (30 % of the natural press-width delta), ±2 neighbors get {@code 0.1}, and further-out
-   * segments get {@code 0.0} (no ripple). Design doc §6.
-   *
-   * <p>The factor multiplies the natural press-width delta of <em>this</em> button (so a smaller
-   * neighbor borrows proportionally less). The morph itself is the standard {@link
-   * MorphAnimator#SHORT3_MS} (150 ms) press timing.
-   *
-   * <p>Calling with {@code factor = 0.0} is equivalent to {@link #releaseWidthBorrow()} —
-   * convenient when a group computes a borrow vector with some zero entries.
-   *
-   * @param factor the borrow factor in {@code [-1, 1]}; clamped if outside
-   * @version v0.3.0
-   * @since v0.3.0
-   */
-  /**
    * Runs one full press-in → press-out shape + width morph cycle programmatically — the same motion
    * a pointer press produces — but <em>unconditionally</em>, deliberately ignoring the {@link
    * ButtonInteractionMode#SELECTABLE} press-morph suppression that {@code firesPressMorph()}
@@ -1434,6 +1416,12 @@ public class ElwhaButton extends JComponent implements ShadowBearing {
    * scaled by {@code factor} ({@code > 0} grows, {@code < 0} lends width to the pressed neighbor).
    * Called by the hosting {@code ElwhaButtonGroup} on each segment when a segment is pressed; a
    * factor of {@code 0} delegates to {@link #releaseWidthBorrow()}.
+   *
+   * <p>The group's ripple ladder (design doc §6): the pressed segment borrows at {@code 1.0}, its
+   * ±1 neighbors at {@code 0.3}, its ±2 neighbors at {@code 0.1}, and everything further out at
+   * {@code 0.0}. The factor scales the natural press-width delta of <em>this</em> button, so a
+   * narrower neighbor borrows proportionally less, and the morph runs at the standard {@link
+   * MorphAnimator#SHORT3_MS} press timing.
    *
    * @param factor the borrow factor, clamped to {@code [-1, 1]}
    * @version v0.5.0

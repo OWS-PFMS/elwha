@@ -140,7 +140,7 @@ final class ColorPickerHeader extends JComponent {
     g2.drawRoundRect(x, y, SWATCH_SIZE - 1, SWATCH_SIZE - 1, arc, arc);
   }
 
-  private static int fontHeight(final Font font) {
-    return new javax.swing.JLabel().getFontMetrics(font).getHeight();
+  private int fontHeight(final Font font) {
+    return getFontMetrics(font).getHeight();
   }
 }

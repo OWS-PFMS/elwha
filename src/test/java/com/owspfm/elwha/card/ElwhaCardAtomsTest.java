@@ -2,6 +2,7 @@ package com.owspfm.elwha.card;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.button.ElwhaButton;
@@ -13,6 +14,7 @@ import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -176,6 +178,29 @@ class ElwhaCardAtomsTest {
     assertThat(body.getText())
         .as("the ampersand is escaped first, so a literal entity is not silently substituted")
         .isEqualTo("<html>Tom &amp;amp; Jerry</html>");
+  }
+
+  /**
+   * #691 — the natural-width helper strips tags but used to leave entities alone, so the {@code
+   * &lt;} that {@link ElwhaCardTitle} stores for a literal {@code <} was measured as four glyphs
+   * where one is drawn, over-reporting preferred width on any card text carrying {@code &}, {@code
+   * <} or {@code >}. Asserted as a delta between two titles so the atom's own padding cancels out.
+   */
+  @Test
+  void escapedEntitiesAreMeasuredAsTheGlyphTheyRender() {
+    final ElwhaCardTitle escaped = new ElwhaCardTitle("Price < 5");
+    final ElwhaCardTitle control = new ElwhaCardTitle("Price x 5");
+    final FontMetrics fm = escaped.getFontMetrics(escaped.getFont());
+
+    final int measuredDelta = escaped.getPreferredSize().width - control.getPreferredSize().width;
+    final int renderedDelta = fm.stringWidth("<") - fm.stringWidth("x");
+
+    assertThat(measuredDelta)
+        .as("the two titles differ by one glyph, so their preferred widths do too")
+        .isCloseTo(renderedDelta, within(1));
+    assertThat(measuredDelta)
+        .as("measuring the entity literally would inflate the width by three extra glyphs")
+        .isLessThan(fm.stringWidth("&lt;") - fm.stringWidth("x"));
   }
 
   @Test

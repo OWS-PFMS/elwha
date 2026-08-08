@@ -8,7 +8,11 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.Insets;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.net.URL;
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -21,15 +25,20 @@ import javax.swing.UIManager;
  * Reference panel listing every cursor a card-rendering {@link com.owspfm.elwha.list.ElwhaItemList}
  * can hand out: AWT predefined cursors plus the two custom grab / grabbing cursors.
  *
- * <p>The previews are loaded reflectively from the package-private {@code
- * com.owspfm.elwha.list.ReorderCursors} loader — the same class the live list uses — so the panel
- * needs no public preview API on the loader.
+ * <p>The live {@link java.awt.Cursor} instances are pulled reflectively from the package-private
+ * {@code com.owspfm.elwha.list.ReorderCursors} loader, so a row hands out exactly the cursor the
+ * list would. The preview <em>rasters</em> beside them are read straight off the bundled assets — a
+ * reference panel showing what shipped should read what shipped, and it keeps the library from
+ * carrying a preview accessor no library code calls (#612).
  *
  * @author Charles Bryan
  * @version v0.5.0
  * @since v0.2.0
  */
 public final class CursorReferencePanel extends JPanel {
+
+  /** Where the reorder cursor rasters live, relative to this class. */
+  private static final String CURSOR_ASSETS = "/com/owspfm/elwha/list/cursors/";
 
   /** Builds the reference panel. */
   public CursorReferencePanel() {
@@ -121,12 +130,16 @@ public final class CursorReferencePanel extends JPanel {
   }
 
   private static Image loadCustomImage(final String baseName) {
-    try {
-      final Class<?> clazz = Class.forName("com.owspfm.elwha.list.ReorderCursors");
-      final Method method = clazz.getDeclaredMethod("previewImage", String.class, boolean.class);
-      method.setAccessible(true);
-      return (Image) method.invoke(null, baseName, isDarkTheme());
-    } catch (ReflectiveOperationException e) {
+    final String variant = isDarkTheme() ? "dark" : "light";
+    final URL url =
+        CursorReferencePanel.class.getResource(
+            CURSOR_ASSETS + baseName + "-" + variant + "-32.png");
+    if (url == null) {
+      return null;
+    }
+    try (InputStream in = url.openStream()) {
+      return ImageIO.read(in);
+    } catch (final IOException missing) {
       return null;
     }
   }

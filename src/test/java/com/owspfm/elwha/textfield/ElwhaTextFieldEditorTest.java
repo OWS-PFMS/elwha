@@ -1,6 +1,8 @@
 package com.owspfm.elwha.textfield;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.testkit.EdtInterceptor;
@@ -11,6 +13,7 @@ import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.Color;
+import java.awt.IllegalComponentStateException;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -286,5 +289,55 @@ class ElwhaTextFieldEditorTest {
 
     field.setReadOnly(false);
     assertThat(field.isReadOnly()).as("which round-trips").isFalse();
+  }
+
+  // ------------------------------------- the peered-orphan accessibility trap
+
+  /**
+   * #679 — {@code addNotify()} on an unparented field leaves it in a state Swing answers
+   * inconsistently: {@code isShowing()} is true because the peer exists and no parent objects, but
+   * there is no window to measure a screen location against. {@code
+   * AccessibleJTextComponent.caretUpdate} asks for one on every caret move, and the JDK guards that
+   * ask with {@code catch (IllegalComponentStateException)} — a handler it never reaches, because
+   * {@code Component.getLocationOnScreen} takes its {@code isShowing()} branch and NPEs walking to
+   * the absent window. Elwha arms this on every field, not just an accessibility-aware one, because
+   * the constructor realizes the editor's accessible context.
+   */
+  @Test
+  void anUnparentedFieldSurvivesAddNotifyThenSetText() {
+    final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
+
+    field.addNotify();
+
+    assertThatCode(() -> field.setText("hello"))
+        .as("an offscreen render path peers without parenting; setText must not NPE there")
+        .doesNotThrowAnyException();
+    assertThat(field.getText()).as("and the text actually lands").isEqualTo("hello");
+  }
+
+  @Test
+  void everyEditorModeSurvivesThePeeredOrphanState() {
+    for (final InputMode mode : InputMode.values()) {
+      final ElwhaTextField field = new ElwhaTextField(Variant.OUTLINED, "Notes");
+      field.setInputMode(mode);
+
+      field.addNotify();
+
+      assertThatCode(() -> field.setText("x"))
+          .as("the guard rides on the editor, so it must cover the JTextArea modes too: " + mode)
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  void aWindowlessEditorAnswersWithTheExceptionSwingAlreadyCatches() {
+    final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "Email");
+    field.addNotify();
+
+    assertThatThrownBy(() -> field.getEditor().getLocationOnScreen())
+        .as(
+            "Component.getLocationOnScreen specifies this for a component not showing on screen,"
+                + " and it is the exception AccessibleJTextComponent.caretUpdate already handles")
+        .isInstanceOf(IllegalComponentStateException.class);
   }
 }

@@ -7,6 +7,8 @@ import com.owspfm.elwha.badge.IconBearing;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.FocusVisible;
+import com.owspfm.elwha.theme.HoverTracker;
+import com.owspfm.elwha.theme.RippleAnimation;
 import com.owspfm.elwha.theme.RipplePainter;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.StateLayer;
@@ -19,9 +21,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.MouseInfo;
 import java.awt.Point;
-import java.awt.PointerInfo;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
@@ -46,8 +46,6 @@ import javax.swing.Action;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
-import javax.swing.Timer;
 
 /**
  * One tab of an M3 tab bar — the dedicated tab primitive hosted by {@link ElwhaTabs}. Paints its
@@ -117,9 +115,6 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
   static final int INLINE_GAP_PX = 8;
   static final int STACKED_GAP_PX = 2;
 
-  private static final int RIPPLE_TOTAL_MS = 400;
-  private static final int RIPPLE_TICK_MS = 16;
-  private static final int HOVER_POLL_INTERVAL_MS = 100;
   private static final float FOCUS_RING_STROKE = 2f;
   private static final String ACTION_ACTIVATE = "elwhaTab.activate";
 
@@ -145,10 +140,8 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
   private ElwhaBadgeAnchor.Attachment badgeAttachment;
   private ElwhaBadgeAnchor.AnchorMode badgeAnchoredMode;
 
-  private Point rippleOrigin;
-  private float rippleProgress = 1f;
-  private Timer rippleTimer;
-  private Timer hoverPollTimer;
+  private final RippleAnimation ripple = new RippleAnimation(this);
+  private final HoverTracker hoverTracker = new HoverTracker(this, this::onPointerGone);
 
   private ElwhaTab(
       final String label,
@@ -738,15 +731,15 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
   }
 
   private void paintRippleLayer(final Graphics2D g2) {
-    if (rippleOrigin == null || rippleProgress >= 1f) {
+    if (!ripple.isActive()) {
       return;
     }
     RipplePainter.paint(
         g2,
         getWidth(),
         getHeight(),
-        rippleOrigin,
-        rippleProgress,
+        ripple.origin(),
+        ripple.progress(),
         0,
         stateLayerTint(StateLayer.PRESSED));
   }
@@ -929,82 +922,30 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
   }
 
   void startRipple(final Point origin) {
-    rippleOrigin = origin;
-    rippleProgress = 0f;
-    if (rippleTimer != null && rippleTimer.isRunning()) {
-      rippleTimer.stop();
-    }
-    final long startNanos = System.nanoTime();
-    rippleTimer =
-        new Timer(
-            RIPPLE_TICK_MS,
-            e -> {
-              rippleProgress =
-                  Math.min(1f, (System.nanoTime() - startNanos) / (RIPPLE_TOTAL_MS * 1_000_000f));
-              repaint();
-              if (rippleProgress >= 1f) {
-                rippleTimer.stop();
-              }
-            });
-    rippleTimer.setRepeats(true);
-    rippleTimer.start();
-    repaint();
+    ripple.start(origin);
   }
 
   private boolean containsPoint(final Point p) {
-    return p.x >= 0 && p.y >= 0 && p.x < getWidth() && p.y < getHeight();
+    return hoverTracker.containsPoint(p);
   }
 
   private boolean isCursorStillInside(final MouseEvent event) {
-    if (!isShowing()) {
-      return false;
-    }
-    final PointerInfo info = MouseInfo.getPointerInfo();
-    final Point screenPt =
-        info != null ? info.getLocation() : new Point(event.getXOnScreen(), event.getYOnScreen());
-    final Point local = new Point(screenPt);
-    SwingUtilities.convertPointFromScreen(local, this);
-    return containsPoint(local);
+    return hoverTracker.cursorStillInside(event);
   }
 
   private void ensureHoverPolling() {
-    if (hoverPollTimer != null && hoverPollTimer.isRunning()) {
-      return;
-    }
-    hoverPollTimer = new Timer(HOVER_POLL_INTERVAL_MS, e -> pollHoverState());
-    hoverPollTimer.setRepeats(true);
-    hoverPollTimer.start();
+    hoverTracker.start();
   }
 
   private void stopHoverPolling() {
-    if (hoverPollTimer != null) {
-      hoverPollTimer.stop();
-    }
+    hoverTracker.stop();
   }
 
-  private void pollHoverState() {
-    if (!hovered) {
-      stopHoverPolling();
-      return;
-    }
-    if (!isShowing()) {
-      hovered = false;
-      pressed = false;
-      stopHoverPolling();
-      return;
-    }
-    final PointerInfo info = MouseInfo.getPointerInfo();
-    if (info == null) {
-      return;
-    }
-    final Point local = new Point(info.getLocation());
-    SwingUtilities.convertPointFromScreen(local, this);
-    if (!containsPoint(local)) {
-      hovered = false;
-      pressed = false;
-      stopHoverPolling();
-      repaint();
-    }
+  // What the tracker calls once it has established the pointer is no longer on this tab.
+  private void onPointerGone() {
+    hovered = false;
+    pressed = false;
+    repaint();
   }
 
   /**
@@ -1041,18 +982,17 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
 
   // Shared by removeNotify and setEnabled(false): both leave the tab unable to hear the pointer
   // again, and the hover poll is the only path that self-corrects `hovered` / `pressed` (#625,
-  // #683). Completing the ripple matters as much as stopping its timer here — unlike the button
-  // primitives, neither paintComponent nor paintRippleLayer consults isEnabled(), so a stopped
-  // timer with progress short of 1 would freeze a half-drawn ripple on the tab permanently.
+  // #683). Completing the ripple matters as much as stopping its timer: a stopped timer with
+  // progress short of 1 would otherwise leave a half-drawn ripple parked on the tab.
+  // RippleAnimation
+  // additionally refuses to report itself active on a disabled host (#686), so no future state
+  // combination can paint interactive chrome on a tab that is not accepting interaction.
   private void clearTransientInputState() {
-    stopHoverPolling();
+    hoverTracker.stop();
     hovered = false;
     pressed = false;
     focusVisible = false;
-    if (rippleTimer != null) {
-      rippleTimer.stop();
-    }
-    rippleProgress = 1f;
+    ripple.finish();
   }
 
   // ----------------------------------------------------------- accessibility
