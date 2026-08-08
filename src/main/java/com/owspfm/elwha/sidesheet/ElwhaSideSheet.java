@@ -1021,6 +1021,13 @@ public final class ElwhaSideSheet extends JComponent {
     return contentHolder;
   }
 
+  // The header band the drag-to-dismiss handler is registered on. Package-private so the suite can
+  // dispatch a real press at the gesture's own entry point rather than at applyDragFraction, which
+  // is downstream of the button filter.
+  JPanel headerPanel() {
+    return header;
+  }
+
   // The anatomy body panel (header/content/footer). Package-private so guards can assert its
   // mid-flight bounds without depending on child index order — the resize strip now sits at
   // z-order 0 (the topmost hit target), so it, not the body, is getComponent(0).
@@ -1235,7 +1242,10 @@ public final class ElwhaSideSheet extends JComponent {
 
     @Override
     public void mousePressed(final MouseEvent e) {
-      if (!dragToDismissEnabled) {
+      // BUTTON1 only, as every other drag path in the library filters: a right- or middle-button
+      // press-drag on the header scrubbed the dismiss motion and, past the 0.5 threshold, dismissed
+      // the sheet outright (#605).
+      if (!dragToDismissEnabled || e.getButton() != MouseEvent.BUTTON1) {
         return;
       }
       dragging = true;
@@ -1268,6 +1278,7 @@ public final class ElwhaSideSheet extends JComponent {
   // cursor and a press-drag changes the sheet width live (clamped to [min, max]). Absolute screen X
   // keeps the delta stable as the body reflows under the pointer during the resize.
   private final class ResizeStrip extends JComponent {
+    private boolean dragging;
     private int pressScreenX;
     private int startWidth;
 
@@ -1278,14 +1289,26 @@ public final class ElwhaSideSheet extends JComponent {
           new MouseAdapter() {
             @Override
             public void mousePressed(final MouseEvent e) {
+              if (e.getButton() != MouseEvent.BUTTON1) {
+                return;
+              }
+              dragging = true;
               pressScreenX = e.getXOnScreen();
               startWidth = sheetWidth;
             }
 
             @Override
             public void mouseDragged(final MouseEvent e) {
+              if (!dragging) {
+                return;
+              }
               final int delta = e.getXOnScreen() - pressScreenX;
               resizeWidthTo(startWidth + (isDockedRight() ? -delta : delta));
+            }
+
+            @Override
+            public void mouseReleased(final MouseEvent e) {
+              dragging = false;
             }
           };
       addMouseListener(handler);

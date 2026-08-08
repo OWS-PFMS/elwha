@@ -12,6 +12,7 @@ import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JComponent;
@@ -394,6 +395,42 @@ class ElwhaSideSheetModalTest {
     assertThat(sheet.isOpen()).isTrue();
     assertThat(sheet.getPreferredSize().width)
         .as("a drag that did not commit leaves the sheet exactly as it was")
+        .isEqualTo(sheet.getSheetWidth());
+  }
+
+  /** Drags the header a whole sheet-width toward the docked edge, starting with {@code button}. */
+  private void headerDrag(final ElwhaSideSheet sheet, final int button) {
+    final Component header = sheet.headerPanel();
+    final int toward = sheet.isDockedRight() ? sheet.getSheetWidth() : -sheet.getSheetWidth();
+    Input.press(header, 10, 5, button);
+    Input.drag(header, 10 + toward, 5);
+    Input.release(header, 10 + toward, 5);
+  }
+
+  @Test
+  void aHeaderDragDismissesTheSheet() {
+    final ElwhaSideSheet sheet = ElwhaSideSheet.standardSheet("Filters");
+    sheet.setDragToDismissEnabled(true);
+
+    headerDrag(sheet, MouseEvent.BUTTON1);
+
+    assertThat(sheet.isOpen())
+        .as("a left-button drag past the threshold is the gesture, and it still works")
+        .isFalse();
+  }
+
+  @Test
+  void onlyTheLeftButtonStartsAHeaderDrag() {
+    final ElwhaSideSheet sheet = ElwhaSideSheet.standardSheet("Filters");
+    sheet.setDragToDismissEnabled(true);
+
+    headerDrag(sheet, MouseEvent.BUTTON3);
+
+    assertThat(sheet.isOpen())
+        .as("a right-button press-drag on the header must not scrub the sheet away")
+        .isTrue();
+    assertThat(sheet.getPreferredSize().width)
+        .as("nor leave it scrubbed part-way")
         .isEqualTo(sheet.getSheetWidth());
   }
 
