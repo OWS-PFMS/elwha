@@ -1,7 +1,10 @@
 package com.owspfm.elwha.navrail;
 
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
+import com.owspfm.elwha.menu.ElwhaMenu;
+import com.owspfm.elwha.menu.ElwhaMenuItem;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.MorphAnimator;
@@ -28,6 +31,7 @@ import javax.accessibility.AccessibleRole;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.ActionMap;
+import javax.swing.Icon;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
@@ -58,10 +62,9 @@ import javax.swing.KeyStroke;
  * height required to host every populated slot (chrome + every destination + every trailing action
  * + paddings); consumers should give the rail at least that much height (typically the full
  * content-area height of the host window). When the host gives the rail less than its minimum, the
- * trailing actions slide down to the bottom of the destination stack rather than overlapping it —
- * content then clips at the rail's bottom edge as graceful degradation. Collapsing the
- * trailing-actions stack into an overflow menu (parallel to a future {@code ElwhaFabMenu}) is filed
- * as a follow-up.
+ * trailing actions {@linkplain #setOverflowMode collapse into an overflow menu}; with overflow
+ * turned off they instead slide down to the bottom of the destination stack rather than overlapping
+ * it, and content clips at the rail's bottom edge as graceful degradation.
  *
  * <p><strong>Paint contract.</strong>
  *
@@ -92,10 +95,11 @@ import javax.swing.KeyStroke;
  *
  * <p><strong>Keyboard navigation</strong> (design doc §10.2): Tab enters the rail at the menu
  * button (if present) → FAB (if present) → exactly one destination (the focused one, falling back
- * to the selected one, then the first) → trailing actions (in order) → next focusable after the
- * rail. Shift+Tab reverses. Within the destination band, ↑ / ↓ move focus cyclically to the
- * previous / next destination; Home / End jump to the first / last; Space / Enter activate the
- * focused destination (selection only changes on activation, never on focus traversal). Escape is
+ * to the selected one, then the first) → trailing actions in order, or the single {@linkplain
+ * #setOverflowMode overflow entry point} when they are collapsed → next focusable after the rail.
+ * Shift+Tab reverses. Within the destination band, ↑ / ↓ move focus cyclically to the previous /
+ * next destination; Home / End jump to the first / last; Space / Enter activate the focused
+ * destination (selection only changes on activation, never on focus traversal). Escape is
  * intentionally not consumed.
  *
  * @serial exclude
@@ -106,6 +110,37 @@ import javax.swing.KeyStroke;
 public final class ElwhaNavigationRail extends JComponent {
 
   private static final Logger LOG = Logger.getLogger(ElwhaNavigationRail.class.getName());
+
+  /**
+   * When the rail collapses its {@linkplain #setTrailingActions trailing actions} into a single
+   * overflow entry point (design doc §16).
+   *
+   * @author Charles Bryan
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public enum OverflowMode {
+    /**
+     * Never collapse — every trailing action is always laid out in the stack. The pre-#238
+     * behaviour: when the rail is too short, the actions slide below the destinations and clip at
+     * the bottom edge.
+     */
+    NEVER,
+    /**
+     * Collapse only when the rail's height cannot host the full trailing stack below the
+     * destination stack — the default. A rail given the height it asks for looks exactly as it did
+     * before overflow existed; a rail squeezed shorter trades the clipped stack for a menu.
+     *
+     * <p>A lone trailing action is never collapsed: an overflow entry point is the same height as
+     * the action it would hide, so collapsing one action costs a click and saves nothing.
+     */
+    WHEN_NEEDED,
+    /**
+     * Always collapse, however much room there is — the single consistent affordance a consumer
+     * picks when the rail's foot should read the same at every window height.
+     */
+    ALWAYS
+  }
 
   /** The rail's two variants per M3 Expressive — Collapsed (96 dp) and Expanded (220–360 dp). */
   public enum Variant {
@@ -186,6 +221,22 @@ public final class ElwhaNavigationRail extends JComponent {
    */
   public static final String PROPERTY_VARIANT = "variant";
 
+  /**
+   * Property name fired when the trailing actions collapse into — or expand back out of — the
+   * overflow entry point. The collapse is height-driven under {@link OverflowMode#WHEN_NEEDED}, so
+   * this event is the only way a consumer learns that a resize changed the rail's foot.
+   */
+  public static final String PROPERTY_TRAILING_COLLAPSED = "trailingActionsCollapsed";
+
+  /** The accessible name the overflow entry point carries (design doc §16). */
+  static final String OVERFLOW_ACCESSIBLE_NAME = "More actions";
+
+  /**
+   * The leading-icon size {@link ElwhaMenuItem} lays out for. The rail's actions carry 24 dp glyphs
+   * (the icon-button default), so an action's icon is re-derived to this before it reaches a row.
+   */
+  static final int OVERFLOW_MENU_ICON_PX = 20;
+
   static final int COLLAPSED_WIDTH_PX = 96;
   static final int EXPANDED_WIDTH_MIN_PX = 220;
   static final int EXPANDED_WIDTH_MAX_PX = 360;
@@ -215,6 +266,11 @@ public final class ElwhaNavigationRail extends JComponent {
   private ElwhaIconButton menuButton;
   private ElwhaFab fab;
   private final List<ElwhaIconButton> trailingActions = new ArrayList<>();
+
+  private OverflowMode overflowMode = OverflowMode.WHEN_NEEDED;
+  private ElwhaIconButton overflowButton;
+  private boolean trailingCollapsed;
+  private ElwhaMenu shownOverflowMenu;
 
   private final List<ElwhaNavRailDestination> primary = new ArrayList<>();
   private final List<Section> sections = new ArrayList<>();
@@ -897,6 +953,9 @@ public final class ElwhaNavigationRail extends JComponent {
   public void setTrailingActions(final List<ElwhaIconButton> actions) {
     for (final ElwhaIconButton old : trailingActions) {
       remove(old);
+      // A collapsed rail hides the rows it stands in for. Handing one back to the consumer still
+      // hidden would strand a button they never made invisible.
+      old.setVisible(true);
     }
     trailingActions.clear();
     if (actions != null) {
@@ -908,6 +967,7 @@ public final class ElwhaNavigationRail extends JComponent {
         add(a);
       }
     }
+    resetTrailingCollapse();
     revalidate();
     repaint();
   }
@@ -922,6 +982,200 @@ public final class ElwhaNavigationRail extends JComponent {
    */
   public List<ElwhaIconButton> getTrailingActions() {
     return new ArrayList<>(trailingActions);
+  }
+
+  // ------------------------------------------------- trailing-actions overflow (#238)
+
+  /**
+   * Returns when the rail collapses its trailing actions into an overflow menu.
+   *
+   * @return the active overflow mode
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public OverflowMode getOverflowMode() {
+    return overflowMode;
+  }
+
+  /**
+   * Sets when the {@linkplain #setTrailingActions trailing actions} collapse into a single "more
+   * actions" entry point — an {@link ElwhaIconButton} bearing the {@code more_vert} glyph that
+   * opens an {@link ElwhaMenu} of the collapsed actions beside the rail. Defaults to {@link
+   * OverflowMode#WHEN_NEEDED}.
+   *
+   * <p><strong>The menu does not fork the consumer's handlers.</strong> Each row stands in for one
+   * of the actions the consumer passed: activating it calls {@link ElwhaIconButton#doClick()} on
+   * that very button, so the consumer's own listeners fire with the original button as the event
+   * source and a {@code SELECTABLE} action toggles exactly as it would in the rail. Rows are built
+   * per open, so an action the consumer disables or re-labels between opens is reflected the next
+   * time the menu appears.
+   *
+   * <p><strong>Row labels</strong> come from each action's {@linkplain
+   * AccessibleContext#getAccessibleName() accessible name}, which an icon button resolves through
+   * its own fallback chain — the name set on it, else its tooltip text, else its component name,
+   * else the generic {@code "Icon button"} literal. An icon-only action with none of the three
+   * therefore reaches the menu unlabelled in every practical sense; set an accessible name or a
+   * tooltip on every trailing action, which screen-reader users need regardless of overflow.
+   *
+   * <p>The collapse is recomputed on every layout pass, so a {@code WHEN_NEEDED} rail collapses and
+   * expands as its host window resizes; observe it via {@link #PROPERTY_TRAILING_COLLAPSED}.
+   *
+   * @param mode the new overflow mode; must not be {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setOverflowMode(final OverflowMode mode) {
+    Objects.requireNonNull(mode, "mode");
+    if (this.overflowMode == mode) {
+      return;
+    }
+    this.overflowMode = mode;
+    revalidate();
+    repaint();
+  }
+
+  /**
+   * Reports whether the trailing actions are currently standing behind the overflow entry point.
+   * Settled by layout, so a rail that has never been laid out reports {@code false}.
+   *
+   * @return {@code true} while the trailing actions are collapsed
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public boolean isTrailingActionsCollapsed() {
+    return trailingCollapsed;
+  }
+
+  /**
+   * Returns the overflow entry point — the "more actions" icon button that replaces the trailing
+   * stack — or {@code null} while the actions are laid out individually. Exposed so a consumer can
+   * reach the button the same way it reaches the {@linkplain #getMenuButton() menu button} (to
+   * re-style it, or to drive it in a test); the rail owns its glyph, accessible name, and click
+   * behaviour.
+   *
+   * @return the entry point while {@linkplain #isTrailingActionsCollapsed() collapsed}, else {@code
+   *     null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public ElwhaIconButton getOverflowButton() {
+    return trailingCollapsed ? overflowButton : null;
+  }
+
+  private ElwhaIconButton ensureOverflowButton() {
+    if (overflowButton == null) {
+      overflowButton = new ElwhaIconButton(com.owspfm.elwha.icons.MaterialIcons.moreVert());
+      overflowButton.getAccessibleContext().setAccessibleName(OVERFLOW_ACCESSIBLE_NAME);
+      overflowButton.setVisible(false);
+      overflowButton.addActionListener(e -> showOverflowMenu());
+    }
+    return overflowButton;
+  }
+
+  private void showOverflowMenu() {
+    final ElwhaMenu menu = buildOverflowMenu();
+    if (menu == null) {
+      return;
+    }
+    shownOverflowMenu = menu;
+    menu.open(overflowButton);
+  }
+
+  /**
+   * Builds the menu that stands in for the collapsed actions — one row per action, in slot order.
+   * Package-private so the suite can read the rows without mounting an overlay.
+   *
+   * @return the menu, or {@code null} when there is nothing to collapse
+   */
+  ElwhaMenu buildOverflowMenu() {
+    if (trailingActions.isEmpty()) {
+      return null;
+    }
+    final ElwhaMenu.Builder builder = ElwhaMenu.builder().sideAnchored(true);
+    for (final ElwhaIconButton action : trailingActions) {
+      final ElwhaMenuItem row = ElwhaMenuItem.of(overflowRowIcon(action), overflowRowLabel(action));
+      row.setEnabled(action.isEnabled());
+      row.addActionListener(e -> action.doClick());
+      builder.addItem(row);
+    }
+    return builder.onClose(cause -> shownOverflowMenu = null).build();
+  }
+
+  private static String overflowRowLabel(final ElwhaIconButton action) {
+    final AccessibleContext ctx = action.getAccessibleContext();
+    final String name = ctx == null ? null : ctx.getAccessibleName();
+    return name == null || name.isBlank() ? OVERFLOW_ACCESSIBLE_NAME : name;
+  }
+
+  private static Icon overflowRowIcon(final ElwhaIconButton action) {
+    final Icon icon = action.getIcon();
+    // A menu row stamps its own color filter onto any FlatSVGIcon handed to it, so passing the
+    // button's live instance would repaint the icon still on screen in the row's foreground.
+    // Deriving hands the row a private copy — at the row's own icon size, not the button's.
+    return icon instanceof FlatSVGIcon svg
+        ? svg.derive(OVERFLOW_MENU_ICON_PX, OVERFLOW_MENU_ICON_PX)
+        : icon;
+  }
+
+  // Whether the full trailing stack has to give way to the entry point, given where the
+  // destinations ended and how much height the host actually granted. A pure question about the
+  // FULL stack, never about the current collapsed state, so a collapse can't feed itself.
+  private boolean shouldCollapseTrailing(final int destinationsBottom, final int height) {
+    return switch (overflowMode) {
+      case NEVER -> false;
+      case ALWAYS -> !trailingActions.isEmpty();
+      case WHEN_NEEDED ->
+          trailingActions.size() > 1
+              && destinationsBottom + CHROME_GAP_PX + trailingHeight() > height - CHROME_PAD_PX;
+    };
+  }
+
+  // Applies a collapse-state change to the children, reporting whether anything moved. The
+  // property change is fired by the caller once layout has finished with the trailing list — a
+  // listener that re-populates the slot mid-pass would otherwise mutate what doLayout is walking.
+  private boolean applyTrailingCollapse(final boolean collapse) {
+    if (this.trailingCollapsed == collapse) {
+      return false;
+    }
+    this.trailingCollapsed = collapse;
+    if (collapse) {
+      final ElwhaIconButton entry = ensureOverflowButton();
+      if (entry.getParent() != this) {
+        add(entry);
+      }
+      entry.setVisible(true);
+    } else {
+      if (overflowButton != null) {
+        overflowButton.setVisible(false);
+      }
+      // The menu is anchored to a button that is about to stop being on screen.
+      if (shownOverflowMenu != null) {
+        shownOverflowMenu.close();
+        shownOverflowMenu = null;
+      }
+    }
+    for (final ElwhaIconButton action : trailingActions) {
+      action.setVisible(!collapse);
+    }
+    return true;
+  }
+
+  private void resetTrailingCollapse() {
+    final boolean changed = applyTrailingCollapse(false);
+    for (final ElwhaIconButton action : trailingActions) {
+      action.setVisible(true);
+    }
+    if (changed) {
+      firePropertyChange(PROPERTY_TRAILING_COLLAPSED, true, false);
+    }
+  }
+
+  // The rows the trailing slot actually lays out: the entry point when collapsed, else the actions.
+  private List<ElwhaIconButton> trailingRows() {
+    if (trailingCollapsed && overflowButton != null) {
+      return List.of(overflowButton);
+    }
+    return trailingActions;
   }
 
   @Override
@@ -977,9 +1231,25 @@ public final class ElwhaNavigationRail extends JComponent {
     if (!trailingActions.isEmpty()) {
       h += CHROME_GAP_PX;
     }
-    h += trailingHeight();
+    h += preferredTrailingHeight();
     h += CHROME_PAD_PX;
     return Math.max(h, COLLAPSED_WIDTH_PX);
+  }
+
+  /**
+   * The height the trailing slot asks the host to reserve. {@link OverflowMode#ALWAYS} will never
+   * show the stack, so asking for its height would be asking for space the rail cannot use; every
+   * other mode asks for the whole stack, because showing it is what the rail wants and collapsing
+   * is what it settles for.
+   */
+  private int preferredTrailingHeight() {
+    if (trailingActions.isEmpty()) {
+      return 0;
+    }
+    if (overflowMode == OverflowMode.ALWAYS) {
+      return ensureOverflowButton().getPreferredSize().height;
+    }
+    return trailingHeight();
   }
 
   private int primaryStackHeight() {
@@ -1026,15 +1296,20 @@ public final class ElwhaNavigationRail extends JComponent {
     return getFontMetrics(sectionHeaderFont()).getHeight();
   }
 
+  /** The height of the full trailing stack, whether or not it is currently collapsed. */
   private int trailingHeight() {
-    if (trailingActions.isEmpty()) {
+    return stackHeight(trailingActions);
+  }
+
+  private static int stackHeight(final List<ElwhaIconButton> rows) {
+    if (rows.isEmpty()) {
       return 0;
     }
     int h = 0;
-    for (final ElwhaIconButton a : trailingActions) {
+    for (final ElwhaIconButton a : rows) {
       h += a.getPreferredSize().height;
     }
-    h += TRAILING_ACTION_GAP_PX * (trailingActions.size() - 1);
+    h += TRAILING_ACTION_GAP_PX * (rows.size() - 1);
     return h;
   }
 
@@ -1106,19 +1381,25 @@ public final class ElwhaNavigationRail extends JComponent {
       }
     }
 
-    if (trailingActions.isEmpty()) {
-      return;
+    final boolean collapseChanged =
+        applyTrailingCollapse(shouldCollapseTrailing(destinationsBottom, h));
+
+    final List<ElwhaIconButton> rows = trailingRows();
+    if (!rows.isEmpty()) {
+      final int trailingBlock = stackHeight(rows);
+      final int bottomAnchorTop = h - CHROME_PAD_PX - trailingBlock;
+      final int safeTop = destinationsBottom + CHROME_GAP_PX;
+      int by = Math.max(bottomAnchorTop, safeTop);
+      for (final ElwhaIconButton a : rows) {
+        final Dimension d = a.getPreferredSize();
+        final int ax = expandedish ? iconColumnAlignedX(d.width) : (w - d.width) / 2;
+        a.setBounds(ax, by, d.width, d.height);
+        by += d.height + TRAILING_ACTION_GAP_PX;
+      }
     }
 
-    final int trailingBlock = trailingHeight();
-    final int bottomAnchorTop = h - CHROME_PAD_PX - trailingBlock;
-    final int safeTop = destinationsBottom + CHROME_GAP_PX;
-    int by = Math.max(bottomAnchorTop, safeTop);
-    for (final ElwhaIconButton a : trailingActions) {
-      final Dimension d = a.getPreferredSize();
-      final int ax = expandedish ? iconColumnAlignedX(d.width) : (w - d.width) / 2;
-      a.setBounds(ax, by, d.width, d.height);
-      by += d.height + TRAILING_ACTION_GAP_PX;
+    if (collapseChanged) {
+      firePropertyChange(PROPERTY_TRAILING_COLLAPSED, !trailingCollapsed, trailingCollapsed);
     }
   }
 
@@ -1447,7 +1728,9 @@ public final class ElwhaNavigationRail extends JComponent {
       if (tabStop != null) {
         out.add(tabStop);
       }
-      out.addAll(trailingActions);
+      // Collapsed, the entry point is the only trailing stop there is — the actions it stands for
+      // are reachable through the menu it opens, and Tab must not walk into hidden buttons.
+      out.addAll(trailingRows());
       return out;
     }
   }

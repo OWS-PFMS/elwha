@@ -3309,6 +3309,7 @@ public final class ElwhaShowcase {
     rail.setPrimary(dests);
     rail.setSurfaceFilled(true);
     rail.setMenuButton(new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.menu()));
+    rail.setTrailingActions(showcaseTrailingActions());
 
     // Custom Workbench stage for Nav Rail: the ComponentWorkbench default "single comp centered on
     // a surface" pattern doesn't fit chrome components — the rail IS the surface, so placing it
@@ -3333,6 +3334,11 @@ public final class ElwhaShowcase {
     contentArea.add(selectedLabel, BorderLayout.NORTH);
     contentArea.add(logScroll, BorderLayout.CENTER);
 
+    // The frame height is a control (below), because the trailing-actions overflow is
+    // height-driven:
+    // WHEN_NEEDED only collapses once the rail is too short to stand its actions below the
+    // destinations, and a fixed-height stage could never show that happening.
+    final int[] frameHeight = {720};
     final JPanel fakeAppFrame =
         new JPanel(new BorderLayout()) {
           @Override
@@ -3342,7 +3348,7 @@ public final class ElwhaShowcase {
             // Without this the rail's natural preferred height (chrome + few destinations ≈
             // 380 dp) leaves the rail marooned in the middle of a much larger empty surface;
             // 720 dp is a comfortable laptop-friendly window-frame height.
-            return new Dimension(720, 720);
+            return new Dimension(720, frameHeight[0]);
           }
         };
     fakeAppFrame.setBackground(com.owspfm.elwha.theme.ColorRole.SURFACE_CONTAINER_LOW.resolve());
@@ -3398,17 +3404,43 @@ public final class ElwhaShowcase {
                     ? com.owspfm.elwha.fab.ElwhaFab.extended(MaterialIcons.edit(), "Compose")
                     : null));
     final ElwhaCheckbox trailingBox = new ElwhaCheckbox("Trailing actions");
+    trailingBox.setChecked(true);
     trailingBox.addActionListener(
         e -> {
           if (trailingBox.isChecked()) {
-            final java.util.List<com.owspfm.elwha.iconbutton.ElwhaIconButton> actions =
-                new java.util.ArrayList<>();
-            actions.add(new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.help()));
-            actions.add(new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.info()));
-            rail.setTrailingActions(actions);
+            rail.setTrailingActions(showcaseTrailingActions());
           } else {
             rail.setTrailingActions(null);
           }
+        });
+
+    // --- #238: trailing-actions overflow ---
+    final JComboBox<com.owspfm.elwha.navrail.ElwhaNavigationRail.OverflowMode> overflowBox =
+        new JComboBox<>(com.owspfm.elwha.navrail.ElwhaNavigationRail.OverflowMode.values());
+    overflowBox.setSelectedItem(rail.getOverflowMode());
+    overflowBox.addActionListener(
+        e ->
+            rail.setOverflowMode(
+                (com.owspfm.elwha.navrail.ElwhaNavigationRail.OverflowMode)
+                    overflowBox.getSelectedItem()));
+
+    final javax.swing.JSpinner frameHeightSpinner =
+        new javax.swing.JSpinner(new javax.swing.SpinnerNumberModel(720, 280, 900, 40));
+    frameHeightSpinner.addChangeListener(
+        e -> {
+          frameHeight[0] = (Integer) frameHeightSpinner.getValue();
+          fakeAppFrame.revalidate();
+          fakeAppFrame.repaint();
+        });
+
+    rail.addPropertyChangeListener(
+        com.owspfm.elwha.navrail.ElwhaNavigationRail.PROPERTY_TRAILING_COLLAPSED,
+        e -> {
+          railLog.append(
+              Boolean.TRUE.equals(e.getNewValue())
+                  ? "Trailing actions collapsed into the overflow menu\n"
+                  : "Trailing actions expanded back into the rail\n");
+          railLog.setCaretPosition(railLog.getDocument().getLength());
         });
 
     // --- Phase 3: Variant + Expanded layout controls ---
@@ -3489,6 +3521,13 @@ public final class ElwhaShowcase {
     controls.addControl("", fabBox);
     controls.addControl("", trailingBox);
 
+    // Overflow is height-driven, so its control sits next to the one knob that changes the rail's
+    // height: shrink the frame under WHEN_NEEDED and the four trailing actions fold into a single
+    // ⋮ entry point that opens them as a menu beside the rail.
+    controls.addSection("Trailing overflow");
+    controls.addControl("Mode", overflowBox);
+    controls.addControl("Frame height", frameHeightSpinner);
+
     controls.addSection("Container");
     controls.addControl("", surfaceFilled);
     controls.addControl("", dividerBox);
@@ -3544,9 +3583,30 @@ public final class ElwhaShowcase {
             + "rail.setFab(ElwhaFab.extended(MaterialIcons.edit(), \"Compose\"));\n"
             + "rail.setPrimary(List.of(home, liked, watched, stacks, starred));\n"
             + "rail.addSection(\"Tools\", List.of(settings, help));\n"
+            + "rail.setTrailingActions(List.of(help, info, settings, theme));\n"
+            + "rail.setOverflowMode(OverflowMode.WHEN_NEEDED);  // fold into ⋮ when short\n"
             + "rail.morphTo(Variant.EXPANDED);  // 350ms morph\n"
             + "rail.addSelectionListener((prev, cur) -> selectTab(cur));");
     return workbench;
+  }
+
+  // The staged rail's trailing actions. Each carries an accessible name because that is what the
+  // overflow menu labels its rows with (#238) — an icon-only action with none would reach the menu
+  // reading "Icon button", which is exactly the mistake the Showcase should not model.
+  private static java.util.List<com.owspfm.elwha.iconbutton.ElwhaIconButton>
+      showcaseTrailingActions() {
+    final String[][] entries = {
+      {"help", "Help"}, {"info", "About"}, {"settings", "Settings"}, {"dark_mode", "Theme"}
+    };
+    final java.util.List<com.owspfm.elwha.iconbutton.ElwhaIconButton> actions =
+        new java.util.ArrayList<>();
+    for (final String[] entry : entries) {
+      final com.owspfm.elwha.iconbutton.ElwhaIconButton action =
+          new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.get(entry[0]));
+      action.getAccessibleContext().setAccessibleName(entry[1]);
+      actions.add(action);
+    }
+    return actions;
   }
 
   private static com.owspfm.elwha.badge.ElwhaBadge badgeFor(final String label) {
