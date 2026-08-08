@@ -18,12 +18,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * Library-internal helper that paints the M3-aligned drop shadow for an elevated round-rect surface
  * — the round-rect silhouette of the body convolution-blurred into a soft halo, with a directional
  * key-shadow downward offset. Extracted from {@code SurfacePainter.renderShadowImage} with a
- * **redesigned cache strategy**: the cache key is {@code (arc, elevation)} only, not body size; the
- * shadow image is generated once at a canonical body size and {@link Graphics2D#drawImage 9-sliced}
- * onto any host body at paint time. This decouples shadow cost from body resize — the same cached
- * image serves every {@link com.owspfm.elwha.surface.ElwhaSurface} instance and every {@link
- * com.owspfm.elwha.card.ElwhaCard} regardless of dimensions, eliminating the per-frame ConvolveOp
- * recompute that PR #110's {@code setSuspendShadowRecompute} workaround targeted.
+ * **redesigned cache strategy**: the cache key is the body's <em>shape</em> — {@code (arc,
+ * elevation, which axes carry a straight run)} — never its size; the shadow image is generated once
+ * at a canonical body size and {@link Graphics2D#drawImage 9-sliced} onto any host body at paint
+ * time. This decouples shadow cost from body resize — the same cached image serves every {@link
+ * com.owspfm.elwha.surface.ElwhaSurface} instance and every {@link com.owspfm.elwha.card.ElwhaCard}
+ * regardless of dimensions, eliminating the per-frame ConvolveOp recompute that PR #110's {@code
+ * setSuspendShadowRecompute} workaround targeted.
  *
  * <p><strong>Not part of the public API.</strong> Declared {@code public} only to cross the {@code
  * .theme} package boundary into the component packages that consume it. Library consumers must not
@@ -43,12 +44,14 @@ public final class ShadowPainter {
   public static final int MAX_ELEVATION = 5;
 
   /**
-   * Straight-edge pixels in the canonical body between the two arc-corners on each axis — the
-   * source pixels the 9-slice stretches across the center and edges of any larger destination body.
-   * Kept small (the center slice carries no falloff, just uniform shadow tint) but non-zero so the
-   * middle source rect is well-defined.
+   * Floor on the straight run in the canonical body between the two arc-corners on an axis — the
+   * source pixels the 9-slice stretches across the center and edges of the destination body. The
+   * effective run is blur-dependent; see {@link #straightEdgeFor(int)}.
    */
   private static final int CANONICAL_STRAIGHT_EDGE = 4;
+
+  /** Floor on the canonical body so a tiny arc still produces a usable image. */
+  private static final int MIN_CANONICAL_BODY_PX = 16;
 
   private static final Map<CacheKey, SoftReference<BufferedImage>> CACHE =
       new ConcurrentHashMap<>();
@@ -92,17 +95,11 @@ public final class ShadowPainter {
     final int arc = Math.max(0, Math.min(arcWidthPx, Math.min(width, height)));
     final int cornerRadius = arc / 2;
 
-    // 9-slice requires a non-empty center slice; small bodies fall back to a direct render at exact
-    // size. This path is uncached — small interactive primitives are unlikely to hit it on the hot
-    // path, and re-rendering at the rare exact size avoids polluting the shared cache.
-    final int sliceSide = cornerRadius + Math.max(insets.left, insets.top);
-    if (width < 2 * sliceSide || height < 2 * sliceSide) {
-      final BufferedImage exact = renderShadowAtBodySize(width, height, arc, elevation);
-      g.drawImage(exact, -insets.left, -insets.top, null);
-      return;
-    }
-
-    final BufferedImage canon = canonicalImage(arc, elevation);
+    // A canonical per (arc, elevation, which axes have a straight run). An axis with no straight
+    // run in the destination must have none in the canonical either: a pill's cap has the opposite
+    // cap below it, not a straight edge, and slicing its corners out of a rounded SQUARE would
+    // borrow shadow cast by an edge the pill does not have.
+    final BufferedImage canon = canonicalImage(arc, elevation, width > arc, height > arc);
     nineSlice(g, canon, width, height, cornerRadius, insets);
   }
 
@@ -168,17 +165,41 @@ public final class ShadowPainter {
     return live;
   }
 
-  private static BufferedImage canonicalImage(int arc, int elevation) {
-    final CacheKey key = new CacheKey(arc, elevation);
+  /**
+   * The straight run between the canonical body's two corner arcs on an axis that has one.
+   *
+   * <p>Sized to the blur spread rather than to a fixed few pixels. The middle slice is stretched
+   * along the whole straight edge of the destination body, so it has to carry the falloff of an
+   * edge that is <em>locally straight</em>; if the two corners sit inside each other's blur radius
+   * in the canonical image, their overlap is baked into that strip and then smeared down the
+   * destination edge. Twice the widest inset separates them past where either contributes.
+   *
+   * <p>Twice, not more: the destination's short axis is often smaller than the canonical's, and a
+   * canonical grown further has its middle strips <em>compressed</em> into the destination instead
+   * of stretched, which resamples the falloff and costs back more than the extra separation buys.
+   * Measured across the size/elevation matrix in {@code ShadowPainterCacheTest}, 2 is the minimum
+   * of that curve.
+   */
+  private static int straightEdgeFor(int elevation) {
+    final Insets insets = shadowInsets(elevation);
+    return Math.max(CANONICAL_STRAIGHT_EDGE, 2 * Math.max(insets.left, insets.bottom));
+  }
+
+  private static BufferedImage canonicalImage(
+      int arc, int elevation, boolean straightX, boolean straightY) {
+    final CacheKey key = new CacheKey(arc, elevation, straightX, straightY);
     SoftReference<BufferedImage> ref = CACHE.get(key);
     BufferedImage img = ref != null ? ref.get() : null;
     if (img != null) {
       return img;
     }
-    // Canonical body must be at least arc + STRAIGHT — two half-corners (each arc/2 wide) plus a
-    // small straight middle for 9-slice to stretch across.
-    final int canonicalBody = Math.max(arc + CANONICAL_STRAIGHT_EDGE, 16);
-    img = renderShadowAtBodySize(canonicalBody, canonicalBody, arc, elevation);
+    // Two half-corners (each arc/2) plus, on each axis that has one, a straight middle for the
+    // 9-slice to stretch across. An axis without a straight run yields a zero-extent middle slice,
+    // which drawSlice skips — the corner slices then tile that axis exactly.
+    final int straight = straightEdgeFor(elevation);
+    final int bodyW = Math.max(arc + (straightX ? straight : 0), MIN_CANONICAL_BODY_PX);
+    final int bodyH = Math.max(arc + (straightY ? straight : 0), MIN_CANONICAL_BODY_PX);
+    img = renderShadowAtBodySize(bodyW, bodyH, arc, elevation);
     CACHE.put(key, new SoftReference<>(img));
     return img;
   }
@@ -384,10 +405,14 @@ public final class ShadowPainter {
   private static final class CacheKey {
     final int arc;
     final int elevation;
+    final boolean straightX;
+    final boolean straightY;
 
-    CacheKey(int arc, int elevation) {
+    CacheKey(int arc, int elevation, boolean straightX, boolean straightY) {
       this.arc = arc;
       this.elevation = elevation;
+      this.straightX = straightX;
+      this.straightY = straightY;
     }
 
     @Override
@@ -398,12 +423,15 @@ public final class ShadowPainter {
       if (!(o instanceof CacheKey k)) {
         return false;
       }
-      return arc == k.arc && elevation == k.elevation;
+      return arc == k.arc
+          && elevation == k.elevation
+          && straightX == k.straightX
+          && straightY == k.straightY;
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(arc, elevation);
+      return Objects.hash(arc, elevation, straightX, straightY);
     }
   }
 }
