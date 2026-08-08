@@ -84,7 +84,10 @@ final class FlatLafKeyMapping {
     UIManager.put("Component.focusWidth", 2);
     putColor("Component.borderColor", outline);
     putColor("Component.disabledBorderColor", outlineVariant);
-    UIManager.put("Component.arc", ShapeScale.SM.px());
+    // FlatLaf's Component.arc is a RoundRectangle2D arcWidth, so this is XS doubled, not SM: a
+    // FlatLaf-native text field lands on the same 4 px radius ElwhaTextField paints. Written as
+    // SM.px() before #663 — same number, wrong token, and it read as a shape-scale mismatch.
+    UIManager.put("Component.arc", ShapeScale.XS.arcPx());
     putColor("Component.error.borderColor", error);
     putColor("Component.error.focusedBorderColor", error);
 

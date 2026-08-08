@@ -23,7 +23,7 @@ import java.awt.geom.RoundRectangle2D;
  * {@link Color}s — so the painter respects the token binding rule by construction.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public final class SurfacePainter {
@@ -49,12 +49,17 @@ public final class SurfacePainter {
    * @param g the graphics context (not mutated; a copy is made for rendering-hint isolation)
    * @param width the surface width in pixels
    * @param height the surface height in pixels
-   * @param arc the corner radius in pixels (clamped to {@code min(width, height)} internally)
+   * @param arc the body's {@link RoundRectangle2D} {@code arcWidth} in pixels — the corner
+   *     <em>diameter</em> (2× the corner radius), <strong>not</strong> the radius, and the same
+   *     value {@link ShadowPainter#paint(Graphics2D, int, int, int, int)} takes so a body and its
+   *     shadow agree on one silhouette. Callers holding a real radius — {@link CornerRadii}, or a
+   *     {@link ShapeScale} step — must double it ({@link ShapeScale#arcPx()}). Clamped to {@code
+   *     min(width, height)} internally
    * @param surfaceRole the resting surface role; {@code null} for transparent resting fill
    * @param overlay the state layer to composite over the surface, or {@code null} for none
    * @param borderRole the border stroke role; {@code null} suppresses the border
    * @param borderWidthPx the border stroke width in pixels; {@code <= 0} suppresses the border
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public static void paint(
@@ -109,9 +114,11 @@ public final class SurfacePainter {
    *
    * @param width body width in pixels
    * @param height body height in pixels
-   * @param arc corner radius in pixels (clamped internally to {@code min(width, height)})
+   * @param arc the body's {@link RoundRectangle2D} {@code arcWidth} in pixels — the corner
+   *     <em>diameter</em>, not the radius (see {@link ShapeScale#arcPx()}); clamped internally to
+   *     {@code min(width, height)}
    * @return the rounded-rect shape covering the body
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public static RoundRectangle2D.Float bodyShape(final int width, final int height, final int arc) {

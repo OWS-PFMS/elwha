@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.owspfm.elwha.list.ElwhaListItemView;
 import com.owspfm.elwha.surface.ElwhaSurface;
+import com.owspfm.elwha.testkit.Corners;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
@@ -428,5 +429,45 @@ class ElwhaCardRenderTest {
     assertThat(preferred.width)
         .as("and its two padding columns plus the same reserve")
         .isEqualTo(2 * SpaceScale.LG.px() + reserve.left + reserve.right);
+  }
+
+  // ------------------------------------------------------------ corner radius (#663)
+
+  @ParameterizedTest
+  @EnumSource(CardVariant.class)
+  void everyVariantRendersTheMdChassisCornerAtTwelvePixels(final CardVariant variant) {
+    final ElwhaCard card = new ElwhaCard().setVariant(variant);
+    final BufferedImage image = render(card);
+    final Insets reserve = card.getShadowInsets();
+
+    Corners.assertTopLeftRadius(
+        image,
+        reserve.left,
+        reserve.top,
+        ShapeScale.MD.px(),
+        card.getSurfaceRole().resolve(),
+        new Color(image.getRGB(reserve.left - 3, reserve.top - 3), true),
+        ShapeScale.MD.px(),
+        variant
+            + " paints the 12 dp M3 card corner; the chassis rendered at 6 before the ShapeScale"
+            + " radius-vs-arcWidth normalization");
+  }
+
+  @Test
+  void aReshapedCardFollowsTheTokenToo() {
+    final ElwhaCard card = new ElwhaCard().setVariant(CardVariant.FILLED);
+    card.setShape(ShapeScale.XL);
+    final BufferedImage image = render(card);
+    final Insets reserve = card.getShadowInsets();
+
+    Corners.assertTopLeftRadius(
+        image,
+        reserve.left,
+        reserve.top,
+        ShapeScale.XL.px(),
+        card.getSurfaceRole().resolve(),
+        new Color(image.getRGB(reserve.left - 3, reserve.top - 3), true),
+        ShapeScale.XL.px(),
+        "setShape moves the chassis corner by the full token step, not half of it");
   }
 }

@@ -690,7 +690,7 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
         bottomReserve =
             Math.max(inset, bar.indicatorRestRect(this).height + 1 + FOCUS_RING_STROKE / 2f);
       }
-      final float arc = 2f * ShapeScale.SM.px();
+      final float arc = ShapeScale.SM.arcPx();
       f.draw(
           new RoundRectangle2D.Float(
               inset,

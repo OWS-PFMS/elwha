@@ -2,6 +2,7 @@ package com.owspfm.elwha.fab;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.owspfm.elwha.testkit.Corners;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Input;
 import com.owspfm.elwha.testkit.Pixels;
@@ -278,5 +279,33 @@ class ElwhaFabRenderTest {
   private static int brightness(final BufferedImage image, final int x, final int y) {
     final java.awt.Color color = new java.awt.Color(image.getRGB(x, y), true);
     return color.getRed() + color.getGreen() + color.getBlue();
+  }
+
+  // ------------------------------------------------------------ corner radius (#654)
+
+  @ParameterizedTest
+  @EnumSource(ElwhaFab.Size.class)
+  void everySizeRendersAtItsDocumentedM3Radius(final ElwhaFab.Size size) {
+    final ElwhaFab fab = fab(ElwhaFab.ColorStyle.PRIMARY_CONTAINER).setFabSize(size);
+    final Dimension pref = fab.getPreferredSize();
+    // A magenta ground, not the usual SURFACE: the corner probe classifies each pixel by which
+    // reference color it sits nearer, and a shadowed body over a near-neutral ground leaves the
+    // two references too close to separate the halo from the fill.
+    final BufferedImage image = Pixels.render(fab, pref.width, pref.height, java.awt.Color.MAGENTA);
+    final Insets reserve = fab.getShadowInsets();
+
+    Corners.assertTopLeftRadius(
+        image,
+        reserve.left,
+        reserve.top,
+        size.cornerRadiusPx(),
+        ElwhaFab.ColorStyle.PRIMARY_CONTAINER.containerRole().resolve(),
+        // The FAB always carries a halo, so the outside reference is the local shadow rather than
+        // the flat ground.
+        new java.awt.Color(image.getRGB(reserve.left - 3, reserve.top - 3), true),
+        size.cornerRadiusPx(),
+        size
+            + " paints the M3 dp radius its enum documents; it rendered at half until the arcWidth"
+            + " conversion landed");
   }
 }

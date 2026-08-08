@@ -14,8 +14,18 @@ import javax.swing.UIManager;
  * <p><strong>Binding rule.</strong> Callers must invoke {@link #px()} at paint time and must not
  * cache the result across paints.
  *
+ * <p><strong>Units — radius, not arc.</strong> {@link #px()} is a corner <em>radius</em>, matching
+ * M3's shape tokens and every dp figure in the component design docs. Java2D's {@link
+ * java.awt.geom.RoundRectangle2D} instead takes an {@code arcWidth} — the corner <em>diameter</em>
+ * — and so do the int-arc {@link SurfacePainter#paint(java.awt.Graphics2D, int, int, int,
+ * ColorRole, StateLayer, ColorRole, float) SurfacePainter} and {@link
+ * ShadowPainter#paint(java.awt.Graphics2D, int, int, int, int) ShadowPainter} overloads built on
+ * it. A shape step handed straight to one of those renders at half its token radius. {@link
+ * #arcPx()} is the conversion; use it at every painter boundary, and {@link #px()} only where the
+ * consumer stores real radii ({@link CornerRadii}).
+ *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public enum ShapeScale {
@@ -111,13 +121,39 @@ public enum ShapeScale {
    * <p>If no theme has been installed (the {@code UIManager} key is absent or not an integer), this
    * degrades to the compiled-in v1 default rather than returning {@code 0}.
    *
+   * <p>This is a real radius. Feeding it to a {@link java.awt.geom.RoundRectangle2D} or an int-arc
+   * painter, both of which take a corner diameter, halves the shape — call {@link #arcPx()} there
+   * instead.
+   *
    * @return the corner radius in pixels
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public int px() {
     Object resolved = UIManager.get(uiKey());
     return resolved instanceof Integer ? (Integer) resolved : defaultPx;
+  }
+
+  /**
+   * Resolves this step to a {@link java.awt.geom.RoundRectangle2D} {@code arcWidth} — the corner
+   * <em>diameter</em>, {@code 2 ×} {@link #px()}.
+   *
+   * <p>This is the value every int-arc painter takes: {@link
+   * SurfacePainter#paint(java.awt.Graphics2D, int, int, int, ColorRole, StateLayer, ColorRole,
+   * float)}, {@link SurfacePainter#bodyShape(int, int, int)}, {@link
+   * ShadowPainter#paint(java.awt.Graphics2D, int, int, int, int)}, and a hand-rolled {@code
+   * RoundRectangle2D}. Passing the same {@code arcPx()} to a body and to its shadow is what keeps
+   * the two silhouettes in lock-step (#199).
+   *
+   * <p>{@link #FULL} resolves to a number far past any real body; every painter clamps the arc to
+   * {@code min(width, height)}, which is the pill capsule.
+   *
+   * @return the corner diameter in pixels
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public int arcPx() {
+    return px() * 2;
   }
 
   /**
