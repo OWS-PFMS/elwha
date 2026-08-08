@@ -483,6 +483,28 @@ class ElwhaTextFieldLabelTest {
         .isEqualTo(field.getWidth() - ElwhaTextField.PAD_LR_NO_ICON - suffixWidth);
   }
 
+  @Test
+  void affixesSitOnTheFirstTextLineInEveryInputMode() {
+    final double multiLine = prefixBaseline(ElwhaTextField.InputMode.MULTI_LINE);
+    final double textArea = prefixBaseline(ElwhaTextField.InputMode.TEXT_AREA);
+
+    assertThat(textArea)
+        .as(
+            "#617 — a TEXT_AREA editor is nested in a scroll pane, so deriving the baseline from "
+                + "the editor's own y put the affix at the top of the component instead")
+        .isEqualTo(multiLine);
+    assertThat(textArea)
+        .as("and both sit below the container top, on the first line of input")
+        .isGreaterThan(0d);
+  }
+
+  private static double prefixBaseline(final ElwhaTextField.InputMode mode) {
+    final ElwhaTextField field = new ElwhaTextField(Variant.FILLED, "");
+    field.setInputMode(mode);
+    field.setPrefixText("$");
+    return PaintLog.capture(field).text("$").orElseThrow().y();
+  }
+
   // ---------------------------------------------------------------- teardown
 
   @Test

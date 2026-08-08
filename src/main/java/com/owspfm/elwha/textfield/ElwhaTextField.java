@@ -170,6 +170,14 @@ public class ElwhaTextField extends JComponent {
 
   private Icon leadingIcon;
   private Icon trailingIcon;
+
+  /**
+   * The auto error glyph and the role colour its filter is currently bound to; see {@link
+   * #themedErrorIcon()}.
+   */
+  private FlatSVGIcon errorIcon;
+
+  private Color errorIconTint;
   private ElwhaIconButton trailingButton;
 
   private boolean required;
@@ -1234,11 +1242,26 @@ public class ElwhaTextField extends JComponent {
     }
   }
 
-  /** The auto error glyph, tinted to the {@code error} role (the non-color cue). */
+  /**
+   * The auto error glyph, tinted to the {@code error} role (the non-color cue).
+   *
+   * <p>Held rather than rebuilt per call: {@link MaterialIcons} hands back a fresh instance every
+   * lookup, so building one here on every paint of an errored field re-parsed and re-rasterized the
+   * SVG each frame. The instance is private to this field, so binding a filter to it cannot mutate
+   * a shared glyph (#197). The filter is re-bound only when the resolved role colour actually
+   * changes, which is what keeps a runtime theme or mode switch from leaving a stale tint — {@code
+   * ElwhaSlider.rebuildInsetIcon} is the same shape.
+   */
   private Icon themedErrorIcon() {
-    final FlatSVGIcon icon = MaterialIcons.error(ICON_GLYPH);
-    icon.setColorFilter(new FlatSVGIcon.ColorFilter(c -> ColorRole.ERROR.resolve()));
-    return icon;
+    if (errorIcon == null) {
+      errorIcon = MaterialIcons.error(ICON_GLYPH);
+    }
+    final Color tint = ColorRole.ERROR.resolve();
+    if (!tint.equals(errorIconTint)) {
+      errorIconTint = tint;
+      errorIcon.setColorFilter(new FlatSVGIcon.ColorFilter(c -> tint));
+    }
+    return errorIcon;
   }
 
   private void paintIcon(final Graphics2D g2, final Icon icon, final int x, final int y) {
@@ -1264,7 +1287,10 @@ public class ElwhaTextField extends JComponent {
     }
     g2.setFont(TypeRole.BODY_LARGE.resolve());
     g2.setColor(affixColor());
-    final int baseline = editor.getY() + getFontMetrics(TypeRole.BODY_LARGE.resolve()).getAscent();
+    // editorTopY(), not editor.getY(): in TEXT_AREA mode the editor is nested inside a JScrollPane
+    // viewport, so its own y is ~0 and the affix would land at the top of the component instead of
+    // on the first text line. The two agree in the modes where the editor IS the host.
+    final int baseline = editorTopY() + getFontMetrics(TypeRole.BODY_LARGE.resolve()).getAscent();
     final boolean ltr = getComponentOrientation().isLeftToRight();
     if (!prefix.isEmpty()) {
       final int x = ltr ? leftContentEdge() : getWidth() - rightContentEdge() - textWidth(prefix);
