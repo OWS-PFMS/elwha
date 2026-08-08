@@ -9,7 +9,6 @@ import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import java.awt.Dimension;
-import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -27,12 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 class ComponentWorkbenchTest {
 
   private static List<String> segmentsOf(final ComponentWorkbench workbench) {
-    final List<String> names = new ArrayList<>();
-    for (final ElwhaButton segment :
-        ShowcaseFixture.findAll(switcher(workbench), ElwhaButton.class)) {
-      names.add(segment.getText());
-    }
-    return names;
+    return ShowcaseFixture.segmentsOf(workbench);
   }
 
   private static ElwhaButtonGroup switcher(final ComponentWorkbench workbench) {
@@ -239,6 +233,106 @@ class ComponentWorkbenchTest {
   @Test
   void anUnknownSegmentHasNoCode() {
     assertThat(new ComponentWorkbench().codeFor("Nonexistent")).isEmpty();
+  }
+
+  // ----------------------------------------------------------- pinned band
+
+  @Test
+  void aFreshWorkbenchPinsNothing() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+
+    assertThat(workbench.pinnedActionFor("Component")).isNull();
+    assertThat(workbench.pinnedBand().getPreferredSize().height)
+        .as("#507 — a leaf that pins nothing must see no layout change at all")
+        .isZero();
+  }
+
+  @Test
+  void aPinnedActionIsMountedOutsideTheScrollingColumn() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+    final ElwhaButton trigger = new ElwhaButton("Open modal");
+
+    workbench.setPinnedAction(trigger);
+
+    assertThat(ShowcaseFixture.descendants(workbench)).contains(trigger);
+    assertThat(ShowcaseFixture.descendants(workbench.controls()))
+        .as("#507 — the whole point is that it does not scroll with the column")
+        .doesNotContain(trigger);
+    assertThat(ShowcaseFixture.descendants(workbench.pinnedBand())).contains(trigger);
+  }
+
+  @Test
+  void aPinnedActionGivesTheBandHeight() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+
+    workbench.setPinnedAction(new ElwhaButton("Open modal"));
+
+    assertThat(workbench.pinnedBand().getPreferredSize().height).isPositive();
+  }
+
+  @Test
+  void pinningNullClearsTheBand() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+    workbench.setPinnedAction(new ElwhaButton("Open modal"));
+
+    workbench.setPinnedAction(null);
+
+    assertThat(workbench.pinnedActionFor("Component")).isNull();
+    assertThat(workbench.pinnedBand().getPreferredSize().height).isZero();
+  }
+
+  @Test
+  void pinnedBandFollowsTheActiveSegment() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+    final ElwhaButton trigger = new ElwhaButton("Open modal");
+    workbench.setPinnedAction(trigger);
+
+    selectSegment(workbench, "Surface");
+
+    assertThat(ShowcaseFixture.descendants(workbench.pinnedBand()))
+        .as("#507 — the band is per-segment, like the controls card it sits above")
+        .doesNotContain(trigger);
+
+    selectSegment(workbench, "Component");
+
+    assertThat(ShowcaseFixture.descendants(workbench.pinnedBand())).contains(trigger);
+  }
+
+  @Test
+  void aFacetPinsItsOwnAction() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+    final ComponentWorkbench.Facet facet = workbench.addFacet("Modal", new WorkbenchControls());
+    final ElwhaButton trigger = new ElwhaButton("Open modal");
+
+    facet.setPinnedAction(trigger);
+    selectSegment(workbench, "Modal");
+
+    assertThat(ShowcaseFixture.descendants(workbench.pinnedBand())).contains(trigger);
+  }
+
+  @Test
+  void aSegmentThatPinsNothingKeepsAZeroHeightBand() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+    workbench.addFacet("Modal", new WorkbenchControls()).setPinnedAction(new ElwhaButton("Open"));
+
+    assertThat(workbench.activeSegment()).isEqualTo("Component");
+    assertThat(workbench.pinnedBand().getPreferredSize().height)
+        .as("#507 — one facet's pinned action must not reserve a strip on every other segment")
+        .isZero();
+  }
+
+  @Test
+  void anActionPinnedWhileAnotherSegmentIsActiveIsHeldNotShown() {
+    final ComponentWorkbench workbench = new ComponentWorkbench();
+    final ElwhaButton trigger = new ElwhaButton("Open modal");
+    selectSegment(workbench, "Surface");
+
+    workbench.setPinnedAction(trigger);
+
+    assertThat(ShowcaseFixture.descendants(workbench.pinnedBand())).doesNotContain(trigger);
+    assertThat(workbench.pinnedActionFor("Component"))
+        .as("but it is held, ready for the switch back")
+        .isSameAs(trigger);
   }
 
   // ------------------------------------------------------- surface controls

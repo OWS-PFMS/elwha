@@ -18,7 +18,9 @@ import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -50,6 +52,13 @@ import javax.swing.UIManager;
  * with the component's option controls, and pushes equivalent-Java text through {@link
  * #setCode(String)} whenever a control changes. The surface segment is supplied by the scaffold —
  * builders never wire it.
+ *
+ * <p><strong>The pinned band.</strong> The controls column scrolls as one unit, so a leaf whose
+ * controls are worth scrolling past cannot keep a prominent action in view — promoting it to the
+ * top of the column only helps until the user scrolls. {@link #setPinnedAction(JComponent)} lifts
+ * one component out of the scroll into a fixed band under the switcher bar; a facet pins its own
+ * through {@link Facet#setPinnedAction(JComponent)}. The band is per-segment and swaps with the
+ * controls card, and a segment that pins nothing has no band at all rather than an empty strip.
  *
  * <p><strong>Extra facets.</strong> A composed component (e.g. a navigation rail carrying a badge)
  * can expose an embedded sub-component's own editor as an additional switcher segment via {@link
@@ -94,6 +103,8 @@ public final class ComponentWorkbench extends JPanel {
   private final WorkbenchControls componentControls;
   private final JPanel controlsCards;
   private final JPanel switcherBar;
+  private final JPanel pinnedBand;
+  private final Map<String, JComponent> pinnedActions = new HashMap<>();
   private final CodeView codeView;
   private final List<Facet> facets = new ArrayList<>();
 
@@ -106,7 +117,7 @@ public final class ComponentWorkbench extends JPanel {
    * Builds an empty workbench — call {@link #setStage}, {@link #controls}, and {@link #setCode} to
    * fill it.
    *
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public ComponentWorkbench() {
@@ -160,11 +171,20 @@ public final class ComponentWorkbench extends JPanel {
             BorderFactory.createEmptyBorder(8, 8, 8, 8)));
     rebuildSwitcher();
 
+    pinnedBand = new JPanel(new BorderLayout());
+
+    // The fixed head of the controls region: the switcher, then whatever the active segment pins.
+    // Both sit outside controlsScroll, which is the whole point — the column below them scrolls
+    // and they do not.
+    final JPanel controlsHead = new JPanel(new BorderLayout());
+    controlsHead.add(switcherBar, BorderLayout.NORTH);
+    controlsHead.add(pinnedBand, BorderLayout.CENTER);
+
     final JPanel controlsRegion = new JPanel(new BorderLayout());
     controlsRegion.setPreferredSize(new Dimension(CONTROLS_WIDTH, 0));
     controlsRegion.setBorder(
         BorderFactory.createMatteBorder(0, 1, 0, 0, UIManager.getColor("Component.borderColor")));
-    controlsRegion.add(switcherBar, BorderLayout.NORTH);
+    controlsRegion.add(controlsHead, BorderLayout.NORTH);
     controlsRegion.add(controlsScroll, BorderLayout.CENTER);
 
     codeView = new CodeView();
@@ -246,6 +266,51 @@ public final class ComponentWorkbench extends JPanel {
   }
 
   /**
+   * Pins one component into the fixed band under the switcher bar for the {@code Component}
+   * segment, lifting it out of the scrolling controls column. Use for a single prominent action a
+   * leaf needs kept in view — a trigger that presents an overlay, say — while the rest of the
+   * column scrolls under it. Pass {@code null} to unpin.
+   *
+   * @param action the component to pin, or {@code null} to clear the band
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void setPinnedAction(final JComponent action) {
+    pin(COMPONENT_SEGMENT, action);
+  }
+
+  private void pin(final String segment, final JComponent action) {
+    if (action == null) {
+      pinnedActions.remove(segment);
+    } else {
+      pinnedActions.put(segment, action);
+    }
+    if (segment.equals(activeSegment)) {
+      showPinnedAction(segment);
+    }
+  }
+
+  // Swaps the band to the given segment's pinned action. A segment that pins nothing leaves the
+  // band childless and borderless, so it measures 0 high and no leaf that never pins one sees a
+  // layout change.
+  private void showPinnedAction(final String segment) {
+    final JComponent action = pinnedActions.get(segment);
+    pinnedBand.removeAll();
+    if (action == null) {
+      pinnedBand.setBorder(null);
+    } else {
+      pinnedBand.setBorder(
+          BorderFactory.createCompoundBorder(
+              BorderFactory.createMatteBorder(
+                  0, 0, 1, 0, UIManager.getColor("Component.borderColor")),
+              BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+      pinnedBand.add(action, BorderLayout.LINE_START);
+    }
+    pinnedBand.revalidate();
+    pinnedBand.repaint();
+  }
+
+  /**
    * Adds an extra switcher facet between the {@code Component} and {@code Surface} bookends — a
    * named segment that swaps the controls column to {@code controls} when selected. Use for a
    * composed component's embedded sub-component editor (e.g. a navigation rail's badge). Facets
@@ -255,7 +320,7 @@ public final class ComponentWorkbench extends JPanel {
    * @param controls the controls panel shown when this facet is active
    * @return a handle for pushing this facet's equivalent-Java code via {@link
    *     Facet#setCode(String)}
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public Facet addFacet(final String name, final JComponent controls) {
@@ -272,7 +337,7 @@ public final class ComponentWorkbench extends JPanel {
    * facet is the active segment.
    *
    * @author Charles Bryan
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public final class Facet {
@@ -296,6 +361,18 @@ public final class ComponentWorkbench extends JPanel {
       if (name.equals(activeSegment)) {
         codeView.setCode(code);
       }
+    }
+
+    /**
+     * Pins one component into the fixed band under the switcher bar for this facet, lifting it out
+     * of the facet's scrolling controls column. Pass {@code null} to unpin.
+     *
+     * @param action the component to pin, or {@code null} to clear this facet's band
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    public void setPinnedAction(final JComponent action) {
+      pin(name, action);
     }
   }
 
@@ -339,13 +416,23 @@ public final class ComponentWorkbench extends JPanel {
   private void showSegment(final String name) {
     activeSegment = name;
     ((CardLayout) controlsCards.getLayout()).show(controlsCards, name);
+    showPinnedAction(name);
     codeView.setCode(codeFor(name));
   }
 
-  // Test seams — the staged component, the active switcher segment, and the code view, none of
-  // which a builder needs but all of which the Showcase suite asserts against (#544).
+  // Test seams — the staged component, the active switcher segment, the code view and the pinned
+  // band, none of which a builder needs but all of which the Showcase suite asserts against
+  // (#544).
   JComponent stage() {
     return liveComponent;
+  }
+
+  JComponent pinnedActionFor(final String name) {
+    return pinnedActions.get(name);
+  }
+
+  JPanel pinnedBand() {
+    return pinnedBand;
   }
 
   String activeSegment() {

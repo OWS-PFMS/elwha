@@ -267,9 +267,14 @@ final class SideSheetShowcasePanels {
           status.setText("Modal open…");
         });
 
-    controls.addSection("Present");
-    controls.addControl("", openModal);
-    controls.addControl("", status);
+    // The trigger and its dismissal readout are pinned rather than scrolled (#507): they were at
+    // the top of the column, which only kept them visible until the reader scrolled to the
+    // dismissal toggles they exist to demonstrate.
+    final JPanel present = new JPanel(new BorderLayout(12, 0));
+    present.setOpaque(false);
+    present.add(openModal, BorderLayout.LINE_START);
+    present.add(status, BorderLayout.CENTER);
+
     controls.addSection("Modal side sheet");
     controls.addControl("", edgeBox);
     controls.addControl("", widthBox);
@@ -288,6 +293,7 @@ final class SideSheetShowcasePanels {
     controls.addControl("", resizableBox);
 
     final ComponentWorkbench.Facet facet = workbench.addFacet("Modal", controls);
+    facet.setPinnedAction(present);
     facet.setCode(
         """
         ElwhaSideSheet modal = ElwhaSideSheet.modalSheet("Filters");
