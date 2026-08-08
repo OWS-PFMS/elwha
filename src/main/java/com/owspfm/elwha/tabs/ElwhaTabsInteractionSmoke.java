@@ -12,12 +12,12 @@ import java.awt.image.BufferedImage;
 
 /**
  * S2 headless guard for {@link ElwhaTabs} interaction (#427): click-activation semantics (active
- * click no-op, release-outside abort), the ChangeListener/ActionListener split, the disabled
+ * click no-op, release-outside abort), the PROPERTY_ACTIVE_TAB/ActionListener split, the disabled
  * cascade, and pixel-asserted state-layer blends — including the primary variant's
  * inactive-pressed→PRIMARY tint quirk and the inactive content-color lift.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class ElwhaTabsInteractionSmoke {
@@ -52,7 +52,7 @@ public final class ElwhaTabsInteractionSmoke {
     final ElwhaTabs bar = laidOutBar(ElwhaTabs.primary());
     final int[] changes = {0};
     final int[] actions = {0, 0, 0};
-    bar.addChangeListener(e -> changes[0]++);
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, e -> changes[0]++);
     for (int i = 0; i < 3; i++) {
       final int idx = i;
       bar.getTabAt(i).addActionListener(e -> actions[idx]++);
@@ -78,7 +78,7 @@ public final class ElwhaTabsInteractionSmoke {
   private static void checkDisabledCascade() {
     final ElwhaTabs bar = laidOutBar(ElwhaTabs.secondary());
     final int[] changes = {0};
-    bar.addChangeListener(e -> changes[0]++);
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, e -> changes[0]++);
 
     bar.setEnabled(false);
     check("disable cascades to tabs", !bar.getTabAt(1).isEnabled());

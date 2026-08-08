@@ -132,7 +132,8 @@ final class TabsShowcasePanels {
           badgedTab[0].setBadge(badge[0]);
           bar.setActiveTabIndex(Math.min(activeIndex[0], count - 1));
           activeIndex[0] = bar.getActiveTabIndex();
-          bar.addChangeListener(
+          bar.addPropertyChangeListener(
+              ElwhaTabs.PROPERTY_ACTIVE_TAB,
               e -> {
                 activeIndex[0] = bar.getActiveTabIndex();
                 ((CardLayout) pages.getLayout())
