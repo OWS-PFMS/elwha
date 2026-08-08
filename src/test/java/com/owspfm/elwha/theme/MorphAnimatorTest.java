@@ -5,6 +5,10 @@ import static org.assertj.core.api.Assertions.within;
 
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import java.lang.reflect.Field;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.JPanel;
 import org.junit.jupiter.api.AfterEach;
@@ -117,6 +121,72 @@ class MorphAnimatorTest {
     animator.snapTo(0f);
 
     assertThat(calls.get()).as("a removed listener is off the broadcast for good").isEqualTo(1);
+  }
+
+  // --------------------------------------------------- OS reduced-motion probe
+
+  /**
+   * Loads a second, independent copy of the class so its static state is untouched by everything
+   * this JVM has already done to the real one — the only way to observe what class initialisation
+   * on its own does. Parented at the platform loader so {@code java.desktop} still resolves while
+   * {@code MorphAnimator} itself is defined fresh.
+   */
+  private static Class<?> freshlyInitialisedAnimator() throws Exception {
+    final URL classes = MorphAnimator.class.getProtectionDomain().getCodeSource().getLocation();
+    try (URLClassLoader isolated =
+        new URLClassLoader(new URL[] {classes}, ClassLoader.getPlatformClassLoader())) {
+      return Class.forName(MorphAnimator.class.getName(), true, isolated);
+    }
+  }
+
+  private static Object staticField(final Class<?> type, final String name) throws Exception {
+    final Field field = type.getDeclaredField(name);
+    field.setAccessible(true);
+    return field.get(null);
+  }
+
+  @Test
+  void classInitialisationProbesNothing() throws Exception {
+    final Class<?> fresh = freshlyInitialisedAnimator();
+
+    assertThat(((AtomicBoolean) staticField(fresh, "osSignalRequested")).get())
+        .as("class init is triggered by the first ElwhaButton, so it must not shell out to the OS")
+        .isFalse();
+    assertThat(staticField(fresh, "reducedMotion"))
+        .as("and it must reach no verdict, since it asked nothing")
+        .isEqualTo(false);
+  }
+
+  @Test
+  void theFirstReadIsWhatRequestsTheOsSignal() throws Exception {
+    final Class<?> fresh = freshlyInitialisedAnimator();
+
+    fresh.getMethod("isReducedMotion").invoke(null);
+
+    assertThat(((AtomicBoolean) staticField(fresh, "osSignalRequested")).get())
+        .as("the probe is deferred to first use, not skipped altogether")
+        .isTrue();
+  }
+
+  @Test
+  void anExplicitOverrideSuppressesTheOsProbeEntirely() throws Exception {
+    final Class<?> fresh = freshlyInitialisedAnimator();
+
+    fresh.getMethod("setReducedMotion", boolean.class).invoke(null, false);
+
+    assertThat(((AtomicBoolean) staticField(fresh, "osSignalRequested")).get())
+        .as("an explicit override outranks the OS, so asking it costs a subprocess for nothing")
+        .isTrue();
+    assertThat(fresh.getMethod("isReducedMotion").invoke(null))
+        .as("and reading it back does not start one either")
+        .isEqualTo(false);
+  }
+
+  @Test
+  void noProbeThreadOutlivesTheFixture() {
+    assertThat(Thread.getAllStackTraces().keySet())
+        .as("every fixture pins the flag explicitly, so no run of the suite forks gsettings")
+        .noneMatch(thread -> MorphAnimator.OS_PROBE_THREAD.equals(thread.getName()));
   }
 
   @Test
