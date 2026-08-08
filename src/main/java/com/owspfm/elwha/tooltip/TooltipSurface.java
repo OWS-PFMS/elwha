@@ -36,7 +36,7 @@ import javax.swing.JPanel;
  * ElwhaButton#textButton} action children (row min-height 36, bottom pad 8).
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 class TooltipSurface extends JPanel {
@@ -161,6 +161,16 @@ class TooltipSurface extends JPanel {
     } finally {
       g2.dispose();
     }
+  }
+
+  // While the entrance composite is live, a rich tooltip's action-button children must not paint
+  // themselves directly — a hover state layer or ripple tick would bypass paint()'s AlphaComposite
+  // and pop the button in at full alpha. Declaring a painting origin routes those repaints back
+  // through paint(). Gated rather than unconditional so the steady state keeps Swing's ordinary
+  // per-child repaint optimization (the ElwhaItemList precedent).
+  @Override
+  public boolean isPaintingOrigin() {
+    return alphaSupplier.get() < 1f;
   }
 
   @Override
