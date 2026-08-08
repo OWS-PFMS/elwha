@@ -78,7 +78,7 @@ import javax.swing.SwingUtilities;
  * press feedback (epic #288).
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
@@ -158,18 +158,19 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   }
 
   // Esc → close with cancel semantics (§9); Enter → the confirming action (§5). The hand-wired twin
-  // of Esc this epic shares with the Basic Dialog, since ElwhaButton isn't a JButton.
+  // of Esc this epic shares with the Basic Dialog, since ElwhaButton isn't a JButton. Both go
+  // through topmostAction so a stacked overlay above this dialog owns the keystroke instead (#599).
   @Override
   protected void installKeyBindings() {
     final InputMap im = surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
     final ActionMap am = surface.getActionMap();
     if (isDismissibleByEsc()) {
       im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-fsd-cancel");
-      am.put("elwha-fsd-cancel", action(() -> dismiss(DismissCause.CANCEL)));
+      am.put("elwha-fsd-cancel", topmostAction(() -> dismiss(DismissCause.CANCEL)));
     }
     if (confirmAction != null) {
       im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "elwha-fsd-confirm");
-      am.put("elwha-fsd-confirm", action(confirmAction::doClick));
+      am.put("elwha-fsd-confirm", topmostAction(confirmAction::doClick));
     }
   }
 

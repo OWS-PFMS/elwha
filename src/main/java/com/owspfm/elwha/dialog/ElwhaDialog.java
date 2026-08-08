@@ -160,7 +160,8 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
   // Esc → cancel semantics (§5/§9): fires the cancel action when present (so its consumer listener
   // runs and the close cause is CANCEL), else closes with DismissCause.ESC. Enter → the confirming
   // action — the hand-wired twin of Esc this epic exists to formalize, since ElwhaButton isn't a
-  // JButton and can't be a root-pane default button.
+  // JButton and can't be a root-pane default button. Both go through topmostAction so a stacked
+  // overlay above this dialog owns the keystroke instead (#599).
   @Override
   protected void installKeyBindings() {
     final InputMap im = surface.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
@@ -170,7 +171,7 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
       im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "elwha-dialog-cancel");
       am.put(
           "elwha-dialog-cancel",
-          action(
+          topmostAction(
               () -> {
                 if (cancelAction != null) {
                   cancelAction.doClick();
@@ -181,7 +182,7 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
     }
     if (confirmAction != null) {
       im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "elwha-dialog-confirm");
-      am.put("elwha-dialog-confirm", action(confirmAction::doClick));
+      am.put("elwha-dialog-confirm", topmostAction(confirmAction::doClick));
     }
   }
 
