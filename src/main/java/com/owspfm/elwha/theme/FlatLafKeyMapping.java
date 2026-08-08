@@ -29,7 +29,7 @@ import javax.swing.plaf.ColorUIResource;
  * first-installed theme and break runtime mode switching.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 final class FlatLafKeyMapping {
@@ -40,8 +40,12 @@ final class FlatLafKeyMapping {
    * Writes the direct role-to-key assignments — backgrounds, foregrounds, borders, focus color, and
    * the global corner-arc default — onto FlatLaf's component keys.
    *
+   * <p>Keys whose final value is a baked state layer are written only by {@link
+   * #applyStateLayerKeys(Palette)}, which always runs after this method — writing them here too
+   * would be dead.
+   *
    * @param palette the palette being installed
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   static void applyStaticKeys(Palette palette) {
@@ -199,7 +203,6 @@ final class FlatLafKeyMapping {
     putColor("TabbedPane.foreground", onSurfaceVariant);
     putColor("TabbedPane.underlineColor", primary);
     putColor("TabbedPane.selectedForeground", onSurface);
-    putColor("TabbedPane.hoverColor", surfaceVariant);
 
     // --- Progress, slider ---
     putColor("ProgressBar.background", surfaceVariant);

@@ -89,16 +89,50 @@ class TypographyTest {
   }
 
   @Test
-  void ofFamilyAsksForMediumWeightThroughTheTextAttribute() {
-    Typography.defaults();
-    final Typography typography = Typography.ofFamily("Inter");
+  void ofFamilyAsksForMediumWeightWhenTheFamilyHasNoMediumFace() {
+    final Typography typography = Typography.ofFamily(Font.SANS_SERIF);
 
+    assertThat(new Font(Font.SANS_SERIF + " Medium", Font.PLAIN, 12).getFamily())
+        .as("the premise: no 'SansSerif Medium' is installed, so a lookup lands on Dialog")
+        .isNotEqualTo(Font.SANS_SERIF + " Medium");
     assertThat(typography.get(TypeRole.TITLE_MEDIUM).getAttributes().get(TextAttribute.WEIGHT))
         .as("a 500-weight role requests WEIGHT_MEDIUM, honored where the family supplies glyphs")
         .isEqualTo(TextAttribute.WEIGHT_MEDIUM);
     assertThat(typography.get(TypeRole.BODY_MEDIUM).getAttributes().get(TextAttribute.WEIGHT))
         .as("a 400-weight role carries no weight override")
         .isNotEqualTo(TextAttribute.WEIGHT_MEDIUM);
+  }
+
+  @Test
+  void ofFamilyPrefersARealMediumFaceOverSynthesis() {
+    Typography.defaults();
+
+    final Typography typography = Typography.ofFamily("Inter");
+
+    assertThat(typography.get(TypeRole.LABEL_LARGE).getFamily())
+        .as("Inter ships a real 500 face, and a real face always beats a synthesised weight")
+        .isEqualTo("Inter Medium");
+    assertThat(typography.get(TypeRole.BODY_MEDIUM).getFamily())
+        .as("the 400-weight roles still take the family that was asked for")
+        .isEqualTo("Inter");
+  }
+
+  @Test
+  void aTypographyRoundTripsThroughItsOwnFamilyNameWithoutLosingTheMediumFace() {
+    final Typography original = Typography.defaults();
+
+    final Typography roundTripped = Typography.ofFamily(original.familyName());
+
+    for (final TypeRole role : TypeRole.values()) {
+      assertThat(roundTripped.get(role).getFamily())
+          .as(
+              "%s survives ofFamily(familyName()) — the round trip a consumer actually writes",
+              role)
+          .isEqualTo(original.get(role).getFamily());
+      assertThat(roundTripped.get(role).getSize())
+          .as("%s keeps its point size across the round trip", role)
+          .isEqualTo(original.get(role).getSize());
+    }
   }
 
   @ParameterizedTest

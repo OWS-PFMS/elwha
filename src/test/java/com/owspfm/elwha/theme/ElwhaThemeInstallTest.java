@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import java.awt.Color;
+import java.awt.Font;
 import javax.swing.UIManager;
 import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.FontUIResource;
@@ -64,6 +65,27 @@ class ElwhaThemeInstallTest {
     assertThat(UIManager.getFont("defaultFont"))
         .as("raw Swing gets a default font from the same typography")
         .isNotNull();
+  }
+
+  /**
+   * #658 asked whether writing {@code defaultFont} <em>after</em> the base look-and-feel installs
+   * means raw Swing never picks it up — FlatLaf reads that key while building its defaults table,
+   * so a later write should arrive too late to reach the already-built {@code Label.font}. It does
+   * not: FlatLaf resolves the font keys lazily against {@code defaultFont}, so the ordering is
+   * harmless. Pinned here because the raw-Swing typography contract has no other coverage, and
+   * because the ordering is exactly the kind of thing a later refactor could break silently.
+   */
+  @Test
+  void rawSwingFontKeysFollowTheInstalledTypography() {
+    final String installed = Typography.defaults().familyName();
+
+    for (final String key : new String[] {"Label.font", "Button.font", "TextField.font"}) {
+      assertThat(UIManager.getFont(key))
+          .as("%s is what raw Swing paints with, so it has to be Elwha's family", key)
+          .isNotNull()
+          .extracting(Font::getFamily)
+          .isEqualTo(installed);
+    }
   }
 
   @Test

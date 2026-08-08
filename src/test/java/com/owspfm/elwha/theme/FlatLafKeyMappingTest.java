@@ -107,6 +107,16 @@ class FlatLafKeyMappingTest {
   }
 
   @Test
+  void aKeyTheStateLayerHalfOwnsIsNotAlsoWrittenByTheStaticHalf() {
+    final Color surface = ColorRole.SURFACE.resolve();
+
+    assertThat(UIManager.getColor("TabbedPane.hoverColor"))
+        .as("applyStaticKeys always runs first, so a static write here would be dead code")
+        .isEqualTo(StateLayer.HOVER.over(surface, ColorRole.ON_SURFACE.resolve()))
+        .isNotEqualTo(ColorRole.SURFACE_VARIANT.resolve());
+  }
+
+  @Test
   void pressedKeysCarryTheStrongerOverlay() {
     final Color base = ColorRole.SURFACE_CONTAINER_LOW.resolve();
 
