@@ -1,18 +1,28 @@
 package com.owspfm.elwha.card;
 
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.ShapeScale;
+import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.TypeRole;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.RoundRectangle2D;
 import java.beans.PropertyChangeListener;
 import java.util.Objects;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
+import javax.swing.BorderFactory;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -42,6 +52,12 @@ import javax.swing.KeyStroke;
  */
 public final class ElwhaCardExpandLink extends JLabel {
 
+  /** Focus-ring stroke width in px — the 2 dp the card and menu item rings use. */
+  private static final float FOCUS_RING_STROKE_PX = 2f;
+
+  /** Vertical padding reserved so the ring clears the text. */
+  private static final int FOCUS_RING_PAD_PX = 2;
+
   private final ElwhaCard card;
   private final String expandText;
   private final String collapseText;
@@ -69,6 +85,12 @@ public final class ElwhaCardExpandLink extends JLabel {
     this.collapseText = Objects.requireNonNull(collapseText, "collapseText");
     setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     setFocusable(true);
+    // Room for the focus ring to sit clear of the glyphs. A JLabel sizes itself to its text
+    // exactly, so without this the ring would be drawn straight through the first and last
+    // characters (#606).
+    setBorder(
+        BorderFactory.createEmptyBorder(
+            FOCUS_RING_PAD_PX, SpaceScale.XS.px(), FOCUS_RING_PAD_PX, SpaceScale.XS.px()));
     setText(card.isCollapsed() ? expandText : collapseText);
     addMouseListener(
         new MouseAdapter() {
@@ -91,8 +113,49 @@ public final class ElwhaCardExpandLink extends JLabel {
             }
           }
         });
+    addFocusListener(
+        new FocusAdapter() {
+          @Override
+          public void focusGained(final FocusEvent e) {
+            repaint();
+          }
+
+          @Override
+          public void focusLost(final FocusEvent e) {
+            pressed = false;
+            repaint();
+          }
+        });
     installKeyboardActivation();
     subscribe();
+  }
+
+  /**
+   * Paints the link, then its keyboard focus ring. A {@link JLabel} draws no focus indicator of its
+   * own, so this tab stop was previously invisible when focus landed on it (#606).
+   *
+   * @param g the graphics context
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  protected void paintComponent(final Graphics g) {
+    super.paintComponent(g);
+    if (!isFocusOwner()) {
+      return;
+    }
+    final Graphics2D g2 = (Graphics2D) g.create();
+    try {
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      g2.setStroke(new BasicStroke(FOCUS_RING_STROKE_PX));
+      g2.setColor(ColorRole.SECONDARY.resolve());
+      final float in = FOCUS_RING_STROKE_PX / 2f;
+      final float arc = ShapeScale.XS.px();
+      g2.draw(
+          new RoundRectangle2D.Float(in, in, getWidth() - 2 * in, getHeight() - 2 * in, arc, arc));
+    } finally {
+      g2.dispose();
+    }
   }
 
   // Idempotent so the constructor and addNotify can both ask for it: a link tracks its card from
