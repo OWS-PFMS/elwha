@@ -48,6 +48,18 @@ Components with a single "primary content" concept get one convenience construct
 
 Both the setter and the getter are exposed on every component that has a paintable border (Surface, IconButton, Chip, future variant-bearing primitives). Asymmetric setter-without-getter is drift; fix it in the next pass.
 
+## 5a. Setter return type — fluent `this`, and a subclass re-types every setter it advertises
+
+A component mutator returns `this`, typed as the **concrete component class**, so a construction chain reads as one expression. `void` is acceptable only where the component has no fluent chain to join (the progress indicators, `ElwhaLoadingIndicator`); a `withX()` prefix is not — the name is `setX` regardless of what it returns ([#636](https://github.com/OWS-PFMS/elwha/issues/636), which converted `ElwhaBadge`'s three `withX` mutators).
+
+**The subclass rule.** When a component extends another component, **every inherited setter it advertises as its own API gets a covariant override narrowing the return type to the subclass.** Java resolves the return type statically, so one un-narrowed setter mid-chain silently ends the chain at the *parent* type and the next call fails to compile — an error the consumer reads as "that setter doesn't exist" rather than "you passed through a base-class setter."
+
+**Apply when:** adding a component that extends `ElwhaSurface` (or any other component). Go through the parent's fluent setters, decide which ones your component advertises, and re-type all of them in the same change. The override body is `super.setX(...); return this;` — behavior stays on the parent.
+
+**Deliberate exception — the un-advertised setter.** A setter the subclass does *not* advertise is left un-narrowed on purpose. Java cannot hide an inherited public method, so it stays callable; leaving the chain broken there is the closest the language gets to a "not part of this component's API" marker. `ElwhaCard` does exactly this with `setBorderRole` — §4 says a variant-bearing component does not expose a border-role override, and the V3 spec §3.2 records it as inherited-but-not-advertised.
+
+**Precedent.** `ElwhaCard` shipped with only `setElevation` narrowed, so `ElwhaCard.filledCard().setShape(XL).setVariant(...)` did not compile even though the V3 spec advertised `setShape` as per-instance card API ([#570](https://github.com/OWS-PFMS/elwha/issues/570)). It now narrows `setSurfaceRole`, `setShape`, `setBorderWidth`, and `setClipChildrenToCorners` as well.
+
 ## 6. Leaf vs container — different API shapes are sanctioned
 
 Components split into two roles, and the role determines the API shape:

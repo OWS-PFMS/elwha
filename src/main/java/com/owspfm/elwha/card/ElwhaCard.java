@@ -322,6 +322,80 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
     return this;
   }
 
+  // ------------------------------------------- inherited chrome, re-typed
+  //
+  // Every ElwhaSurface setter the V3 spec §3.2 advertises as per-instance card API is re-declared
+  // here purely to narrow the fluent return type from ElwhaSurface to ElwhaCard, so a chain can
+  // pass through them and keep reaching card-only setters (#570). Behavior lives on Surface.
+  //
+  // setBorderRole is deliberately absent: conventions §4 says a variant-bearing component does not
+  // advertise a border-role override, and §3.2 records it as inherited-but-not-advertised. It stays
+  // reachable (Java cannot hide an inherited public method) but breaking a chain is the correct
+  // signal that it is not part of the card's API.
+
+  /**
+   * Overrides the variant-derived surface fill role. Covariant override of {@link
+   * ElwhaSurface#setSurfaceRole(ColorRole)} for the fluent return type.
+   *
+   * @param role the fill role
+   * @return {@code this} for fluent chaining
+   * @throws NullPointerException if {@code role} is {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public ElwhaCard setSurfaceRole(final ColorRole role) {
+    super.setSurfaceRole(role);
+    return this;
+  }
+
+  /**
+   * Overrides the default {@link ShapeScale#MD} corner-radius step. Covariant override of {@link
+   * ElwhaSurface#setShape(ShapeScale)} for the fluent return type.
+   *
+   * @param shape the shape step
+   * @return {@code this} for fluent chaining
+   * @throws NullPointerException if {@code shape} is {@code null}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public ElwhaCard setShape(final ShapeScale shape) {
+    super.setShape(shape);
+    return this;
+  }
+
+  /**
+   * Overrides the variant-derived border stroke width. Covariant override of {@link
+   * ElwhaSurface#setBorderWidth(int)} for the fluent return type.
+   *
+   * @param px the stroke width in pixels
+   * @return {@code this} for fluent chaining
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public ElwhaCard setBorderWidth(final int px) {
+    super.setBorderWidth(px);
+    return this;
+  }
+
+  /**
+   * Forces the rounded-corner clip on or off for this card's children. Covariant override of {@link
+   * ElwhaSurface#setClipChildrenToCorners(boolean)} for the fluent return type. Cards enable the
+   * clip automatically for an edge-bleed {@link ElwhaCardMedia}, so most consumers never call this.
+   *
+   * @param clip {@code true} to clip children to the rounded corners
+   * @return {@code this} for fluent chaining
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public ElwhaCard setClipChildrenToCorners(final boolean clip) {
+    super.setClipChildrenToCorners(clip);
+    return this;
+  }
+
   // --------------------------------------------------------------- padding
 
   /**
