@@ -294,7 +294,7 @@ public final class ShadowPainter {
             arc,
             ambientBlurRadius(e),
             ambientOffsetY(e),
-            ambientSourceAlpha(e));
+            AMBIENT_SOURCE_ALPHA);
     final BufferedImage key =
         renderSingleShadowPass(
             imgW,
@@ -306,7 +306,7 @@ public final class ShadowPainter {
             arc,
             keyBlurRadius(e),
             keyOffsetY(e),
-            keySourceAlpha(e));
+            KEY_SOURCE_ALPHA);
 
     final Graphics2D cg = ambient.createGraphics();
     try {
@@ -370,6 +370,10 @@ public final class ShadowPainter {
   // Source alphas compensate for box-blur's lower per-pixel density vs CSS Gaussian. M3 spec
   // calls for opacity 0.30 (= 77) key / 0.15 (= 38) ambient; box blur disperses ~50% more so we
   // hold source alpha higher to land at a similar perceived intensity.
+  //
+  // Deliberately not per-level: M3's elevation tokens ramp blur and offsetY across levels 1-5 and
+  // hold both opacities flat, so unlike their blur/offset siblings these are single constants
+  // rather than tables (#667).
   private static final int KEY_SOURCE_ALPHA = 160;
   private static final int AMBIENT_SOURCE_ALPHA = 90;
 
@@ -381,20 +385,12 @@ public final class ShadowPainter {
     return KEY_OFFSET_Y[Math.min(MAX_ELEVATION, elevation) - 1];
   }
 
-  private static int keySourceAlpha(int elevation) {
-    return KEY_SOURCE_ALPHA;
-  }
-
   private static int ambientBlurRadius(int elevation) {
     return AMBIENT_BLUR[Math.min(MAX_ELEVATION, elevation) - 1];
   }
 
   private static int ambientOffsetY(int elevation) {
     return AMBIENT_OFFSET_Y[Math.min(MAX_ELEVATION, elevation) - 1];
-  }
-
-  private static int ambientSourceAlpha(int elevation) {
-    return AMBIENT_SOURCE_ALPHA;
   }
 
   /** Effective blur spread for a two-pass box blur at the given outer radius. */
