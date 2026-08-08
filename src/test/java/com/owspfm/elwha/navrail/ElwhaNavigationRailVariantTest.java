@@ -718,4 +718,28 @@ class ElwhaNavigationRailVariantTest {
         .as("§6 — the rail's selection is over its own members, so a stranger is a bug")
         .isThrownBy(() -> rail.setSelected(RailFixture.destination("Stranger")));
   }
+
+  /**
+   * #729: the shell recipe needs the Collapsed width for its content-column inset, and the only
+   * thing it could reach for was {@code getPreferredSize().width} — correct only while the rail
+   * happens to be collapsed. The accessor answers the same number whatever the rail is doing,
+   * because the Expanded rail overlays the inset rather than reflowing the content behind it.
+   */
+  @Test
+  void theCollapsedWidthAccessorIsIndependentOfTheCurrentVariant() {
+    final ElwhaNavigationRail collapsed = ElwhaNavigationRail.collapsed();
+    assertThat(collapsed.getCollapsedWidth())
+        .as("collapsed: the accessor and the preferred width agree")
+        .isEqualTo(collapsed.getPreferredSize().width)
+        .isEqualTo(ElwhaNavigationRail.COLLAPSED_WIDTH_PX);
+
+    final ElwhaNavigationRail expanded = ElwhaNavigationRail.expanded();
+    assertThat(expanded.getCollapsedWidth())
+        .as("expanded: the accessor still answers the Collapsed width")
+        .isEqualTo(ElwhaNavigationRail.COLLAPSED_WIDTH_PX);
+    assertThat(expanded.getPreferredSize().width)
+        .as("which is exactly where the preferred-width fallback went wrong")
+        .isEqualTo(expanded.getExpandedWidth())
+        .isNotEqualTo(expanded.getCollapsedWidth());
+  }
 }

@@ -146,7 +146,6 @@ import javax.swing.event.DocumentListener;
  */
 public final class ElwhaShowcase {
 
-  private static final int RAIL_COLLAPSED_WIDTH = 96;
   // The catalog, the card keys, and the routing entry points are package-private rather than
   // private so the Showcase suite (#544) can reach them: buildAndShow starts by constructing a
   // JFrame, which throws under headless, but everything it wires up afterwards is testable
@@ -262,12 +261,11 @@ public final class ElwhaShowcase {
     // The rail spans the full window height on the layered pane, so the header bar lives INSIDE
     // the content area (above the CardLayout content) rather than across the top of the frame.
     // Without this, the header would extend across the rail's leading column and the rail would
-    // read as a sidebar pocket rather than a real-app shell. Content pane gets a 96-dp leading
-    // inset matching the Collapsed rail width; the Expanded morph overlays into the inset area
-    // without reflowing content. Mirrors the FAB Phase 5 layered-pane recipe (#206) at a
-    // structural level.
+    // read as a sidebar pocket rather than a real-app shell. The content pane gets a leading inset
+    // the width of the Collapsed rail; the Expanded morph overlays into the inset area without
+    // reflowing content. Mirrors the FAB Phase 5 layered-pane recipe (#206) at a structural level.
+    // The inset itself is applied below, once the rail exists to be asked for its width (#729).
     final JPanel contentWrapper = new JPanel(new BorderLayout());
-    contentWrapper.setBorder(BorderFactory.createEmptyBorder(0, RAIL_COLLAPSED_WIDTH, 0, 0));
     contentWrapper.add(buildHeaderBar(), BorderLayout.NORTH);
     contentWrapper.add(content, BorderLayout.CENTER);
 
@@ -281,7 +279,12 @@ public final class ElwhaShowcase {
     populateLandingCards();
     populateLeafCards();
 
-    mountRailOnLayeredPane(frame, buildShowcaseRail());
+    final ElwhaNavigationRail showcaseRail = buildShowcaseRail();
+    // Read the inset off the rail rather than keeping a private copy of 96 — getCollapsedWidth is
+    // variant-independent, which getPreferredSize().width is not (#729).
+    contentWrapper.setBorder(
+        BorderFactory.createEmptyBorder(0, showcaseRail.getCollapsedWidth(), 0, 0));
+    mountRailOnLayeredPane(frame, showcaseRail);
 
     floatingFabAnchor = buildFloatingFabAnchor(root);
     frame.setContentPane(floatingFabAnchor);
