@@ -272,9 +272,9 @@ public final class ElwhaShowcase {
     final JPanel root = new JPanel(new BorderLayout());
     root.add(contentWrapper, BorderLayout.CENTER);
 
-    // Populate the catalog of leaves + build all CardLayout cards (4 landings + 19 wrapped
-    // leaves). Must run before the rail is built so the rail's primary action listeners can
-    // resolve landing keys that already have cards registered.
+    // Populate the catalog of leaves + build all CardLayout cards (the area landings plus one
+    // wrapped card per leaf). Must run before the rail is built so the rail's primary action
+    // listeners can resolve landing keys that already have cards registered.
     populateCatalog();
     populateLandingCards();
     populateLeafCards();
@@ -853,7 +853,7 @@ public final class ElwhaShowcase {
 
   // The four landing cards, populated into the CardLayout content panel. Each is a grid of
   // ElwhaCards — title + supporting text + an actionable click that routes to the leaf surface.
-  // Home is the master index (all 33 leaves, grouped by area heading); each area landing covers
+  // Home is the master index (every leaf, grouped by area heading); each area landing covers
   // just its own leaves. ElwhaCard's actionable mode is the entire raison-d'être here: the cards
   // are the navigation surface, not decoration.
   void populateLandingCards() {
