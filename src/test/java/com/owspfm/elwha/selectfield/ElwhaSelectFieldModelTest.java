@@ -54,8 +54,40 @@ class ElwhaSelectFieldModelTest {
     select.setSelectedValue("Earth");
 
     assertThat(select.getSelectedValue())
-        .as("with the options gone, nothing is selectable — a null list is not a crash")
-        .isEqualTo("Earth");
+        .as("with the options gone nothing is selectable — a null list is not a crash (#619)")
+        .isNull();
+    assertThat(select.getText()).as("and the field text goes with the dropped value").isEmpty();
+  }
+
+  @Test
+  void replacingTheOptionsDropsASelectionTheyNoLongerOffer() {
+    final ElwhaSelectField<String> select = planets();
+    select.setSelectedValue("Earth");
+    final List<String> heard = new ArrayList<>();
+    select.addSelectionChangeListener(heard::add);
+
+    select.setOptions(List.of("Venus", "Jupiter"));
+
+    assertThat(select.getSelectedValue())
+        .as("a select is constrained to its options, so a value they drop cannot survive (#619)")
+        .isNull();
+    assertThat(select.getText()).as("and its display text goes with it").isEmpty();
+    assertThat(heard).as("listeners hear the drop rather than reading a stale getter").hasSize(1);
+    assertThat(heard.get(0)).isNull();
+  }
+
+  @Test
+  void replacingTheOptionsKeepsASelectionTheyStillOffer() {
+    final ElwhaSelectField<String> select = planets();
+    select.setSelectedValue("Venus");
+    final List<String> heard = new ArrayList<>();
+    select.addSelectionChangeListener(heard::add);
+
+    select.setOptions(List.of("Venus", "Jupiter"));
+
+    assertThat(select.getSelectedValue()).as("a surviving value stays selected").isEqualTo("Venus");
+    assertThat(select.getText()).as("with its display text intact").isEqualTo("Venus");
+    assertThat(heard).as("and no listener is woken for a selection that did not change").isEmpty();
   }
 
   @Test
@@ -380,12 +412,18 @@ class ElwhaSelectFieldModelTest {
     final ElwhaSelectField<String> select = planets();
     select.setMultiSelect(true);
     select.setSelectedValues(List.of("Venus", "Mars"));
+    final List<List<String>> heard = new ArrayList<>();
+    select.addMultiSelectionChangeListener(heard::add);
 
     select.setOptions(List.of("Venus", "Jupiter"));
 
     assertThat(select.getSelectedValues())
         .as("values that are no longer options cannot stay selected")
         .containsExactly("Venus");
+    assertThat(select.getText())
+        .as("and the summary is rewritten rather than left advertising the dropped value (#619)")
+        .isEqualTo("Venus");
+    assertThat(heard).as("listeners hear the prune").hasSize(1);
   }
 
   // ------------------------------------------------------------ summary

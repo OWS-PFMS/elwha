@@ -167,13 +167,36 @@ public class ElwhaSelectField<T> extends JComponent {
    * rebuild-on-options-change} lifecycle locked by the S1 spike), so changing options is cheap and
    * preserves the {@code selected} mark cheaply between opens.
    *
+   * <p>An open menu is <strong>closed</strong> first — it is bound to the outgoing option list, so
+   * leaving it up would strand a popup whose picks silently do nothing. A selection the new options
+   * no longer offer is <strong>dropped</strong>, and the field text and selection listeners follow:
+   * a select is constrained to its options, so a value that is not one of them cannot survive. In
+   * {@linkplain #setMultiSelect multi-select} that prune is per-value, and the summary text is
+   * rewritten to match.
+   *
    * @param options the options, or {@code null} for none
+   * @version v0.5.0
    */
   public void setOptions(final List<T> options) {
+    if (expanded && menu != null) {
+      menu.close();
+    }
     this.options = options == null ? List.of() : List.copyOf(options);
     this.menu = null;
     if (multiSelect) {
+      final List<T> before = List.copyOf(multiValues);
       reorderMultiValues();
+      if (!before.equals(multiValues)) {
+        writeMultiSummary();
+        this.committedText = field.getText();
+        fireMultiSelectionChange();
+      }
+    } else if (selectedValue != null && !this.options.contains(selectedValue)) {
+      this.selectedValue = null;
+      writeFieldText("");
+      this.committedText = field.getText();
+      this.filterText = "";
+      fireSelectionChange();
     }
   }
 
