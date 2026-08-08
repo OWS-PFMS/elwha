@@ -246,6 +246,9 @@ public class ElwhaTabs extends JComponent implements Accessible {
    * tab leaves the bar with no active tab and fires with a {@code null} {@code newValue}; removing
    * a tab before the active one keeps the same tab active.
    *
+   * <p>Either fire carries the departing tab as its {@code oldValue}, so a consumer diffing
+   * selections sees which tab the selection left rather than a bare {@code null}.
+   *
    * @param tab the tab to remove; unknown tabs are ignored
    * @version v0.5.0
    * @since v0.4.0
@@ -266,7 +269,11 @@ public class ElwhaTabs extends JComponent implements Accessible {
         // hand forward: activate() cannot carry it because there is no index to activate (#724).
         firePropertyChange(PROPERTY_ACTIVE_TAB, tab, null);
       } else {
-        activate(0, false);
+        // activate() reads the old value off activeTabIndex, which the reset above has already
+        // cleared — so it would announce old=null. Let it move the selection silently and fire
+        // here, where the departing tab is still in hand (#733).
+        activate(0, true);
+        firePropertyChange(PROPERTY_ACTIVE_TAB, tab, getActiveTab());
       }
     } else if (index < activeTabIndex) {
       activeTabIndex--;

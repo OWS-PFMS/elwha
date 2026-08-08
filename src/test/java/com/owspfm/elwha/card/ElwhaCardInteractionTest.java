@@ -228,7 +228,7 @@ class ElwhaCardInteractionTest {
   void aSelectableCardTracksTheStateAndFiresTheProperty() {
     final ElwhaCard card = ElwhaCard.filledCard().setSelectable(true);
     final List<PropertyChangeEvent> heard = new ArrayList<>();
-    card.addSelectionChangeListener(heard::add);
+    card.addPropertyChangeListener(ElwhaCard.PROPERTY_SELECTED, heard::add);
 
     card.setSelected(true);
     card.setSelected(true);
@@ -238,6 +238,8 @@ class ElwhaCardInteractionTest {
     assertThat(heard.get(0).getPropertyName())
         .as("the event names the selected property")
         .isEqualTo(ElwhaCard.PROPERTY_SELECTED);
+    assertThat(heard.get(0).getOldValue()).isEqualTo(Boolean.FALSE);
+    assertThat(heard.get(0).getNewValue()).isEqualTo(Boolean.TRUE);
   }
 
   @Test
@@ -245,25 +247,36 @@ class ElwhaCardInteractionTest {
     final ElwhaCard card = ElwhaCard.filledCard().setSelectable(true);
     final List<PropertyChangeEvent> heard = new ArrayList<>();
     final java.beans.PropertyChangeListener listener = heard::add;
-    card.addSelectionChangeListener(listener);
+    card.addPropertyChangeListener(ElwhaCard.PROPERTY_SELECTED, listener);
 
-    card.removeSelectionChangeListener(listener);
+    card.removePropertyChangeListener(ElwhaCard.PROPERTY_SELECTED, listener);
     card.setSelected(true);
 
     assertThat(heard).as("removal actually detaches the listener").isEmpty();
   }
 
+  /**
+   * The card used to fire selection twice — once on the inherited support and once on a private
+   * {@code PropertyChangeSupport} behind an {@code addSelectionChangeListener} wrapper. #732
+   * retired the second channel, so a listener on the key must still hear exactly one event.
+   */
   @Test
-  void selectionAlsoReachesPlainPropertyChangeListeners() {
+  void selectionIsAnnouncedOnceOnTheInheritedChannel() {
     final ElwhaCard card = ElwhaCard.filledCard().setSelectable(true);
-    final List<PropertyChangeEvent> heard = new ArrayList<>();
-    card.addPropertyChangeListener(ElwhaCard.PROPERTY_SELECTED, heard::add);
+    final List<PropertyChangeEvent> keyed = new ArrayList<>();
+    final List<PropertyChangeEvent> unkeyed = new ArrayList<>();
+    card.addPropertyChangeListener(ElwhaCard.PROPERTY_SELECTED, keyed::add);
+    card.addPropertyChangeListener(
+        e -> {
+          if (ElwhaCard.PROPERTY_SELECTED.equals(e.getPropertyName())) {
+            unkeyed.add(e);
+          }
+        });
 
     card.setSelected(true);
 
-    assertThat(heard)
-        .as("the standard bean channel carries the change as well as the typed one")
-        .hasSize(1);
+    assertThat(keyed).as("one change, one event on the key").hasSize(1);
+    assertThat(unkeyed).as("and one on the unkeyed channel — not two").hasSize(1);
   }
 
   @Test
@@ -486,7 +499,7 @@ class ElwhaCardInteractionTest {
   void collapsingFiresTheExpansionProperty() {
     final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
     final List<PropertyChangeEvent> heard = new ArrayList<>();
-    card.addExpansionChangeListener(heard::add);
+    card.addPropertyChangeListener(ElwhaCard.PROPERTY_COLLAPSED, heard::add);
 
     card.setCollapsed(true);
     card.setCollapsed(true);
@@ -495,6 +508,8 @@ class ElwhaCardInteractionTest {
     assertThat(heard.get(0).getPropertyName())
         .as("the event names the collapsed property")
         .isEqualTo(ElwhaCard.PROPERTY_COLLAPSED);
+    assertThat(heard.get(0).getOldValue()).isEqualTo(Boolean.FALSE);
+    assertThat(heard.get(0).getNewValue()).isEqualTo(Boolean.TRUE);
   }
 
   @Test
@@ -502,12 +517,29 @@ class ElwhaCardInteractionTest {
     final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
     final List<PropertyChangeEvent> heard = new ArrayList<>();
     final java.beans.PropertyChangeListener listener = heard::add;
-    card.addExpansionChangeListener(listener);
+    card.addPropertyChangeListener(ElwhaCard.PROPERTY_COLLAPSED, listener);
 
-    card.removeExpansionChangeListener(listener);
+    card.removePropertyChangeListener(ElwhaCard.PROPERTY_COLLAPSED, listener);
     card.setCollapsed(true);
 
     assertThat(heard).as("removal actually detaches the listener").isEmpty();
+  }
+
+  /** The expansion half of #732 — one channel, so one event per real change. */
+  @Test
+  void collapseIsAnnouncedOnceOnTheInheritedChannel() {
+    final ElwhaCard card = ElwhaCard.filledCard().setCollapsible(true);
+    final List<PropertyChangeEvent> unkeyed = new ArrayList<>();
+    card.addPropertyChangeListener(
+        e -> {
+          if (ElwhaCard.PROPERTY_COLLAPSED.equals(e.getPropertyName())) {
+            unkeyed.add(e);
+          }
+        });
+
+    card.setCollapsed(true);
+
+    assertThat(unkeyed).as("the private support is gone, so nothing echoes it").hasSize(1);
   }
 
   @Test

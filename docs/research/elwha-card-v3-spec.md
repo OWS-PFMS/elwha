@@ -206,8 +206,8 @@ public class ElwhaCard extends ElwhaSurface {
   public boolean isSelectable();
   public ElwhaCard setSelected(boolean selected);
   public boolean isSelected();
-  public void addSelectionChangeListener(PropertyChangeListener listener);
-  public void removeSelectionChangeListener(PropertyChangeListener listener);
+  // Observed with the inherited addPropertyChangeListener(PROPERTY_SELECTED, l)
+  // — conventions §10; the wrapper pair was retired in #732.
 
   // ---- Collapse / disclosure (see §14) -------------------------------------
 
@@ -219,8 +219,8 @@ public class ElwhaCard extends ElwhaSurface {
   public boolean isAnimateCollapse();
   public void setCollapseConstraint(Component child, CollapseRule rule);
   public CollapseRule getCollapseConstraint(Component child);
-  public void addExpansionChangeListener(PropertyChangeListener listener);
-  public void removeExpansionChangeListener(PropertyChangeListener listener);
+  // Observed with the inherited addPropertyChangeListener(PROPERTY_COLLAPSED, l)
+  // — conventions §10; the wrapper pair was retired in #732.
 
   // ---- Expansion overflow (see §14.4) --------------------------------------
 
@@ -667,8 +667,8 @@ public final class ElwhaCardChevron extends ElwhaIconButton {
 ```
 
 **Behavior:**
-- On construction: registers an `addExpansionChangeListener` on the
-  card; swaps glyph between `MaterialIcons.expandMore()` (collapsed)
+- On construction: subscribes to the card's `PROPERTY_COLLAPSED` with
+  the inherited `addPropertyChangeListener`; swaps glyph between `MaterialIcons.expandMore()` (collapsed)
   and `MaterialIcons.expandLess()` (expanded).
 - On click: calls `card.setCollapsed(!card.isCollapsed())`.
 - Default size: `IconButtonSize.S` (32dp) — sized to fit alongside
@@ -700,8 +700,8 @@ public final class ElwhaCardExpandLink extends JComponent {
 }
 ```
 
-**Behavior:** registers an `addExpansionChangeListener` on the card;
-swaps text between `expandText` (collapsed) and `collapseText`
+**Behavior:** subscribes to the card's `PROPERTY_COLLAPSED` with the
+inherited `addPropertyChangeListener`; swaps text between `expandText` (collapsed) and `collapseText`
 (expanded). Click toggles `card.setCollapsed(...)`. Tab-focusable;
 Enter / Space activates.
 

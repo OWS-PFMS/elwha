@@ -963,8 +963,12 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
    * Installs a mouse listener on the chip body and the inner content / leading / trailing clusters,
    * so a host container sees the listener fire anywhere on the chip except over an inline button.
    *
+   * <p>Undo it with {@link #removeChipMouseListener(java.awt.event.MouseListener)}, not with {@link
+   * java.awt.Component#removeMouseListener}: the registration spans four components, and the
+   * inherited call detaches only the one on the chip itself.
+   *
    * @param listener the listener to install
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public void addChipMouseListener(final java.awt.event.MouseListener listener) {
@@ -978,11 +982,30 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
   }
 
   /**
+   * Detaches a listener installed by {@link #addChipMouseListener(java.awt.event.MouseListener)}
+   * from all four components it was registered on. A listener that was never installed is ignored,
+   * matching {@link java.awt.Component#removeMouseListener}.
+   *
+   * @param listener the listener to detach
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void removeChipMouseListener(final java.awt.event.MouseListener listener) {
+    if (listener == null) {
+      return;
+    }
+    removeMouseListener(listener);
+    contentRow.removeMouseListener(listener);
+    leadingCluster.removeMouseListener(listener);
+    trailingCluster.removeMouseListener(listener);
+  }
+
+  /**
    * Mirror of {@link #addChipMouseListener(java.awt.event.MouseListener)} for {@link
    * java.awt.event.MouseMotionListener}.
    *
    * @param listener the listener to install
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public void addChipMouseMotionListener(final java.awt.event.MouseMotionListener listener) {
@@ -993,6 +1016,24 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
     contentRow.addMouseMotionListener(listener);
     leadingCluster.addMouseMotionListener(listener);
     trailingCluster.addMouseMotionListener(listener);
+  }
+
+  /**
+   * Mirror of {@link #removeChipMouseListener(java.awt.event.MouseListener)} for {@link
+   * java.awt.event.MouseMotionListener}.
+   *
+   * @param listener the listener to detach
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void removeChipMouseMotionListener(final java.awt.event.MouseMotionListener listener) {
+    if (listener == null) {
+      return;
+    }
+    removeMouseMotionListener(listener);
+    contentRow.removeMouseMotionListener(listener);
+    leadingCluster.removeMouseMotionListener(listener);
+    trailingCluster.removeMouseMotionListener(listener);
   }
 
   /**

@@ -31,8 +31,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
-import java.beans.PropertyChangeListener;
-import java.beans.PropertyChangeSupport;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -82,6 +80,16 @@ import javax.swing.Timer;
  * <p><strong>Actionability is atomic.</strong> {@link #setActionable(boolean)} flips the entire
  * quadrad — cursor + hover state-layer + ripple + tab stop + AccessibleRole — together; consumers
  * cannot configure those independently. See spec §12.
+ *
+ * <p><strong>Observing state.</strong> The card is a {@code JComponent}, so its named states are
+ * announced on the inherited key-scoped subscription (conventions §10) — there is no convenience
+ * wrapper to learn:
+ *
+ * <pre>{@code
+ * card.addPropertyChangeListener(ElwhaCard.PROPERTY_SELECTED, e -> …);
+ * card.addPropertyChangeListener(ElwhaCard.PROPERTY_COLLAPSED, e -> …);
+ * card.removePropertyChangeListener(ElwhaCard.PROPERTY_SELECTED, listener);
+ * }</pre>
  *
  * @serial exclude
  * @author Charles Bryan
@@ -192,8 +200,6 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
 
   private final Map<Component, CollapseRule> collapseConstraints = new IdentityHashMap<>();
   private final java.util.List<ActionListener> actionListeners = new java.util.ArrayList<>();
-  private final PropertyChangeSupport selectionChange = new PropertyChangeSupport(this);
-  private final PropertyChangeSupport expansionChange = new PropertyChangeSupport(this);
 
   /**
    * Creates a card with the {@link CardVariant#ELEVATED} default. Use the static factories ({@link
@@ -542,7 +548,8 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   /**
    * Sets the selected state. No-op when {@link #isSelectable()} is {@code false} — unless the card
    * is under list-driven interaction, in which case the host list owns selection and writes it here
-   * regardless of the card's own selectable flag.
+   * regardless of the card's own selectable flag. A real change fires {@link #PROPERTY_SELECTED} on
+   * the inherited key-scoped subscription.
    *
    * @param newSelected the new selected state
    * @return {@code this} for fluent chaining
@@ -556,7 +563,6 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
     final boolean old = this.selected;
     this.selected = newSelected;
     firePropertyChange(PROPERTY_SELECTED, old, newSelected);
-    selectionChange.firePropertyChange(PROPERTY_SELECTED, old, newSelected);
     repaint();
     return this;
   }
@@ -570,28 +576,6 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    */
   public boolean isSelected() {
     return selected;
-  }
-
-  /**
-   * Adds a listener notified on every {@link #PROPERTY_SELECTED} change.
-   *
-   * @param listener the listener
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public void addSelectionChangeListener(final PropertyChangeListener listener) {
-    selectionChange.addPropertyChangeListener(listener);
-  }
-
-  /**
-   * Removes a previously-registered selection-change listener.
-   *
-   * @param listener the listener to remove
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public void removeSelectionChangeListener(final PropertyChangeListener listener) {
-    selectionChange.removePropertyChangeListener(listener);
   }
 
   // -------------------------------------------------------------- collapse
@@ -621,11 +605,12 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   }
 
   /**
-   * Sets the collapsed state. No-op when {@link #isCollapsible()} is {@code false}.
+   * Sets the collapsed state. No-op when {@link #isCollapsible()} is {@code false}. A real change
+   * fires {@link #PROPERTY_COLLAPSED} on the inherited key-scoped subscription.
    *
    * @param newCollapsed the new collapsed state
    * @return {@code this} for fluent chaining
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public ElwhaCard setCollapsed(final boolean newCollapsed) {
@@ -638,7 +623,6 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
     applyCollapseVisibility();
     final int afterHeight = computeContentHeight();
     firePropertyChange(PROPERTY_COLLAPSED, old, newCollapsed);
-    expansionChange.firePropertyChange(PROPERTY_COLLAPSED, old, newCollapsed);
     if (animateCollapse && beforeHeight != afterHeight) {
       startCollapseAnimation(beforeHeight, afterHeight);
     } else {
@@ -844,37 +828,15 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   }
 
   /**
-   * Adds a listener notified on every {@link #PROPERTY_COLLAPSED} change.
-   *
-   * @param listener the listener
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public void addExpansionChangeListener(final PropertyChangeListener listener) {
-    expansionChange.addPropertyChangeListener(listener);
-  }
-
-  /**
-   * Removes a previously-registered expansion-change listener.
-   *
-   * @param listener the listener to remove
-   * @version v0.2.0
-   * @since v0.2.0
-   */
-  public void removeExpansionChangeListener(final PropertyChangeListener listener) {
-    expansionChange.removePropertyChangeListener(listener);
-  }
-
-  /**
-   * How many expansion-change listeners are registered. A package-private seam for the disclosure
-   * affordances' teardown contract; not API.
+   * How many {@link #PROPERTY_COLLAPSED} listeners are registered. A package-private seam for the
+   * disclosure affordances' teardown contract; not API.
    *
    * @return the registered listener count
    * @version v0.5.0
    * @since v0.5.0
    */
   int expansionListenerCount() {
-    return expansionChange.getPropertyChangeListeners().length;
+    return getPropertyChangeListeners(PROPERTY_COLLAPSED).length;
   }
 
   /**
