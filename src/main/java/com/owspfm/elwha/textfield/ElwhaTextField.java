@@ -235,6 +235,7 @@ public class ElwhaTextField extends JComponent {
     setLayout(null);
     add(editorHost);
     setOpaque(false);
+    setFocusable(false);
     syncAccessibleName();
   }
 
@@ -990,6 +991,33 @@ public class ElwhaTextField extends JComponent {
    */
   public JTextComponent getEditor() {
     return editor;
+  }
+
+  /**
+   * Routes a focus request to the embedded editor. The chassis itself is not a tab stop
+   * (conventions §12) — without this, {@code field.requestFocusInWindow()} would be the silent
+   * no-op §9 rules out, since the decorator declines focus and never forwards it.
+   *
+   * @return whether the editor is likely to receive focus, per {@link
+   *     java.awt.Component#requestFocusInWindow()}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public boolean requestFocusInWindow() {
+    return editor.requestFocusInWindow();
+  }
+
+  /**
+   * Routes a focus request to the embedded editor — the {@link #requestFocusInWindow()} rationale
+   * applies unchanged.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void requestFocus() {
+    editor.requestFocus();
   }
 
   @Override

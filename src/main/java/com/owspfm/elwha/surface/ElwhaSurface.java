@@ -107,11 +107,16 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
    * Creates a Surface with the default look — {@link ColorRole#SURFACE} fill, {@link ShapeScale#MD}
    * shape, no border. Use the fluent setters to override any of the four axes.
    *
-   * @version v0.1.0
+   * <p>Not a tab stop: a Surface is painted chrome that operates no keyboard of its own, so it
+   * declares {@code setFocusable(false)} per conventions §12. A subclass that binds keys opts back
+   * in — {@link com.owspfm.elwha.card.ElwhaCard} does so exactly while it is actionable.
+   *
+   * @version v0.5.0
    * @since v0.1.0
    */
   public ElwhaSurface() {
     setOpaque(false);
+    setFocusable(false);
   }
 
   /**

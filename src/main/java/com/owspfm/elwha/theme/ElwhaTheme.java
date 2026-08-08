@@ -168,13 +168,16 @@ public final class ElwhaTheme {
     UIManager.put(StateLayer.DISABLED_CONTAINER_KEY, StateLayer.DEFAULT_DISABLED_CONTAINER);
   }
 
-  // Step 7: register the fonts and write the Elwha.type.* keys plus the global defaultFont.
-  // Fonts are stored as FontUIResource for the same updateUI() re-install reason as colors.
+  // Step 7: register the fonts and write the Elwha.type.* keys, the global defaultFont, and the
+  // FlatLaf-native font keys. Fonts are stored as FontUIResource for the same updateUI()
+  // re-install reason as colors. defaultFont goes first: the ladder rungs FlatLafKeyMapping
+  // deliberately leaves un-bridged are derived from it.
   private static void applyTypography(Typography typography) {
     for (TypeRole role : TypeRole.values()) {
       UIManager.put(role.uiKey(), new FontUIResource(typography.get(role)));
     }
     UIManager.put("defaultFont", new FontUIResource(typography.get(TypeRole.BODY_MEDIUM)));
+    FlatLafKeyMapping.applyFontKeys(typography);
   }
 
   // Step 8: the only step that touches live components — they re-resolve tokens per the binding

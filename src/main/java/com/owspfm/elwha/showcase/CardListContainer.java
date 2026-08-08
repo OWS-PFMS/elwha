@@ -70,6 +70,36 @@ final class CardListContainer {
     workbench.setContainer(scroll);
 
     buildControls();
+    refreshCode();
+  }
+
+  // The equivalent Java for the live list, read off the list itself rather than off the controls,
+  // so the snippet cannot drift from what is on the stage. Model and renderer lead: they are the
+  // half of a list a reader cannot infer from looking at one (#582).
+  private void refreshCode() {
+    workbench.setCode(
+        """
+        DefaultElwhaListModel<String> model = new DefaultElwhaListModel<>(items);
+        ElwhaItemList<String> list = new ElwhaItemList<>(model, (item, index) -> {
+          ElwhaCard card = ElwhaCard.outlinedCard().setActionable(true).setSelectable(true);
+          card.add(new ElwhaCardHeader().setTitle(item).setSubtitle("List item"));
+          return card;
+        });
+        list.setOrientation(ElwhaListOrientation.%s);
+        list.setSelectionMode(SelectionMode.%s);
+        list.setMovementMode(MovementMode.%s);
+        list.setColumns(%d);
+        list.setItemGap(%d);
+        list.setListPadding(new Insets(8, 8, 8, 8));
+
+        list.addSelectionListener(event -> handle(event.getSelected()));
+        """
+            .formatted(
+                list.getOrientation(),
+                list.getSelectionMode(),
+                list.getMovementMode(),
+                list.getColumns(),
+                list.getItemGap()));
   }
 
   /**
@@ -90,21 +120,40 @@ final class CardListContainer {
         ElwhaSelectField.outlined("Orientation");
     orientation.setOptions(List.of(ElwhaListOrientation.values()));
     orientation.setSelectedValue(ElwhaListOrientation.VERTICAL);
-    orientation.addSelectionChangeListener(list::setOrientation);
+    orientation.addSelectionChangeListener(
+        value -> {
+          list.setOrientation(value);
+          refreshCode();
+        });
 
     final ElwhaSelectField<SelectionMode> selection = ElwhaSelectField.outlined("Selection mode");
     selection.setOptions(List.of(SelectionMode.values()));
     selection.setSelectedValue(list.getSelectionMode());
-    selection.addSelectionChangeListener(list::setSelectionMode);
+    selection.addSelectionChangeListener(
+        value -> {
+          list.setSelectionMode(value);
+          refreshCode();
+        });
 
     controls.addSection("List");
     controls.addControl("", orientation);
     controls.addControl("", selection);
 
-    final JSpinner columns = new JSpinner(new SpinnerNumberModel(1, 1, 6, 1));
-    columns.addChangeListener(event -> list.setColumns((Integer) columns.getValue()));
+    // Seeded from the live list, not from a literal: the spinner used to open on 1 against a list
+    // sitting at its own default, so the control disagreed with the stage until it was touched.
+    // The code view (#582) is what made the mismatch visible.
+    final JSpinner columns = new JSpinner(new SpinnerNumberModel(list.getColumns(), 1, 6, 1));
+    columns.addChangeListener(
+        event -> {
+          list.setColumns((Integer) columns.getValue());
+          refreshCode();
+        });
     final JSpinner gap = new JSpinner(new SpinnerNumberModel(8, 0, 30, 1));
-    gap.addChangeListener(event -> list.setItemGap((Integer) gap.getValue()));
+    gap.addChangeListener(
+        event -> {
+          list.setItemGap((Integer) gap.getValue());
+          refreshCode();
+        });
 
     controls.addSection("Layout");
     controls.addControl("Columns (grid)", columns);

@@ -24,7 +24,7 @@ import java.util.Objects;
  * <p>Instances are immutable.
  *
  * @author Charles Bryan
- * @version v0.1.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public final class Palette {
@@ -45,6 +45,62 @@ public final class Palette {
    */
   public Color get(ColorRole role) {
     return colors.get(role);
+  }
+
+  /**
+   * Value equality — two palettes are equal when they assign the same color to every role.
+   *
+   * <p>A palette is a complete, immutable map of 49 roles to colors and nothing else, so identity
+   * equality made two loads of one JSON file unequal. That is the defect behind {@link
+   * MaterialPalettes}'s resource-keyed cache ((#671)), which fixed the bundled case by ensuring
+   * there is only ever one instance; a consumer-loaded palette had no such guarantee and could
+   * never be compared against a bundled one. Ruled for the 1.0 freeze in (#698).
+   *
+   * @param obj the object to compare against
+   * @return whether {@code obj} is a palette with the same role-to-color mapping
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof Palette other)) {
+      return false;
+    }
+    return colors.equals(other.colors);
+  }
+
+  /**
+   * @return a hash consistent with {@link #equals(Object)}
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public int hashCode() {
+    return colors.hashCode();
+  }
+
+  /**
+   * A short fingerprint rather than all 49 roles — enough to tell two palettes apart in a debugger
+   * or an assertion message without filling the line.
+   *
+   * @return the palette's primary and surface colors in hex
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public String toString() {
+    return "Palette[primary="
+        + hex(get(ColorRole.PRIMARY))
+        + ", surface="
+        + hex(get(ColorRole.SURFACE))
+        + "]";
+  }
+
+  private static String hex(Color color) {
+    return String.format("#%06X", color.getRGB() & 0xFFFFFF);
   }
 
   /**

@@ -318,6 +318,15 @@ public final class ComponentWorkbench extends JPanel {
    * composed component's embedded sub-component editor (e.g. a navigation rail's badge). Facets
    * appear in insertion order between the bookends.
    *
+   * <p><strong>One facet per leaf.</strong> The switcher is a connected group, which never shrinks
+   * a segment below its own label — so its width is the widest segment times the segment count.
+   * With the {@code Component} bookend as the widest at {@code XS}, three segments come to 376 px
+   * and a fourth to 502 px against a {@value #CONTROLS_WIDTH} px column, where the bar hands the
+   * group its full preferred width and the column clips the overflow silently. The column stays at
+   * {@value #CONTROLS_WIDTH} — widening it would cost every leaf's stage 40 px for headroom no leaf
+   * needs (#441) — so a second facet on one leaf is out of budget. The Showcase suite asserts the
+   * fit across the whole catalog; a second facet fails the build rather than clipping in the UI.
+   *
    * @param name the segment label, also the facet's code-tracking key (must be unique among facets)
    * @param controls the controls panel shown when this facet is active
    * @return a handle for pushing this facet's equivalent-Java code via {@link
