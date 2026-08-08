@@ -28,12 +28,29 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Install X server utilities (xset — not on all runner images)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends x11-xserver-utils xkb-data x11-xkb-utils xvfb
+
       - name: Run the suite
         # xvfb-run hosts the gui-tagged tier: on Linux the JDK 21 X11 font natives need a real
         # display, so the linux-gui-native Maven profile selects the native toolkit and Xvfb
         # provides the display (docs/research/elwha-test-suite-research.md §5b). The pinned
         # screen matches the Cacio config developers run against.
-        run: xvfb-run -a -s "-screen 0 1920x1080x24" bash -c 'xset r off; exec mvn -B verify --file pom.xml'
+        run: |
+          xvfb-run -a -s "-screen 0 1920x1080x24 -ardelay 3600000 -arinterval 3600000" bash -c '
+            ok=0
+            for i in $(seq 1 15); do
+              if xset r off; then ok=1; break; fi
+              sleep 1
+            done
+            if [ "$ok" != 1 ]; then
+              echo "FATAL - xset r off never succeeded (missing binary or server not ready); failing fast instead of flaking"
+              exit 1
+            fi
+            echo "--- xset q keyboard state (informational - Xvfb query does not reflect the toggle) ---"
+            xset q | sed -n "/Keyboard Control/,+3p"
+            exec mvn -B verify --file pom.xml
+          '
 
       - name: Upload test reports and crash dumps
         if: failure()
