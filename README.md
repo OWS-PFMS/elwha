@@ -17,7 +17,7 @@ Consistency holds because there is one vocabulary, not because everyone remember
 > The Elwha is a Pacific Northwest river restored after the largest dam removal in US history — the
 > name puts the library on [Open Water Systems](https://openwatersystems.com)' clean-water mission.
 
-<!-- TODO(#530): add a Showcase screenshot here once one is captured. -->
+<!-- TODO(#747): add a Showcase screenshot here once one is captured. -->
 
 *No screenshots yet — the fastest way to see what Elwha looks like is to run The Elwha Showcase
 from a checkout (see [Seeing everything](#seeing-everything) below).*
