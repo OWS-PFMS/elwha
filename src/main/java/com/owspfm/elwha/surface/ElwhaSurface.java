@@ -16,7 +16,10 @@ import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.Objects;
+import java.util.logging.Logger;
 import javax.swing.JPanel;
+import javax.swing.border.Border;
+import javax.swing.plaf.UIResource;
 
 /**
  * A token-native rounded surface primitive — a {@link JPanel} subclass that paints a role-filled,
@@ -34,6 +37,8 @@ import javax.swing.JPanel;
  * tokens or pixel counts only. There is no {@code setSurfaceColor(Color)} / {@code
  * setCornerRadius(int)} / raw-typed escape hatch; the lesson from {@code ElwhaCard} V1 is that
  * every escape hatch becomes a long-term migration cost. Pre-1.0, the typed API is the only API.
+ * Inherited {@link javax.swing.JComponent#setBorder} is part of that rule and is refused — see
+ * {@link #setBorder(javax.swing.border.Border)} for why the chassis insets cannot host one.
  *
  * <p><strong>Defaults.</strong> {@link ColorRole#SURFACE} fill, {@link ShapeScale#MD} (12 px)
  * corner radius, no border. These match the locked {@code ElwhaCard} default so a card composing a
@@ -68,6 +73,11 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
    * 0..5 are accepted; higher values clamp.
    */
   public static final int MAX_ELEVATION = 5;
+
+  private static final Logger LOG = Logger.getLogger(ElwhaSurface.class.getName());
+
+  /** Once-per-JVM guard so a grid of surfaces cannot flood the log with the same refusal. */
+  private static boolean borderRefusalLogged;
 
   private ColorRole surfaceRole = ColorRole.SURFACE;
   private ShapeScale shape = ShapeScale.MD;
@@ -345,6 +355,66 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
   @Override
   public Insets getInsets() {
     return ShadowPainter.shadowInsets(elevation);
+  }
+
+  /**
+   * Returns the same chassis insets into a caller-supplied reuse buffer.
+   *
+   * <p>{@link javax.swing.JComponent}'s own implementation of this overload reads the {@link
+   * javax.swing.border.Border} directly rather than delegating to {@link #getInsets()}, so without
+   * this override the two overloads disagree: a layout manager using the allocation-free form would
+   * see zero insets and lay children out over the reserved shadow halo. Sourced from the virtual
+   * {@link #getInsets()} — the same delegation {@link #getShadowInsets()} uses — so a subclass that
+   * customizes the reserve ({@code ElwhaCard} reserves for {@link #MAX_ELEVATION}) stays consistent
+   * across both overloads with no override of its own.
+   *
+   * @param insets a buffer to fill, or {@code null} to allocate one
+   * @return the chassis insets; the supplied buffer when one was given
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public Insets getInsets(final Insets insets) {
+    final Insets reserve = getInsets();
+    if (insets == null) {
+      return reserve;
+    }
+    insets.set(reserve.top, reserve.left, reserve.bottom, reserve.right);
+    return insets;
+  }
+
+  /**
+   * Refuses a consumer-supplied {@link Border}, logging once, and installs only the {@code null} /
+   * {@link UIResource} borders the look-and-feel plumbing passes.
+   *
+   * <p>A Swing {@code Border} is a competing chrome mechanism this family cannot honor. It would
+   * paint a rectangular stroke around a rounded body, and its insets have nowhere to live: {@link
+   * #getInsets()} is the shadow reserve and nothing else, a contract {@link #getShadowInsets()}
+   * delegates to and every placement engine that backs the halo out of a component's bounds — the
+   * tooltip, the badge anchor, the menu, the FAB anchor — depends on. Folding border insets into it
+   * would report border width as phantom shadow to all of them.
+   *
+   * <p>The supported axis is {@link #setBorderRole(ColorRole)} plus {@link #setBorderWidth(int)},
+   * which strokes the rounded body path the surface actually paints.
+   *
+   * @param border the border to install; only {@code null} and {@link UIResource} borders are
+   *     honored
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  @Override
+  public void setBorder(final Border border) {
+    if (border == null || border instanceof UIResource) {
+      super.setBorder(border);
+      return;
+    }
+    if (!borderRefusalLogged) {
+      borderRefusalLogged = true;
+      LOG.warning(
+          "ElwhaSurface: setBorder is not supported — the chassis insets are the shadow reserve, "
+              + "so a Border would paint with no space reserved for it. Use setBorderRole + "
+              + "setBorderWidth, which stroke the rounded body.");
+    }
   }
 
   /**

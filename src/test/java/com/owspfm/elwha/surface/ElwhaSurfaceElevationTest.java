@@ -10,6 +10,10 @@ import com.owspfm.elwha.theme.ShadowBearing;
 import com.owspfm.elwha.theme.ShadowPainter;
 import java.awt.Color;
 import java.awt.Insets;
+import javax.swing.BorderFactory;
+import javax.swing.border.Border;
+import javax.swing.border.LineBorder;
+import javax.swing.plaf.UIResource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -136,6 +140,64 @@ class ElwhaSurfaceElevationTest {
         HEIGHT / 2,
         ColorRole.SURFACE.resolve(),
         "the body starts just inside the reserved left edge");
+  }
+
+  // ------------------------------------------------- both getInsets overloads
+
+  @Test
+  void theReuseBufferOverloadReportsTheSameReserve() {
+    final ElwhaSurface surface = new ElwhaSurface().setElevation(4);
+    final Insets buffer = new Insets(0, 0, 0, 0);
+
+    final Insets filled = surface.getInsets(buffer);
+
+    assertThat(filled)
+        .as("a layout manager using the allocation-free overload must not see zero insets")
+        .isSameAs(buffer)
+        .isEqualTo(surface.getInsets());
+  }
+
+  @Test
+  void theReuseBufferOverloadAllocatesWhenGivenNoBuffer() {
+    final ElwhaSurface surface = new ElwhaSurface().setElevation(2);
+
+    assertThat(surface.getInsets(null))
+        .as("the null-buffer contract JComponent documents still holds")
+        .isEqualTo(surface.getInsets());
+  }
+
+  @Test
+  void aConsumerBorderIsRefusedRatherThanLeftToPaintWithNoSpace() {
+    final ElwhaSurface surface = new ElwhaSurface().setElevation(1);
+    final Insets reserve = surface.getInsets();
+
+    surface.setBorder(BorderFactory.createLineBorder(Color.RED, 8));
+
+    assertThat(surface.getBorder())
+        .as("the chassis insets are the shadow reserve, so a Border has nowhere to live")
+        .isNull();
+    assertThat(surface.getInsets())
+        .as("and the reserve every placement engine backs out is unchanged")
+        .isEqualTo(reserve);
+  }
+
+  @Test
+  void theLookAndFeelsOwnBorderPlumbingStillWorks() {
+    final ElwhaSurface surface = new ElwhaSurface();
+    final Border installed = new LineBorderUiResource();
+
+    surface.setBorder(installed);
+
+    assertThat(surface.getBorder())
+        .as("LookAndFeel.installBorder passes a UIResource; refusing it would fight the LAF")
+        .isSameAs(installed);
+  }
+
+  /** What {@code LookAndFeel.installBorder} hands a component — LAF-owned, not consumer-owned. */
+  private static final class LineBorderUiResource extends LineBorder implements UIResource {
+    LineBorderUiResource() {
+      super(Color.BLUE, 1);
+    }
   }
 
   @Test
