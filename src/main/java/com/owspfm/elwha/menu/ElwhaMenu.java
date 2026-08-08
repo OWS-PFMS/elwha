@@ -127,6 +127,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
   private final Consumer<ElwhaMenuItem> onSelectionChange;
   private final Component focusHome;
   private final Separator separator;
+  private final boolean sideAnchored;
 
   // Live state — non-null while shown.
   // The separator actually rendered this open. M3 forbids gaps in a scrollable menu, but that is a
@@ -174,6 +175,7 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     this.selectionMode = b.selectionMode;
     this.onSelectionChange = b.onSelectionChange;
     this.focusHome = b.focusHome;
+    this.sideAnchored = b.sideAnchored;
     final boolean selectable = selectionMode != SelectionMode.NONE;
     for (final List<ElwhaMenuItem> group : groups) {
       for (final ElwhaMenuItem item : group) {
@@ -190,10 +192,11 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     }
   }
 
-  // A submenu opens to the side of its opener item, not below a trigger (chain host §6).
+  // A submenu opens to the side of its opener item, not below a trigger (chain host §6); a root
+  // menu opens to the side only when the consumer asked for it (Builder#sideAnchored).
   @Override
   protected boolean sideAnchored() {
-    return chainParentOverlay() != null;
+    return sideAnchored || chainParentOverlay() != null;
   }
 
   // Adopt the parent menu's color style when this submenu's was left at the STANDARD default
@@ -1191,9 +1194,32 @@ public final class ElwhaMenu extends AbstractElwhaMenuOverlay {
     private Consumer<ElwhaMenuItem> onSelectionChange;
     private Consumer<MenuDismissCause> onClose;
     private Component focusHome;
+    private boolean sideAnchored;
 
     private Builder() {
       groups.add(new ArrayList<>());
+    }
+
+    /**
+     * Opens the menu <em>beside</em> its trigger (M3 {@code START_END}) rather than below it —
+     * trailing side first, flipping to the leading side when the trailing side would clip, and
+     * shifted vertically to stay in the viewport. The placement a submenu already uses, offered to
+     * a root menu whose trigger sits on a vertical edge of the window: a {@linkplain
+     * com.owspfm.elwha.navrail.ElwhaNavigationRail#setOverflowMode navigation rail's overflow
+     * button} is at the foot of a full-height rail, so the default below-the-trigger placement has
+     * nowhere to go but up and over the rail's own destinations, while beside-the-trigger puts the
+     * menu on the content area where an overflow list belongs.
+     *
+     * <p>Off by default. A submenu is side-anchored regardless of this flag.
+     *
+     * @param sideAnchored {@code true} to place beside the trigger
+     * @return this builder
+     * @version v0.5.0
+     * @since v0.5.0
+     */
+    public Builder sideAnchored(final boolean sideAnchored) {
+      this.sideAnchored = sideAnchored;
+      return this;
     }
 
     /**

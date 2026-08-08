@@ -781,6 +781,29 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
   // ------------------------------------------------------------- listeners
 
   /**
+   * Activates the button programmatically, exactly as a completed click would: a {@link
+   * IconButtonInteractionMode#SELECTABLE} button flips its selection first, then every registered
+   * {@linkplain #addActionListener action listener} fires with this button as the event source. A
+   * disabled button ignores the call, matching every other activation path.
+   *
+   * <p>The Swing {@code AbstractButton.doClick()} counterpart for a component that is not an {@code
+   * AbstractButton}. It delivers the <em>event</em>, not a synthetic gesture — no press state,
+   * ripple, or press-morph is played — so a caller standing in for the user (a rail's {@linkplain
+   * com.owspfm.elwha.navrail.ElwhaNavigationRail#setOverflowMode overflow menu} routing a menu
+   * selection back to the action it represents) reaches the consumer's handlers without disturbing
+   * the button's visuals.
+   *
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void doClick() {
+    if (!isEnabled()) {
+      return;
+    }
+    activate(0);
+  }
+
+  /**
    * Registers an action listener that fires on click (CLICKABLE) or toggle (SELECTABLE).
    *
    * @param listener the listener; {@code null} is ignored
