@@ -23,7 +23,7 @@ All Java source files in this library use JavaDoc `@version` and `@since` tags t
 
 ## Milestone Naming
 
-Milestones are named `vMAJOR.MINOR.PATCH` — no `-alpha` / `-beta` suffix. While the library is pre-1.0, minor bumps may include breaking changes (documented in `CHANGELOG.md`) and patch bumps are bug-fix only.
+Milestones are named `vMAJOR.MINOR.PATCH` — no `-alpha` / `-beta` suffix. Pre-1.0, a minor bump could include breaking changes and only patch bumps were bug-fix-only. **From `1.0.0` onward semver applies in full:** breaking changes need a major bump, minors are additive, patches are fixes. Either way every change is documented in `CHANGELOG.md`.
 
 Examples: `v0.1.0`, `v0.2.0`, `v0.2.1`, `v1.0.0`.
 
