@@ -2,6 +2,7 @@ package com.owspfm.elwha.iconbutton;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.owspfm.elwha.testkit.Corners;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
@@ -32,6 +33,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 class ElwhaIconButtonRenderTest {
 
   private static final int SIDE = IconButtonSize.M.containerPx();
+
+  /** A ground no bundled palette carries, so the corner probe separates cleanly. */
+  private static final Color GROUND = Color.MAGENTA;
 
   private static Stream<Arguments> variantsInBothModes() {
     return Stream.of(Mode.LIGHT, Mode.DARK)
@@ -318,5 +322,41 @@ class ElwhaIconButtonRenderTest {
     assertThat(button.isRequestFocusEnabled())
         .as("but a click does not pull focus — the toolbar default from the constructor")
         .isFalse();
+  }
+
+  // ------------------------------------------------------------ corner radius (#663)
+
+  @ParameterizedTest
+  @EnumSource(
+      value = ShapeScale.class,
+      names = {"XS", "SM", "MD", "LG"})
+  void aShapedButtonRendersAtTheFullTokenRadius(final ShapeScale step) {
+    final ElwhaIconButton button = button(IconButtonVariant.FILLED).setShape(step);
+
+    Corners.assertTopLeftRadius(
+        Pixels.render(button, SIDE, SIDE, GROUND),
+        0,
+        0,
+        step.px(),
+        restingFill(IconButtonVariant.FILLED),
+        GROUND,
+        step.px(),
+        "the resting radius is the token itself — the pre-#663 halving rendered every step at"
+            + " half its dp figure");
+  }
+
+  @Test
+  void defaultFullShapeIsStillACircle() {
+    final ElwhaIconButton button = button(IconButtonVariant.FILLED);
+
+    Corners.assertTopLeftRadius(
+        Pixels.render(button, SIDE, SIDE, GROUND),
+        0,
+        0,
+        SIDE / 2,
+        restingFill(IconButtonVariant.FILLED),
+        GROUND,
+        SIDE / 2,
+        "FULL clamps to half the shorter axis, so the default icon button is unchanged");
   }
 }

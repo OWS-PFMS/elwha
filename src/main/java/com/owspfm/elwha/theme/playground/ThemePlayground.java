@@ -90,7 +90,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
  * -Dexec.mainClass="com.owspfm.elwha.theme.playground.ThemePlayground"}
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.1.0
  */
 public final class ThemePlayground {
@@ -641,9 +641,10 @@ public final class ThemePlayground {
 
     @Override
     protected void paintComponent(Graphics g) {
-      int radius = Math.min(shape.px(), Math.min(getWidth(), getHeight()));
+      // arcWidth, not radius — see FoundationsPanels (#663).
+      int arc = Math.min(shape.arcPx(), Math.min(getWidth(), getHeight()));
       g.setColor(ColorRole.SECONDARY_CONTAINER.resolve());
-      g.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, radius, radius);
+      g.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, arc, arc);
       g.setColor(ColorRole.ON_SECONDARY_CONTAINER.resolve());
       g.setFont(getFont().deriveFont(Font.PLAIN, 11f));
       g.drawString(shape.key(), 8, getHeight() / 2 + 4);

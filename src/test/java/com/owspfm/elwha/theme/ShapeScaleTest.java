@@ -2,8 +2,11 @@ package com.owspfm.elwha.theme;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.owspfm.elwha.testkit.Corners;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.ThemeExtension;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.util.EnumMap;
 import java.util.Map;
 import javax.swing.UIManager;
@@ -19,6 +22,9 @@ import org.junit.jupiter.params.provider.EnumSource;
  */
 @ExtendWith({EdtInterceptor.class, ThemeExtension.class})
 class ShapeScaleTest {
+
+  /** Body size for the painter-boundary probe — comfortably wider than twice the largest step. */
+  private static final int SHAPE_PROBE_PX = 80;
 
   /** The locked radius table from taxonomy §3. */
   private static final Map<ShapeScale, Integer> LOCKED_PX = new EnumMap<>(ShapeScale.class);
@@ -64,6 +70,60 @@ class ShapeScaleTest {
           .isGreaterThan(previous);
       previous = step.px();
     }
+  }
+
+  // ------------------------------------------------------- radius vs. arcWidth (#663)
+
+  @ParameterizedTest
+  @EnumSource(ShapeScale.class)
+  void arcPxIsTheDiameterOfTheTokenRadius(final ShapeScale step) {
+    assertThat(step.arcPx())
+        .as(
+            "%s feeds RoundRectangle2D's arcWidth, which is the corner diameter — twice the token"
+                + " radius",
+            step)
+        .isEqualTo(step.px() * 2);
+  }
+
+  @Test
+  void arcPxTracksARethemedRadiusRatherThanTheCompiledDefault() {
+    UIManager.put(ShapeScale.MD.uiKey(), 30);
+
+    assertThat(ShapeScale.MD.arcPx())
+        .as("the diameter is derived per call, so a themed radius carries into the painter value")
+        .isEqualTo(60);
+  }
+
+  @Test
+  void aBodyPaintedWithArcPxRendersAtTheTokenRadius() {
+    final BufferedImage image =
+        new BufferedImage(SHAPE_PROBE_PX, SHAPE_PROBE_PX, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D g = image.createGraphics();
+    try {
+      g.setColor(java.awt.Color.MAGENTA);
+      g.fillRect(0, 0, SHAPE_PROBE_PX, SHAPE_PROBE_PX);
+      SurfacePainter.paint(
+          g,
+          SHAPE_PROBE_PX,
+          SHAPE_PROBE_PX,
+          ShapeScale.LG.arcPx(),
+          ColorRole.SURFACE,
+          null,
+          null,
+          0f);
+    } finally {
+      g.dispose();
+    }
+
+    Corners.assertTopLeftRadius(
+        image,
+        0,
+        0,
+        ShapeScale.LG.px(),
+        ColorRole.SURFACE.resolve(),
+        java.awt.Color.MAGENTA,
+        ShapeScale.LG.px(),
+        "arcPx() is the conversion that makes a painted corner land on the token's dp figure");
   }
 
   @ParameterizedTest

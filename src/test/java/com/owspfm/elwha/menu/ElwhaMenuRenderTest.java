@@ -2,6 +2,7 @@ package com.owspfm.elwha.menu;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.owspfm.elwha.testkit.Corners;
 import com.owspfm.elwha.testkit.EdtInterceptor;
 import com.owspfm.elwha.testkit.Input;
 import com.owspfm.elwha.testkit.PaintLog;
@@ -266,6 +267,26 @@ class ElwhaMenuRenderTest {
         ElwhaMenu.builder().colorStyle(ColorStyle.VIBRANT).addItem(ElwhaMenuItem.of(LABEL)).build();
 
     assertContainerTint(menu.renderPreview(), ColorRole.TERTIARY_CONTAINER.resolve());
+  }
+
+  @Test
+  void containerCornerIsTheMdTokenRadius() {
+    final ElwhaMenu menu = ElwhaMenu.builder().addItem(ElwhaMenuItem.of(LABEL)).build();
+    final JComponent surface = menu.renderPreview();
+    final Dimension pref = surface.getPreferredSize();
+    final BufferedImage shot = Pixels.render(surface, pref.width, pref.height, Color.MAGENTA);
+    final Insets shadow = ShadowPainter.shadowInsets(ElwhaMenu.ELEVATION);
+
+    Corners.assertTopLeftRadius(
+        shot,
+        shadow.left,
+        shadow.top,
+        ElwhaMenu.CONTAINER_RADIUS_PX,
+        ColorRole.SURFACE_CONTAINER_LOW.resolve(),
+        new Color(shot.getRGB(shadow.left - 3, shadow.top - 3), true),
+        ElwhaMenu.CONTAINER_RADIUS_PX,
+        "the menu already doubled its radius at the painter, so the #663 normalization must leave"
+            + " its 12 dp container corner exactly where it was");
   }
 
   private static void assertContainerTint(final JComponent surface, final Color want) {

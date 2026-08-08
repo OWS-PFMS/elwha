@@ -150,7 +150,7 @@ public final class ElwhaCardExpandLink extends JLabel {
       g2.setStroke(new BasicStroke(FOCUS_RING_STROKE_PX));
       g2.setColor(ColorRole.SECONDARY.resolve());
       final float in = FOCUS_RING_STROKE_PX / 2f;
-      final float arc = ShapeScale.XS.px();
+      final float arc = ShapeScale.XS.arcPx();
       g2.draw(
           new RoundRectangle2D.Float(in, in, getWidth() - 2 * in, getHeight() - 2 * in, arc, arc));
     } finally {

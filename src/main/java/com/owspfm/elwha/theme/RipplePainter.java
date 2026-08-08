@@ -26,7 +26,7 @@ import java.awt.geom.RoundRectangle2D;
  * duration when the host's clock drives progress from 0 to 1 over 400 ms.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public final class RipplePainter {
@@ -53,10 +53,11 @@ public final class RipplePainter {
    *     {@code null} suppresses paint
    * @param progress the ripple animation phase in {@code [0, 1]}; values {@code >= 1f} suppress
    *     paint (the fade tail has completed)
-   * @param cornerRadiusPx the host's round-rect corner radius in pixels; the ripple clips to this
-   *     outline
+   * @param arcWidthPx the host body's {@link RoundRectangle2D} {@code arcWidth} — the corner
+   *     <em>diameter</em>, not the radius (see {@link ShapeScale#arcPx()}). The ripple clips to
+   *     this outline, so it must be the identical value the host passed its own surface painter
    * @param tint the ripple fill color, painted at {@link #PEAK_OPACITY} scaled by the fade tail
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public static void paint(
@@ -65,7 +66,7 @@ public final class RipplePainter {
       int height,
       Point origin,
       float progress,
-      int cornerRadiusPx,
+      int arcWidthPx,
       Color tint) {
     if (origin == null || progress >= 1f || width <= 0 || height <= 0 || tint == null) {
       return;
@@ -73,7 +74,7 @@ public final class RipplePainter {
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      final int arc = Math.max(0, Math.min(cornerRadiusPx, Math.min(width, height)));
+      final int arc = Math.max(0, Math.min(arcWidthPx, Math.min(width, height)));
       g2.clip(new RoundRectangle2D.Float(0f, 0f, width, height, arc, arc));
       // Curve constants mirror ElwhaCard.paintRipple verbatim — expand phase reaches 1.0 at
       // progress 0.625 (= 250ms/400ms), fade tail starts at progress 0.375 (= 150ms/400ms) and
