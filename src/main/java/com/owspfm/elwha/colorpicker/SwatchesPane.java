@@ -174,7 +174,13 @@ final class SwatchesPane extends ColorPickerPane {
     return activeHue;
   }
 
+  // Bounds-guarded like selectRecent already was: the real callers derive their index from
+  // indexAt(point), which answers -1 for a press that lands between cells, and an unguarded
+  // catalog lookup turns that into an AIOOBE out of a mouse handler (#572).
   void selectHue(final int hueIndex) {
+    if (hueIndex < 0 || hueIndex >= MaterialSwatchCatalog.hues().size()) {
+      return;
+    }
     activeHue = hueIndex;
     commit(
         preserveAlpha(
@@ -186,7 +192,11 @@ final class SwatchesPane extends ColorPickerPane {
   }
 
   void selectShade(final int shadeIndex) {
-    commit(preserveAlpha(MaterialSwatchCatalog.hues().get(activeHue).shades()[shadeIndex]), false);
+    final Color[] shades = MaterialSwatchCatalog.hues().get(activeHue).shades();
+    if (shadeIndex < 0 || shadeIndex >= shades.length) {
+      return;
+    }
+    commit(preserveAlpha(shades[shadeIndex]), false);
     repaint();
   }
 
@@ -203,7 +213,7 @@ final class SwatchesPane extends ColorPickerPane {
 
   void selectRecent(final int recentIndex) {
     final List<Color> recent = picker().recentColors();
-    if (recentIndex < recent.size()) {
+    if (recentIndex >= 0 && recentIndex < recent.size()) {
       commit(recent.get(recentIndex), false);
       repaint();
     }
