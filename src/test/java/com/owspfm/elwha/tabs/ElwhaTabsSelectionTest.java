@@ -489,6 +489,64 @@ class ElwhaTabsSelectionTest {
   }
 
   /**
+   * The non-empty half of #724's fix, which shipped with the wrong old value. {@code removeTab}
+   * clears {@code activeTabIndex} before handing off to {@code activate}, and {@code activate}
+   * reads the old value off that field — so the announcement said the selection had come from
+   * nowhere. A consumer diffing selections cannot tell which tab it left.
+   */
+  @Test
+  void removingTheActiveTabCarriesTheDepartingTabAsTheOldValue() {
+    final ElwhaTabs bar = barOf("One", "Two", "Three");
+    bar.setActiveTabIndex(1);
+    final ElwhaTab departing = bar.getTabAt(1);
+    final ElwhaTab survivor = bar.getTabAt(0);
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, events::add);
+
+    bar.removeTab(departing);
+
+    assertThat(events).as("re-activating the first survivor is an active-tab change").hasSize(1);
+    assertThat(events.get(0).getOldValue())
+        .as("#733 — the tab that left, not null")
+        .isSameAs(departing);
+    assertThat(events.get(0).getNewValue())
+        .as("the first survivor takes over the selection")
+        .isSameAs(survivor);
+  }
+
+  /**
+   * The same fix seen from the index-0 removal, where the arriving tab lands on the index the
+   * departing one vacated. Identity is the only thing that separates the two here.
+   */
+  @Test
+  void aSameIndexReplacementStillNamesBothTabs() {
+    final ElwhaTabs bar = barOf("One", "Two");
+    final ElwhaTab departing = bar.getTabAt(0);
+    final ElwhaTab second = bar.getTabAt(1);
+    final List<PropertyChangeEvent> events = new ArrayList<>();
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, events::add);
+
+    bar.removeTab(departing);
+
+    assertThat(events).hasSize(1);
+    assertThat(events.get(0).getOldValue()).isSameAs(departing);
+    assertThat(events.get(0).getNewValue()).isSameAs(second);
+  }
+
+  /** The removal must still announce exactly once — the silent hand-off must not double-fire. */
+  @Test
+  void removingTheActiveTabAnnouncesExactlyOnce() {
+    final ElwhaTabs bar = barOf("One", "Two", "Three");
+    bar.setActiveTabIndex(2);
+    final int[] changes = {0};
+    bar.addPropertyChangeListener(ElwhaTabs.PROPERTY_ACTIVE_TAB, e -> changes[0]++);
+
+    bar.removeTab(bar.getTabAt(2));
+
+    assertThat(changes[0]).as("one removal, one announcement").isOne();
+  }
+
+  /**
    * The one active-tab change with no arriving tab to carry. It used to pass silently: {@code
    * removeTab} set {@code activeTabIndex = -1} and returned without firing, because the fire lives
    * inside {@code activate(int)} and there was no index left to activate — so a consumer tracking

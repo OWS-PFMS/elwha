@@ -163,14 +163,14 @@ public final class ElwhaCardExpandLink extends JLabel {
   // restore the subscription without stacking a second copy.
   private void subscribe() {
     if (!subscribed) {
-      card.addExpansionChangeListener(expansionSync);
+      card.addPropertyChangeListener(ElwhaCard.PROPERTY_COLLAPSED, expansionSync);
       subscribed = true;
     }
   }
 
   private void unsubscribe() {
     if (subscribed) {
-      card.removeExpansionChangeListener(expansionSync);
+      card.removePropertyChangeListener(ElwhaCard.PROPERTY_COLLAPSED, expansionSync);
       subscribed = false;
     }
   }
