@@ -118,6 +118,41 @@ final class WrappingLabels {
   }
 
   /**
+   * The height the label's wrapped text needs at an explicitly given width — the height-for-width
+   * hook {@link ElwhaCardActions#heightForSlotWidth(int)} and {@link
+   * ElwhaCardMedia#heightForSlotWidth(int)} already give the chassis, for the atoms that wrap text.
+   *
+   * <p>Without it a chassis has only {@code getPreferredSize()} to ask, and that answers for the
+   * width the label is <em>currently</em> holding rather than the one it is about to be assigned —
+   * so every measurement is one layout pass behind the width it describes. On a first layout the
+   * label holds no width at all and {@link #availableWidth} falls back to the nearest sized
+   * ancestor, which can be the whole page: a blurb that wraps to six lines in its real slot reports
+   * two, and the chassis sizes itself to that
+   * ([#737](https://github.com/OWS-PFMS/elwha/issues/737)).
+   *
+   * <p>Sizing the shared {@code "html"} view here is the same operation {@link
+   * #preferredSizeForWidth} performs, and it is storm-safe (#305) for the same reason: the caller
+   * is the layout, and the width it passes is the width it is about to hand the label, so the
+   * measure width and the later paint width agree and {@code Renderer.setSize} is a no-op between
+   * them.
+   *
+   * @param label the label
+   * @param width the slot width in pixels; {@code <= 0} falls back to the unconstrained span
+   * @return the wrapped height in pixels
+   */
+  static int heightForWidth(final JLabel label, final int width) {
+    final View view = (View) label.getClientProperty("html");
+    if (view == null) {
+      return label.getPreferredSize().height;
+    }
+    if (width > 0) {
+      final java.awt.Insets ins = label.getInsets();
+      view.setSize(Math.max(1, width - ins.left - ins.right), 0);
+    }
+    return Math.max((int) Math.ceil(view.getPreferredSpan(View.Y_AXIS)), 1);
+  }
+
+  /**
    * Measures the natural single-line width of {@code label.getText()} using the label's current
    * font. HTML tags are stripped and the entities {@link #escapeMarkup} produces are decoded back
    * to the one character each of them renders as — without that, {@code setTitle("Price < 5")},
