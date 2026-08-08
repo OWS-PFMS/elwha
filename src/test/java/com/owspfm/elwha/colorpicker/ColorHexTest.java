@@ -47,7 +47,7 @@ class ColorHexTest {
   }
 
   @Test
-  void theWrongNumberOfDigitsAnswersNull() {
+  void aStringOfTheWrongLengthAnswersNull() {
     assertThat(ColorHex.parse(null, false)).isNull();
     assertThat(ColorHex.parse("", false)).isNull();
     assertThat(ColorHex.parse("#12345", false)).isNull();

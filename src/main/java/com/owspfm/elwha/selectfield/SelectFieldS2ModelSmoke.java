@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * -Dexec.mainClass="com.owspfm.elwha.selectfield.SelectFieldS2ModelSmoke"}.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public final class SelectFieldS2ModelSmoke {

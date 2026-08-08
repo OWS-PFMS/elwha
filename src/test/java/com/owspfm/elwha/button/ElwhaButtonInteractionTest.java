@@ -161,7 +161,7 @@ class ElwhaButtonInteractionTest {
   }
 
   @Test
-  void theListenerArrayIsACopy() {
+  void aReturnedListenerArrayIsACopy() {
     final ElwhaButton button = new ElwhaButton("Save");
     button.addActionListener(e -> {});
 

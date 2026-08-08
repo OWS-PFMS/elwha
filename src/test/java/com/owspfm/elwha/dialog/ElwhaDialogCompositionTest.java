@@ -298,7 +298,7 @@ class ElwhaDialogCompositionTest {
   }
 
   @Test
-  void theContentSlotIsTheOneChildAPreviewStillBorrows() {
+  void aContentSlotIsTheOneChildAPreviewStillBorrows() {
     final JTextField field = new JTextField("draft");
     final ElwhaDialog dialog = show(alert().content(field).build());
 

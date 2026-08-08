@@ -414,7 +414,7 @@ class ElwhaSliderRangeTest {
   }
 
   @Test
-  void theRootNodeReportsNoValueRatherThanAStaleOne() {
+  void aRangeRootNodeReportsNoValueRatherThanAStaleOne() {
     final ElwhaSlider slider = span();
     slider.setLowerValue(30);
     slider.setUpperValue(70);
