@@ -1274,10 +1274,7 @@ public final class ElwhaNavigationRail extends JComponent {
     if (primary.isEmpty()) {
       return 0;
     }
-    int h = 0;
-    for (final ElwhaNavRailDestination d : primary) {
-      h += ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX;
-    }
+    int h = primary.size() * ElwhaNavRailDestination.EXPANDED_CONTENT_HEIGHT_PX;
     // doLayout only inserts the Collapsed gap once the morph has settled, so reserving it from
     // frame 0 would ask the host for height the laid-out band does not use (#635).
     if (!expandedish()) {
