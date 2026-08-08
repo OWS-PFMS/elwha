@@ -5,6 +5,7 @@ import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.surface.ElwhaSurface;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.MotionSnapshot;
 import com.owspfm.elwha.theme.ShapeScale;
 import com.owspfm.elwha.theme.SpaceScale;
 import com.owspfm.elwha.theme.TypeRole;
@@ -20,7 +21,6 @@ import java.awt.LayoutManager;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.util.function.Consumer;
 import javax.accessibility.AccessibleContext;
@@ -357,9 +357,7 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
 
     // Cached full-size render reused across the slide tween's frames (see paint()); released at the
     // steady state. Mirrors DialogSurface's optimization.
-    private BufferedImage motionSnapshot;
-    private int snapshotW;
-    private int snapshotH;
+    private final MotionSnapshot motionSnapshot = new MotionSnapshot();
 
     FullScreenSurface() {
       setLayout(new BorderLayout());
@@ -383,7 +381,7 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     public void paint(final Graphics g) {
       final float p = Math.max(0f, Math.min(1f, motionProgress));
       if (p >= 1f) {
-        motionSnapshot = null;
+        motionSnapshot.release();
         super.paint(g);
         return;
       }
@@ -392,24 +390,7 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
       if (w <= 0 || h <= 0) {
         return;
       }
-      final AffineTransform tx = ((Graphics2D) g).getTransform();
-      final double sx = tx.getScaleX() > 0 ? tx.getScaleX() : 1.0;
-      final double sy = tx.getScaleY() > 0 ? tx.getScaleY() : 1.0;
-      final int deviceW = Math.max(1, (int) Math.ceil(w * sx));
-      final int deviceH = Math.max(1, (int) Math.ceil(h * sy));
-      if (motionSnapshot == null || snapshotW != deviceW || snapshotH != deviceH) {
-        final BufferedImage snap = new BufferedImage(deviceW, deviceH, BufferedImage.TYPE_INT_ARGB);
-        final Graphics2D bg = snap.createGraphics();
-        try {
-          bg.scale(sx, sy);
-          super.paint(bg);
-        } finally {
-          bg.dispose();
-        }
-        motionSnapshot = snap;
-        snapshotW = deviceW;
-        snapshotH = deviceH;
-      }
+      final BufferedImage raster = motionSnapshot.rasterFor((Graphics2D) g, w, h, super::paint);
 
       final Graphics2D g2 = (Graphics2D) g.create();
       try {
@@ -419,7 +400,7 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
             RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g2.translate(0, offsetY);
         g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, p));
-        g2.drawImage(motionSnapshot, 0, 0, w, h, null);
+        g2.drawImage(raster, 0, 0, w, h, null);
       } finally {
         g2.dispose();
       }
@@ -435,9 +416,13 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
     // Gated on the tween, not unconditional: past full progress paint() short-circuits to
     // super.paint() and transforms nothing, so a bare `true` would keep forcing a whole-surface
     // re-composite for every caret blink and hover tick for as long as the dialog is open.
+    //
+    // Routed through the snapshot because being ASKED this question is Swing's signal that a
+    // descendant is redirecting a repaint up here, which is exactly when the cached raster has gone
+    // stale (#713). See MotionSnapshot for the measurement behind that.
     @Override
     public boolean isPaintingOrigin() {
-      return motionProgress < 1f;
+      return motionSnapshot.paintingOrigin(motionProgress < 1f);
     }
 
     // Reports AccessibleRole.DIALOG so assistive tech announces this as a dialog (§9); the
