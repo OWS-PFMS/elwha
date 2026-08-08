@@ -218,6 +218,35 @@ class ElwhaLoadingIndicatorTest {
         .isCloseTo(atPreferred, within(0.08));
   }
 
+  /**
+   * #574 — the contained paint scales the active box by {@code indicatorSize / containerSize}.
+   * Shrinking only the container drives that ratio above 1, and the shape painted straight past the
+   * circle it is supposed to sit inside — a 24 px container fully covered by the default 38 px
+   * shape. The setter's javadoc promised the ratio is held "within it", which was true only when
+   * the <em>available space</em> shrank.
+   */
+  @Test
+  void shrinkingOnlyTheContainerKeepsTheShapeInsideIt() {
+    final ElwhaLoadingIndicator indicator = ElwhaLoadingIndicator.contained();
+
+    indicator.setContainerSize(24);
+
+    assertThat(activeToContainerRatio(indicator, 48))
+        .as("the container bounds the shape rather than the shape escaping the container")
+        .isLessThanOrEqualTo(1.0);
+  }
+
+  @Test
+  void aContainerLargerThanTheIndicatorStillHoldsTheM3Ratio() {
+    final ElwhaLoadingIndicator indicator = ElwhaLoadingIndicator.contained();
+
+    indicator.setContainerSize(64);
+
+    assertThat(activeToContainerRatio(indicator, 64))
+        .as("the clamp only bites when the ratio would exceed 1; below that nothing changes")
+        .isBetween(0.5, 0.85);
+  }
+
   @Test
   void bothSizeKnobsTogetherSetTheContainedProportions() {
     final ElwhaLoadingIndicator indicator = ElwhaLoadingIndicator.contained();

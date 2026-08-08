@@ -290,7 +290,9 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
   }
 
   /**
-   * Sets the active indicator's box size.
+   * Sets the active indicator's box size. In the {@linkplain #setContained(boolean) contained}
+   * configuration the {@linkplain #setContainerSize(int) container} bounds it — an indicator larger
+   * than its container paints at the container's size, not past its edge.
    *
    * @param size the size, px (clamped to ≥ 8)
    * @version v0.5.0
@@ -315,7 +317,9 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
 
   /**
    * Sets the container circle's box size. The active shape holds the M3 active-to-container ratio
-   * within it.
+   * within it, and the container is a hard bound: shrinking it below the {@linkplain
+   * #setIndicatorSize(int) indicator size} shrinks the shape to fit rather than letting it paint
+   * outside the circle.
    *
    * @param size the size, px (clamped to ≥ 8)
    * @version v0.5.0
@@ -674,7 +678,11 @@ public class ElwhaLoadingIndicator extends JComponent implements Accessible {
                 containerDiameter,
                 containerDiameter));
         // Hold the M3 38/48 active-to-container ratio even if the container was shrunk to fit.
-        activeBox = containerDiameter * (indicatorSize / (float) containerSize);
+        // Capped at 1: a consumer who shrinks only the container drives the raw ratio above 1,
+        // which would paint the active shape outside the circle it is supposed to sit inside
+        // (#574). The container is the bound, so the shape shrinks with it.
+        final float ratio = Math.min(1f, indicatorSize / (float) containerSize);
+        activeBox = containerDiameter * ratio;
       }
 
       final float scale = activeBox / 2f - 1f;
