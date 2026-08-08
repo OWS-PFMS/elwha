@@ -86,7 +86,7 @@ An ordered sequence:
 4. **Write the `Elwha.*` keys.** For every token, `UIManager.put("Elwha.<category>.<key>", value)` — all 49 colors, 7 shapes, 6 spacings, 12 type fonts, 5 state opacities, 2 disabled constants. This is what FlatComp's own components resolve against.
 5. **Write the FlatLaf-native keys.** Map roles onto FlatLaf's component keys so **raw Swing inherits the design language** (§4). This is the step that makes a plain `JButton` look like it belongs next to a `FlatChip`.
 6. **Compute-and-bake state layers.** FlatLaf models hover/pressed as separate colors; M3 models them as opacity overlays. Blend the overlay over the role color and write the *result* into FlatLaf's `*hoverBackground` / `*pressedBackground` keys (§5).
-7. **Apply typography.** Register the bundled Inter font; write `defaultFont` and the `Elwha.type.*` fonts.
+7. **Apply typography.** Register the bundled Inter font; write `defaultFont` and the `Elwha.type.*` fonts, then the FlatLaf-native **font** keys (§4a). `defaultFont` goes first, because the ladder rungs §4a deliberately leaves alone are derived from it.
 8. **Repaint.** `SwingUtilities.updateComponentTreeUI(w)` for every `Window` in `Window.getWindows()`. Components re-resolve tokens per the taxonomy's binding rule and re-skin live.
 
 Steps 4–7 are pure `UIManager` population; step 8 is the only one that touches live components.
@@ -112,9 +112,40 @@ The bridge that makes raw Swing inherit the theme. FlatLaf exposes hundreds of `
 | `ToolTip.background` | `inverseSurface` | M3 tooltips use the inverse surface |
 | `ToolTip.foreground` | `inverseOnSurface` | |
 | `Component.error.focusedBorderColor` | `error` | |
-| `defaultFont` | `Typography` → `bodyMedium` | |
+| `defaultFont` | `Typography` → `bodyMedium` | the font keys are their own table — §4a |
 
 **Locked (Q1):** the *full* mapping table is a separate sub-deliverable — likely 40–80 keys — shipped as its own locked appendix to this doc. It is enumerated carefully (FlatLaf's key list is large and partially undocumented) and validated visually in the playground apps. It does **not** block the install-API shape: the API only ever says "write the native keys" — it does not depend on the table's contents.
+
+
+### 4a. The font half of the bridge
+
+Added in [#696](https://github.com/OWS-PFMS/elwha/issues/696). Until then step 7 wrote `defaultFont` and nothing else, so every raw Swing component painted Body Medium: a `JButton`, a `JTable` row and a tab label were typographically identical, and "raw Swing inherits the design language" held for colour and shape but not type.
+
+**What transfers cleanly.** M3 assigns a type role to a component *archetype* — a button label is Label Large, a menu item is Label Large, a tab is Title Small — and Swing keys fonts by component class, so the assignment maps one-to-one:
+
+| Role | FlatLaf keys |
+|---|---|
+| `LABEL_LARGE` | `Button` · `ToggleButton` · `ToolBar` · `CheckBox` · `RadioButton` · `Menu` · `MenuBar` · `MenuItem` · `CheckBoxMenuItem` · `RadioButtonMenuItem` · `PopupMenu` · `OptionPane.buttonFont` |
+| `BODY_LARGE` | `TextField` · `FormattedTextField` · `PasswordField` · `TextArea` · `TextPane` · `EditorPane` · `ComboBox` · `Spinner` · `List` · `Table` · `Tree` |
+| `BODY_MEDIUM` | `Label` · `OptionPane.messageFont` |
+| `BODY_SMALL` | `ToolTip` |
+| `TITLE_SMALL` | `TabbedPane` · `TableHeader` · `TitledBorder` |
+| `TITLE_MEDIUM` | `InternalFrame.titleFont` |
+| `LABEL_MEDIUM` | `ProgressBar` · `Slider` · `MenuItem.acceleratorFont` |
+
+**What does not, and the answer to it.** M3 names a role per *usage*; Swing has one `Label.font`, so a `JLabel` standing in for a headline and one carrying body text cannot be told apart from the key table. FlatLaf's own semantic style-class ladder is the mechanism that closes this — a consumer writes `putClientProperty(FlatClientProperties.STYLE_CLASS, "h2")` — so the ladder is bridged onto M3 steps:
+
+| Rung | Role | | Rung | Role |
+|---|---|---|---|---|
+| `h00.font` | `DISPLAY_SMALL` | | `h4.font` | `TITLE_MEDIUM` |
+| `h0.font` | `HEADLINE_LARGE` | | `large.font` | `BODY_LARGE` |
+| `h1.font` | `HEADLINE_MEDIUM` | | `small.font` | `BODY_SMALL` |
+| `h2.font` | `HEADLINE_SMALL` | | `semibold.font` | `LABEL_LARGE` |
+| `h3.font` | `TITLE_LARGE` | | | |
+
+Bridging the ladder also fixes a defect it was hiding. Un-bridged, `h1`–`h3` resolve through FlatLaf's `$semibold.font`, which falls back to a system face when the installed family ships no semibold — measured at **Helvetica Neue** while every other key was Inter. Pointing `semibold.font` at `LABEL_LARGE` (Inter Medium) fixes it at the root.
+
+**Deliberately left derived.** `medium.font` (default −1) and `mini.font` (default −3) land on sizes the M3 scale has no step for; snapping them would collapse two rungs onto one font or invent a role. Derived from `defaultFont`, they keep the installed family and stay monotonic between the rungs either side. `light.font` has no Inter face to point at. These three are also the live witness that step 7's ordering still holds — see `ElwhaThemeInstallTest.theUnbridgedRungsStillDeriveFromDefaultFont`.
 
 ---
 
