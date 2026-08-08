@@ -75,7 +75,7 @@ class ElwhaTextFieldGuiTest {
           frame.add(field);
           frame.add(other);
           frame.pack();
-          frame.setLocation(100 + slot * 560, 100);
+          frame.setLocation(GuiSteps.slotX(slot, 560), 100);
           frame.setVisible(true);
         });
     robot.waitForIdle();
@@ -162,62 +162,12 @@ class ElwhaTextFieldGuiTest {
     SwingUtilities.invokeAndWait(() -> other.getEditor().requestFocusInWindow());
     waitFor("the other field starts with focus", () -> other.getEditor().isFocusOwner());
 
-    final StringBuilder trace = new StringBuilder();
-    final java.awt.event.AWTEventListener spy =
-        event -> {
-          if (event.getID() == java.awt.event.MouseEvent.MOUSE_PRESSED) {
-            trace.append(" press->").append(event.getSource().getClass().getSimpleName());
-          }
-        };
-    java.awt.Toolkit.getDefaultToolkit()
-        .addAWTEventListener(spy, java.awt.AWTEvent.MOUSE_EVENT_MASK);
-    try {
-      GuiSteps.clickUntil(
-          robot,
-          frame,
-          this::chromeMargin,
-          "clicking the field's own chrome moves focus into its editor",
-          () -> field.getEditor().isFocusOwner());
-    } catch (final AssertionError | RuntimeException failure) {
-      final AtomicReference<String> diag = new AtomicReference<>();
-      SwingUtilities.invokeAndWait(
-          () ->
-              diag.set(
-                  "point="
-                      + chromeMarginOnEdt()
-                      + " fieldOnScreen="
-                      + field.getLocationOnScreen()
-                      + " fieldSize="
-                      + field.getSize()
-                      + " fieldFocusable="
-                      + field.isFocusable()
-                      + " editorFocusable="
-                      + field.getEditor().isFocusable()
-                      + " editorEnabled="
-                      + field.getEditor().isEnabled()
-                      + " editorShowing="
-                      + field.getEditor().isShowing()
-                      + " editorBounds="
-                      + field.getEditor().getBounds()
-                      + " focusOwner="
-                      + java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager()
-                          .getFocusOwner()
-                      + " directRequest="
-                      + field.getEditor().requestFocusInWindow()
-                      + " presses="
-                      + trace));
-      Thread.sleep(200);
-      final AtomicReference<String> after = new AtomicReference<>();
-      SwingUtilities.invokeAndWait(
-          () ->
-              after.set(
-                  String.valueOf(
-                      java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager()
-                          .getFocusOwner())));
-      throw new AssertionError("DIAG " + diag.get() + " afterDirect=" + after.get(), failure);
-    } finally {
-      java.awt.Toolkit.getDefaultToolkit().removeAWTEventListener(spy);
-    }
+    GuiSteps.clickUntil(
+        robot,
+        frame,
+        this::chromeMargin,
+        "clicking the field's own chrome moves focus into its editor",
+        () -> field.getEditor().isFocusOwner());
 
     assertThat(onEdt(() -> other.getEditor().isFocusOwner()))
         .as("the previous editor released focus")
@@ -245,12 +195,6 @@ class ElwhaTextFieldGuiTest {
   private void focusTheEditor() throws Exception {
     SwingUtilities.invokeAndWait(() -> field.getEditor().requestFocusInWindow());
     waitFor("the field's editor owns focus", () -> field.getEditor().isFocusOwner());
-  }
-
-  /** {@link #chromeMargin()} without the EDT hop, for callers already on the EDT. */
-  private Point chromeMarginOnEdt() {
-    final Point origin = field.getLocationOnScreen();
-    return new Point(origin.x + 4, origin.y + ElwhaTextField.CONTAINER_HEIGHT / 2);
   }
 
   /** A point on the field's left padding — chrome the decorator owns, not the editor. */

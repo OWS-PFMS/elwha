@@ -163,4 +163,31 @@ public final class GuiSteps {
     }
     WaitFor.waitFor(what, effect);
   }
+
+  /**
+   * Returns the x for a per-test frame slot, wrapped so the frame always lands on the display.
+   *
+   * <p>Gui tests give each test method its own screen position because under bare Xvfb the previous
+   * test's window can still be tearing down at the shared one, and events aimed there go to the
+   * dying window. The wrap is the part that is easy to leave out and expensive to debug: a class
+   * whose slots march past the display width places a frame off-screen, where {@code Robot}'s
+   * clicks land on nothing. Nothing reports an error — the test simply never observes its effect
+   * and times out, so the failure reads as a bug in whatever the test was measuring.
+   *
+   * <p>Found the hard way in #688: adding a fifth test to {@code ElwhaTextFieldGuiTest} shifted the
+   * slots by one, put slot 4 at x=2340 on CI's 1920-wide Xvfb screen, and produced a focus test
+   * that failed with no {@code MOUSE_PRESSED} ever reaching the application.
+   *
+   * @param slot the zero-based slot, typically from a static counter incremented per test
+   * @param stride the horizontal spacing between slots, at least the frame's width
+   * @return an x inside the display
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public static int slotX(final int slot, final int stride) {
+    final int margin = 100;
+    final int usable = java.awt.Toolkit.getDefaultToolkit().getScreenSize().width - margin;
+    final int columns = Math.max(1, usable / stride);
+    return margin + (slot % columns) * stride;
+  }
 }

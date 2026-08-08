@@ -4,6 +4,7 @@ import static com.owspfm.elwha.testkit.WaitFor.onEdt;
 import static com.owspfm.elwha.testkit.WaitFor.waitFor;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.owspfm.elwha.testkit.GuiSteps;
 import com.owspfm.elwha.testkit.GuiToolkit;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.textfield.ElwhaTextField;
@@ -67,7 +68,7 @@ class ElwhaSelectFieldGuiTest {
           frame.add(combo);
           frame.add(neighbor);
           frame.pack();
-          frame.setLocation(100 + slot * 560, 100);
+          frame.setLocation(GuiSteps.slotX(slot, 560), 100);
           frame.setVisible(true);
         });
     robot.waitForIdle();
