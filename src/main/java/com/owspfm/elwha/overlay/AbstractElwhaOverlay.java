@@ -21,6 +21,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Objects;
 import javax.swing.AbstractAction;
+import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
@@ -789,7 +790,8 @@ public abstract class AbstractElwhaOverlay {
   }
 
   /**
-   * Depth-first search for the first focus-accepting descendant, skipping container panels.
+   * Depth-first search for the first focus-accepting descendant, skipping container panels and
+   * display-only components.
    *
    * @param root the container to search
    * @return the first focusable descendant, or {@code null}
@@ -800,7 +802,8 @@ public abstract class AbstractElwhaOverlay {
           && child.isEnabled()
           && child.isVisible()
           && child.isDisplayable()
-          && !(child instanceof JPanel)) {
+          && !(child instanceof JPanel)
+          && respondsToTheKeyboard(child)) {
         return child;
       }
       if (child instanceof Container) {
@@ -811,6 +814,27 @@ public abstract class AbstractElwhaOverlay {
       }
     }
     return null;
+  }
+
+  // Swing keeps display-only components out of Tab traversal by POLICY, not by the focusable flag —
+  // JLabel reports isFocusable() true — so the flag alone let a dialog open with focus on its
+  // headline (#578). LayoutFocusTraversalPolicy's own test is "has a WHEN_FOCUSED binding", which
+  // is
+  // what really distinguishes something the keyboard can operate; mirror it, walking the parent
+  // chain because a component's own map is usually an empty child of the UI-installed one. A
+  // decorator that delegates to an embedded editor (ElwhaTextField, ElwhaSelectField) fails this
+  // and
+  // is descended into instead, landing on the editor that owns the keystrokes — the right target
+  // anyway.
+  private static boolean respondsToTheKeyboard(final Component child) {
+    if (!(child instanceof JComponent jc)) {
+      return true;
+    }
+    InputMap map = jc.getInputMap(JComponent.WHEN_FOCUSED);
+    while (map != null && map.size() == 0) {
+      map = map.getParent();
+    }
+    return map != null;
   }
 
   /**
