@@ -38,12 +38,18 @@ import javax.swing.UIManager;
  * </ol>
  *
  * <p>Hotspots are authored against a 32&nbsp;px design grid and scaled to whatever size the toolkit
- * reports as best. A runtime theme switch invalidates the cache, so the next call rebuilds in the
- * new variant.
+ * reports as best. Both states share one hotspot, {@code (16, 14)} on the knuckle line, so the
+ * artwork does not shift when a press swaps grab for grabbing; both coordinates are even so the
+ * integer scale to 16&nbsp;px stays exact. A runtime theme switch invalidates the cache, so the
+ * next call rebuilds in the new variant.
+ *
+ * <p>The {@code -light-} and {@code -dark-} suffixes name the <em>theme</em> an asset is for, not
+ * the colour of its body: a {@code -light-} asset is a dark hand with a light halo, because that is
+ * what stays legible on a light panel. The Java2D fallback follows the same rule.
  *
  * <p>Relocated here from the V1 card list in story #69 (spec §7), which is what removes the last
- * code dependency the pre-#70 list families carried. The asset content itself is owned by issue
- * #531.
+ * code dependency the pre-#70 list families carried. The artwork was replaced with the first-party
+ * set in issue #531.
  *
  * @author Charles Bryan
  * @version v0.5.0
@@ -53,6 +59,13 @@ final class ReorderCursors {
 
   private static final int DESIGN_SIZE = 32;
   private static final int FALLBACK_SIZE = 16;
+
+  /**
+   * The bundled artwork's body colours, reused so the fallback matches the assets it stands in for.
+   */
+  private static final Color BODY_ON_DARK = new Color(0xFE, 0xFE, 0xFE);
+
+  private static final Color BODY_ON_LIGHT = new Color(0x1A, 0x1A, 0x1A);
 
   private static Cursor grabCached;
   private static Cursor grabbingCached;
@@ -81,7 +94,7 @@ final class ReorderCursors {
     }
     refreshIfThemeChanged();
     if (grabCached == null) {
-      grabCached = loadCursor("grab", isDarkTheme(), new Point(15, 8), "ElwhaItemList.grab", true);
+      grabCached = loadCursor("grab", isDarkTheme(), new Point(16, 14), "ElwhaItemList.grab", true);
     }
     return grabCached;
   }
@@ -100,7 +113,7 @@ final class ReorderCursors {
     refreshIfThemeChanged();
     if (grabbingCached == null) {
       grabbingCached =
-          loadCursor("grabbing", isDarkTheme(), new Point(13, 13), "ElwhaItemList.grabbing", false);
+          loadCursor("grabbing", isDarkTheme(), new Point(16, 14), "ElwhaItemList.grabbing", false);
     }
     return grabbingCached;
   }
@@ -219,7 +232,7 @@ final class ReorderCursors {
         return scaleIfNeeded(image, requestedSize);
       }
     }
-    return paintFallback(openHand, requestedSize);
+    return paintFallback(openHand, requestedSize, dark);
   }
 
   private static BufferedImage loadPng(final String fileName) {
@@ -254,12 +267,13 @@ final class ReorderCursors {
 
   // ----------------------------------------------------------- fallback paint
 
-  private static BufferedImage paintFallback(final boolean openHand, final int size) {
+  private static BufferedImage paintFallback(
+      final boolean openHand, final int size, final boolean dark) {
     final int actualSize = size > 0 ? size : FALLBACK_SIZE;
-    return openHand ? paintOpenHand(actualSize) : paintClosedFist(actualSize);
+    return openHand ? paintOpenHand(actualSize, dark) : paintClosedFist(actualSize, dark);
   }
 
-  private static BufferedImage paintOpenHand(final int size) {
+  private static BufferedImage paintOpenHand(final int size, final boolean dark) {
     final BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
     final Graphics2D g = image.createGraphics();
     try {
@@ -274,14 +288,14 @@ final class ReorderCursors {
       hand.add(new Area(rr(19, 6, 3, 12, 1.5, scale)));
       hand.add(new Area(rr(3.5, 18, 7, 5, 2.5, scale)));
 
-      strokeSilhouette(g, hand, scale);
+      strokeSilhouette(g, hand, scale, dark);
     } finally {
       g.dispose();
     }
     return image;
   }
 
-  private static BufferedImage paintClosedFist(final int size) {
+  private static BufferedImage paintClosedFist(final int size, final boolean dark) {
     final BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
     final Graphics2D g = image.createGraphics();
     try {
@@ -295,17 +309,18 @@ final class ReorderCursors {
       fist.add(new Area(rr(13, 10, 4, 4, 2, scale)));
       fist.add(new Area(rr(18, 10.5, 4, 4, 2, scale)));
 
-      strokeSilhouette(g, fist, scale);
+      strokeSilhouette(g, fist, scale, dark);
     } finally {
       g.dispose();
     }
     return image;
   }
 
-  private static void strokeSilhouette(final Graphics2D g, final Area shape, final double scale) {
-    g.setColor(Color.WHITE);
+  private static void strokeSilhouette(
+      final Graphics2D g, final Area shape, final double scale, final boolean dark) {
+    g.setColor(dark ? BODY_ON_DARK : BODY_ON_LIGHT);
     g.fill(shape);
-    g.setColor(Color.BLACK);
+    g.setColor(dark ? BODY_ON_LIGHT : BODY_ON_DARK);
     g.setStroke(new BasicStroke((float) Math.max(1.0, 1.2 * scale)));
     g.draw(shape);
   }
