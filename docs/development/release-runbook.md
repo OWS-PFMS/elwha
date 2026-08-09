@@ -281,7 +281,7 @@ it published, roll forward.
 
 ## Related
 
-- `CLAUDE.md` — *Release process* (the five-line summary), *Milestones*, *Where 1.0.0 stands*
+- `CLAUDE.md` — *Release process* (the five-line summary), *Milestones*, *Version state & release*
 - `docs/development/changelog-policy.md` — what earns a CHANGELOG entry and in which category
 - `docs/development/versioning.md` — the `@version` / `@since` convention the release gate enforces
 - `.github/workflows/publish.yml` — the workflow this page describes
