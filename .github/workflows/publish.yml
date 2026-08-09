@@ -45,6 +45,11 @@ jobs:
           echo "CHANGELOG entry found for ${TAG_VERSION}"
 
       - name: Build and publish
-        run: mvn -B clean deploy --file pom.xml
+        # The suite runs in the required Test workflow, which already gated the tagged tree on
+        # main. Re-running it here would need the Xvfb display scaffolding this workflow doesn't
+        # have (the gui tier can't run headless-native) and would duplicate a passed gate — the
+        # same dedupe reasoning as build.yml. This step's job is the artifacts: jar, sources,
+        # javadoc, deployed to GitHub Packages.
+        run: mvn -B clean deploy -DskipTests --file pom.xml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
