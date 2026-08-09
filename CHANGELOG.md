@@ -12,10 +12,22 @@ waves that were never cut, so four waves of components, refactors and fixes accu
 a single unreleased heading. Entries are grouped by kind rather than by the wave they landed in;
 **breaking changes come first** under Changed and Removed.
 
-Because nothing between `0.1.0` and `1.0.0` was ever published, most "breaking" entries below break
-nothing a consumer could have been depending on — they are recorded for provenance. The exceptions
-are the handful that change API present in `0.1.0`: the `FlatPill` → `ElwhaChip` and
-`FlatComp` → `Elwha` renames, and the chip surface removals.
+Most "breaking" entries below break nothing anyone could have been depending on: they change API
+that was introduced and then reworked inside this same unreleased span, and are recorded for
+provenance. What genuinely breaks a `0.1.0` consumer is the surface `0.1.0` actually shipped, and
+essentially all of it moved:
+
+- `FlatPill` → `ElwhaChip`, and the library-wide `FlatComp` → `Elwha` rename, with the
+  `FlatPill.*` UIManager namespace, raw-typed setters, foreground override and auto-contrast
+  machinery all gone.
+- `ElwhaCardList<T>` and `FlatPillList<T>` → the single `ElwhaItemList<T>`.
+- `ElwhaCard` is a different component. The `0.1.0` card was the pre-Elwha-theme V1; 1.0.0's is the
+  V3 chrome-only primitive, composed with `card.add(...)` rather than configured through typed
+  setters. `docs/migration/elwha-card-v1-to-v3.md` maps it setter by setter.
+- `ElwhaList<T>` survives as the interface, but now describes one implementation rather than two.
+
+There is no consumer mid-migration: the known consumer never adopted a published card, and 1.0.0 is
+its initial adoption.
 
 ### Added
 
