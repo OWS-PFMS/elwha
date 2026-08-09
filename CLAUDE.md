@@ -185,30 +185,11 @@ The workflow validates that the tag matches `pom.xml` and that `CHANGELOG.md` ha
 
 **`docs/development/release-runbook.md` is the executable version of this** — pre-flight checklist, the exact commands, and what to verify after the workflow goes green. Use it rather than the five lines above when actually cutting a release.
 
-## Where 1.0.0 stands
+## Version state & release
 
-**The road is finished; only the release act remains.** Every epic that gated the freeze is closed, `v0.5.0` is at zero open, and `v1.0.0` holds nothing but the publishing tail. Don't plan work against the old roadmap — this is the state:
+The pre-1.0 roadmap is **complete** — every epic that gated the freeze is closed, and the full account of what changed lives in `CHANGELOG.md`, not here. `v1.0.0` holds only the publishing tail: #97 (and epic #80, which closes with it) stay open until the tag publishes; the procedure is `docs/development/release-runbook.md`. `v1.1.0` is the post-1.0 parking lot for deliberately deferred work.
 
-| Epic | What it did | State |
-|---|---|---|
-| [#67](https://github.com/OWS-PFMS/elwha/issues/67) `ElwhaItemList<T>` | Collapsed the twin card/chip list families into one generic container on the locked `max(funcA, funcB)` principle. #68 spec → #69 build → #70 migrate + delete | **Closed** |
-| [#80](https://github.com/OWS-PFMS/elwha/issues/80) Card V3 | Chrome + composition rebuild; `card/v1` deleted 2026-08-07 (#96). V3 is what `card/` ships | Stories closed; **epic + #97 stay open until the tag** |
-| [#438](https://github.com/OWS-PFMS/elwha/issues/438) Regression suite | Zero tests → ~4,570, two tiers, required check on `main`. Framework selection in #439 | **Closed** |
-| [#440](https://github.com/OWS-PFMS/elwha/issues/440) Full lib review | Scan → file every finding → fix in batches, suite green per batch. ~90 findings filed and worked | **Closed** |
-| [#441](https://github.com/OWS-PFMS/elwha/issues/441) Showcase review · [#424](https://github.com/OWS-PFMS/elwha/issues/424) dogfood sweep | Storefront reordered under the family taxonomy; raw Swing replaced with Elwha equivalents throughout Showcase + playgrounds | **Closed** |
-| [#529](https://github.com/OWS-PFMS/elwha/issues/529) Javadoc review | Cleared the `-Xdoclint:all` baseline and flipped the build to enforce it | **Closed** |
-| [#531](https://github.com/OWS-PFMS/elwha/issues/531) Cursor licence | Third-party cursors replaced with first-party artwork; `NOTICE` now accurate | **Closed** |
-
-**What is actually left**, all on `v1.0.0`:
-
-- **[#530](https://github.com/OWS-PFMS/elwha/issues/530) — consumer adoption & publishing notes.** Install/auth, a Quick start that compiles, theming guide, component index, stability policy. Owns the README work #97 used to claim. In flight as PR #746.
-- **[#747](https://github.com/OWS-PFMS/elwha/issues/747) — a Showcase screenshot for the README front door.** Split out of #530; wanted before the tag so the published front page isn't text-only.
-- **[#759](https://github.com/OWS-PFMS/elwha/issues/759) — `ElwhaShowcase`'s class javadoc** still describes a six-leaf Components nav and the deleted Chip List / Card List containers. It ships in the published jar, so it wants fixing before the tag.
-- **[#97](https://github.com/OWS-PFMS/elwha/issues/97) — the release chore itself**, and **#80**, which closes with it. Both close *after* the tag publishes, not before. Procedure: `docs/development/release-runbook.md`.
-
-**Dead framings — don't work from them:** the old consumer-repo epics `OWS-Local-Search-GUI#252` / `#253` (absorbed by #67 and superseded by #80), and `docs/research/elwha-v1-component-scope.md`, which never locked and is marked superseded. `docs/handoff/elwha-v1-roadmap-handoff.md` was the plan of record for the road and is now largely historical — its §11 definition of done is the live part.
-
-**Completed renames, for context:** `FlatPill` → `ElwhaChip` (epic [#27](https://github.com/OWS-PFMS/elwha/issues/27)) is complete in the lib; `FlatComp` → `Elwha` (issue #42) executed 2026-05-15 in PR #44.
+**Superseded plans — don't work from them:** `docs/research/elwha-v1-component-scope.md` (never locked), `docs/handoff/elwha-v1-roadmap-handoff.md` (historical; its §11 definition of done was met), and the old consumer-repo epics `OWS-Local-Search-GUI#252` / `#253`.
 
 Org-level project board: **Project #5 — Material Flat Component Library** at `https://github.com/orgs/OWS-PFMS/projects/5`. **Every new issue gets added to it as part of filing.**
 
