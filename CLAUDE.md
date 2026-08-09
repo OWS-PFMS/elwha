@@ -203,6 +203,7 @@ The workflow validates that the tag matches `pom.xml` and that `CHANGELOG.md` ha
 
 - **[#530](https://github.com/OWS-PFMS/elwha/issues/530) — consumer adoption & publishing notes.** Install/auth, a Quick start that compiles, theming guide, component index, stability policy. Owns the README work #97 used to claim. In flight as PR #746.
 - **[#747](https://github.com/OWS-PFMS/elwha/issues/747) — a Showcase screenshot for the README front door.** Split out of #530; wanted before the tag so the published front page isn't text-only.
+- **[#759](https://github.com/OWS-PFMS/elwha/issues/759) — `ElwhaShowcase`'s class javadoc** still describes a six-leaf Components nav and the deleted Chip List / Card List containers. It ships in the published jar, so it wants fixing before the tag.
 - **[#97](https://github.com/OWS-PFMS/elwha/issues/97) — the release chore itself**, and **#80**, which closes with it. Both close *after* the tag publishes, not before. Procedure: `docs/development/release-runbook.md`.
 
 **Dead framings — don't work from them:** the old consumer-repo epics `OWS-Local-Search-GUI#252` / `#253` (absorbed by #67 and superseded by #80), and `docs/research/elwha-v1-component-scope.md`, which never locked and is marked superseded. `docs/handoff/elwha-v1-roadmap-handoff.md` was the plan of record for the road and is now largely historical — its §11 definition of done is the live part.
