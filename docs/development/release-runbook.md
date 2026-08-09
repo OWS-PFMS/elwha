@@ -185,11 +185,15 @@ The deploy publishes three artifacts — the jar, `-sources`, and `-javadoc` —
 
 ## 6. Post-publish verification
 
-**The GitHub Packages artifact.** It should list the new version, with all three jars:
+**The GitHub Packages artifact.** It should list the new version, with all three jars. The Maven
+package name is `groupId.artifactId`:
 
 ```bash
 gh api "/orgs/OWS-PFMS/packages/maven/com.owspfm.elwha/versions" --jq '.[].name'
 ```
+
+A `403 — You need at least read:packages scope` here is about **your token**, not the release. Re-run
+with `gh auth refresh -s read:packages`, or just read the Packages tab in the browser.
 
 Then confirm a consumer can actually resolve it. GitHub Packages requires authentication even for
 public packages, so this needs a `~/.m2/settings.xml` server entry with a PAT carrying
