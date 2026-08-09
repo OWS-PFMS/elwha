@@ -50,13 +50,12 @@ import javax.swing.event.EventListenerList;
  * &Oslash;{@value #ICON_SIZE_PX}) that fills with a &Oslash;{@value #DOT_SIZE_PX} inner dot while
  * selected.
  *
- * <p><strong>Architecture (load-bearing, locked by the S1 spike — design doc {@code
- * elwha-radiobutton-design.md} §2).</strong> {@code ElwhaRadioButton} is one dedicated {@link
- * JComponent} that paints every M3 part itself, holding the selection as a plain boolean. It is
- * <em>not</em> a styled {@code JRadioButton} and <em>not</em> a {@code ButtonUI} delegate: the
- * button UI's text/icon layout fights the icon-only anatomy, and {@code ButtonGroup} has no
- * vocabulary for the M3 group keyboard contract (selection-follows-focus arrows, roving tab stop)
- * that {@link ElwhaRadioGroup} carries.
+ * <p><strong>Architecture (load-bearing — design doc {@code elwha-radiobutton-design.md}
+ * §2).</strong> {@code ElwhaRadioButton} is one dedicated {@link JComponent} that paints every M3
+ * part itself, holding the selection as a plain boolean. It is <em>not</em> a styled {@code
+ * JRadioButton} and <em>not</em> a {@code ButtonUI} delegate: the button UI's text/icon layout
+ * fights the icon-only anatomy, and {@code ButtonGroup} has no vocabulary for the M3 group keyboard
+ * contract (selection-follows-focus arrows, roving tab stop) that {@link ElwhaRadioGroup} carries.
  *
  * <p><strong>Color (zero new tokens — research §Tokens).</strong> Unselected: ring {@link
  * ColorRole#ON_SURFACE_VARIANT}, shifting to {@link ColorRole#ON_SURFACE} under hover, focus, or
@@ -108,7 +107,7 @@ import javax.swing.event.EventListenerList;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.0
  * @since v0.4.0
  */
 public class ElwhaRadioButton extends JComponent implements BodyBearing {
@@ -1059,17 +1058,4 @@ public class ElwhaRadioButton extends JComponent implements BodyBearing {
         Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * f),
         Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * f));
   }
-
-  /**
-   * A retargeting tween over one float quantity — the CSS-transition model the research §Mo
-   * durations describe. Each {@link #retarget} captures the current value as the new starting point
-   * and re-runs the backing {@link MorphAnimator} {@code 0→1} through the given {@link Easing}, so
-   * a mid-flight direction change (deselect during the dot grow) continues from wherever the value
-   * currently is instead of jumping. Re-implemented privately from {@code ElwhaSwitch} — the #401
-   * branch is unmerged; extraction to {@code theme/} is the recorded design §14-2 follow-up.
-   *
-   * @author Charles Bryan
-   * @version v0.4.0
-   * @since v0.4.0
-   */
 }

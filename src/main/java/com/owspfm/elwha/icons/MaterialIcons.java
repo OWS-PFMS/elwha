@@ -15,25 +15,28 @@ import javax.swing.UIManager;
  * #DEFAULT_SIZE}, and a sized form taking an explicit pixel size, so consumers don't have to chain
  * {@code .derive(size, size)} themselves.
  *
- * <p>Adding new icons: drop the SVG under {@code resources/com/owspfm/icons/material/} (download
- * from <a href="https://fonts.google.com/icons">fonts.google.com/icons</a> with the same style axes
- * — Rounded, 400, fill 0, 20px — to keep visual consistency) and add a lookup here. Material
- * Symbols are licensed Apache-2.0; see the project LICENSE-NOTICES file for attribution.
- *
- * <p><strong>Theming icons from a client-owned resource path.</strong> Consumer libraries and apps
- * that want to pair their own SVGs with Elwha's theme-aware color filter should drop the SVGs at a
+ * <p><strong>Using your own icons.</strong> The bundle is fixed at build time — client code cannot
+ * add to it. To use your own icons alongside it, keep the SVGs in your <em>own</em> resources at a
  * client-owned classpath location (e.g. {@code com/acme/icons/}), construct a {@link FlatSVGIcon}
- * against that path, and wrap it with {@link #themed(FlatSVGIcon)}:
+ * against that path, and wrap it with {@link #themed(FlatSVGIcon)} so it follows the installed
+ * Elwha theme (light/dark re-skins live) exactly like the bundled set:
  *
  * <pre>{@code
  * Icon icon = MaterialIcons.themed(new FlatSVGIcon("com/acme/icons/foo.svg", 24, 24));
  * }</pre>
  *
- * <p>For unusual cases that need raw access to the filter (e.g. applying it to an icon constructed
- * elsewhere), use the {@link #LABEL_FOREGROUND_FILTER} constant directly. The alternative —
- * dropping SVGs into {@code com/owspfm/icons/material/} and using {@link #get(String)} — works, but
- * client names race Elwha's bundle on the classpath with undefined resolution order; the {@code
- * themed} route is the recommended one for any non-trivial consumer.
+ * <p>For visual consistency with the bundled glyphs, download from <a
+ * href="https://fonts.google.com/icons">fonts.google.com/icons</a> with the house style axes —
+ * Rounded, weight 400, fill 0, optical size 20px (fill 1 for selected/active states). The filter
+ * remaps every painted color to {@code Label.foreground}, so monochrome artwork themes cleanly;
+ * multicolor artwork will flatten. For unusual cases that need raw access to the filter (e.g.
+ * applying it to an icon constructed elsewhere), use the {@link #LABEL_FOREGROUND_FILTER} constant
+ * directly. One route to avoid: dropping SVGs into {@code com/owspfm/icons/material/} and using
+ * {@link #get(String)} appears to work, but client names race Elwha's bundle on the classpath with
+ * undefined resolution order — keep your icons in your own namespace.
+ *
+ * <p>Material Symbols are licensed Apache-2.0; see the project LICENSE-NOTICES file for
+ * attribution.
  *
  * <p><strong>Per-glyph optical centering varies.</strong> Material Symbols are designed for
  * text-baseline alignment in font usage, not optical centering when consumed as standalone
@@ -946,7 +949,7 @@ public final class MaterialIcons {
 
   /**
    * Leading back arrow "←" — M3's back-navigation affordance for multi-step surfaces; the {@code
-   * ElwhaSideSheet} header's optional back icon button (#308).
+   * ElwhaSideSheet} header's optional back icon button.
    *
    * @return the icon at {@link #DEFAULT_SIZE}
    * @version v0.5.0
@@ -1019,10 +1022,10 @@ public final class MaterialIcons {
 
   /**
    * Hamburger menu glyph — three horizontal lines. M3's canonical menu / drawer affordance, and the
-   * menu-button glyph used in the Navigation Rail Collapsed variant (Phase 2 of epic #159).
+   * menu-button glyph used in the Navigation Rail Collapsed variant.
    *
    * @return the icon at the default size
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public static FlatSVGIcon menu() {
@@ -1045,10 +1048,10 @@ public final class MaterialIcons {
    * Hamburger-with-arrow "menu open" glyph — M3's canonical collapse affordance shown when a
    * navigation drawer or rail is in its expanded state. Pairs with {@link #menu()} as the rail's
    * Collapsed ↔ Expanded toggle (design doc §4.3); the consumer flips the icon when calling {@code
-   * rail.morphTo(...)} in Phase 3.
+   * rail.morphTo(...)}.
    *
    * @return the icon at the default size
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public static FlatSVGIcon menuOpen() {
@@ -1623,6 +1626,9 @@ public final class MaterialIcons {
     return load("layers_fill", size);
   }
 
+  // Adding a bundled icon: drop the SVG under resources/com/owspfm/icons/material/ with the same
+  // style axes, add a lookup method here that calls load(...), and update the inventory in the
+  // package doc (MaterialIconsInventoryDocTest enforces it).
   private static FlatSVGIcon load(final String name, final int size) {
     return themed(new FlatSVGIcon(BASE + name + ".svg", size, size));
   }

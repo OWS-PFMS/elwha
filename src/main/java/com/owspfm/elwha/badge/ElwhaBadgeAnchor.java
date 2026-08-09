@@ -26,10 +26,10 @@ import javax.swing.SwingUtilities;
  * AnchorMode}: the default {@link AnchorMode#ICON_CORNER} pins the badge to the upper-trailing
  * corner of the host's icon bounding box (the canonical nav-rail case); {@link
  * AnchorMode#TRAILING_EDGE} pins it to the host composition's trailing edge, vertically centered —
- * the M3 "Favorites 84" pattern, where a Large badge follows a label + icon row ([#219]). Owns
- * three concerns the consumer would otherwise have to assemble manually: placement, RTL mirroring
- * (S4, #213), and push-model accessibility wiring (S5, #214). Mirrors the FAB §15 floating-FAB
- * recipe as a first-class primitive — the lesson #205 tracked.
+ * the M3 "Favorites 84" pattern, where a Large badge follows a label + icon row. Owns three
+ * concerns the consumer would otherwise have to assemble manually: placement, RTL mirroring, and
+ * push-model accessibility wiring. Mirrors the FAB §15 floating-FAB recipe as a first-class
+ * primitive.
  *
  * <p><strong>Z-order.</strong> The badge is added to the host's nearest {@link JLayeredPane}
  * ancestor (the root pane's layered pane in the common JFrame/JDialog case) at {@link
@@ -37,9 +37,9 @@ import javax.swing.SwingUtilities;
  * Elwha-owned overlay band that floats above ordinary content and below Elwha dialogs ({@link
  * JLayeredPane#MODAL_LAYER}) and Swing popups. Using the dedicated overlay band rather than the
  * public {@link JLayeredPane#PALETTE_LAYER} keeps the badge from colliding, add-order-dependently,
- * with consumer-owned floating UI that lives on {@code PALETTE_LAYER} ([#221]). Consumers with an
- * exotic stack can pin an explicit layer via the layer-override {@code attach(...)} overloads; the
- * pinned layer survives ancestor-change re-attach.
+ * with consumer-owned floating UI that lives on {@code PALETTE_LAYER}. Consumers with an exotic
+ * stack can pin an explicit layer via the layer-override {@code attach(...)} overloads; the pinned
+ * layer survives ancestor-change re-attach.
  *
  * <p><strong>Bounds geometry.</strong> The badge's bottom-leading corner is pinned a variant-
  * dependent offset from the icon's top-trailing corner — Small 6 × 6 dp, Large 14 × 12 dp (design
@@ -95,8 +95,7 @@ public final class ElwhaBadgeAnchor {
   private static final int LABEL_TRAILING_GAP_DP = 4;
 
   /**
-   * How far below the anchor rect's true centre the badge is seated in LABEL_TRAILING mode, in dp
-   * (#442).
+   * How far below the anchor rect's true centre the badge is seated in LABEL_TRAILING mode, in dp.
    *
    * <p>Geometrically centring a pill on a text rect makes it read <em>high</em>, because the rect
    * is the font box and the ink is not. Measured at {@code TITLE_SMALL} 14 px / Inter, in a 48 px
@@ -109,7 +108,7 @@ public final class ElwhaBadgeAnchor {
    * 1.25 px lower than the font-box centre at that size, which is the correction this constant
    * approximates. It is expressed as a flat dp rather than derived because the anchor is fed a
    * {@link Rectangle} and has no route to the host's baseline or x-height; feeding it a glyph box
-   * would be the exact fix, and is the larger change #442 also describes.
+   * would be the exact fix.
    */
   private static final int LABEL_TRAILING_OPTICAL_SEAT_DP = 1;
 

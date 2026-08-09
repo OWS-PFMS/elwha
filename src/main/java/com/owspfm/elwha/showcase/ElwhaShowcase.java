@@ -86,6 +86,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ComponentAdapter;
@@ -118,30 +119,28 @@ import javax.swing.event.DocumentListener;
 /**
  * The Elwha Showcase — the unified, curated playground for the whole Elwha component set.
  *
- * <p>A left <em>sidebar nav</em> selects one surface at a time into a card-swapped content area; a
- * header bar carries the light / dark / system mode toggle. The nav is organised into three
- * sections:
+ * <p>A full-height {@link com.owspfm.elwha.navrail.ElwhaNavigationRail} at the leading edge owns
+ * navigation across three areas — <strong>Foundations</strong> (the design tokens: color roles,
+ * type scale, spacing, and the raw-Swing bridge gallery, see {@link FoundationsPanels}),
+ * <strong>Components</strong> (every shipped component, one leaf each), and
+ * <strong>Containers</strong> (the multi-instance surfaces: the item list and the selection-group
+ * demos). Each area opens on a landing page of summary cards grouped by component family — the same
+ * family taxonomy the {@code GROUP_ORDER} constant encodes — and each leaf is a tabbed pane of
+ * {@code Workbench} (interactive controls on a staged instance, with a live equivalent-Java code
+ * view) and {@code Gallery} (the variant matrix) views. The header bar inside the content column
+ * carries the palette tier and picker plus the light / dark / system mode toggle, and a floating
+ * {@link com.owspfm.elwha.fab.ElwhaFabAnchor} demonstrates itself over the content.
  *
- * <ul>
- *   <li><strong>Foundations</strong> — the design tokens: color roles, type scale, and the
- *       raw-Swing gallery (see {@link FoundationsPanels}).
- *   <li><strong>Components</strong> — Button, Chip, Icon Button, Button Group, Card, and Surface,
- *       each a single inner tabbed pane of {@code Workbench} (interactive) and {@code Gallery}
- *       (matrix) views.
- *   <li><strong>Containers</strong> — the multi-instance surfaces: Chip List, Card List, and the
- *       Button / Icon Button group demos.
- * </ul>
- *
- * <p>Most panels are composed from the existing factored playground builders ({@code
- * ButtonPlaygroundPanels} and friends) so the Showcase and the standalone playgrounds never drift;
- * component Workbenches are progressively migrated onto the shared {@link ComponentWorkbench}
- * scaffold. The locked design is {@code docs/research/elwha-showcase-design.md}.
+ * <p>Leaves are composed from the factored per-component playground builders so the Showcase and
+ * the standalone playgrounds never drift; every component Workbench sits on the shared {@link
+ * ComponentWorkbench} / {@code ContainerWorkbench} scaffolds. The design is {@code
+ * docs/research/elwha-showcase-design.md}.
  *
  * <p>Run with: {@code mvn compile exec:java
  * -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"}
  *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.0
  * @since v0.3.0
  */
 public final class ElwhaShowcase {
@@ -187,6 +186,11 @@ public final class ElwhaShowcase {
   // Maximum width of the landing-page card grid. Caps cards at ~320 dp each (960 / 3) so the
   // grid reads as a dashboard tile-row rather than stretching cards to the full frame width.
   private static final int MAX_GRID_WIDTH = 960;
+
+  /** Landing-grid geometry — three fixed columns, 12 px between cells on both axes. */
+  private static final int GRID_COLUMNS = 3;
+
+  private static final int GRID_GAP = 12;
 
   private final List<Runnable> tokenRefreshers = new ArrayList<>();
   final JPanel content = new JPanel(new CardLayout());
@@ -277,6 +281,124 @@ public final class ElwhaShowcase {
     @Override
     public boolean getScrollableTracksViewportHeight() {
       return false;
+    }
+  }
+
+  /**
+   * {@link GridLayout}, except that it sizes its rows to what the cards need <em>at the cell width
+   * it is about to give them</em>.
+   *
+   * <p>A landing card's supporting copy is an HTML-wrapping {@code ElwhaCardSupportingText}, so its
+   * height is a function of the width it is given, and {@code GridLayout.preferredLayoutSize} asks
+   * every child for a preferred size without having told it anything about the cell it is going to
+   * receive. A card asked cold answers for the width it is holding, which before the first layout
+   * is none, so the copy reports the height of the whole string on one line. Measured on the
+   * Components landing at 1100 px: a blurb that wraps to six lines in its real 244 px slot reported
+   * two, the grid sized its rows to that, and the copy painted up to 56 px past the card's bottom
+   * border on 23 of 25 cards ([#737](https://github.com/OWS-PFMS/elwha/issues/737)).
+   *
+   * <p>{@link ElwhaCard#heightForSlotWidth(int)} is the question {@code GridLayout} could not ask,
+   * so this asks it. Nothing is resized to find the answer, which matters more than it looks:
+   * sizing the children during a measuring pass leaves every ancestor that caches size requirements
+   * — {@code BoxLayout} and {@code ScrollPaneLayout} both do — holding the pre-mutation answer, and
+   * since nothing invalidates them afterwards the page keeps that stale height for good. Measuring
+   * makes the grid's first answer its final one.
+   *
+   * <p>This changes <em>what</em> height the grid computes, not how many: the columns stay fixed at
+   * three and every cell keeps the same uniform size. Deriving the column count from the available
+   * width, and letting each row size to its own content, is
+   * [#441](https://github.com/OWS-PFMS/elwha/issues/441) seed 2 and is deliberately not done here.
+   */
+  private static final class CellWidthFirstGrid extends GridLayout {
+
+    private static final long serialVersionUID = 1L;
+
+    CellWidthFirstGrid() {
+      super(0, GRID_COLUMNS, GRID_GAP, GRID_GAP);
+    }
+
+    @Override
+    public Dimension preferredLayoutSize(final Container parent) {
+      return sizeAtCellWidth(parent, super.preferredLayoutSize(parent));
+    }
+
+    @Override
+    public Dimension minimumLayoutSize(final Container parent) {
+      return sizeAtCellWidth(parent, super.minimumLayoutSize(parent));
+    }
+
+    /**
+     * {@code GridLayout}'s own answer with the height replaced by one measured at the real cell
+     * width. The width is left alone — the grid is width-capped by its {@code maximumSize} and the
+     * hosting {@code BoxLayout} column honours that, so the reported width is not what decides how
+     * wide a cell ends up.
+     */
+    private static Dimension sizeAtCellWidth(final Container parent, final Dimension base) {
+      final int visible = visibleChildren(parent);
+      if (visible == 0) {
+        return base;
+      }
+      final int cellW = cellWidth(parent);
+      int cellH = 0;
+      for (final Component child : parent.getComponents()) {
+        if (child.isVisible()) {
+          cellH = Math.max(cellH, heightAt(child, cellW));
+        }
+      }
+      final int rows = (visible + GRID_COLUMNS - 1) / GRID_COLUMNS;
+      final Insets ins = parent.getInsets();
+      final int height = ins.top + ins.bottom + rows * cellH + (rows - 1) * GRID_GAP;
+      return new Dimension(base.width, height);
+    }
+
+    private static int heightAt(final Component child, final int cellW) {
+      return child instanceof ElwhaCard card
+          ? card.heightForSlotWidth(cellW)
+          : child.getPreferredSize().height;
+    }
+
+    private static int visibleChildren(final Container parent) {
+      int visible = 0;
+      for (final Component child : parent.getComponents()) {
+        if (child.isVisible()) {
+          visible++;
+        }
+      }
+      return visible;
+    }
+
+    /**
+     * The cell width, by the same arithmetic {@link GridLayout#layoutContainer} uses — but over the
+     * width the grid is <em>about to</em> receive, not the one it is holding.
+     *
+     * <p>Reading {@code parent.getWidth()} is the obvious thing and it is wrong here. A layout is
+     * asked for its preferred size before its container is resized, so during the pass that follows
+     * a frame resize the grid is still holding the previous frame's width — and a size query is
+     * exactly when it is asked. That answer then sticks: {@code BoxLayout} caches the child
+     * requirements it gathers, so a grid that reported 312 px cells while it was about to be given
+     * 276 px ones has told the page a row height the page will not revisit.
+     *
+     * <p>The width the grid will get is derivable without waiting for it: the hosting {@code
+     * BoxLayout} column hands it the page's content width, held to the {@link #MAX_GRID_WIDTH} cap
+     * its own {@code maximumSize} declares. That is the same number once the grid is settled, and
+     * the right one while it is not.
+     */
+    private static int cellWidth(final Container parent) {
+      final Insets ins = parent.getInsets();
+      final int outer = Math.min(MAX_GRID_WIDTH, ancestorContentWidth(parent));
+      final int inner = outer - ins.left - ins.right - (GRID_COLUMNS - 1) * GRID_GAP;
+      return Math.max(1, inner / GRID_COLUMNS);
+    }
+
+    /** The content width of the nearest ancestor that has one, or the cap when none does yet. */
+    private static int ancestorContentWidth(final Container parent) {
+      for (Container p = parent.getParent(); p != null; p = p.getParent()) {
+        if (p.getWidth() > 0) {
+          final Insets ins = p.getInsets();
+          return Math.max(1, p.getWidth() - ins.left - ins.right);
+        }
+      }
+      return MAX_GRID_WIDTH;
     }
   }
 
@@ -1025,14 +1147,14 @@ public final class ElwhaShowcase {
     return families;
   }
 
-  // A 3-column GridLayout grid of leaf cards, capped at MAX_GRID_WIDTH so individual cards stay
-  // at a dashboard-tile measure (~320 dp each) instead of stretching to the frame width.
-  // GridLayout divides its container width evenly across columns — so capping container.maxSize
-  // is enough; the BoxLayout column hosting the grid respects the max and aligns the grid
-  // leading-edge. ElwhaCardSupportingText is HTML-auto-wrapping so the cards' supporting copy
-  // reflows naturally at the chosen card width.
+  // A 3-column grid of leaf cards, capped at MAX_GRID_WIDTH so individual cards stay at a
+  // dashboard-tile measure (~320 dp each) instead of stretching to the frame width. GridLayout
+  // divides its container width evenly across columns — so capping container.maxSize is enough;
+  // the BoxLayout column hosting the grid respects the max and aligns the grid leading-edge.
+  // ElwhaCardSupportingText is HTML-auto-wrapping so the cards' supporting copy reflows naturally
+  // at the chosen card width — see CellWidthFirstGrid for what it takes to measure that reflow.
   private JComponent landingGrid(final List<LeafEntry> entries) {
-    final JPanel grid = new JPanel(new GridLayout(0, 3, 12, 12));
+    final JPanel grid = new JPanel(new CellWidthFirstGrid());
     grid.setOpaque(false);
     grid.setAlignmentX(JComponent.LEFT_ALIGNMENT);
     grid.setMaximumSize(new Dimension(MAX_GRID_WIDTH, Integer.MAX_VALUE));

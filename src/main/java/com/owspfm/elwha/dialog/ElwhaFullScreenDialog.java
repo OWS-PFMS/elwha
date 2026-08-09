@@ -75,7 +75,7 @@ import javax.swing.SwingUtilities;
  * action buttons — the dialog-owned close ✕ and the consumer {@code confirmAction} — via {@link
  * com.owspfm.elwha.button.ElwhaButton#setRippleEnabled}. The exit motion fades a one-time snapshot
  * of the surface, on which a live ripple would freeze mid-stroke; the exit motion is itself the
- * press feedback (epic #288).
+ * press feedback.
  *
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v0.5.0
@@ -221,10 +221,10 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
    * do not preview a dialog while it is shown.</strong> The slot holds the consumer's own component
    * under a hosted-as-is contract, and a Swing component has exactly one parent, so the preview
    * re-parents it: a shown dialog loses its content to the preview, and a second preview takes it
-   * from the first. This is the deliberate limit of the {@code renderPreview} isolation (#589,
-   * ruled in #708) rather than an oversight — an arbitrary consumer component has no copy
-   * constructor, and a placeholder would misrepresent the composition the preview exists to show.
-   * Preview a dialog that is not currently shown, or build a separate instance for the gallery.
+   * from the first. This is the deliberate limit of the {@code renderPreview} isolation rather than
+   * an oversight — an arbitrary consumer component has no copy constructor, and a placeholder would
+   * misrepresent the composition the preview exists to show. Preview a dialog that is not currently
+   * shown, or build a separate instance for the gallery.
    *
    * @return a non-modal render of the dialog surface
    * @version v0.5.0
@@ -552,12 +552,12 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
   }
 
   /**
-   * Fluent builder for {@link ElwhaFullScreenDialog}. Edge-to-edge scrolling content and a11y / RTL
-   * refinements are layered on in later Phase-1 stories; this builds the frame-filling dialog with
-   * a top app bar (close → headline → optional confirm) over a content column.
+   * Fluent builder for {@link ElwhaFullScreenDialog}: builds the frame-filling dialog with a top
+   * app bar (close → headline → optional confirm) over a content column, with edge-to-edge
+   * scrolling content and RTL support.
    *
    * @author Charles Bryan (cfb3@uw.edu)
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public static final class Builder {
@@ -586,12 +586,12 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
 
     /**
      * Sets the primary content component — typically a form. The dialog hosts it transparently and
-     * does not recolor it. (Edge-to-edge scrolling when the content is taller than the frame is
-     * added in a later Phase-1 story.)
+     * does not recolor it. Content taller than the frame leaves room scrolls vertically, with the
+     * top app bar staying pinned.
      *
      * @param content the content component, or {@code null} for none
      * @return {@code this}
-     * @version v0.3.0
+     * @version v0.5.0
      * @since v0.3.0
      */
     public Builder content(final JComponent content) {
@@ -607,12 +607,12 @@ public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {
      *
      * <p>The dialog disables this button's press ripple ({@link
      * com.owspfm.elwha.button.ElwhaButton#setRippleEnabled}) so it can't freeze on the exit-fade
-     * snapshot (#288); the exit motion is the feedback. The effect persists on the button instance
-     * if you reuse it elsewhere. (The dialog-owned close ✕ is likewise ripple-suppressed.)
+     * snapshot; the exit motion is the feedback. The effect persists on the button instance if you
+     * reuse it elsewhere. (The dialog-owned close ✕ is likewise ripple-suppressed.)
      *
      * @param button the confirming action, or {@code null} for none
      * @return {@code this}
-     * @version v0.3.0
+     * @version v0.5.0
      * @since v0.3.0
      */
     public Builder confirmAction(final ElwhaButton button) {

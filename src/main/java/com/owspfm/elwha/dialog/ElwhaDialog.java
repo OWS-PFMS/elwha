@@ -50,15 +50,15 @@ import javax.swing.SwingUtilities;
  * <p><strong>Why not {@code JOptionPane}.</strong> {@code ElwhaButton extends JComponent}, so
  * {@link javax.swing.JRootPane#setDefaultButton(javax.swing.JButton)} rejects it and {@code
  * JOptionPane} is fully closed to Elwha actions. {@code ElwhaDialog} is the custom path that
- * formalizes the hand-rolled About-dialog chrome from #252 — including the Esc-to-dismiss and
+ * formalizes the hand-rolled About-dialog chrome — including the Esc-to-dismiss and
  * Enter-to-confirm key wiring done by hand (the About dialog already proved the Esc half).
  *
  * <p><strong>Overlay host.</strong> The shared overlay-host lifecycle — host resolution, {@link
  * JLayeredPane#MODAL_LAYER} attach, dismiss/teardown, focus trap + restore, relayout-on-resize, and
- * the entrance/exit motion plumbing — lives in {@link AbstractElwhaDialog} (extracted in epic #271
- * S1 so the Full-screen Dialog can reuse it). This class supplies the Basic-Dialog anatomy: the
- * {@code SURFACE_CONTAINER_HIGH} / 28px / Level-3 surface clamped to the M3 280–560px band, the
- * scrim backdrop, the centered layout, the typed three-action row, and the scale-in entrance.
+ * the entrance/exit motion plumbing — lives in {@link AbstractElwhaDialog} (so the Full-screen
+ * Dialog can reuse it). This class supplies the Basic-Dialog anatomy: the {@code
+ * SURFACE_CONTAINER_HIGH} / 28px / Level-3 surface clamped to the M3 280–560px band, the scrim
+ * backdrop, the centered layout, the typed three-action row, and the scale-in entrance.
  *
  * <p><strong>Lifecycle.</strong> {@link #show(Component)} resolves the host frame from any
  * component in the tree (mirroring {@code JOptionPane.showXxx(parentComponent, ...)}), attaches the
@@ -269,12 +269,12 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
    * do not preview a dialog while it is shown.</strong> The slot holds the consumer's own component
    * under a hosted-as-is contract, and a Swing component has exactly one parent, so the preview
    * re-parents it: a shown dialog loses its content to the preview, and a second preview takes it
-   * from the first. This is the deliberate limit of the {@code renderPreview} isolation (#589,
-   * ruled in #708) rather than an oversight. It cannot be twinned the way the action buttons are —
-   * an arbitrary consumer component has no copy constructor, and a placeholder would misrepresent
-   * both the composition the preview exists to show and the natural size the surface settles at
-   * within the 280–560px band. Preview a dialog that is not currently shown, or build a separate
-   * instance for the gallery.
+   * from the first. This is the deliberate limit of the {@code renderPreview} isolation rather than
+   * an oversight. It cannot be twinned the way the action buttons are — an arbitrary consumer
+   * component has no copy constructor, and a placeholder would misrepresent both the composition
+   * the preview exists to show and the natural size the surface settles at within the 280–560px
+   * band. Preview a dialog that is not currently shown, or build a separate instance for the
+   * gallery.
    *
    * @return a non-modal render of the dialog surface
    * @version v0.5.0
@@ -547,12 +547,12 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
      * text button, but a filled / tonal one for emphasis is allowed.
      *
      * <p>The dialog disables this button's press ripple ({@link ElwhaButton#setRippleEnabled}) so
-     * it can't freeze on the exit-fade snapshot (#288); the exit motion is the feedback. The effect
+     * it can't freeze on the exit-fade snapshot; the exit motion is the feedback. The effect
      * persists on the button instance if you reuse it elsewhere.
      *
      * @param button the confirming action, or {@code null} for none
      * @return {@code this}
-     * @version v0.3.0
+     * @version v0.5.0
      * @since v0.3.0
      */
     public Builder confirmAction(final ElwhaButton button) {
@@ -565,12 +565,12 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
      * closes the dialog with {@link DismissCause#ALTERNATE}.
      *
      * <p>The dialog disables this button's press ripple ({@link ElwhaButton#setRippleEnabled}) so
-     * it can't freeze on the exit-fade snapshot (#288); the exit motion is the feedback. The effect
+     * it can't freeze on the exit-fade snapshot; the exit motion is the feedback. The effect
      * persists on the button instance if you reuse it elsewhere.
      *
      * @param button the alternate action, or {@code null} for none
      * @return {@code this}
-     * @version v0.3.0
+     * @version v0.5.0
      * @since v0.3.0
      */
     public Builder alternateAction(final ElwhaButton button) {
@@ -584,12 +584,12 @@ public final class ElwhaDialog extends AbstractElwhaDialog {
      * {@link DismissCause#CANCEL}.
      *
      * <p>The dialog disables this button's press ripple ({@link ElwhaButton#setRippleEnabled}) so
-     * it can't freeze on the exit-fade snapshot (#288); the exit motion is the feedback. The effect
+     * it can't freeze on the exit-fade snapshot; the exit motion is the feedback. The effect
      * persists on the button instance if you reuse it elsewhere.
      *
      * @param button the cancel action, or {@code null} for none
      * @return {@code this}
-     * @version v0.3.0
+     * @version v0.5.0
      * @since v0.3.0
      */
     public Builder cancelAction(final ElwhaButton button) {

@@ -7,10 +7,10 @@ import java.util.function.Predicate;
  * mode at a time. The mode drives drag-enable, the reorder cursor / handle affordance, the
  * auto-injected context-menu sections, and which partition (if any) the render order honors.
  *
- * <p>Lifted verbatim from the chip family in story #69 and hoisted to the top level (spec §8). For
- * back-compat, {@link ElwhaItemList#setReorderable(boolean)} maps to {@link #STATIC} (false) or
- * {@link #MOVABLE} (true), {@link ElwhaItemList#setPinPredicate(Predicate)} implicitly flips to
- * {@link #PINNED}, and {@link ElwhaItemList#setAnchorPredicate(Predicate)} to {@link #ANCHORED}.
+ * <p>Lifted verbatim from the chip family and hoisted to the top level (spec §8). For back-compat,
+ * {@link ElwhaItemList#setReorderable(boolean)} maps to {@link #STATIC} (false) or {@link #MOVABLE}
+ * (true), {@link ElwhaItemList#setPinPredicate(Predicate)} implicitly flips to {@link #PINNED}, and
+ * {@link ElwhaItemList#setAnchorPredicate(Predicate)} to {@link #ANCHORED}.
  *
  * @author Charles Bryan
  * @version v0.5.0

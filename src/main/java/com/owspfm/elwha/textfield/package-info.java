@@ -8,10 +8,12 @@
  * <p>Architecturally a <i>decorator</i>: {@code ElwhaTextField extends JComponent} owns the chrome
  * paint, the floating label, the typed slots, and the token mapping, while an embedded {@code
  * JTextField} owns the editing surface (caret, selection, IME, copy/paste, accessibility) that
- * Swing provides for free. Decisions: {@code docs/research/elwha-textfield-design.md}.
+ * Swing provides for free.
+ *
+ * <p>Design: {@code docs/research/elwha-textfield-design.md}.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 package com.owspfm.elwha.textfield;

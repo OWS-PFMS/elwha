@@ -8,6 +8,9 @@ The canonical exemplars are **`switches/ElwhaSwitch`** (a component class doc, e
 **`surface/ElwhaSurface`** (a primitive with subclass hooks — and the first doclint-clean class in
 the library). Write new docs by imitating them, not by inventing structure.
 
+Read **[Audience](#audience-the-javadoc-is-the-clients-reference)** first — it decides what may
+appear at all, and the sections below only govern how it is shaped.
+
 ## The component class doc
 
 One `<p><strong>…</strong>` paragraph per concern, in this order, dropping paragraphs that don't
@@ -65,3 +68,41 @@ As of #529 Phase 0 the javadoc plugin runs `<doclint>all</doclint>` with
 `<failOnError>true</failOnError>`: doclint *errors* fail `mvn package` (and therefore the `build`
 check). Warnings print but do not fail — until the epic's final story flips `failOnWarnings` once
 the tracked debt reaches zero. Do not reintroduce suppression.
+
+## Audience — the javadoc is the client's reference
+
+Since #529 Phase 0 the javadoc is deployed as a Pages site on every push to `main`. It is the
+public API reference, not a contributor artifact, and it is written for the **client**. Ruling
+approved 2026-08-08; swept across the library in #755.
+
+- **Method docs are pure contract.** What it does, what it takes, what it returns, what it throws,
+  what it fires, what it repaints. Nothing about how the method came to exist.
+- **Class docs are contract plus design intent** — the load-bearing structural decision and *why*,
+  the token bindings, the deliberate M3 divergences. But **no workflow artifacts**: no phase
+  language, no issue or PR numbers, no epic narration, and never "the operator".
+- **Maintainer instructions** — "add a lookup here when you add a variant", "bump this when the
+  token changes" — are for whoever edits the file next, not for the client. They move to an
+  **implementation comment** at the code site they govern. The no-comments-by-default rule in
+  `code-style.md` already permits them: a rule the code cannot express is exactly the non-obvious
+  *why* that earns a comment.
+- **Package docs may keep exactly one trailing provenance line** — epic link plus design doc path —
+  placed immediately before the tag block. That single line is the contributor's map into the
+  research docs, and it is the **only** sanctioned home for a workflow reference in javadoc. One
+  line, one package, no more; a package that has none does not need one invented.
+
+Two things this ruling deliberately does **not** touch:
+
+- **Design and research doc citations in class docs stay.** Item 10 of *The component class doc*
+  still stands, and so do the inline `design §7` section cites. A design doc is where the intent is
+  sourced from, not a workflow record — it explains the shipped behavior rather than the project
+  that produced it. Only the *epic link* is package-doc-only.
+- **Implementation comments are out of scope.** They are not published, so `// #176 Phase 2 —
+  press morph deltas` is fine where it sits and is in fact the destination this ruling demotes
+  javadoc workflow content *to*.
+
+Rewriting, not deleting, is the default. Where a sentence carries real intent wrapped around a
+workflow reference, keep the intent and drop the reference — "the shape-morph engine from epic
+#468" becomes "the shape-morph engine". Delete outright only when the sentence is pure provenance
+narration with no contract or intent left once the reference is gone. Genuine caveats a client can
+trip over — known limitations, optical-centering notes, ordering constraints — are contract and
+always stay.

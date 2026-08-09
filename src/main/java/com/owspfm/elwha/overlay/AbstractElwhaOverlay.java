@@ -38,14 +38,13 @@ import javax.swing.SwingUtilities;
  * axes: <em>dismiss policy</em> (modal-trap vs light-dismiss) and <em>placement</em> (the {@link
  * #layoutSurface} hook — centered, anchored, frame-filling).
  *
- * <p><strong>Extraction provenance (epic #298 S1 spike).</strong> Lifted out of {@code
- * com.owspfm.elwha.dialog.AbstractElwhaDialog} (#254/#271) so the M3 Menu (#298) and the pending
- * side-sheet (#308) reuse the mount/focus/motion plumbing instead of copying it. {@code
- * AbstractElwhaDialog} is now the modal-scrim + centered subclass ({@link #lightDismiss()} {@code
- * false}, {@link #overlayLayer()} {@link JLayeredPane#MODAL_LAYER}); the menu host is the
- * light-dismiss + anchored subclass ({@link #lightDismiss()} {@code true}, {@link #overlayLayer()}
- * {@link JLayeredPane#POPUP_LAYER}). The split is recorded in {@code
- * docs/research/elwha-menu-design.md} §2.
+ * <p><strong>Shared host.</strong> This base exists so {@code
+ * com.owspfm.elwha.dialog.AbstractElwhaDialog}, the M3 Menu, and the side sheet reuse the
+ * mount/focus/motion plumbing instead of copying it. {@code AbstractElwhaDialog} is the modal-scrim
+ * + centered subclass ({@link #lightDismiss()} {@code false}, {@link #overlayLayer()} {@link
+ * JLayeredPane#MODAL_LAYER}); the menu host is the light-dismiss + anchored subclass ({@link
+ * #lightDismiss()} {@code true}, {@link #overlayLayer()} {@link JLayeredPane#POPUP_LAYER}). The
+ * split is recorded in {@code docs/research/elwha-menu-design.md} §2.
  *
  * <p><strong>Not part of the public API.</strong> Declared {@code public} only to cross the {@code
  * .overlay} package boundary into the component packages (dialog, menu, side-sheet) that subclass
@@ -207,13 +206,13 @@ public abstract class AbstractElwhaOverlay {
   /**
    * Whether the overlay participates in keyboard focus at all. {@code true} (default) moves initial
    * focus into the surface, installs the focus-escape listener, and restores focus on close — the
-   * menu/dialog contract. A <em>passive</em> overlay (a tooltip, epic #445) returns {@code false}:
-   * the component that triggered it keeps focus the whole time — no initial-focus grab, no
-   * focus-escape reaction, no restore-on-close — because yanking focus out from under a hovering
-   * pointer would interrupt typing in the very control the overlay describes.
+   * menu/dialog contract. A <em>passive</em> overlay (a tooltip) returns {@code false}: the
+   * component that triggered it keeps focus the whole time — no initial-focus grab, no focus-escape
+   * reaction, no restore-on-close — because yanking focus out from under a hovering pointer would
+   * interrupt typing in the very control the overlay describes.
    *
    * @return {@code true} (default) when the overlay takes focus while shown
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   protected boolean takesFocus() {
@@ -382,18 +381,17 @@ public abstract class AbstractElwhaOverlay {
   }
 
   /**
-   * Shows this overlay as a <em>child</em> of {@code parent} in the overlay chain (epic #322): it
-   * mounts above {@code parent} — typically anchored to an item inside it — <strong>without
-   * dismissing {@code parent}</strong>. The chain (root → child → …) becomes the unit of "one
-   * overlay open": focus lives in the topmost level, an outside-the-chain press closes every level,
-   * and {@code parent}'s teardown cascades to this child. When this child closes on its own
-   * (Escape, a back key, focus loss) {@code parent} stays up and is notified via {@link
-   * #onChainChildClosed()}.
+   * Shows this overlay as a <em>child</em> of {@code parent} in the overlay chain: it mounts above
+   * {@code parent} — typically anchored to an item inside it — <strong>without dismissing {@code
+   * parent}</strong>. The chain (root → child → …) becomes the unit of "one overlay open": focus
+   * lives in the topmost level, an outside-the-chain press closes every level, and {@code parent}'s
+   * teardown cascades to this child. When this child closes on its own (Escape, a back key, focus
+   * loss) {@code parent} stays up and is notified via {@link #onChainChildClosed()}.
    *
    * @param anchor the component to anchor and resolve the host from (an item inside {@code parent})
    * @param parent the overlay this one nests under; required
    * @throws NullPointerException if {@code anchor} or {@code parent} is {@code null}
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   protected final void showInChain(final Component anchor, final AbstractElwhaOverlay parent) {
@@ -862,7 +860,7 @@ public abstract class AbstractElwhaOverlay {
    * order is registration recency, not z-order, so it agrees with {@code isTopmost()} only while
    * show order and layer order happen to coincide: a modal side sheet ({@code OVERLAY_LAYER}) shown
    * while a dialog ({@code MODAL_LAYER}) is already up registers last but paints underneath, and
-   * took Escape out from under the dialog on top of it (#599).
+   * took Escape out from under the dialog on top of it.
    *
    * <p>Reporting {@code isEnabled() == false} rather than no-op'ing the body is what makes the fix
    * work: {@code SwingUtilities.notifyAction} treats a disabled action as not-fired, so the search

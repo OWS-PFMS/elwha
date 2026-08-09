@@ -64,6 +64,25 @@ public final class ElwhaCardSupportingText extends JLabel {
   }
 
   /**
+   * The height this atom's wrapped text needs at a given slot width. Called by {@link ElwhaCard}'s
+   * {@code VerticalCardLayout} so the chassis measures the copy at the width it is about to assign
+   * rather than the width the label happens to be holding — the same height-for-width hook {@link
+   * ElwhaCardMedia#heightForSlotWidth(int)} and {@link ElwhaCardActions#heightForSlotWidth(int)}
+   * already provide.
+   *
+   * @param slotWidth the cell width the chassis will assign in pixels
+   * @return the height in pixels the chassis should reserve
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  int heightForSlotWidth(final int slotWidth) {
+    if (isPreferredSizeSet()) {
+      return super.getPreferredSize().height;
+    }
+    return WrappingLabels.heightForWidth(this, slotWidth);
+  }
+
+  /**
    * Reports unbounded X-axis so a parent {@code BoxLayout(Y_AXIS)} (or any width-respecting layout)
    * stretches this atom to the available width — letting HTML wrap kick in at narrow chassis widths
    * per spec §3.4 rule 2 / §22 guard-rail. Critical for the §3.4 contract: without this, supporting

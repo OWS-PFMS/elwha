@@ -132,7 +132,7 @@ public final class ElwhaCardExpandLink extends JLabel {
 
   /**
    * Paints the link, then its keyboard focus ring. A {@link JLabel} draws no focus indicator of its
-   * own, so this tab stop was previously invisible when focus landed on it (#606).
+   * own, so this tab stop was previously invisible when focus landed on it.
    *
    * @param g the graphics context
    * @version v0.5.0
@@ -163,14 +163,14 @@ public final class ElwhaCardExpandLink extends JLabel {
   // restore the subscription without stacking a second copy.
   private void subscribe() {
     if (!subscribed) {
-      card.addExpansionChangeListener(expansionSync);
+      card.addPropertyChangeListener(ElwhaCard.PROPERTY_COLLAPSED, expansionSync);
       subscribed = true;
     }
   }
 
   private void unsubscribe() {
     if (subscribed) {
-      card.removeExpansionChangeListener(expansionSync);
+      card.removePropertyChangeListener(ElwhaCard.PROPERTY_COLLAPSED, expansionSync);
       subscribed = false;
     }
   }
@@ -288,9 +288,9 @@ public final class ElwhaCardExpandLink extends JLabel {
   /**
    * Self-anchors the link's host container as {@link CollapseRule#ALWAYS_VISIBLE} on the driven
    * card the first time the link is added to the component tree underneath that card. See class
-   * Javadoc for rationale (the #23 footgun applies to ExpandLink for the same reason as
-   * ElwhaCardChevron). Defensive: silently does nothing if the link is added outside the card's
-   * subtree.
+   * Javadoc for rationale, which applies to the expand link for the same reason it applies to
+   * {@link ElwhaCardChevron}. Defensive: silently does nothing if the link is added outside the
+   * card's subtree.
    *
    * <p>Also subscribes the label text to the card's expansion state and resyncs it, since the card
    * can have been toggled while the link was detached.

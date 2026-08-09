@@ -52,9 +52,9 @@ public final class Palette {
    *
    * <p>A palette is a complete, immutable map of 49 roles to colors and nothing else, so identity
    * equality made two loads of one JSON file unequal. That is the defect behind {@link
-   * MaterialPalettes}'s resource-keyed cache ((#671)), which fixed the bundled case by ensuring
-   * there is only ever one instance; a consumer-loaded palette had no such guarantee and could
-   * never be compared against a bundled one. Ruled for the 1.0 freeze in (#698).
+   * MaterialPalettes}'s resource-keyed cache, which fixed the bundled case by ensuring there is
+   * only ever one instance; a consumer-loaded palette had no such guarantee and could never be
+   * compared against a bundled one.
    *
    * @param obj the object to compare against
    * @return whether {@code obj} is a palette with the same role-to-color mapping

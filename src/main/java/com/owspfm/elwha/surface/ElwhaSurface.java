@@ -239,10 +239,10 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
    * Opts this surface into the antialiased rounded-corner child clip. When {@code true}, children
    * are composited through the chassis's curved corner so an opaque edge-to-edge child (e.g. an
    * {@code ElwhaCardMedia} cover) conforms to the round-rect outline instead of overhanging it with
-   * a square corner (#157). When {@code false} (the default) children paint directly with no
-   * offscreen buffer — the right, cheap choice for the common case where every child is inset from
-   * the corners (plain surfaces, dialogs, non-media cards), since the clip then has nothing to do
-   * and would only burn an allocation per paint (#272).
+   * a square corner. When {@code false} (the default) children paint directly with no offscreen
+   * buffer — the right, cheap choice for the common case where every child is inset from the
+   * corners (plain surfaces, dialogs, non-media cards), since the clip then has nothing to do and
+   * would only burn an allocation per paint.
    *
    * <p>Subclasses that intrinsically host a corner-reaching opaque child may force the clip on
    * regardless of this flag — {@code ElwhaCard} enables it automatically whenever an edge-bleed
@@ -251,7 +251,7 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
    * @param clip {@code true} to clip children to the rounded corners; {@code false} to paint them
    *     directly
    * @return {@code this} for fluent chaining
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public ElwhaSurface setClipChildrenToCorners(final boolean clip) {
@@ -452,11 +452,11 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
    * and border are <em>not</em> painted here — they are folded into the child clip buffer in {@link
    * #paintChildren} so the chassis fill shares the children's single antialiased corner cut,
    * instead of the fill and an opaque edge-to-edge child antialiasing their corners in two separate
-   * passes (the #163 corner fringe). Only the shadow, which sits behind everything, is painted here
-   * in that case.
+   * passes (the corner fringe). Only the shadow, which sits behind everything, is painted here in
+   * that case.
    *
    * @param g the graphics context
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   @Override
@@ -523,21 +523,21 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
    *
    * <p>Java2D never antialiases a {@link Graphics2D#clip(java.awt.Shape) clip} boundary, so a plain
    * round-rect clip leaves an opaque edge-to-edge child with jagged, stair-stepped corners against
-   * the smooth chassis fill (#157). Instead the children are drawn into an offscreen buffer and
-   * composited back through an antialiased rounded-rect alpha mask ({@link AlphaComposite#DstIn});
-   * the mask carries the AA so every child's corner curve matches the chassis exactly. The buffer
-   * is sized to the {@code Graphics}' device resolution so children stay crisp on a HiDPI display.
+   * the smooth chassis fill. Instead the children are drawn into an offscreen buffer and composited
+   * back through an antialiased rounded-rect alpha mask ({@link AlphaComposite#DstIn}); the mask
+   * carries the AA so every child's corner curve matches the chassis exactly. The buffer is sized
+   * to the {@code Graphics}' device resolution so children stay crisp on a HiDPI display.
    *
    * <p>The offscreen buffer runs only when {@link #clipsChildrenToCorners()} resolves {@code true}
    * — i.e. the surface actually hosts a corner-reaching opaque child. Every other surface (inset
    * children, dialogs, non-media cards) takes the direct {@code super.paintChildren} path with no
-   * allocation, since the clip would have nothing to cut there (#272). When the buffer does run,
-   * the device-resolution image and the corner-overflow {@link Area} are cached and reused across
+   * allocation, since the clip would have nothing to cut there. When the buffer does run, the
+   * device-resolution image and the corner-overflow {@link Area} are cached and reused across
    * paints — re-created only when the device size or body geometry changes — so an animating child
    * (a card ripple) doesn't churn an allocation per frame.
    *
    * @param g the graphics context
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   @Override
@@ -638,7 +638,7 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
    * Returns a cleared device-resolution ARGB buffer of the requested size, reusing the cached image
    * when its dimensions are unchanged (the common animating-child case) so the clip path doesn't
    * allocate per paint. A reused buffer is cleared to fully transparent first, since it still holds
-   * the previous frame's pixels (#272).
+   * the previous frame's pixels.
    */
   private BufferedImage acquireClipBuffer(final int deviceW, final int deviceH) {
     BufferedImage buffer = clipBufferCache != null ? clipBufferCache.get() : null;
@@ -660,8 +660,8 @@ public class ElwhaSurface extends JPanel implements ShadowBearing {
   /**
    * Returns the corner-overflow region — the body rectangle minus its rounded body shape — reusing
    * the cached {@link Area} when the body geometry is unchanged, so the {@link Area} subtract math
-   * isn't rebuilt per paint (#272). {@link SurfacePainter#bodyShape} is the single source of the
-   * curve geometry so the cut aligns with the chassis fill and stroke exactly.
+   * isn't rebuilt per paint. {@link SurfacePainter#bodyShape} is the single source of the curve
+   * geometry so the cut aligns with the chassis fill and stroke exactly.
    */
   private Area cornerOverflow(
       final int bodyX, final int bodyY, final int bodyW, final int bodyH, final int arc) {

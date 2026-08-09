@@ -2869,7 +2869,7 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
    * association for custom cursors across a Spaces or Mission Control transition, so a list that
    * survives one goes back to the default pointer with nothing to re-install it. Re-applying the
    * cached instances would not help — the objects survive, the association is what dies — so the
-   * cursors are rebuilt first (#556).
+   * cursors are rebuilt first.
    *
    * @version v0.5.0
    * @since v0.5.0
@@ -2883,7 +2883,7 @@ public class ElwhaItemList<T> extends JPanel implements Accessible, ElwhaList<T>
    * window holding several cursor-swap lists would otherwise rebuild once per list on every Alt-Tab
    * — each list discarding the cursor the one before it had just decoded. Charging the rebuild to
    * the activation event itself makes it happen once, after which the remaining lists re-apply from
-   * the warm cache (#614).
+   * the warm cache.
    *
    * @param activation the window-activation event to charge the rebuild to, or {@code null} to
    *     rebuild unconditionally

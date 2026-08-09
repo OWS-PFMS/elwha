@@ -7,11 +7,10 @@ package com.owspfm.elwha.button;
  * com.owspfm.elwha.theme.SurfacePainter} clamps the arc to {@code min(width, height)}) and {@link
  * #SQUARE} (per-size corner radius from the {@code BUTTON_SQUARE_CORNERS_DP} table inside {@link
  * ElwhaButton}). The shape is static for the component's lifetime — shape morph on press /
- * selection is deferred to a future animation epic per {@code docs/research/elwha-button-design.md}
- * §10.
+ * selection is not yet implemented; see {@code docs/research/elwha-button-design.md} §10.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 public enum ButtonShape {
@@ -26,10 +25,9 @@ public enum ButtonShape {
   ROUND,
 
   /**
-   * Square treatment with a per-size corner radius. Story 3 hardcodes the Small radius (12 px);
-   * Story 4 generalizes the full size axis.
+   * Square treatment with a per-size corner radius across the full button-size axis.
    *
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   SQUARE

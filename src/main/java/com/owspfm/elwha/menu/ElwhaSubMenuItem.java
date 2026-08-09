@@ -14,10 +14,10 @@ import javax.swing.Icon;
 import javax.swing.Timer;
 
 /**
- * A menu item that hosts a nested {@link ElwhaMenu} — the M3 <strong>submenu</strong> trigger (epic
- * #322 V2). The one sanctioned sibling of {@link ElwhaMenuItem} (design §3, research §Q′): it
- * inherits the full slot anatomy, state painting, and accessibility of a menu item and adds a
- * nested menu that opens to the side without dismissing its parent.
+ * A menu item that hosts a nested {@link ElwhaMenu} — the M3 <strong>submenu</strong> trigger (V2).
+ * The one sanctioned sibling of {@link ElwhaMenuItem} (design §3, research §Q′): it inherits the
+ * full slot anatomy, state painting, and accessibility of a menu item and adds a nested menu that
+ * opens to the side without dismissing its parent.
  *
  * <p>Activating the item — a <strong>hover-intent dwell</strong> (400 ms), a click, or Right-arrow
  * — opens its {@link #getSubMenu() submenu} as a child overlay anchored beside this row; the parent

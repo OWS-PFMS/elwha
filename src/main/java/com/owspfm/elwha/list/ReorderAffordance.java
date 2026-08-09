@@ -3,8 +3,8 @@ package com.owspfm.elwha.list;
 /**
  * How {@link ElwhaItemList} signals that an item can be dragged to reorder.
  *
- * <p>Introduced in story #69 (spec §7). The two shipped list families offered only the cursor swap;
- * the hover-revealed drag handle is new with the unified list.
+ * <p>Introduced (spec §7). The two shipped list families offered only the cursor swap; the
+ * hover-revealed drag handle is new with the unified list.
  *
  * @author Charles Bryan
  * @version v0.5.0

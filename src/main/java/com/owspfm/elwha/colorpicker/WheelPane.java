@@ -170,9 +170,9 @@ final class WheelPane extends ColorPickerPane {
 
     /**
      * Whether the focus indicator should paint — armed only by a keyboard traversal, so a plain
-     * click leaves no ring behind ({@link com.owspfm.elwha.theme.FocusVisible}, #630). Every one of
-     * these panes requests focus from its own mousePressed, which is exactly the case the gate
-     * exists for.
+     * click leaves no ring behind ({@link com.owspfm.elwha.theme.FocusVisible}). Every one of these
+     * panes requests focus from its own mousePressed, which is exactly the case the gate exists
+     * for.
      */
     private boolean focusVisible;
 
@@ -354,7 +354,7 @@ final class WheelPane extends ColorPickerPane {
   /**
    * The hue/saturation disc, evaluated per pixel at the requested diameter — the uncached render
    * behind {@code WheelDisc}'s cache, and the direct-render seam a cached-versus-direct probe
-   * compares against (#692).
+   * compares against.
    *
    * <p>The edge is antialiased inside the image (per-pixel coverage), never via {@code clip()} —
    * Java2D clipping is never antialiased (the V1 shade-strip smoke-iterate finding). That analytic

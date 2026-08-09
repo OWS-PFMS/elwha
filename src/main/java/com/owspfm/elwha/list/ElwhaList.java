@@ -8,9 +8,9 @@ import javax.swing.JComponent;
 /**
  * The shared contract implemented by every {@code ElwhaList} component family member — {@link
  * ElwhaItemList} today, and any future sibling that renders a model as a list of components. The
- * parallel card-list and chip-list families that predated it were retired in epic #67.
+ * parallel card-list and chip-list families that predated it were retired.
  *
- * <p>Extracted in story #237 so consumers can write orientation-agnostic and family-agnostic code:
+ * <p>Extracted so consumers can write orientation-agnostic and family-agnostic code:
  *
  * <pre>{@code
  * void configureForCompactMode(ElwhaList<?> list) {

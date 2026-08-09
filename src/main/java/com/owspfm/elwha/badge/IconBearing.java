@@ -7,7 +7,7 @@ import javax.swing.JComponent;
  * Contract for components that own an icon at a known position inside their own coordinate space —
  * the placement target {@link ElwhaBadgeAnchor} anchors badges to. Hosts that conform expose their
  * icon bounding box via {@link #getIconBounds()}; the anchor primitive does the rest (placement,
- * RTL mirroring once S4 lands, accessibility wiring once S5 lands).
+ * RTL mirroring, accessibility wiring).
  *
  * <p>Implementations must also be a {@link JComponent} — the anchor primitive needs to install
  * listeners on the host and use Swing coordinate-conversion utilities against it. Non-conforming
@@ -16,7 +16,7 @@ import javax.swing.JComponent;
  * takes an explicit {@link Rectangle} instead.
  *
  * @author Charles Bryan
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public interface IconBearing {

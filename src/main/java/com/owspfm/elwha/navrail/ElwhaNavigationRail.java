@@ -42,13 +42,13 @@ import javax.swing.KeyStroke;
  * stack of {@link ElwhaNavRailDestination primary destinations}, and an optional list of trailing
  * utility actions.
  *
- * <p><strong>Phase 3 — both variants and the Collapsed↔Expanded morph.</strong> The rail now
- * supports {@link Variant#COLLAPSED} (96 dp fixed) and {@link Variant#EXPANDED} (220–360 dp
- * configurable). The variant is changed via {@link #setVariant(Variant)} (snap) or {@link
- * #morphTo(Variant)} (animated, 350 ms — drives every {@link ElwhaNavRailDestination} in lock-step
- * and orchestrates the slotted {@link ElwhaFab}'s Standard↔Extended form per design doc §9). The
- * Expanded variant adds optional sections (section header + secondary destinations) via {@link
- * #addSection(String, List)} / {@link #clearSections()}; sections render only in Expanded.
+ * <p><strong>Both variants and the Collapsed↔Expanded morph.</strong> The rail supports {@link
+ * Variant#COLLAPSED} (96 dp fixed) and {@link Variant#EXPANDED} (220–360 dp configurable). The
+ * variant is changed via {@link #setVariant(Variant)} (snap) or {@link #morphTo(Variant)}
+ * (animated, 350 ms — drives every {@link ElwhaNavRailDestination} in lock-step and orchestrates
+ * the slotted {@link ElwhaFab}'s Standard↔Extended form per design doc §9). The Expanded variant
+ * adds optional sections (section header + secondary destinations) via {@link #addSection(String,
+ * List)} / {@link #clearSections()}; sections render only in Expanded.
  *
  * <p><strong>Geometry (M3 token-locked, see {@code elwha-navigation-rail-design.md} §4).</strong>
  * Collapsed width is fixed at {@value #COLLAPSED_WIDTH_PX} dp. Header chrome is top-anchored with
@@ -88,8 +88,8 @@ import javax.swing.KeyStroke;
  * </ul>
  *
  * <p><strong>Accessibility.</strong> {@link AccessibleRole#PAGE_TAB_LIST} (pairs with each
- * destination's {@link AccessibleRole#PAGE_TAB} from Phase 1 — matches ARIA {@code tablist} /
- * {@code tab}). Consumers must supply an accessible name via {@code
+ * destination's {@link AccessibleRole#PAGE_TAB} — matches ARIA {@code tablist} / {@code tab}).
+ * Consumers must supply an accessible name via {@code
  * getAccessibleContext().setAccessibleName(...)}; the rail logs a {@link Logger#warning(String)} at
  * first paint if no name is set.
  *
@@ -121,9 +121,8 @@ public final class ElwhaNavigationRail extends JComponent {
    */
   public enum OverflowMode {
     /**
-     * Never collapse — every trailing action is always laid out in the stack. The pre-#238
-     * behaviour: when the rail is too short, the actions slide below the destinations and clip at
-     * the bottom edge.
+     * Never collapse — every trailing action is always laid out in the stack. When the rail is too
+     * short, the actions slide below the destinations and clip at the bottom edge.
      */
     NEVER,
     /**
@@ -304,11 +303,11 @@ public final class ElwhaNavigationRail extends JComponent {
   }
 
   /**
-   * Creates a Collapsed rail — 96 dp wide, icon-over-label destinations (once wired in story #235),
-   * Standard-form FAB if present.
+   * Creates a Collapsed rail — 96 dp wide, icon-over-label destinations, Standard-form FAB if
+   * present.
    *
    * @return a new rail in {@link Variant#COLLAPSED}
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public static ElwhaNavigationRail collapsed() {
@@ -543,12 +542,11 @@ public final class ElwhaNavigationRail extends JComponent {
 
   /**
    * Sets the rail's elevation level. Only {@code 0} (flat — the M3 default) and {@code 1} (single
-   * standard surface elevation) are accepted in Phase 2. Higher levels are not part of M3's rail
-   * spec.
+   * standard surface elevation) are accepted. Higher levels are not part of M3's rail spec.
    *
    * @param level {@code 0} or {@code 1}
    * @throws IllegalArgumentException if {@code level} is not in {@code {0, 1}}
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public void setElevation(final int level) {
@@ -623,12 +621,12 @@ public final class ElwhaNavigationRail extends JComponent {
 
   /**
    * Slots a {@link ElwhaFab} into the rail's anchored-action position (below the menu button). Pass
-   * {@code null} to clear. The rail does not orchestrate the FAB's Standard↔Extended form in Phase
-   * 2 — that wiring lands in Phase 3 alongside the Collapsed↔Expanded morph; the FAB simply sits in
-   * its current form.
+   * {@code null} to clear. The rail keeps the FAB's Standard↔Extended form in sync with its own
+   * variant — snapped immediately by {@link #setVariant(Variant)} and animated in lock-step by
+   * {@link #morphTo(Variant)} alongside the Collapsed↔Expanded morph.
    *
    * @param fab the FAB to slot, or {@code null} to remove
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public void setFab(final ElwhaFab fab) {
@@ -977,7 +975,7 @@ public final class ElwhaNavigationRail extends JComponent {
    * clicking one fires that button's own {@link java.awt.event.ActionListener} chain, nothing more.
    * The slot is an Elwha extension beyond the formal M3 token tables — m3.material.io itself
    * renders a rail with bottom-anchored utility buttons, so the pattern is demonstrated by the
-   * spec's own home site even though not formally documented (design doc §3, PR #231).
+   * spec's own home site even though not formally documented (design doc §3).
    *
    * @param actions the actions to slot at the bottom of the rail, or {@code null} / empty to clear
    * @version v0.3.0
@@ -1326,12 +1324,12 @@ public final class ElwhaNavigationRail extends JComponent {
   /**
    * The section header's font — {@link TypeRole#TITLE_SMALL} unless a consumer installed a font on
    * the rail itself. Role-always, matching {@code ElwhaAppBar}, {@code ElwhaTab} and {@code
-   * ElwhaBadge} (#628): {@code getFont()} answers the <em>inherited</em> container font on a rail
-   * that is actually in a hierarchy, so preferring it applied the token role only to offscreen
-   * renders — the inverse of the intent. {@link #isFontSet()} is the distinction that matters: it
-   * is true only for a font set on this component, so an explicit consumer override still wins
-   * while a panel's ambient font does not. Both the reserved header height and the header paint
-   * read this, so the space set aside can never disagree with the glyphs drawn into it.
+   * ElwhaBadge}: {@code getFont()} answers the <em>inherited</em> container font on a rail that is
+   * actually in a hierarchy, so preferring it applied the token role only to offscreen renders —
+   * the inverse of the intent. {@link #isFontSet()} is the distinction that matters: it is true
+   * only for a font set on this component, so an explicit consumer override still wins while a
+   * panel's ambient font does not. Both the reserved header height and the header paint read this,
+   * so the space set aside can never disagree with the glyphs drawn into it.
    */
   private Font sectionHeaderFont() {
     return isFontSet() ? getFont() : TypeRole.TITLE_SMALL.resolve();

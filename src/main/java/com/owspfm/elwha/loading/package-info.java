@@ -1,6 +1,5 @@
 /**
- * The Elwha Material 3 Expressive loading indicator — epic <a
- * href="https://github.com/OWS-PFMS/elwha/issues/468">#468</a>. {@link
+ * The Elwha Material 3 Expressive loading indicator. {@link
  * com.owspfm.elwha.loading.ElwhaLoadingIndicator} is a dedicated {@link javax.swing.JComponent}
  * that continuously rotates a filled rounded-polygon while morphing it through a fixed sequence of
  * M3 shape-library forms — the short-wait spinner M3 says "should replace most uses of the
@@ -12,8 +11,11 @@
  * com.owspfm.elwha.loading.ShapeMorph}) because Elwha's existing {@code ShapeMorphPainter} only
  * interpolates corner radii on a rounded rectangle. Every M3 loading-indicator shape is
  * star-convex, so a shape is a radius profile {@code r(θ)} and morphing is a per-angle lerp —
- * seamless, no feature-matching. Spec: {@code docs/research/elwha-loading-indicator-design.md} +
- * {@code elwha-loading-indicator-research.md}.
+ * seamless, no feature-matching.
+ *
+ * <p>Spec: {@code docs/research/elwha-loading-indicator-design.md}; research: {@code
+ * elwha-loading-indicator-research.md}. Epic <a
+ * href="https://github.com/OWS-PFMS/elwha/issues/468">#468</a>.
  *
  * @author Charles Bryan
  * @version v0.5.0

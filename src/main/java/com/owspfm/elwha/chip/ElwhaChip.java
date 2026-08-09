@@ -120,7 +120,7 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
   /**
    * Whether the focus treatment (the 2 px PRIMARY border) should paint — armed only by a keyboard
    * traversal, so a plain click leaves no focus outline behind ({@link
-   * com.owspfm.elwha.theme.FocusVisible}, #630).
+   * com.owspfm.elwha.theme.FocusVisible}).
    */
   private boolean focusVisible;
 
@@ -963,8 +963,12 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
    * Installs a mouse listener on the chip body and the inner content / leading / trailing clusters,
    * so a host container sees the listener fire anywhere on the chip except over an inline button.
    *
+   * <p>Undo it with {@link #removeChipMouseListener(java.awt.event.MouseListener)}, not with {@link
+   * java.awt.Component#removeMouseListener}: the registration spans four components, and the
+   * inherited call detaches only the one on the chip itself.
+   *
    * @param listener the listener to install
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public void addChipMouseListener(final java.awt.event.MouseListener listener) {
@@ -978,11 +982,30 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
   }
 
   /**
+   * Detaches a listener installed by {@link #addChipMouseListener(java.awt.event.MouseListener)}
+   * from all four components it was registered on. A listener that was never installed is ignored,
+   * matching {@link java.awt.Component#removeMouseListener}.
+   *
+   * @param listener the listener to detach
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void removeChipMouseListener(final java.awt.event.MouseListener listener) {
+    if (listener == null) {
+      return;
+    }
+    removeMouseListener(listener);
+    contentRow.removeMouseListener(listener);
+    leadingCluster.removeMouseListener(listener);
+    trailingCluster.removeMouseListener(listener);
+  }
+
+  /**
    * Mirror of {@link #addChipMouseListener(java.awt.event.MouseListener)} for {@link
    * java.awt.event.MouseMotionListener}.
    *
    * @param listener the listener to install
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   public void addChipMouseMotionListener(final java.awt.event.MouseMotionListener listener) {
@@ -993,6 +1016,24 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
     contentRow.addMouseMotionListener(listener);
     leadingCluster.addMouseMotionListener(listener);
     trailingCluster.addMouseMotionListener(listener);
+  }
+
+  /**
+   * Mirror of {@link #removeChipMouseListener(java.awt.event.MouseListener)} for {@link
+   * java.awt.event.MouseMotionListener}.
+   *
+   * @param listener the listener to detach
+   * @version v0.5.0
+   * @since v0.5.0
+   */
+  public void removeChipMouseMotionListener(final java.awt.event.MouseMotionListener listener) {
+    if (listener == null) {
+      return;
+    }
+    removeMouseMotionListener(listener);
+    contentRow.removeMouseMotionListener(listener);
+    leadingCluster.removeMouseMotionListener(listener);
+    trailingCluster.removeMouseMotionListener(listener);
   }
 
   /**
@@ -1422,10 +1463,10 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
    * ColorRole#PRIMARY} so the chip reads as "the picked one" without relying on the fill alone —
    * particularly relevant for OUTLINED chips under the uniform 12% selected overlay (rebuild doc §9
    * Q2). GHOST suppresses the border at rest but reveals it on hover / press / focus, and ignores
-   * the selected state entirely (rebuild doc §9 Q2 amendment, issue #50): GHOST is M3's text-button
-   * equivalent and the spec doesn't render a selected state on that emphasis level.
+   * the selected state entirely (rebuild doc §9 Q2 amendment): GHOST is M3's text-button equivalent
+   * and the spec doesn't render a selected state on that emphasis level.
    *
-   * @version v0.1.0
+   * @version v0.5.0
    * @since v0.1.0
    */
   private ColorRole effectiveBorderRole(final boolean focused) {
@@ -1561,7 +1602,7 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
    * only applies to {@code FlatSVGIcon} instances, and the component the glyph is handed at paint
    * time is the trailing {@code JLabel}, whose foreground is the plain LAF label color. A chip on a
    * custom surface role would otherwise paint its × in one color and its text in another — the
-   * unpaired result the class documentation says cannot happen (#644).
+   * unpaired result the class documentation says cannot happen.
    *
    * @version v0.5.0
    * @since v0.1.0

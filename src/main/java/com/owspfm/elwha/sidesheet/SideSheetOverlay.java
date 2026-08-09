@@ -23,8 +23,8 @@ import javax.swing.KeyStroke;
 /**
  * The modal presentation host for {@link ElwhaSideSheet} — the package-private {@link
  * AbstractElwhaOverlay} subclass behind {@link ElwhaSideSheet#showModal(Component)}. Pins the modal
- * side-sheet posture: {@code ElwhaLayers.OVERLAY_LAYER} (190, below dialogs and menus per #221), a
- * 32% {@code SCRIM} backdrop (the dialog's scrim treatment), the focus-trap dismiss policy, an
+ * side-sheet posture: {@code ElwhaLayers.OVERLAY_LAYER} (190, below dialogs and menus), a 32%
+ * {@code SCRIM} backdrop (the dialog's scrim treatment), the focus-trap dismiss policy, an
  * edge-docked full-height placement flush against the resolved window edge, and the slide-from-edge
  * entrance/exit synchronized with the scrim fade. One host instance serves one {@code
  * showModal(...)}; the sheet constructs a fresh one per show.
