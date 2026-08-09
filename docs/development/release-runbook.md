@@ -180,7 +180,12 @@ fail, in order. Knowing which one failed tells you exactly what to fix.
 |---|---|---|
 | **Verify tag matches pom.xml version** | Strips `refs/tags/v` off the ref and string-compares against `${project.version}` | You tagged before committing the bump, or tagged the wrong number |
 | **Verify CHANGELOG entry exists** | `grep -q "## \[${TAG_VERSION}\]" CHANGELOG.md` | You forgot the `[Unreleased]` → `[1.0.0]` flip, or the heading is malformed |
-| **Build and publish** | `mvn -B clean deploy` on temurin 21, authenticating to GitHub Packages with `GITHUB_TOKEN` | The build itself breaks — which pre-flight should already have caught |
+| **Build and publish** | `mvn -B clean deploy -DskipTests` on temurin 21, authenticating to GitHub Packages with `GITHUB_TOKEN` | The build itself breaks — which pre-flight should already have caught |
+
+Tests are deliberately skipped in the deploy (#764): the required `Test` workflow already gated the
+identical tree on `main`, and the gui tier needs display scaffolding this workflow doesn't carry —
+the first 1.0.0 tag push failed on exactly that. A tag also runs the workflow file **at its own
+ref**, so a publish-workflow fix only takes effect once the tag points at a commit containing it.
 
 Note what it does **not** check: that `main` was green, that the milestone was empty, or that the
 CHANGELOG says anything useful. Those are this page's job.
