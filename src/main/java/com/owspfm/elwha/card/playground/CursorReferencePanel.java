@@ -1,7 +1,6 @@
 package com.owspfm.elwha.card.playground;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
@@ -32,7 +31,7 @@ import javax.swing.UIManager;
  * carrying a preview accessor no library code calls (#612).
  *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.0
  * @since v0.2.0
  */
 public final class CursorReferencePanel extends JPanel {
@@ -130,7 +129,12 @@ public final class CursorReferencePanel extends JPanel {
   }
 
   private static Image loadCustomImage(final String baseName) {
-    final String variant = isDarkTheme() ? "dark" : "light";
+    // Body colour follows the platform pointer, matching ReorderCursors' selection rule:
+    // white-bodied on Windows (its arrow is white), black-bodied everywhere else.
+    final String variant =
+        System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win")
+            ? "white"
+            : "black";
     final URL url =
         CursorReferencePanel.class.getResource(
             CURSOR_ASSETS + baseName + "-" + variant + "-32.png");
@@ -142,14 +146,6 @@ public final class CursorReferencePanel extends JPanel {
     } catch (final IOException missing) {
       return null;
     }
-  }
-
-  private static boolean isDarkTheme() {
-    final Color panel = UIManager.getColor("Panel.background");
-    if (panel == null) {
-      return false;
-    }
-    return (panel.getRed() + panel.getGreen() + panel.getBlue()) / 3 < 128;
   }
 
   private static void addSectionHeader(final JPanel table, final int row, final JLabel label) {

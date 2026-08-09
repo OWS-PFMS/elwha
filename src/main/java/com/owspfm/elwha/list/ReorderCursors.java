@@ -17,7 +17,6 @@ import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.net.URL;
 import javax.imageio.ImageIO;
-import javax.swing.UIManager;
 
 /**
  * Lazily-built drag cursors for {@link ElwhaItemList}'s {@link ReorderAffordance#CURSOR_SWAP}
@@ -29,29 +28,34 @@ import javax.swing.UIManager;
  * with a three-tier loading strategy:
  *
  * <ol>
- *   <li>The cursor PNGs bundled under {@code cursors/}, in a light or dark variant chosen from the
- *       active theme's panel-background luminance.
+ *   <li>The cursor PNGs bundled under {@code cursors/}, in the body colour that matches the
+ *       platform's own pointer.
  *   <li>If no PNG can be loaded, a Java2D-painted silhouette, so the pointer is at least
  *       recognisable as a hand.
  *   <li>If even custom-cursor creation fails — some platforms reject particular sizes — {@link
  *       Cursor#MOVE_CURSOR}.
  * </ol>
  *
+ * <p><strong>The body colour follows the platform pointer, never the theme.</strong> No desktop OS
+ * flips its pointer when the theme changes — macOS ships a black arrow with a white outline in both
+ * appearances, Windows a white arrow with a black outline — and legibility on the opposite ground
+ * comes from the contrasting outline, not from body inversion. The hand does the same: the {@code
+ * -black-} (dark body, light halo) assets on macOS and Linux, matching their black system arrows,
+ * and the {@code -white-} assets on Windows, matching its white arrow. The halo plays the outline's
+ * role, so the hand stays legible on either ground. Linux cursor themes cannot be detected, so it
+ * gets the Adwaita-default assumption (black) with the halo covering mismatches. The Java2D
+ * fallback follows the same rule.
+ *
  * <p>Hotspots are authored against a 32&nbsp;px design grid and scaled to whatever size the toolkit
  * reports as best. Both states share one hotspot, {@code (16, 14)} on the knuckle line, so the
  * artwork does not shift when a press swaps grab for grabbing; both coordinates are even so the
- * integer scale to 16&nbsp;px stays exact. A runtime theme switch invalidates the cache, so the
- * next call rebuilds in the new variant.
- *
- * <p>The {@code -light-} and {@code -dark-} suffixes name the <em>theme</em> an asset is for, not
- * the colour of its body: a {@code -light-} asset is a dark hand with a light halo, because that is
- * what stays legible on a light panel. The Java2D fallback follows the same rule.
+ * integer scale to 16&nbsp;px stays exact.
  *
  * <p>Relocated here from the V1 card list (spec §7), which is what removes the last code dependency
  * the legacy list families carried. The artwork was replaced with a first-party set.
  *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.0
  * @since v0.5.0
  */
 final class ReorderCursors {
@@ -62,13 +66,12 @@ final class ReorderCursors {
   /**
    * The bundled artwork's body colours, reused so the fallback matches the assets it stands in for.
    */
-  private static final Color BODY_ON_DARK = new Color(0xFE, 0xFE, 0xFE);
+  private static final Color BODY_LIGHT = new Color(0xFE, 0xFE, 0xFE);
 
-  private static final Color BODY_ON_LIGHT = new Color(0x1A, 0x1A, 0x1A);
+  private static final Color BODY_DARK = new Color(0x1A, 0x1A, 0x1A);
 
   private static Cursor grabCached;
   private static Cursor grabbingCached;
-  private static Boolean cachedDark;
 
   // Counts cache drops so a caller can tell whether a rebuild actually happened. EDT-confined,
   // like everything else here.
@@ -84,16 +87,16 @@ final class ReorderCursors {
    * Returns the open-hand "grab" cursor, which signals that a surface is draggable.
    *
    * @return the grab cursor; never null
-   * @version v0.5.0
+   * @version v1.0.0
    * @since v0.5.0
    */
   static Cursor grab() {
     if (GraphicsEnvironment.isHeadless()) {
       return Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
     }
-    refreshIfThemeChanged();
     if (grabCached == null) {
-      grabCached = loadCursor("grab", isDarkTheme(), new Point(16, 14), "ElwhaItemList.grab", true);
+      grabCached =
+          loadCursor("grab", lightBodiedPlatform(), new Point(16, 14), "ElwhaItemList.grab", true);
     }
     return grabCached;
   }
@@ -102,17 +105,21 @@ final class ReorderCursors {
    * Returns the closed-fist "grabbing" cursor, which signals a drag in flight.
    *
    * @return the grabbing cursor; never null
-   * @version v0.5.0
+   * @version v1.0.0
    * @since v0.5.0
    */
   static Cursor grabbing() {
     if (GraphicsEnvironment.isHeadless()) {
       return Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
     }
-    refreshIfThemeChanged();
     if (grabbingCached == null) {
       grabbingCached =
-          loadCursor("grabbing", isDarkTheme(), new Point(16, 14), "ElwhaItemList.grabbing", false);
+          loadCursor(
+              "grabbing",
+              lightBodiedPlatform(),
+              new Point(16, 14),
+              "ElwhaItemList.grabbing",
+              false);
     }
     return grabbingCached;
   }
@@ -169,30 +176,21 @@ final class ReorderCursors {
     return generation;
   }
 
-  private static void refreshIfThemeChanged() {
-    final boolean dark = isDarkTheme();
-    if (cachedDark == null || cachedDark != dark) {
-      cachedDark = dark;
-      invalidate();
-    }
-  }
-
-  private static boolean isDarkTheme() {
-    final Color panel = UIManager.getColor("Panel.background");
-    if (panel == null) {
-      return false;
-    }
-    return (panel.getRed() + panel.getGreen() + panel.getBlue()) / 3 < 128;
+  // Windows is the one desktop whose stock pointer is white-bodied; macOS's arrow and Linux's
+  // Adwaita default are black-bodied. The platform cannot change mid-process, so this is not
+  // cached state the way the theme used to be.
+  private static boolean lightBodiedPlatform() {
+    return System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win");
   }
 
   private static Cursor loadCursor(
       final String baseName,
-      final boolean dark,
+      final boolean lightBodied,
       final Point hotspot,
       final String name,
       final boolean openHand) {
     final Dimension best = bestCursorSize();
-    final BufferedImage image = pickBestImage(baseName, dark, best.width, openHand);
+    final BufferedImage image = pickBestImage(baseName, lightBodied, best.width, openHand);
     if (image == null) {
       return Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
     }
@@ -221,16 +219,19 @@ final class ReorderCursors {
   }
 
   private static BufferedImage pickBestImage(
-      final String baseName, final boolean dark, final int requestedSize, final boolean openHand) {
-    final String themeKey = dark ? "dark" : "light";
+      final String baseName,
+      final boolean lightBodied,
+      final int requestedSize,
+      final boolean openHand) {
+    final String bodyKey = lightBodied ? "white" : "black";
     final int[] sizes = requestedSize >= 24 ? new int[] {32, 16} : new int[] {16, 32};
     for (final int size : sizes) {
-      final BufferedImage image = loadPng(baseName + "-" + themeKey + "-" + size + ".png");
+      final BufferedImage image = loadPng(baseName + "-" + bodyKey + "-" + size + ".png");
       if (image != null) {
         return scaleIfNeeded(image, requestedSize);
       }
     }
-    return paintFallback(openHand, requestedSize, dark);
+    return paintFallback(openHand, requestedSize, lightBodied);
   }
 
   private static BufferedImage loadPng(final String fileName) {
@@ -266,12 +267,14 @@ final class ReorderCursors {
   // ----------------------------------------------------------- fallback paint
 
   private static BufferedImage paintFallback(
-      final boolean openHand, final int size, final boolean dark) {
+      final boolean openHand, final int size, final boolean lightBodied) {
     final int actualSize = size > 0 ? size : FALLBACK_SIZE;
-    return openHand ? paintOpenHand(actualSize, dark) : paintClosedFist(actualSize, dark);
+    return openHand
+        ? paintOpenHand(actualSize, lightBodied)
+        : paintClosedFist(actualSize, lightBodied);
   }
 
-  private static BufferedImage paintOpenHand(final int size, final boolean dark) {
+  private static BufferedImage paintOpenHand(final int size, final boolean lightBodied) {
     final BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
     final Graphics2D g = image.createGraphics();
     try {
@@ -286,14 +289,14 @@ final class ReorderCursors {
       hand.add(new Area(rr(19, 6, 3, 12, 1.5, scale)));
       hand.add(new Area(rr(3.5, 18, 7, 5, 2.5, scale)));
 
-      strokeSilhouette(g, hand, scale, dark);
+      strokeSilhouette(g, hand, scale, lightBodied);
     } finally {
       g.dispose();
     }
     return image;
   }
 
-  private static BufferedImage paintClosedFist(final int size, final boolean dark) {
+  private static BufferedImage paintClosedFist(final int size, final boolean lightBodied) {
     final BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
     final Graphics2D g = image.createGraphics();
     try {
@@ -307,7 +310,7 @@ final class ReorderCursors {
       fist.add(new Area(rr(13, 10, 4, 4, 2, scale)));
       fist.add(new Area(rr(18, 10.5, 4, 4, 2, scale)));
 
-      strokeSilhouette(g, fist, scale, dark);
+      strokeSilhouette(g, fist, scale, lightBodied);
     } finally {
       g.dispose();
     }
@@ -315,10 +318,10 @@ final class ReorderCursors {
   }
 
   private static void strokeSilhouette(
-      final Graphics2D g, final Area shape, final double scale, final boolean dark) {
-    g.setColor(dark ? BODY_ON_DARK : BODY_ON_LIGHT);
+      final Graphics2D g, final Area shape, final double scale, final boolean lightBodied) {
+    g.setColor(lightBodied ? BODY_LIGHT : BODY_DARK);
     g.fill(shape);
-    g.setColor(dark ? BODY_ON_LIGHT : BODY_ON_DARK);
+    g.setColor(lightBodied ? BODY_DARK : BODY_LIGHT);
     g.setStroke(new BasicStroke((float) Math.max(1.0, 1.2 * scale)));
     g.draw(shape);
   }
