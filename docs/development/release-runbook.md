@@ -103,6 +103,11 @@ do it in a PR *before* the release commit, never inside it.
 
 One commit, made directly on `main`, containing exactly three edits.
 
+`main` is protected with required status checks, but `enforce_admins` is off, so a repository admin
+can push this commit straight to `main`. A non-admin maintainer cannot and will need to route it
+through a PR — which is fine, just slower: the same three edits, milestoned `v1.0.0`, merged before
+tagging.
+
 **1. `pom.xml`** — the project version. There is no parent POM, so it is the **first** `<version>`
 element in the file, directly under `<artifactId>elwha</artifactId>` (line 9 at the time of
 writing); every later one belongs to a dependency or a plugin. Confirm before editing:
