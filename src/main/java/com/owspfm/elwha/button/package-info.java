@@ -11,15 +11,10 @@
  * com.owspfm.elwha.button.ButtonShape#ROUND} / {@link com.owspfm.elwha.button.ButtonShape#SQUARE}
  * shape options.
  *
- * <p>The fifth token-native component (after {@code ElwhaChip} #31, {@code ElwhaSurface} #43,
- * {@code ElwhaIconButton} #45, and the V3 {@code ElwhaCard} #80), filling out the action-row
- * vocabulary alongside {@code ElwhaIconButton}. V3 Card spec §3.3 pairs Outlined cards with
- * Filled-Tonal buttons, which had no path through the lib before this primitive landed.
- *
  * <p>Decisions and the deliberate M3 divergences: {@code docs/research/elwha-button-design.md}.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v0.5.0
  * @since v0.2.0
  */
 package com.owspfm.elwha.button;

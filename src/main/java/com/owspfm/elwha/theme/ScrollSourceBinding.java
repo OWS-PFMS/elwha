@@ -14,7 +14,7 @@ import javax.swing.event.ChangeListener;
  * its own response semantics: {@code ElwhaFabAnchor} reacts to scroll <em>direction</em>
  * (hide/shrink), {@code ElwhaAppBar} to the absolute <em>offset</em> (lift, collapse). Mirrors the
  * {@link RipplePainter}/{@link MorphAnimator} shared-machinery precedent (design {@code
- * elwha-appbar-design.md} §8, settling the #269 cross-component note from epic #287).
+ * elwha-appbar-design.md} §8).
  *
  * <p>Attachment is explicit: callers invoke {@link #attach()} when their response is armed (and
  * typically from {@code addNotify()}) and {@link #detach()} when it is not (and from {@code

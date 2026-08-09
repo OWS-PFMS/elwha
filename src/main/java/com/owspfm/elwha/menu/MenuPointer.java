@@ -12,7 +12,7 @@ import java.awt.PointerInfo;
  * answering {@code null} when there is no display, so the {@code info != null} check the call sites
  * carried never got the chance to fire. That made every code path reaching the chain-active
  * recomputation — which is most of the submenu machinery — structurally untestable outside the
- * {@code gui} tier, and pushed coverage there that had nothing to do with a real pointer (#709).
+ * {@code gui} tier, and pushed coverage there that had nothing to do with a real pointer.
  *
  * <p>A {@code null} answer is already the "the platform will not tell me" case the callers handle:
  * the chain-active pass falls through to its focus/keyboard signal, and the hover-away dwell treats

@@ -28,10 +28,10 @@ import javax.swing.Timer;
  * {@link #start()} and {@link #reverse()} snap {@link #progress()} to the destination value and the
  * Timer never schedules ticks — visually identical to the static v1 behavior. The flag is static
  * and global per the design doc §10; the {@code ElwhaTheme.config(...).reducedMotion(...)} wiring
- * is Phase 5. Because every animator samples the flag when an animation <em>starts</em>, a change
- * needs no notification to be picked up. A consumer running a continuous clock gated on the flag —
- * rather than a morph started by an interaction — is the exception, and subscribes through {@link
- * #addReducedMotionListener(Runnable)}.
+ * sets it directly. Because every animator samples the flag when an animation <em>starts</em>, a
+ * change needs no notification to be picked up. A consumer running a continuous clock gated on the
+ * flag — rather than a morph started by an interaction — is the exception, and subscribes through
+ * {@link #addReducedMotionListener(Runnable)}.
  *
  * <p><strong>OS detection is best-effort, and Windows is a proxy.</strong> macOS reads {@code
  * apple.awt.reduceMotion} and GNOME reads {@code org.gnome.desktop.interface enable-animations} —
@@ -238,9 +238,9 @@ public final class MorphAnimator {
    * {@link #start()} reads the current value and a stale flag is unobservable. It exists for a
    * consumer whose animation is a <em>continuously running clock</em> gated on the flag rather than
    * a morph started by an interaction — {@code ElwhaLoadingIndicator}'s spinner is the case that
-   * motivated it (#632). For those, sampling the flag only at start-up leaves a live component
-   * wrong in both directions: burning frames while painting a static shape, or frozen with the
-   * clock stopped.
+   * motivated it. For those, sampling the flag only at start-up leaves a live component wrong in
+   * both directions: burning frames while painting a static shape, or frozen with the clock
+   * stopped.
    *
    * <p>The reference held is <strong>weak</strong>, so a consumer that forgets to remove its
    * listener cannot pin itself in memory — but the consumer must keep its own strong reference (a

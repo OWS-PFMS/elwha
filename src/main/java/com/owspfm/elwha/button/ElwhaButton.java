@@ -804,15 +804,15 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
    * com.owspfm.elwha.theme.RipplePainter} circle seeded at the click point on press or keyboard
    * activation. Disable it for hosts whose own motion is the press feedback: a dialog that
    * dismisses on an action click would otherwise freeze the in-flight ripple onto its exit-fade
-   * snapshot (epic #288). Disabling mid-ripple clears any in-flight ripple immediately.
+   * snapshot. Disabling mid-ripple clears any in-flight ripple immediately.
    *
    * <p>This gates <em>only</em> the press ripple. The pressed state-layer darken and the
-   * connected-group width-ripple ({@link com.owspfm.elwha.buttongroup.ElwhaButtonGroup}, #176) are
+   * connected-group width-ripple ({@link com.owspfm.elwha.buttongroup.ElwhaButtonGroup}) are
    * unaffected. Default {@code true}.
    *
    * @param rippleEnabled whether press / touch ripples animate
    * @return {@code this} for fluent chaining
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public ElwhaButton setRippleEnabled(final boolean rippleEnabled) {
@@ -1252,9 +1252,9 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
    * inflation padding should stay clickable — correct while bounds equal preferred size, and wrong
    * the moment they do not. A stretching layout grows the bounds arbitrarily and the same test grew
    * the hit area with them: measured in the side-sheet repro, a 40&nbsp;px pill in 162&nbsp;px of
-   * granted height accepted clicks roughly 57&nbsp;px above <em>and</em> below itself (#505).
-   * Deriving the rect from the body instead keeps the a11y target at preferred size — where the
-   * inflation is exactly what the minimum asks for — and caps it under stretch.
+   * granted height accepted clicks roughly 57&nbsp;px above <em>and</em> below itself. Deriving the
+   * rect from the body instead keeps the a11y target at preferred size — where the inflation is
+   * exactly what the minimum asks for — and caps it under stretch.
    */
   private boolean containsClickPoint(final Point componentPoint) {
     return hitRect().contains(componentPoint);
@@ -1488,11 +1488,11 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
    * width (design doc §6). {@code 0} at rest and on any button outside a standard group's
    * width-ripple; while a group neighbor is held it animates {@code 0 → factor → 0} in sync with
    * the visible width pinch. Diagnostic reader for the Button Group Workbench's per-segment borrow
-   * readout ([#184]) — not part of the press-morph behavior contract.
+   * readout — not part of the press-morph behavior contract.
    *
    * @return the current borrow contribution (the active factor scaled by morph progress); {@code 0}
    *     at rest
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public float currentWidthBorrow() {

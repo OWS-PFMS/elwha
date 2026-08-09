@@ -341,7 +341,7 @@ public class ElwhaTextField extends JComponent {
    * Re-resolves the editor's text, caret, and font under the current theme after a LAF switch.
    * {@code ElwhaTheme.install}'s {@code updateComponentTreeUI} pass lands here for in-hierarchy
    * fields; without the re-apply the text UI swaps the caret to the LAF default (losing the M3
-   * PRIMARY / ERROR stroke) on every switch (#495).
+   * PRIMARY / ERROR stroke) on every switch.
    *
    * @version v0.5.0
    * @since v0.5.0
@@ -358,7 +358,7 @@ public class ElwhaTextField extends JComponent {
    * Re-resolves the editor's colors when the field joins a hierarchy. Fields built while detached
    * (an unopened dialog's content, a lazily-mounted pane) are never visited by {@code
    * updateComponentTreeUI}, so a theme switch between construction and mount would otherwise show
-   * the old mode's text color (#495 — the color-picker hex-field finding).
+   * the old mode's text color (the color-picker hex-field finding).
    *
    * @version v0.5.0
    * @since v0.5.0
@@ -1139,8 +1139,7 @@ public class ElwhaTextField extends JComponent {
    * Fires the accessibility "alert" announcement for the error state. Swing has no {@code ALERT}
    * role, so this approximates it by firing an {@link AccessibleContext} description property
    * change on the focusable editor — the Java Access Bridge surfaces this to AT as a live update.
-   * The full message composition (supporting text, then error) lands in S5; S1 proves the
-   * mechanism.
+   * The announcement composes the supporting text, when present, followed by the error message.
    */
   private void fireAccessibleAlert() {
     final AccessibleContext ctx = editor.getAccessibleContext();
@@ -1353,9 +1352,9 @@ public class ElwhaTextField extends JComponent {
    * <p>Held rather than rebuilt per call: {@link MaterialIcons} hands back a fresh instance every
    * lookup, so building one here on every paint of an errored field re-parsed and re-rasterized the
    * SVG each frame. The instance is private to this field, so binding a filter to it cannot mutate
-   * a shared glyph (#197). The filter is re-bound only when the resolved role colour actually
-   * changes, which is what keeps a runtime theme or mode switch from leaving a stale tint — {@code
-   * ElwhaSlider.rebuildInsetIcon} is the same shape.
+   * a shared glyph (the shared-icon-filter hazard). The filter is re-bound only when the resolved
+   * role colour actually changes, which is what keeps a runtime theme or mode switch from leaving a
+   * stale tint — {@code ElwhaSlider.rebuildInsetIcon} is the same shape.
    */
   private Icon themedErrorIcon() {
     if (errorIcon == null) {

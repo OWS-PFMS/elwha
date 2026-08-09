@@ -3,23 +3,23 @@ package com.owspfm.elwha.menu;
 /**
  * How an {@link ElwhaMenu} treats item activation (M3 menu "Selection", design §9). Mirrors M3's
  * exact nouns per the terminology lock (design §P) and is name-compatible with the cross-cutting
- * selection surface (#252).
+ * selection surface.
  *
  * <p>The selected visual — a {@code TERTIARY_CONTAINER} (Standard) / bold {@code TERTIARY}
  * (Vibrant) fill plus a ✓ checkmark, a 3:1 + non-color cue per accessibility (§X) — is shared by
  * both persistent modes; only the activation behavior differs.
  *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.4.0
+ * @version v0.5.0
  * @since v0.4.0
  */
 public enum SelectionMode {
 
   /**
    * Action menu (the default): activating an item fires its action and closes the menu, with no
-   * persistent selection. This is the Phase-1 behavior — every item is a one-shot command.
+   * persistent selection — every item is a one-shot command.
    *
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   NONE,

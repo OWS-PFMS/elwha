@@ -8,12 +8,8 @@ import java.util.function.Consumer;
  * Basic Dialog, and {@link ElwhaFullScreenDialog}, the M3 Full-screen Dialog) so a consumer's close
  * handler reads the same vocabulary regardless of dialog type.
  *
- * <p>Promoted to a top-level type from a nested {@code ElwhaDialog.DismissCause} in epic #271 S1
- * when the overlay-host lifecycle was extracted into {@link AbstractElwhaDialog} — a pre-1.0
- * breaking change with no compatibility shim.
- *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.3.0
+ * @version v0.5.0
  * @since v0.3.0
  */
 public enum DismissCause {

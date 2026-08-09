@@ -72,9 +72,9 @@ import javax.swing.Timer;
  * ExpansionOverflow#GROW}. The four M3 measurement defaults — 12dp shape, 16dp padding, 8dp
  * inter-card (consumer-controlled on the list), start-aligned text — are baked in.
  *
- * <p><strong>Orientation.</strong> v0.2.0 ships VERTICAL only; HORIZONTAL is deferred to v0.3.0 per
- * spec §15.3 (#112). The v0.3 HORIZONTAL design will reuse {@code add(...)} with typed partitioning
- * ({@link ElwhaCardMedia} → leading column, everything else → trailing column under the same
+ * <p><strong>Orientation.</strong> Only VERTICAL orientation ships; HORIZONTAL is planned per spec
+ * §15.3. The HORIZONTAL design will reuse {@code add(...)} with typed partitioning ({@link
+ * ElwhaCardMedia} → leading column, everything else → trailing column under the same
  * VerticalCardLayout rules) — no separate setLeadingColumn / setTrailingColumn API.
  *
  * <p><strong>Actionability is atomic.</strong> {@link #setActionable(boolean)} flips the entire
@@ -183,10 +183,10 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    * so {@link ElwhaSurface}'s super-paint skips its resting border stroke and {@link
    * #paintChildren} repaints the outline above the children instead. Painting the border last keeps
    * it from being occluded by an edge-bleed {@link ElwhaCardMedia} slot, whose opaque cover fills
-   * the card to the chassis edge and would otherwise hide the top and upper-side outline (#157); it
-   * also gives the focused-outlined (PL-8) and disabled-outlined (PL-10) treatments a clean base.
-   * The flag is read via the overridden {@link #getBorderRole()} — returning {@code null} from
-   * there suppresses the border inside {@link com.owspfm.elwha.theme.SurfacePainter#paint}.
+   * the card to the chassis edge and would otherwise hide the top and upper-side outline; it also
+   * gives the focused-outlined (PL-8) and disabled-outlined (PL-10) treatments a clean base. The
+   * flag is read via the overridden {@link #getBorderRole()} — returning {@code null} from there
+   * suppresses the border inside {@link com.owspfm.elwha.theme.SurfacePainter#paint}.
    */
   private boolean suppressRestingBorder;
 
@@ -443,12 +443,11 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    * state-layer hover/press overlays, click ripple, chassis tab stop, AccessibleRole=PUSH_BUTTON,
    * action listeners fire on click + Space + Enter. When {@code false}: none of those.
    *
-   * <p>Behavior wiring (cursor, ripple, state-layer paint, focus traversal, accessibility) lands
-   * with the actionability story; this setter records the property and fires the change event.
+   * <p>Records the property and fires the change event.
    *
    * @param newActionable whether the card behaves as a button
    * @return {@code this} for fluent chaining
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public ElwhaCard setActionable(final boolean newActionable) {
@@ -706,12 +705,12 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   }
 
   /**
-   * Toggles the collapse-animation behavior. Behavior wiring (height tween at 250 ms with M3
-   * easing) lands with the collapse story.
+   * Toggles the collapse-animation behavior. When enabled, a collapse or expand tweens the card's
+   * height over 250 ms with M3 easing instead of snapping.
    *
    * @param animate whether to animate collapse transitions
    * @return {@code this} for fluent chaining
-   * @version v0.2.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   public ElwhaCard setAnimateCollapse(final boolean animate) {
@@ -763,10 +762,10 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    * Removes a content child and forgets its collapse rule. Mirrors {@link #addImpl}: under {@link
    * ExpansionOverflow#SCROLL} the child a consumer added through {@code card.add(...)} belongs to
    * the inner scroll body, not to the card, so a removal that did not route there silently did
-   * nothing (#677). The rule map is keyed by identity and written from three places — the public
-   * setter and both self-anchoring affordances — with no other removal path, so without the
-   * forgetting a card that cycles its content (a detail pane rebuilt per selection) would hold
-   * every child it has ever contained.
+   * nothing. The rule map is keyed by identity and written from three places — the public setter
+   * and both self-anchoring affordances — with no other removal path, so without the forgetting a
+   * card that cycles its content (a detail pane rebuilt per selection) would hold every child it
+   * has ever contained.
    *
    * <p>In {@code SCROLL} mode this addresses content only; the scroll pane is the card's own
    * furniture and is installed and removed by {@link #setExpansionOverflow} alone.
@@ -789,7 +788,7 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    * Removes the content child at {@code index} and forgets its collapse rule. The index addresses
    * whichever container holds the content — the inner scroll body under {@link
    * ExpansionOverflow#SCROLL}, the card itself otherwise — matching the index {@code add(comp,
-   * index)} accepts (#677).
+   * index)} accepts.
    *
    * @param index the content index to remove
    * @version v0.5.0
@@ -809,7 +808,7 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   /**
    * Removes every content child and forgets their collapse rules. Under {@link
    * ExpansionOverflow#SCROLL} that is the inner scroll body's children; the scroll pane itself
-   * stays, since it is the card's own furniture rather than content (#677).
+   * stays, since it is the card's own furniture rather than content.
    *
    * @version v0.5.0
    * @since v0.5.0
@@ -1036,9 +1035,9 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   // -------------------------------------------------------------- painting
 
   /**
-   * Paints the chrome — delegates to Surface for the rounded fill and border. Subsequent stories
-   * layer on shadow / state-layer overlay / focus ring / ripple, and the M3 top-trailing selection
-   * badge in {@link #paintChildren}.
+   * Paints the chrome — delegates to Surface for the rounded fill and border, then layers on the
+   * shadow, state-layer overlay, focus ring, and ripple. The M3 top-trailing selection badge is
+   * painted in {@link #paintChildren}.
    *
    * @param g the graphics context
    * @version v0.2.0
@@ -1091,12 +1090,12 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    * <p>Sets two per-paint flags ({@link #paintingDisabled}, {@link #suppressRestingBorder}) so the
    * chassis super-paint sees the disabled container-role swap (PL-9) and skips the resting border
    * for every OUTLINED card — the outline is repainted above the children so an edge-bleed media
-   * slot cannot occlude it (#157), covering the resting, focused-outlined (PL-8), and
-   * disabled-outlined (PL-10) treatments alike. The flags are reset before this method returns so a
-   * subsequent paint with different state uses the resting defaults.
+   * slot cannot occlude it, covering the resting, focused-outlined (PL-8), and disabled-outlined
+   * (PL-10) treatments alike. The flags are reset before this method returns so a subsequent paint
+   * with different state uses the resting defaults.
    *
    * @param g the graphics context
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   @Override
@@ -1158,12 +1157,12 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   /**
    * Forces the chassis rounded-corner child clip on whenever an edge-bleed {@link ElwhaCardMedia}
    * is the first or last visible child — the one case where a card hosts an opaque cover that
-   * reaches the chassis corners and would otherwise overhang them with a square edge (#157). Every
-   * other card (inset content only) inherits the default and skips the offscreen clip buffer
-   * entirely, so a ripple-animating non-media card doesn't allocate per frame (#272).
+   * reaches the chassis corners and would otherwise overhang them with a square edge. Every other
+   * card (inset content only) inherits the default and skips the offscreen clip buffer entirely, so
+   * a ripple-animating non-media card doesn't allocate per frame.
    *
    * @return {@code true} when an edge-bleed media child requires the corner clip
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   @Override
@@ -1195,8 +1194,8 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   /**
    * Paints above the children: the OUTLINED border, ripple, focus ring, and selection badge.
    * Painting these on top of children ensures the selection badge sits above any media child that
-   * would otherwise hide it, and — per #157 — that an OUTLINED card's outline is never occluded by
-   * an edge-bleed {@link ElwhaCardMedia} slot.
+   * would otherwise hide it, and that an OUTLINED card's outline is never occluded by an edge-bleed
+   * {@link ElwhaCardMedia} slot.
    *
    * <p>The border for every Outlined card is painted here at the chassis body edge: the resting
    * OUTLINE_VARIANT stroke ({@link #paintRestingOutlinedBorder}), the PL-8 focused replacement
@@ -1206,7 +1205,7 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    * there's no double-stacking.
    *
    * @param g the graphics context
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   @Override
@@ -1266,13 +1265,13 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    * painted between the chassis fill and the children via the {@link ElwhaSurface} hook. The hook
    * positions the graphics at the body origin, so it paints in body-local coordinates and lands
    * correctly whether the fill was painted directly (inset path) or folded into the child clip
-   * buffer (edge-bleed media — #163).
+   * buffer (edge-bleed media).
    *
    * @param g2 the body-local graphics context
    * @param bodyW the visible body width in pixels
    * @param bodyH the visible body height in pixels
    * @param arc the corner radius in pixels
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.2.0
    */
   @Override
@@ -1298,13 +1297,12 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
   }
 
   /**
-   * Resting OUTLINED border per #157 — painted above the children so an edge-bleed {@link
-   * ElwhaCardMedia} slot (full body width, opaque cover, anchored to the chassis edge) cannot
-   * occlude the outline along the card's top and upper-side edges. The resting OUTLINE_VARIANT
-   * stroke {@link ElwhaSurface} would paint under the children is suppressed by {@link
-   * #suppressRestingBorder}; this repaints it with the exact geometry {@link
-   * com.owspfm.elwha.theme.SurfacePainter#paint} uses for the resting border, so the result is
-   * pixel-identical — only the z-order changes.
+   * Resting OUTLINED border — painted above the children so an edge-bleed {@link ElwhaCardMedia}
+   * slot (full body width, opaque cover, anchored to the chassis edge) cannot occlude the outline
+   * along the card's top and upper-side edges. The resting OUTLINE_VARIANT stroke {@link
+   * ElwhaSurface} would paint under the children is suppressed by {@link #suppressRestingBorder};
+   * this repaints it with the exact geometry {@link com.owspfm.elwha.theme.SurfacePainter#paint}
+   * uses for the resting border, so the result is pixel-identical — only the z-order changes.
    */
   private void paintRestingOutlinedBorder(final Graphics2D g2) {
     final ColorRole role = super.getBorderRole();
@@ -1601,8 +1599,7 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    * string on one line. A layout manager that divides its container into cells knows the width it
    * is about to assign long before it assigns it, and has nowhere to say so; the workaround has
    * been to size the card first and measure after, which mutates the component during a measuring
-   * pass and leaves the ancestors that cache size requirements holding the pre-mutation answer
-   * ([#737](https://github.com/OWS-PFMS/elwha/issues/737)).
+   * pass and leaves the ancestors that cache size requirements holding the pre-mutation answer.
    *
    * <p>Nothing is mutated here — the card is measured, not resized — so the caller may ask before
    * committing to anything.
@@ -1844,10 +1841,10 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
      *       the actual cell width via {@link ElwhaCardMedia#heightForSlotWidth(int)} rather than
      *       the intrinsic preferred-size hint.
      *   <li>{@link ElwhaCardActions} reports its wrapped-row height via {@link
-     *       ElwhaCardActions#heightForSlotWidth(int)} (#17) so the chassis reserves vertical space
-     *       for whatever rows the wrap layout produces at this width — preferred-size queries carry
-     *       no width context and would otherwise always report single-row height.
-     *   <li>The three wrapping text atoms report theirs the same way (#737). Their {@code
+     *       ElwhaCardActions#heightForSlotWidth(int)} so the chassis reserves vertical space for
+     *       whatever rows the wrap layout produces at this width — preferred-size queries carry no
+     *       width context and would otherwise always report single-row height.
+     *   <li>The three wrapping text atoms report theirs the same way. Their {@code
      *       getPreferredSize} measures at the width the label is <em>currently</em> holding, which
      *       on a first layout is none — so asking for a preferred height described the previous
      *       pass's width, or, before any pass, the nearest sized ancestor. Measured on the Showcase

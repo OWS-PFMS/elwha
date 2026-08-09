@@ -12,11 +12,11 @@ import javax.swing.Timer;
  * <p>Progress is read from the wall clock rather than accumulated per tick, so a dropped frame
  * shortens the animation instead of stretching it — the ripple always finishes on time.
  *
- * <p><strong>The disabled guard lives here</strong> (#686). {@link #isActive()} answers {@code
- * false} on a disabled host, so a component that gates its ripple paint on this accessor cannot
- * paint interactive chrome on a control that is not accepting interaction — whatever sequence of
- * state changes got it there. A ripple already in flight when the host is disabled simply stops
- * being drawn.
+ * <p><strong>The disabled guard lives here.</strong> {@link #isActive()} answers {@code false} on a
+ * disabled host, so a component that gates its ripple paint on this accessor cannot paint
+ * interactive chrome on a control that is not accepting interaction — whatever sequence of state
+ * changes got it there. A ripple already in flight when the host is disabled simply stops being
+ * drawn.
  *
  * <p><strong>Not part of the public API.</strong> Declared {@code public} only to cross the {@code
  * .theme} package boundary into the component packages that consume it, exactly as {@link

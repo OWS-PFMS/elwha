@@ -24,9 +24,10 @@ import javax.swing.JPanel;
  *
  * <p><strong>Plain</strong>: a flat {@link ColorRole#INVERSE_SURFACE} round-rect at {@link
  * ShapeScale#XS} carrying a {@link TypeRole#BODY_SMALL} {@link ColorRole#INVERSE_ON_SURFACE} label,
- * word-wrapped by hand at the 200&nbsp;px max width (no HTML views — the #305 doctrine). The
- * wrapped block centers horizontally as a unit; lines inside stay leading-aligned (Compose parity),
- * which collapses to true centering for the single-line common case.
+ * word-wrapped by hand at the 200&nbsp;px max width (no HTML views: an HTML {@code View} can
+ * trigger a measure/paint repaint loop). The wrapped block centers horizontally as a unit; lines
+ * inside stay leading-aligned (Compose parity), which collapses to true centering for the
+ * single-line common case.
  *
  * <p><strong>Rich</strong>: a {@link ColorRole#SURFACE_CONTAINER} card at {@link ShapeScale#MD}
  * under an elevation-2 {@link ShadowPainter} halo (reserved via {@link #halo()}), with an optional

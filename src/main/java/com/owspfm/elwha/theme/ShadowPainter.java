@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * at a canonical body size and {@link Graphics2D#drawImage 9-sliced} onto any host body at paint
  * time. This decouples shadow cost from body resize — the same cached image serves every {@link
  * com.owspfm.elwha.surface.ElwhaSurface} instance and every {@link com.owspfm.elwha.card.ElwhaCard}
- * regardless of dimensions, eliminating the per-frame ConvolveOp recompute that PR #110's {@code
+ * regardless of dimensions, eliminating the per-frame ConvolveOp recompute that the old {@code
  * setSuspendShadowRecompute} workaround targeted.
  *
  * <p><strong>Not part of the public API.</strong> Declared {@code public} only to cross the {@code

@@ -22,10 +22,10 @@ import java.util.function.Consumer;
  * confirmed color becomes the next show's staged color; a cancelled one is forgotten.
  *
  * <p><strong>Two presentations, one semantics.</strong> {@link #show} presents the M3 basic modal;
- * {@link #showFullScreen} presents the same staged pick in the M3 full-screen dialog (#494) — the
- * top app bar's <em>Save</em> confirms, the leading ✕ and Esc discard. The presentations share the
- * staging, the callbacks, and the close routing, and guard each other: while one is showing the
- * other will not open.
+ * {@link #showFullScreen} presents the same staged pick in the M3 full-screen dialog — the top app
+ * bar's <em>Save</em> confirms, the leading ✕ and Esc discard. The presentations share the staging,
+ * the callbacks, and the close routing, and guard each other: while one is showing the other will
+ * not open.
  *
  * <pre>{@code
  * ElwhaColorPickerDialog.show(button, "Accent color", current, chosen -> apply(chosen));

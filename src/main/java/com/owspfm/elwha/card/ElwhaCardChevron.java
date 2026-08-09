@@ -28,8 +28,8 @@ import java.util.Objects;
  * CollapseRule.ALWAYS_VISIBLE)} so the chevron survives a {@code card.setCollapsed(true)} — and the
  * user can therefore expand the card again. Without this self-anchor, every consumer would have to
  * remember the rule, and forgetting silently strands the collapsed card with no affordance to
- * expand (#23 footgun). Consumers who want the chevron's host to hide on collapse anyway can
- * override after adding: {@code card.setCollapseConstraint(host, CollapseRule.COLLAPSIBLE)}.
+ * expand (footgun). Consumers who want the chevron's host to hide on collapse anyway can override
+ * after adding: {@code card.setCollapseConstraint(host, CollapseRule.COLLAPSIBLE)}.
  *
  * <p>See {@code docs/research/elwha-card-v3-spec.md} §6.1.
  *
@@ -98,8 +98,8 @@ public final class ElwhaCardChevron extends ElwhaIconButton {
   /**
    * Self-anchors the chevron's host container as {@link CollapseRule#ALWAYS_VISIBLE} on the driven
    * card the first time the chevron is added to the component tree underneath that card. See class
-   * Javadoc for rationale (the #23 footgun). Defensive: silently does nothing if the chevron is
-   * added outside the card's subtree (consumer error; chevron just doesn't drive survival).
+   * Javadoc for rationale. Defensive: silently does nothing if the chevron is added outside the
+   * card's subtree (consumer error; chevron just doesn't drive survival).
    *
    * <p>Also subscribes the glyph to the card's expansion state and resyncs it, since the card can
    * have been toggled while the chevron was detached.

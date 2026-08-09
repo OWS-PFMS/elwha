@@ -51,14 +51,13 @@ import javax.swing.Timer;
  * {@code docs/research/elwha-fab-design.md}; tracks M3 Expressive post-May-2025 (drops baseline
  * Small, Surface, baseline Extended, and Lowered FABs).
  *
- * <p><strong>Phase 1 + 2 + 3 scope.</strong> Phase 1 (#187–#189) shipped the Standard form: {@link
- * #standard(Icon)} factory + container rendering across all three sizes and six color styles + the
- * full state model (hover state layer + level-4 elevation bump, focus state layer + focus ring,
- * press state layer + ripple). Phase 2 (#190–#191) layered in the Extended form: {@link
- * #extended(String)} and {@link #extended(Icon, String)} factories, per-size label typography
- * (Inter Medium / Regular per design doc §4.2), dynamic content-driven width, and RTL mirroring of
- * the icon-leading / label-trailing order. Phase 3 (#192–#193) adds the bidirectional Standard ↔
- * Extended morph via {@link #morphTo(Form)} — one {@link MorphAnimator} at {@link
+ * <p>The {@link #standard(Icon)} factory builds the Standard form: container rendering across all
+ * three sizes and six color styles, plus the full state model (hover state layer + level-4
+ * elevation bump, focus state layer + focus ring, press state layer + ripple). The {@link
+ * #extended(String)} and {@link #extended(Icon, String)} factories build the Extended form:
+ * per-size label typography (Inter Medium / Regular per design doc §4.2), dynamic content-driven
+ * width, and RTL mirroring of the icon-leading / label-trailing order. {@link #morphTo(Form)}
+ * drives the bidirectional Standard ↔ Extended morph — one {@link MorphAnimator} at {@link
  * MorphAnimator#MEDIUM2_MS 300 ms} drives three parallel transitions per design doc §9.1: container
  * width (the visible "shape morph" — Standard's square body grows / shrinks into Extended's wider
  * round-rect through the eased progress), icon translation (centered ↔ leading inset), and label
@@ -181,7 +180,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
     /**
      * Returns the corner radius in pixels for this size — a real radius, the M3 dp figure, not a
      * {@link java.awt.geom.RoundRectangle2D} {@code arcWidth}. The int-arc painters take the
-     * diameter, so a caller handing them this value must double it first (#654).
+     * diameter, so a caller handing them this value must double it first.
      *
      * @return the corner radius
      * @version v0.5.0
@@ -377,10 +376,11 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
    * <p>A FAB constructed via {@link ElwhaFab#standard(Icon)} resists morphing to {@link #EXTENDED}
    * (no label text to draw); one constructed via {@link ElwhaFab#extended(String)} resists morphing
    * to {@link #STANDARD} (no icon to draw). Only {@link ElwhaFab#extended(Icon, String)} produces
-   * an instance that can move freely in either direction — Nav Rail (#159) is the consumer pattern.
+   * an instance that can move freely in either direction — the navigation rail is the consumer
+   * pattern.
    *
    * @author Charles Bryan
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public enum Form {
@@ -655,13 +655,13 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
    * label text — an instance built via {@link #standard(Icon)} cannot morph to {@code EXTENDED}.
    * {@link Form#STANDARD} requires a non-{@code null} icon — an instance built via {@link
    * #extended(String)} cannot morph to {@code STANDARD}. Only {@link #extended(Icon, String)}
-   * carries the content for both endpoints; that is the Nav Rail (#159) consumer pattern.
+   * carries the content for both endpoints; that is the navigation rail's consumer pattern.
    *
    * @param target the destination form
    * @return {@code this} for fluent chaining
    * @throws NullPointerException if {@code target} is {@code null}
    * @throws IllegalStateException if the target form's content rules cannot be satisfied
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   public ElwhaFab morphTo(final Form target) {

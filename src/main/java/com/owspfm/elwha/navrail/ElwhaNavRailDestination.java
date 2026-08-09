@@ -52,11 +52,11 @@ import javax.swing.KeyStroke;
  * implementing {@link IconBearing} that paints a single icon (with an optional label) and exposes a
  * pill-shaped active-indicator region for state-layer / ripple / future selected paint.
  *
- * <p><strong>Phase 3 — both variants and the Collapsed↔Expanded morph.</strong> Collapsed renders
- * icon-over-label with a 32×56 icon pill (Phase 1 layout). Expanded renders icon-beside-label with
- * a 56-tall Hug-width row pill (icon left, label inline). The variant is pushed in by the parent
- * {@link ElwhaNavigationRail} via the package-private {@code setHostVariant(Variant)}; the morph
- * progress is pushed in via {@code setMorphProgress(float, Variant, Variant)} once per {@link
+ * <p><strong>Collapsed, Expanded, and the morph between them.</strong> Collapsed renders
+ * icon-over-label with a 32×56 icon pill. Expanded renders icon-beside-label with a 56-tall
+ * Hug-width row pill (icon left, label inline). The variant is pushed in by the parent {@link
+ * ElwhaNavigationRail} via the package-private {@code setHostVariant(Variant)}; the morph progress
+ * is pushed in via {@code setMorphProgress(float, Variant, Variant)} once per {@link
  * com.owspfm.elwha.theme.MorphAnimator} tick. The destination is not animator-aware itself — the
  * container owns the clock and broadcasts progress to every destination in lock-step (design doc
  * §9.2).
@@ -511,12 +511,12 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   /**
    * The destination label's font — {@link TypeRole#LABEL_MEDIUM} unless a consumer installed a font
    * on this destination itself. Role-always, matching {@code ElwhaAppBar}, {@code ElwhaTab} and
-   * {@code ElwhaBadge} (#628): {@code getFont()} answers the <em>inherited</em> container font on
-   * anything that is actually in a hierarchy, so preferring it applied the token role only to
-   * offscreen renders — the inverse of the intent. {@link #isFontSet()} is the distinction that
-   * matters: it is true only for a font set on this component, so an explicit consumer override
-   * still wins while a panel's ambient font does not. Both the Expanded hug-width measurement and
-   * the label paint read this, so the reserved width can never disagree with the painted glyphs.
+   * {@code ElwhaBadge}: {@code getFont()} answers the <em>inherited</em> container font on anything
+   * that is actually in a hierarchy, so preferring it applied the token role only to offscreen
+   * renders — the inverse of the intent. {@link #isFontSet()} is the distinction that matters: it
+   * is true only for a font set on this component, so an explicit consumer override still wins
+   * while a panel's ambient font does not. Both the Expanded hug-width measurement and the label
+   * paint read this, so the reserved width can never disagree with the painted glyphs.
    */
   private Font labelFont() {
     return isFontSet() ? getFont() : TypeRole.LABEL_MEDIUM.resolve();
@@ -1037,11 +1037,10 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
    * pairing with a {@code PAGE_TAB_LIST}-roled container — matches ARIA {@code tablist} / {@code
    * tab}), the destination's label as the accessible name, and {@link AccessibleState#SELECTED}
    * when {@link ElwhaNavRailDestination#isSelected()} is true. Badge content fragments are spliced
-   * in by {@link com.owspfm.elwha.badge.ElwhaBadgeAnchor} via its push-model accessibility wiring —
-   * see story #228.
+   * in by {@link com.owspfm.elwha.badge.ElwhaBadgeAnchor} via its push-model accessibility wiring.
    *
    * @author Charles Bryan
-   * @version v0.3.0
+   * @version v0.5.0
    * @since v0.3.0
    */
   protected class AccessibleElwhaNavRailDestination extends AccessibleJComponent {

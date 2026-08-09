@@ -138,8 +138,7 @@ public final class Config {
    * install(current().withMode(DARK))}). Without equality a consumer could not ask "is this the
    * config already installed?" to skip a redundant {@link ElwhaTheme#install(Config)} — and
    * installing is not cheap: it re-runs the base look-and-feel setup, writes the whole key table,
-   * and calls {@code updateComponentTreeUI} on every live window. Ruled for the 1.0 freeze in
-   * (#698).
+   * and calls {@code updateComponentTreeUI} on every live window.
    *
    * @param obj the object to compare against
    * @return whether {@code obj} is a config with the same theme, mode, typography and

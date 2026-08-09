@@ -21,13 +21,13 @@ import javax.swing.event.ChangeListener;
  * mode, color roles, geometry knobs, and the animation clock that {@link
  * ElwhaLinearProgressIndicator} and {@link ElwhaCircularProgressIndicator} paint from.
  *
- * <p><strong>Architecture (load-bearing, locked by the S1 spike — design doc {@code
- * elwha-progress-indicator-design.md} §2).</strong> Progress indicators are dedicated {@link
- * JComponent}s backed by a {@link BoundedRangeModel} ({@link DefaultBoundedRangeModel}) — the
- * {@code ElwhaSlider} precedent — <em>not</em> {@code JProgressBar} subclasses and <em>not</em>
- * {@code ProgressBarUI} delegates: the updated-M3 anatomy (track-active gap, stop indicator, wavy
- * active path) has no counterpart in {@code BasicProgressBarUI}'s box-fill layout, and the shared
- * model means a consumer can drive a slider and a progress readout off one instance.
+ * <p><strong>Architecture (load-bearing — design doc {@code elwha-progress-indicator-design.md}
+ * §2).</strong> Progress indicators are dedicated {@link JComponent}s backed by a {@link
+ * BoundedRangeModel} ({@link DefaultBoundedRangeModel}) — the {@code ElwhaSlider} precedent —
+ * <em>not</em> {@code JProgressBar} subclasses and <em>not</em> {@code ProgressBarUI} delegates:
+ * the updated-M3 anatomy (track-active gap, stop indicator, wavy active path) has no counterpart in
+ * {@code BasicProgressBarUI}'s box-fill layout, and the shared model means a consumer can drive a
+ * slider and a progress readout off one instance.
  *
  * <p><strong>Modes.</strong> Determinate (the default) fills toward {@link #getProgressFraction()}
  * of the run; {@linkplain #setIndeterminate(boolean) indeterminate} loops the current-M3

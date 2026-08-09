@@ -41,13 +41,12 @@ import javax.swing.JComponent;
  *
  * <h2>The invalidation, and why {@code isPaintingOrigin} is the hook</h2>
  *
- * <p>The three original copies keyed their cache on {@code (deviceWidth, deviceHeight)} alone (<a
- * href="https://github.com/OWS-PFMS/elwha/issues/713">#713</a>). Nothing else could invalidate it,
- * and being a painting origin routes <em>every</em> descendant repaint back through the host's
- * {@code paint} — which then found a same-sized raster and re-blitted the stale one. So a spinner,
- * a caret, a per-tick ripple or any content that changed during the entrance rendered frozen for
- * the length of the tween. Bounded in time, but a real cache-key gap: the two mechanisms were each
- * correct alone and wrong together.
+ * <p>The three original copies keyed their cache on {@code (deviceWidth, deviceHeight)} alone.
+ * Nothing else could invalidate it, and being a painting origin routes <em>every</em> descendant
+ * repaint back through the host's {@code paint} — which then found a same-sized raster and
+ * re-blitted the stale one. So a spinner, a caret, a per-tick ripple or any content that changed
+ * during the entrance rendered frozen for the length of the tween. Bounded in time, but a real
+ * cache-key gap: the two mechanisms were each correct alone and wrong together.
  *
  * <p>Detecting the change directly is not cheap, but detecting that one <em>happened</em> is:
  * {@link JComponent#isPaintingOrigin()} is consulted by {@code SwingUtilities.getPaintingOrigin},

@@ -64,7 +64,7 @@ import javax.swing.KeyStroke;
  *       beside label, {@value #INLINE_GAP_PX}&nbsp;px gap, {@value
  *       #INLINE_CONTENT_HEIGHT_PX}&nbsp;px content height.
  *   <li><strong>Icon-only:</strong> the icon centered; pass an accessible label — icon-only tabs
- *       always need one (research §A; surfaces as the accessible name with S6).
+ *       always need one (research §A) — it becomes the accessible name.
  * </ul>
  *
  * <p>The {@link MaterialIcons.Symbol} factories follow the house fill-swap: the fill-0 glyph paints
@@ -93,9 +93,9 @@ import javax.swing.KeyStroke;
  * press ripple seeds at the press point, clipped to the tab rect.
  *
  * <p><strong>Listener semantics.</strong> {@link #addActionListener(ActionListener)} fires on
- * <em>user</em> activation of this tab only (click; keyboard arrives with S6) — never on
- * programmatic activation, and never when the tab was already active (clicking the active tab is a
- * no-op). Any-change observation lives on the bar's {@link ElwhaTabs#PROPERTY_ACTIVE_TAB}.
+ * <em>user</em> activation of this tab only (click or keyboard) — never on programmatic activation,
+ * and never when the tab was already active (clicking the active tab is a no-op). Any-change
+ * observation lives on the bar's {@link ElwhaTabs#PROPERTY_ACTIVE_TAB}.
  *
  * <p>Colors resolve at paint time (the binding rule) — see {@code
  * docs/research/elwha-tabs-design.md} §4–§5.
@@ -378,11 +378,11 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
   }
 
   /**
-   * Adds an action listener fired when the <em>user</em> activates this tab (click; keyboard with
-   * S6). Programmatic activation and clicks on the already-active tab never fire.
+   * Adds an action listener fired when the <em>user</em> activates this tab (click or keyboard).
+   * Programmatic activation and clicks on the already-active tab never fire.
    *
    * @param listener the listener to add; null is ignored
-   * @version v0.4.0
+   * @version v0.5.0
    * @since v0.4.0
    */
   public void addActionListener(final ActionListener listener) {
