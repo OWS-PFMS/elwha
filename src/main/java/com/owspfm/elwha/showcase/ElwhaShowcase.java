@@ -119,30 +119,28 @@ import javax.swing.event.DocumentListener;
 /**
  * The Elwha Showcase — the unified, curated playground for the whole Elwha component set.
  *
- * <p>A left <em>sidebar nav</em> selects one surface at a time into a card-swapped content area; a
- * header bar carries the light / dark / system mode toggle. The nav is organised into three
- * sections:
+ * <p>A full-height {@link com.owspfm.elwha.navrail.ElwhaNavigationRail} at the leading edge owns
+ * navigation across three areas — <strong>Foundations</strong> (the design tokens: color roles,
+ * type scale, spacing, and the raw-Swing bridge gallery, see {@link FoundationsPanels}),
+ * <strong>Components</strong> (every shipped component, one leaf each), and
+ * <strong>Containers</strong> (the multi-instance surfaces: the item list and the selection-group
+ * demos). Each area opens on a landing page of summary cards grouped by component family — the same
+ * family taxonomy the {@code GROUP_ORDER} constant encodes — and each leaf is a tabbed pane of
+ * {@code Workbench} (interactive controls on a staged instance, with a live equivalent-Java code
+ * view) and {@code Gallery} (the variant matrix) views. The header bar inside the content column
+ * carries the palette tier and picker plus the light / dark / system mode toggle, and a floating
+ * {@link com.owspfm.elwha.fab.ElwhaFabAnchor} demonstrates itself over the content.
  *
- * <ul>
- *   <li><strong>Foundations</strong> — the design tokens: color roles, type scale, and the
- *       raw-Swing gallery (see {@link FoundationsPanels}).
- *   <li><strong>Components</strong> — Button, Chip, Icon Button, Button Group, Card, and Surface,
- *       each a single inner tabbed pane of {@code Workbench} (interactive) and {@code Gallery}
- *       (matrix) views.
- *   <li><strong>Containers</strong> — the multi-instance surfaces: Chip List, Card List, and the
- *       Button / Icon Button group demos.
- * </ul>
- *
- * <p>Most panels are composed from the existing factored playground builders ({@code
- * ButtonPlaygroundPanels} and friends) so the Showcase and the standalone playgrounds never drift;
- * component Workbenches are progressively migrated onto the shared {@link ComponentWorkbench}
- * scaffold. The locked design is {@code docs/research/elwha-showcase-design.md}.
+ * <p>Leaves are composed from the factored per-component playground builders so the Showcase and
+ * the standalone playgrounds never drift; every component Workbench sits on the shared {@link
+ * ComponentWorkbench} / {@code ContainerWorkbench} scaffolds. The design is {@code
+ * docs/research/elwha-showcase-design.md}.
  *
  * <p>Run with: {@code mvn compile exec:java
  * -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"}
  *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.0
  * @since v0.3.0
  */
 public final class ElwhaShowcase {
