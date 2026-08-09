@@ -107,7 +107,7 @@ import javax.swing.event.EventListenerList;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.0
  * @since v0.4.0
  */
 public class ElwhaRadioButton extends JComponent implements BodyBearing {
@@ -1058,17 +1058,4 @@ public class ElwhaRadioButton extends JComponent implements BodyBearing {
         Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * f),
         Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * f));
   }
-
-  /**
-   * A retargeting tween over one float quantity — the CSS-transition model the research §Mo
-   * durations describe. Each {@link #retarget} captures the current value as the new starting point
-   * and re-runs the backing {@link MorphAnimator} {@code 0→1} through the given {@link Easing}, so
-   * a mid-flight direction change (deselect during the dot grow) continues from wherever the value
-   * currently is instead of jumping. Re-implemented privately from {@code ElwhaSwitch}; extraction
-   * to {@code theme/} is the recorded design §14-2 follow-up.
-   *
-   * @author Charles Bryan
-   * @version v0.5.0
-   * @since v0.4.0
-   */
 }
