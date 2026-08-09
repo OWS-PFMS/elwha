@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-08-09
+
 Everything below ships as **1.0.0**, Elwha's first release since `0.1.0` and its API-stability
 milestone. It is not one wave of work: `v0.2.0` was cancelled and `v0.3.0` / `v0.4.0` were planning
 waves that were never cut, so four waves of components, refactors and fixes accumulated here behind
@@ -892,5 +894,6 @@ Pre-extraction commit history has been preserved via `git filter-repo --subdirec
 
 Cross-reference these via `git log` in this repo — file paths and blame archeology are preserved.
 
-[Unreleased]: https://github.com/OWS-PFMS/elwha/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/OWS-PFMS/elwha/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/OWS-PFMS/elwha/releases/tag/v1.0.0
 [0.1.0]: https://github.com/OWS-PFMS/elwha/releases/tag/v0.1.0
