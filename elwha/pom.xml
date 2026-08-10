@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.owspfm</groupId>
+    <artifactId>elwha-parent</artifactId>
+    <version>1.0.1</version>
+  </parent>
+
+  <artifactId>elwha</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Elwha</name>
+  <description>A Swing component library implementing Material 3 Expressive on FlatLaf — a design-token foundation plus ~25 components, with the containers, overlays, and anchors around them.</description>
+  <url>https://github.com/OWS-PFMS/elwha</url>
+
+  <!-- The consumer-inherited compile scope: Swing + FlatLaf only (see CLAUDE.md's coupling
+       stance and docs/consumer/stability.md). Test-scope deps come from the parent. -->
+  <dependencies>
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf</artifactId>
+      <version>${flatlaf.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf-extras</artifactId>
+      <version>${flatlaf.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <!-- #774: a stable JPMS name for module-path consumers; without it the module
+                   name derives from the jar filename. -->
+              <Automatic-Module-Name>com.owspfm.elwha</Automatic-Module-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <!-- #547: the landing page of the published javadoc jar (component index + quick
+               start) instead of a bare package list. Module-specific — the doclint/tag config
+               it merges with is inherited from the parent. -->
+          <overview>${project.basedir}/src/main/javadoc/overview.html</overview>
+        </configuration>
+      </plugin>
+      <plugin>
+        <!-- §1.5 re-enable: the parent's pluginManagement skips exec reactor-wide; the module
+             holding the runnable mains flips it back on. P1-S2 moves this override to the
+             elwha-showcase module together with the showcase classes. -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <configuration>
+          <skip>false</skip>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
