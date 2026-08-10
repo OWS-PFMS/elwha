@@ -268,7 +268,7 @@ class ElwhaCardCompositionTest {
   }
 
   @Test
-  void theFourSanctionedMutatorsStillPassTheGuard() {
+  void allFourSanctionedMutatorsStillPassTheGuard() {
     final ElwhaCardHeader header =
         new ElwhaCardHeader()
             .setLeading(new ElwhaCardThumbnail(blankImage()))
