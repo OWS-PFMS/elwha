@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- **The repo is a two-module Maven reactor** (#785; epic #779 Phase 1): a root
+  `com.owspfm:elwha-parent` (packaging `pom`) now hosts the library as the `elwha` module —
+  `src/` moved wholesale to `elwha/src/` as pure renames, so history traverses via
+  `git log --follow`. Shared build config hoisted to the parent; the Checkstyle config and the
+  #774 LICENSE/NOTICE jar resource re-anchored to `${maven.multiModuleProjectDirectory}`
+  (anchored by the new `.mvn/maven.config`). Every documented one-liner — `mvn verify`,
+  `mvn compile exec:java -Dexec.mainClass=…` — keeps working verbatim from the root; jars now
+  land under `elwha/target/`. The published `com.owspfm:elwha` artifact is unchanged in
+  content; the `elwha-showcase` module and the demo-surface move follow in #786.
 - **`ElwhaCardHeader.add(...)` fails fast** (#768): it now throws `IllegalArgumentException`
   instead of silently accepting a child its slot layout would never position — the header is
   slot-based; populate it via `setTitle` / `setSubtitle` / `setLeading` / `addTrailing`.
@@ -25,6 +34,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **The `@version` gate no longer fails open under the reactor** (#785; design doc §4.4): the
+  validation script's root-anchored `src/ test/` pathspec matched nothing once sources moved,
+  so every post-split PR would have passed the required check unvalidated. The diff now runs
+  without a pathspec and module scoping lives in `in_scope()` — restricting the pathspec to
+  the new roots instead would have broken git's rename pairing and demanded bumps on all 887
+  pure renames.
+- **`publish.yml`'s tag-version check survives the reactor** (#785): the parent-managed
+  exec-plugin skip silenced the `exec:exec` version read (an empty version fails the tag check
+  closed); it now reads `help:evaluate -DforceStdout`.
 - **A disabled `ElwhaTabs` bar dims its active indicator with the rest of the bar** (#781):
   `ON_SURFACE` at the 38% disabled content opacity instead of a full-strength `PRIMARY`
   underline — the one saturated element left on an otherwise dimmed bar after #767.
