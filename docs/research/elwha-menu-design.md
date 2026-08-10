@@ -179,3 +179,24 @@ The §2 `RECOMMENDED` extraction was prototyped and **adopted** — no fallback 
   live columns, one per mode). Showcase Menu Workbench gains a Selection control.
 - **V1 (#298) is feature-complete with this story** — its PR `Closes #298`. Submenus are the separate
   **V2 epic #322**.
+
+## §17. Disabled × selected ruling (2026-08-10, #782) — the fill **dims**
+
+A selected item that is also disabled no longer paints its `TERTIARY` / `TERTIARY_CONTAINER` fill
+at full strength. The fill joins the lib-wide #767 disabled treatment: **`ON_SURFACE` at
+`StateLayer.disabledContainerOpacity()` (12%)** — exactly the nav rail's disabled indicator-pill
+precedent (`ElwhaNavRailDestination.paintActiveIndicator`).
+
+Both options were weighed:
+
+- **Keep** — the §9/#298-S6 selection-persistence idiom (selection state lives on the items and
+  survives reopens) argued the fill is selection *state*, not interactive chrome, and full strength
+  keeps it maximally legible.
+- **Dim** — after #767 every other component replaces disabled chrome with `ON_SURFACE` at the
+  container/content opacities; a fully saturated pill under 38%-dimmed text was the one remaining
+  saturated element on a disabled surface.
+
+**Dim won on the #767 uniformity doctrine.** Selection persistence is unaffected — the `selected`
+flag still lives on the item and survives disable/enable round-trips — and selection stays legible
+while disabled: a dimmed pill is still a pill, and the ✓ checkmark (itself dimmed with the content,
+per a11y §X the non-color cue) still marks the row. Pinned by `ElwhaMenuRenderTest`, both modes.

@@ -104,6 +104,87 @@ class ElwhaMenuRenderTest {
         "a vibrant selected row swaps up to the bold tertiary fill");
   }
 
+  // ------------------------------------------- disabled × selected (#782)
+
+  private static Color disabledFill() {
+    return Pixels.mix(
+        ColorRole.SURFACE.resolve(),
+        ColorRole.ON_SURFACE.resolve(),
+        StateLayer.disabledContainerOpacity());
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Mode.class,
+      names = {"LIGHT", "DARK"})
+  void aDisabledSelectedRowDimsItsFillToTheDisabledContainerTreatment(final Mode mode) {
+    ThemeExtension.install(mode);
+    final ElwhaMenuItem item =
+        sizedItem(
+            row -> {
+              row.setSelected(true);
+              row.setEnabled(false);
+            });
+
+    final BufferedImage shot = Pixels.render(item, item.getWidth(), item.getHeight());
+
+    Pixels.assertPixelNear(
+        shot,
+        probeX(item),
+        item.getHeight() / 2,
+        disabledFill(),
+        "#782 — a disabled row's selected fill joins the ON_SURFACE 12% container treatment in "
+            + mode);
+    Pixels.assertNoPixelNear(
+        shot,
+        probeX(item),
+        item.getHeight() / 2,
+        2,
+        ColorRole.TERTIARY_CONTAINER.resolve(),
+        "the saturated selection fill never survives on a disabled row in " + mode);
+  }
+
+  @Test
+  void aDisabledVibrantSelectedRowDimsToTheSameTreatment() {
+    final ElwhaMenuItem item =
+        sizedItem(
+            row -> {
+              row.setColorStyle(ColorStyle.VIBRANT);
+              row.setSelected(true);
+              row.setEnabled(false);
+            });
+
+    final BufferedImage shot = Pixels.render(item, item.getWidth(), item.getHeight());
+
+    Pixels.assertPixelNear(
+        shot,
+        probeX(item),
+        item.getHeight() / 2,
+        disabledFill(),
+        "#782 — the disabled treatment replaces the bold vibrant fill too");
+    Pixels.assertNoPixelNear(
+        shot,
+        probeX(item),
+        item.getHeight() / 2,
+        2,
+        ColorRole.TERTIARY.resolve(),
+        "no bold tertiary survives on a disabled vibrant row");
+  }
+
+  @Test
+  void reEnablingASelectedRowRestoresTheFullStrengthFill() {
+    final ElwhaMenuItem item = sizedItem(row -> row.setSelected(true));
+    item.setEnabled(false);
+    item.setEnabled(true);
+
+    Pixels.assertPixelNear(
+        Pixels.render(item, item.getWidth(), item.getHeight()),
+        probeX(item),
+        item.getHeight() / 2,
+        ColorRole.TERTIARY_CONTAINER.resolve(),
+        "#782 — the dim is a paint-time branch, and selection persists through the round-trip");
+  }
+
   @Test
   void hoveringPaintsTheOnSurfaceStateLayer() {
     final ElwhaMenuItem item = sizedItem();
