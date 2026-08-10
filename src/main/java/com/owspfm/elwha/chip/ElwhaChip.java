@@ -32,6 +32,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
@@ -86,7 +87,7 @@ import javax.swing.Timer;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v1.0.1
+ * @version v1.1.0
  * @since v0.1.0
  */
 public class ElwhaChip extends JPanel implements ElwhaListItemView {
@@ -194,8 +195,8 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
   /**
    * Creates a chip with the given text.
    *
-   * @param text the chip label
-   * @version v0.3.0
+   * @param text the chip label; {@code null} is treated as the empty string
+   * @version v1.1.0
    * @since v0.1.0
    */
   public ElwhaChip(final String text) {
@@ -255,12 +256,15 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
    * ChipVariant#OUTLINED}. Returns a fully further-configurable chip; every preset choice is
    * overridable through the normal setters.
    *
-   * @param text the chip label
+   * @param text the chip label; required — a deliberately text-less chip constructs through {@link
+   *     #ElwhaChip()}
    * @return a configured assist-chip
-   * @version v0.1.0
+   * @throws NullPointerException if {@code text} is {@code null}
+   * @version v1.1.0
    * @since v0.1.0
    */
   public static ElwhaChip assistChip(final String text) {
+    Objects.requireNonNull(text, "text");
     return new ElwhaChip(text)
         .setVariant(ChipVariant.OUTLINED)
         .setInteractionMode(ChipInteractionMode.CLICKABLE);
@@ -270,12 +274,15 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
    * Creates an M3 filter-chip preset — {@link ChipInteractionMode#SELECTABLE} + {@link
    * ChipVariant#OUTLINED}.
    *
-   * @param text the chip label
+   * @param text the chip label; required — a deliberately text-less chip constructs through {@link
+   *     #ElwhaChip()}
    * @return a configured filter-chip
-   * @version v0.1.0
+   * @throws NullPointerException if {@code text} is {@code null}
+   * @version v1.1.0
    * @since v0.1.0
    */
   public static ElwhaChip filterChip(final String text) {
+    Objects.requireNonNull(text, "text");
     return new ElwhaChip(text)
         .setVariant(ChipVariant.OUTLINED)
         .setInteractionMode(ChipInteractionMode.SELECTABLE);
@@ -285,14 +292,17 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
    * Creates an M3 input-chip preset — {@link ChipInteractionMode#CLICKABLE} + {@link
    * ChipVariant#OUTLINED} with a trailing remove (×) affordance wired to {@code onRemove}.
    *
-   * @param text the chip label
+   * @param text the chip label; required — a deliberately text-less chip constructs through {@link
+   *     #ElwhaChip()}
    * @param onRemove invoked when the user clicks the trailing remove button; may be {@code null} to
    *     suppress the click but still render the affordance
    * @return a configured input-chip
-   * @version v0.1.0
+   * @throws NullPointerException if {@code text} is {@code null}
+   * @version v1.1.0
    * @since v0.1.0
    */
   public static ElwhaChip inputChip(final String text, final Runnable onRemove) {
+    Objects.requireNonNull(text, "text");
     ElwhaChip chip =
         new ElwhaChip(text)
             .setVariant(ChipVariant.OUTLINED)
@@ -305,12 +315,15 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
    * Creates an M3 suggestion-chip preset — {@link ChipInteractionMode#CLICKABLE} + {@link
    * ChipVariant#OUTLINED}.
    *
-   * @param text the chip label
+   * @param text the chip label; required — a deliberately text-less chip constructs through {@link
+   *     #ElwhaChip()}
    * @return a configured suggestion-chip
-   * @version v0.1.0
+   * @throws NullPointerException if {@code text} is {@code null}
+   * @version v1.1.0
    * @since v0.1.0
    */
   public static ElwhaChip suggestionChip(final String text) {
+    Objects.requireNonNull(text, "text");
     return new ElwhaChip(text)
         .setVariant(ChipVariant.OUTLINED)
         .setInteractionMode(ChipInteractionMode.CLICKABLE);

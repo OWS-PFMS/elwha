@@ -74,7 +74,7 @@ import javax.swing.JPanel;
  *
  * @serial exclude
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.5.0
  */
 public final class ElwhaSideSheet extends JComponent {
@@ -450,8 +450,9 @@ public final class ElwhaSideSheet extends JComponent {
    * the footer divider when {@link #isFooterDividerVisible()}. Passing no buttons removes the
    * footer entirely. Actions do <strong>not</strong> auto-dismiss — see the class doc.
    *
-   * @param actions the footer action buttons, leading-first; empty for no footer
-   * @version v0.5.0
+   * @param actions the footer action buttons, leading-first; empty (or {@code null}) for no footer,
+   *     and {@code null} entries are skipped
+   * @version v1.1.0
    * @since v0.5.0
    */
   public void setActions(final ElwhaButton... actions) {

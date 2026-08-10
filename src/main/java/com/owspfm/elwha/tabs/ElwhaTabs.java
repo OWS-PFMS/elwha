@@ -482,16 +482,17 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
   /**
    * Activates the tab at the given index. Fires {@link #PROPERTY_ACTIVE_TAB} on an actual change;
-   * activating the already-active index is a no-op. Out-of-range indices are ignored (material-web
-   * parity).
+   * activating the already-active index is a no-op.
    *
    * @param index the tab index to activate
-   * @version v0.5.0
+   * @throws IndexOutOfBoundsException if {@code index} is outside {@code [0, getTabCount())}
+   * @version v1.1.0
    * @since v0.4.0
    */
   public void setActiveTabIndex(final int index) {
     if (index < 0 || index >= tabs.size()) {
-      return;
+      throw new IndexOutOfBoundsException(
+          "activeTabIndex " + index + " out of range [0, " + tabs.size() + ")");
     }
     activate(index, false);
   }
@@ -508,14 +509,19 @@ public class ElwhaTabs extends JComponent implements Accessible {
   }
 
   /**
-   * Activates the given tab. Tabs that are not children of this bar are ignored.
+   * Activates the given tab. Tabs that are not children of this bar are ignored — a documented
+   * ignore this setter keeps, unlike the index overload's range contract.
    *
-   * @param tab the tab to activate
-   * @version v0.4.0
+   * @param tab the tab to activate; {@code null} or a tab that is not a child of this bar is
+   *     ignored
+   * @version v1.1.0
    * @since v0.4.0
    */
   public void setActiveTab(final ElwhaTab tab) {
-    setActiveTabIndex(tabs.indexOf(tab));
+    final int index = tabs.indexOf(tab);
+    if (index >= 0) {
+      activate(index, false);
+    }
   }
 
   /**
@@ -960,7 +966,11 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
     @Override
     public void addAccessibleSelection(final int i) {
-      setActiveTabIndex(i);
+      // AccessibleSelection has no range contract, and assistive tech is not a caller that can
+      // fix its arguments — out-of-range stays a no-op here while the public setter throws.
+      if (i >= 0 && i < tabs.size()) {
+        activate(i, false);
+      }
     }
 
     @Override

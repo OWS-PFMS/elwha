@@ -2,6 +2,7 @@ package com.owspfm.elwha.icons;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import java.awt.Color;
+import java.util.Objects;
 import javax.swing.UIManager;
 
 /**
@@ -58,7 +59,7 @@ import javax.swing.UIManager;
  * components.
  *
  * @author Charles Bryan
- * @version v1.0.1
+ * @version v1.1.0
  * @since v0.1.0
  */
 public final class MaterialIcons {
@@ -1658,9 +1659,12 @@ public final class MaterialIcons {
    *
    * @param icon the icon to theme
    * @return the same icon, with the theme filter attached
+   * @throws NullPointerException if {@code icon} is {@code null}
+   * @version v1.1.0
    * @since v0.3.0
    */
   public static FlatSVGIcon themed(final FlatSVGIcon icon) {
+    Objects.requireNonNull(icon, "icon");
     icon.setColorFilter(LABEL_FOREGROUND_FILTER);
     return icon;
   }

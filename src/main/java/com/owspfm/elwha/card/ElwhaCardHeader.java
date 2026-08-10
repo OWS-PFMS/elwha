@@ -271,12 +271,15 @@ public final class ElwhaCardHeader extends JComponent {
   /**
    * Shorthand: sets the title using a fresh {@link ElwhaCardTitle}.
    *
-   * @param text the title text
+   * @param text the title text; required — a deliberately empty title is constructed explicitly via
+   *     {@link #setTitle(ElwhaCardTitle)}
    * @return {@code this} for fluent chaining
-   * @version v0.2.0
+   * @throws NullPointerException if {@code text} is {@code null}
+   * @version v1.1.0
    * @since v0.2.0
    */
   public ElwhaCardHeader setTitle(final String text) {
+    Objects.requireNonNull(text, "text");
     return setTitle(new ElwhaCardTitle(text));
   }
 
@@ -317,12 +320,15 @@ public final class ElwhaCardHeader extends JComponent {
   /**
    * Shorthand: sets the subtitle using a fresh {@link ElwhaCardSubtitle}.
    *
-   * @param text the subtitle text
+   * @param text the subtitle text; required — a deliberately empty subtitle is constructed
+   *     explicitly via {@link #setSubtitle(ElwhaCardSubtitle)}
    * @return {@code this} for fluent chaining
-   * @version v0.2.0
+   * @throws NullPointerException if {@code text} is {@code null}
+   * @version v1.1.0
    * @since v0.2.0
    */
   public ElwhaCardHeader setSubtitle(final String text) {
+    Objects.requireNonNull(text, "text");
     return setSubtitle(new ElwhaCardSubtitle(text));
   }
 

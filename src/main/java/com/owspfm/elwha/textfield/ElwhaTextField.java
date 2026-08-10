@@ -65,7 +65,7 @@ import javax.swing.text.JTextComponent;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.4.0
  */
 public class ElwhaTextField extends JComponent {
@@ -212,7 +212,7 @@ public class ElwhaTextField extends JComponent {
   /**
    * Creates a {@link Variant#FILLED} field with the given floating label.
    *
-   * @param label the floating label text (may be empty for a label-less field)
+   * @param label the floating label text ({@code null} or empty for a label-less field)
    */
   public ElwhaTextField(final String label) {
     this(Variant.FILLED, label);
@@ -221,8 +221,8 @@ public class ElwhaTextField extends JComponent {
   /**
    * Creates a field with the given variant and floating label.
    *
-   * @param variant the chrome variant
-   * @param label the floating label text (may be empty for a label-less field)
+   * @param variant the chrome variant (a {@code null} is treated as {@link Variant#FILLED})
+   * @param label the floating label text ({@code null} or empty for a label-less field)
    */
   public ElwhaTextField(final Variant variant, final String label) {
     this.variant = variant == null ? Variant.FILLED : variant;
@@ -242,7 +242,7 @@ public class ElwhaTextField extends JComponent {
   /**
    * Creates a {@link Variant#FILLED} field with the given label.
    *
-   * @param label the floating label text
+   * @param label the floating label text ({@code null} or empty for a label-less field)
    * @return a new filled field
    */
   public static ElwhaTextField filled(final String label) {
@@ -252,7 +252,7 @@ public class ElwhaTextField extends JComponent {
   /**
    * Creates a {@link Variant#OUTLINED} field with the given label.
    *
-   * @param label the floating label text
+   * @param label the floating label text ({@code null} or empty for a label-less field)
    * @return a new outlined field
    */
   public static ElwhaTextField outlined(final String label) {

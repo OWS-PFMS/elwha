@@ -700,8 +700,9 @@ public final class ElwhaNavigationRail extends JComponent {
    * still subscribe their own action listeners on a destination for additional side effects, but
    * the rail's container is the single source of truth for which destination is selected.
    *
-   * @param destinations the new list of primary destinations, or {@code null} to clear
-   * @version v0.3.0
+   * @param destinations the new list of primary destinations, or {@code null} to clear; {@code
+   *     null} entries are skipped
+   * @version v1.1.0
    * @since v0.3.0
    */
   public void setPrimary(final List<ElwhaNavRailDestination> destinations) {
@@ -976,8 +977,9 @@ public final class ElwhaNavigationRail extends JComponent {
    * renders a rail with bottom-anchored utility buttons, so the pattern is demonstrated by the
    * spec's own home site even though not formally documented (design doc §3).
    *
-   * @param actions the actions to slot at the bottom of the rail, or {@code null} / empty to clear
-   * @version v0.3.0
+   * @param actions the actions to slot at the bottom of the rail, or {@code null} / empty to clear;
+   *     {@code null} entries are skipped
+   * @version v1.1.0
    * @since v0.3.0
    */
   public void setTrailingActions(final List<ElwhaIconButton> actions) {

@@ -103,7 +103,7 @@ import javax.swing.Timer;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v1.0.1
+ * @version v1.1.0
  * @since v0.2.0
  */
 public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearing {
@@ -243,24 +243,30 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
    * Creates an M3 elevated button preset — {@link ButtonVariant#ELEVATED}. Every preset choice
    * remains overridable through the normal setters.
    *
-   * @param label the button label
+   * @param label the button label; required — a deliberately label-less button constructs through
+   *     {@link #ElwhaButton()}
    * @return a configured elevated button
-   * @version v0.2.0
+   * @throws NullPointerException if {@code label} is {@code null}
+   * @version v1.1.0
    * @since v0.2.0
    */
   public static ElwhaButton elevatedButton(final String label) {
+    Objects.requireNonNull(label, "label");
     return new ElwhaButton(label).setVariant(ButtonVariant.ELEVATED);
   }
 
   /**
    * Creates an M3 filled button preset — {@link ButtonVariant#FILLED}, the default variant.
    *
-   * @param label the button label
+   * @param label the button label; required — a deliberately label-less button constructs through
+   *     {@link #ElwhaButton()}
    * @return a configured filled button
-   * @version v0.2.0
+   * @throws NullPointerException if {@code label} is {@code null}
+   * @version v1.1.0
    * @since v0.2.0
    */
   public static ElwhaButton filledButton(final String label) {
+    Objects.requireNonNull(label, "label");
     return new ElwhaButton(label).setVariant(ButtonVariant.FILLED);
   }
 
@@ -268,24 +274,30 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
    * Creates an M3 filled-tonal button preset — {@link ButtonVariant#FILLED_TONAL}. M3's canonical
    * CTA pairing with Outlined cards.
    *
-   * @param label the button label
+   * @param label the button label; required — a deliberately label-less button constructs through
+   *     {@link #ElwhaButton()}
    * @return a configured filled-tonal button
-   * @version v0.2.0
+   * @throws NullPointerException if {@code label} is {@code null}
+   * @version v1.1.0
    * @since v0.2.0
    */
   public static ElwhaButton filledTonalButton(final String label) {
+    Objects.requireNonNull(label, "label");
     return new ElwhaButton(label).setVariant(ButtonVariant.FILLED_TONAL);
   }
 
   /**
    * Creates an M3 outlined button preset — {@link ButtonVariant#OUTLINED}.
    *
-   * @param label the button label
+   * @param label the button label; required — a deliberately label-less button constructs through
+   *     {@link #ElwhaButton()}
    * @return a configured outlined button
-   * @version v0.2.0
+   * @throws NullPointerException if {@code label} is {@code null}
+   * @version v1.1.0
    * @since v0.2.0
    */
   public static ElwhaButton outlinedButton(final String label) {
+    Objects.requireNonNull(label, "label");
     return new ElwhaButton(label).setVariant(ButtonVariant.OUTLINED);
   }
 
@@ -293,12 +305,15 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
    * Creates an M3 text button preset — {@link ButtonVariant#TEXT}. Lowest emphasis; transparent
    * surface and no border. Cannot be made selectable.
    *
-   * @param label the button label
+   * @param label the button label; required — a deliberately label-less button constructs through
+   *     {@link #ElwhaButton()}
    * @return a configured text button
-   * @version v0.2.0
+   * @throws NullPointerException if {@code label} is {@code null}
+   * @version v1.1.0
    * @since v0.2.0
    */
   public static ElwhaButton textButton(final String label) {
+    Objects.requireNonNull(label, "label");
     return new ElwhaButton(label).setVariant(ButtonVariant.TEXT);
   }
 
