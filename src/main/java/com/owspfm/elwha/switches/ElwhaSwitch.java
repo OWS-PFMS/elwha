@@ -118,6 +118,15 @@ import javax.swing.event.EventListenerList;
  * AccessibleRole#TOGGLE_BUTTON} with {@link AccessibleState#CHECKED} while selected, one "click"
  * {@link AccessibleAction} (a user-gesture toggle), and an {@link AccessibleValue} of 0/1.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaSwitch liveUpdates = new ElwhaSwitch(true);
+ * liveUpdates.setAccessibleLabel("Live updates");
+ * liveUpdates.addActionListener(e -> feed.setLive(liveUpdates.isSelected()));
+ * row.add(liveUpdates);
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
  * @version v1.1.0

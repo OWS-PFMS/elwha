@@ -62,9 +62,21 @@ import javax.swing.Timer;
  * <p><strong>Scope.</strong> A full M3 Scaffold with named slots, adjacent-UI gaps (20 / 28 dp,
  * §4.4), and multi-FAB placement (FAB Menu) are out of scope.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaFab fab = ElwhaFab.standard(MaterialIcons.add());
+ * fab.addActionListener(e -> items.createNew());
+ *
+ * ElwhaFabAnchor anchor = new ElwhaFabAnchor(scrollPane, fab);
+ * anchor.setScrollSource(scrollPane);
+ * anchor.setScrollResponse(ScrollResponse.HIDE);
+ * frame.add(anchor, BorderLayout.CENTER);
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class ElwhaFabAnchor extends JLayeredPane {

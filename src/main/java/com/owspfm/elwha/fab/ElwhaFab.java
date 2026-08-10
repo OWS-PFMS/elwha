@@ -79,6 +79,15 @@ import javax.swing.Timer;
  * RipplePainter} (press ripple) → icon glyph. Per design doc §6.4 the icon, label, and state-layer
  * overlay all share the active style's on-container color.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaFab compose = ElwhaFab.extended(MaterialIcons.edit(), "Compose")
+ *     .setFabSize(ElwhaFab.Size.MEDIUM);
+ * compose.addActionListener(e -> composer.open());
+ * frame.add(new ElwhaFabAnchor(scrollPane, compose), BorderLayout.CENTER);
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
  * @version v1.1.0

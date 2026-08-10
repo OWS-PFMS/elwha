@@ -59,6 +59,16 @@ import javax.swing.event.DocumentListener;
  * closing and the field shows a summary of the selection. Editable and multi-select are mutually
  * exclusive in V1 — enabling one disables the other.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaSelectField<String> priority = ElwhaSelectField.outlined("Priority");
+ * priority.setOptions(List.of("Low", "Medium", "High"));
+ * priority.setSelectedValue("Medium");
+ * priority.addSelectionChangeListener(value -> task.setPriority(value));
+ * form.add(priority);
+ * }</pre>
+ *
  * @param <T> the option value type
  * @serial exclude
  * @author Charles Bryan

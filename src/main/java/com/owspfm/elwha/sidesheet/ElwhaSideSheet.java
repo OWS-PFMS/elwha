@@ -72,6 +72,16 @@ import javax.swing.JPanel;
  * (that's the navigation rail), not interruptive confirmation (the dialog), and not transient
  * command lists (the menu). Keep headlines short; prefer one sheet at a time per edge.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaSideSheet filters = ElwhaSideSheet.standardSheet("Filters");
+ * filters.setContent(filterPanel);
+ * filters.setActions(ElwhaButton.filledButton("Apply"), ElwhaButton.textButton("Reset"));
+ * frame.add(filters, BorderLayout.LINE_END);
+ * filters.open();
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan (cfb3@uw.edu)
  * @version v1.1.0

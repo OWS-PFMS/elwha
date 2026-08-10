@@ -103,6 +103,17 @@ import javax.swing.KeyStroke;
  * destination (selection only changes on activation, never on focus traversal). Escape is
  * intentionally not consumed.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
+ * rail.setPrimary(List.of(
+ *     ElwhaNavRailDestination.of(MaterialIcons.symbol("home"), "Home"),
+ *     ElwhaNavRailDestination.of(MaterialIcons.symbol("favorite"), "Favorites")));
+ * rail.addSelectionListener((previous, current) -> pages.show(current.getLabel()));
+ * frame.add(rail, BorderLayout.LINE_START);
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
  * @version v1.1.0

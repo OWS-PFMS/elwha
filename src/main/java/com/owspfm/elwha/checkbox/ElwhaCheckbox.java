@@ -76,9 +76,17 @@ import javax.swing.Timer;
  * {@link #setIndeterminate(boolean)} on the parent when the children disagree, and {@link
  * #setChecked(boolean)} when they agree.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaCheckbox terms = new ElwhaCheckbox("Accept terms");
+ * terms.addActionListener(e -> submit.setEnabled(terms.isChecked()));
+ * form.add(terms);
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.4.0
  */
 public class ElwhaCheckbox extends JComponent implements BodyBearing {

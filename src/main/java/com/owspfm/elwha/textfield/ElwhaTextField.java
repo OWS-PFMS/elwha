@@ -60,6 +60,15 @@ import javax.swing.text.JTextComponent;
  * component cannot see its window's size class. A form that can grow wide should cap the field's
  * column itself (research §GD3).
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaTextField email = ElwhaTextField.outlined("Email");
+ * email.setPlaceholder("you@example.com");
+ * email.setSupportingText("We never share it");
+ * form.add(email);
+ * }</pre>
+ *
  * <p>Decisions and the deliberate M3 mappings: {@code docs/research/elwha-textfield-design.md} and
  * its companion {@code elwha-textfield-research.md}.
  *

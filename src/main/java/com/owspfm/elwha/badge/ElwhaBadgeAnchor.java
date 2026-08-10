@@ -73,8 +73,18 @@ import javax.swing.SwingUtilities;
  * LABEL_FOR} relation back to the host is cleared. Badges are non-focusable and have no independent
  * accessible action — AT users address the badge by navigating to the host destination.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaIconButton inbox = ElwhaIconButton.standardIconButton(MaterialIcons.menu());
+ * ElwhaBadgeAnchor.Attachment attachment =
+ *     ElwhaBadgeAnchor.attach(inbox, ElwhaBadge.small());
+ * // later, when the badge should go away:
+ * ElwhaBadgeAnchor.detach(attachment);
+ * }</pre>
+ *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class ElwhaBadgeAnchor {
