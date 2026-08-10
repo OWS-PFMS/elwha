@@ -160,7 +160,7 @@ Two components appeared to disagree about what a setter does when the caller ask
 
 **Never the third option: silently doing nothing.** A programmatic setter that no-ops leaves the caller reading a getter that disagrees with what they just wrote, with no signal either way. That is the defect class [#619](https://github.com/OWS-PFMS/elwha/issues/619) fixed in `ElwhaSelectField.setOptions`.
 
-**Null is a separate question** and this rule does not cover it. A `null` argument conventionally means "no opinion" — reset to the default (`setDisplayFunction(null)`), clear (`setSelectedValue(null)`), or ignore (`ElwhaFab.setColorStyle(null)`) — and each setter documents which. Where `null` is genuinely invalid, reject it eagerly at the setter rather than deferring the failure to paint time ([#637](https://github.com/OWS-PFMS/elwha/issues/637)).
+**Null is a separate question** and this rule does not cover it. A `null` argument conventionally means "no opinion" — reset to the default (`setDisplayFunction(null)`), clear (`setSelectedValue(null)`), or ignore (`ElwhaFab.setColorStyle(null)`) — and each setter documents which. Where `null` is genuinely invalid, reject it eagerly at the setter rather than deferring the failure to paint time ([#637](https://github.com/OWS-PFMS/elwha/issues/637)); §15 is the canonical ruling on how.
 
 **Apply when:** adding a setter that names one member of a closed set the component was configured with, or a setting that conflicts with another. Pick the row, and say which in the javadoc.
 
@@ -271,6 +271,32 @@ The same rule already held elsewhere without being written down: `ElwhaColorPick
 **Not the same rule as `getEditor()`.** `ElwhaTextField.getEditor()` returns the raw Swing `JTextComponent` so a consumer can attach document and input listeners and reach the accessible context — capabilities the wrapper cannot mirror without re-exporting all of `javax.swing.text`. It hands out a *Swing* object for observation, not an *Elwha* component for restyling, and its javadoc says the chrome stays Elwha-owned.
 
 **Apply when:** a composed component is asked to expose something it holds. Ask who created the child and whether the host ever replaces it. If the consumer supplied it and the host keeps it, expose it. Otherwise forward the specific settings, and record here what you deliberately did not forward.
+
+## 15. Argument validation — fail fast at the API boundary, and the message names what to fix
+
+A public entry point that stores a bad argument defers the failure to paint, layout, or show time — a stack trace pointing into the library's internals, arbitrarily far from the call that caused it. Ruled in [#776](https://github.com/OWS-PFMS/elwha/issues/776), from a consumer field report: `ElwhaButton.filledButton(null)` constructed happily and blew up later, `ElwhaTabs.setActiveTabIndex(99)` with two tabs stored the index silently, `ElwhaSelectField.setOptions(null)` deferred its NPE to the menu rebuild. Validation happens **eagerly, at the constructor / factory / setter that receives the argument** — never downstream.
+
+**The classification comes first, the throw second.** Every reference or index parameter on a public constructor, static factory, or mutator is one of three things, and the javadoc says which:
+
+| Classification | Behavior | Message shape |
+|---|---|---|
+| **Required reference** | `Objects.requireNonNull(x, "x")` — `NullPointerException` naming the parameter | The bare parameter name is the floor. A sentence that points at the fix is better — `ElwhaBadge.large(null)` is the bar: *"Large badge content must not be null"*, and its empty-string rejection routes the caller to the alternative (*"— use ElwhaBadge.small() for a no-content badge"*) |
+| **Positional index** into the component's live items | `IndexOutOfBoundsException` naming the index and the current valid range | `"activeTabIndex 99 out of range [0, 2)"` — the caller learns both what they passed and what would have worked |
+| **Documented null semantic** | `null` stays legal — it clears, resets to the variant default, or ignores. **The `@param` line states the semantic explicitly** (`"…; null clears the icon"`) | No throw. A setter whose `null` already behaves as a meaningful clear is *documented*, not converted — the classification decision is the work, not the throw count |
+
+**Why `IndexOutOfBoundsException` and not `IllegalArgumentException` for indices.** Positional addressing is the contract shape consumers already know from the collections API (`List.get`) and from Swing itself (`JTabbedPane.setSelectedIndex` throws it), and `DefaultElwhaListModel.move` is in-library prior art. An index is not a *wrong kind* of value — it is a right kind of value that misses the current range, and the range moves as items come and go; the more specific exception says exactly that.
+
+**`IllegalArgumentException` keeps everything that is not a null and not an index:** a non-null reference of the wrong *state* (`ElwhaButtonSelectionGroup.add` is the bar: *"requires SELECTABLE buttons; got CLICKABLE"* — required vs got, both named), a §9 unsatisfiable request, malformed content, and non-positional numeric constraints (a negative delay, a non-positive ratio, an out-of-order `min > max` range) — naming the constraint and the received value, the way the tooltip's `"showDelayMs must be >= 0: -5"` already does.
+
+**Collections are checked for elements too.** A `List` parameter that must not be null is also rejected when it *contains* null (`"options must not contain null"`) — the color picker's `setModes` / `setSwatchSources` are the precedent. Otherwise the null hides in the collection and defers exactly the failure this rule exists to prevent.
+
+**The javadoc carries the contract.** Every validating member declares its `@throws NullPointerException` / `@throws IndexOutOfBoundsException` / `@throws IllegalArgumentException` lines, and every documented-null setter carries the `@param` semantic. A throw the javadoc doesn't declare is a trap; a null tolerance the javadoc doesn't declare is indistinguishable from a gap.
+
+**Grandfathered: the pre-1.0 IAE-for-null sites.** A handful of members shipped rejecting a null argument with `IllegalArgumentException` — `ElwhaSlider(BoundedRangeModel)`, and `ElwhaRadioGroup.add` and the color picker's null rejections, which declare it in their `@throws`. That shipped exception type is published contract, and swapping it for `NullPointerException` is a behavior break — it waits for a major version. They already fail fast with the parameter named, which is the substance of this rule; only new and newly-validated members take the NPE shape.
+
+**This rule does not license new throws on documented tolerance.** Where existing javadoc promises that `null` clears or resets, that promise is API — converting it to a throw is the same breaking change as the grandfather clause guards in the other direction.
+
+**Apply when:** adding any public constructor, static factory, or mutator that takes a reference or an index. Classify every parameter into the table, validate eagerly, declare the `@throws` / `@param` lines, and add a Tier A throw-contract test asserting the exception type *and* that the message names the parameter or range.
 
 ---
 
