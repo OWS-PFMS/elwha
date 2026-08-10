@@ -72,7 +72,7 @@ Full mapping: research §Tokens / §T; load-bearing rows:
 | State layer, active | `PRIMARY` | `ON_SURFACE` |
 | State layer, inactive | `ON_SURFACE` — **except pressed → `PRIMARY`** (research §T quirk, kept verbatim) | `ON_SURFACE` |
 
-Layer opacities: `StateLayer.HOVER`/`FOCUS`/`PRESSED`; press ripple via `RipplePainter` clipped to the tab rect, tinted with the pressed layer color. Bar-level `setEnabled(false)`: content @ `StateLayer.disabledContentOpacity()` (0.38), divider/indicator unchanged, interaction off (§10 rationale). All colors resolved **at paint time** (`ColorRole.resolve()` — the binding rule, no caching).
+Layer opacities: `StateLayer.HOVER`/`FOCUS`/`PRESSED`; press ripple via `RipplePainter` clipped to the tab rect, tinted with the pressed layer color. Bar-level `setEnabled(false)`: content **and the active indicator** @ `ON_SURFACE` × `StateLayer.disabledContentOpacity()` (0.38) per the lib-wide #767 doctrine (#781 — the content opacity, not the nav rail's 12% container opacity, because at 12% the 2–3 px band composites on the wrong side of the `OUTLINE_VARIANT` divider in both modes and reads as a notch in it); divider unchanged, interaction off (§10 rationale). All colors resolved **at paint time** (`ColorRole.resolve()` — the binding rule, no caching).
 
 ## §5. Measurements & geometry
 
