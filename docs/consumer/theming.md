@@ -188,6 +188,29 @@ touched, and it is what makes incremental adoption practical: install the theme,
 widgets with Elwha components where the richer behavior earns its keep. The mapping itself is
 library-internal — you configure it by choosing a palette, not by calling into it.
 
+## Using the bundled icons
+
+`MaterialIcons` exposes the bundled Material Symbols through four small families, and picking the
+right one matters because two component APIs are typed against them:
+
+- **Named accessors** — `MaterialIcons.pushPin()`, `.delete(20)`, … — one glyph, no-arg at the
+  house 24 px or sized.
+- **`get(name)`** — the same lookup by bare Material Symbol name, for names chosen at runtime.
+- **`pair(name)`** — an `IconPair` holding the outline (fill 0) and filled (fill 1) cuts, for
+  hand-rolled selected/unselected icon swaps.
+- **`symbol(name)`** — a strongly-typed `Symbol` handle that resolves both fill-axis cuts on
+  demand. This is the type the icon overloads of `ElwhaTab.of(...)` and
+  `ElwhaNavRailDestination.of(...)` take — those components flip the fill axis themselves when a
+  tab or destination activates, so they want the handle, not a pre-resolved icon or pair:
+
+```java
+ElwhaTab home = ElwhaTab.of(MaterialIcons.symbol("home"), "Home");
+ElwhaNavRailDestination inbox = ElwhaNavRailDestination.of(MaterialIcons.symbol("inbox"), "Inbox");
+```
+
+The full glyph inventory lives in the
+[`icons` package Javadoc](https://ows-pfms.github.io/elwha/com/owspfm/elwha/icons/package-summary.html).
+
 ## Using your own icons
 
 The bundled Material Symbols (see [the component index](components.md) and the

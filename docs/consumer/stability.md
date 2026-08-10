@@ -59,6 +59,19 @@ the jar. Newer JDKs work.
 
 Raising the floor is a breaking change and will not happen inside 1.x.
 
+## Threading
+
+Elwha components follow **Swing's standard single-thread rule**, no more and no less: construct
+components wherever you like before they are realized, but once a component is in a realized
+hierarchy, every mutation — setters, model changes, `add`/`remove` — belongs on the event dispatch
+thread, via `SwingUtilities.invokeLater(...)` from anywhere else. Elwha adds no locking of its own,
+and its animation machinery (ripples, morphs, hover tracking) ticks on `javax.swing.Timer`, which
+already dispatches on the EDT.
+
+The **one deliberate exception** is theme install: `ElwhaTheme.install(...)` may be called from any
+thread — off the EDT it dispatches its writes to the EDT and blocks until they land (see
+[Theming](theming.md)). No component API makes that promise; assume EDT-only.
+
 ## Dependency stance
 
 Elwha depends on **Swing and FlatLaf only**. There is no app framework, no dependency-injection
