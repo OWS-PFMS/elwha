@@ -7,13 +7,17 @@ import com.owspfm.elwha.testkit.PaintLog;
 import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import com.owspfm.elwha.theme.ColorRole;
+import com.owspfm.elwha.theme.Mode;
 import com.owspfm.elwha.theme.MorphAnimator;
+import com.owspfm.elwha.theme.StateLayer;
 import java.awt.ComponentOrientation;
 import java.awt.Rectangle;
 import java.awt.geom.Rectangle2D;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /**
  * Tier A coverage of the single, container-owned active indicator — design doc §2 (one indicator,
@@ -301,5 +305,73 @@ class ElwhaTabsIndicatorTest {
         bar.getHeight() - 1,
         ColorRole.PRIMARY.resolve(),
         "§4 — where they overlap the indicator wins, because it paints last");
+  }
+
+  // -------------------------------------------------- the disabled bar (#781)
+
+  /**
+   * The probe row sits above the 1&nbsp;px divider (the indicator's bottom row overlaps it), so the
+   * translucent disabled fill composites over plain {@code SURFACE} and {@link Pixels#mix} predicts
+   * the exact result.
+   */
+  private static int probeYAboveDivider(final ElwhaTabs bar, final Rectangle indicator) {
+    return indicator.y + indicator.height / 2;
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Mode.class,
+      names = {"LIGHT", "DARK"})
+  void aDisabledBarsIndicatorJoinsTheOnSurfaceDim(final Mode mode) {
+    ThemeExtension.install(mode);
+    final ElwhaTabs bar = barOf(TabsVariant.PRIMARY, "One", "Two");
+    bar.setEnabled(false);
+    final Rectangle indicator = bar.currentIndicatorRect();
+
+    Pixels.assertPixelNear(
+        Pixels.render(bar, BAR_WIDTH, bar.getPreferredSize().height),
+        indicator.x + indicator.width / 2,
+        probeYAboveDivider(bar, indicator),
+        Pixels.mix(
+            ColorRole.SURFACE.resolve(),
+            ColorRole.ON_SURFACE.resolve(),
+            StateLayer.disabledContentOpacity()),
+        "#781 — a disabled bar's indicator is ON_SURFACE at the content opacity, like the tab "
+            + "content it underlines, in "
+            + mode);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Mode.class,
+      names = {"LIGHT", "DARK"})
+  void nothingInADisabledIndicatorBandKeepsFullStrengthPrimary(final Mode mode) {
+    ThemeExtension.install(mode);
+    final ElwhaTabs bar = barOf(TabsVariant.PRIMARY, "One", "Two");
+    bar.setEnabled(false);
+    final Rectangle indicator = bar.currentIndicatorRect();
+
+    Pixels.assertNoPixelNear(
+        Pixels.render(bar, BAR_WIDTH, bar.getPreferredSize().height),
+        indicator.x + indicator.width / 2,
+        probeYAboveDivider(bar, indicator),
+        1,
+        ColorRole.PRIMARY.resolve(),
+        "#781 — the saturated PRIMARY never survives on an otherwise dimmed bar in " + mode);
+  }
+
+  @Test
+  void reEnablingRestoresThePrimaryIndicator() {
+    final ElwhaTabs bar = barOf(TabsVariant.PRIMARY, "One", "Two");
+    bar.setEnabled(false);
+    bar.setEnabled(true);
+    final Rectangle indicator = bar.currentIndicatorRect();
+
+    Pixels.assertPixelNear(
+        Pixels.render(bar, BAR_WIDTH, bar.getPreferredSize().height),
+        indicator.x + indicator.width / 2,
+        probeYAboveDivider(bar, indicator),
+        ColorRole.PRIMARY.resolve(),
+        "the dim is a paint-time branch, not a latched color");
   }
 }
