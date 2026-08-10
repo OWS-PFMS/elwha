@@ -3789,11 +3789,16 @@ public final class ElwhaShowcase {
 
     menuBox.setChecked(true);
     menuBox.addActionListener(
-        e ->
-            rail.setMenuButton(
-                menuBox.isChecked()
-                    ? new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.menu())
-                    : null));
+        e -> {
+          if (!menuBox.isChecked()) {
+            rail.setMenuButton(null);
+            return;
+          }
+          final com.owspfm.elwha.iconbutton.ElwhaIconButton rebuiltMenuButton =
+              new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.menu());
+          rebuiltMenuButton.setToolTipText("Menu");
+          rail.setMenuButton(rebuiltMenuButton);
+        });
     final ElwhaCheckbox fabBox = new ElwhaCheckbox("FAB");
     fabBox.addActionListener(
         e ->
