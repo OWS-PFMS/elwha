@@ -102,7 +102,7 @@ import javax.swing.KeyStroke;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.1
  * @since v0.4.0
  */
 public final class ElwhaTab extends JComponent implements IconBearing, Accessible {
@@ -790,6 +790,11 @@ public final class ElwhaTab extends JComponent implements IconBearing, Accessibl
   // Active content: PRIMARY in primary tabs, ON_SURFACE in secondary tabs. Inactive content:
   // ON_SURFACE_VARIANT, lifted to ON_SURFACE under hover / focus / press (research §T).
   private Color contentColor() {
+    if (!isEnabled()) {
+      // #767 — M3 disabled tab content is ON_SURFACE (the 38% composite rides on top in the
+      // icon/label paint); fading the active tab's PRIMARY kept an accent tint M3 removes.
+      return ColorRole.ON_SURFACE.resolve();
+    }
     if (active) {
       return activeContentRole().resolve();
     }

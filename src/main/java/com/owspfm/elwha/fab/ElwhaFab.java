@@ -14,6 +14,7 @@ import com.owspfm.elwha.theme.StateLayer;
 import com.owspfm.elwha.theme.SurfacePainter;
 import com.owspfm.elwha.theme.TypeRole;
 import java.awt.AlphaComposite;
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -79,7 +80,7 @@ import javax.swing.Timer;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.1
  * @since v0.3.0
  */
 public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBearing {
@@ -428,8 +429,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
 
   private Timer hoverPollTimer;
 
-  private final FlatSVGIcon.ColorFilter iconFilter =
-      new FlatSVGIcon.ColorFilter(c -> color.onContainerRole().resolve());
+  private final FlatSVGIcon.ColorFilter iconFilter = new FlatSVGIcon.ColorFilter(c -> contentColor());
 
   private final List<ActionListener> actionListeners = new ArrayList<>();
 
@@ -1135,12 +1135,13 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
         return;
       }
 
-      // M3 disabled — container fill at 12% alpha, content at 38% alpha. No shadow. Matches the
+      // M3 disabled — ON_SURFACE container at 12% alpha, ON_SURFACE content at 38% alpha. No
+      // shadow. The roles are swapped, not the FAB color's own faded (#767); matches the button /
       // chip / icon-button disabled handling.
       final Graphics2D dim = (Graphics2D) g2.create();
       try {
         dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
-        SurfacePainter.paint(dim, bodyW, bodyH, arc, surfaceRole, null, null, 0f);
+        SurfacePainter.paint(dim, bodyW, bodyH, arc, ColorRole.ON_SURFACE, null, null, 0f);
       } finally {
         dim.dispose();
       }
@@ -1163,6 +1164,12 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
   // doc §9.1: container width (already baked into bodyW from bodyWidthPx), icon X (centered ↔
   // leading-inset), and label alpha (0 ↔ 1). RTL mirrors the icon-leading / label-trailing order
   // through bodyW so the design doc §11 contract holds for every mid-morph frame too.
+  // Disabled swaps the content color to ON_SURFACE rather than fading the FAB color's
+  // on-container role (#767) — the M3 disabled treatment replaces the role.
+  private Color contentColor() {
+    return isEnabled() ? color.onContainerRole().resolve() : ColorRole.ON_SURFACE.resolve();
+  }
+
   private void paintContent(
       final Graphics2D g, final int bodyW, final int bodyH, final float contentAlpha) {
     final float eased = Easing.EMPHASIZED.ease(formMorph.progress());
@@ -1238,7 +1245,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
           // only on the disabled paint branch). DST_IN-style compositing isn't needed — both
           // factors are independent SRC_OVER alpha multipliers.
           gl.setComposite(AlphaComposite.SrcOver.derive(contentAlpha * labelAlpha));
-          gl.setColor(color.onContainerRole().resolve());
+          gl.setColor(contentColor());
           gl.setFont(font);
           final int baseline = bodyH / 2 + (fm.getAscent() - fm.getDescent()) / 2;
           gl.drawString(text, labelX, baseline);

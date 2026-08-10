@@ -108,7 +108,7 @@ import javax.swing.KeyStroke;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.1
  * @since v0.3.0
  */
 public final class ElwhaNavRailDestination extends JComponent implements IconBearing {
@@ -624,7 +624,13 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
     }
     final Graphics2D s = (Graphics2D) g2.create();
     try {
-      s.setColor(ColorRole.SECONDARY_CONTAINER.resolve());
+      if (isEnabled()) {
+        s.setColor(ColorRole.SECONDARY_CONTAINER.resolve());
+      } else {
+        // #767 — the disabled indicator pill is ON_SURFACE at the 12% container opacity.
+        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
+        s.setColor(ColorRole.ON_SURFACE.resolve());
+      }
       s.fill(growFromCenter(geom, t));
     } finally {
       s.dispose();
@@ -829,11 +835,19 @@ public final class ElwhaNavRailDestination extends JComponent implements IconBea
   }
 
   private Color iconColor() {
+    if (!isEnabled()) {
+      // #767 — M3 disabled destination content is ON_SURFACE (contentOpacity() carries the 38%);
+      // the selected form's container-pair colors are replaced, not faded.
+      return ColorRole.ON_SURFACE.resolve();
+    }
     return (paintSelectedForm() ? ColorRole.ON_SECONDARY_CONTAINER : ColorRole.ON_SURFACE_VARIANT)
         .resolve();
   }
 
   private Color labelColor() {
+    if (!isEnabled()) {
+      return ColorRole.ON_SURFACE.resolve();
+    }
     return (paintSelectedForm() ? ColorRole.SECONDARY : ColorRole.ON_SURFACE_VARIANT).resolve();
   }
 

@@ -224,14 +224,17 @@ class ElwhaIconButtonRenderTest {
             ? ColorRole.SURFACE.resolve()
             : Pixels.mix(
                 ColorRole.SURFACE.resolve(),
-                variant.surfaceRole().resolve(),
+                ColorRole.ON_SURFACE.resolve(),
                 StateLayer.disabledContainerOpacity());
     Pixels.assertPixelNear(
         render(button),
         SIDE / 2,
         SIDE / 2,
         want,
-        variant + " freezes into the disabled treatment and drops every state layer in " + mode);
+        variant
+            + " freezes into the ON_SURFACE disabled treatment (#767) and drops every state layer"
+            + " in "
+            + mode);
   }
 
   // ------------------------------------------------------------ foreground
