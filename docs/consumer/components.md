@@ -60,6 +60,17 @@ component is shaped the way it is, including its deliberate divergences from the
 | Color picker | [`colorpicker.ElwhaColorPicker`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/colorpicker/ElwhaColorPicker.html) | The M3 picker grammar applied to color — swatch tiers, spectrum, wheel, slider/hex modes, opt-in alpha, eyedropper. ([design](../research/elwha-color-picker-design.md)) | Components → Color picker |
 | Color picker dialog / popover | [`colorpicker.ElwhaColorPickerDialog`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/colorpicker/ElwhaColorPickerDialog.html), [`ElwhaColorPickerPopover`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/colorpicker/ElwhaColorPickerPopover.html) | The picker staged modally with pending-until-OK semantics, or as an anchored light-dismiss popover. | Components → Color picker |
 
+**Eyedropper on wide-gamut displays.** The color picker's eyedropper delivers the color of the
+pixel you point at as the operating system reports it. On a wide-gamut display (a P3 Mac, for
+example) the OS color-manages the screen capture through the display profile on its way back to
+sRGB, so a *saturated* color can come back up to ~3 per channel off the value that was painted —
+pure sRGB green may read `#03FF00` — while neutrals and pure red/blue round-trip exactly. This is
+the OS's display-profile round trip, not the picker; `java.awt.Robot` exposes no route to the raw
+framebuffer values, so there is nothing the library can correct. (On macOS the eyedropper also
+needs the Screen Recording permission — see the
+[`setEyedropperEnabled`](https://ows-pfms.github.io/elwha/com/owspfm/elwha/colorpicker/ElwhaColorPicker.html#setEyedropperEnabled(boolean))
+Javadoc for both notes.)
+
 ## Containers and surfaces
 
 | Component | Class | What it is | Leaf |
