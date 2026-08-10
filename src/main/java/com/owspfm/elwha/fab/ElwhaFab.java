@@ -429,7 +429,8 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
 
   private Timer hoverPollTimer;
 
-  private final FlatSVGIcon.ColorFilter iconFilter = new FlatSVGIcon.ColorFilter(c -> contentColor());
+  private final FlatSVGIcon.ColorFilter iconFilter =
+      new FlatSVGIcon.ColorFilter(c -> contentColor());
 
   private final List<ActionListener> actionListeners = new ArrayList<>();
 

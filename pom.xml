@@ -245,6 +245,11 @@
                not fail the build until the epic's final failOnWarnings flip. -->
           <doclint>all</doclint>
           <failOnError>true</failOnError>
+          <!-- #774: the Automatic-Module-Name manifest entry makes the javadoc plugin treat the
+               project as a JPMS module (module-path + patch-module), under which the
+               package-info-only root package fails with "No source files". legacyMode keeps the
+               docs build on the classpath — the jar manifest entry is unaffected. -->
+          <legacyMode>true</legacyMode>
           <!-- #96 — the final #529 ratchet: with card/v1 gone the tree is doclint-warning-free,
                and failOnWarnings keeps it that way. The <tags> declarations make the house
                @version/@since-on-every-member convention legal to javadoc (placement "a" = all);

@@ -23,8 +23,8 @@ import javax.swing.UIManager;
  * com.owspfm.elwha.tabs.ElwhaTab#of(MaterialIcons.Symbol, String) ElwhaTab.of} and {@link
  * com.owspfm.elwha.navrail.ElwhaNavRailDestination#of(MaterialIcons.Symbol, String)
  * ElwhaNavRailDestination.of} take, because those components flip the fill axis themselves on
- * activation. {@link
- * #themed(FlatSVGIcon)} adapts a client-owned icon into the same theming pipeline (below).
+ * activation. {@link #themed(FlatSVGIcon)} adapts a client-owned icon into the same theming
+ * pipeline (below).
  *
  * <p><strong>Using your own icons.</strong> The bundle is fixed at build time — client code cannot
  * add to it. To use your own icons alongside it, keep the SVGs in your <em>own</em> resources at a
