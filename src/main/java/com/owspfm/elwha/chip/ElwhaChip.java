@@ -86,7 +86,7 @@ import javax.swing.Timer;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.1
  * @since v0.1.0
  */
 public class ElwhaChip extends JPanel implements ElwhaListItemView {
@@ -928,27 +928,30 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
 
   /**
    * Resolves the effective text + icon foreground color — the {@code on}-pair of the effective
-   * surface role (or {@link ColorRole#ON_SURFACE} when the surface role is null / unpaired),
-   * carried down to {@link StateLayer#disabledContentOpacity()} while the chip is disabled. Always
-   * correct by construction; there is no per-instance foreground override.
+   * surface role (or {@link ColorRole#ON_SURFACE} when the surface role is null / unpaired) while
+   * enabled, and {@link ColorRole#ON_SURFACE} at {@link StateLayer#disabledContentOpacity()} while
+   * disabled (the M3 disabled treatment replaces the role rather than fading it). Always correct by
+   * construction; there is no per-instance foreground override.
    *
    * @return the resolved foreground color (never null)
-   * @version v0.5.0
+   * @version v1.0.1
    * @since v0.1.0
    */
   protected Color resolveForegroundColor() {
-    ColorRole basis = getSurfaceRole();
-    if (basis == null) {
-      basis = ColorRole.SURFACE;
-    }
-    final Color resolved = basis.on().orElse(ColorRole.ON_SURFACE).resolve();
     if (isEnabled()) {
-      return resolved;
+      ColorRole basis = getSurfaceRole();
+      if (basis == null) {
+        basis = ColorRole.SURFACE;
+      }
+      return basis.on().orElse(ColorRole.ON_SURFACE).resolve();
     }
-    // M3 disabled content is the resolved role at 38%. The dimming has to ride on the color rather
-    // than on a compositing pass, because the chip's text and icons paint from paintChildren —
-    // after paintComponent's disabled composite has already been disposed. Icons come along for
-    // free: iconFilter calls this at paint time.
+    // M3 disabled content is ON_SURFACE at 38% — the role is swapped, not the variant's own on-
+    // color faded (#767): a selected filter chip's ON_SECONDARY_CONTAINER is container-contrasting,
+    // not surface-contrasting. The dimming has to ride on the color rather than on a compositing
+    // pass, because the chip's text and icons paint from paintChildren — after paintComponent's
+    // disabled composite has already been disposed. Icons come along for free: iconFilter calls
+    // this at paint time.
+    final Color resolved = ColorRole.ON_SURFACE.resolve();
     final float opacity = StateLayer.disabledContentOpacity();
     return new Color(
         resolved.getRed(),
@@ -1424,11 +1427,19 @@ public class ElwhaChip extends JPanel implements ElwhaListItemView {
     final float borderStroke = focused ? Math.max(borderWidth, FOCUSED_BORDER_WIDTH) : borderWidth;
 
     if (!isEnabled()) {
-      // M3 disabled is a compositing pass on top of the resolved surface, not a tinted overlay.
+      // M3 disabled is a compositing pass over ON_SURFACE (container + outline at 12%) — the
+      // roles are swapped, not the variant's own faded (#767). SURFACE is the outlined
+      // treatment's visually-neutral state-layer base, not a container, so it stays as-is —
+      // swapping it would hand a disabled outlined chip a container M3 says it doesn't have.
+      final ColorRole disabledSurface =
+          surfaceRole == null || surfaceRole == ColorRole.SURFACE
+              ? surfaceRole
+              : ColorRole.ON_SURFACE;
+      final ColorRole disabledBorder = borderRole != null ? ColorRole.ON_SURFACE : null;
       final Graphics2D dim = (Graphics2D) g.create();
       try {
         dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
-        SurfacePainter.paint(dim, w, h, arc, surfaceRole, null, borderRole, borderStroke);
+        SurfacePainter.paint(dim, w, h, arc, disabledSurface, null, disabledBorder, borderStroke);
       } finally {
         dim.dispose();
       }

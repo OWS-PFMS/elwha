@@ -168,9 +168,11 @@ mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.chip.ElwhaChipPlaygroun
 
 - **JDK 21** or later (bytecode 65 — JDK 17 cannot load the jar)
 - **Swing** — no JavaFX, no Compose, no AWT-only fallback
-- **FlatLaf 3.2.5** and `jsvg`, pulled in transitively
+- **FlatLaf 3.2.5** (`flatlaf`, `flatlaf-extras`, `flatlaf-intellij-themes`) and `jsvg`, pulled
+  in transitively
 
-Elwha depends on Swing and FlatLaf only. That is a deliberate constraint — see
+Elwha depends on Swing and the FlatLaf family only — no app framework, no logging facade, no
+domain types. The exact compile-scope set lives in
 [Dependency stance](docs/consumer/stability.md#dependency-stance).
 
 ## Stability

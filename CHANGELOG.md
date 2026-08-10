@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+All entries below come out of the first two consumer field reports against the published 1.0.0
+artifact — fixes only, per the patch rules.
+
+### Fixed
+
+- **`ElwhaTabs` FIXED mode truncated labels at exactly preferred size** (#766). The bar's
+  preferred width summed each tab's natural width while the layout hands every tab an equal
+  slice, so any tab wider than the mean ellipsized. FIXED preferred width is now
+  count × widest tab — never smaller than the old sum, so no layout gets less room.
+- **Disabled components swap to `ON_SURFACE` instead of fading their variant roles** (#767).
+  M3 disables by replacing both chrome roles with `ON_SURFACE` (container/outline at 12%,
+  content at 38%); fading the variant's own roles left a disabled FILLED button's `ON_PRIMARY`
+  label invisible in dark mode. Fixed across the seven offenders — `ElwhaButton`,
+  `ElwhaIconButton`, `ElwhaFab`, `ElwhaChip`, `ElwhaTab`, `ElwhaNavRailDestination` (including
+  the indicator pill), `ElwhaMenuItem` — with the already-correct components (radio, checkbox,
+  switch, textfield, slider, app bar, card primitives) audited and unchanged.
+- **README's dependency paragraph matches the pom** (#771): it now names the full compile-scope
+  set (`flatlaf`, `flatlaf-extras`, `flatlaf-intellij-themes` + transitive `jsvg`) and defers to
+  stability.md's dependency stance as the source of truth.
+- **`MaterialIcons.symbol()` is documented** (#772) — the typed handle the icon overloads of
+  `ElwhaTab.of(...)` / `ElwhaNavRailDestination.of(...)` take now appears in the consumer docs
+  (new "Using the bundled icons" section in theming.md, components.md icons row) and in the
+  `MaterialIcons` class doc's four-family overview.
+- **Threading contract documented** (#773): stability.md gains a Threading section — Swing's
+  standard single-thread rule, with `ElwhaTheme.install(...)`'s any-thread dispatch-and-block as
+  the one documented exception.
+
+### Added
+
+- **Jar/pom publication metadata** (#774): `Automatic-Module-Name: com.owspfm.elwha` in the
+  manifest for stable JPMS naming; `LICENSE` and `NOTICE` ride inside the jar and sources jar at
+  `META-INF/`; the pom `<description>` reworded off the flatcomp-era text.
+
 ## [1.0.0] — 2026-08-09
 
 Everything below ships as **1.0.0**, Elwha's first release since `0.1.0` and its API-stability

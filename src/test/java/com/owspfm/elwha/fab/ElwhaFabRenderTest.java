@@ -235,9 +235,12 @@ class ElwhaFabRenderTest {
         center.y,
         Pixels.mix(
             ColorRole.SURFACE.resolve(),
-            color.containerRole().resolve(),
+            ColorRole.ON_SURFACE.resolve(),
             StateLayer.disabledContainerOpacity()),
-        color + " freezes into the disabled treatment and drops every state layer in " + mode);
+        color
+            + " freezes into the ON_SURFACE disabled treatment (#767) and drops every state layer"
+            + " in "
+            + mode);
   }
 
   @Test

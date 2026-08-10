@@ -83,7 +83,7 @@ import javax.swing.Timer;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.1
  * @since v0.1.0
  */
 public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badge.IconBearing {
@@ -866,6 +866,10 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
    * @since v0.1.0
    */
   protected Color resolveForegroundColor() {
+    if (!isEnabled()) {
+      // M3 disabled swaps to ON_SURFACE rather than fading the variant's on-color (#767).
+      return ColorRole.ON_SURFACE.resolve();
+    }
     if (selected
         && variant == IconButtonVariant.STANDARD
         && interactionMode == IconButtonInteractionMode.SELECTABLE) {
@@ -1151,12 +1155,16 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     final CornerRadii bodyRadii = morphedRadii(w, h, radiusPx);
 
     if (!isEnabled()) {
-      // M3 disabled is a compositing pass (container at 12%, content at 38%) over the resolved
-      // surface — not a tinted overlay. Matches the chip's disabled handling.
+      // M3 disabled is a compositing pass (container at 12%, content at 38%) over ON_SURFACE —
+      // the roles are swapped, not the variant's own faded (#767): FILLED's ON_PRIMARY is dark
+      // in dark schemes and vanishes at 38% over a dark surface. Containerless STANDARD stays
+      // containerless.
+      final ColorRole disabledSurface = surfaceRole != null ? ColorRole.ON_SURFACE : null;
+      final ColorRole disabledBorder = borderRole != null ? ColorRole.ON_SURFACE : null;
       final Graphics2D dim = (Graphics2D) g.create();
       try {
         dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
-        paintSurface(dim, w, h, bodyRadii, surfaceRole, null, borderRole, borderStroke);
+        paintSurface(dim, w, h, bodyRadii, disabledSurface, null, disabledBorder, borderStroke);
       } finally {
         dim.dispose();
       }

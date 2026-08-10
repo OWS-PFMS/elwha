@@ -103,7 +103,7 @@ import javax.swing.Timer;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.1
  * @since v0.2.0
  */
 public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearing {
@@ -970,12 +970,18 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
    * Resolves the effective foreground color for the label and icon tint. Implements §3 plus the §7
    * hybrid swaps: TEXT is always PRIMARY; ELEVATED with no override uses PRIMARY (not the surface's
    * on-pair). Selectable FILLED/OUTLINED swap foreground roles to match their swapped surfaces.
+   * Disabled swaps to {@link ColorRole#ON_SURFACE} unconditionally — the M3 disabled treatment
+   * replaces the variant role rather than fading it, so the 38% content fade always sits on a
+   * surface-contrasting base in both modes.
    *
    * @return the resolved foreground color (never {@code null})
-   * @version v0.2.0
+   * @version v1.0.1
    * @since v0.2.0
    */
   protected Color resolveForegroundColor() {
+    if (!isEnabled()) {
+      return ColorRole.ON_SURFACE.resolve();
+    }
     if (variant == ButtonVariant.TEXT) {
       return ColorRole.PRIMARY.resolve();
     }
@@ -1546,11 +1552,24 @@ public class ElwhaButton extends JComponent implements ShadowBearing, BodyBearin
       }
 
       if (!isEnabled()) {
+        // M3 disables by swapping BOTH chrome roles to ON_SURFACE at the disabled opacities —
+        // not by fading the variant's own roles, whose on-colors (e.g. FILLED's ON_PRIMARY) are
+        // dark in dark schemes and vanish at 38% over a dark surface (#767). Containerless
+        // chrome stays containerless: TEXT gains no fill, OUTLINED's fill stays transparent.
+        final ColorRole disabledSurface = surfaceRole != null ? ColorRole.ON_SURFACE : null;
+        final ColorRole disabledBorder = borderRole != null ? ColorRole.ON_SURFACE : null;
         final Graphics2D dim = (Graphics2D) g2.create();
         try {
           dim.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
           paintSurface(
-              dim, paintedBodyW, bodyH, morphedRadii, surfaceRole, null, borderRole, borderStroke);
+              dim,
+              paintedBodyW,
+              bodyH,
+              morphedRadii,
+              disabledSurface,
+              null,
+              disabledBorder,
+              borderStroke);
         } finally {
           dim.dispose();
         }

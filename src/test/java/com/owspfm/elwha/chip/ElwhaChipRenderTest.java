@@ -277,10 +277,9 @@ class ElwhaChipRenderTest {
         render(chip),
         CENTER_X,
         CENTER_Y,
-        Pixels.mix(
-            GROUND, ColorRole.PRIMARY_CONTAINER.resolve(), StateLayer.disabledContainerOpacity()),
-        "M3 disabled is a compositing pass over the resolved surface, not a grey tint painted on"
-            + " top");
+        Pixels.mix(GROUND, ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContainerOpacity()),
+        "#767 — M3 disabled composites ON_SURFACE at 12%, the role swapped rather than the"
+            + " variant's own container faded");
   }
 
   @Test
@@ -297,8 +296,10 @@ class ElwhaChipRenderTest {
         render(chip),
         BORDER_X,
         CENTER_Y,
-        Pixels.mix(dimmedFill, ColorRole.OUTLINE.resolve(), StateLayer.disabledContainerOpacity()),
-        "the border goes through the same pass, so the whole chip fades as one");
+        Pixels.mix(
+            dimmedFill, ColorRole.ON_SURFACE.resolve(), StateLayer.disabledContainerOpacity()),
+        "#767 — the disabled outline swaps to ON_SURFACE at 12%; the outlined treatment's neutral"
+            + " SURFACE base stays, so no container appears");
   }
 
   @Test
@@ -328,8 +329,8 @@ class ElwhaChipRenderTest {
     final Color disabled = chip.resolveForegroundColor();
 
     assertThat(disabled.getRGB() & 0xFFFFFF)
-        .as("the role resolution is unchanged — only the alpha carries the dimming")
-        .isEqualTo(enabled.getRGB() & 0xFFFFFF);
+        .as("#767 — disabled content swaps to ON_SURFACE; the alpha carries the 38% dimming")
+        .isEqualTo(ColorRole.ON_SURFACE.resolve().getRGB() & 0xFFFFFF);
     assertThat(disabled.getAlpha())
         .as(
             "text and icons paint from paintChildren, after paintComponent's disabled composite has"

@@ -15,6 +15,17 @@ import javax.swing.UIManager;
  * #DEFAULT_SIZE}, and a sized form taking an explicit pixel size, so consumers don't have to chain
  * {@code .derive(size, size)} themselves.
  *
+ * <p><strong>Four lookup families.</strong> The named accessors ({@link #pushPin()}, {@link
+ * #delete()}, …) and {@link #get(String)} return one resolved icon. {@link #pair(String)} returns
+ * an {@link IconPair} holding the outline and filled cuts for hand-rolled selected/unselected
+ * swaps. {@link #symbol(String)} returns the strongly-typed {@link Symbol} handle that resolves
+ * either cut on demand — the type the icon overloads of {@link
+ * com.owspfm.elwha.tabs.ElwhaTab#of(MaterialIcons.Symbol, String) ElwhaTab.of} and {@link
+ * com.owspfm.elwha.navrail.ElwhaNavRailDestination#of(MaterialIcons.Symbol, String)
+ * ElwhaNavRailDestination.of} take, because those components flip the fill axis themselves on
+ * activation. {@link #themed(FlatSVGIcon)} adapts a client-owned icon into the same theming
+ * pipeline (below).
+ *
  * <p><strong>Using your own icons.</strong> The bundle is fixed at build time — client code cannot
  * add to it. To use your own icons alongside it, keep the SVGs in your <em>own</em> resources at a
  * client-owned classpath location (e.g. {@code com/acme/icons/}), construct a {@link FlatSVGIcon}
@@ -47,7 +58,7 @@ import javax.swing.UIManager;
  * components.
  *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.1
  * @since v0.1.0
  */
 public final class MaterialIcons {

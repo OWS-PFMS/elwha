@@ -240,9 +240,9 @@ class ElwhaButtonMorphTest {
         CORNER_PROBE,
         Pixels.mix(
             ColorRole.SURFACE.resolve(),
-            ColorRole.PRIMARY.resolve(),
+            ColorRole.ON_SURFACE.resolve(),
             StateLayer.disabledContainerOpacity()),
-        "and paints the selected shape immediately, dimmed by the disabled treatment");
+        "and paints the selected shape immediately, in the ON_SURFACE disabled treatment (#767)");
   }
 
   // ---------------------------------------------------------- width borrow

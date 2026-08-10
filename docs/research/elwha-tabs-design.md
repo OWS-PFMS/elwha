@@ -92,7 +92,7 @@ Layer opacities: `StateLayer.HOVER`/`FOCUS`/`PRESSED`; press ripple via `RippleP
 | Scroll margin | 48 (scroll-to-tab keeps this much of the neighbor visible) |
 | Focus ring | inward rounded rect, `ShapeScale.SM` (8); on the active tab the ring bottom sits above the indicator (+1) |
 
-Inline-height tabs **bottom-align** in a 64 bar (web `align-items: end`). Preferred bar size: height per above; width = sum of tab preferred widths (SCROLLABLE) or the same sum as a sane minimum (FIXED fills whatever the layout grants). No `getMaximumSize` override (#199/#200 doctrine).
+Inline-height tabs **bottom-align** in a 64 bar (web `align-items: end`). Preferred bar size: height per above; width = sum of clamped tab preferred widths (SCROLLABLE) or **tab count × widest tab's preferred width** (FIXED — equal-slice layout means the widest label governs every slice; the original sum-of-naturals shorted any tab wider than the mean at exactly-preferred bounds, fixed in #766). No `getMaximumSize` override (#199/#200 doctrine).
 
 ## §6. States & motion
 

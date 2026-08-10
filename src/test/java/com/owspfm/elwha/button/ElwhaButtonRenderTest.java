@@ -184,7 +184,8 @@ class ElwhaButtonRenderTest {
 
   @ParameterizedTest
   @MethodSource("variantsInBothModes")
-  void disabledDropsTheContainerToTwelvePercent(final ButtonVariant variant, final Mode mode) {
+  void disabledSwapsTheContainerToOnSurfaceAtTwelvePercent(
+      final ButtonVariant variant, final Mode mode) {
     ThemeExtension.install(mode);
     final ElwhaButton button = chromeOnly(variant);
     button.setEnabled(false);
@@ -196,11 +197,18 @@ class ElwhaButtonRenderTest {
             ? ColorRole.SURFACE.resolve()
             : Pixels.mix(
                 ColorRole.SURFACE.resolve(),
-                variant.surfaceRole().resolve(),
+                ColorRole.ON_SURFACE.resolve(),
                 StateLayer.disabledContainerOpacity());
     final Point center = bodyCenter(button);
     Pixels.assertPixelNear(
-        image, center.x, center.y, want, variant + " composites its disabled container in " + mode);
+        image,
+        center.x,
+        center.y,
+        want,
+        variant
+            + " swaps its disabled container to ON_SURFACE in "
+            + mode
+            + " — #767, the role is replaced, not faded");
   }
 
   @ParameterizedTest
@@ -216,7 +224,7 @@ class ElwhaButtonRenderTest {
             ? ColorRole.SURFACE.resolve()
             : Pixels.mix(
                 ColorRole.SURFACE.resolve(),
-                variant.surfaceRole().resolve(),
+                ColorRole.ON_SURFACE.resolve(),
                 StateLayer.disabledContainerOpacity());
     final Point center = bodyCenter(button);
     Pixels.assertPixelNear(
@@ -225,6 +233,44 @@ class ElwhaButtonRenderTest {
         center.y,
         want,
         variant + " ignores hover and press once disabled — the frozen visual of §15.7");
+  }
+
+  @ParameterizedTest
+  @MethodSource("variantsInBothModes")
+  void disabledForegroundSwapsToOnSurface(final ButtonVariant variant, final Mode mode) {
+    ThemeExtension.install(mode);
+    final ElwhaButton button = chromeOnly(variant);
+    button.setEnabled(false);
+
+    assertThat(button.resolveForegroundColor())
+        .as(
+            "#767 — disabled label/icon color is ON_SURFACE in %s; fading %s's own foreground"
+                + " role left FILLED's dark-mode label invisible",
+            mode, variant)
+        .isEqualTo(ColorRole.ON_SURFACE.resolve());
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Mode.class,
+      names = {"LIGHT", "DARK"})
+  void disabledOutlinedStrokesOnSurfaceNotItsOutlineRole(final Mode mode) {
+    ThemeExtension.install(mode);
+    final ElwhaButton button =
+        chromeOnly(ButtonVariant.OUTLINED).setShape(ButtonShape.SQUARE).setBorderWidth(8);
+    button.setEnabled(false);
+
+    final BufferedImage image = render(button);
+
+    Pixels.assertPixelNear(
+        image,
+        4,
+        button.getButtonSize().containerHeightPx() / 2,
+        Pixels.mix(
+            ColorRole.SURFACE.resolve(),
+            ColorRole.ON_SURFACE.resolve(),
+            StateLayer.disabledContainerOpacity()),
+        "#767 — the disabled outline swaps to ON_SURFACE at 12% in " + mode);
   }
 
   // ------------------------------------------------------------- outline

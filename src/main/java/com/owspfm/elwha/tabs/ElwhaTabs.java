@@ -68,7 +68,7 @@ import javax.swing.SwingUtilities;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.0.1
  * @since v0.4.0
  */
 public class ElwhaTabs extends JComponent implements Accessible {
@@ -641,11 +641,22 @@ public class ElwhaTabs extends JComponent implements Accessible {
       return super.getPreferredSize();
     }
     int width = 0;
+    int widest = 0;
     int height = BAR_HEIGHT_INLINE_PX;
     for (ElwhaTab tab : tabs) {
       final Dimension pref = tab.getPreferredSize();
-      width += tabMode == TabMode.SCROLLABLE ? clampedScrollableWidth(tab) : pref.width;
+      if (tabMode == TabMode.SCROLLABLE) {
+        width += clampedScrollableWidth(tab);
+      } else {
+        widest = Math.max(widest, pref.width);
+      }
       height = Math.max(height, pref.height);
+    }
+    if (tabMode == TabMode.FIXED) {
+      // count × widest, not the sum of naturals — doLayout hands every fixed tab an equal slice,
+      // so a sum-based preferred size shorts any tab wider than the mean and its label
+      // ellipsizes at exactly-preferred bounds (#766).
+      width = widest * tabs.size();
     }
     return new Dimension(width, height);
   }

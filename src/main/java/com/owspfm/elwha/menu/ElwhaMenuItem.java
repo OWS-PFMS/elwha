@@ -68,7 +68,7 @@ import javax.swing.Timer;
  *
  * @serial exclude
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.5.0
+ * @version v1.0.1
  * @since v0.4.0
  */
 public sealed class ElwhaMenuItem extends JComponent implements BodyBearing
@@ -836,6 +836,11 @@ public sealed class ElwhaMenuItem extends JComponent implements BodyBearing
   }
 
   private Color iconColor() {
+    if (!isEnabled()) {
+      // #767 — M3 disabled item content is ON_SURFACE (the contentAlpha composite carries the
+      // 38%); the selected/vibrant container-pair colors are replaced, not faded.
+      return ColorRole.ON_SURFACE.resolve();
+    }
     if (selected) {
       return onSelectedFill();
     }
@@ -843,6 +848,9 @@ public sealed class ElwhaMenuItem extends JComponent implements BodyBearing
   }
 
   private Color labelColor() {
+    if (!isEnabled()) {
+      return ColorRole.ON_SURFACE.resolve();
+    }
     if (selected) {
       return onSelectedFill();
     }
@@ -850,6 +858,9 @@ public sealed class ElwhaMenuItem extends JComponent implements BodyBearing
   }
 
   private Color supportingColor() {
+    if (!isEnabled()) {
+      return ColorRole.ON_SURFACE.resolve();
+    }
     if (selected) {
       return onSelectedFill();
     }
