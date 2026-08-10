@@ -284,6 +284,25 @@ under the same `VerticalCardLayout` rules), so orientation becomes a
 re-layout, not a re-construction. No `setLeadingColumn` /
 `setTrailingColumn` setters in the future API.
 
+**Vertical stacking spacing (#770 — confirmed by design).**
+`VerticalCardLayout` separates consecutive children by a fixed
+`SpaceScale.SM` (8dp) inter-element gap; `paddingVertical`
+(`SpaceScale.LG`, 16dp) applies only at the card's own top/bottom
+edges. The M3 measurement frame ([§4.1 of
+`m3-card-spec-organized.md`](m3-card-spec-organized.md)) binds no
+header→supporting-text spacing token, so the 8dp gap is the governing
+value. A 1.0.0 field report read the header→supporting gap as "fairly
+large"; measured (header via `setTitle`/`setSubtitle`, then
+`ElwhaCardSupportingText`, baseline theme): component-bounds gap is
+exactly 8px, and the *visual* whitespace is ~11px — the 8px gap plus
+the subtitle's font-box descent tail and the supporting text's ascent
+overshoot. Inside the header the title→subtitle whitespace is ~4px
+(the text stack has no flow gap), which is the contrast that makes 8dp
+read large. Reserved leading-icon space was ruled out (an empty
+leading slot contributes zero width). Both numbers sit inside M3's
+8dp-rhythm / 16dp-padding frame, so no token change; the gap is
+pinned by `ElwhaCardLayoutTest`.
+
 ### 3.4 Width-constraint behavior
 
 Cards are responsive components. The chassis honors the width its
