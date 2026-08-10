@@ -62,7 +62,7 @@ class AccessibleNameAdvisoryTest {
   }
 
   @Test
-  void theFirstCheckDecidesForTheInstance() {
+  void firstCheckDecidesForTheInstance() {
     try (LogCapture log = LogCapture.of(ProbeOwner.class)) {
       final JPanel component = new JPanel();
       AccessibleNameAdvisory.checkOnce(component, ProbeOwner.class, "Named early", REMEDY);
