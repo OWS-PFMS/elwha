@@ -21,7 +21,7 @@ import javax.swing.UIManager;
  * ButtonPlaygroundPanels} / {@code ChipPlaygroundPanels}.
  *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class FabPlaygroundPanels {
@@ -114,7 +114,10 @@ public final class FabPlaygroundPanels {
       matrix.add(rowLabel(size.name() + " · " + size.containerPx() + " dp"), gbc);
 
       gbc.gridx = 1;
-      matrix.add(ElwhaFab.standard(MaterialIcons.add(size.iconPx())).setFabSize(size), gbc);
+      final ElwhaFab standard =
+          ElwhaFab.standard(MaterialIcons.add(size.iconPx())).setFabSize(size);
+      standard.setToolTipText("Create");
+      matrix.add(standard, gbc);
 
       gbc.gridx = 2;
       matrix.add(ElwhaFab.extended("Compose").setFabSize(size), gbc);

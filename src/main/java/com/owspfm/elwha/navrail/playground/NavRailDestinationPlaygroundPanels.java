@@ -22,7 +22,7 @@ import javax.swing.JPanel;
  * lives in a sibling package; consumers must not depend on this type.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class NavRailDestinationPlaygroundPanels {
@@ -119,10 +119,12 @@ public final class NavRailDestinationPlaygroundPanels {
    * <strong>Expanded</strong> moves it to the row's trailing edge ({@link
    * com.owspfm.elwha.badge.ElwhaBadgeAnchor.AnchorMode#TRAILING_EDGE TRAILING_EDGE}). Each
    * destination is hosted in a real {@link ElwhaNavigationRail} so its variant — and therefore the
-   * anchor mode — is driven through the production path, not a test hook. Story #300.
+   * anchor mode — is driven through the production path, not a test hook. Story #300. The demo
+   * rails carry three destinations and an accessible name so the library's own advisories hold on
+   * its own demo (#769).
    *
    * @return the badge-anchor matrix
-   * @version v0.4.0
+   * @version v1.1.0
    * @since v0.4.0
    */
   public static JPanel buildBadgeAnchorPanel() {
@@ -148,15 +150,21 @@ public final class NavRailDestinationPlaygroundPanels {
     return matrix;
   }
 
-  // A minimal rail hosting a single selected, badged destination. The rail drives the destination's
-  // variant, so the Large badge anchors at the icon corner (Collapsed) or the row trailing edge
-  // (Expanded) — the two states shown side by side in buildBadgeAnchorPanel.
+  // A minimal rail whose selected "Favorites" destination wears the Large badge. The rail drives
+  // the destination's variant, so the badge anchors at the icon corner (Collapsed) or the row
+  // trailing edge (Expanded) — the two states shown side by side in buildBadgeAnchorPanel. Three
+  // destinations, because a 1-destination rail trips the library's own 3–7 advisory (#769).
   private static ElwhaNavigationRail badgedRail(final ElwhaNavigationRail rail) {
-    final ElwhaNavRailDestination dest =
+    rail.getAccessibleContext().setAccessibleName("Badge anchor demo");
+    final ElwhaNavRailDestination favorites =
         ElwhaNavRailDestination.of(MaterialIcons.symbol("favorite"), "Favorites");
-    dest.setSelected(true);
-    rail.setPrimary(List.of(dest));
-    dest.setBadge(ElwhaBadge.large(84));
+    rail.setPrimary(
+        List.of(
+            ElwhaNavRailDestination.of(MaterialIcons.symbol("widgets"), "Home"),
+            favorites,
+            ElwhaNavRailDestination.of(MaterialIcons.symbol("visibility"), "Watched")));
+    rail.setSelected(favorites);
+    favorites.setBadge(ElwhaBadge.large(84));
     return rail;
   }
 
