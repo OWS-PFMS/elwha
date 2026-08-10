@@ -327,17 +327,65 @@ class ElwhaTabsLayoutTest {
   }
 
   @Test
-  void barAsksForTheSumOfItsTabsWidths() {
-    final ElwhaTabs bar = barOf("One", "Two", "Three");
+  void aFixedBarAsksForItsWidestTabTimesTheTabCount() {
+    final ElwhaTabs bar = barOf("Overview", "Specs", "Reviews");
 
-    int sum = 0;
+    int widest = 0;
     for (int i = 0; i < bar.getTabCount(); i++) {
-      sum += bar.getTabAt(i).getPreferredSize().width;
+      widest = Math.max(widest, bar.getTabAt(i).getPreferredSize().width);
     }
 
     assertThat(bar.getPreferredSize().width)
-        .as("§5 — a fixed bar's natural width is enough room for every tab's content")
+        .as("§5 / #766 — equal-slice layout means the widest label governs every slice")
+        .isEqualTo(widest * bar.getTabCount());
+  }
+
+  @Test
+  void aScrollableBarAsksForTheSumOfItsClampedTabWidths() {
+    final ElwhaTabs bar = barOf("Overview", "Specs", "Reviews");
+    bar.setTabMode(TabMode.SCROLLABLE);
+
+    int sum = 0;
+    for (int i = 0; i < bar.getTabCount(); i++) {
+      sum +=
+          Math.max(
+              ElwhaTabs.SCROLLABLE_MIN_TAB_WIDTH_PX,
+              Math.min(
+                  bar.getTabAt(i).getPreferredSize().width, ElwhaTabs.SCROLLABLE_MAX_TAB_WIDTH_PX));
+    }
+
+    assertThat(bar.getPreferredSize().width)
+        .as("§5 — a scrollable bar's natural width is the sum of its content-sized tabs")
         .isEqualTo(sum);
+  }
+
+  @Test
+  void fixedTabsAtExactlyPreferredSizeGiveEveryLabelItsNaturalWidth() {
+    final ElwhaTabs bar = barOf("Overview", "Specs", "Reviews");
+
+    laidOut(bar, bar.getPreferredSize().width);
+
+    for (int i = 0; i < bar.getTabCount(); i++) {
+      assertThat(bar.getTabAt(i).getWidth())
+          .as(
+              "#766 — at exactly preferred size no fixed tab is shorted below its content, tab %d",
+              i)
+          .isGreaterThanOrEqualTo(bar.getTabAt(i).getPreferredSize().width);
+    }
+  }
+
+  @Test
+  void fixedTabsAtExactlyPreferredSizeGiveEveryLabelItsNaturalWidthInRtl() {
+    final ElwhaTabs bar = barOf("Overview", "Specs", "Reviews");
+    bar.applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+
+    laidOut(bar, bar.getPreferredSize().width);
+
+    for (int i = 0; i < bar.getTabCount(); i++) {
+      assertThat(bar.getTabAt(i).getWidth())
+          .as("#766 — the RTL layout branch honors the same floor, tab %d", i)
+          .isGreaterThanOrEqualTo(bar.getTabAt(i).getPreferredSize().width);
+    }
   }
 
   @Test
