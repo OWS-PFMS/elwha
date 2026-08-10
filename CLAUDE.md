@@ -151,7 +151,7 @@ Bundled resources:
 
 ## Coupling stance (defend this)
 
-The pre-extraction audit confirmed **zero coupling sites** between these components and the OWS-tool app they came from. Keep it that way: depend on **Swing + FlatLaf only**, never on app-specific code, domain types, or consumer assumptions. The compile-scope deps in `pom.xml` are `flatlaf`, `flatlaf-extras`, `flatlaf-intellij-themes` and nothing else — that is what a consumer inherits, and adding to it needs a strong reason. Test scope is separate and does not reach consumers: `junit-jupiter`, `assertj-core`, `cacio-tta-jdk21`.
+The pre-extraction audit confirmed **zero coupling sites** between these components and the OWS-tool app they came from. Keep it that way: depend on **Swing + FlatLaf only**, never on app-specific code, domain types, or consumer assumptions. The compile-scope deps in `pom.xml` are `flatlaf`, `flatlaf-extras` and nothing else — that is what a consumer inherits, and adding to it needs a strong reason (`flatlaf-intellij-themes` was extraction-era dead weight, removed in #775). Test scope is separate and does not reach consumers: `junit-jupiter`, `assertj-core`, `cacio-tta-jdk21`.
 
 ## Conventions
 

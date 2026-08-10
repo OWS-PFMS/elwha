@@ -11,7 +11,7 @@ token step the first time.
 |---|---|
 | **JDK** | 21 or later. Elwha compiles to bytecode 65 (`maven.compiler.release=21`), so a JDK 17 consumer cannot load it. |
 | **UI toolkit** | Swing. No JavaFX, no Compose, no AWT-only fallback. |
-| **Transitive dependencies** | `com.formdev:flatlaf`, `flatlaf-extras`, `flatlaf-intellij-themes` (all 3.2.5), plus `com.github.weisj:jsvg` at runtime for SVG icon rendering. All resolve automatically. |
+| **Transitive dependencies** | `com.formdev:flatlaf` and `flatlaf-extras` (both 3.2.5), plus `com.github.weisj:jsvg` at runtime for SVG icon rendering. All resolve automatically. |
 
 Elwha depends on **Swing and FlatLaf only** — see [Dependency stance](stability.md#dependency-stance).
 
