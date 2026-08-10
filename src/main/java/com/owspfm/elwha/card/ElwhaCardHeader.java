@@ -29,9 +29,16 @@ import javax.swing.JPanel;
  * repeated {@link #addTrailing} calls — header trailing is polymorphic across icon buttons, chips,
  * and overflow triggers.
  *
+ * <p><strong>Slot-based — {@code add()} is not part of this API.</strong> The header's layout
+ * positions only its three internal slot holders, so a directly-added child would join the
+ * container but never be laid out (it would sit invisible at 0&times;0). {@code add(...)} therefore
+ * throws {@link IllegalArgumentException} for any external component; populate the header through
+ * {@link #setTitle(String)}, {@link #setSubtitle(String)}, {@link #setLeading}, and {@link
+ * #addTrailing} instead.
+ *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.2.0
  */
 public final class ElwhaCardHeader extends JComponent {
@@ -188,6 +195,28 @@ public final class ElwhaCardHeader extends JComponent {
   }
 
   private static final Dimension ZERO = new Dimension(0, 0);
+
+  /**
+   * Rejects external children — the header is slot-based and its layout would never position them,
+   * so a silent {@code add()} renders nothing (#768). Only the three internal slot holders created
+   * during construction pass, identified by reference (the {@code JSplitPane} pattern).
+   *
+   * @param comp the component to add
+   * @param constraints layout constraints (unused)
+   * @param index the position at which to insert
+   * @throws IllegalArgumentException for any component other than the internal slot holders
+   * @version v1.1.0
+   * @since v1.1.0
+   */
+  @Override
+  protected void addImpl(final Component comp, final Object constraints, final int index) {
+    if (comp != leadingHolder && comp != textStack && comp != trailingRow) {
+      throw new IllegalArgumentException(
+          "ElwhaCardHeader is slot-based; add() is not part of its API. Use setTitle / setSubtitle"
+              + " / setLeading / addTrailing.");
+    }
+    super.addImpl(comp, constraints, index);
+  }
 
   /**
    * Sets the leading slot — typically an {@link ElwhaCardLeadingIcon} or {@link

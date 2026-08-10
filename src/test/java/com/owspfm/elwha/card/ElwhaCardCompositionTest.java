@@ -236,6 +236,52 @@ class ElwhaCardCompositionTest {
         .isLessThan(withLeading.getPreferredSize().width);
   }
 
+  // ------------------------------------------------- the add() guard (#768)
+
+  @Test
+  void externalAddFailsFastAndNamesTheSlotApi() {
+    final ElwhaCardHeader header = new ElwhaCardHeader();
+
+    assertThatThrownBy(() -> header.add(new ElwhaCardTitle("orphan")))
+        .as("#768 — an external add() throws instead of silently rendering nothing")
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("setTitle")
+        .hasMessageContaining("setSubtitle")
+        .hasMessageContaining("setLeading")
+        .hasMessageContaining("addTrailing");
+  }
+
+  @Test
+  void everyAddOverloadIsGuarded() {
+    final ElwhaCardHeader header = new ElwhaCardHeader();
+    final Block child = new Block(10, 10);
+
+    assertThatThrownBy(() -> header.add(child, 0))
+        .as("the index overload funnels through the same guard")
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> header.add(child, "constraint"))
+        .as("and so does the constraints overload")
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(descendants(header))
+        .as("a rejected child never joins the tree")
+        .doesNotContain(child);
+  }
+
+  @Test
+  void theFourSanctionedMutatorsStillPassTheGuard() {
+    final ElwhaCardHeader header =
+        new ElwhaCardHeader()
+            .setLeading(new ElwhaCardThumbnail(blankImage()))
+            .setTitle("Recent activity")
+            .setSubtitle("Last 30 days")
+            .addTrailing(new Block(24, 24));
+
+    assertThat(header.getLeading()).as("setLeading still mounts").isNotNull();
+    assertThat(header.getTitle()).as("setTitle still mounts").isNotNull();
+    assertThat(header.getSubtitle()).as("setSubtitle still mounts").isNotNull();
+    assertThat(header.getTrailingItems()).as("addTrailing still mounts").hasSize(1);
+  }
+
   // --------------------------------------------------------- actions row
 
   @Test
