@@ -21,7 +21,7 @@ import javax.swing.JPanel;
  * Gallery tab so both views stay in sync.
  *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class NavigationRailPlaygroundPanels {
@@ -97,7 +97,7 @@ public final class NavigationRailPlaygroundPanels {
     rail.setSurfaceFilled(true);
     rail.setDivider(true);
     rail.setExpandedWidth(240);
-    rail.setMenuButton(new ElwhaIconButton(MaterialIcons.menuOpen()));
+    rail.setMenuButton(action(MaterialIcons.menuOpen(), "Menu"));
     rail.setFab(ElwhaFab.extended(MaterialIcons.edit(), "Compose"));
     final List<ElwhaNavRailDestination> dests = new ArrayList<>();
     dests.add(ElwhaNavRailDestination.of(MaterialIcons.symbol("widgets"), "Home"));
@@ -168,10 +168,12 @@ public final class NavigationRailPlaygroundPanels {
     final ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
     rail.getAccessibleContext().setAccessibleName("Sample navigation");
     if (menu) {
-      rail.setMenuButton(new ElwhaIconButton(MaterialIcons.menu()));
+      rail.setMenuButton(action(MaterialIcons.menu(), "Menu"));
     }
     if (fab) {
-      rail.setFab(ElwhaFab.standard(MaterialIcons.edit()));
+      final ElwhaFab compose = ElwhaFab.standard(MaterialIcons.edit());
+      compose.setToolTipText("Compose");
+      rail.setFab(compose);
     }
     final List<ElwhaNavRailDestination> dests = new ArrayList<>();
     dests.add(ElwhaNavRailDestination.of(MaterialIcons.symbol("widgets"), "Home"));

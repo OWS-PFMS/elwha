@@ -88,9 +88,18 @@ import javax.swing.event.EventListenerList;
  * ColorRole#ON_SURFACE} at the M3 content (0.38) / container (0.12) opacities. Resolved at paint
  * time so runtime theme + light/dark switching re-skins the slider live.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaSlider volume = new ElwhaSlider(0, 100, 40);
+ * volume.setStops(10);
+ * volume.addChangeListener(e -> player.setVolume(volume.getValue()));
+ * panel.add(volume);
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.4.0
  */
 public class ElwhaSlider extends JComponent {

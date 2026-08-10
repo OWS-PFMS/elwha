@@ -1,6 +1,7 @@
 package com.owspfm.elwha.fab;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.theme.AccessibleNameAdvisory;
 import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
@@ -78,9 +79,18 @@ import javax.swing.Timer;
  * RipplePainter} (press ripple) → icon glyph. Per design doc §6.4 the icon, label, and state-layer
  * overlay all share the active style's on-container color.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaFab compose = ElwhaFab.extended(MaterialIcons.edit(), "Compose")
+ *     .setFabSize(ElwhaFab.Size.MEDIUM);
+ * compose.addActionListener(e -> composer.open());
+ * frame.add(new ElwhaFabAnchor(scrollPane, compose), BorderLayout.CENTER);
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
- * @version v1.0.1
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBearing {
@@ -1104,6 +1114,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
 
   @Override
   protected void paintComponent(final Graphics g) {
+    warnIfMissingAccessibleName();
     final int bodyW = bodyWidthPx();
     final int bodyH = bodyHeightPx();
     final int arc = size.cornerRadiusPx() * 2;
@@ -1352,6 +1363,17 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
     return accessibleContext;
   }
 
+  private void warnIfMissingAccessibleName() {
+    if (getAccessibleContext() instanceof AccessibleElwhaFab ctx) {
+      AccessibleNameAdvisory.checkOnce(
+          this,
+          ElwhaFab.class,
+          ctx.meaningfulName(),
+          "Set a tooltip or call setAccessibleName(...) — e.g. \"Compose\" — so screen readers"
+              + " announce more than \"Floating action button\".");
+    }
+  }
+
   /**
    * Accessible role: {@link AccessibleRole#PUSH_BUTTON}. Name resolution priority is: declared
    * accessible name → Extended-form label text → tooltip → component name → the literal {@code
@@ -1360,9 +1382,10 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
    * icon-only, so consumers SHOULD still set a tooltip (which doubles as the M3 hover-tooltip per
    * design doc §10.4 and as the accessible-name fallback) or call {@code
    * getAccessibleContext().setAccessibleName(...)} on every Standard FAB or screen-reader users
-   * will hear nothing meaningful.
+   * will hear nothing meaningful; the FAB logs a {@link java.util.logging.Logger#warning(String)}
+   * at first paint when resolution would fall through to the literal.
    *
-   * @version v0.3.0
+   * @version v1.1.0
    * @since v0.3.0
    */
   protected class AccessibleElwhaFab extends AccessibleJComponent {
@@ -1380,8 +1403,7 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
       return AccessibleRole.PUSH_BUTTON;
     }
 
-    @Override
-    public String getAccessibleName() {
+    private String meaningfulName() {
       final String declared = super.getAccessibleName();
       if (declared != null && !declared.isEmpty()) {
         return declared;
@@ -1397,7 +1419,13 @@ public final class ElwhaFab extends JComponent implements ShadowBearing, BodyBea
       if (name != null && !name.isEmpty()) {
         return name;
       }
-      return "Floating action button";
+      return null;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      final String meaningful = meaningfulName();
+      return meaningful != null ? meaningful : "Floating action button";
     }
   }
 }

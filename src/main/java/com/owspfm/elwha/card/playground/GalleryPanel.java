@@ -43,7 +43,7 @@ import javax.swing.Scrollable;
  * handles the "what does it look like under <em>my</em> settings" half.
  *
  * @author Charles Bryan
- * @version v0.2.0
+ * @version v1.1.0
  * @since v0.2.0
  */
 public final class GalleryPanel extends JPanel {
@@ -214,7 +214,7 @@ public final class GalleryPanel extends JPanel {
             .setLeading(new ElwhaCardThumbnail(stripeImage(56, 56, new Color(0xFF7043))))
             .setTitle("Project alpha")
             .setSubtitle("Updated 2 minutes ago")
-            .addTrailing(ElwhaIconButton.standardIconButton(MaterialIcons.moreVert())));
+            .addTrailing(moreActionsButton()));
     card.add(
         new ElwhaCardSupportingText(
             "Every layer 2-3 primitive in one card: media + header with leading thumbnail +"
@@ -286,7 +286,7 @@ public final class GalleryPanel extends JPanel {
             .setLeading(new ElwhaCardThumbnail(stripeImage(72, 72, new Color(0xE91E63))))
             .setTitle("REI")
             .setSubtitle("Your order has shipped")
-            .addTrailing(ElwhaIconButton.standardIconButton(MaterialIcons.moreVert())));
+            .addTrailing(moreActionsButton()));
     card.add(Box.createVerticalStrut(8));
     card.add(
         new ElwhaCardSupportingText(
@@ -305,6 +305,12 @@ public final class GalleryPanel extends JPanel {
   }
 
   // ------------------------------------------------------------- utilities
+
+  private static ElwhaIconButton moreActionsButton() {
+    final ElwhaIconButton more = ElwhaIconButton.standardIconButton(MaterialIcons.moreVert());
+    more.setToolTipText("More options");
+    return more;
+  }
 
   /** Generates a striped {@link Image} for thumbnails / media — avoids bundling assets. */
   static Image stripeImage(final int w, final int h, final Color base) {

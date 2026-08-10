@@ -3,6 +3,8 @@ package com.owspfm.elwha.tabs;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
 import com.owspfm.elwha.theme.MorphAnimator;
+import com.owspfm.elwha.theme.StateLayer;
+import java.awt.AlphaComposite;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -68,7 +70,7 @@ import javax.swing.SwingUtilities;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v1.0.1
+ * @version v1.1.0
  * @since v0.4.0
  */
 public class ElwhaTabs extends JComponent implements Accessible {
@@ -480,16 +482,17 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
   /**
    * Activates the tab at the given index. Fires {@link #PROPERTY_ACTIVE_TAB} on an actual change;
-   * activating the already-active index is a no-op. Out-of-range indices are ignored (material-web
-   * parity).
+   * activating the already-active index is a no-op.
    *
    * @param index the tab index to activate
-   * @version v0.5.0
+   * @throws IndexOutOfBoundsException if {@code index} is outside {@code [0, getTabCount())}
+   * @version v1.1.0
    * @since v0.4.0
    */
   public void setActiveTabIndex(final int index) {
     if (index < 0 || index >= tabs.size()) {
-      return;
+      throw new IndexOutOfBoundsException(
+          "activeTabIndex " + index + " out of range [0, " + tabs.size() + ")");
     }
     activate(index, false);
   }
@@ -506,26 +509,31 @@ public class ElwhaTabs extends JComponent implements Accessible {
   }
 
   /**
-   * Activates the given tab. Tabs that are not children of this bar are ignored.
+   * Activates the given tab. Tabs that are not children of this bar are ignored — a documented
+   * ignore this setter keeps, unlike the index overload's range contract.
    *
-   * @param tab the tab to activate
-   * @version v0.4.0
+   * @param tab the tab to activate; {@code null} or a tab that is not a child of this bar is
+   *     ignored
+   * @version v1.1.0
    * @since v0.4.0
    */
   public void setActiveTab(final ElwhaTab tab) {
-    setActiveTabIndex(tabs.indexOf(tab));
+    final int index = tabs.indexOf(tab);
+    if (index >= 0) {
+      activate(index, false);
+    }
   }
 
   /**
-   * Enables or disables the whole bar, cascading to every tab: content paints at the disabled
-   * opacity and all <em>user</em> interaction is off — click, keyboard, wheel, and the accessible
-   * "click" action. Programmatic activation ({@link #setActiveTabIndex(int)} et al.) still works
-   * while disabled, standard Swing semantics (a disabled {@code JTabbedPane} honors {@code
-   * setSelectedIndex} the same way). There is no per-tab disabled — M3 defines none for tabs
-   * (design §10).
+   * Enables or disables the whole bar, cascading to every tab: content — and the bar-owned active
+   * indicator (#781) — paints at the disabled {@link ColorRole#ON_SURFACE} treatment and all
+   * <em>user</em> interaction is off — click, keyboard, wheel, and the accessible "click" action.
+   * Programmatic activation ({@link #setActiveTabIndex(int)} et al.) still works while disabled,
+   * standard Swing semantics (a disabled {@code JTabbedPane} honors {@code setSelectedIndex} the
+   * same way). There is no per-tab disabled — M3 defines none for tabs (design §10).
    *
    * @param enabled the new enabled state
-   * @version v0.4.0
+   * @version v1.1.0
    * @since v0.4.0
    */
   @Override
@@ -703,20 +711,31 @@ public class ElwhaTabs extends JComponent implements Accessible {
     if (rect == null) {
       return;
     }
-    g2.setColor(ColorRole.PRIMARY.resolve());
-    if (variant == TabsVariant.PRIMARY) {
-      // Top corners rounded, bottom square: fill a taller round-rect clipped to the indicator
-      // band so the bottom corners fall outside the clip.
-      final Graphics2D c = (Graphics2D) g2.create();
-      try {
+    final Graphics2D c = (Graphics2D) g2.create();
+    try {
+      if (isEnabled()) {
+        c.setColor(ColorRole.PRIMARY.resolve());
+      } else {
+        // #781 — the indicator paints in the bar's overlay pass, outside the per-tab #767 fade,
+        // so it dims here: ON_SURFACE at the 38% content opacity, matching the disabled tab
+        // content it underlines. Not the nav rail's 12% container opacity — at 12% the 2–3 px
+        // band composites lighter than the OUTLINE_VARIANT divider it sits on (light mode) and
+        // darker than it (dark mode), reading as a notch in the divider rather than an
+        // indicator.
+        c.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContentOpacity()));
+        c.setColor(ColorRole.ON_SURFACE.resolve());
+      }
+      if (variant == TabsVariant.PRIMARY) {
+        // Top corners rounded, bottom square: fill a taller round-rect clipped to the indicator
+        // band so the bottom corners fall outside the clip.
         c.clip(rect);
         final int arc = PRIMARY_INDICATOR_CORNER_RADIUS_PX * 2;
         c.fill(new RoundRectangle2D.Float(rect.x, rect.y, rect.width, rect.height + arc, arc, arc));
-      } finally {
-        c.dispose();
+      } else {
+        c.fill(rect);
       }
-    } else {
-      g2.fill(rect);
+    } finally {
+      c.dispose();
     }
   }
 
@@ -947,7 +966,11 @@ public class ElwhaTabs extends JComponent implements Accessible {
 
     @Override
     public void addAccessibleSelection(final int i) {
-      setActiveTabIndex(i);
+      // AccessibleSelection has no range contract, and assistive tech is not a caller that can
+      // fix its arguments — out-of-range stays a no-op here while the public setter throws.
+      if (i >= 0 && i < tabs.size()) {
+        activate(i, false);
+      }
     }
 
     @Override

@@ -48,8 +48,18 @@ import javax.swing.SwingUtilities;
  * start/center/end} against the anchor (direction-aware), and clamps to the pane with an 8&nbsp;px
  * edge margin. Design: {@code docs/research/elwha-tooltip-design.md} §5.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaTooltip.plain("Add to favorites").attach(favoriteButton);
+ *
+ * ElwhaTooltip tip = ElwhaTooltip.plain("Copy link");
+ * tip.setPreferredPlacement(TooltipPlacement.BELOW);
+ * tip.attach(copyButton);
+ * }</pre>
+ *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.4.0
  */
 public final class ElwhaTooltip extends AbstractElwhaOverlay {

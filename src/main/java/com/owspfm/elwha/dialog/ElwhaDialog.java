@@ -66,8 +66,21 @@ import javax.swing.SwingUtilities;
  * {@link Builder#onClose(Consumer)} with a {@link DismissCause}. {@link #dismiss()} closes it
  * programmatically.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaDialog.builder()
+ *     .headline("Discard draft?")
+ *     .supportingText("Unsent changes will be lost.")
+ *     .confirmAction(ElwhaButton.textButton("Discard"))
+ *     .cancelAction(ElwhaButton.textButton("Cancel"))
+ *     .onClose(cause -> handleClose(cause))
+ *     .build()
+ *     .show(anyComponentInTheFrame);
+ * }</pre>
+ *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class ElwhaDialog extends AbstractElwhaDialog {

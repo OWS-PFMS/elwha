@@ -3,6 +3,8 @@ package com.owspfm.elwha.switches;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.testkit.EdtInterceptor;
+import com.owspfm.elwha.testkit.LogCapture;
+import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import java.beans.PropertyChangeEvent;
 import java.util.ArrayList;
@@ -259,5 +261,41 @@ class ElwhaSwitchLabelAccessibilityTest {
     assertThat(toggle.getAccessibleContext())
         .as("repeat calls hand back the same context, so listeners registered on it survive")
         .isSameAs(toggle.getAccessibleContext());
+  }
+
+  @Test
+  void anUnnamedSwitchWarnsOnceAtFirstPaint() {
+    try (LogCapture log = LogCapture.of(ElwhaSwitch.class)) {
+      final ElwhaSwitch toggle = new ElwhaSwitch();
+      Pixels.render(toggle, 64, 40);
+      Pixels.render(toggle, 64, 40);
+
+      assertThat(log.messages())
+          .as("research §A — a switch must always be named, so an unnamed one warns exactly once")
+          .hasSize(1);
+      assertThat(log.messages().get(0)).startsWith("ElwhaSwitch has no accessible name.");
+    }
+  }
+
+  @Test
+  void anAccessibleLabelKeepsTheAdvisorySilent() {
+    try (LogCapture log = LogCapture.of(ElwhaSwitch.class)) {
+      final ElwhaSwitch toggle = new ElwhaSwitch();
+      toggle.setAccessibleLabel("Wi-Fi");
+      Pixels.render(toggle, 64, 40);
+
+      assertThat(log.messages()).as("setAccessibleLabel names the switch").isEmpty();
+    }
+  }
+
+  @Test
+  void aLabelForAssociationKeepsTheAdvisorySilent() {
+    try (LogCapture log = LogCapture.of(ElwhaSwitch.class)) {
+      final ElwhaSwitch toggle = new ElwhaSwitch();
+      labelFor(toggle, "Dark mode");
+      Pixels.render(toggle, 64, 40);
+
+      assertThat(log.messages()).as("a labelFor JLabel names the switch too").isEmpty();
+    }
   }
 }

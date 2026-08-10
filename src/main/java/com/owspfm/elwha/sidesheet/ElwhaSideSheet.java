@@ -72,9 +72,19 @@ import javax.swing.JPanel;
  * (that's the navigation rail), not interruptive confirmation (the dialog), and not transient
  * command lists (the menu). Keep headlines short; prefer one sheet at a time per edge.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaSideSheet filters = ElwhaSideSheet.standardSheet("Filters");
+ * filters.setContent(filterPanel);
+ * filters.setActions(ElwhaButton.filledButton("Apply"), ElwhaButton.textButton("Reset"));
+ * frame.add(filters, BorderLayout.LINE_END);
+ * filters.open();
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.5.0
  */
 public final class ElwhaSideSheet extends JComponent {
@@ -450,8 +460,9 @@ public final class ElwhaSideSheet extends JComponent {
    * the footer divider when {@link #isFooterDividerVisible()}. Passing no buttons removes the
    * footer entirely. Actions do <strong>not</strong> auto-dismiss — see the class doc.
    *
-   * @param actions the footer action buttons, leading-first; empty for no footer
-   * @version v0.5.0
+   * @param actions the footer action buttons, leading-first; empty (or {@code null}) for no footer,
+   *     and {@code null} entries are skipped
+   * @version v1.1.0
    * @since v0.5.0
    */
   public void setActions(final ElwhaButton... actions) {

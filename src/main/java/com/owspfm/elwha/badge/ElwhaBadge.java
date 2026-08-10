@@ -41,9 +41,17 @@ import javax.swing.JComponent;
  * resolved container color) → label glyph (Large only, resolved {@link TypeRole#LABEL_SMALL} font
  * at paint time).
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaBadge unread = ElwhaBadge.large(12).setAccessibilityText("12 unread messages");
+ * ElwhaBadgeAnchor.attach(inboxButton, unread);
+ * unread.setContent(99);
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class ElwhaBadge extends JComponent {

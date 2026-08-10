@@ -105,9 +105,22 @@ import javax.swing.event.EventListenerList;
  * (programmatic semantics), and an {@link AccessibleRelation#MEMBER_OF} relation answering the
  * current {@link ElwhaRadioGroup} membership.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaRadioButton csv = new ElwhaRadioButton("CSV", true);
+ * ElwhaRadioButton json = new ElwhaRadioButton("JSON");
+ * ElwhaRadioGroup format = new ElwhaRadioGroup();
+ * format.add(csv);
+ * format.add(json);
+ * format.addSelectionChangeListener(evt -> preview.update(format.getSelected()));
+ * form.add(csv);
+ * form.add(json);
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
- * @version v1.0.0
+ * @version v1.1.0
  * @since v0.4.0
  */
 public class ElwhaRadioButton extends JComponent implements BodyBearing {

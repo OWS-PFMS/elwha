@@ -77,8 +77,20 @@ import javax.swing.SwingUtilities;
  * of the surface, on which a live ripple would freeze mid-stroke; the exit motion is itself the
  * press feedback.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaFullScreenDialog.builder()
+ *     .headline("New event")
+ *     .content(eventForm)
+ *     .confirmAction(ElwhaButton.textButton("Save"))
+ *     .onClose(cause -> handleClose(cause))
+ *     .build()
+ *     .show(anyComponentInTheFrame);
+ * }</pre>
+ *
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class ElwhaFullScreenDialog extends AbstractElwhaDialog {

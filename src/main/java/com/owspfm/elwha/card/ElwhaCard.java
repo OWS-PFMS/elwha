@@ -70,7 +70,11 @@ import javax.swing.Timer;
  * <p><strong>Defaults.</strong> {@link ShapeScale#MD} (12 dp corner radius — inherited from
  * Surface), padding {@link SpaceScale#LG} (16 dp) on both axes, expansion overflow {@link
  * ExpansionOverflow#GROW}. The four M3 measurement defaults — 12dp shape, 16dp padding, 8dp
- * inter-card (consumer-controlled on the list), start-aligned text — are baked in.
+ * inter-card (consumer-controlled on the list), start-aligned text — are baked in. The vertical
+ * flow gap between stacked children (header to supporting text, for example) is {@link
+ * SpaceScale#SM} (8 dp); the whitespace the eye reads between two text blocks is that gap plus the
+ * blocks' own font-box leading (measured at ~11 px between a subtitle and supporting text — #770,
+ * confirmed by design).
  *
  * <p><strong>Orientation.</strong> Only VERTICAL orientation ships; HORIZONTAL is planned per spec
  * §15.3. The HORIZONTAL design will reuse {@code add(...)} with typed partitioning ({@link
@@ -93,7 +97,7 @@ import javax.swing.Timer;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.2.0
  */
 public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
@@ -1645,9 +1649,11 @@ public class ElwhaCard extends ElwhaSurface implements ElwhaListItemView {
    * behavior as {@code BoxLayout(Y_AXIS)} per spec §3.3 — plus two card-specific rules:
    *
    * <ul>
-   *   <li><strong>Padding from token roles.</strong> Each non-edge-media child is inset by {@link
-   *       #paddingHorizontal} horizontally and the card's vertical padding between siblings (top
-   *       and bottom of the card itself).
+   *   <li><strong>Spacing from token roles.</strong> Each non-edge-media child is inset by {@link
+   *       #paddingHorizontal} horizontally; {@link #paddingVertical} pads the card's own top and
+   *       bottom edges, and consecutive siblings are separated by the fixed {@link SpaceScale#SM}
+   *       inter-element gap ({@link #interElementGap()}) — the governing token for the vertical
+   *       whitespace between stacked content blocks (#770).
    *   <li><strong>Edge-bleed for {@link ElwhaCardMedia}.</strong> When media is the first child, it
    *       gets full card width and no top inset; when it's the last child, no bottom inset. This is
    *       the spec §5.2 contract that lets the media's cubic-Bezier corner clip align with the

@@ -6,6 +6,70 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **`ElwhaCardHeader.add(...)` fails fast** (#768): it now throws `IllegalArgumentException`
+  instead of silently accepting a child its slot layout would never position — the header is
+  slot-based; populate it via `setTitle` / `setSubtitle` / `setLeading` / `addTrailing`.
+- **Argument validation fails fast at the API boundary** (#776; conventions §15). Reference
+  parameters throw `NullPointerException` naming the parameter, positional indices throw
+  `IndexOutOfBoundsException` naming the index and the live range, and `null` stays legal only
+  where it is a documented clear/reset semantic — now stated on an explicit `@param` line
+  everywhere it applies. Newly throwing where calls previously succeeded silently:
+  `ElwhaButton`'s and `ElwhaChip`'s variant factories on a `null` label/text (the constructors
+  keep their documented null-as-empty path), `ElwhaTabs.setActiveTabIndex` on an out-of-range
+  index (previously ignored; `setActiveTab`'s documented non-member ignore and the
+  accessible-selection path are unchanged), `ElwhaCardHeader.setTitle(String)` /
+  `setSubtitle(String)` on `null` text, `ElwhaSelectField.setOptions` on a `null` element
+  (previously an unnamed copy-time NPE), and `MaterialIcons.themed` on a `null` icon.
+
+### Fixed
+
+- **A disabled `ElwhaTabs` bar dims its active indicator with the rest of the bar** (#781):
+  `ON_SURFACE` at the 38% disabled content opacity instead of a full-strength `PRIMARY`
+  underline — the one saturated element left on an otherwise dimmed bar after #767.
+- **A selected `ElwhaMenuItem` that is disabled dims its selection fill** (#782): `ON_SURFACE`
+  at the 12% disabled container opacity, matching the lib-wide disabled treatment; the ✓
+  checkmark still marks the row, and selection state survives disable/enable. Ruling recorded
+  in the menu design doc §17.
+- **The card header→supporting-text gap is confirmed by design** (#770): exactly the
+  `SpaceScale.SM` (8 dp) inter-element flow gap, now named in the `ElwhaCard` class doc and
+  card V3 spec §3.3; no code change.
+- **The Showcase no longer trips the library's own advisories** (#769): the badge-anchor demo
+  rails carry three named destinations, and every Showcase-mounted icon-only interactive
+  resolves a meaningful accessible name — enforced by a permanent suite-level sweep.
+- **Eyedropper wide-gamut drift documented as a known limitation** (#736): on a wide-gamut
+  display the OS color-manages `Robot`'s capture through the display profile, so saturated
+  samples can land up to ~3 per channel off the painted value (neutrals and pure red/blue are
+  exact). Documented on `ElwhaColorPicker.setEyedropperEnabled` and in
+  `docs/consumer/components.md`; `Robot` exposes no raw-framebuffer route, so there is nothing
+  to fix in code.
+
+### Added
+
+- **`AccessibleNameAdvisory` in `theme/`** (#777): the library-wide missing-accessible-name
+  advisory — uniform wording, `WARNING` level, once-per-instance throttling — extracted from
+  `ElwhaNavigationRail` and applied at first paint to `ElwhaIconButton`, `ElwhaFab`, and
+  `ElwhaSwitch` whenever name resolution would announce a generic literal or nothing.
+  `ElwhaCardChevron` now seeds a stable default accessible name ("Expand or collapse the
+  card") at construction, overridable per instance.
+- **Every flagship class doc carries a usage example** (#778): the 18 component classes that
+  lacked the `ElwhaButton`-style Quick start block gained one — FAB + anchor, checkbox, radio,
+  switch, text field, select field, slider, side sheet, both dialogs, tooltip, navigation rail,
+  badge + anchor, both progress indicators, and the loading indicator — so hover-docs read
+  consistently across the published `-javadoc` jar.
+- **Artifact-split design doc** (#783): `docs/research/elwha-artifact-split-design.md` —
+  Phase 0 of epic #779, locking the two-module reactor layout (`elwha` + `elwha-showcase`),
+  the measured 355-file move inventory, the testkit test-jar strategy, and the CI/release
+  plumbing for the two-artifact tag.
+
+### Removed
+
+- **The unused `flatlaf-intellij-themes` compile dependency** (#775): zero references anywhere
+  in `src/`; the compile-scope set consumers inherit is now `flatlaf` + `flatlaf-extras` (plus
+  transitive `jsvg`). README, stability.md, install.md, and the repo coupling stance updated to
+  match.
+
 ## [1.0.1] — 2026-08-10
 
 All entries below come out of the first two consumer field reports against the published 1.0.0

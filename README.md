@@ -168,7 +168,7 @@ mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.chip.ElwhaChipPlaygroun
 
 - **JDK 21** or later (bytecode 65 — JDK 17 cannot load the jar)
 - **Swing** — no JavaFX, no Compose, no AWT-only fallback
-- **FlatLaf 3.2.5** (`flatlaf`, `flatlaf-extras`, `flatlaf-intellij-themes`) and `jsvg`, pulled
+- **FlatLaf 3.2.5** (`flatlaf`, `flatlaf-extras`) and `jsvg`, pulled
   in transitively
 
 Elwha depends on Swing and the FlatLaf family only — no app framework, no logging facade, no

@@ -43,7 +43,7 @@ import javax.swing.event.DocumentListener;
  * of {@link ElwhaIconButton}s, and every text input is itself an {@link ElwhaTextField}.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v1.1.0
  * @since v0.4.0
  */
 final class SelectFieldShowcasePanels {
@@ -90,10 +90,12 @@ final class SelectFieldShowcasePanels {
         new ElwhaIconButton(MaterialIcons.remove())
             .setVariant(IconButtonVariant.STANDARD)
             .setButtonSize(IconButtonSize.S);
+    countDown.setToolTipText("Fewer options");
     final ElwhaIconButton countUp =
         new ElwhaIconButton(MaterialIcons.add())
             .setVariant(IconButtonVariant.STANDARD)
             .setButtonSize(IconButtonSize.S);
+    countUp.setToolTipText("More options");
     final JPanel countStepper = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
     countStepper.setOpaque(false);
     countStepper.add(countDown);

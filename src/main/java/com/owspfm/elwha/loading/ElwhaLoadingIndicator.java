@@ -53,9 +53,19 @@ import javax.swing.event.ChangeListener;
  * getAccessibleContext().setAccessibleName("Loading…")}. For the contained variant keep the active
  * indicator and container at ≥ 3:1 contrast (M3 guidance).
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaLoadingIndicator loading = new ElwhaLoadingIndicator();
+ * loading.getAccessibleContext().setAccessibleName("Loading results");
+ * panel.add(loading);
+ *
+ * panel.add(ElwhaLoadingIndicator.contained());
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.5.0
  */
 public class ElwhaLoadingIndicator extends JComponent implements Accessible {

@@ -5,6 +5,7 @@ import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.menu.ElwhaMenu;
 import com.owspfm.elwha.menu.ElwhaMenuItem;
+import com.owspfm.elwha.theme.AccessibleNameAdvisory;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.MorphAnimator;
@@ -102,9 +103,20 @@ import javax.swing.KeyStroke;
  * destination (selection only changes on activation, never on focus traversal). Escape is
  * intentionally not consumed.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaNavigationRail rail = ElwhaNavigationRail.collapsed();
+ * rail.setPrimary(List.of(
+ *     ElwhaNavRailDestination.of(MaterialIcons.symbol("home"), "Home"),
+ *     ElwhaNavRailDestination.of(MaterialIcons.symbol("favorite"), "Favorites")));
+ * rail.addSelectionListener((previous, current) -> pages.show(current.getLabel()));
+ * frame.add(rail, BorderLayout.LINE_START);
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class ElwhaNavigationRail extends JComponent {
@@ -281,8 +293,6 @@ public final class ElwhaNavigationRail extends JComponent {
           setSelected(d);
         }
       };
-
-  private boolean missingAccessibleNameWarned;
 
   // Morph state ------------------------------------------------------------
   private final MorphAnimator variantMorph = new MorphAnimator(this, MorphAnimator.MEDIUM3_MS);
@@ -701,8 +711,9 @@ public final class ElwhaNavigationRail extends JComponent {
    * still subscribe their own action listeners on a destination for additional side effects, but
    * the rail's container is the single source of truth for which destination is selected.
    *
-   * @param destinations the new list of primary destinations, or {@code null} to clear
-   * @version v0.3.0
+   * @param destinations the new list of primary destinations, or {@code null} to clear; {@code
+   *     null} entries are skipped
+   * @version v1.1.0
    * @since v0.3.0
    */
   public void setPrimary(final List<ElwhaNavRailDestination> destinations) {
@@ -977,8 +988,9 @@ public final class ElwhaNavigationRail extends JComponent {
    * renders a rail with bottom-anchored utility buttons, so the pattern is demonstrated by the
    * spec's own home site even though not formally documented (design doc §3).
    *
-   * @param actions the actions to slot at the bottom of the rail, or {@code null} / empty to clear
-   * @version v0.3.0
+   * @param actions the actions to slot at the bottom of the rail, or {@code null} / empty to clear;
+   *     {@code null} entries are skipped
+   * @version v1.1.0
    * @since v0.3.0
    */
   public void setTrailingActions(final List<ElwhaIconButton> actions) {
@@ -1562,17 +1574,13 @@ public final class ElwhaNavigationRail extends JComponent {
   }
 
   private void warnIfMissingAccessibleName() {
-    if (missingAccessibleNameWarned) {
-      return;
-    }
     final AccessibleContext ctx = getAccessibleContext();
-    final String name = ctx == null ? null : ctx.getAccessibleName();
-    if (name == null || name.isEmpty()) {
-      LOG.warning(
-          "ElwhaNavigationRail has no accessible name. Call setAccessibleName(...) — e.g."
-              + " \"Primary navigation\" — so screen readers can identify the rail.");
-    }
-    missingAccessibleNameWarned = true;
+    AccessibleNameAdvisory.checkOnce(
+        this,
+        ElwhaNavigationRail.class,
+        ctx == null ? null : ctx.getAccessibleName(),
+        "Call setAccessibleName(...) — e.g. \"Primary navigation\" — so screen readers can"
+            + " identify the rail.");
   }
 
   @Override

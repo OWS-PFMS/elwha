@@ -47,7 +47,7 @@ import javax.swing.event.ChangeListener;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.5.0
  */
 public class ElwhaColorPicker extends JComponent {
@@ -339,8 +339,17 @@ public class ElwhaColorPicker extends JComponent {
    * only the wallpaper and this JVM's windows) — which is why the affordance is opt-in. Headless
    * environments and {@code Robot} construction failures hide the affordance automatically.
    *
+   * <p><strong>Known limitation — wide-gamut displays shift saturated samples.</strong> The sampler
+   * reads the screen through {@link java.awt.Robot}, and on a wide-gamut display (a P3 Mac, for
+   * example) the operating system color-manages that capture through the display profile on its way
+   * back to sRGB. A <em>saturated</em> color near the sRGB gamut boundary can therefore arrive up
+   * to ~3 per channel away from the value that was painted (pure sRGB green may sample as {@code
+   * #03FF00}), while neutrals and pure red / blue round-trip exactly. This is the OS's
+   * display-profile round trip, not the picker's arithmetic — {@code Robot} exposes no route to the
+   * raw framebuffer values, so the library cannot correct it.
+   *
    * @param eyedropperEnabled whether the header offers the eyedropper
-   * @version v0.5.0
+   * @version v1.1.0
    * @since v0.5.0
    */
   public void setEyedropperEnabled(final boolean eyedropperEnabled) {

@@ -140,7 +140,7 @@ import javax.swing.event.DocumentListener;
  * -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"}
  *
  * @author Charles Bryan
- * @version v1.0.0
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class ElwhaShowcase {
@@ -1248,7 +1248,9 @@ public final class ElwhaShowcase {
     target.getAccessibleContext().setAccessibleName("Showcase navigation rail");
     target.setSurfaceFilled(true);
     target.setElevation(1);
-    target.setMenuButton(new ElwhaIconButton(MaterialIcons.menu()));
+    final ElwhaIconButton menuButton = new ElwhaIconButton(MaterialIcons.menu());
+    menuButton.setToolTipText("Menu");
+    target.setMenuButton(menuButton);
 
     final ElwhaFab homeFab =
         ElwhaFab.extended(MaterialIcons.home(ElwhaFab.Size.SMALL.iconPx()), "Home");
@@ -2115,6 +2117,7 @@ public final class ElwhaShowcase {
 
           final MaterialIcons.IconPair pair = icon.pair(size.iconPx());
           final ElwhaIconButton button = new ElwhaIconButton(pair.resting());
+          button.getAccessibleContext().setAccessibleName("Workbench icon button");
           button
               .setVariant(variant)
               .setInteractionMode(mode)
@@ -2427,6 +2430,10 @@ public final class ElwhaShowcase {
             default -> fab = ElwhaFab.standard(iconChoice.icon(size.iconPx()));
           }
           fab.setFabSize(size).setColorStyle(color);
+          if (form != FabForm.EXTENDED_TEXT && form != FabForm.EXTENDED_ICON_TEXT) {
+            // §10.4 — the Standard form is icon-only, so the tooltip is its accessible name.
+            fab.setToolTipText(safeLabel);
+          }
           fab.setHovered(hovered);
           fab.setPressed(pressed);
           fab.setEnabled(enabled);
@@ -2608,6 +2615,7 @@ public final class ElwhaShowcase {
                     .setInteractionMode(IconButtonInteractionMode.SELECTABLE);
             button.setIcons(pair.resting(), pair.filled());
             final String label = entry[1];
+            button.setToolTipText(label);
             button.addPropertyChangeListener(
                 ElwhaIconButton.PROPERTY_SELECTED,
                 event -> {
@@ -3695,7 +3703,10 @@ public final class ElwhaShowcase {
     dests.get(1).setBadge(com.owspfm.elwha.badge.ElwhaBadge.small());
     rail.setPrimary(dests);
     rail.setSurfaceFilled(true);
-    rail.setMenuButton(new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.menu()));
+    final com.owspfm.elwha.iconbutton.ElwhaIconButton railMenuButton =
+        new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.menu());
+    railMenuButton.setToolTipText("Menu");
+    rail.setMenuButton(railMenuButton);
     rail.setTrailingActions(showcaseTrailingActions());
 
     // Custom Workbench stage for Nav Rail: the ComponentWorkbench default "single comp centered on
@@ -3778,11 +3789,16 @@ public final class ElwhaShowcase {
 
     menuBox.setChecked(true);
     menuBox.addActionListener(
-        e ->
-            rail.setMenuButton(
-                menuBox.isChecked()
-                    ? new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.menu())
-                    : null));
+        e -> {
+          if (!menuBox.isChecked()) {
+            rail.setMenuButton(null);
+            return;
+          }
+          final com.owspfm.elwha.iconbutton.ElwhaIconButton rebuiltMenuButton =
+              new com.owspfm.elwha.iconbutton.ElwhaIconButton(MaterialIcons.menu());
+          rebuiltMenuButton.setToolTipText("Menu");
+          rail.setMenuButton(rebuiltMenuButton);
+        });
     final ElwhaCheckbox fabBox = new ElwhaCheckbox("FAB");
     fabBox.addActionListener(
         e ->
@@ -4068,6 +4084,7 @@ public final class ElwhaShowcase {
 
     final ElwhaIconButton overflow =
         new ElwhaIconButton(MaterialIcons.moreVert(IconButtonSize.M.iconPx()));
+    overflow.setToolTipText("Open the workbench menu");
     overflow.addActionListener(
         e ->
             buildWorkbenchMenu(layout, separator, colorStyle, selection, selectedLabels, status)

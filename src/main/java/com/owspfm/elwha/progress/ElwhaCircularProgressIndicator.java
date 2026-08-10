@@ -33,9 +33,19 @@ import javax.swing.DefaultBoundedRangeModel;
  * is the flat-default at 4px thickness; thickness past 4 grows it 1:1 (44 at 8px) and the wavy
  * shape adds 8 (48 / 52). See {@code elwha-progress-indicator-design.md} §5.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * panel.add(ElwhaCircularProgressIndicator.indeterminate());
+ *
+ * ElwhaCircularProgressIndicator download = new ElwhaCircularProgressIndicator(0, 100, 65);
+ * download.setWavy(true);
+ * panel.add(download);
+ * }</pre>
+ *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.4.0
  */
 public class ElwhaCircularProgressIndicator extends AbstractElwhaProgressIndicator {

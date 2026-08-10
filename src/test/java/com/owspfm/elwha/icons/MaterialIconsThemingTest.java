@@ -1,6 +1,7 @@
 package com.owspfm.elwha.icons;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.testkit.EdtInterceptor;
@@ -108,6 +109,14 @@ class MaterialIconsThemingTest {
     assertThat(opaqueColors(consumerIcon))
         .as("themed() gives a client-path SVG the identical treatment the bundle gets")
         .containsExactly(new Color(UIManager.getColor("Label.foreground").getRGB(), false));
+  }
+
+  @Test
+  void themedRejectsANullIconNamingTheParameter() {
+    assertThatNullPointerException()
+        .as("conventions §15 — the failure happens at the call site, not inside the filter")
+        .isThrownBy(() -> MaterialIcons.themed(null))
+        .withMessage("icon");
   }
 
   @Test

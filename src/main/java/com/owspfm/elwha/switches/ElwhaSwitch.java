@@ -1,6 +1,7 @@
 package com.owspfm.elwha.switches;
 
 import com.owspfm.elwha.icons.MaterialIcons;
+import com.owspfm.elwha.theme.AccessibleNameAdvisory;
 import com.owspfm.elwha.theme.BodyBearing;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.Easing;
@@ -111,14 +112,24 @@ import javax.swing.event.EventListenerList;
  * <p><strong>Labelling &amp; accessibility (research §A / §X).</strong> A switch never labels
  * itself — M3 requires an adjacent label naming what it toggles, and the accessible name must
  * <em>always</em> be set: call {@link #setAccessibleLabel(String)} or associate a {@link
- * javax.swing.JLabel} via {@link javax.swing.JLabel#setLabelFor}. Swing has no SWITCH role, so the
- * accessible context is the {@code JToggleButton} shape: {@link AccessibleRole#TOGGLE_BUTTON} with
- * {@link AccessibleState#CHECKED} while selected, one "click" {@link AccessibleAction} (a
- * user-gesture toggle), and an {@link AccessibleValue} of 0/1.
+ * javax.swing.JLabel} via {@link javax.swing.JLabel#setLabelFor}; the switch logs a {@link
+ * java.util.logging.Logger#warning(String)} at first paint if no name resolves. Swing has no SWITCH
+ * role, so the accessible context is the {@code JToggleButton} shape: {@link
+ * AccessibleRole#TOGGLE_BUTTON} with {@link AccessibleState#CHECKED} while selected, one "click"
+ * {@link AccessibleAction} (a user-gesture toggle), and an {@link AccessibleValue} of 0/1.
+ *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaSwitch liveUpdates = new ElwhaSwitch(true);
+ * liveUpdates.setAccessibleLabel("Live updates");
+ * liveUpdates.addActionListener(e -> feed.setLive(liveUpdates.isSelected()));
+ * row.add(liveUpdates);
+ * }</pre>
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.4.0
  */
 public class ElwhaSwitch extends JComponent implements BodyBearing {
@@ -658,6 +669,7 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
 
   @Override
   protected void paintComponent(final Graphics g) {
+    warnIfMissingAccessibleName();
     final Graphics2D g2 = (Graphics2D) g.create();
     try {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -946,6 +958,16 @@ public class ElwhaSwitch extends JComponent implements BodyBearing {
       accessibleContext = new AccessibleElwhaSwitch();
     }
     return accessibleContext;
+  }
+
+  private void warnIfMissingAccessibleName() {
+    final AccessibleContext ctx = getAccessibleContext();
+    AccessibleNameAdvisory.checkOnce(
+        this,
+        ElwhaSwitch.class,
+        ctx == null ? null : ctx.getAccessibleName(),
+        "Call setAccessibleLabel(...) or associate a JLabel via setLabelFor(...) — e.g. \"Dark"
+            + " mode\" — so screen readers can identify what it toggles.");
   }
 
   /**

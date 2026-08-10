@@ -39,7 +39,7 @@ import javax.swing.event.DocumentListener;
  * {@link ElwhaTextField}.
  *
  * @author Charles Bryan
- * @version v0.4.0
+ * @version v1.1.0
  * @since v0.4.0
  */
 final class TextFieldShowcasePanels {
@@ -102,10 +102,12 @@ final class TextFieldShowcasePanels {
         new ElwhaIconButton(MaterialIcons.remove())
             .setVariant(IconButtonVariant.STANDARD)
             .setButtonSize(IconButtonSize.S);
+    rowsDown.setToolTipText("Fewer rows");
     final ElwhaIconButton rowsUp =
         new ElwhaIconButton(MaterialIcons.add())
             .setVariant(IconButtonVariant.STANDARD)
             .setButtonSize(IconButtonSize.S);
+    rowsUp.setToolTipText("More rows");
     final JPanel rowsStepper = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
     rowsStepper.setOpaque(false);
     rowsStepper.add(rowsDown);
@@ -118,10 +120,12 @@ final class TextFieldShowcasePanels {
         new ElwhaIconButton(MaterialIcons.remove())
             .setVariant(IconButtonVariant.STANDARD)
             .setButtonSize(IconButtonSize.S);
+    maxLenDown.setToolTipText("Lower the character limit");
     final ElwhaIconButton maxLenUp =
         new ElwhaIconButton(MaterialIcons.add())
             .setVariant(IconButtonVariant.STANDARD)
             .setButtonSize(IconButtonSize.S);
+    maxLenUp.setToolTipText("Raise the character limit");
     final JPanel maxLenStepper = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
     maxLenStepper.setOpaque(false);
     maxLenStepper.add(maxLenDown);
@@ -200,6 +204,7 @@ final class TextFieldShowcasePanels {
                 new ElwhaIconButton(MaterialIcons.close())
                     .setVariant(IconButtonVariant.STANDARD)
                     .setButtonSize(IconButtonSize.M);
+            clear.setToolTipText("Clear text");
             clear.addActionListener(event -> field.setText(""));
             field.setTrailingIconButton(clear);
           }
@@ -432,6 +437,7 @@ final class TextFieldShowcasePanels {
         new ElwhaIconButton(MaterialIcons.close())
             .setVariant(IconButtonVariant.STANDARD)
             .setButtonSize(IconButtonSize.M);
+    clear.setToolTipText("Clear text");
     clear.addActionListener(event -> trailing.setText(""));
     trailing.setTrailingIconButton(clear);
 

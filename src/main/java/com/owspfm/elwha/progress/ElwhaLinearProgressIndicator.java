@@ -32,12 +32,22 @@ import javax.swing.DefaultBoundedRangeModel;
  * {@code (10%, 95%)} progress, and the track always stays flat. Direction follows {@link
  * java.awt.ComponentOrientation} — RTL mirrors the fill and the stop dot.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaLinearProgressIndicator upload = new ElwhaLinearProgressIndicator(0, 100, 0);
+ * panel.add(upload);
+ * upload.setValue(40);
+ *
+ * panel.add(ElwhaLinearProgressIndicator.wavyIndeterminate());
+ * }</pre>
+ *
  * <p>The bar stretches to its layout width (preferred 240px); height is the chrome height (track
  * thickness, plus the wave band when wavy). See {@code elwha-progress-indicator-design.md} §5.
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.4.0
  */
 public class ElwhaLinearProgressIndicator extends AbstractElwhaProgressIndicator {

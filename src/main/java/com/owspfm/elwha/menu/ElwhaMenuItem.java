@@ -55,7 +55,9 @@ import javax.swing.Timer;
  * <p><strong>States</strong> (research §L): Enabled / Disabled (38% dim, focusable-but-inert via
  * the container's roving focus) / Hovered ({@code ON_SURFACE} state layer) / Focused (3 dp inset
  * {@code SECONDARY} ring) / Pressed (ripple). Selected = {@code TERTIARY_CONTAINER} fill + a {@code
- * ON_TERTIARY_CONTAINER} ✓ checkmark (Standard color), a 3:1 + non-color cue per a11y (§X).
+ * ON_TERTIARY_CONTAINER} ✓ checkmark (Standard color), a 3:1 + non-color cue per a11y (§X). A
+ * selected row that is also disabled dims its fill to {@code ON_SURFACE} at the 12% container
+ * opacity (#782, the lib-wide #767 doctrine) — the ✓ remains, so selection still reads.
  *
  * <p><strong>Focus model.</strong> The item is <em>not</em> independently focusable — the parent
  * {@link ElwhaMenu} owns the single keyboard focus and pushes a roving "focused" flag down (so a
@@ -68,7 +70,7 @@ import javax.swing.Timer;
  *
  * @serial exclude
  * @author Charles Bryan (cfb3@uw.edu)
- * @version v1.0.1
+ * @version v1.1.0
  * @since v0.4.0
  */
 public sealed class ElwhaMenuItem extends JComponent implements BodyBearing
@@ -666,8 +668,22 @@ public sealed class ElwhaMenuItem extends JComponent implements BodyBearing
       return;
     }
     final Rectangle b = visualBounds();
-    g2.setColor((vibrant() ? ColorRole.TERTIARY : ColorRole.TERTIARY_CONTAINER).resolve());
-    g2.fill(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, ARC_PX * 2f, ARC_PX * 2f));
+    final Graphics2D s = (Graphics2D) g2.create();
+    try {
+      if (isEnabled()) {
+        s.setColor((vibrant() ? ColorRole.TERTIARY : ColorRole.TERTIARY_CONTAINER).resolve());
+      } else {
+        // #782 — a disabled row's selected fill joins the #767 disabled treatment (ON_SURFACE at
+        // the 12% container opacity, the nav rail's indicator-pill precedent) rather than keeping
+        // the saturated selection-persistence fill; the ✓ checkmark stays the non-color cue, so a
+        // dimmed pill still reads as selected.
+        s.setComposite(AlphaComposite.SrcOver.derive(StateLayer.disabledContainerOpacity()));
+        s.setColor(ColorRole.ON_SURFACE.resolve());
+      }
+      s.fill(new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, ARC_PX * 2f, ARC_PX * 2f));
+    } finally {
+      s.dispose();
+    }
   }
 
   private void paintStateLayer(final Graphics2D g2) {

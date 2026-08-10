@@ -59,10 +59,20 @@ import javax.swing.event.DocumentListener;
  * closing and the field shows a summary of the selection. Editable and multi-select are mutually
  * exclusive in V1 — enabling one disables the other.
  *
+ * <p><strong>Quick start:</strong>
+ *
+ * <pre>{@code
+ * ElwhaSelectField<String> priority = ElwhaSelectField.outlined("Priority");
+ * priority.setOptions(List.of("Low", "Medium", "High"));
+ * priority.setSelectedValue("Medium");
+ * priority.addSelectionChangeListener(value -> task.setPriority(value));
+ * form.add(priority);
+ * }</pre>
+ *
  * @param <T> the option value type
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.4.0
  */
 public class ElwhaSelectField<T> extends JComponent {
@@ -184,9 +194,13 @@ public class ElwhaSelectField<T> extends JComponent {
    * rewritten to match.
    *
    * @param options the options, or {@code null} for none
-   * @version v0.5.0
+   * @throws NullPointerException if {@code options} contains a {@code null} element
+   * @version v1.1.0
    */
   public void setOptions(final List<T> options) {
+    if (options != null && options.stream().anyMatch(Objects::isNull)) {
+      throw new NullPointerException("options must not contain null elements");
+    }
     if (expanded && menu != null) {
       menu.close();
     }

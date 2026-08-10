@@ -81,7 +81,6 @@ domain types of any kind. The full compile-scope set a consumer inherits is:
 ```
 com.formdev:flatlaf
 com.formdev:flatlaf-extras
-com.formdev:flatlaf-intellij-themes
 com.github.weisj:jsvg            (runtime, via flatlaf-extras — SVG icon rendering)
 ```
 

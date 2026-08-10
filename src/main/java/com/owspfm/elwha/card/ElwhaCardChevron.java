@@ -13,7 +13,9 @@ import java.util.Objects;
  *
  * <p>Default size {@link IconButtonSize#S} (32 dp) — sized to fit alongside header text without
  * dominating the row. Inherits all {@link ElwhaIconButton} chrome (state layer, focus ring,
- * keyboard activation, accessibility).
+ * keyboard activation, accessibility), and seeds the accessible name {@code "Expand or collapse the
+ * card"} at construction — stable across toggles, and overridable via {@code
+ * getAccessibleContext().setAccessibleName(...)}.
  *
  * <p>Typical placement: as a trailing header affordance.
  *
@@ -35,7 +37,7 @@ import java.util.Objects;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.2.0
  */
 public final class ElwhaCardChevron extends ElwhaIconButton {
@@ -58,6 +60,7 @@ public final class ElwhaCardChevron extends ElwhaIconButton {
     super(MaterialIcons.expandMore());
     this.card = Objects.requireNonNull(card, "card");
     setButtonSize(IconButtonSize.S);
+    getAccessibleContext().setAccessibleName("Expand or collapse the card");
     syncGlyph();
     addActionListener(e -> card.setCollapsed(!card.isCollapsed()));
     subscribe();

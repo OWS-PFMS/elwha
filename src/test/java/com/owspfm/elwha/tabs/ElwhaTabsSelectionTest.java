@@ -87,17 +87,49 @@ class ElwhaTabsSelectionTest {
   }
 
   @Test
-  void anOutOfRangeIndexLeavesTheSelectionUntouched() {
+  void anOutOfRangeIndexThrowsAndLeavesTheSelectionUntouched() {
     final ElwhaTabs bar = barOf("One", "Two");
     bar.setActiveTabIndex(1);
 
-    bar.setActiveTabIndex(5);
-    bar.setActiveTabIndex(-1);
+    assertThatExceptionOfType(IndexOutOfBoundsException.class)
+        .as("conventions §15 — an unusable index fails fast instead of being swallowed")
+        .isThrownBy(() -> bar.setActiveTabIndex(5))
+        .withMessage("activeTabIndex 5 out of range [0, 2)");
+    assertThatExceptionOfType(IndexOutOfBoundsException.class)
+        .isThrownBy(() -> bar.setActiveTabIndex(-1))
+        .withMessage("activeTabIndex -1 out of range [0, 2)");
+
+    assertThat(bar.getActiveTabIndex())
+        .as("the failed writes left the mandatory selection where it was")
+        .isEqualTo(1);
+  }
+
+  @Test
+  void setActiveTabKeepsItsDocumentedIgnoreForNonMembers() {
+    final ElwhaTabs bar = barOf("One", "Two");
+    bar.setActiveTabIndex(1);
+
+    bar.setActiveTab(ElwhaTab.of("Stranger"));
+    bar.setActiveTab(null);
 
     assertThat(bar.getActiveTabIndex())
         .as(
-            "§2 — the selection is mandatory, so an unusable index is ignored rather than "
-                + "leaving the bar with nothing active")
+            "a tab that is not a child of this bar is ignored — the documented value-addressed"
+                + " contract, unchanged by the index overload's §15 range throw")
+        .isEqualTo(1);
+  }
+
+  @Test
+  void accessibleSelectionSwallowsAnOutOfRangeIndex() {
+    final ElwhaTabs bar = barOf("One", "Two");
+    bar.setActiveTabIndex(1);
+
+    bar.getAccessibleContext().getAccessibleSelection().addAccessibleSelection(9);
+
+    assertThat(bar.getActiveTabIndex())
+        .as(
+            "assistive tech cannot fix its arguments — the a11y path stays a no-op while the"
+                + " public setter throws")
         .isEqualTo(1);
   }
 
