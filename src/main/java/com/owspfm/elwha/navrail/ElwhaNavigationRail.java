@@ -5,6 +5,7 @@ import com.owspfm.elwha.fab.ElwhaFab;
 import com.owspfm.elwha.iconbutton.ElwhaIconButton;
 import com.owspfm.elwha.menu.ElwhaMenu;
 import com.owspfm.elwha.menu.ElwhaMenuItem;
+import com.owspfm.elwha.theme.AccessibleNameAdvisory;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.ContentMorphPainter;
 import com.owspfm.elwha.theme.MorphAnimator;
@@ -104,7 +105,7 @@ import javax.swing.KeyStroke;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.3.0
  */
 public final class ElwhaNavigationRail extends JComponent {
@@ -281,8 +282,6 @@ public final class ElwhaNavigationRail extends JComponent {
           setSelected(d);
         }
       };
-
-  private boolean missingAccessibleNameWarned;
 
   // Morph state ------------------------------------------------------------
   private final MorphAnimator variantMorph = new MorphAnimator(this, MorphAnimator.MEDIUM3_MS);
@@ -1562,17 +1561,13 @@ public final class ElwhaNavigationRail extends JComponent {
   }
 
   private void warnIfMissingAccessibleName() {
-    if (missingAccessibleNameWarned) {
-      return;
-    }
     final AccessibleContext ctx = getAccessibleContext();
-    final String name = ctx == null ? null : ctx.getAccessibleName();
-    if (name == null || name.isEmpty()) {
-      LOG.warning(
-          "ElwhaNavigationRail has no accessible name. Call setAccessibleName(...) — e.g."
-              + " \"Primary navigation\" — so screen readers can identify the rail.");
-    }
-    missingAccessibleNameWarned = true;
+    AccessibleNameAdvisory.checkOnce(
+        this,
+        ElwhaNavigationRail.class,
+        ctx == null ? null : ctx.getAccessibleName(),
+        "Call setAccessibleName(...) — e.g. \"Primary navigation\" — so screen readers can"
+            + " identify the rail.");
   }
 
   @Override

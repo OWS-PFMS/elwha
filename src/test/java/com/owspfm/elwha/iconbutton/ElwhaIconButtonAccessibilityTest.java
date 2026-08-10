@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.testkit.EdtInterceptor;
+import com.owspfm.elwha.testkit.LogCapture;
+import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
@@ -116,6 +118,33 @@ class ElwhaIconButtonAccessibilityTest {
       assertThat(button.isRequestFocusEnabled())
           .as("%s still refuses click-focus by default — Tab navigation is gated separately", size)
           .isFalse();
+    }
+  }
+
+  @Test
+  void anUnnamedIconButtonWarnsOnceAtFirstPaint() {
+    try (LogCapture log = LogCapture.of(ElwhaIconButton.class)) {
+      final ElwhaIconButton button = new ElwhaIconButton(MaterialIcons.add());
+      Pixels.render(button, 48, 48);
+      Pixels.render(button, 48, 48);
+
+      assertThat(log.messages())
+          .as("a button that would announce the literal warns exactly once")
+          .hasSize(1);
+      assertThat(log.messages().get(0)).startsWith("ElwhaIconButton has no accessible name.");
+    }
+  }
+
+  @Test
+  void aTooltipKeepsTheAdvisorySilent() {
+    try (LogCapture log = LogCapture.of(ElwhaIconButton.class)) {
+      final ElwhaIconButton button = new ElwhaIconButton(MaterialIcons.add());
+      button.setToolTipText("Add to favorites");
+      Pixels.render(button, 48, 48);
+
+      assertThat(log.messages())
+          .as("a tooltip is a meaningful name source, so the advisory stays silent")
+          .isEmpty();
     }
   }
 }

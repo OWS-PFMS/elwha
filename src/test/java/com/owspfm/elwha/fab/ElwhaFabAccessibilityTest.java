@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.owspfm.elwha.icons.MaterialIcons;
 import com.owspfm.elwha.testkit.EdtInterceptor;
+import com.owspfm.elwha.testkit.LogCapture;
+import com.owspfm.elwha.testkit.Pixels;
 import com.owspfm.elwha.testkit.ThemeExtension;
 import javax.accessibility.AccessibleRole;
 import javax.accessibility.AccessibleState;
@@ -87,5 +89,44 @@ class ElwhaFabAccessibilityTest {
     assertThat(fab.getAccessibleContext().getAccessibleStateSet().contains(AccessibleState.ENABLED))
         .as("a disabled FAB drops ENABLED so assistive tech can skip it")
         .isFalse();
+  }
+
+  @Test
+  void anUnnamedStandardFabWarnsOnceAtFirstPaint() {
+    try (LogCapture log = LogCapture.of(ElwhaFab.class)) {
+      final ElwhaFab fab = ElwhaFab.standard(MaterialIcons.add());
+      Pixels.render(fab, 80, 80);
+      Pixels.render(fab, 80, 80);
+
+      assertThat(log.messages())
+          .as("a Standard FAB that would announce the literal warns exactly once")
+          .hasSize(1);
+      assertThat(log.messages().get(0)).startsWith("ElwhaFab has no accessible name.");
+    }
+  }
+
+  @Test
+  void aStandardFabWithATooltipStaysSilent() {
+    try (LogCapture log = LogCapture.of(ElwhaFab.class)) {
+      final ElwhaFab fab = ElwhaFab.standard(MaterialIcons.add());
+      fab.setToolTipText("Compose");
+      Pixels.render(fab, 80, 80);
+
+      assertThat(log.messages())
+          .as("§10.4 — the tooltip is the sanctioned Standard-form name source")
+          .isEmpty();
+    }
+  }
+
+  @Test
+  void anExtendedFabsLabelKeepsTheAdvisorySilent() {
+    try (LogCapture log = LogCapture.of(ElwhaFab.class)) {
+      final ElwhaFab fab = ElwhaFab.extended(MaterialIcons.add(), "Compose");
+      Pixels.render(fab, 160, 80);
+
+      assertThat(log.messages())
+          .as("§10.4 — the Extended label is automatically the accessible name")
+          .isEmpty();
+    }
   }
 }

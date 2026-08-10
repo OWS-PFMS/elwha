@@ -1,6 +1,7 @@
 package com.owspfm.elwha.iconbutton;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.owspfm.elwha.theme.AccessibleNameAdvisory;
 import com.owspfm.elwha.theme.ColorRole;
 import com.owspfm.elwha.theme.CornerRadii;
 import com.owspfm.elwha.theme.Easing;
@@ -83,7 +84,7 @@ import javax.swing.Timer;
  *
  * @serial exclude
  * @author Charles Bryan
- * @version v1.0.1
+ * @version v1.1.0
  * @since v0.1.0
  */
 public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badge.IconBearing {
@@ -1143,6 +1144,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
 
   @Override
   protected void paintComponent(final Graphics g) {
+    warnIfMissingAccessibleName();
     final int w = getWidth();
     final int h = getHeight();
     final int radiusPx = shape.px();
@@ -1370,13 +1372,26 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
     return accessibleContext;
   }
 
+  private void warnIfMissingAccessibleName() {
+    if (getAccessibleContext() instanceof AccessibleElwhaIconButton ctx) {
+      AccessibleNameAdvisory.checkOnce(
+          this,
+          ElwhaIconButton.class,
+          ctx.meaningfulName(),
+          "Call setAccessibleName(...) or setToolTipText(...) — e.g. \"Add to favorites\" — so"
+              + " screen readers announce more than \"Icon button\".");
+    }
+  }
+
   /**
    * Accessible role: {@link AccessibleRole#PUSH_BUTTON} for {@code CLICKABLE}; {@link
    * AccessibleRole#TOGGLE_BUTTON} for {@code SELECTABLE}. Name resolution falls through tooltip →
    * component name → the literal {@code "Icon button"} — consumers SHOULD set one or the other on
-   * every icon-only button or screen-reader users will hear nothing meaningful.
+   * every icon-only button or screen-reader users will hear nothing meaningful; the button logs a
+   * {@link java.util.logging.Logger#warning(String)} at first paint when resolution would fall
+   * through to the literal.
    *
-   * @version v0.1.0
+   * @version v1.1.0
    * @since v0.1.0
    */
   protected class AccessibleElwhaIconButton extends AccessibleJComponent {
@@ -1396,8 +1411,7 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
           : AccessibleRole.PUSH_BUTTON;
     }
 
-    @Override
-    public String getAccessibleName() {
+    private String meaningfulName() {
       final String declared = super.getAccessibleName();
       if (declared != null && !declared.isEmpty()) {
         return declared;
@@ -1410,7 +1424,13 @@ public class ElwhaIconButton extends JComponent implements com.owspfm.elwha.badg
       if (name != null && !name.isEmpty()) {
         return name;
       }
-      return "Icon button";
+      return null;
+    }
+
+    @Override
+    public String getAccessibleName() {
+      final String meaningful = meaningfulName();
+      return meaningful != null ? meaningful : "Icon button";
     }
 
     @Override
