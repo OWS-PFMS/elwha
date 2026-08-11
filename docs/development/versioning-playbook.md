@@ -107,13 +107,13 @@ You can run this manually at any time to preview compliance. See [`.claude/comma
 
 Before closing a milestone and creating a release, follow the release process in [`CONTRIBUTING.md`](../../CONTRIBUTING.md#release-process):
 
-1. Bump `<version>` in `pom.xml` to the milestone target.
+1. Bump the shared `<version>` across the reactor poms (the parent plus both modules' `<parent>` blocks) — `docs/development/release-runbook.md` has the exact command.
 2. Move `[Unreleased]` → `[X.Y.Z]` in `CHANGELOG.md`.
 3. Commit: `chore: release X.Y.Z`.
 4. Tag: `git tag -a vX.Y.Z -m "Release X.Y.Z"`.
 5. Push: `git push origin vX.Y.Z` — the `publish.yml` workflow publishes to GitHub Packages.
 
-**Optional**: a tree-wide snapshot of `@version` compliance at close-out, since the PR-diff-scoped validator only checks per-PR. The legacy command still works:
+**Optional**: a tree-wide snapshot of `@version` compliance at close-out, since the PR-diff-scoped validator only checks per-PR. The legacy command still works (it walks both reactor modules):
 
 ```bash
 python3 scripts/update_javadoc_version.py --check --expected v0.2.0
@@ -246,7 +246,7 @@ public class PillSelectionModel {
 ### CI failing: "MISSING @version"
 
 ```
-✗ MISSING @version: src/main/java/com/owspfm/elwha/badge/ElwhaBadge.java
+✗ MISSING @version: elwha/src/main/java/com/owspfm/elwha/badge/ElwhaBadge.java
 ```
 
 **Solution**: add a class-level JavaDoc block with `@version` and `@since` matching your PR milestone.
@@ -254,7 +254,7 @@ public class PillSelectionModel {
 ### CI failing: "WRONG @version (v0.1.0 != v0.2.0)"
 
 ```
-✗ WRONG @version (v0.1.0 != v0.2.0): src/main/java/com/owspfm/elwha/card/ElwhaCard.java
+✗ WRONG @version (v0.1.0 != v0.2.0): elwha/src/main/java/com/owspfm/elwha/card/ElwhaCard.java
 ```
 
 **Solution**: bump `@version` to the PR's milestone. If the file truly should not have been modified, revert your changes to it.
@@ -279,6 +279,8 @@ If you genuinely need to normalize many files (e.g., recovering the extraction b
 
 ```bash
 # DESTRUCTIVE — rewrites @version AND @since on every file in scope. Review the diff carefully.
+# --scope src covers both reactor modules' main trees (elwha/src/main, elwha-showcase/src/main);
+# --scope test covers both src/test trees; the default --scope all covers everything.
 python3 scripts/update_javadoc_version.py --apply --expected v0.1.0 --scope src
 ```
 
@@ -311,7 +313,7 @@ python3 scripts/update_javadoc_version.py --apply --expected v0.1.0 --scope src
 
 4. **Bump and tag**
    ```bash
-   # Update <version> in pom.xml first
+   # Bump the shared <version> across the reactor poms first (see the release runbook)
    git commit -m "chore: release v0.N+1.0"
    git tag -a v0.N+1.0 -m "Release v0.N+1.0"
    git push origin v0.N+1.0

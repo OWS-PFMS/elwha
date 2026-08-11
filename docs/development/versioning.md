@@ -184,7 +184,9 @@ When creating a pull request:
 The CI build runs the `@version` validator on every PR. It:
 - Reads the PR's milestone title
 - Diffs the PR against `origin/main` (triple-dot, merge-base semantics — matches GitHub's PR diff)
-- Validates `@version` and `@since` on every modified or added Java file
+- Validates `@version` and `@since` on every modified or added Java file under the reactor modules'
+  trees (`elwha/src/`, `elwha-showcase/src/`); test sources are exempt except `testkit/`, and pure
+  renames (R100) are excluded so filesystem moves never demand spurious bumps
 - Fails with actionable file-level error messages if violations are found
 
 ### Manual Validation
@@ -201,7 +203,7 @@ python3 scripts/update_javadoc_version.py \
     --expected v0.2.0 --base-ref origin/main
 ```
 
-The legacy tree-wide check (`--check --expected V` without `--changed-only`) still works for emergency normalization but is no longer the preferred flow. The `--apply` mode is a maintenance tool only — running it tree-wide would overwrite `@since` on files unrelated to your PR, so the validator rejects `--apply --changed-only`.
+The legacy tree-wide check (`--check --expected V` without `--changed-only`) still works for emergency normalization but is no longer the preferred flow; it walks both reactor modules' source trees (`--scope src` = each module's `src/main`, `--scope test` = each module's `src/test`, default `all`). The `--apply` mode is a maintenance tool only — running it tree-wide would overwrite `@since` on files unrelated to your PR, so the validator rejects `--apply --changed-only`.
 
 ### Branch Protection
 
