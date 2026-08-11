@@ -41,7 +41,7 @@ coordinate `com.owspfm:elwha`. Add the repository and the dependency:
   <dependency>
     <groupId>com.owspfm</groupId>
     <artifactId>elwha</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
   </dependency>
 </dependencies>
 ```

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-08-11
+
 ### Changed
 
 - **The repo is a two-module Maven reactor** (#785; epic #779 Phase 1): a root
@@ -1054,7 +1056,8 @@ Pre-extraction commit history has been preserved via `git filter-repo --subdirec
 
 Cross-reference these via `git log` in this repo — file paths and blame archeology are preserved.
 
-[Unreleased]: https://github.com/OWS-PFMS/elwha/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/OWS-PFMS/elwha/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/OWS-PFMS/elwha/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/OWS-PFMS/elwha/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/OWS-PFMS/elwha/releases/tag/v1.0.0
 [0.1.0]: https://github.com/OWS-PFMS/elwha/releases/tag/v0.1.0
