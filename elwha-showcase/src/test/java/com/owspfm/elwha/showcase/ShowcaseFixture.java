@@ -22,9 +22,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -440,8 +443,17 @@ final class ShowcaseFixture {
     return refs;
   }
 
+  // Post-#779 the library and the Showcase compile to different artifacts, so the pre-split
+  // single-root scan is now a union of two code sources: the showcase module's classes (a
+  // directory — classRefsIn reads its constant pools by path) and the library artifact the
+  // roster is discovered from (a jar under Maven, a classes directory under an IDE).
   private static List<String> compiledClasses() {
-    final Path root = classesRoot().resolve("com/owspfm/elwha");
+    final Set<String> out = new TreeSet<>(classesUnder(classesRoot().resolve("com/owspfm/elwha")));
+    out.addAll(libraryClasses());
+    return List.copyOf(out);
+  }
+
+  private static List<String> classesUnder(final Path root) {
     final List<String> out = new ArrayList<>();
     try (Stream<Path> walk = Files.walk(root)) {
       walk.filter(path -> path.toString().endsWith(".class"))
@@ -456,7 +468,26 @@ final class ShowcaseFixture {
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
-    out.sort(String::compareTo);
+    return out;
+  }
+
+  private static List<String> libraryClasses() {
+    final Path location = codeSourceOf(AbstractElwhaOverlay.class);
+    if (Files.isDirectory(location)) {
+      return classesUnder(location.resolve("com/owspfm/elwha"));
+    }
+    final List<String> out = new ArrayList<>();
+    try (JarFile jar = new JarFile(location.toFile())) {
+      final Enumeration<JarEntry> entries = jar.entries();
+      while (entries.hasMoreElements()) {
+        final String name = entries.nextElement().getName();
+        if (name.startsWith("com/owspfm/elwha/") && name.endsWith(".class")) {
+          out.add(name.replace(".class", "").replace('/', '.'));
+        }
+      }
+    } catch (final IOException e) {
+      throw new UncheckedIOException(e);
+    }
     return out;
   }
 
@@ -465,11 +496,14 @@ final class ShowcaseFixture {
   // to paths that do not exist under this root and fall out via the Files.exists guard, exactly
   // as JDK refs always have.
   private static Path classesRoot() {
+    return codeSourceOf(ElwhaShowcase.class);
+  }
+
+  private static Path codeSourceOf(final Class<?> anchor) {
     try {
-      return Path.of(
-          ElwhaShowcase.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+      return Path.of(anchor.getProtectionDomain().getCodeSource().getLocation().toURI());
     } catch (final URISyntaxException e) {
-      throw new IllegalStateException("cannot locate the compiled library", e);
+      throw new IllegalStateException("cannot locate compiled classes for " + anchor, e);
     }
   }
 

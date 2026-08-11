@@ -36,12 +36,13 @@
  *       com.owspfm.elwha.progress}, {@link com.owspfm.elwha.loading}
  * </ul>
  *
- * <p>The Elwha Showcase ({@link com.owspfm.elwha.showcase}) is the visual storefront — one leaf per
- * component — and most component packages also carry {@code *Demo} / {@code *Smoke} mains and a
- * {@code playground} subpackage; those are development artifacts, not part of the supported API.
+ * <p>The Elwha Showcase — the visual storefront, one leaf per component — together with every
+ * {@code playground} subpackage and the story-time {@code *Demo} / {@code *Smoke} mains, ships in
+ * the separate {@code com.owspfm:elwha-showcase} artifact (#779); this artifact is the library
+ * alone.
  *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.1.0
  * @since v0.5.0
  */
 package com.owspfm.elwha;
