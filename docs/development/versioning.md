@@ -181,7 +181,9 @@ When creating a pull request:
 
 ### CI Workflow
 
-The CI build runs the `@version` validator on every PR. It:
+The validator runs in its own workflow — `validate-versions.yml`, surfaced as the required check
+**`Validate @version and @since tags`** — on every PR. (It is not part of the `build` workflow,
+and `mvn verify` does not run it either; use the manual command below to check locally.) It:
 - Reads the PR's milestone title
 - Diffs the PR against `origin/main` (triple-dot, merge-base semantics — matches GitHub's PR diff)
 - Validates `@version` and `@since` on every modified or added Java file under the reactor modules'
@@ -207,10 +209,12 @@ The legacy tree-wide check (`--check --expected V` without `--changed-only`) sti
 
 ### Branch Protection
 
-The `build` check is required on the `main` branch. PRs cannot merge until:
+`Validate @version and @since tags` is one of the five required checks on the `main` branch
+(alongside `build`, `Test (components + Showcase)`, and the Spotless and Checkstyle validations).
+PRs cannot merge until:
 - A milestone is set on the PR
 - All version tags on modified/added files match the milestone
-- The build workflow (including the validator) passes
+- The `validate-versions` workflow passes
 
 ### Workflow Gates
 

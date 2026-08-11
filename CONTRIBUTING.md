@@ -1,6 +1,6 @@
 # Contributing to Elwha
 
-Thanks for considering a contribution! Elwha is in early development (pre-1.0), so the contribution process is intentionally lightweight.
+Thanks for considering a contribution! Elwha is maintained by one person, so the contribution process is intentionally lightweight.
 
 ## Issue tracker
 
@@ -20,7 +20,10 @@ When filing an issue, include:
 mvn clean package
 ```
 
-Produces `target/elwha-<version>.jar`, `elwha-<version>-sources.jar`, and `elwha-<version>-javadoc.jar`.
+Builds the two-module reactor: the library at `elwha/target/elwha-<version>.jar` (plus `-sources`,
+`-javadoc`, and the testkit `-tests` jars) and the demo storefront at
+`elwha-showcase/target/elwha-showcase-<version>.jar` (plus `-sources`, `-javadoc`, and the
+self-contained `-app` jar).
 
 ### Run a playground
 
@@ -35,7 +38,7 @@ mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.playground.ElwhaCa
 mvn verify
 ```
 
-Runs the full suite — ~4,570 tests in two tiers, plus Spotless and Checkstyle. The default tier is
+Runs the full suite — ~4,640 tests in two tiers across both modules, plus Spotless and Checkstyle. The default tier is
 headless; a `@Tag("gui")` tier runs in its own forked JVM for the things headless cannot represent
 (real focus ownership, `Robot` input, window realization). A behavior change should land with a
 test. Read [`docs/development/testing.md`](docs/development/testing.md) first — its determinism
@@ -92,11 +95,14 @@ exposed. Every change, breaking or not, is documented in `CHANGELOG.md`.
 
 (Internal — for maintainers)
 
-1. Update `version` in `pom.xml` and `CHANGELOG.md` `[Unreleased]` → `[X.Y.Z]`
+1. Bump the shared version across all three reactor poms:
+   `mvn versions:set -DnewVersion=X.Y.Z -DgenerateBackupPoms=false`, and move `CHANGELOG.md`
+   `[Unreleased]` → `[X.Y.Z]`
 2. Commit: `chore: release X.Y.Z`
 3. Tag: `git tag -a vX.Y.Z -m "Release X.Y.Z"`
 4. Push tag: `git push origin vX.Y.Z`
-5. The GitHub Actions release workflow publishes to GitHub Packages on tag push.
+5. The GitHub Actions release workflow publishes both modules to GitHub Packages on tag push, then
+   creates the GitHub Release with the runnable `elwha-showcase-<version>-app.jar` attached.
 
 [`docs/development/release-runbook.md`](docs/development/release-runbook.md) is the full procedure —
 pre-flight checks, what the publish workflow validates, and what to verify afterwards. Use it rather
