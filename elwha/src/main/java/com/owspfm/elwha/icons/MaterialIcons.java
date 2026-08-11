@@ -24,8 +24,10 @@ import javax.swing.UIManager;
  * com.owspfm.elwha.tabs.ElwhaTab#of(MaterialIcons.Symbol, String) ElwhaTab.of} and {@link
  * com.owspfm.elwha.navrail.ElwhaNavRailDestination#of(MaterialIcons.Symbol, String)
  * ElwhaNavRailDestination.of} take, because those components flip the fill axis themselves on
- * activation. {@link #themed(FlatSVGIcon)} adapts a client-owned icon into the same theming
- * pipeline (below).
+ * activation. The three by-name lookups validate the name against the bundle and throw {@link
+ * IllegalArgumentException} for names not in it — a bad name fails at the call site instead of
+ * painting a solid error block. {@link #themed(FlatSVGIcon)} adapts a client-owned icon into the
+ * same theming pipeline (below).
  *
  * <p><strong>Using your own icons.</strong> The bundle is fixed at build time — client code cannot
  * add to it. To use your own icons alongside it, keep the SVGs in your <em>own</em> resources at a
@@ -59,7 +61,7 @@ import javax.swing.UIManager;
  * components.
  *
  * @author Charles Bryan
- * @version v1.1.0
+ * @version v1.1.1
  * @since v0.1.0
  */
 public final class MaterialIcons {
@@ -865,11 +867,14 @@ public final class MaterialIcons {
 
   /**
    * Generic lookup for cases where a name is computed at runtime. Throws if the resource is
-   * missing.
+   * missing, so a name outside the bundle fails at the call site instead of painting a solid error
+   * block.
    *
    * @param name the bare icon name (no path, no extension), e.g. {@code "push_pin"}
    * @return a fresh icon sized to {@link #DEFAULT_SIZE}
-   * @version v0.1.0
+   * @throws NullPointerException if {@code name} is {@code null}
+   * @throws IllegalArgumentException if the bundle ships no SVG named {@code <name>.svg}
+   * @version v1.1.1
    * @since v0.1.0
    */
   public static FlatSVGIcon get(final String name) {
@@ -882,10 +887,13 @@ public final class MaterialIcons {
    * @param name the bare icon name (no path, no extension), e.g. {@code "push_pin"}
    * @param size pixel size for the returned icon
    * @return the icon at the requested size
-   * @version v0.1.0
+   * @throws NullPointerException if {@code name} is {@code null}
+   * @throws IllegalArgumentException if the bundle ships no SVG named {@code <name>.svg}
+   * @version v1.1.1
    * @since v0.1.0
    */
   public static FlatSVGIcon get(final String name, final int size) {
+    requireBundled(name);
     return load(name, size);
   }
 
@@ -1645,6 +1653,24 @@ public final class MaterialIcons {
     return themed(new FlatSVGIcon(BASE + name + ".svg", size, size));
   }
 
+  // Guards only the by-name entry points (get / symbol, and pair via symbol): the named accessors
+  // pass compile-time-known names the inventory test already proves bundled, and skipping the
+  // check there keeps the per-call classpath probe off the hot resolve paths.
+  private static void requireBundled(final String name) {
+    Objects.requireNonNull(name, "name");
+    if (MaterialIcons.class.getClassLoader().getResource(BASE + name + ".svg") == null) {
+      throw new IllegalArgumentException(
+          "No bundled Material Symbol named \""
+              + name
+              + "\" (no resource at "
+              + BASE
+              + name
+              + ".svg). The bundled inventory is listed in the com.owspfm.elwha.icons package"
+              + " Javadoc; for icons outside the bundle, load your own SVG and wrap it with"
+              + " MaterialIcons.themed(...).");
+    }
+  }
+
   /**
    * Applies the Elwha theme-aware color filter ({@link #LABEL_FOREGROUND_FILTER}) to the given icon
    * and returns it. Intended for consumer code loading SVGs from a client-owned classpath
@@ -1680,13 +1706,15 @@ public final class MaterialIcons {
    * {@code light_mode}, {@code dark_mode}, {@code brightness_auto}, {@code palette}, {@code
    * colorize}, {@code widgets}, {@code layers}.
    *
-   * <p><strong>Graceful fallback.</strong> A name with no bundled {@code _fill} variant yields a
-   * pair whose {@code filled} member is the unfilled glyph, exactly as {@link Symbol#selected()}
-   * does — the two entry points answer identically for identical input. Nothing is thrown, either
-   * here or at paint time; a raw {@link FlatSVGIcon} over a missing resource does not throw, it
-   * paints a solid red error block, which is what this fallback exists to keep out of a consumer's
-   * UI. Use {@link Symbol#hasSelectedVariant()} to ask ahead of time whether the swap will be
-   * visible.
+   * <p><strong>Graceful fallback — for the fill axis only.</strong> A bundled name with no {@code
+   * _fill} variant yields a pair whose {@code filled} member is the unfilled glyph, exactly as
+   * {@link Symbol#selected()} does — the two entry points answer identically for identical input.
+   * Nothing is thrown for a missing fill variant, either here or at paint time; a raw {@link
+   * FlatSVGIcon} over a missing resource does not throw, it paints a solid error block, which is
+   * what this fallback exists to keep out of a consumer's UI. The <em>base</em> name gets no such
+   * fallback: a name whose {@code <name>.svg} is not bundled throws here, exactly as {@link
+   * #get(String)} and {@link #symbol(String)} do. Use {@link Symbol#hasSelectedVariant()} to ask
+   * ahead of time whether the swap will be visible.
    *
    * <p><strong>Why a helper, not an auto-detect inside {@link
    * com.owspfm.elwha.iconbutton.ElwhaIconButton}.</strong> The button stays icon-library-agnostic
@@ -1696,7 +1724,9 @@ public final class MaterialIcons {
    *
    * @param name the bare Material Symbol name (no path, no extension, no {@code _fill} suffix)
    * @return the resting + filled pair
-   * @version v0.5.0
+   * @throws NullPointerException if {@code name} is {@code null}
+   * @throws IllegalArgumentException if the bundle ships no SVG named {@code <name>.svg}
+   * @version v1.1.1
    * @since v0.1.0
    */
   public static IconPair pair(final String name) {
@@ -1710,7 +1740,9 @@ public final class MaterialIcons {
    * @param size pixel size for both icons in the returned pair
    * @return the resting + filled pair at the requested size; {@code filled} repeats the outline
    *     glyph when the bundle ships no {@code _fill} variant
-   * @version v0.5.0
+   * @throws NullPointerException if {@code name} is {@code null}
+   * @throws IllegalArgumentException if the bundle ships no SVG named {@code <name>.svg}
+   * @version v1.1.1
    * @since v0.1.0
    */
   public static IconPair pair(final String name, final int size) {
@@ -1849,15 +1881,20 @@ public final class MaterialIcons {
 
   /**
    * Factory for a {@link Symbol} handle wrapping the named glyph. The base SVG ({@code <name>.svg})
-   * must be bundled; the fill variant ({@code <name>_fill.svg}) is optional and resolved at paint
-   * time — see {@link Symbol} for fallback semantics.
+   * must be bundled — this factory throws for names outside the bundle, so a bad name fails here
+   * rather than painting a solid error block wherever the handle is later resolved. The fill
+   * variant ({@code <name>_fill.svg}) is optional and resolved at paint time — see {@link Symbol}
+   * for fallback semantics.
    *
    * @param name the bare Material Symbol name (no path, no extension, no {@code _fill} suffix)
    * @return a symbol handle backed by the bundle
-   * @version v0.3.0
+   * @throws NullPointerException if {@code name} is {@code null}
+   * @throws IllegalArgumentException if the bundle ships no SVG named {@code <name>.svg}
+   * @version v1.1.1
    * @since v0.3.0
    */
   public static Symbol symbol(final String name) {
+    requireBundled(name);
     return new Symbol(name);
   }
 }

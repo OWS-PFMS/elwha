@@ -1,6 +1,8 @@
 package com.owspfm.elwha.icons;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.owspfm.elwha.testkit.EdtInterceptor;
@@ -294,5 +296,61 @@ class MaterialIconsTest {
     assertThat(symbol.selected().getColorFilter())
         .as("the fill axis is themed too")
         .isSameAs(MaterialIcons.LABEL_FOREGROUND_FILTER);
+  }
+
+  // -------------------------------------------- by-name lookups fail fast (#797)
+
+  /** A name outside the bundle — the consumer report's own broken-example glyph. */
+  private static final String UNBUNDLED = "inbox";
+
+  @Test
+  void getRejectsAnUnbundledName() {
+    assertThatIllegalArgumentException()
+        .as("get() must fail at the call site, not paint an error block later")
+        .isThrownBy(() -> MaterialIcons.get(UNBUNDLED))
+        .withMessageContaining(UNBUNDLED)
+        .withMessageContaining(".svg");
+  }
+
+  @Test
+  void sizedGetRejectsAnUnbundledName() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MaterialIcons.get(UNBUNDLED, 16))
+        .withMessageContaining(UNBUNDLED);
+  }
+
+  @Test
+  void symbolRejectsAnUnbundledName() {
+    assertThatIllegalArgumentException()
+        .as("the factory throws, so a bad handle can never reach a component")
+        .isThrownBy(() -> MaterialIcons.symbol(UNBUNDLED))
+        .withMessageContaining(UNBUNDLED);
+  }
+
+  @Test
+  void pairRejectsAnUnbundledName() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MaterialIcons.pair(UNBUNDLED))
+        .withMessageContaining(UNBUNDLED);
+  }
+
+  @Test
+  void byNameLookupsRejectANullName() {
+    assertThatNullPointerException()
+        .isThrownBy(() -> MaterialIcons.get(null))
+        .withMessageContaining("name");
+    assertThatNullPointerException()
+        .isThrownBy(() -> MaterialIcons.symbol(null))
+        .withMessageContaining("name");
+    assertThatNullPointerException()
+        .isThrownBy(() -> MaterialIcons.pair(null))
+        .withMessageContaining("name");
+  }
+
+  @Test
+  void aBundledNameStillResolvesThroughEveryByNameLookup() {
+    assertThat(MaterialIcons.get(SYMBOL_WITH_FILL).hasFound()).isTrue();
+    assertThat(MaterialIcons.symbol(SYMBOL_WITH_FILL).unselected().hasFound()).isTrue();
+    assertThat(MaterialIcons.pair(SYMBOL_WITH_FILL).resting().hasFound()).isTrue();
   }
 }
