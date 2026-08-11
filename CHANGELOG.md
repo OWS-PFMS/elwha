@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **1.1.0 consumer smoke-test report archived** — `docs/research/elwha-1.1.0-consumer-report.md`:
+  the 2026-08-11 external-client report against the published `1.1.0` artifacts (66-test
+  standalone consumer harness, pure published-jar posture — no implementation source read).
+  Verdict positive; every load-bearing consumer-doc claim verified. Its four findings and
+  behavior notes are triaged as [#797](https://github.com/OWS-PFMS/elwha/issues/797) /
+  [#798](https://github.com/OWS-PFMS/elwha/issues/798) (milestoned `v1.1.1`) and
+  [#799](https://github.com/OWS-PFMS/elwha/issues/799) /
+  [#800](https://github.com/OWS-PFMS/elwha/issues/800) /
+  [#801](https://github.com/OWS-PFMS/elwha/issues/801) (`v1.2.0`).
+
 ## [1.1.0] — 2026-08-11
 
 ### Changed
