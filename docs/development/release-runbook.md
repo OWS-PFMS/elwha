@@ -1,7 +1,8 @@
 # Release runbook
 
 How to cut an Elwha release. Written for 1.0.0 — the first publish since `0.1.0` and the API
-freeze — but the mechanics are the same for every tag after it.
+freeze — and updated for the two-module reactor (#779): since the artifact split, one tag
+publishes the library and the Showcase together. The mechanics are the same for every tag.
 
 The whole thing is meant to be a five-minute mechanical act. Everything that required judgement was
 done ahead of it, in the PRs that landed on `main`. If you find yourself making a decision while
@@ -24,18 +25,19 @@ following this page, stop: the decision belongs in a PR, not in a release commit
 ## 1. What the release actually is
 
 Publishing is tag-driven. Pushing a `v*` tag runs `.github/workflows/publish.yml`, which validates
-the tag against the repository and then runs `mvn -B clean deploy` to GitHub Packages. There is no
-manual upload step and no release branch — `main` is what ships.
+the tag against the repository, runs `mvn -B clean deploy` to GitHub Packages, then creates the
+GitHub Release for the tag with the runnable Showcase (`elwha-showcase-<v>-app.jar`) attached.
+There is no manual upload step and no release branch — `main` is what ships.
 
 Two commits' worth of work sit either side of the tag, and they are deliberately separate:
 
 | | Where it lives | Who does it |
 |---|---|---|
 | Everything a reader of the release sees — CHANGELOG content, `CLAUDE.md`, `README.md`, docs | Ordinary PRs merged to `main` beforehand | Whoever does the work |
-| `pom.xml` version + the `[Unreleased]` → `[X.Y.Z]` flip | **One commit, made directly on `main` at release time** | The maintainer cutting the release |
+| The version bump (all three poms, via `versions:set`) + the `[Unreleased]` → `[X.Y.Z]` flip | **One commit, made directly on `main` at release time** | The maintainer cutting the release |
 
 Keeping the version bump out of the content PRs is what makes this page short. A content PR that
-also bumped `pom.xml` would be unmergeable the moment a second one appeared.
+also bumped the poms would be unmergeable the moment a second one appeared.
 
 ## 2. Pre-flight
 
@@ -89,6 +91,13 @@ JDK 21* in `CLAUDE.md`.
 mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"
 ```
 
+And from the shaded jar — the Release attaches this exact file, so pre-flight runs what ships:
+
+```bash
+mvn -q clean package -DskipTests
+java -jar elwha-showcase/target/elwha-showcase-<v>-app.jar
+```
+
 Click through the three areas. Nothing in the test suite renders to a screen a human looks at, so
 this is the only check that the storefront is not visually broken.
 
@@ -108,15 +117,15 @@ can push this commit straight to `main`. A non-admin maintainer cannot and will 
 through a PR — which is fine, just slower: the same three edits, milestoned `v1.0.0`, merged before
 tagging.
 
-**1. `pom.xml`** — the project version. There is no parent POM, so it is the **first** `<version>`
-element in the file, directly under `<artifactId>elwha</artifactId>` (line 9 at the time of
-writing); every later one belongs to a dependency or a plugin. Confirm before editing:
+**1. The poms** — the shared version lives in exactly three places: the root parent's
+`<version>` and each module's `<parent><version>` block (`elwha/pom.xml`,
+`elwha-showcase/pom.xml`). Don't edit them by hand — one command moves all three atomically:
 
 ```bash
-grep -n "<version>" pom.xml | head -3
+mvn -q versions:set -DnewVersion=X.Y.Z -DgenerateBackupPoms=false
 ```
 
-Set it to the bare number, no `v` prefix: `1.0.0`.
+Bare number, no `v` prefix. `git diff --stat` should show exactly the three poms changed.
 
 **2. `CHANGELOG.md`** — rename the heading and add the date, then open a fresh empty
 `[Unreleased]` above it:
@@ -138,17 +147,16 @@ Update the link definitions at the bottom of the file:
 The heading format matters: `publish.yml` greps for the literal string `## [1.0.0]`. The em-dash
 and the date after it are free-form and are not matched.
 
-**3. `CLAUDE.md`** — the *Version, carefully* paragraph in *What this repo is* opens by saying
-`pom.xml` reads the last published release and is not a description of `main`. After the bump those
-two agree, so rewrite the paragraph to say so and drop the four-unreleased-waves framing.
+**3. `CLAUDE.md`** — the **Version** paragraph in *What this repo is* names the current release
+and its date. Update it to the version being cut.
 
 Then:
 
 ```bash
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 mvn -B clean verify          # the version bump must not break the build
-git add pom.xml CHANGELOG.md CLAUDE.md
-git commit -m "chore: release 1.0.0"
+git add pom.xml elwha/pom.xml elwha-showcase/pom.xml CHANGELOG.md CLAUDE.md
+git commit -m "chore: release X.Y.Z"
 git push origin main
 ```
 
@@ -173,14 +181,15 @@ gh run watch "$(gh run list --workflow publish.yml --limit 1 --json databaseId -
 
 ## 5. What the publish workflow checks
 
-`.github/workflows/publish.yml` triggers on `push` of any `v*` tag and runs three steps that can
+`.github/workflows/publish.yml` triggers on `push` of any `v*` tag and runs four steps that can
 fail, in order. Knowing which one failed tells you exactly what to fix.
 
 | Step | What it does | Fails when |
 |---|---|---|
-| **Verify tag matches pom.xml version** | Strips `refs/tags/v` off the ref and string-compares against `${project.version}` | You tagged before committing the bump, or tagged the wrong number |
+| **Verify tag matches pom.xml version** | Strips `refs/tags/v` off the ref and string-compares against `${project.version}`, read via `help:evaluate --non-recursive` — under the reactor that is the parent's version, which *is* the shared version | You tagged before committing the bump, or tagged the wrong number |
 | **Verify CHANGELOG entry exists** | `grep -q "## \[${TAG_VERSION}\]" CHANGELOG.md` | You forgot the `[Unreleased]` → `[1.0.0]` flip, or the heading is malformed |
-| **Build and publish** | `mvn -B clean deploy -DskipTests` on temurin 21, authenticating to GitHub Packages with `GITHUB_TOKEN` | The build itself breaks — which pre-flight should already have caught |
+| **Build and publish** | `mvn -B clean deploy -DskipTests` on temurin 21 — the whole reactor, all three coordinates below — authenticating to GitHub Packages with `GITHUB_TOKEN` | The build itself breaks — which pre-flight should already have caught |
+| **Create GitHub Release and attach the runnable Showcase** | `gh release create` for the tag, then uploads `elwha-showcase/target/elwha-showcase-<v>-app.jar`; both idempotent on re-run (`\|\| true` / `--clobber`) | The `-app` jar is missing from the build output, or the workflow lost `contents: write` |
 
 Tests are deliberately skipped in the deploy (#764): the required `Test` workflow already gated the
 identical tree on `main`, and the gui tier needs display scaffolding this workflow doesn't carry —
@@ -190,16 +199,28 @@ ref**, so a publish-workflow fix only takes effect once the tag points at a comm
 Note what it does **not** check: that `main` was green, that the milestone was empty, or that the
 CHANGELOG says anything useful. Those are this page's job.
 
-The deploy publishes three artifacts — the jar, `-sources`, and `-javadoc` — to
-`https://maven.pkg.github.com/OWS-PFMS/elwha`.
+The deploy publishes every artifact the reactor attaches, across three coordinates, all to
+`https://maven.pkg.github.com/OWS-PFMS/elwha`:
+
+| Coordinate | Artifacts |
+|---|---|
+| `com.owspfm:elwha-parent` | pom — the module poms reference it, so consumers need it resolvable |
+| `com.owspfm:elwha` | jar, `-sources`, `-javadoc`, `-tests` (the shared testkit test-jar) |
+| `com.owspfm:elwha-showcase` | jar (plain, `Main-Class` manifest), `-sources`, `-javadoc`, `-app` (shaded, runnable) |
+
+The `-app` jar is also the file the Release step attaches — the no-Packages-auth evaluator
+download. Release-notes curation stays a human act (§6); the workflow only guarantees the asset
+is there.
 
 ## 6. Post-publish verification
 
-**The GitHub Packages artifact.** It should list the new version, with all three jars. The Maven
+**The GitHub Packages artifacts.** All three coordinates should list the new version. The Maven
 package name is `groupId.artifactId`:
 
 ```bash
-gh api "/orgs/OWS-PFMS/packages/maven/com.owspfm.elwha/versions" --jq '.[].name'
+for pkg in com.owspfm.elwha-parent com.owspfm.elwha com.owspfm.elwha-showcase; do
+  gh api "/orgs/OWS-PFMS/packages/maven/${pkg}/versions" --jq '.[].name'
+done
 ```
 
 A `403 — You need at least read:packages scope` here is about **your token**, not the release. Re-run
@@ -211,8 +232,11 @@ public packages, so this needs a `~/.m2/settings.xml` server entry with a PAT ca
 
 ```bash
 mvn dependency:get -DremoteRepositories=github::::https://maven.pkg.github.com/OWS-PFMS/elwha \
-  -Dartifact=com.owspfm:elwha:1.0.0
+  -Dartifact=com.owspfm:elwha:X.Y.Z
 ```
+
+(Optionally the same for `com.owspfm:elwha-showcase:X.Y.Z` — resolving it also proves the parent
+pom resolves, since the module pom references it.)
 
 **The Pages deploy.** `pages.yml` runs on every push to `main`, so the release commit triggers its
 own deploy. The published javadoc should show the new version:
@@ -229,12 +253,20 @@ carries a hardcoded `<version>`. Confirm it names the version you just published
 one. If a consumer-docs PR landed before the release with a forward-looking version, this is where
 that lie becomes visible.
 
-**A release on GitHub.** The workflow does not create one; the tag alone is enough for Maven. If
-you want release notes on the Releases page, create it from the tag with the CHANGELOG section as
-the body:
+**The GitHub Release and its jar.** The workflow creates the Release for the tag and attaches
+`elwha-showcase-<v>-app.jar`. Verify the asset is there, downloads, and launches — this is the
+evaluation story's front door:
 
 ```bash
-gh release create v1.0.0 --title "1.0.0" --notes-file <(sed -n '/## \[1.0.0\]/,/## \[0.1.0\]/p' CHANGELOG.md)
+gh release download vX.Y.Z --pattern '*-app.jar' --dir /tmp
+java -jar /tmp/elwha-showcase-X.Y.Z-app.jar
+```
+
+The workflow stamps only a pointer at the CHANGELOG as the body; notes curation is a human act.
+Replace the body with the release's CHANGELOG section when you want real notes on the page:
+
+```bash
+gh release edit vX.Y.Z --notes-file <(sed -n '/## \[X.Y.Z\]/,/## \[/p' CHANGELOG.md | sed '$d')
 ```
 
 ## 7. Close the milestone
@@ -262,6 +294,19 @@ git push origin :refs/tags/v1.0.0
 
 **The deploy failed halfway.** Re-run the workflow from the Actions UI. `mvn deploy` is idempotent
 for a version that did not fully publish.
+
+**The deploy succeeded but the Release step failed.** Nothing needs re-publishing. Create the
+Release by hand from the tag — the same commands the workflow runs:
+
+```bash
+git checkout vX.Y.Z
+mvn -q clean package -DskipTests
+gh release create vX.Y.Z --verify-tag --title "X.Y.Z" --notes "See CHANGELOG.md §[X.Y.Z]."
+gh release upload vX.Y.Z elwha-showcase/target/elwha-showcase-X.Y.Z-app.jar --clobber
+```
+
+(A workflow re-run also works — create and upload are idempotent — but it re-runs the deploy
+too, which can fail against artifacts Packages already accepted.)
 
 **The artifact published and is wrong.** Do not delete the published version and do not re-tag —
 a consumer may already have resolved it, and re-publishing the same coordinate with different bytes
