@@ -120,15 +120,19 @@ re-skin correctly. `install` already repaints all open windows.
 
 ## Seeing it all at once
 
-Everything Elwha ships has a leaf in **The Elwha Showcase**, the visual harness in this
-repository. From a checkout:
+Everything Elwha ships has a leaf in **The Elwha Showcase**, which ships as its own runnable
+artifact — it is not inside the library jar. Download the self-contained
+`elwha-showcase-<version>-app.jar` from the
+[releases page](https://github.com/OWS-PFMS/elwha/releases) (attached to every release from 1.1.0
+on) and run it, no Packages authentication needed:
 
 ```bash
-mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"
+java -jar elwha-showcase-<version>-app.jar
 ```
 
-That is the fastest way to see a component's states, and to try a bundled palette against your own
-content before wiring it in.
+From a checkout, `mvn compile exec:java` launches the same storefront. Either way, it is the
+fastest route to a component's states, and to trying a bundled palette against your own content
+before wiring it in.
 
 ## Compile proof
 

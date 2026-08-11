@@ -19,13 +19,15 @@ Consistency holds because there is one vocabulary, not because everyone remember
 
 ![The Elwha Showcase — the Components landing, grouped by family, on the Material Baseline palette](docs/assets/showcase.png)
 
-*The Elwha Showcase's Components landing. To explore every component live, run the Showcase from a
-checkout (see [Seeing everything](#seeing-everything) below).*
+*The Elwha Showcase's Components landing. To explore every component live, run the downloadable
+Showcase jar (see [Seeing everything](#seeing-everything) below).*
 
 ## Install
 
 Elwha publishes to **GitHub Packages**, which requires an authenticated request even for public
-artifacts. Add the repository and the dependency:
+artifacts. (To just *see* the components before deciding, skip all of this — the Showcase is a
+downloadable jar; see [Seeing everything](#seeing-everything).) The library is the single
+coordinate `com.owspfm:elwha`. Add the repository and the dependency:
 
 ```xml
 <repositories>
@@ -150,13 +152,20 @@ export into that format. Full guide: **[docs/consumer/theming.md](docs/consumer/
 
 ## Seeing everything
 
-Every shipped component has a leaf in **The Elwha Showcase**. From a checkout:
+Every shipped component has a leaf in **The Elwha Showcase**, and the Showcase is a download, not
+a build: grab the self-contained `elwha-showcase-<version>-app.jar` from the
+[releases page](https://github.com/OWS-PFMS/elwha/releases) — it is attached to every release from
+1.1.0 on — and run it. No clone, no Maven, no Packages token; a JDK 21+ is the only requirement.
 
 ```bash
-mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"
+java -jar elwha-showcase-<version>-app.jar
 ```
 
-Around thirty per-component playgrounds live alongside it — for example:
+The Showcase and the per-component playgrounds ship as their own artifact, `elwha-showcase` — none
+of it is inside the `com.owspfm:elwha` jar your build depends on (see the
+[stability policy](docs/consumer/stability.md#the-elwha-showcase-artifact)). From a checkout the
+same storefront runs with `mvn compile exec:java` (the Showcase is the default main class), and
+around thirty per-component playgrounds live alongside it — for example:
 
 ```bash
 mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.theme.playground.ThemePlayground"

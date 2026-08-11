@@ -1,10 +1,12 @@
 # Component index
 
 Every component in Elwha, its package, and the leaf where you can see it in **The Elwha
-Showcase**. Run the Showcase from a checkout:
+Showcase**. The Showcase is a downloadable jar — grab `elwha-showcase-<version>-app.jar` from the
+[releases page](https://github.com/OWS-PFMS/elwha/releases) (attached to every release from 1.1.0
+on) and run it, or launch it from a checkout with `mvn compile exec:java`:
 
 ```bash
-mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.showcase.ElwhaShowcase"
+java -jar elwha-showcase-<version>-app.jar
 ```
 
 The Showcase is organized into three areas — **Foundations**, **Components** (grouped by family),
