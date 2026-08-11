@@ -85,6 +85,38 @@ The API reference is browsable without any of the above, at
 `javadoc` classifier on the artifact — `com.owspfm:elwha:1.0.0:javadoc` — which most IDEs will
 attach automatically once the dependency resolves.
 
+## The other published artifacts
+
+From 1.1.0 on the repository publishes three coordinates. The library is `com.owspfm:elwha`, and
+it is the only coordinate your build ever names — the other two exist for specific jobs:
+
+**`com.owspfm:elwha-parent`** is the reactor parent pom that the `elwha` pom references. Maven
+resolves it automatically through the same repository and credentials as the jar; you never
+declare it. It matters only if you *mirror* the repository into a repository manager (Nexus,
+Artifactory, …): mirror all three coordinates, or the library pom will fail to resolve its parent.
+
+**`com.owspfm:elwha` with the `tests` classifier** is an optional jar carrying the shared test
+fixtures (the `com.owspfm.elwha.testkit` package — theme-installing JUnit extensions, EDT
+interception, pixel probes), published from 1.1.0 on for consumers who want to reuse them in their
+own suites. Test scope only:
+
+```xml
+<dependency>
+  <groupId>com.owspfm</groupId>
+  <artifactId>elwha</artifactId>
+  <version>1.1.0</version>
+  <type>test-jar</type>
+  <scope>test</scope>
+</dependency>
+```
+
+**`com.owspfm:elwha-showcase`** is the demo storefront — an application, not a library, and not
+covered by the [stability policy](stability.md#the-elwha-showcase-artifact). To evaluate Elwha you
+do not need it from Packages at all: download the self-contained
+`elwha-showcase-<version>-app.jar` from the
+[releases page](https://github.com/OWS-PFMS/elwha/releases) (attached to every release from 1.1.0
+on) and `java -jar` it — no token required.
+
 ## Troubleshooting
 
 **`401 Unauthorized` fetching `elwha-1.0.0.pom`.** Maven is sending no credentials or wrong ones.

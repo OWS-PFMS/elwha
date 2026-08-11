@@ -21,25 +21,57 @@ minor release can break your build. Add a `default` branch.
 
 ## What counts as public API
 
-The promise covers types in `com.owspfm.elwha.*` that are declared `public` and are not in one of
-the excluded areas below. The [API reference](https://ows-pfms.github.io/elwha/) lists every public
-type, so anything absent from it is package-private and therefore not API — but note the reverse
-does not hold: the Javadoc also documents the harness packages carved out below, and being
-documented does not by itself make a type stable.
+The promise covers types that ship in the **`com.owspfm:elwha` jar**, are declared `public`, and
+are not package-private machinery (`overlay.AbstractElwhaOverlay`'s internals and the FlatLaf
+key-mapping bridge are the notable examples — nothing package-private is API). The
+[API reference](https://ows-pfms.github.io/elwha/) is built from the library artifact alone, so it
+is an exact roster: every public type it lists is covered by this promise, and anything absent is
+either package-private or not in the jar.
 
-**Not API, and free to change or disappear in any release:**
+Through 1.0.x the jar also carried the development harness — the Showcase, the playgrounds, the
+story-time demo and diagnostic classes — under a carve-out that declared them "not API, and free
+to change or disappear in any release." 1.1.0 exercised that carve-out wholesale: the harness
+classes are **no longer in the `elwha` jar at all**. They ship in their own artifact, described
+next, and the old carve-out is now simply the artifact boundary. Concretely, what moved out:
 
-- The **Showcase** (`com.owspfm.elwha.showcase`) — a visual harness, not a library surface.
-- **Playgrounds** — every `playground` subpackage.
-- Classes named `*Demo`, `*Smoke`, `*Guard`, and the `card.fixes` diagnostic harnesses. These are
-  build-time artifacts left behind by the story that shipped a feature.
-- Anything package-private, including `overlay.AbstractElwhaOverlay`'s internals and the
-  FlatLaf key-mapping bridge.
+- the **Showcase** (`com.owspfm.elwha.showcase`);
+- every **`playground` subpackage**, plus the top-level `chip.ElwhaChipPlayground`;
+- classes named `*Demo`, `*Smoke`, `*Guard`, `*Diag`;
+- the `card.fixes` diagnostic harnesses.
+
+If your build referenced any of these, 1.1.0 is where that stops compiling. They were never API,
+so this rides a minor release under the carve-out above; the fix is to drop the reference, not to
+add the showcase artifact as a dependency.
 
 **`UIManager` keys are a grey area.** The `Elwha.*` namespace is documented and stable enough to
 override for a spot fix (see [Theming](theming.md#overriding-individual-roles)), but the specific
 FlatLaf-native keys Elwha writes are an implementation detail of the bridge. Build on the typed
 token accessors — `ColorRole.resolve()` and friends — wherever you can.
+
+## The `elwha-showcase` artifact
+
+Since 1.1.0 the runnable storefront ships as **`com.owspfm:elwha-showcase`** — the Showcase, every
+playground, every story-time main, packaged apart from the library. It exists so you can *look at*
+Elwha:
+
+- **Evaluators** download the self-contained `elwha-showcase-<version>-app.jar` attached to each
+  [GitHub Release](https://github.com/OWS-PFMS/elwha/releases) from 1.1.0 on, and `java -jar` it —
+  no Packages authentication, no clone, no build.
+- The plain `com.owspfm:elwha-showcase` jar also resolves from GitHub Packages with normal
+  transitive dependencies, but there is rarely a reason to depend on it: it is an application, not
+  a library.
+
+Two things the showcase artifact deliberately is **not**:
+
+- **Not covered by this policy.** The semver promise above covers the `com.owspfm:elwha` jar;
+  every class in `elwha-showcase` is free to change or disappear in any release. Evaluate with
+  it — do not build on it.
+- **Not usable on the JPMS module path.** The split kept every moved class's original package
+  name, so the showcase jar shares package names with the library jar. On the classpath — the only
+  supported way to run it — that is legal and invisible; on the module path it is a split-package
+  error, which is why the jar declares no `Automatic-Module-Name`. The `elwha` jar keeps its
+  `com.owspfm.elwha` module name and remains module-path-clean — the split *removed* the harness
+  classes from that module's surface.
 
 ## Deprecation policy
 
@@ -88,6 +120,11 @@ This is a deliberate constraint, not an accident of the current state. Elwha was
 application specifically so that it would carry none of that application with it, and adding to
 the list is treated as an architectural decision rather than a convenience. Practically, it means
 dropping Elwha into an existing Swing app cannot conflict with your dependency graph.
+
+The [`elwha-showcase` artifact](#the-elwha-showcase-artifact)'s dependencies are an application's
+and reach no consumer — nothing above changes if you never resolve it. The published
+`com.owspfm:elwha-parent` pom carries no dependencies of its own that reach you either; it exists
+so the module poms resolve (see [Install](install.md#the-other-published-artifacts)).
 
 ## Relationship to Material 3
 
