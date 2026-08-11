@@ -14,7 +14,7 @@ and **Containers** — and the "Leaf" column below names the entry to click.
 
 **API reference: [ows-pfms.github.io/elwha](https://ows-pfms.github.io/elwha/)**, redeployed on
 every push to `main`. Every class name in the tables below links into it. The same Javadoc also
-ships as a classifier on the artifact (`com.owspfm:elwha:1.1.0:javadoc`) if you would rather attach
+ships as a classifier on the artifact (`com.owspfm:elwha:1.1.1:javadoc`) if you would rather attach
 it in your IDE.
 
 Design docs are linked where one exists; they are maintainer documents that record *why* a

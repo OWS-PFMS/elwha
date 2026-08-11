@@ -29,7 +29,7 @@ Elwha depends on **Swing and FlatLaf only** — see [Dependency stance](stabilit
   <dependency>
     <groupId>com.owspfm</groupId>
     <artifactId>elwha</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
   </dependency>
 </dependencies>
 ```
@@ -75,14 +75,14 @@ if your build must read it from an environment variable instead, use
 ## 4. Verify
 
 ```bash
-mvn -q dependency:get -Dartifact=com.owspfm:elwha:1.1.0
+mvn -q dependency:get -Dartifact=com.owspfm:elwha:1.1.1
 ```
 
 A silent exit means the artifact resolved. Then continue to the [Quick start](quick-start.md).
 
 The API reference is browsable without any of the above, at
 **[ows-pfms.github.io/elwha](https://ows-pfms.github.io/elwha/)**. It is also published as a
-`javadoc` classifier on the artifact — `com.owspfm:elwha:1.1.0:javadoc` — which most IDEs will
+`javadoc` classifier on the artifact — `com.owspfm:elwha:1.1.1:javadoc` — which most IDEs will
 attach automatically once the dependency resolves.
 
 ## The other published artifacts
@@ -104,7 +104,7 @@ own suites. Test scope only:
 <dependency>
   <groupId>com.owspfm</groupId>
   <artifactId>elwha</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
   <type>test-jar</type>
   <scope>test</scope>
 </dependency>
@@ -142,7 +142,7 @@ on) and `java -jar` it — no token required.
 
 ## Troubleshooting
 
-**`401 Unauthorized` fetching `elwha-1.1.0.pom`.** Maven is sending no credentials or wrong ones.
+**`401 Unauthorized` fetching `elwha-1.1.1.pom`.** Maven is sending no credentials or wrong ones.
 Check, in order: the `<server>` `<id>` matches the `<repository>` `<id>`; the username is your
 GitHub login, not your email; the token has not expired. Run with `-X` and look for
 `Using authentication for server github-elwha` — if that line is absent, the ids do not match.
@@ -150,7 +150,7 @@ GitHub login, not your email; the token has not expired. Run with `-X` and look 
 **`403 Forbidden`.** The credentials were accepted but the token lacks `read:packages`, or a
 fine-grained token was scoped to the wrong organization. Regenerate with the right scope.
 
-**`Could not find artifact com.owspfm:elwha:1.1.0`.** Maven never reached GitHub Packages. Confirm
+**`Could not find artifact com.owspfm:elwha:1.1.1`.** Maven never reached GitHub Packages. Confirm
 the `<repositories>` block is in the POM that is actually building — in a multi-module project it
 belongs in the parent, or in each module that declares the dependency.
 
@@ -171,6 +171,6 @@ repositories {
 }
 
 dependencies {
-    implementation("com.owspfm:elwha:1.1.0")
+    implementation("com.owspfm:elwha:1.1.1")
 }
 ```
