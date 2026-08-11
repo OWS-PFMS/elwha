@@ -18,6 +18,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   [#800](https://github.com/OWS-PFMS/elwha/issues/800) /
   [#801](https://github.com/OWS-PFMS/elwha/issues/801) (`v1.2.0`).
 
+### Fixed
+
+- **`MaterialIcons` by-name lookups fail fast on unbundled glyph names**
+  ([#797](https://github.com/OWS-PFMS/elwha/issues/797)): `get(name)`, `pair(name)`, and
+  `symbol(name)` now throw `IllegalArgumentException` naming the requested glyph and the missing
+  resource path when the bundle ships no `<name>.svg` — previously they returned a normal-looking
+  icon that painted as a solid error block, with no exception and no log. `get()`'s Javadoc had
+  documented the throw since v0.1.0 without enforcing it; the contract is now real. A `null` name
+  throws `NullPointerException` naming the parameter, matching the 1.1.0 fail-fast conventions
+  (#776). The `Symbol` fill-axis fallback is unchanged: a *bundled* name with no `_fill` variant
+  still degrades gracefully to the outline glyph — only the base name is validated. The named
+  accessors (`pushPin()`, …) are compile-time-known bundled and skip the check. Found by the 1.1.0
+  consumer smoke-test report (F2). Also fixes `theming.md`'s nav-rail example, which used the
+  unbundled `inbox` glyph — the doc's own snippet rendered a broken icon; it now uses `settings`,
+  and the by-name bullet documents the new fail-fast behavior.
+- **`install.md` documents the testkit's test-stack requirement**
+  ([#798](https://github.com/OWS-PFMS/elwha/issues/798)): the `tests`-classifier jar asserts
+  through JUnit Jupiter and AssertJ, and a classifier jar carries no dependency metadata — a
+  consumer following the previous docs verbatim hit `NoClassDefFoundError` on first fixture use.
+  The testkit section now declares both requirements with the versions Elwha builds against and a
+  paste-ready dependency snippet. Found by the 1.1.0 consumer smoke-test report (F1).
+
 ## [1.1.0] — 2026-08-11
 
 ### Changed

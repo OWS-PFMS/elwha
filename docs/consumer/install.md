@@ -110,6 +110,29 @@ own suites. Test scope only:
 </dependency>
 ```
 
+The testkit asserts through **JUnit Jupiter and AssertJ**, and a classifier jar carries no
+dependency metadata of its own — without both on your test classpath, the first fixture use fails
+with `NoClassDefFoundError: org/assertj/core/api/Assertions` (or the JUnit equivalent). Declare
+them alongside it, at or near the versions Elwha builds against:
+
+```xml
+<dependency>
+  <groupId>org.junit.jupiter</groupId>
+  <artifactId>junit-jupiter</artifactId>
+  <version>6.1.2</version>
+  <scope>test</scope>
+</dependency>
+<dependency>
+  <groupId>org.assertj</groupId>
+  <artifactId>assertj-core</artifactId>
+  <version>3.27.7</version>
+  <scope>test</scope>
+</dependency>
+```
+
+A suite already on JUnit 5/6 + AssertJ needs nothing extra — these are the stack the testkit was
+extracted from, not additions to it.
+
 **`com.owspfm:elwha-showcase`** is the demo storefront — an application, not a library, and not
 covered by the [stability policy](stability.md#the-elwha-showcase-artifact). To evaluate Elwha you
 do not need it from Packages at all: download the self-contained

@@ -195,7 +195,9 @@ right one matters because two component APIs are typed against them:
 
 - **Named accessors** — `MaterialIcons.pushPin()`, `.delete(20)`, … — one glyph, no-arg at the
   house 24 px or sized.
-- **`get(name)`** — the same lookup by bare Material Symbol name, for names chosen at runtime.
+- **`get(name)`** — the same lookup by bare Material Symbol name, for names chosen at runtime. A
+  name outside the bundle throws `IllegalArgumentException` naming the glyph (as do `pair` and
+  `symbol`), so a bad name fails at the call site instead of rendering a broken icon.
 - **`pair(name)`** — an `IconPair` holding the outline (fill 0) and filled (fill 1) cuts, for
   hand-rolled selected/unselected icon swaps.
 - **`symbol(name)`** — a strongly-typed `Symbol` handle that resolves both fill-axis cuts on
@@ -205,7 +207,8 @@ right one matters because two component APIs are typed against them:
 
 ```java
 ElwhaTab home = ElwhaTab.of(MaterialIcons.symbol("home"), "Home");
-ElwhaNavRailDestination inbox = ElwhaNavRailDestination.of(MaterialIcons.symbol("inbox"), "Inbox");
+ElwhaNavRailDestination settings =
+    ElwhaNavRailDestination.of(MaterialIcons.symbol("settings"), "Settings");
 ```
 
 The full glyph inventory lives in the
