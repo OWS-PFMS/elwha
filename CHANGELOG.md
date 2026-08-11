@@ -74,6 +74,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- **The runnable Showcase ships as `elwha-showcase-<v>-app.jar`** (#789; epic #779 Phase 2): a
+  maven-shade fat jar attached under classifier `app` — the plain `elwha-showcase` jar Maven
+  consumers resolve is byte-for-byte unaffected. It embeds elwha + FlatLaf + jsvg with
+  signature debris and dependency module descriptors stripped, and carries Elwha's
+  LICENSE/NOTICE verbatim plus jsvg's MIT text at `META-INF/licenses/jsvg-LICENSE`. On a
+  version tag, `publish.yml` (now `contents: write`) creates the GitHub Release after the
+  Packages deploy and attaches the jar — the no-Packages-auth evaluator download. The release
+  runbook documents the two-artifact procedure (`versions:set` bump, three-coordinate
+  post-publish verification, Release-asset check).
 - **`elwha` publishes a `tests`-classifier jar restricted to the shared `testkit/**`
   fixtures** (#786): downstreams (including `elwha-showcase`'s own suite) can reuse
   `EdtInterceptor`, `ThemeExtension`, `Pixels`, and the rest without inheriting the library's
