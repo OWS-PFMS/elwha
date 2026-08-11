@@ -26,6 +26,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   `Main-Class: …ElwhaShowcase`; `mvn compile exec:java` one-liners keep working verbatim from
   the root and now execute in `elwha-showcase`. Bundled resources stay in `elwha` and resolve
   cross-module via the classpath.
+- **Consumer docs tell the two-artifact story** (#793; epic #779 Phase 3): the README and
+  `docs/consumer/` evaluation story becomes "download `elwha-showcase-<v>-app.jar` from the
+  GitHub Release, `java -jar` it" — no Packages auth, no clone — while the library install
+  story stays Packages-based on `com.owspfm:elwha` alone. `stability.md`'s harness carve-out is
+  rewritten as the artifact boundary (now naming `*Diag` and the top-level
+  `ElwhaChipPlayground` explicitly) and documents `elwha-showcase` as a classpath-only
+  application artifact — split packages, no `Automatic-Module-Name`, outside the semver
+  promise. `install.md` adds the resolvable `elwha-parent` pom and the optional
+  `tests`-classifier testkit jar.
+- **Stale prose corrected against the repo's actual state** (#793): CLAUDE.md's milestone
+  bullet (live milestones `v1.1.0`/`v1.2.0`; `@version` high-water now `v1.1.0`) and
+  release-tail claim (#97/#80 closed with the 1.0.0 publish), CONTRIBUTING.md's single-pom
+  release step (now the `versions:set` three-pom bump) and single-module build outputs, and
+  `versioning.md`'s claim that the `build` workflow runs the `@version` validator (it is the
+  separate `validate-versions` required check).
 - **Developer docs follow the two-module reactor** (#790): CLAUDE.md (build/run paths, module
   framing, per-module test counts, testkit consumption, release surface), `testing.md`,
   `versioning.md`, and `versioning-playbook.md` re-anchored to `elwha/` + `elwha-showcase/`
