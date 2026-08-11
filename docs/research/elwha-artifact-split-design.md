@@ -14,6 +14,11 @@ Every count and every claim below was taken from the tree at the time of writing
 2026-08-10) by running the globs and reading the workflows and scripts — not from CLAUDE.md's
 approximations.
 
+> **As built (Phase 1 — PRs #787 and #788, merged 2026-08-10):** the design held except where
+> measured otherwise during the build. Each deviation is recorded as an **As built** note at the
+> affected section — §1.2, §1.4, §1.5, §2.1, §2.5, §2.7, §3.1, §3.2, §4.4. The surrounding text is
+> preserved as written at lock time; where a note and the body disagree, the note wins.
+
 ## TL;DR — the decisions this doc locks
 
 - **Layout:** root parent pom (`com.owspfm:elwha-parent`, packaging `pom`) + two module
@@ -108,6 +113,11 @@ poms name it in their `<parent>` block and omit their own `<groupId>`/`<version>
 | exec-maven-plugin skip wiring | parent `pluginManagement` + showcase override | §1.5 |
 | `<distributionManagement>` | parent | inherited; the URL (`maven.pkg.github.com/OWS-PFMS/elwha`) is repo-scoped and serves all three coordinates |
 
+> **As built (PR #787):** the dependency rows predate #775, which removed `flatlaf-intellij-themes`
+> tree-wide before Phase 1 ran; `elwha/pom.xml` carries the post-#775 set — `flatlaf` +
+> `flatlaf-extras` — following `main`, not this table. And the showcase row's test-jar consumption
+> changed: see the §3.2 as-built note.
+
 **Javadoc stays symmetric deliberately.** The 355 harness files are doclint-clean today because
 `failOnWarnings` gates them; if `elwha-showcase` stopped building a javadoc jar, that discipline
 would silently lapse on exactly the files least likely to get review attention. The cost is
@@ -151,6 +161,11 @@ the bump as a scripted mechanical act. Rejected in favor of `versions:set`.
 `publish.yml`'s tag check reads `${project.version}` with `--non-recursive` — under the reactor
 that is the parent's version, which is the shared version. It keeps working unchanged.
 
+> **As built (PR #787):** not unchanged — the version read ran through the exec plugin, which the
+> parent's §1.5 `skip=true` silences, so the read came back empty and the tag check failed closed.
+> One-line fix: `publish.yml` reads the version via `help:evaluate -Dexpression=project.version
+> -q -DforceStdout` instead.
+
 ### §1.5 How invocations change — mostly, they don't
 
 The trap: in a reactor, a CLI goal like `exec:java` runs on *every* module (including the parent),
@@ -163,6 +178,13 @@ kill the build. The fix is pom-side, once:
 - `elwha-showcase` `<build><plugins>`: declares the plugin with `<skip>false</skip>` and
   `<mainClass>${exec.mainClass}</mainClass>`, plus a module property
   `<exec.mainClass>com.owspfm.elwha.showcase.ElwhaShowcase</exec.mainClass>`.
+
+> **As built (PR #787):** the module-local property placement above is wrong — exec:java validates
+> its required `mainClass` parameter on *every* reactor project **before** consulting `skip`, so a
+> showcase-local `exec.mainClass` kills the bare invocation at the parent. The property (and the
+> `<mainClass>` routing) live on the parent; the showcase module contributes only the
+> `<skip>false</skip>` re-enable. Both invocation forms — bare and `-Dexec.mainClass=…` — proven
+> working from the root.
 
 Routing `mainClass` through the property (rather than hardcoding it) matters: pom configuration
 outranks CLI user properties, so a hardcoded `<mainClass>` would *ignore* `-Dexec.mainClass`.
@@ -233,6 +255,9 @@ Per-package, so Phase 1's move script has a checkable target:
 (The epic's "471 of ~900 classes" counts nested and anonymous classes; the 355 above are files,
 which is the unit `git mv` and the version gate operate on. Same population.)
 
+> **As built (PR #788):** 355 moved, matching the bucket tables exactly; **193 stay**, not 192 —
+> #784 added `theme/AccessibleNameAdvisory` after this census.
+
 ### §2.2 Two patterns the epic didn't name [RECOMMENDED — operator sign-off in §10]
 
 The epic's list ("the Showcase, all 14 `playground/` packages, every `*Demo`/`*Smoke`/`*Guard`
@@ -296,6 +321,11 @@ harness surface loads cursors, icons, fonts and palettes exclusively through lib
 `elwha`, and the Showcase's palette picker keeps its directory-discovery behavior through
 `MaterialPalettes.primary()`/`secondary()` unchanged.
 
+> **As built (PR #788):** the zero-calls claim was stale by move time — `CursorReferencePanel`
+> (#763, added after this doc) makes one `getResource` call. The conclusion holds unchanged:
+> every resource stays in `elwha` and resolves cross-module over the classpath, exercised by the
+> exec proofs.
+
 ### §2.6 Split packages and JPMS — accept, document, don't repackage
 
 The wholesale move keeps every moved class's package name (`slider/SliderSizesDemo` stays
@@ -330,6 +360,11 @@ files in the entire tree (main and test). `flatlaf-intellij-themes` is a compile
 nothing compiles against. Removing it would shrink the consumer-inherited set stability.md
 documents — a separate decision for a separate issue, not this epic (§9).
 
+> **As built (PRs #787/#788):** the incidental finding was actioned before Phase 1 ran — #775
+> removed `flatlaf-intellij-themes` tree-wide, so only `flatlaf` flows transitively through
+> `elwha`. The showcase pom declares `elwha` + `flatlaf-extras` compile-scope as measured here,
+> but **no** test-jar dependency — see the §3.2 as-built note.
+
 ## §3. Tests and the testkit
 
 ### §3.1 What moves: the 11 showcase-facing tests
@@ -344,7 +379,23 @@ must follow them), `ShowcaseCatalogTest`, `ShowcaseFixture`, `ShowcaseLandingTes
 The other 201 — the per-component suites and `testkit/` — stay in `elwha`. The §2.4 scan confirms
 none of them touches a moved class in code.
 
+> **As built (PR #788):** **12** test files moved, not 11 — #784 added
+> `showcase/ShowcaseAccessibleNameGuardTest` after this census, and the rule stated here (the
+> whole showcase test package moves) governs: it imports moved classes, so it could not stay.
+> 209 stay in `elwha`.
+
 ### §3.2 Testkit strategy [LOCKED: test-jar, restricted to `testkit/**`]
+
+> **As built (PR #788):** the *production* half of this decision is unchanged — `elwha` ships the
+> `tests`-classifier jar restricted to `testkit/**` (§5.1's consumer story). The *sibling
+> consumption* half did not survive contact with §1.5: with the test-jar declared as a showcase
+> dependency, cold-tree `mvn compile exec:java` fails resolution
+> (`Could not find artifact com.owspfm:elwha:jar:tests`) — exec:java resolves test scope, and
+> Maven's ReactorReader only substitutes a sibling's `target/test-classes` after `test-compile`
+> has run in the same session. Since the epic's invariant is that the documented one-liners work
+> verbatim, `elwha-showcase` instead compiles the testkit **sources** via build-helper
+> `add-test-source` + compiler `testIncludes` (`showcase/**`, `testkit/**`; testkit self-tests
+> excluded so they run once). The cycle analysis below and the gate carve-in consequence stand.
 
 All 11 moving tests use the testkit (`ThemeExtension` on every fixture, `EdtInterceptor`, `Input`),
 so `elwha-showcase` must reach `elwha/src/test/java/com/owspfm/elwha/testkit/`. Two candidates,
@@ -451,6 +502,14 @@ containing `/src/test/` unless it contains `/elwha/testkit/` (which keeps matchi
 package segment, §3.2); legacy mode walks `<module>/src` for both modules. The `since_on_base`
 `git show base:path` calls already use repo-relative diff paths and survive untouched, as does the
 R100 pure-rename exclusion the move itself depends on (§6).
+
+> **As built (PR #787):** the designed pathspec does not work — a pathspec naming only the new
+> module roots hides a moved file's *old* path, which breaks git's rename pairing and degrades
+> every move to an "added" entry (measured: 563 files spuriously demanding bumps on the #785
+> move). The shipped fix diffs with **no pathspec** and does module scoping in `in_scope()`
+> instead; the R100 exclusion and `since_on_base` are preserved verbatim. The legacy tree-wide
+> mode went module-aware in the same edit (a shared `MODULE_DIRS` walk), ahead of its §8 P2-S4
+> slot — P2-S4's gate audit re-ran every mode and found no residual gap.
 
 **Phasing correction:** the epic slotted "version-gate" into Phase 2, but a fail-open required
 check is not a window to leave ajar between phases — the script fix rides the Phase-1 move PR

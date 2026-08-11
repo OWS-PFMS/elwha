@@ -19,21 +19,36 @@ own surefire execution and JVM.
 
 ## Layout and naming
 
+Since the #779 artifact split the suite spans both reactor modules; each module's surefire runs
+its own tree with the same two-tier config, inherited from the parent pom:
+
 ```
-src/test/java/com/owspfm/elwha/
+elwha/src/test/java/com/owspfm/elwha/
   testkit/                          shared fixtures (public; @version convention applies)
   <component>/                      same package as the component — package-private seams stay
       <Component><Aspect>Test.java  Tier A
       <Component>GuiTest.java       Tier B
+elwha-showcase/src/test/java/com/owspfm/elwha/
+  showcase/                         the storefront suite (registry, navigation, workbench, sweeps)
 ```
 
 Test classes and methods are package-private. Assertion messages are plain-English contract
 statements ("Space release commits the toggle") so a CI failure reads as a spec violation.
 
 **The `@version`/`@since` convention applies to `testkit/` only** — per-test classes are exempt
-(the gate script scopes `src/test` to the testkit package; decision recorded in the #529 triage).
+(the gate script exempts `src/test/` trees except the testkit package, matched by its package
+segment so the rule holds under either module prefix; decision recorded in the #529 triage).
 
 ## The testkit
+
+The fixtures live in `elwha/src/test/java/com/owspfm/elwha/testkit/`. `elwha-showcase` consumes
+them by **source inclusion**: build-helper adds the library's test tree as a test-source root and
+the compiler's `testIncludes` restrict compilation to `testkit/**` plus the module's own tests
+(testkit self-tests excluded so they run once, in `elwha`). A test-jar *dependency* is deliberately
+not used in-reactor — it breaks cold-tree `mvn compile exec:java`, because exec:java resolves
+test scope and Maven only substitutes a sibling's `target/test-classes` after `test-compile` has
+run in-session. The `tests`-classifier jar `elwha` publishes (restricted to `testkit/**`) is the
+consumption path for projects *outside* the reactor.
 
 - **`EdtInterceptor`** — runs every Tier A test + lifecycle method on the EDT. Not for gui tests.
 - **`ThemeExtension`** — installs baseline LIGHT before each test and pins reduced motion
@@ -73,7 +88,7 @@ statements ("Space release commits the toggle") so a CI failure reads as a spec 
 
 Two workflows run the suite: `build` (packaging gate) and `Test (components + Showcase)`
 (`test.yml` — uploads `surefire-reports` + `hs_err_pid*` on failure and the JaCoCo report on
-success). JaCoCo is **report-only**; no coverage threshold while the suite grows from zero. The
+success, globbed `**/target/…` so both modules' output is captured). JaCoCo is **report-only**; no coverage threshold while the suite grows from zero. The
 gui-tier surefire `argLine` chains `@{argLine}` so JaCoCo's agent injection survives — hardcoding
 that line silently zeroes coverage for the tier.
 
