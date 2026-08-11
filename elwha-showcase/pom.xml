@@ -95,6 +95,87 @@
         </configuration>
       </plugin>
       <plugin>
+        <!-- §5.2 of the artifact-split design [LOCKED]: the evaluator download is an *attached*
+             shaded jar, classifier app — the plain jar above stays the module's main artifact,
+             byte-for-byte untouched, so Maven consumers resolving com.owspfm:elwha-showcase get
+             a normal jar with normal transitive deps while evaluators get one double-clickable
+             elwha-showcase-<v>-app.jar. No relocation: the fat jar is an application, not a
+             dependency. -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>app-jar</id>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>app</shadedClassifierName>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <filters>
+                <filter>
+                  <!-- Fat-jar hygiene: a merged jar's signatures could never verify, and the
+                       dependencies' module descriptors (flatlaf, flatlaf-extras, jsvg all ship
+                       one) would each lie about a jar that splits packages and is documented
+                       classpath-only (§2.6) — strip both. -->
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>module-info.class</exclude>
+                  </excludes>
+                </filter>
+                <!-- LICENSE/NOTICE carriage. §5.2 named the ApacheLicense/ApacheNotice
+                     transformers for this; measured, both corrupt: the license transformer
+                     swallows every META-INF/LICENSE (Elwha's own included) and emits nothing,
+                     and the notice transformer injects an ASF developed-at attribution that is
+                     false here. Filters instead: this module's own META-INF/LICENSE and NOTICE
+                     (#774, via the parent's resource block) ride through verbatim, while the
+                     byte-identical copies in the elwha jar and FlatLaf's Apache-2.0 LICENSE
+                     (the same licence text the kept file carries; FlatLaf ships no NOTICE) are
+                     dropped rather than collide. -->
+                <filter>
+                  <artifact>com.owspfm:elwha</artifact>
+                  <excludes>
+                    <exclude>META-INF/LICENSE</exclude>
+                    <exclude>META-INF/NOTICE</exclude>
+                  </excludes>
+                </filter>
+                <filter>
+                  <artifact>com.formdev:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/LICENSE</exclude>
+                  </excludes>
+                </filter>
+                <filter>
+                  <artifact>com.github.weisj:jsvg</artifact>
+                  <excludes>
+                    <exclude>META-INF/LICENSE</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.owspfm.elwha.showcase.ElwhaShowcase</mainClass>
+                </transformer>
+                <!-- jsvg is MIT, not Apache — its licence text must ride in a jar that embeds
+                     its classes, at a path that cannot collide with the Apache LICENSE.
+                     src/main/licenses/jsvg-LICENSE is the verbatim META-INF/LICENSE from the
+                     jsvg jar (outside src/main/resources deliberately, so the plain jar stays
+                     untouched); re-copy it if ${flatlaf.version}'s transitive jsvg ever bumps. -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                  <resource>META-INF/licenses/jsvg-LICENSE</resource>
+                  <file>src/main/licenses/jsvg-LICENSE</file>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <!-- §1.5 re-enable: the parent's pluginManagement skips exec reactor-wide; the module
              holding the runnable mains flips it back on. The exec.mainClass default stays a
              parent property — exec:java validates its required mainClass parameter on every

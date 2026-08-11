@@ -9,7 +9,10 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # write, not read: the final step creates the GitHub Release for the tag and uploads the
+      # runnable -app jar as its asset (§5.3 of the artifact-split design). packages: write is
+      # the deploy, unchanged.
+      contents: write
       packages: write
 
     steps:
@@ -56,3 +59,18 @@ jobs:
         run: mvn -B clean deploy -DskipTests --file pom.xml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release and attach the runnable Showcase
+        # Runs only after the Packages deploy succeeded, so a Release never exists without its
+        # artifacts. `|| true` on create keeps a workflow re-run idempotent when the Release
+        # already exists; --clobber makes the upload idempotent. Release-notes curation stays a
+        # human act per the runbook — this step only guarantees the -app jar is attached.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          gh release create "$TAG" --verify-tag --title "$VERSION" \
+            --notes "See CHANGELOG.md §[$VERSION]." || true
+          gh release upload "$TAG" \
+            "elwha-showcase/target/elwha-showcase-${VERSION}-app.jar" --clobber
