@@ -22,7 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 /**
- * Tier A spike for the #439 framework selection — the {@link ElwhaSwitchInteractionSmoke} §7
+ * Tier A spike for the #439 framework selection — the {@code ElwhaSwitchInteractionSmoke} §7
  * interaction contract re-expressed as JUnit tests, exercising the three assertion families the
  * regression suite (#438) needs headless: synthetic input event contracts, pixel probes against
  * resolved token colors, and accessibility shape. Two deliberate upgrades over the smoke idiom:

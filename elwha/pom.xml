@@ -37,15 +37,37 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifestEntries>
-              <!-- #774: a stable JPMS name for module-path consumers; without it the module
-                   name derives from the jar filename. -->
-              <Automatic-Module-Name>com.owspfm.elwha</Automatic-Module-Name>
-            </manifestEntries>
-          </archive>
-        </configuration>
+        <executions>
+          <execution>
+            <!-- Scoped to the main jar only (not plugin-level) so the test-jar below does not
+                 inherit the module name — two jars claiming com.owspfm.elwha on a module path
+                 would collide, and the test-jar is classpath-only test tooling (§3.2). -->
+            <id>default-jar</id>
+            <configuration>
+              <archive>
+                <manifestEntries>
+                  <!-- #774: a stable JPMS name for module-path consumers; without it the module
+                       name derives from the jar filename. -->
+                  <Automatic-Module-Name>com.owspfm.elwha</Automatic-Module-Name>
+                </manifestEntries>
+              </archive>
+            </configuration>
+          </execution>
+          <execution>
+            <!-- §3.2 of docs/research/elwha-artifact-split-design.md [LOCKED]: the shared test
+                 fixtures ship as a test-jar restricted to testkit/**, consumed test-scope by
+                 elwha-showcase. The include keeps the ~200 per-component test classes off the
+                 showcase test classpath. A third testkit module is rejected — test-scope edges
+                 count in the reactor graph, so it is a module cycle. -->
+            <id>testkit-test-jar</id>
+            <goals><goal>test-jar</goal></goals>
+            <configuration>
+              <includes>
+                <include>com/owspfm/elwha/testkit/**</include>
+              </includes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -55,16 +77,6 @@
                start) instead of a bare package list. Module-specific — the doclint/tag config
                it merges with is inherited from the parent. -->
           <overview>${project.basedir}/src/main/javadoc/overview.html</overview>
-        </configuration>
-      </plugin>
-      <plugin>
-        <!-- §1.5 re-enable: the parent's pluginManagement skips exec reactor-wide; the module
-             holding the runnable mains flips it back on. P1-S2 moves this override to the
-             elwha-showcase module together with the showcase classes. -->
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <configuration>
-          <skip>false</skip>
         </configuration>
       </plugin>
     </plugins>

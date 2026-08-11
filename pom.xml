@@ -39,6 +39,7 @@
 
   <modules>
     <module>elwha</module>
+    <module>elwha-showcase</module>
   </modules>
 
   <properties>

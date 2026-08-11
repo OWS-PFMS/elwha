@@ -460,8 +460,10 @@ final class ShowcaseFixture {
     return out;
   }
 
-  // The compiled-output root the library was loaded from — class files resolve under it by binary
-  // name, and the library's own tree hangs off com/owspfm/elwha.
+  // The compiled-output root the Showcase was loaded from (the elwha-showcase module's classes
+  // post-#779) — class files resolve under it by binary name. Refs into library classes resolve
+  // to paths that do not exist under this root and fall out via the Files.exists guard, exactly
+  // as JDK refs always have.
   private static Path classesRoot() {
     try {
       return Path.of(
