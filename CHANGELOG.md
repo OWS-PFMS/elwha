@@ -26,6 +26,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   `Main-Class: …ElwhaShowcase`; `mvn compile exec:java` one-liners keep working verbatim from
   the root and now execute in `elwha-showcase`. Bundled resources stay in `elwha` and resolve
   cross-module via the classpath.
+- **Developer docs follow the two-module reactor** (#790): CLAUDE.md (build/run paths, module
+  framing, per-module test counts, testkit consumption, release surface), `testing.md`,
+  `versioning.md`, and `versioning-playbook.md` re-anchored to `elwha/` + `elwha-showcase/`
+  paths; the artifact-split design doc carries **As built** correction notes for every measured
+  Phase 1–2 deviation (PRs #787/#788/#791) rather than silently asserting what the tree
+  disproves.
 - **`ElwhaCardHeader.add(...)` fails fast** (#768): it now throws `IllegalArgumentException`
   instead of silently accepting a child its slot layout would never position — the header is
   slot-based; populate it via `setTitle` / `setSubtitle` / `setLeading` / `addTrailing`.

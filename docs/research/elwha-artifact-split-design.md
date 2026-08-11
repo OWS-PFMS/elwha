@@ -522,6 +522,9 @@ check is not a window to leave ajar between phases — the script fix rides the 
 
 Seven artifacts across three coordinates, one workflow run:
 
+> **As built (PR #791):** the table is right, the count is not — its rows total **nine** artifacts
+> (1 parent pom + 4 `elwha` + 4 `elwha-showcase`). The runbook uses the table, no count.
+
 | Coordinate | Artifacts |
 |---|---|
 | `com.owspfm:elwha-parent` | pom (consumers of `elwha` need it resolvable — module poms reference it) |
@@ -552,8 +555,22 @@ Shade config: `ManifestResourceTransformer` restating
 `ServicesResourceTransformer` for safety (FlatLaf ships service files). No relocation — the fat
 jar is an application, not a dependency.
 
+> **As built (PR #791):** the `Apache*ResourceTransformer` pair corrupts the jar — both are
+> ASF-build machinery: the license transformer deduplicates by deleting *every* `META-INF/LICENSE`
+> (Elwha's own included), and the notice transformer injects Apache Foundation boilerplate into
+> NOTICE even with `addHeader=false`. The stated intent (third-party notices next to Elwha's own)
+> ships instead via per-artifact filters — Elwha's LICENSE/NOTICE carried verbatim, duplicate
+> Apache texts dropped — plus an `IncludeResourceTransformer` carrying jsvg's MIT text at
+> `META-INF/licenses/jsvg-LICENSE` (source of truth: `elwha-showcase/src/main/licenses/`,
+> deliberately outside `resources/` so the plain jar stays untouched). Also measured: FlatLaf
+> 3.2.5 ships **no** `META-INF/services` entries; the `ServicesResourceTransformer` stays as
+> cheap insurance.
+
 Size sanity: today's single jar is ~2.8 MB with all deps external; the fat jar adds FlatLaf
 (~1 MB), extras, themes and jsvg — call it 6–8 MB. Fine for a Release asset.
+
+> **As built (PR #791):** 4.3 MB — the estimate double-counted; `flatlaf` + `flatlaf-extras` +
+> jsvg land at ~1.5 MB compressed on top of the showcase's own classes.
 
 ### §5.3 `publish.yml` changes
 
