@@ -17,6 +17,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   `mvn compile exec:java -Dexec.mainClass=…` — keeps working verbatim from the root; jars now
   land under `elwha/target/`. The published `com.owspfm:elwha` artifact is unchanged in
   content; the `elwha-showcase` module and the demo-surface move follow in #786.
+- **The published `com.owspfm:elwha` jar is the library alone** (#786; epic #779 Phase 1): the
+  new `com.owspfm:elwha-showcase` module now carries The Elwha Showcase, all 14 `playground/`
+  packages, and every story-time `*Demo` / `*Smoke` / `*Guard` / `*Diag` main — 355 main + 12
+  test files, moved as history-preserving renames. The harness classes leave the `elwha`
+  artifact under the `docs/consumer/stability.md` carve-out that always excluded them from the
+  API surface, so this is a minor-level change, not a breaking one. The showcase jar declares
+  `Main-Class: …ElwhaShowcase`; `mvn compile exec:java` one-liners keep working verbatim from
+  the root and now execute in `elwha-showcase`. Bundled resources stay in `elwha` and resolve
+  cross-module via the classpath.
 - **`ElwhaCardHeader.add(...)` fails fast** (#768): it now throws `IllegalArgumentException`
   instead of silently accepting a child its slot layout would never position — the header is
   slot-based; populate it via `setTitle` / `setSubtitle` / `setLeading` / `addTrailing`.
@@ -65,6 +74,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- **`elwha` publishes a `tests`-classifier jar restricted to the shared `testkit/**`
+  fixtures** (#786): downstreams (including `elwha-showcase`'s own suite) can reuse
+  `EdtInterceptor`, `ThemeExtension`, `Pixels`, and the rest without inheriting the library's
+  test classes.
 - **`AccessibleNameAdvisory` in `theme/`** (#777): the library-wide missing-accessible-name
   advisory — uniform wording, `WARNING` level, once-per-instance throttling — extracted from
   `ElwhaNavigationRail` and applied at first paint to `ElwhaIconButton`, `ElwhaFab`, and

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.owspfm</groupId>
+    <artifactId>elwha-parent</artifactId>
+    <version>1.0.1</version>
+  </parent>
+
+  <artifactId>elwha-showcase</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Elwha Showcase</name>
+  <description>The runnable Elwha storefront — the Showcase, every component playground, and the story-time demo/smoke/diagnostic mains — packaged apart from the library artifact. A classpath-only application jar: it shares package names with com.owspfm:elwha (§2.6 of the artifact-split design) and deliberately declares no Automatic-Module-Name.</description>
+  <url>https://github.com/OWS-PFMS/elwha</url>
+
+  <!-- §2.7: elwha plus flatlaf-extras (three playground files import FlatSVGIcon directly —
+       used directly, so declared directly rather than leaning on transitivity). flatlaf itself
+       flows transitively through elwha. Test scope: the junit/assertj/cacio trio comes from the
+       parent; the shared testkit fixtures arrive by source inclusion (build-helper below), NOT
+       by the elwha test-jar the design doc's §3.2 chose. Measured conflict: exec:java declares
+       ResolutionScope.TEST, and Maven's ReactorReader only substitutes a sibling's
+       target/test-classes once test-compile has run in the same session — so a test-jar
+       dependency here makes the §1.5 invariant invocation `mvn compile exec:java` fail
+       dependency resolution on every cold tree. The test-jar itself is still produced and
+       published by elwha (§3.2/§5.1); only this module's consumption mechanism differs. -->
+  <dependencies>
+    <dependency>
+      <groupId>com.owspfm</groupId>
+      <artifactId>elwha</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf-extras</artifactId>
+      <version>${flatlaf.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <!-- The testkit consumption path (see the dependency comment above): compile the shared
+             fixtures from the library's test tree, restricted by the compiler's testIncludes so
+             none of the ~200 per-component test classes ride along. Anchored the same way as the
+             parent's Checkstyle config and LICENSE resource (§1.3). -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>add-testkit-sources</id>
+            <phase>generate-test-sources</phase>
+            <goals><goal>add-test-source</goal></goals>
+            <configuration>
+              <sources>
+                <source>${maven.multiModuleProjectDirectory}/elwha/src/test/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <testIncludes>
+            <include>com/owspfm/elwha/showcase/**</include>
+            <include>com/owspfm/elwha/testkit/**</include>
+          </testIncludes>
+          <testExcludes>
+            <!-- The testkit's own self-tests (e.g. PixelsRenderTest) stay in elwha's suite —
+                 compiled here they would land in this module's test-classes and surefire would
+                 run them a second time. -->
+            <exclude>com/owspfm/elwha/testkit/**/*Test.java</exclude>
+          </testExcludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <!-- The runnable-jar entry point. The plain jar still needs its deps on the
+                   classpath; the self-contained shaded -app.jar is P2-S3 (§5.2). No
+                   Automatic-Module-Name here — this jar splits packages with elwha and is
+                   documented classpath-only (§2.6). -->
+              <Main-Class>com.owspfm.elwha.showcase.ElwhaShowcase</Main-Class>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <!-- §1.5 re-enable: the parent's pluginManagement skips exec reactor-wide; the module
+             holding the runnable mains flips it back on. The exec.mainClass default stays a
+             parent property — exec:java validates its required mainClass parameter on every
+             reactor project before consulting skip. -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <configuration>
+          <skip>false</skip>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
