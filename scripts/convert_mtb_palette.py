@@ -30,7 +30,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 DEFAULT_IN = REPO / "docs/research/themes"
-DEFAULT_OUT = REPO / "src/main/resources/com/owspfm/elwha/theme/palettes/secondary"
+DEFAULT_OUT = REPO / "elwha/src/main/resources/com/owspfm/elwha/theme/palettes/secondary"
 PREFIX = "material-theme-"
 
 

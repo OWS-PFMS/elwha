@@ -4,7 +4,8 @@
 Two modes:
 
 * Tree-wide (legacy): ``--check --expected V`` or ``--apply --expected V``.
-  Walks every ``*.java`` under ``src/`` and ``test/``. Retained for backward
+  Walks every ``*.java`` under each reactor module's ``src/`` tree
+  (``elwha/src/``, ``elwha-showcase/src/``). Retained for backward
   compatibility and the deprecated ``update-baseline-version.sh`` flow.
 
 * PR-diff scoped: ``--check --changed-only --expected V [--base-ref REF]``.
@@ -34,13 +35,17 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 
+MODULE_DIRS = ('elwha', 'elwha-showcase')
+
+
 def find_java_files(scope: str) -> List[Path]:
     """Find all Java files in the specified scope."""
     paths = []
-    if scope in ('all', 'src'):
-        paths.append(Path('src'))
-    if scope in ('all', 'test'):
-        paths.append(Path('test'))
+    for module in MODULE_DIRS:
+        if scope in ('all', 'src'):
+            paths.append(Path(module) / 'src' / 'main')
+        if scope in ('all', 'test'):
+            paths.append(Path(module) / 'src' / 'test')
 
     java_files = []
     for path in paths:
@@ -183,7 +188,7 @@ def _git(*args: str) -> str:
 
 
 def changed_java_files(base_ref: str) -> Tuple[List[Path], List[Path]]:
-    """Return ``(modified_files, added_files)`` under src/ or test/, *.java only.
+    """Return ``(modified_files, added_files)`` under a module src/ tree, *.java only.
 
     Uses ``base_ref...HEAD`` (triple-dot) so we diff against the merge-base —
     matching PR diff semantics. Classification is rename-aware, parsed from
@@ -197,25 +202,33 @@ def changed_java_files(base_ref: str) -> Tuple[List[Path], List[Path]]:
       * ``D``                    -> excluded
 
     Excluding pure renames keeps a filesystem move (e.g. the #60 src/main/java
-    migration) from spuriously demanding ``@version`` / ``@since`` bumps on
-    files whose content never changed.
+    migration, or the #779 module split) from spuriously demanding
+    ``@version`` / ``@since`` bumps on files whose content never changed.
+
+    The diff deliberately carries NO git pathspec — module scoping happens in
+    ``in_scope()`` instead. A pathspec naming only the current module roots
+    would hide the *old* path of a file moved in from outside them, so git
+    could not pair the rename and every moved file would degrade to an
+    "added" entry, defeating the R100 exclusion (measured on the #785 move).
     """
     diff_range = f"{base_ref}...HEAD"
-    raw = _git(
-        "diff", "--name-status", "--find-renames", diff_range,
-        "--", "src/", "test/",
-    )
+    raw = _git("diff", "--name-status", "--find-renames", diff_range)
 
     def in_scope(path: str) -> bool:
         """Whether the @version/@since convention applies to this file.
 
-        Test sources are exempt EXCEPT the shared testkit fixture library,
-        which is API-like and keeps the discipline (#529 triage §7 / #536).
-        Per-test classes would otherwise pay a re-tag tax on every touch.
+        Only the reactor modules' source trees are gated. Test sources are
+        exempt EXCEPT the shared testkit fixture library, which is API-like
+        and keeps the discipline (#529 triage §7 / #536). Per-test classes
+        would otherwise pay a re-tag tax on every touch. The testkit carve-in
+        matches its package segment (``.../com/owspfm/elwha/testkit/...``),
+        so it holds under any module prefix.
         """
         if not path.endswith(".java"):
             return False
-        if path.startswith("src/test/"):
+        if not path.startswith(tuple(f"{module}/src/" for module in MODULE_DIRS)):
+            return False
+        if "/src/test/" in path:
             return "/elwha/testkit/" in path
         return True
 

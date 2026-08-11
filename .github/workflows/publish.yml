@@ -28,7 +28,10 @@ jobs:
       - name: Verify tag matches pom.xml version
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-          POM_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
+          # help:evaluate, not exec:exec — the reactor parent's pluginManagement skips the
+          # exec plugin (the §1.5 exec:java wiring), which silences exec:exec here too and
+          # would leave POM_VERSION empty.
+          POM_VERSION=$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout --non-recursive)
           if [ "$TAG_VERSION" != "$POM_VERSION" ]; then
             echo "::error::Tag version ($TAG_VERSION) does not match pom.xml version ($POM_VERSION)"
             exit 1

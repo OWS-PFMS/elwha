@@ -5,12 +5,12 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.owspfm</groupId>
-  <artifactId>elwha</artifactId>
+  <artifactId>elwha-parent</artifactId>
   <version>1.0.1</version>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
 
-  <name>Elwha</name>
-  <description>A Swing component library implementing Material 3 Expressive on FlatLaf — a design-token foundation plus ~25 components, with the containers, overlays, and anchors around them.</description>
+  <name>Elwha Parent</name>
+  <description>Reactor parent for the Elwha component library — shared versions, plugin configuration, and test-scope dependencies for the library and harness modules.</description>
   <url>https://github.com/OWS-PFMS/elwha</url>
 
   <licenses>
@@ -37,6 +37,10 @@
     <url>https://github.com/OWS-PFMS/elwha/tree/main</url>
   </scm>
 
+  <modules>
+    <module>elwha</module>
+  </modules>
+
   <properties>
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
@@ -58,6 +62,12 @@
          Cacio segfaults there (hs_err frame: Java_sun_awt_FcFontManager_getFontPathNative).
          Full derivation: docs/research/elwha-test-suite-research.md §5. -->
     <guitier.toolkit>cacio</guitier.toolkit>
+    <!-- The default main for `mvn compile exec:java` (§1.5 of the artifact-split design).
+         Lives on the parent, not the module that runs it: exec:java validates its required
+         mainClass parameter on every reactor project BEFORE the skip configuration is
+         consulted, so the property must resolve everywhere. -Dexec.mainClass=… overrides it
+         (user properties outrank pom properties in interpolation). -->
+    <exec.mainClass>com.owspfm.elwha.showcase.ElwhaShowcase</exec.mainClass>
   </properties>
 
   <profiles>
@@ -84,17 +94,12 @@
     </dependencies>
   </dependencyManagement>
 
+  <!-- Test scope only — every module has a test tree, and declaring the trio here (rather than
+       leaning on the elwha test-jar's transitivity, which test-jars do not carry) keeps both
+       modules' test classpaths identical. Compile-scope deps stay per-module: the set a consumer
+       inherits from com.owspfm:elwha is documented in docs/consumer/stability.md and lives in
+       elwha/pom.xml alone. -->
   <dependencies>
-    <dependency>
-      <groupId>com.formdev</groupId>
-      <artifactId>flatlaf</artifactId>
-      <version>${flatlaf.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.formdev</groupId>
-      <artifactId>flatlaf-extras</artifactId>
-      <version>${flatlaf.version}</version>
-    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
@@ -128,11 +133,12 @@
       <resource>
         <directory>src/main/resources</directory>
       </resource>
-      <!-- #774: Apache-2.0 distribution convention — LICENSE and NOTICE ride inside the jar
-           (and the sources jar) at META-INF/, sourced from the repo root so there is no
-           second copy to drift. -->
+      <!-- #774: Apache-2.0 distribution convention — LICENSE and NOTICE ride inside every module
+           jar (and sources jar) at META-INF/, sourced from the repo root so there is no second
+           copy to drift. ${maven.multiModuleProjectDirectory} (anchored by .mvn/ at the root)
+           resolves to the repo root from any module basedir. -->
       <resource>
-        <directory>${project.basedir}</directory>
+        <directory>${maven.multiModuleProjectDirectory}</directory>
         <targetPath>META-INF</targetPath>
         <includes>
           <include>LICENSE</include>
@@ -140,21 +146,30 @@
         </includes>
       </resource>
     </resources>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.4.1</version>
+        </plugin>
+        <plugin>
+          <!-- §1.5 of docs/research/elwha-artifact-split-design.md: exec:java on a reactor runs
+               on every module, so the parent skips it here and the module that owns the mainClass
+               re-enables with <skip>false</skip>. Routing mainClass through the exec.mainClass
+               property (instead of hardcoding) keeps -Dexec.mainClass=… CLI overrides working —
+               pom configuration outranks CLI user properties, property interpolation does not. -->
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>3.5.0</version>
+          <configuration>
+            <skip>true</skip>
+            <mainClass>${exec.mainClass}</mainClass>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>3.4.1</version>
-        <configuration>
-          <archive>
-            <manifestEntries>
-              <!-- #774: a stable JPMS name for module-path consumers; without it the module
-                   name derives from the jar filename. -->
-              <Automatic-Module-Name>com.owspfm.elwha</Automatic-Module-Name>
-            </manifestEntries>
-          </archive>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -262,9 +277,6 @@
               <head>Since:</head>
             </tag>
           </tags>
-          <!-- #547: the landing page of the published javadoc jar (component index + quick
-               start) instead of a bare package list. -->
-          <overview>${project.basedir}/src/main/javadoc/overview.html</overview>
         </configuration>
         <executions>
           <execution>
@@ -309,7 +321,7 @@
           </dependency>
         </dependencies>
         <configuration>
-          <configLocation>${project.basedir}/config/checkstyle/checkstyle.xml</configLocation>
+          <configLocation>${maven.multiModuleProjectDirectory}/config/checkstyle/checkstyle.xml</configLocation>
           <sourceDirectories>
             <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
             <sourceDirectory>${project.basedir}/src/test/java</sourceDirectory>

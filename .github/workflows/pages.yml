@@ -31,8 +31,10 @@ jobs:
 
       - name: Build the javadoc
         # Same doclint ratchet as the jar build (#529): errors are fatal, so a page
-        # only ever deploys from javadoc that passed the gate.
-        run: mvn -B javadoc:javadoc --file pom.xml
+        # only ever deploys from javadoc that passed the gate. Library module only
+        # (-pl elwha, no -am needed — its deps are all external): the published API
+        # reference is the library's, not the harness's (#779 §4).
+        run: mvn -B -pl elwha javadoc:javadoc --file pom.xml
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -40,7 +42,7 @@ jobs:
       - name: Upload the apidocs site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: target/reports/apidocs
+          path: elwha/target/reports/apidocs
 
   deploy:
     needs: build
