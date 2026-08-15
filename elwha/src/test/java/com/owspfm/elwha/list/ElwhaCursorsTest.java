@@ -24,8 +24,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * a cursor-swap list actually installs — not a property of the cursor in isolation.
  *
  * <p>Headless collapses both states onto {@link Cursor#MOVE_CURSOR}, since there is no display to
- * build a custom cursor against. That they are <em>distinct</em> on a real display is the one claim
- * this tier cannot represent, and it lives in {@code ElwhaCursorsGuiTest}.
+ * build a custom cursor against, so that grab and grabbing are <em>distinct</em> pointers is the
+ * one claim this tier cannot represent. It has no Tier B counterpart on purpose: a gui-tagged test
+ * that built the cursors without realizing a window destabilized the focus-acquisition tests
+ * sharing its JVM, failing three consecutive runs on three different victims. The distinctness of
+ * the two states is a property of the loader this class only delegates to, so the coverage lost is
+ * not coverage of this facade.
  */
 @ExtendWith({EdtInterceptor.class, ThemeExtension.class})
 class ElwhaCursorsTest {
