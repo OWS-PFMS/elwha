@@ -16,11 +16,16 @@
  * cross-cutting contract (orientation, item gap, padding, empty and loading state, filter, sort)
  * that any future list sibling is expected to expose.
  *
+ * <p>{@link com.owspfm.elwha.list.ElwhaCursors} is the package's one export that has nothing to do
+ * with lists: the open-hand and closed-fist drag pointers AWT does not ship, published so a
+ * consumer's own draggable surfaces read the way an Elwha list's do. It lives here because this is
+ * where the artwork and its loader already lived.
+ *
  * <p>This package is free of OWS-specific imports and depends only on standard Swing and the Elwha
  * theme foundation.
  *
  * @author Charles Bryan
- * @version v0.5.0
+ * @version v1.2.0
  * @since v0.1.0
  */
 package com.owspfm.elwha.list;
