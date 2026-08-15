@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **The grab and grabbing drag cursors have a public accessor**
+  ([#814](https://github.com/OWS-PFMS/elwha/issues/814)): new
+  `com.owspfm.elwha.list.ElwhaCursors`, with `public static Cursor grab()` and
+  `public static Cursor grabbing()`. AWT ships neither pointer — `HAND_CURSOR` is a pointing
+  finger and `MOVE_CURSOR` a four-direction arrow — so a consumer drawing its own draggable
+  surfaces (a tab strip, a chip row, a splitter, a canvas handle) previously had no way to match
+  the pointer `ElwhaItemList` wears for drag-reorder: the loader, `ReorderCursors`, is
+  package-private, and the pre-rename `flatcomp` 0.1.0 `Cursors` class it descends from was
+  public. Both methods return plain `java.awt.Cursor` values and degrade rather than fail —
+  bundled artwork, else a painted silhouette, else `MOVE_CURSOR` — so no call site branches on
+  availability. Call them at the point of use rather than caching the result: the cache is
+  dropped when the returned instances would have stopped rendering, which is what makes custom
+  cursors survive a macOS Spaces transition. The cache-invalidation machinery stays internal.
+
+### Fixed
+
+- **The card V1→V3 migration map's list half named classes that never shipped**
+  ([#815](https://github.com/OWS-PFMS/elwha/issues/815)):
+  `docs/migration/elwha-card-v1-to-v3.md` mapped V1 card lists onto
+  `com.owspfm.elwha.card.list.ElwhaCardList` / `DefaultCardListModel` / `CardSelectionMode` /
+  `CardSelectionModel` — a package that does not exist in any released artifact, because epic #67
+  collapsed the parallel card-list and chip-list families into the generic
+  `com.owspfm.elwha.list` before 1.0.0. It also told consumers the fine-grained list events had
+  been replaced by a single "model changed" `Consumer` callback, the opposite of what shipped
+  (`ElwhaListDataEvent.Type` is `ADDED` / `REMOVED` / `CHANGED` / `MOVED`, and reorder keeps its
+  own typed `ElwhaReorderEvent<T>`). The list half now names the shipped API, a new §4a walks the
+  card-list conversion including the `ElwhaItemAdapter<T>` step the doc never mentioned, and the
+  stale version and source-path claims are corrected — V1 was `FlatCard` in `0.1.0` and was
+  deleted before 1.0.0, never published under the `card.v1` name, since the `0.2.0` release the
+  doc assumed was cancelled.
+
 ## [1.1.1] — 2026-08-11
 
 ### Added

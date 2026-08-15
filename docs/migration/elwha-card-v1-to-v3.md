@@ -1,8 +1,12 @@
 # ElwhaCard V1 → V3 migration map
 
-**For:** OWS-PFMS/OWS-Local-Search-GUI implementors (and any other Elwha 0.2.0+ consumer with a V1 card site to convert).
+**For:** OWS-PFMS/OWS-Local-Search-GUI implementors (and any other consumer with a V1 card site to convert).
 
-V1 is pre-Elwha-theme legacy that ships in 0.2.0 at `com.owspfm.elwha.card.v1.*`. V3 ships in 0.2.0 at `com.owspfm.elwha.card.*` (the unprefixed namespace). 1.0.0 deletes V1 entirely (story #96, gated on this migration finishing). This doc is the per-setter recipe for converting one card site at a time.
+V1 is the pre-Elwha-theme card: `FlatCard` in the `0.1.0` artifact, renamed to `com.owspfm.elwha.card.v1.*` on `main` during the 0.x window and **deleted before 1.0.0**. It was never published under the `v1` package name — the planned `0.2.0` release was cancelled — so no resolvable artifact carries both shapes, and V3 is simply what `com.owspfm.elwha.card.*` has meant since 1.0.0.
+
+Read this as a translation table for source you still have, not for a dependency you can still resolve against. It is the per-setter recipe for converting one card site at a time.
+
+> **Card half vs list half.** §1–§2 and §5–§6 are about the card and stand as written. §3 and §4 also cover the *card list*, which took a second, larger move after this doc was written: the parallel `card/list/` and `chip/list/` families were collapsed into one generic `com.owspfm.elwha.list` package. A V1 card **list** therefore migrates onto `ElwhaItemList<T>`, not onto anything under `card/` — see §4a.
 
 The conversion is **not a drop-in rename**. V1's accumulated escape-hatches (raw label getters, `setSurfaceColor` bolt-on, `setKeepSummaryWhenExpanded`, the polymorphic `setHeader` overloads) are replaced in V3 by:
 
@@ -94,35 +98,80 @@ card.add(new ElwhaCardActions()
 
 ## 3. Listener mapping
 
-| V1 | V3 |
+| V1 | Now |
 |---|---|
 | `addActionListener(ActionListener)` | `addActionListener(ActionListener)` — same. Requires `setActionable(true)`. |
-| Property change on `selected` | `setSelected(boolean)` + `getSelected()`; programmatic toggle via `cancelPendingClick()` if you need to suppress the chrome click handler mid-flight. |
-| Card list selection: `CardSelectionListener<T>` (event-based) | `CardSelectionModel.addChangeListener(Consumer<CardSelectionModel<T>>)` — simpler functional callback. |
-| Card list reorder: `CardReorderListener<T>` + `CardReorderEvent<T>` | `CardListModel.addChangeListener(Consumer<CardListModel<T>>)` — model-level change covers reorders, inserts, removes. |
-| Card list data: `CardListDataListener` + `CardListDataEvent` | Same model-level change callback. |
+| Property change on `selected` | `card.addPropertyChangeListener(ElwhaCard.PROPERTY_SELECTED, listener)`; `setSelected(boolean)` + `isSelected()`. Programmatic toggle via `cancelPendingClick()` if you need to suppress the chrome click handler mid-flight. |
+| Card list selection: `CardSelectionListener<T>` | `ElwhaItemList.addSelectionListener(ElwhaSelectionListener<T>)`, delivering an `ElwhaSelectionEvent<T>` whose `getSelected()` is the whole selection. |
+| Card list reorder: `CardReorderListener<T>` + `CardReorderEvent<T>` | `ElwhaItemList.addReorderListener(ElwhaReorderListener<T>)` + `ElwhaReorderEvent<T>` — `getItem()`, `getFromIndex()`, `getToIndex()`. |
+| Card list data: `CardListDataListener` + `CardListDataEvent` | `ElwhaListModel.addListDataListener(ElwhaListDataListener<T>)` + `ElwhaListDataEvent<T>`, typed `ADDED` / `REMOVED` / `CHANGED` / `MOVED` with `getIndex0()` / `getIndex1()`. |
 
-If you depended on V1's fine-grained event types (insert vs remove vs reorder), V3 sends a single "model changed" notification — callers diff if they need that detail. The most common usage (rebuild a status line / counter after any change) is unchanged.
+The fine-grained event vocabulary survived the move. If you depended on telling an insert from a remove from a reorder, you still can — reorder has its own listener and event type, and list-data changes carry a `Type` discriminator. Subscribing to the *list* gets you selection and reorder; subscribing to the *model* gets you data changes.
 
 ---
 
 ## 4. Cross-package class mapping
 
-| V1 class | V3 equivalent |
+| V1 class | Shipped equivalent |
 |---|---|
 | `com.owspfm.elwha.card.v1.ElwhaCard` | `com.owspfm.elwha.card.ElwhaCard` |
 | `com.owspfm.elwha.card.v1.CardVariant` | `com.owspfm.elwha.card.CardVariant` — same values |
 | `com.owspfm.elwha.card.v1.CardInteractionMode` | **DROPPED** — see §5 |
-| `com.owspfm.elwha.card.v1.list.ElwhaCardList` | `com.owspfm.elwha.card.list.ElwhaCardList` |
-| `com.owspfm.elwha.card.v1.list.DefaultCardListModel` | `com.owspfm.elwha.card.list.DefaultCardListModel` |
-| `com.owspfm.elwha.card.v1.list.CardSelectionMode` | `com.owspfm.elwha.card.list.CardSelectionMode` — same values, plus `SINGLE_MANDATORY` (new in V3) |
-| `com.owspfm.elwha.card.v1.list.CardSelectionModel` | `com.owspfm.elwha.card.list.CardSelectionModel` |
-| `com.owspfm.elwha.card.v1.list.ReorderHandle` | **DROPPED** — V3 list drag uses the chassis itself (or a dedicated handle component the consumer adds and wires) |
-| `com.owspfm.elwha.card.v1.list.CardListDataListener` / `CardSelectionListener` / `CardReorderListener` | All replaced by the simpler model-level `Consumer<...>` change listeners. |
+| `com.owspfm.elwha.card.v1.list.ElwhaCardList` | `com.owspfm.elwha.list.ElwhaItemList<T>` — one generic list for every item type; see §4a |
+| `com.owspfm.elwha.card.v1.list.CardListModel` / `DefaultCardListModel` | `com.owspfm.elwha.list.ElwhaListModel<T>` / `DefaultElwhaListModel<T>` |
+| `com.owspfm.elwha.card.v1.list.CardSelectionMode` | `com.owspfm.elwha.list.SelectionMode` — `NONE` / `SINGLE` / `SINGLE_MANDATORY` / `MULTIPLE` |
+| `com.owspfm.elwha.card.v1.list.CardSelectionModel` | `com.owspfm.elwha.list.ElwhaSelectionModel<T>` / `DefaultElwhaSelectionModel<T>` |
+| `com.owspfm.elwha.card.v1.list.ReorderHandle` | **DROPPED** — drag is configured on the list via `MovementMode` + `ReorderAffordance`, not by a handle enum on the card |
+| `com.owspfm.elwha.card.v1.list.CardListDataListener` / `CardSelectionListener` / `CardReorderListener` | `com.owspfm.elwha.list.ElwhaListDataListener<T>` / `ElwhaSelectionListener<T>` / `ElwhaReorderListener<T>` — see §3 |
 
-New in V3:
+Note the package: **every list type moved out of `card/` entirely.** There is no `com.owspfm.elwha.card.list` package. The parallel card-list and chip-list families were collapsed into one generic `com.owspfm.elwha.list`, so the same container hosts cards, chips, or any `JComponent` you render.
+
+New alongside V3:
 - `com.owspfm.elwha.card.{CollapseRule, ExpansionOverflow, DividerStyle, ThumbnailShape}`
 - `com.owspfm.elwha.card.{ElwhaCardHeader, ElwhaCardMedia, ElwhaCardActions, ElwhaCardDivider, ElwhaCardChevron, ElwhaCardExpandLink, ElwhaCardTitle, ElwhaCardSubtitle, ElwhaCardSupportingText, ElwhaCardLeadingIcon, ElwhaCardThumbnail}`
+- `com.owspfm.elwha.list.{ElwhaItemList, ElwhaItemAdapter, ElwhaList, ElwhaListModel, DefaultElwhaListModel, ElwhaSelectionModel, DefaultElwhaSelectionModel, SelectionMode, MovementMode, ReorderAffordance, IconAffordance, ElwhaListItemView, ElwhaCursors}`
+
+---
+
+## 4a. Card list → `ElwhaItemList<T>`
+
+The structural change is bigger than a rename, and it is worth understanding before converting a list site: **the list no longer holds cards.** It holds your domain items, and an adapter turns each one into a view on demand.
+
+```java
+// V1 — the list held ElwhaCards, and you built them up front
+ElwhaCardList<Report> list = new ElwhaCardList<>();
+list.setModel(new DefaultCardListModel<>(reports));
+list.setSelectionMode(CardSelectionMode.SINGLE);
+
+// Now — the list holds Reports; the adapter makes a view for each
+ElwhaItemList<Report> list = new ElwhaItemList<>(
+    new DefaultElwhaListModel<>(reports),
+    (report, visibleIndex) -> {
+      ElwhaCard card = ElwhaCard.outlinedCard();
+      card.add(new ElwhaCardHeader()
+          .setTitle(report.title())
+          .setSubtitle(report.updatedAt()));
+      return card;
+    });
+list.setSelectionMode(SelectionMode.SINGLE);
+```
+
+`ElwhaItemAdapter<T>` is a single-method interface — `JComponent componentFor(T item, int visibleIndex)` — so a lambda is the usual form. The `T` parameter on the list is the **item** type, not the view type; that is the sharpest difference from V1, where the list was typed by the card.
+
+Selection is by value, not by index or by card: `getSelectionModel().getSelected()` hands back `List<T>` of your items.
+
+The view you return may implement `com.owspfm.elwha.list.ElwhaListItemView` to receive selection state and drag chrome. `ElwhaCard` and `ElwhaChip` both do, so a card view gets selection styling for free; a plain `JComponent` still renders and lays out correctly, it just doesn't restyle itself on selection.
+
+Drag-reorder is two settings on the list rather than a per-card handle:
+
+```java
+list.setMovementMode(MovementMode.MOVABLE);              // STATIC / MOVABLE / PINNED
+list.setReorderAffordance(ReorderAffordance.CURSOR_SWAP); // CURSOR_SWAP / HOVER_ICON / BOTH
+list.addReorderListener(event ->
+    persistOrder(event.getItem(), event.getFromIndex(), event.getToIndex()));
+```
+
+If you are hand-building a draggable surface *outside* a list and want the same pointer feedback, `ElwhaCursors.grab()` / `grabbing()` are the cursors the list itself wears.
 
 ---
 
@@ -204,7 +253,7 @@ card.add(new ElwhaCardActions()
 | `setKeepSummaryWhenExpanded(boolean)` | Subsumed by the per-child `ALWAYS_VISIBLE` collapse rule, which is more general. |
 | `setLeadingActions(Component...)` | V3 header has only leading-icon + title-stack + trailing-affordances. Leading actions on the action row use `ElwhaCardActions.addLeading(...)`. |
 | `getTitleLabel()` / `getSubtitleLabel()` returning raw `JLabel` | V3 exposes typed `ElwhaCardTitle` / `ElwhaCardSubtitle` (both extend `JLabel`) via `ElwhaCardHeader.getTitle()` / `.getSubtitle()`. Cast is unnecessary; the typed wrapper handles disabled-fade and HTML-wrap. |
-| `ReorderHandle` enum | V3 list drag uses the chassis itself by default. If a consumer wants a dedicated handle, add it as a normal child and wire its mouse listeners. |
+| `ReorderHandle` enum | Drag became a property of the list, not of the card: `ElwhaItemList.setMovementMode(...)` says whether an item moves, `setReorderAffordance(...)` says how that is advertised (pointer swap, hover icon, or both). A per-card handle enum has nothing left to configure. |
 
 If a V1 capability you depend on isn't covered here, open an issue against [OWS-PFMS/elwha](https://github.com/OWS-PFMS/elwha) before working around it — V3 spec gaps get tracked and fixed, not papered over with escape-hatches.
 
@@ -212,6 +261,8 @@ If a V1 capability you depend on isn't covered here, open an issue against [OWS-
 
 ## Reference
 
-- V3 spec: [`docs/research/elwha-card-v3-spec.md`](../research/elwha-card-v3-spec.md)
-- V3 playground (visual reference for every pattern in this doc): `mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.playground.ElwhaCardPlayground"`
-- V1 source (read-only reference; ships in 0.2.0, deleted in 1.0.0): `src/main/java/com/owspfm/elwha/card/v1/`
+- Card V3 spec: [`docs/research/elwha-card-v3-spec.md`](../research/elwha-card-v3-spec.md)
+- List unification spec (why the card list became `ElwhaItemList<T>`): [`docs/research/elwha-list-generification-spec.md`](../research/elwha-list-generification-spec.md)
+- Card playground (visual reference for every pattern in this doc): `mvn compile exec:java -Dexec.mainClass="com.owspfm.elwha.card.playground.ElwhaCardPlayground"`
+- The shipped API, class by class: the [published javadoc](https://ows-pfms.github.io/elwha/), and `docs/consumer/components.md` for the catalogue
+- V1 source: not in the tree and not in any 1.x artifact. It is still in history — `git log --all -- '*card/v1/ElwhaCard.java'` finds it, and the `v0.1.0` tag carries the same shape under its original name at `src/com/owspfm/ui/components/card/FlatCard.java`.
