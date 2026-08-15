@@ -50,8 +50,8 @@ import java.awt.Cursor;
  * Cursor#MOVE_CURSOR}. A consumer never has to branch on availability.
  *
  * @author Charles Bryan
- * @version v1.2.0
- * @since v1.2.0
+ * @version v1.1.2
+ * @since v1.1.2
  */
 public final class ElwhaCursors {
 
@@ -65,8 +65,8 @@ public final class ElwhaCursors {
    *
    * @return the grab cursor, or {@link Cursor#MOVE_CURSOR} where custom cursors are unavailable;
    *     never {@code null}
-   * @version v1.2.0
-   * @since v1.2.0
+   * @version v1.1.2
+   * @since v1.1.2
    */
   public static Cursor grab() {
     return ReorderCursors.grab();
@@ -81,8 +81,8 @@ public final class ElwhaCursors {
    *
    * @return the grabbing cursor, or {@link Cursor#MOVE_CURSOR} where custom cursors are
    *     unavailable; never {@code null}
-   * @version v1.2.0
-   * @since v1.2.0
+   * @version v1.1.2
+   * @since v1.1.2
    */
   public static Cursor grabbing() {
     return ReorderCursors.grabbing();

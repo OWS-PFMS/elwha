@@ -25,7 +25,7 @@
  * theme foundation.
  *
  * @author Charles Bryan
- * @version v1.2.0
+ * @version v1.1.2
  * @since v0.1.0
  */
 package com.owspfm.elwha.list;

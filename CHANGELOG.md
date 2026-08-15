@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.1.2] — 2026-08-15
+
+> **A note on the version number.** This release adds a public class, and strict semver classifies
+> new public API as a **minor** bump. It ships as a **patch** anyway, knowingly and on the record.
+> The reasoning: [#814](https://github.com/OWS-PFMS/elwha/issues/814) is a *regression* — `flatcomp`
+> 0.1.0 shipped these cursors publicly and the flatcomp→elwha transition dropped the modifier, so
+> 1.1.2 **restores** public surface that was lost rather than designing new surface. That is the
+> same impact-based judgment the 1.1.1 `MaterialIcons` entry used when it called a new
+> `IllegalArgumentException` "a fix under semver, not a break." The deviation is recorded here
+> rather than glossed, and it is a one-off tied to the regression framing — the semver rule in
+> `CONTRIBUTING.md` is unchanged, and the next additive-API release takes a minor. `v1.2.0` stays
+> reserved for the documented desktop-workbench wave.
+
 ### Added
 
 - **The grab and grabbing drag cursors have a public accessor**
@@ -38,6 +51,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   stale version and source-path claims are corrected — V1 was `FlatCard` in `0.1.0` and was
   deleted before 1.0.0, never published under the `card.v1` name, since the `0.2.0` release the
   doc assumed was cancelled.
+- **A frameless gui test destabilized the focus-acquisition tier**
+  ([#817](https://github.com/OWS-PFMS/elwha/issues/817)): `ElwhaCursorsGuiTest` built the cursors
+  on a JVM that never realized a window, and `main`'s required Test check then failed three
+  consecutive times — never on that test, always on another test's `Robot` pointer click followed
+  by a wait on focus ownership. The gui tier shares one forked JVM and there is no window manager
+  under `xvfb-run`, so X input focus is assigned rather than negotiated. The test is removed; the
+  Tier A suite still pins the facade's contract. Consumers are unaffected — no library code
+  changed — but the issue records the broader finding, which is that the focus-acquisition helpers
+  wait on their own window and have no defence against another test having moved the input focus.
 
 ## [1.1.1] — 2026-08-11
 
@@ -1125,7 +1147,8 @@ Pre-extraction commit history has been preserved via `git filter-repo --subdirec
 
 Cross-reference these via `git log` in this repo — file paths and blame archeology are preserved.
 
-[Unreleased]: https://github.com/OWS-PFMS/elwha/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/OWS-PFMS/elwha/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/OWS-PFMS/elwha/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/OWS-PFMS/elwha/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/OWS-PFMS/elwha/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/OWS-PFMS/elwha/compare/v1.0.0...v1.0.1
